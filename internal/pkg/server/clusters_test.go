@@ -7,10 +7,11 @@ package server
 
 import (
 	"context"
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sync"
 	"time"
+
+	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,10 +20,9 @@ import (
 
 var _ = Describe("Clusters", func() {
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-
 	clusters := &clusters{
-		clusters:   make(map[string]*cluster),
-		k8sCLI:     k8sAPI,
+		clusters: make(map[string]*cluster),
+		k8sCLI:   k8sAPI,
 	}
 
 	var wg sync.WaitGroup
@@ -95,7 +95,6 @@ var _ = Describe("Clusters", func() {
 			Expect(k8sAPI.AddCluster("X", "X", nil)).ShouldNot(HaveOccurred())
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
-
 
 		It("should add a cluster before watch restarted due to an error", func() {
 			Expect(len(clusters.List())).To(Equal(1))

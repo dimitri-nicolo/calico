@@ -3,7 +3,7 @@ module github.com/tigera/voltron
 go 1.14
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c // indirect
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -33,16 +33,19 @@ replace (
 )
 
 require (
+	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.8.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/apiserver v0.0.0-20200730204338-ab34dfe6eeda
+	github.com/stretchr/testify v1.4.0
+	github.com/tigera/apiserver v0.0.0-20201009181127-0a204605c07c
+	github.com/tigera/lma v0.0.0-20201014202455-01dd28429dd9
 	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
 	k8s.io/client-go v0.17.3

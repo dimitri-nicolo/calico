@@ -15,36 +15,33 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"k8s.io/client-go/rest"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/apiserver/pkg/authentication"
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
 	// ClusterHeaderField represents the request header key used to determine
 	// which cluster to proxy for
 	ClusterHeaderField = "x-cluster-id"
+	// This cluster name is the management cluster. No tunnel is necessary for
+	// requests with this value in the ClusterHeaderField.
+	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
 )
 
 // ClusterHeaderFieldCanon represents the request header key used to determine which
 // cluster to proxy for (Canonical)
 var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(ClusterHeaderField)
-
-// K8sInterface represent the interface server needs to access all k8s resources
-type K8sInterface interface {
-	kubernetes.Interface
-	clientv3.ProjectcalicoV3Interface
-}
 
 // Server is the voltron server that accepts tunnels from the app clusters. It
 // serves HTTP requests and proxies them to the tunnels.
@@ -54,11 +51,14 @@ type Server struct {
 	http     *http.Server
 	proxyMux *http.ServeMux
 
-	k8s           K8sInterface
+	k8s bootstrap.K8sClient
+	// When impersonating a user we use the tigera-manager sa bearer token from this config.
+	config        *rest.Config
 	authenticator authentication.Authenticator
 
 	defaultProxy          *proxy.Proxy
 	tunnelTargetWhitelist []regexp.Regexp
+	kubernetesAPITargets  []regexp.Regexp
 
 	clusters *clusters
 	health   *health
@@ -84,9 +84,10 @@ type Server struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s K8sInterface, authenticator authentication.Authenticator, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator authentication.Authenticator, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
+		config:        config,
 		authenticator: authenticator,
 		clusters: &clusters{
 			clusters: make(map[string]*cluster),
@@ -277,41 +278,44 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
-	// With the introduction of Centralized ElasticSearch for Multi-cluster Management,
-	// certain categories of requests related to a specific cluster will be proxied
-	// within the Management cluster (instead of being sent down a secure tunnel to the
-	// actual Managed cluster).
-	// To see how the s.tunnelTargetWhitelist is configured, please look at the Voltron
-	// main function.
-	shouldUseTunnel := shouldUseTunnel(r, s.tunnelTargetWhitelist)
+	chdr, hasClusterHeader := r.Header[ClusterHeaderFieldCanon]
+	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
+	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
 
-	if _, ok := r.Header[ClusterHeaderFieldCanon]; !shouldUseTunnel || !ok {
-		if !shouldUseTunnel {
-			log.Debugf("Server Proxy: Skip tunnel, send request %q to default proxy (local)", r.URL)
-		} else {
-			log.Debugf("Server Proxy: No cluster header, send request %q to default proxy (local)", r.URL)
-		}
-		if s.defaultProxy != nil {
-			s.defaultProxy.ServeHTTP(w, r)
-			return
-		}
-
-		msg := fmt.Sprintf("missing %q header", ClusterHeaderField)
-		log.Errorf("clusterMuxer: %s (and cannot proxy locally, no default proxy was configured)", msg)
-		http.Error(w, msg, 400)
+	// If shouldUseTunnel=true, we do authn checks & impersonation and the request will be sent to guardian.
+	// If isK8sRequest=true, we also do authn checks & impersonation.
+	// If neither is true, we just proxy the request. Authn will be handled there.
+	if (!shouldUseTunnel || !hasClusterHeader) && !isK8sRequest {
+		// This is a request for the backend servers in the management cluster, like es-proxy or compliance.
+		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
 
-	if len(r.Header[ClusterHeaderFieldCanon]) > 1 {
+	if len(chdr) > 1 {
 		msg := fmt.Sprintf("multiple %q headers", ClusterHeaderField)
 		log.Errorf("clusterMuxer: %s", msg)
 		http.Error(w, msg, 400)
 		return
 	}
 
+	usr, status, err := s.authenticator.Authenticate(r.Header.Get(authentication.AuthorizationHeader))
+	if err != nil {
+		log.Errorf("Could not authenticate user from request: %s", err)
+		http.Error(w, err.Error(), status)
+		return
+	}
+	addImpersonationHeaders(r, usr)
+	removeAuthHeaders(r)
+
 	// Note, we expect the value passed in the request header field to be the resource
 	// name for a ManagedCluster resource (which will be human-friendly and unique)
 	clusterID := r.Header.Get(ClusterHeaderField)
+
+	if isK8sRequest && (!hasClusterHeader || clusterID == DefaultClusterID) {
+		r.Header.Set(authentication.AuthorizationHeader, fmt.Sprintf("Bearer %s", s.config.BearerToken))
+		s.defaultProxy.ServeHTTP(w, r)
+		return
+	}
 
 	c := s.clusters.get(clusterID)
 
@@ -331,26 +335,14 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// N.B. Host is only set to make the ReverseProxy happy, DialContext ignores
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
-
-	user, status, err := s.authenticator.Authenticate(r.Header.Get(authentication.AuthorizationHeader))
-	if err != nil {
-		log.Errorf("Could not authenticate user from request: %s", err)
-		http.Error(w, err.Error(), status)
-		return
-	}
-	addImpersonationHeaders(r, user)
-	removeAuthHeaders(r)
-
-	log.Debugf("Server Proxy: Sending request %q from %q through tunnel to %q", r.URL, r.RemoteAddr, clusterID)
 	r.Header.Del(ClusterHeaderField)
-
 	c.ServeHTTP(w, r)
 }
 
 // Determine whether or not the given request should use the tunnel proxying
 // by comparing its URL path against the provide list of regex expressions
 // (representing paths for targets that the request might be going to).
-func shouldUseTunnel(r *http.Request, targetPaths []regexp.Regexp) bool {
+func requestPathMatches(r *http.Request, targetPaths []regexp.Regexp) bool {
 	for _, p := range targetPaths {
 		if p.MatchString(r.URL.Path) {
 			return true

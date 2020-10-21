@@ -14,20 +14,23 @@ import (
 	"sync"
 	"time"
 
-	vtls "github.com/tigera/voltron/pkg/tls"
-
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"github.com/pkg/errors"
+
 	log "github.com/sirupsen/logrus"
+
 	"golang.org/x/net/http2"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
+	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
+	vtls "github.com/tigera/voltron/pkg/tls"
 	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/tigera/voltron/pkg/tunnelmgr"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -46,7 +49,7 @@ type cluster struct {
 	tunnelManager tunnelmgr.Manager
 	proxy         *httputil.ReverseProxy
 
-	k8sCLI K8sInterface
+	k8sCLI bootstrap.K8sClient
 
 	tlsProxy vtls.Proxy
 }
@@ -55,7 +58,7 @@ type clusters struct {
 	sync.RWMutex
 	clusters map[string]*cluster
 
-	k8sCLI K8sInterface
+	k8sCLI bootstrap.K8sClient
 
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool

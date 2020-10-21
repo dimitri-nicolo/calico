@@ -3,13 +3,19 @@
 package server_test
 
 import (
+	"context"
 	"crypto"
 	"crypto/rsa"
+	"encoding/base64"
 	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/coreos/go-oidc"
+	"github.com/stretchr/testify/mock"
+	"github.com/tigera/lma/pkg/auth"
 	"golang.org/x/crypto/ssh"
+	"k8s.io/client-go/rest"
 
 	"crypto/tls"
 	"crypto/x509"
@@ -39,6 +45,15 @@ import (
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
+const (
+	k8sIssuer           = "kubernetes/serviceaccount"
+	dexIssuer           = "https://127.0.0.1:9443/dex"
+	managerSAAuthHeader = "Bearer tigera-manager-token"
+
+	// Exp that is very far in the future.
+	exp = 9600964804
+)
+
 var (
 	tunnelCert    *x509.Certificate
 	tunnelPrivKey *rsa.PrivateKey
@@ -46,7 +61,38 @@ var (
 
 	clusterA = "clusterA"
 	clusterB = "clusterB"
+	config   = &rest.Config{BearerToken: "tigera-manager-token"}
+
+	// Tokens issued by k8s.
+	janeBearerToken = authHeader(k8sIssuer, "jane@example.io", exp)
+	bobBearerToken  = authHeader(k8sIssuer, "bob@example.io", exp)
+
+	// Token issued by dex.
+	jennyToken      = authHeader(dexIssuer, "jenny@dex.io", exp)
+	expiredDexToken = authHeader(dexIssuer, "jenny@dex.io", 0)
 )
+
+func authHeader(iss, email string, exp int) string {
+	hdrhdr := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3ODM2YzRiMjdmN2M3ZmVjMjk1MTk0NTFkNDc5MmUyNjQ4M2RmYWUifQ" // rs256 header
+	payload := map[string]interface{}{
+		"iss":            iss,
+		"sub":            "ChUxMDkxMzE",
+		"aud":            "tigera-manager",
+		"exp":            exp,
+		"iat":            1600878403,
+		"nonce":          "35e32c66028243f592cc3103c7c2dfb2",
+		"at_hash":        "jOq0F62t_NE9a3UXtNJkYg",
+		"email":          email,
+		"email_verified": true,
+		"groups": []string{
+			"all-van@tigera.io",
+		},
+		"name": "John Doe",
+	}
+	payloadJson, _ := json.Marshal(payload)
+	payloadStr := base64.RawURLEncoding.EncodeToString(payloadJson)
+	return fmt.Sprintf("Bearer %s.%s.%s", hdrhdr, payloadStr, "e30")
+}
 
 func init() {
 	log.SetOutput(GinkgoWriter)
@@ -71,12 +117,13 @@ var _ = Describe("Server", func() {
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	authenticator := authentication.NewFakeAuthenticator()
-	authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
+	authenticator.AddValidApiResponse(janeBearerToken, "jane", []string{"developers"})
 	watchSync := make(chan error)
 
 	It("should fail to use invalid path", func() {
 		_, err := server.New(
 			k8sAPI,
+			config,
 			authenticator,
 			server.WithExternalCredsFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
@@ -91,6 +138,7 @@ var _ = Describe("Server", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			config,
 			authenticator,
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
@@ -182,15 +230,20 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		srv    *server.Server
 		lis    net.Listener
 		lisTun net.Listener
+		keyset = &mockKeySet{}
 	)
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	authenticator := authentication.NewFakeAuthenticator()
-	authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
+	janeBearerToken = authHeader(k8sIssuer, "jane@example.io", exp)
+	authenticator.AddValidApiResponse(janeBearerToken, "jane", []string{"developers"})
 	watchSync := make(chan error)
 
 	defaultServer := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Echo the token, such that we can determine if the auth header was successfully swapped.
+			w.Header().Set(authentication.AuthorizationHeader, r.Header.Get(authentication.AuthorizationHeader))
+		}))
 
 	startServer := func(opts ...server.Option) {
 		var e error
@@ -220,17 +273,24 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			`^/some/path$`,
 		})
 
+		k8sTargets, _ := regex.CompileRegexStrings([]string{
+			`^/api/?`,
+			`^/apis/?`,
+		})
+
 		opts = append(opts,
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 			server.WithDefaultProxy(defaultProxy),
+			server.WithKubernetesAPITargets(k8sTargets),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 		)
 
 		srv, err = server.New(
 			k8sAPI,
-			authenticator,
+			config,
+			auth.NewAggregateAuthenticator(dex(keyset), authenticator),
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -311,7 +371,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			req.Header.Add(server.ClusterHeaderField, clusterA)
-			test.AddJaneToken(req)
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken)
 
 			var httpClient = &http.Client{
 				Transport: &http.Transport{
@@ -323,6 +383,51 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			resp, err := httpClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
+		})
+
+		It("Should swap the auth header and impersonate the user for requests to k8s (a)api server", func() {
+			req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", lis.Addr().String(), "/api/v1/namespaces"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, janeBearerToken)
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
+		})
+
+		It("Should authenticate dex users for k8s api call", func() {
+			payload, _ := base64.RawURLEncoding.DecodeString(strings.Split(jennyToken, ".")[1])
+			keyset.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(jennyToken, "Bearer "))).Return(payload, nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("https://%s%s", lis.Addr().String(), "/api/v1/namespaces"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set(authentication.AuthorizationHeader, jennyToken)
+
+			resp, err := configureHTTPSClient().Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+			Expect(resp.Header.Get(authentication.AuthorizationHeader)).To(Equal(managerSAAuthHeader))
+
+		})
+
+		It("Should reject dex users with expired token for k8s api call", func() {
+			req, err := http.NewRequest(
+				"GET",
+				fmt.Sprintf("https://%s%s", lis.Addr().String(), "/api/v1/namespaces"), nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Add(server.ClusterHeaderField, clusterA)
+			req.Header.Set(authentication.AuthorizationHeader, expiredDexToken)
+
+			var httpClient = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true,
+					},
+				},
+			}
+			resp, err := httpClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(401))
 		})
 
 		It("should be possible to open a tunnel", func() {
@@ -370,7 +475,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					"https://"+lis.Addr().String()+"/some/path", strings.NewReader("HELLO"))
 				Expect(err).NotTo(HaveOccurred())
 				req.Header[server.ClusterHeaderField] = []string{clusterA}
-				test.AddJaneToken(req)
+				req.Header.Set(authentication.AuthorizationHeader, jennyToken)
 
 				var resp *http.Response
 
@@ -614,6 +719,10 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 				Path: "/compliance/",
 				Dest: defaultURL,
 			},
+			{
+				Path: "/api/v1/namespaces",
+				Dest: defaultURL,
+			},
 		})
 		Expect(e).NotTo(HaveOccurred())
 
@@ -641,6 +750,7 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			config,
 			authenticator,
 			opts...,
 		)
@@ -736,6 +846,7 @@ var _ = Describe("Server authenticates requests", func() {
 	var voltronPrivKey crypto.Signer
 	var rootCAs *x509.CertPool
 
+	keyset := &mockKeySet{}
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	authenticator := authentication.NewFakeAuthenticator()
 	watchSync := make(chan error)
@@ -770,7 +881,8 @@ var _ = Describe("Server authenticates requests", func() {
 
 		srv, err = server.New(
 			k8sAPI,
-			authenticator,
+			config,
+			auth.NewAggregateAuthenticator(dex(keyset), authenticator),
 			server.WithTunnelCreds(voltronCert, voltronPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
@@ -827,17 +939,25 @@ var _ = Describe("Server authenticates requests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		bin = test.NewHTTPSBin(tun, tunnelCert, func(r *http.Request) {
-			Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
-			Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
-			Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
-			binC <- struct{}{}
+			switch r.Header.Get("Impersonate-User") {
+			case "jane":
+				Expect(r.Header.Get("Impersonate-Group")).To(Equal("developers"))
+				Expect(r.Header.Get("Authorization")).NotTo(Equal(janeBearerToken))
+				binC <- struct{}{}
+			case "jenny@dex.io":
+				Expect(r.Header.Get("Impersonate-Group")).To(Equal("all-van@tigera.io"))
+				Expect(r.Header.Get("Authorization")).NotTo(Equal(janeBearerToken))
+				binC <- struct{}{}
+			default:
+				panic("unexpected user was impersonated")
+			}
 		})
 	})
 
 	authJane := func() {
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
-		test.AddJaneToken(req)
+		req.Header.Set(authentication.AuthorizationHeader, janeBearerToken)
 		resp, err := clnt.Do(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
@@ -847,15 +967,36 @@ var _ = Describe("Server authenticates requests", func() {
 	}
 
 	It("should authenticate Jane", func() {
-		authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
+		authenticator.AddValidApiResponse(janeBearerToken, "jane", []string{"developers"})
 		authJane()
 	})
 
-	It("should not authenticate Bob - Bob exists, does not have rights", func() {
-		authenticator.AddErrorAPIServerResponse(test.BobBearerToken, nil, http.StatusUnauthorized)
+	It("Should authenticate dex users for tunnel call", func() {
+		payload, _ := base64.RawURLEncoding.DecodeString(strings.Split(jennyToken, ".")[1])
+		keyset.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(jennyToken, "Bearer "))).Return(payload, nil)
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
-		test.AddBobToken(req)
+		req.Header.Set(authentication.AuthorizationHeader, jennyToken)
+		resp, err := clnt.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(200))
+		<-binC
+	})
+
+	It("Should reject dex users with expired token for tunnel call", func() {
+		clnt := configureHTTPSClient()
+		req := requestToClusterA(lisHTTPS.Addr().String())
+		req.Header.Set(authentication.AuthorizationHeader, expiredDexToken)
+		resp, err := clnt.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(401))
+	})
+
+	It("should not authenticate Bob - Bob exists, does not have rights", func() {
+		authenticator.AddErrorAPIServerResponse(bobBearerToken, nil, http.StatusUnauthorized)
+		clnt := configureHTTPSClient()
+		req := requestToClusterA(lisHTTPS.Addr().String())
+		req.Header.Set(authentication.AuthorizationHeader, bobBearerToken)
 		resp, err := clnt.Do(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(401))
@@ -949,7 +1090,7 @@ func clientHelloReq(addr string, target string, expectStatus int) {
 		Expect(err).NotTo(HaveOccurred())
 
 		req.Header[server.ClusterHeaderField] = []string{target}
-		test.AddJaneToken(req)
+		req.Header.Set(authentication.AuthorizationHeader, janeBearerToken)
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
@@ -1009,4 +1150,27 @@ func http2Srv(t *tunnel.Tunnel) {
 
 	Expect(httpsrv.Close()).ShouldNot(HaveOccurred())
 	wg.Wait()
+}
+
+type mockKeySet struct {
+	mock.Mock
+}
+
+// Test Verify method.
+func (t *mockKeySet) VerifySignature(ctx context.Context, jwt string) ([]byte, error) {
+	args := t.Called(ctx, jwt)
+	err := args.Get(1)
+	if err != nil {
+		return nil, err.(error)
+	}
+	return args.Get(0).([]byte), nil
+}
+
+func dex(keySet oidc.KeySet) authentication.Authenticator {
+	dex, _ := auth.NewDexAuthenticator("https://127.0.0.1:9443/dex", "tigera-manager", "email",
+		auth.WithKeySet(keySet),
+		auth.WithGroupsClaim("groups"),
+		auth.WithUsernamePrefix("-"),
+	)
+	return dex
 }

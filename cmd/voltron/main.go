@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/version"
@@ -18,8 +19,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
-	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
 )
 
@@ -67,6 +68,19 @@ type config struct {
 	KibanaBasePath               string `default:"/tigera-kibana" split_words:"true"`
 	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
 
+	// Dex settings
+	DexEnabled        bool   `default:"false" split_words:"true"`
+	DexURL            string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/" split_words:"true"`
+	DexJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
+	DexBasePath       string `default:"/dex/" split_words:"true"`
+	DexCABundlePath   string `default:"/etc/ssl/certs/tls-dex.crt" split_words:"true"`
+	DexIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
+	DexClientID       string `default:"tigera-manager" split_words:"true"`
+	DexUsernameClaim  string `default:"email" split_words:"true"`
+	DexUsernamePrefix string `split_words:"true"`
+	DexGroupsClaim    string `default:"groups" split_words:"true"`
+	DexGroupsPrefix   string `split_words:"true"`
+
 	// The DefaultForward parameters configure where connections from guardian should be forwarded to by default
 	ForwardingEnabled               bool          `default:"true" split_words:"true"`
 	DefaultForwardServer            string        `default:"tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
@@ -109,14 +123,26 @@ func main() {
 
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 
+	kubernetesAPITargets, err := regex.CompileRegexStrings([]string{
+		`^/api/?`,
+		`^/apis/?`,
+	})
+
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
+	}
+
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithExternalCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
+		server.WithKubernetesAPITargets(kubernetesAPITargets),
 	}
 
-	k8s := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
-	authn, err := authentication.ConfigureAuthenticator()
+	config := bootstrap.NewRestConfig(cfg.K8sConfigPath)
+	k8s := bootstrap.NewK8sClientWithConfig(config)
+
+	authn, err := authentication.New()
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to configure authenticator.")
 	}
@@ -144,6 +170,7 @@ func main() {
 		if err != nil {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
+
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithPublicAddr(cfg.PublicIP),
@@ -154,7 +181,7 @@ func main() {
 		)
 	}
 
-	targets, err := bootstrap.ProxyTargets([]bootstrap.Target{
+	targetList := []bootstrap.Target{
 		{
 			Path:         "/api/",
 			Dest:         cfg.K8sEndpoint,
@@ -188,7 +215,37 @@ func main() {
 			Dest:             cfg.NginxEndpoint,
 			AllowInsecureTLS: true,
 		},
-	})
+	}
+
+	if cfg.DexEnabled {
+
+		targetList = append(targetList, bootstrap.Target{
+			Path:         cfg.DexBasePath,
+			Dest:         cfg.DexURL,
+			CABundlePath: cfg.DexCABundlePath,
+		})
+
+		opts := []auth.DexOption{
+			auth.WithGroupsClaim(cfg.DexGroupsClaim),
+			auth.WithJWKSURL(cfg.DexJWKSURL),
+			auth.WithUsernamePrefix(cfg.DexUsernamePrefix),
+			auth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+		}
+
+		dex, err := auth.NewDexAuthenticator(
+			cfg.DexIssuer,
+			cfg.DexClientID,
+			cfg.DexUsernameClaim,
+			opts...)
+		if err != nil {
+			log.WithError(err).Panic("Unable to create dex authenticator")
+		}
+		// Make an aggregated authenticator that can deal with tokens from different issuers.
+		authn = auth.NewAggregateAuthenticator(dex, authn)
+
+	}
+
+	targets, err := bootstrap.ProxyTargets(targetList)
 
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")
@@ -202,6 +259,7 @@ func main() {
 
 	srv, err := server.New(
 		k8s,
+		config,
 		authn,
 		opts...,
 	)

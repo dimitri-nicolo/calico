@@ -84,6 +84,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			config,
 			authenticator,
 			opts...,
 		)

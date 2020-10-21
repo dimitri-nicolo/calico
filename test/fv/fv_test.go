@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
+	"k8s.io/client-go/rest"
 
 	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/client"
@@ -90,7 +91,7 @@ func (c *testClient) request(clusterID string, schema string, address string) (*
 	req, err := http.NewRequest("GET", schema+"://"+address+"/some/path", strings.NewReader("HELLO"))
 	Expect(err).NotTo(HaveOccurred())
 	req.Header[server.ClusterHeaderField] = []string{clusterID}
-	test.AddJaneToken(req)
+	req.Header.Set(authentication.AuthorizationHeader, "Bearer jane")
 	Expect(err).NotTo(HaveOccurred())
 	return req, err
 }
@@ -123,12 +124,12 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt sync.WaitGroup
 	)
 
-	clusterID := "cluster"
+	clusterID := "external-cluster"
 	clusterID2 := "other-cluster"
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	authenticator := authentication.NewFakeAuthenticator()
-	authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
+	authenticator.AddValidApiResponse("Bearer jane", "jane", []string{"developers"})
 	watchSync := make(chan error)
 
 	// client to be used to interact with voltron (mimic UI)
@@ -187,6 +188,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		voltron, err = server.New(
 			k8sAPI,
+			&rest.Config{BearerToken: "manager-token"},
 			authenticator,
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),

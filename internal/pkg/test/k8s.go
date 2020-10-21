@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"net/http"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -17,17 +16,6 @@ import (
 	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	calicofake "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
 	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-)
-
-const (
-	// Jane is a generic username to be used in testing
-	Jane = "jane"
-	// Developers is a generic group name to be used in testing
-	Developers = "developers"
-	// JaneBearerToken is the Bearer token associated with Jane
-	JaneBearerToken = "Bearer jane'sToken"
-	// BobBearerToken is the Bearer token associated with Bob
-	BobBearerToken = "Bearer bob'sToken"
 )
 
 type k8sFake = fake.Clientset
@@ -152,7 +140,7 @@ func (mc *managedClusters) Add(id, name string, annotations map[string]string, s
 			ResourceVersion: mc.versionStr(),
 			Annotations:     annotations,
 		},
-		Status:calicov3.ManagedClusterStatus{
+		Status: calicov3.ManagedClusterStatus{
 			Conditions: []calicov3.ManagedClusterStatusCondition{
 				{
 					Status: status,
@@ -387,14 +375,4 @@ func (c *K8sFakeClient) BreakWatcher() {
 
 	c.clusters.watched = make(chan struct{}, 1000)
 	c.clusters.StopWatcher()
-}
-
-// AddJaneToken adds JaneBearerToken on the request
-func AddJaneToken(req *http.Request) {
-	req.Header.Add("Authorization", JaneBearerToken)
-}
-
-// AddBobToken adds BobBearerToken on the request
-func AddBobToken(req *http.Request) {
-	req.Header.Add("Authorization", BobBearerToken)
 }

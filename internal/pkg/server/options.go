@@ -139,3 +139,12 @@ func WithDefaultForwardServer(serverName string, dialRetryAttempts int, dialRetr
 		return nil
 	}
 }
+
+// WithKubernetesAPITargets sets a whitelist of regex representing target paths
+// that target the kube (a)api server
+func WithKubernetesAPITargets(tgts []regexp.Regexp) Option {
+	return func(s *Server) error {
+		s.kubernetesAPITargets = tgts
+		return nil
+	}
+}
