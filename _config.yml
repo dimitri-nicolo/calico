@@ -64,6 +64,7 @@ imageNames:
   elasticsearch: tigera/elasticsearch
   license-agent: tigera/license-agent
   firewall-integration: tigera/firewall-integration
+  honeypod-controller: tigera/honeypod-controller
   prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
   configMapReload: quay.io/coreos/configmap-reload
   alertManager: quay.io/prometheus/alertmanager
@@ -147,6 +148,7 @@ defaults:
         elasticsearch: tigera/elasticsearch
         license-agent: tigera/license-agent
         firewall-integration: tigera/firewall-integration
+        honeypod-controller: tigera/honeypod-controller
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
         alertManager: quay.io/prometheus/alertmanager

@@ -1,0 +1,136 @@
+---                                                                                                                           
+layout: null                                                                     
+--- 
+
+---
+
+# Required RBAC:
+# - get/list workloadenpoints and pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: honeypod-controller 
+  namespace: tigera-intrusion-detection
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: tigera-intrusion-detection
+  name: honeypod-controller-role
+rules:
+  - apiGroups: ["projectcalico.org"]
+    resources: ["workloadendpoints"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list","get"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: honeypod-controller-binding
+subjects:
+  - kind: ServiceAccount
+    name: honeypod-controller 
+    namespace: tigera-intrusion-detection
+roleRef:
+  kind: ClusterRole
+  name: honeypod-controller-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# Packet Capture
+apiVersion: projectcalico.org/v3
+kind: PacketCapture
+metadata:
+  name: capture-honey
+  namespace: tigera-internal
+spec:
+  selector: all()
+
+---
+
+# The actual honeypod-controller deployment
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: honeypod-controller
+  namespace: tigera-intrusion-detection
+spec:
+  selector:
+    matchLabels:
+      app: honeypod-controller
+  template:
+    metadata:
+      labels:
+        app: honeypod-controller
+    spec:
+      serviceAccountName: honeypod-controller
+      imagePullSecrets:
+      - name: tigera-pull-secret
+      containers:
+      - name: controller 
+        imagePullPolicy: "IfNotPresent"
+        image: {{page.registry}}{% include component_image component="honeypod-controller" %}
+        env:
+        - name: ELASTIC_SCHEME
+          value: https
+        - name: ELASTIC_HOST
+          value: tigera-secure-es-http.tigera-elasticsearch.svc
+        - name: ELASTIC_PORT
+          value: "9200"
+        - name: ELASTIC_SSL_VERIFY
+          value: "true"
+        - name: ELASTIC_USER
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: tigera-ee-intrusion-detection-elasticsearch-access
+        - name: ELASTIC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: tigera-ee-intrusion-detection-elasticsearch-access
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: tigera-ee-intrusion-detection-elasticsearch-access
+        - name: ELASTIC_CA
+          value: /etc/ssl/elastic/ca.pem
+        - name: ES_CA_CERT
+          value: /etc/ssl/elastic/ca.pem
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - mountPath: /etc/ssl/elastic/
+          name: elastic-ca-cert-volume
+          readOnly: true
+        - mountPath: /pcap
+          name: pcap
+          readOnly: true
+        - mountPath: /snort
+          name: snort
+      volumes:
+      - name: elastic-ca-cert-volume
+        secret:
+          defaultMode: 420
+          items:
+          - key: tls.crt
+            path: ca.pem
+          secretName: tigera-secure-es-http-certs-public
+      - name: pcap
+        hostPath:
+          path: /var/log/calico/pcap/
+          type: Directory 
+      - name: snort
+        emptyDir: {}
+
+---
