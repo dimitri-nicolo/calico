@@ -9,14 +9,14 @@ data center, or between a workload and the Internet, without additional
 encapsulation.
 
 In the {{site.prodname}} approach, IP packets to or from a workload are routed and
-firewalled by the Linux routing table and iptables infrastructure on the
+firewalled by the Linux routing table and iptables  infrastructure on the
 workload’s host. For a workload that is sending packets, {{site.prodname}} ensures
 that the host is always returned as the next hop MAC address regardless
 of whatever routing the workload itself might configure. For packets
 addressed to a workload, the last IP hop is that from the destination
 workload’s host to the workload itself.
 
-![Calico datapath]({{site.url}}/images/calico-datapath.png)
+![Calico datapath]({{site.baseurl}}/images/calico-datapath.png)
 
 Suppose that IPv4 addresses for the workloads are allocated from a
 datacenter-private subnet of 10.65/16, and that the hosts have IP
@@ -53,20 +53,6 @@ asked to provision connectivity for a particular workload. A BGP client
 (such as BIRD) then notices those and distributes them – perhaps via a
 route reflector – to BGP clients running on other hosts, and hence the
 indirect routes appear also.
-
-## Bookended security
-
-The routing above in principle allows any workload in a data center to
-communicate with any other – but in general, an operator will want to
-restrict that; for example, so as to isolate customer A’s workloads from
-those of customer B. Therefore {{site.prodname}} also programs iptables on each
-host, to specify the IP addresses (and optionally ports etc.) that each
-workload is allowed to send to or receive from. This programming is
-‘bookended’ in that the traffic between workloads X and Y will be
-firewalled by both X’s host and Y’s host – this helps to keep unwanted
-traffic off the data center’s core network, and as a secondary defense
-in case it is possible for a rogue workload to compromise its local
-host.
 
 ## Is that all?
 
