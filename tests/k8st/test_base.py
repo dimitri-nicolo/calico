@@ -274,6 +274,7 @@ class TestBase(TestCase):
                 iterations_with_no_change += 1
                 if iterations_with_no_change == 4:
                     run("docker exec kind-control-plane conntrack -L", allow_fail=True)
+                    self.fail("calico-node DaemonSet update failed to make progress for 40s")
             else:
                 last_number = node_ds.status.updated_number_scheduled
                 iterations_with_no_change = 0
