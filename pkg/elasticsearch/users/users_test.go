@@ -127,7 +127,9 @@ var _ = Describe("ElasticseachUsers", func() {
 											Names: []string{
 												".tigera.ipset.managed-cluster",
 												"tigera_secure_ee_events.managed-cluster",
-												".tigera.domainnameset.managed-cluster"},
+												".tigera.domainnameset.managed-cluster",
+												".tigera.forwarderconfig.managed-cluster",
+											},
 											Privileges: []string{"all"},
 										},
 									},
@@ -278,7 +280,9 @@ var _ = Describe("ElasticseachUsers", func() {
 											Names: []string{
 												".tigera.ipset.cluster",
 												"tigera_secure_ee_events.cluster",
-												".tigera.domainnameset.cluster"},
+												".tigera.domainnameset.cluster",
+												".tigera.forwarderconfig.cluster",
+											},
 											Privileges: []string{"all"},
 										},
 									},

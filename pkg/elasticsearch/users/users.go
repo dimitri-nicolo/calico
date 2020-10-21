@@ -148,7 +148,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 								Names: []string{
 									indexPattern(".tigera.ipset", clusterName, ""),
 									indexPattern("tigera_secure_ee_events", clusterName, ""),
-									indexPattern(".tigera.domainnameset", clusterName, "")},
+									indexPattern(".tigera.domainnameset", clusterName, ""),
+									indexPattern(".tigera.forwarderconfig", clusterName, ""),
+								},
 								Privileges: []string{"all"},
 							},
 						},
@@ -200,7 +202,6 @@ func buildManagedUserPattern() []*regexp.Regexp {
 
 	return usersPattern
 }
-
 
 func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserName]elasticsearch.User {
 	return map[ElasticsearchUserName]elasticsearch.User{
