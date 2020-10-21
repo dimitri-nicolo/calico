@@ -522,6 +522,9 @@ class NetcatClientTCP(Pod):
         self.last_output = ""
 
     def can_connect(self, ip, port, command="nc"):
+        run("docker exec %s ip rule" % self.nodename, allow_fail=True)
+        run("docker exec %s ip r l table 250" % self.nodename, allow_fail=True)
+        run("docker exec %s ip r l table 249" % self.nodename, allow_fail=True)
         try:
             self.check_connected(ip, port, command)
             _log.info("'%s' connected, as expected", self.name)
