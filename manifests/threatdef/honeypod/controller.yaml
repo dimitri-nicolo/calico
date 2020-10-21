@@ -65,6 +65,10 @@ spec:
   selector:
     matchLabels:
       app: honeypod-controller
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   template:
     metadata:
       labels:
@@ -118,6 +122,12 @@ spec:
           readOnly: true
         - mountPath: /snort
           name: snort
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
       volumes:
       - name: elastic-ca-cert-volume
         secret:

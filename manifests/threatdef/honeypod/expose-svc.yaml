@@ -3,7 +3,6 @@ layout: null
 --- 
 
 ---
-
 # Honeypod Fake Service
 
 # Deployment:
@@ -22,6 +21,12 @@ spec:
       labels:
         app: tigera-internal-3
     spec:
+      hostNetwork: false
+      hostIPC: false
+      hostPID: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
       imagePullSecrets:
       - name: tigera-pull-secret
       containers:
@@ -30,7 +35,15 @@ spec:
         ports:
         - containerPort: 8888
         - containerPort: 443
-
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
 ---
 
 # Create two service, one unreachable, one debug
@@ -48,9 +61,7 @@ spec:
       targetPort: 8080
   selector:
     app: tigera-internal-3
-
 ---
-
 kind: Service
 apiVersion: v1
 metadata:
@@ -64,7 +75,6 @@ spec:
       protocol: TCP
   selector:
     app: tigera-internal-3
-
 ---
 
 # Global Alert Template and Global Alert for Fake Service access
@@ -79,9 +89,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
-
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
@@ -92,5 +100,4 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
-
 ---

@@ -3,7 +3,6 @@ layout: null
 --- 
 
 ---
-
 # Honeypod Vulnerable Service
 
 # Deployment:
@@ -22,6 +21,9 @@ spec:
       labels:
         app: tigera-internal-4
     spec:
+      hostNetwork: false
+      hostIPC: false
+      hostPID: false
       imagePullSecrets:
       - name: tigera-pull-secret
       securityContext:
@@ -35,7 +37,15 @@ spec:
         env:
         - name: MYSQL_ALLOW_EMPTY_PASSWORD 
           value: 'yes'
-
+        resources:
+          limits:
+            memory: 400Mi
+          requests:
+            cpu: 100m
+            memory: 400Mi
+        securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
 ---
 
 # Create Mysql service
@@ -53,7 +63,6 @@ spec:
       targetPort: 3306
   selector:
     app: tigera-internal-4
-
 ---
 
 # Global Alert Template and Global Alert for Vulnerable Service access
@@ -68,9 +77,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
-
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
@@ -81,5 +88,4 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
-
 ---

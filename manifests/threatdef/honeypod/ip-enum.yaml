@@ -3,8 +3,7 @@ layout: null
 --- 
 
 ---
-
-# Honeypod IP Enum
+# Honeypod IP Enumeration
 
 # Daemonset Deployment:
 apiVersion: apps/v1
@@ -21,12 +20,26 @@ spec:
       labels:
         app: tigera-internal-1
     spec:
+      hostNetwork: false
+      hostIPC: false
+      hostPID: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
       imagePullSecrets:
       - name: tigera-pull-secret
       containers:
       - name: tigera-internal-1
         image: quay.io/tigera/honeypod:v2.7.0
-
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
 ---
 
 # Global Alert Template and Global Alert for IP Enumeration
@@ -41,9 +54,7 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
-
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
@@ -54,7 +65,6 @@ spec:
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
-
 ---
 
 # Global Alert Template and Global Alert for IP Enumeration
@@ -72,9 +82,7 @@ spec:
   metric: count
   condition: gte
   threshold: 4
-
 ---
-
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
@@ -88,5 +96,4 @@ spec:
   metric: count
   condition: gte
   threshold: 4
-
 ---
