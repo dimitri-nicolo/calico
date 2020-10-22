@@ -35,24 +35,26 @@ class DiagsCollector(object):
         pass
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # Print out diagnostics for the test. These will go to screen
-        # on test failure.
-        _log.info("===================================================")
-        _log.info("============= COLLECTING DIAGS FOR TEST ===========")
-        _log.info("===================================================")
-        kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
-        for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
-            _log.info("")
-            calicoctl("get " + resource + " -o yaml")
-        nodes, _, _ = node_info()
-        for node in nodes:
-            _log.info("")
-            run("docker exec " + node + " ip r")
-        kubectl("logs -n kube-system -l k8s-app=calico-node",
-                allow_fail=True)
-        _log.info("===================================================")
-        _log.info("============= COLLECTED DIAGS FOR TEST ============")
-        _log.info("===================================================")
+        if exc_type is not None:
+            # Print out diagnostics for the test. These will go to screen
+            # on test failure.
+            _log.info("===================================================")
+            _log.info("============= COLLECTING DIAGS FOR TEST ===========")
+            _log.info("===================================================")
+            kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
+            for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
+                _log.info("")
+                calicoctl("get " + resource + " -o yaml")
+            nodes, _, _ = node_info()
+            for node in nodes:
+                _log.info("")
+                run("docker exec " + node + " ip r")
+            for pod_name in calico_node_pod_names():
+                kubectl("logs -n kube-system %s" % pod_name,
+                        allow_fail=True)
+            _log.info("===================================================")
+            _log.info("============= COLLECTED DIAGS FOR TEST ============")
+            _log.info("===================================================")
 
 def log_calico_node(node_ip):
     pod_name = run(" kubectl get pod -n kube-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
@@ -273,3 +275,8 @@ def stop_for_debug():
     _log.info("stop on file /code/stop")
     while os.path.isfile('/code/stop'):
         os.system("sleep 3")
+
+
+def calico_node_pod_names():
+    return kubectl("get po -n kube-system -l k8s-app=calico-node" +
+                   " -o jsonpath='{.items[*].metadata.name}'").split()
