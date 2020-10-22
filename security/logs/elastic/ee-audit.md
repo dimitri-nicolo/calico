@@ -60,8 +60,8 @@ Analytics, similar to the {{site.prodname}} resources above:
 - `NetworkPolicy` (Kubernetes/OpenShift)
 - `Endpoints`
 
-You may wish to audit resources beyond those involved in network policy.  Consult the [Kubernetes docs](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy), or
-look at [this function](https://github.com/kubernetes/kubernetes/blob/cc67ccfd7f4f0bc96d7f1c8e5fe8577821757d03/cluster/gce/gci/configure-helper.sh#L752)
+You may wish to audit resources beyond those involved in network policy.  Consult the [Kubernetes docs](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy){:target="_blank"}, or
+look at [this function](https://github.com/kubernetes/kubernetes/blob/cc67ccfd7f4f0bc96d7f1c8e5fe8577821757d03/cluster/gce/gci/configure-helper.sh#L752){:target="_blank"}
 which generates the GKE audit policy for inspiration.  Here is the sample policy which audits changes to `Pod`,
 `Namespace`, `ServiceAccount`, `Endpoints` and `NetworkPolicy` resources.
 

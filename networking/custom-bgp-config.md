@@ -9,8 +9,8 @@ Use customized BIRD configuration files to enable specialized use-cases.
 
 ### Concepts
 
-In {{site.prodname}}, BGP is handled by [BIRD](https://github.com/projectcalico/bird).
-The BIRD configurations are templated out through [confd](https://github.com/projectcalico/confd).
+In {{site.prodname}}, BGP is handled by [BIRD](https://github.com/projectcalico/bird){:target="_blank"}.
+The BIRD configurations are templated out through [confd](https://github.com/projectcalico/confd){:target="_blank"}.
 You can modify the BIRD configuration to use BIRD features which are not typically exposed using the
 default configuration provided with {{site.prodname}}.
 

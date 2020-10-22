@@ -62,7 +62,7 @@ including whether this is informed by TCP and UDP port numbers as well as source
 destination IP addresses, whether the decision is made per-packet, per-connection, or in
 some other way, and so on; and the details here have varied with Linux kernel version.
 For a clear account of the exact options and behaviors for different kernel versions,
-please see [this blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/).
+please see [this blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/){:target="_blank"}.
 
 #### Loopback IP addresses
 
@@ -76,7 +76,7 @@ goes down.
 #### BFD
 
 Bidirectional Forwarding Detection (BFD) is [a
-protocol](https://tools.ietf.org/html/rfc5880) that detects very quickly when forwarding
+protocol](https://tools.ietf.org/html/rfc5880){:target="_blank"} that detects very quickly when forwarding
 along a particular path stops working - whether that's because a link has broken
 somewhere, or some software component along the path.
 
@@ -86,14 +86,14 @@ cluster can quickly adjust to using the other available connectivity plane.
 #### Long lived graceful restart
 
 Long Lived Graceful Restart (LLGR) is [an extension for
-BGP](https://tools.ietf.org/html/draft-uttaro-idr-bgp-persistence-05) that handles link
+BGP](https://tools.ietf.org/html/draft-uttaro-idr-bgp-persistence-05){:target="_blank"} that handles link
 failure by lowering the preference of routes over that link.  This is a compromise between
 the base BGP behaviour - which is immediately to remove those routes - and traditional BGP
 Graceful Restart behaviour - which is not to change those routes at all, until some
 configured time has passed.
 
 For a dual ToR setup, LLGR is helpful, as explained in more detail by [this
-blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr), because:
+blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, because:
 
 -  If a link fails somewhere, the immediate preference lowering allows traffic to adjust
    immediately to use the other connectivity plane.
@@ -157,7 +157,7 @@ So for the first node in rack A, for example,
 #### Decide your ECMP usage policy
 
 The details and available options for how Linux uses ECMP routes have [historically varied
-with kernel version](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/).
+with kernel version](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/){:target="_blank"}.
 
 We recommend using a 4.17 or later kernel with `fib_multipath_hash_policy = 1`.  That
 gives load-balancing per-flow for both IPv4 and IPv6, based on a hash of the source and
@@ -265,7 +265,7 @@ resource.  The following settings are recommended for dual ToR configurations.
 
    > **Note**: For directly connected BGP peerings, BIRD provides two gateway computation
    > modes, ["direct" and
-   > "recursive"](https://bird.network.cz/?get_doc&v=16&f=bird-6.html#ss6.3).  "recursive"
+   > "recursive"](https://bird.network.cz/?get_doc&v=16&f=bird-6.html#ss6.3){:target="_blank"}.  "recursive"
    > is the default, but "direct" can give better results when the ToR also acts as the
    > route reflector (RR) for the rack.
    >

@@ -23,7 +23,7 @@ For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following
 may be used to specify the resource type on the CLI:
 `stagedglobalnetworkpolicy`, `stagedglobalnetworkpolicies`, `sgnp`, `sgnps`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/){:target="_blank"}, the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `stagedglobalnetworkpolicy.projectcalico.org`, `stagedglobalnetworkpolicies.projectcalico.org` and abbreviations such as
 `stagedglobalnetworkpolicy.p` and `stagedglobalnetworkpolicies.p`.

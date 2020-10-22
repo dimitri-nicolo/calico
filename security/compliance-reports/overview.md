@@ -217,7 +217,7 @@ To configure and schedule a compliance report, create a [GlobalReport]({{site.ba
 | --------------- | ------------------------------------------------------------ |
 | name            | Unique name for your report.                                 |
 | reportType      | One of the following predefined report types: `inventory`, `network-access`, `policy-audit`. |
-| schedule        | The start and end time of the report using [crontab format](https://en.wikipedia.org/wiki/Cron).  To allow for archiving, reports are generated approximately 30 minutes after the end time. A single report is limited to a maximum of two per hour. |
+| schedule        | The start and end time of the report using [crontab format](https://en.wikipedia.org/wiki/Cron){:target="_blank"}.  To allow for archiving, reports are generated approximately 30 minutes after the end time. A single report is limited to a maximum of two per hour. |
 | endpoints       | **Optional**. For inventory and network-access reports, specifies the endpoints to include in the report.  For the policy-audit report, restricts audit logs to include only policies that apply to the selected endpoints. If not specified, the report includes all endpoints and audit logs.   |
 | jobNodeSelector | **Optional**. Limits report generation jobs to specific nodes. |
 | suspend         | **Optional**. Suspends report generation. All in-flight reports will complete, and future scheduled reports are suspended. |

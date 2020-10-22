@@ -6,7 +6,7 @@ canonical_url: /security/logs/elastic/dns
 
 {{site.prodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.baseurl}}/security/domain-based-policy#trusted-dns-servers). The following table
 details the key/value pairs in the JSON blob, including their
-[Elasticsearch datatype](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html).
+[Elasticsearch datatype](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html){:target="_blank"}.
 This information should assist you in constructing queries.
 
 | Name                  | Datatype          | Description |

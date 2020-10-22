@@ -22,7 +22,7 @@ are the dashboards in the Manager UI. Data ingestion is temporarily paused and w
 up and running again.
 
 To retain data from your current installation (optional), ensure that the currently mounted persistent volumes 
-have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/).
+have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/){:target="_blank"}.
 Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
 the upgrade.
 

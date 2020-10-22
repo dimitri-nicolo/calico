@@ -119,7 +119,7 @@ The BGP client is responsible for:
     BGP route reflectors are often configured for large deployments rather than a standard BGP client. (Standard BGP requires that every BGP client be connected to every other BGP client in a mesh topology, which is difficult to maintain.) 
     For redundancy, you can seamlessly deploy multiple BGP route reflectors. Note that BGP route reflectors are involved only in control of the network: endpoint data does not passes through them. When the {{site.prodname}} BGP client advertises 
     routes from its FIB to the route reflector, the route reflector advertises those routes to the other nodes in the deployment.
-    
+
 
 ### confd
 

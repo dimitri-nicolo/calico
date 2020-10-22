@@ -25,7 +25,7 @@ This how-to guide uses the following {{ site.prodname }} features:
 
 #### Kubernetes CIS benchmarks
 
-As part of {{ site.prodname }} installation, each node runs a pod named compliance-benchmarker that executes Kubernetes CIS benchmarks every hour (default). We recommend that you review the CIS benchmark best practices for securing cluster component configurations here: [CIS benchmarks downloads](https://learn.cisecurity.org/benchmarks).
+As part of {{ site.prodname }} installation, each node runs a pod named compliance-benchmarker that executes Kubernetes CIS benchmarks every hour (default). We recommend that you review the CIS benchmark best practices for securing cluster component configurations here: [CIS benchmarks downloads](https://learn.cisecurity.org/benchmarks){:target="_blank"}.
 
 #### Configure Global Report
 
@@ -55,7 +55,7 @@ In the following example, we use a **GlobalReport** with CIS benchmark fields to
 
 | **Fields**           | **Description** |
 | -------------------- | --------------- |
-| schedule             | The start and end time of the report using [crontab format](https://en.wikipedia.org/wiki/Cron). To allow for archiving, reports are generated approximately 30 minutes after the end time. A single report is limited to a maximum of two per hour. |
+| schedule             | The start and end time of the report using [crontab format](https://en.wikipedia.org/wiki/Cron){:target="_blank"}. To allow for archiving, reports are generated approximately 30 minutes after the end time. A single report is limited to a maximum of two per hour. |
 | highThreshold        | **Optional**. Integer percentage value that determines the lower limit of passing tests to consider a node as healthy. Default: 100 |
 | medThreshold         | **Optional**. Integer percentage value that determines the lower limit of passing tests to consider a node as unhealthy. Default: 50 |
 | includeUnscoredTests | **Optional**. Boolean value that when false, applies a filter to exclude tests that are marked as “Unscored” by the CIS benchmark standard. If true, the tests will be included in the report. Default: true |
@@ -120,7 +120,7 @@ We recommend the following approach to CIS benchmark reports results:
 1. Download the Kubernetes CIS benchmarks and export your full CIS benchmark results in .csv format.
 1. In the compliance dashboard, review the “Top-Failed Tests” section to identify which tests are the most problematic.
 1. Cross reference the top-failed tests to identify which nodes are failing that test.
-1. Look up those tests in the [Kubernetes benchmark document](https://downloads.cisecurity.org/#/) and follow the remediation steps to resolve the failure.
+1. Look up those tests in the [Kubernetes benchmark document](https://downloads.cisecurity.org/#/){:target="_blank"} and follow the remediation steps to resolve the failure.
 1. Discuss with your infrastructure and security team if this remediation is viable within your organization.
   1. If so, update your nodes with the fix and ensure that the test passes on the next generation of the report.
   1. If the fix is not viable but is an acceptable risk to take within the organization, configure the report specification to exclude that test index so that it no longer shown in the report.

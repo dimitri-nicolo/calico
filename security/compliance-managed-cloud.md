@@ -46,7 +46,7 @@ Complete the following steps to configure Amazon EKS for compliance reporting:
 
 #### Enable audit logs in EKS
 
-Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.amazon.com/cloudwatch/).
+Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.amazon.com/cloudwatch/){:target="_blank"}.
 
 1. In the EKS management console, access your EKS cluster.
 1. Under **Logging**, click **Update**.
@@ -107,7 +107,7 @@ Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.
 
 In this step, you add AWS authentication information to enable {{site.prodname}} to get logs from the EKS Cloudwatch instance.
 
-Add a Secret with the name, `tigera-eks-log-forwarder-secret` in the namespace, `tigera-operator`, and the AWS [Security Credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) in the data section.
+Add a Secret with the name, `tigera-eks-log-forwarder-secret` in the namespace, `tigera-operator`, and the AWS [Security Credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html){:target="_blank"} in the data section.
 
 ```
 apiVersion: v1

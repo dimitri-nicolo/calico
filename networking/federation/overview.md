@@ -58,7 +58,7 @@ then Kubernetes will manage that service, populating the service endpoints from 
 
 Tigera Federated Services Controller is used alongside Federated Endpoint
 Identity to provide discovery of remote pods. It extends the standard Kubernetes service and endpoints functionality to
-provide federation of [Kubernetes endpoints](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#endpoints-v1-core) across all of the clusters.
+provide federation of [Kubernetes endpoints](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#endpoints-v1-core){:target="_blank"} across all of the clusters.
 
 Configuration of the Federated Services feature requires:
 - [Setting up a remote cluster configuration](./configure-rcc) for the remote cluster that will have endpoints federated.

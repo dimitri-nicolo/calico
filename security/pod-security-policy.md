@@ -44,7 +44,7 @@ Admission controllers in Kubernetes intercept requests to the Kubernetes API and
     curl -O {{ "/manifests/psp-guardian.yaml" | absolute_url }}
     ```
     
-    **PSPs for the third-party [ingress controller](https://docs.tigera.io/security/advanced-policy)**
+    **PSPs for the third-party [ingress controller](https://docs.tigera.io/security/advanced-policy){:target="_blank"}**
     ```bash
     curl -O {{ "/manifests/psp-ingress-collector.yaml" | absolute_url }}
     ```

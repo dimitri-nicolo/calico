@@ -72,17 +72,17 @@ The following orchestrators are supported to capture external IP address flow lo
 * OpenShift 3.11
 
 The following ingress controllers are supported:
-* [Kubernetes, Nginx](https://github.com/kubernetes/ingress-nginx)
-* [Nginx, Nginx](https://github.com/nginxinc/kubernetes-ingress)
+* [Kubernetes, Nginx](https://github.com/kubernetes/ingress-nginx){:target="_blank"}
+* [Nginx, Nginx](https://github.com/nginxinc/kubernetes-ingress){:target="_blank"}
 
 The following are required before starting to configure flow logs to trace external
 IP addresses:
 * {{site.prodname}} flow logs are running **with flow log aggregation level of 1 or 0**.
-  See [Felix configuration documentation for flowLogsFileAggregationKindForAllowed](https://docs.tigera.io/v2.5/reference/resources/felixconfig#spec)
+  See [Felix configuration documentation for flowLogsFileAggregationKindForAllowed](https://docs.tigera.io/v2.5/reference/resources/felixconfig#spec){:target="_blank"}
   for more details.
 * Ingress controllers/routers are running
 * (OpenShift only) Syslog is running as a container in your cluster with the proper
-  router configuration. See the [OpenShift Documentation](https://docs.openshift.com/container-platform/3.11/admin_guide/router.html#viewing-logs)
+  router configuration. See the [OpenShift Documentation](https://docs.openshift.com/container-platform/3.11/admin_guide/router.html#viewing-logs){:target="_blank"}
   for more details.
 
 Create a Kubernetes pull secret in the namespace your ingress controller or router syslog
@@ -183,20 +183,20 @@ the appropriate information to the ingress controller logs.
    ```
 
    **Kubernetes community-maintained NGINX ingress controller**
-   Set the [log-format-upstream](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#log-format-upstream)
+   Set the [log-format-upstream](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#log-format-upstream){:target="_blank"}
    variable in your ingress controller configuration configmap (see the
-   [Kubernetes community maintained NGINX ingress controller documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/)
+   [Kubernetes community maintained NGINX ingress controller documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/){:target="_blank"}
    for more details).
 
    **NGINX Inc-maintained NGINX ingress controller**
-   Set the [log-format](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md#logging)
+   Set the [log-format](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md#logging){:target="_blank"}
    variable in your ingress controller configuration configmap (see the
-   [NGINX Inc. ingress controller documentation](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md)
+   [NGINX Inc. ingress controller documentation](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md){:target="_blank"}
    for more details).
 
    **OpenShift router**
    In order to view OpenShift router logs, set up a syslog server (See the
-   [OpenShift documentation](https://docs.okd.io/3.11/admin_guide/router.html#viewing-logs)
+   [OpenShift documentation](https://docs.okd.io/3.11/admin_guide/router.html#viewing-logs){:target="_blank"}
    for more details). Once that is set up appropriately, add the above json
    template to the `ROUTER_SYSLOG_FORMAT` environment variable on your router.
 
@@ -208,7 +208,7 @@ the appropriate information to the ingress controller logs.
 
    **Kubernetes community-maintained NGINX ingress controller**
    If you are using the community maintained ingress controller, set
-   [access-log-path](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#access-log-path)
+   [access-log-path](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#access-log-path){:target="_blank"}
    in your configmap. Set this value to `/var/log/calico/ingress/ingress.log`
 
    > **Note**: Setting the access-log-path will reroute logs in NGINX from writing to stdout.
@@ -219,14 +219,14 @@ the appropriate information to the ingress controller logs.
    > specified log location. To have logs readable through the `kubectl log` command, you will
    > need to follow the same directions as the NGINX Inc-maintained NGINX ingress controller
    > but instead mount in your NGINX template according to the
-   > [Kubernetes community-maintained ingress controller documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/custom-template/).
+   > [Kubernetes community-maintained ingress controller documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/custom-template/){:target="_blank"}.
 
    **NGINX Inc-maintained NGINX ingress controller**
    If you are using the NGINX Inc maintained ingress controller, create a custom
    NGINX template in order to tell NGINX to log to a file. To do this, set
-   [main-template](https://github.com/nginxinc/kubernetes-ingress/blob/1f4ad601f8b94ce6767c43a3ae66e7caf00963bc/docs/configmap-and-annotations.md#snippets-and-custom-templates)
+   [main-template](https://github.com/nginxinc/kubernetes-ingress/blob/1f4ad601f8b94ce6767c43a3ae66e7caf00963bc/docs/configmap-and-annotations.md#snippets-and-custom-templates){:target="_blank"}
    in your configmap. Your new template should probably look similar to the
-   [mounted template](https://github.com/nginxinc/kubernetes-ingress/blob/8986c96331f3806172aa10ec6a0f773a630eee9c/internal/configs/version1/nginx.tmpl).
+   [mounted template](https://github.com/nginxinc/kubernetes-ingress/blob/8986c96331f3806172aa10ec6a0f773a630eee9c/internal/configs/version1/nginx.tmpl){:target="_blank"}.
    The only difference is that under each `access_log` line, another `access_log` line should be
    added pointing towards `/var/log/calico/ingress/ingress.log`.
 

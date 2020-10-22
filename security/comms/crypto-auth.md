@@ -228,7 +228,7 @@ such that {{site.prodname}} Manager receives a HTTPS (TLS) connection, not unenc
 
 If you require TLS termination at any of these proxy elements, you will need to
 
-  * use a proxy that supports transparent HTTP/2 proxying, for example, [Envoy](https://www.envoyproxy.io/)
+  * use a proxy that supports transparent HTTP/2 proxying, for example, [Envoy](https://www.envoyproxy.io/){:target="_blank"}
   * re-originate a TLS connection from your proxy to {{site.prodname}} Manager, as it expects TLS
 
 If you do not require TLS termination, configure your proxy to "pass thru" the TLS to {{site.prodname}} Manager.

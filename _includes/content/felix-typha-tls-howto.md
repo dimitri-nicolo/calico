@@ -37,11 +37,11 @@ cluster:
 
     -  `TyphaURISAN` unset.
 
-For a [SPIFFE](https://github.com/spiffe/spiffe)-compliant deployment you can
+For a [SPIFFE](https://github.com/spiffe/spiffe){:target="_blank"}-compliant deployment you can
 follow the same procedure as above, except:
 
 1.  Choose [SPIFFE
-    Identities](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity)
+    Identities](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity){:target="_blank"}
     to represent Felix and Typha.
 
 1.  When generating leaf certificates for Felix and Typha, put the relevant

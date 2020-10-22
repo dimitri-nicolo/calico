@@ -156,7 +156,7 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
    ```
 
    > **Note**: For details see the
-   > [Amazon VPC CNI Plugin Version 1.1](https://aws.amazon.com/blogs/opensource/vpc-cni-plugin-v1-1-available)
+   > [Amazon VPC CNI Plugin Version 1.1](https://aws.amazon.com/blogs/opensource/vpc-cni-plugin-v1-1-available){:target="_blank"}
    > release notes.
    {: .alert .alert-info}
 

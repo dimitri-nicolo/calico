@@ -18,7 +18,7 @@ cr_directory: manifests_cr
 ## Prerequisite
 
 Ensure that your Kubernetes cluster is running with open source Calico on the latest {{ calico_minor_version | append: '.x' }} release.
-If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/{{calico_minor_version_with_path}}/maintenance/kubernetes-upgrade) before continuing.
+If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/{{calico_minor_version_with_path}}/maintenance/kubernetes-upgrade){:target="_blank"} before continuing.
 
 {{site.prodname}} only supports clusters with a Kubernetes datastore.
 Please contact Tigera Support for assistance upgrading a cluster with an `etcdv3` datastore.

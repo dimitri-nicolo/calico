@@ -4,7 +4,7 @@ description: API for this Calico Enterprise resource.
 ---
 
 A staged kubernetes network policy resource (`StagedKubernetesNetworkPolicy`) represents a staged version
-of [Kubernetes network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies).
+of [Kubernetes network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies){:target="_blank"}.
 This is used to preview network behavior before actually enforcing the network policy. Once persisted, this
 will create a Kubernetes network policy backed by a {{site.prodname}}
 [network policy]({{site.baseurl}}/reference/resources/networkpolicy).
@@ -13,7 +13,7 @@ For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following
 may be used to specify the resource type on the CLI:
 `stagedkubernetesnetworkpolicy`, `stagedkubernetesnetworkpolicies`, `stagedkubernetespolicy`, `sknp`, `stagedkubernetespolicies`, `skpol`, `skpols`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/){:target="_blank"}, the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `stagedkubernetesnetworkpolicy.projectcalico.org`, `stagedkubernetesnetworkpolicies.projectcalico.org` and abbreviations such as
 `stagedkubernetesnetworkpolicy.p` and `stagedkubernetesnetworkpolicies.p`.
@@ -21,7 +21,7 @@ may be used to specify the resource type on the CLI:
 ### Sample YAML
 
 Below is a sample policy created from the example policy from the
-[Kubernetes NetworkPolicy documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/#the-networkpolicy-resource).
+[Kubernetes NetworkPolicy documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/#the-networkpolicy-resource){:target="_blank"}.
 The only difference between this policy and the example Kubernetes version is that the `apiVersion` and `kind` are changed
 to properly specify a staged Kubernetes network policy.
 
@@ -63,5 +63,5 @@ spec:
 ```
 
 ### Definition
-See the [Kubernetes NetworkPolicy documentation](https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#networkpolicyspec-v1-networking-k8s-io)
+See the [Kubernetes NetworkPolicy documentation](https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#networkpolicyspec-v1-networking-k8s-io){:target="_blank"}
 for more information.
