@@ -23,7 +23,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### About monitoring honeypods
 
-Honeypods can be optionally be monitored using a {{site.prodname}} controller that periodically polls selected honeypods for suspicious activity and scans its traffic. Alerts are generated in the Events tab of {{site.prodname}} Manager UI.
+Honeypods can optionally be monitored using a {{site.prodname}} controller that periodically polls selected honeypods for suspicious activity and scans its traffic. Alerts are generated in the Events tab of {{site.prodname}} Manager UI.
 
 The controller leverages the following:
 
