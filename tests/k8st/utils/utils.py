@@ -49,11 +49,20 @@ class DiagsCollector(object):
             for node in nodes:
                 _log.info("")
                 run("docker exec " + node + " ip r")
+                run("docker exec " + node + " ip l")
             for pod_name in calico_node_pod_names():
+                kubectl("exec -n kube-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
+                        allow_fail=True)
+                kubectl("exec -n kube-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % pod_name,
+                        allow_fail=True)
                 kubectl("logs -n kube-system %s" % pod_name,
                         allow_fail=True)
             _log.info("===================================================")
             _log.info("============= COLLECTED DIAGS FOR TEST ============")
+            _log.info("===================================================")
+        else:
+            _log.info("===================================================")
+            _log.info("========= TEST COMPLETED WITHOUT EXCEPTION ========")
             _log.info("===================================================")
 
 def log_calico_node(node_ip):
