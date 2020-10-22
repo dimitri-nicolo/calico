@@ -2,6 +2,7 @@ FROM ubuntu:18.04 as ubuntu
 RUN apt-get update && apt-get install -y ca-certificates
 
 FROM scratch
+USER root
 
 COPY --from=ubuntu /etc/ssl/certs /etc/ssl/certs
 # Ensure the /tmp directory exists in case glog wants to write to it
@@ -10,5 +11,4 @@ ADD bin/controller-amd64 /controller
 ADD bin/healthz-amd64 /healthz
 WORKDIR /
 
-USER 999
 ENTRYPOINT ["/controller"]

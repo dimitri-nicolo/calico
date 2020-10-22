@@ -32,6 +32,7 @@ import (
 	syncElastic "github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	feedsWatcher "github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
+	"github.com/tigera/intrusion-detection/controller/pkg/forwarder"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 )
 
@@ -181,7 +182,14 @@ func main() {
 		}
 	}
 
-	e, err := elastic.NewElastic(h, u, user, pass, indexSettings)
+	debugElastic := false
+	if elasticDebugFlag := os.Getenv("ELASTIC_DEBUG"); elasticDebugFlag != "" {
+		if debugElastic, err = strconv.ParseBool(elasticDebugFlag); err != nil {
+			panic("ELASTIC_DEBUG must be a valid boolean")
+		}
+	}
+
+	e, err := elastic.NewElastic(h, u, user, pass, indexSettings, debugElastic)
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elastic")
 	}
@@ -224,6 +232,17 @@ func main() {
 	if os.Getenv("DISABLE_ALERTS") != "yes" {
 		a2.Run(ctx)
 		defer a2.Close()
+	}
+
+	enableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
+	if err != nil {
+		panic("IDS_ENABLE_EVENT_FORWARDING must be a valid boolean")
+	} else {
+		if enableForwarding {
+			f := forwarder.NewEventForwarder("eventforwarder-1", e)
+			f.Run(ctx)
+			defer f.Close()
+		}
 	}
 
 	hs := health.NewServer(health.Pingers{s, a, a2}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)

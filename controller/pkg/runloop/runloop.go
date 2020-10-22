@@ -92,7 +92,7 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 
 	var done bool
 	cond := sync.NewCond(&sync.Mutex{})
-	// This ensures that the f();wait loop always terminates.
+	// This ensures that the f() wait loop always terminates.
 	defer func() {
 		done = true
 		cond.L.Lock()

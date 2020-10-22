@@ -17,6 +17,7 @@ import (
 
 	"github.com/araddon/dateparse"
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -31,6 +32,7 @@ const (
 	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
 	EventIndexPattern         = "tigera_secure_ee_events.%s"
 	AuditIndexPattern         = "tigera_secure_ee_audit_*.%s.*"
+	ForwarderConfigIndex      = ".tigera.forwarderconfig" // ForwarderConfigIndex is an index for maintaining internal state for the event forwarder
 	WatchIndex                = ".watches"
 	WatchNamePrefixPattern    = "tigera_secure_ee_watch.%s."
 	QuerySize                 = 1000
@@ -90,25 +92,29 @@ func DefaultIndexSettings() IndexSettings {
 }
 
 type Elastic struct {
-	c                           *elastic.Client
-	url                         *url.URL
-	ipSetMappingCreated         chan struct{}
-	domainNameSetMappingCreated chan struct{}
-	eventMappingCreated         chan struct{}
-	elasticIsAlive              bool
-	cancel                      context.CancelFunc
-	once                        sync.Once
-	indexSettings               IndexSettings
+	c                             *elastic.Client
+	url                           *url.URL
+	ipSetMappingCreated           chan struct{}
+	domainNameSetMappingCreated   chan struct{}
+	eventMappingCreated           chan struct{}
+	forwarderConfigMappingCreated chan struct{}
+	elasticIsAlive                bool
+	cancel                        context.CancelFunc
+	once                          sync.Once
+	indexSettings                 IndexSettings
 }
 
-func NewElastic(h *http.Client, url *url.URL, username, password string, indexSettings IndexSettings) (*Elastic, error) {
+func NewElastic(h *http.Client, url *url.URL, username, password string, indexSettings IndexSettings, debug bool) (*Elastic, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
 		elastic.SetErrorLog(log.StandardLogger()),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false),
-		//elastic.SetTraceLog(log.StandardLogger()),
+	}
+	// Enable debug (trace-level) logging for the Elastic client library we use
+	if debug {
+		options = append(options, elastic.SetTraceLog(log.StandardLogger()))
 	}
 	if username != "" {
 		options = append(options, elastic.SetBasicAuth(username, password))
@@ -118,12 +124,13 @@ func NewElastic(h *http.Client, url *url.URL, username, password string, indexSe
 		return nil, err
 	}
 	e := &Elastic{
-		c:                           c,
-		url:                         url,
-		ipSetMappingCreated:         make(chan struct{}),
-		domainNameSetMappingCreated: make(chan struct{}),
-		eventMappingCreated:         make(chan struct{}),
-		indexSettings:               indexSettings,
+		c:                             c,
+		url:                           url,
+		ipSetMappingCreated:           make(chan struct{}),
+		domainNameSetMappingCreated:   make(chan struct{}),
+		eventMappingCreated:           make(chan struct{}),
+		forwarderConfigMappingCreated: make(chan struct{}),
+		indexSettings:                 indexSettings,
 	}
 
 	return e, nil
@@ -139,6 +146,7 @@ func (e *Elastic) Run(ctx context.Context) {
 				}).Error("Could not create index")
 			}
 		}()
+
 		go func() {
 			if err := e.createOrUpdateIndex(ctx, DomainNameSetIndex, domainNameSetMapping, e.domainNameSetMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
@@ -151,6 +159,16 @@ func (e *Elastic) Run(ctx context.Context) {
 			if err := e.createOrUpdateIndex(ctx, EventIndex, EventMapping, e.eventMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"index": EventIndex,
+				}).Error("Could not create index")
+			}
+		}()
+
+		// We create the index ForwarderConfigIndex regardless of whether the event forwarder is enabled or not (so that it's
+		// available when needed).
+		go func() {
+			if err := e.createOrUpdateIndex(ctx, ForwarderConfigIndex, forwarderConfigMapping, e.forwarderConfigMappingCreated); err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"index": ForwarderConfigIndex,
 				}).Error("Could not create index")
 			}
 		}()
@@ -512,6 +530,85 @@ func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterf
 	}
 	_, err := e.c.Index().Index(EventIndex).Id(f.ID()).BodyJson(f).Do(ctx)
 	return err
+}
+
+// GetSecurityEvents retrieves a listing of security events from ES sorted in ascending order,
+// where each events time falls within the range given by start and end time.
+func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time) ([]db.SecurityEvent, error) {
+	l := log.WithFields(logrus.Fields{"func": "GetSecurityEvents"})
+	searchResult, err := e.c.Search().
+		Index(EventIndex).
+		Query(elastic.NewRangeQuery("time").Gte(start).Lte(end)). // query for events within the specified time range
+		Sort("time", true).                                       // sort by "time" field, ascending order (oldest events first)
+		From(0).Size(10000).                                      // we want all events from the time range (avoid pagination)
+		Do(ctx)                                                   // execute
+
+	if err != nil {
+		return nil, err
+	}
+
+	l.Debugf("Query took %d milliseconds", searchResult.TookInMillis)
+	l.Debugf("Found a total of %d security events", searchResult.TotalHits())
+
+	var events []db.SecurityEvent
+	if searchResult.Hits.TotalHits.Value > 0 {
+		// We are concerned mainly with getting the raw JSON of each event
+		for _, hit := range searchResult.Hits.Hits {
+			l.Debugf("Adding security event with id[%s]", hit.Id)
+			events = append(events, db.SecurityEvent{
+				Data: hit.Source,
+				ID:   hit.Id,
+			})
+		}
+	}
+
+	return events, nil
+}
+
+// PutForwarderConfig saves the given ForwarderConfig object back to the datastore.
+func (e *Elastic) PutForwarderConfig(ctx context.Context, id string, f *db.ForwarderConfig) error {
+	l := log.WithFields(logrus.Fields{"func": "PutForwarderConfig"})
+	// Wait for the SecurityEvent Mapping to be created
+	if err := util.WaitForChannel(ctx, e.forwarderConfigMappingCreated, CreateIndexWaitTimeout); err != nil {
+		return err
+	}
+	l.Debugf("Save config with id[%s] content [%+v]", id, f)
+	resp, err := e.c.Index().Index(ForwarderConfigIndex).Id(id).BodyJson(f).Do(ctx)
+	l.Debugf("Save config response [%+v]", resp)
+	return err
+}
+
+// GetForwarderConfig retrieves the forwarder config (which will be a singleton).
+func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.ForwarderConfig, error) {
+	l := log.WithFields(logrus.Fields{"func": "GetForwarderConfig"})
+	l.Debugf("Search for config with id[%s]", id)
+
+	searchResult, err := e.c.Search().
+		Index(ForwarderConfigIndex).
+		Query(elastic.NewTermQuery("_id", id)). // query for the singleton doc by ID
+		From(0).Size(1).                        // retrieve the single document containing the forwarder config
+		Do(ctx)                                 // execute
+
+	if err != nil {
+		return nil, err
+	}
+
+	l.Debugf("Query took %d milliseconds", searchResult.TookInMillis)
+	l.Debugf("Found a total of %d forwarder config", searchResult.TotalHits())
+
+	if searchResult.Hits.TotalHits.Value > 0 {
+		for _, hit := range searchResult.Hits.Hits {
+			l.Debugf("Selecting forwarder config with id[%s]", hit.Id)
+			var config db.ForwarderConfig
+			err := json.Unmarshal(hit.Source, &config)
+			if err != nil {
+				return nil, err
+			}
+			return &config, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func (e *Elastic) GetDatafeeds(ctx context.Context, feedIDs ...string) ([]DatafeedSpec, error) {

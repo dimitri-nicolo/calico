@@ -5,6 +5,7 @@ package db
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 type MockEvents struct {
@@ -22,4 +23,16 @@ func (m *MockEvents) PutSecurityEvent(ctx context.Context, l SecurityEventInterf
 	}
 	m.Events = append(m.Events, l)
 	return nil
+}
+
+func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time) ([]SecurityEvent, error) {
+	return []SecurityEvent{}, nil
+}
+
+func (m *MockEvents) PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error {
+	return nil
+}
+
+func (m *MockEvents) GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error) {
+	return nil, nil
 }
