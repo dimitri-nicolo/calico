@@ -208,7 +208,7 @@ def run(command, logerr=True, allow_fail=False, allow_codes=[]):
         _log.info("Output:\n%s", out)
     except subprocess.CalledProcessError as e:
         if logerr:
-            _log.exception("Failure output:\n%s", e.output)
+            _log.info("Failure output:\n%s", e.output)
         if not (allow_fail or e.returncode in allow_codes):
             raise
     return out
