@@ -31,21 +31,21 @@ func TestBpfProgramLoaderWithMultipleSections(t *testing.T) {
 	RegisterTestingT(t)
 
 	fileName := "../../bpf-gpl/ut/loader_test_with_multiple_sections.o"
-	err, elfFile, fp := elf.ValidateElfFile(fileName)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(elfFile).NotTo(BeNil())
-	Expect(fp).NotTo(BeNil())
+	loader := elf.NewLoader(fileName)
+	Expect(loader).NotTo(BeNil())
 
-	err, license := elf.ReadLicense(elfFile)
+	eInfo := loader.ElfInfo()
+	err := eInfo.ReadElfFile()
+	Expect(err).NotTo(HaveOccurred())
+
+	err, license := eInfo.ReadLicense()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(license).To(Equal("GPL"))
 
-	loader := elf.NewLoader()
-	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(0))
 
-	err = loader.Load(fileName)
+	err = loader.Load()
 	Expect(err).NotTo(HaveOccurred())
 
 	programMap := loader.Programs()
@@ -61,42 +61,24 @@ func TestBpfProgramLoaderWithoutRelocation(t *testing.T) {
 	RegisterTestingT(t)
 
 	fileName := "../../bpf-gpl/ut/loader_test_without_relocation.o"
-	err, elfFile, fp := elf.ValidateElfFile(fileName)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(elfFile).NotTo(BeNil())
-	Expect(fp).NotTo(BeNil())
-
-	err, license := elf.ReadLicense(elfFile)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(license).To(Equal("GPL"))
-
-	loader := elf.NewLoader()
+	loader := elf.NewLoader(fileName)
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(0))
 
-	err = loader.Load(fileName)
+	err := loader.Load()
 	Expect(err).NotTo(HaveOccurred())
 
 	programMap := loader.Programs()
 	Expect(len(programMap)).To(Equal(1))
 	_, ok := programMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
-
 }
 
 func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
 	RegisterTestingT(t)
 
 	fileName := "../../bpf-gpl/ut/loader_test_multiple_maps.o"
-	err, elfFile, fp := elf.ValidateElfFile(fileName)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(elfFile).NotTo(BeNil())
-	Expect(fp).NotTo(BeNil())
-
-	err, license := elf.ReadLicense(elfFile)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(license).To(Equal("GPL"))
 
 	err, testHashMap := CreateTestMap("cali_test_map1", "hash", 4, 8, 511000, unix.BPF_F_NO_PREALLOC)
 	Expect(err).NotTo(HaveOccurred())
@@ -104,12 +86,12 @@ func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
 	err, testPerfMap := CreateTestMap("cali_test_map2", "hash", 4, 4, 511000, unix.BPF_F_NO_PREALLOC)
 	Expect(err).NotTo(HaveOccurred())
 
-	loader := elf.NewLoader(testHashMap, testPerfMap)
+	loader := elf.NewLoader(fileName, testHashMap, testPerfMap)
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(2))
 
-	err = loader.Load(fileName)
+	err = loader.Load()
 	Expect(err).NotTo(HaveOccurred())
 
 	programMap := loader.Programs()
@@ -122,22 +104,14 @@ func TestBpfProgramLoaderWithSingleMap(t *testing.T) {
 	RegisterTestingT(t)
 
 	fileName := "../../bpf-gpl/ut/loader_test_single_map.o"
-	err, elfFile, fp := elf.ValidateElfFile(fileName)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(elfFile).NotTo(BeNil())
-	Expect(fp).NotTo(BeNil())
-
-	err, license := elf.ReadLicense(elfFile)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(license).To(Equal("GPL"))
 
 	err, testMap := CreateTestMap("cali_test_kp", "hash", 4, 8, 511000, unix.BPF_F_NO_PREALLOC)
 	Expect(err).NotTo(HaveOccurred())
-	loader := elf.NewLoader(testMap)
+	loader := elf.NewLoader(fileName, testMap)
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(1))
-	err = loader.Load(fileName)
+	err = loader.Load()
 	Expect(err).NotTo(HaveOccurred())
 
 	programMap := loader.Programs()

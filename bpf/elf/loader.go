@@ -34,6 +34,7 @@ import (
 type Loader struct {
 	programs map[string]*ProgramInfo
 	mapFds   map[string]bpf.MapFD
+	eInfo    elfInfo
 }
 
 type ProgramInfo struct {
@@ -41,7 +42,13 @@ type ProgramInfo struct {
 	Type uint32
 }
 
-func NewLoader(maps ...bpf.Map) *Loader {
+type elfInfo struct {
+	elfFile  *elf.File
+	filePtr  *os.File
+	fileName string
+}
+
+func NewLoader(fileName string, maps ...bpf.Map) *Loader {
 	BpfLoader := &Loader{
 		programs: make(map[string]*ProgramInfo),
 		mapFds:   make(map[string]bpf.MapFD),
@@ -49,6 +56,7 @@ func NewLoader(maps ...bpf.Map) *Loader {
 	for _, pinnedMap := range maps {
 		BpfLoader.mapFds[pinnedMap.GetName()] = pinnedMap.MapFD()
 	}
+	BpfLoader.eInfo.fileName = fileName
 	return BpfLoader
 }
 
@@ -58,6 +66,10 @@ func (l *Loader) MapFD(mapName string) (bpf.MapFD, error) {
 		return fd, nil
 	}
 	return 0, errors.Errorf("Map FD not found")
+}
+
+func (l *Loader) ElfInfo() *elfInfo {
+	return &(l.eInfo)
 }
 
 func (l *Loader) GetFDMap() map[string]bpf.MapFD {
@@ -70,7 +82,8 @@ func (l *Loader) Programs() map[string]*ProgramInfo {
 
 // Read the license section and return the license string which
 // is needed for loading the BPF program
-func ReadLicense(file *elf.File) (error, string) {
+func (e *elfInfo) ReadLicense() (error, string) {
+	file := e.elfFile
 	lsec := file.Section("license")
 	if lsec != nil {
 		data, err := lsec.Data()
@@ -84,9 +97,10 @@ func ReadLicense(file *elf.File) (error, string) {
 
 // Get the relocation offset and the name of the map whose FD needs to be added to the
 // BPF instruction
-func GetMapRelocations(data []byte, file *elf.File) (error, map[uint64]string) {
+func (e *elfInfo) GetMapRelocations(data []byte) (error, map[uint64]string) {
 	var symbol elf.Symbol
 	var symMap map[uint64]string
+	file := e.elfFile
 	symbols, err := file.Symbols()
 	if err != nil {
 		return err, nil
@@ -116,15 +130,15 @@ func GetMapRelocations(data []byte, file *elf.File) (error, map[uint64]string) {
 }
 
 // Relocate the imm value in the BPF instruction with map fd
-func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
-	err, symMap := GetMapRelocations(data, file)
+func (e *elfInfo) relocate(data, rdata []byte, bpfMap map[string]bpf.MapFD) error {
+	err, symMap := e.GetMapRelocations(data)
 	if err != nil {
 		return err
 	}
 	for offset, mapName := range symMap {
-		fd, err := l.MapFD(mapName)
-		if err != nil {
-			return err
+		fd, ok := bpfMap[mapName]
+		if ok != true {
+			return errors.Errorf("Map FD not found")
 		}
 		err = asm.RelocateBpfInsn(uint32(fd), rdata, offset)
 		if err != nil {
@@ -135,25 +149,28 @@ func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
 }
 
 // Basic validation of the ELF file
-func ValidateElfFile(filename string) (error, *elf.File, *os.File) {
+func (e *elfInfo) ReadElfFile() error {
 	var fileReader io.ReaderAt
 	var file *elf.File
-	freader, err := os.Open(filename)
+	freader, err := os.Open(e.fileName)
 	if err != nil {
-		return errors.Errorf("Error opening file"), nil, nil
+		return errors.Errorf("Error opening file")
 	}
 	fileReader = freader
 	file, err = elf.NewFile(fileReader)
 	if err != nil {
-		return errors.Errorf("Error reading elf file"), nil, nil
+		return errors.Errorf("Error reading elf file")
 	}
 	if file.Class != elf.ELFCLASS64 {
-		return errors.Errorf("Unsupported file format"), nil, nil
+		return errors.Errorf("Unsupported file format")
 	}
-	return nil, file, freader
+	e.elfFile = file
+	e.filePtr = freader
+	return nil
 }
 
-func GetRelocationSectionData(sec *elf.Section, file *elf.File) ([]byte, []byte, *elf.Section, error) {
+func (e *elfInfo) GetRelocationSectionData(sec *elf.Section) ([]byte, []byte, *elf.Section, error) {
+	file := e.elfFile
 	if sec.Type == elf.SHT_REL {
 		data, err := sec.Data()
 		if err != nil {
@@ -178,30 +195,32 @@ func GetRelocationSectionData(sec *elf.Section, file *elf.File) ([]byte, []byte,
 	return nil, nil, nil, nil
 }
 
-func (l *Loader) Load(filename string) error {
+func (l *Loader) Load() error {
 	var err error
-	err, file, fp := ValidateElfFile(filename)
-	defer fp.Close()
+	eInfo := l.ElfInfo()
+	err = eInfo.ReadElfFile()
+	defer eInfo.filePtr.Close()
 	if err != nil {
 		return err
 	}
-	err, license := ReadLicense(file)
+	err, license := eInfo.ReadLicense()
 	if err != nil {
 		return errors.Errorf("Error reading license")
 	}
+	file := eInfo.elfFile
 	loaded := make([]bool, len(file.Sections))
 	for i, sec := range file.Sections {
 		if loaded[i] == true {
 			continue
 		}
-		data, relData, relocSec, err := GetRelocationSectionData(sec, file)
+		data, relData, relocSec, err := eInfo.GetRelocationSectionData(sec)
 		if err != nil {
 			return errors.Errorf("Error handling relocation section")
 		} else {
 			if data == nil && relData == nil && relocSec == nil {
 				continue
 			}
-			err = l.Relocate(data, relData, file)
+			err = eInfo.relocate(data, relData, l.GetFDMap())
 			if err != nil {
 				return errors.Errorf("Error handling relocation section")
 			}
