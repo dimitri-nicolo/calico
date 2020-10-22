@@ -35,6 +35,7 @@ COPY --from=vimagick/snort /var/log/snort/ /var/log/snort/
 
 COPY snort.conf /etc/snort/snort.conf
 COPY local.rules /etc/snort/rules/local.rules
+COPY community.rules /etc/snort/rules/community.rules
 
 COPY bin/controller-amd64 /controller
 
