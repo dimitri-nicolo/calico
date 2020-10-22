@@ -257,6 +257,12 @@ class TestBase(TestCase):
         api.replace_namespaced_daemon_set(ds, ns, node_ds)
 
         # Wait until the DaemonSet reports that all nodes have been updated.
+        # In the past we've seen that the calico-node on kind-control-plane can
+        # hang, in a not Ready state, for about 15 minutes.  Here we want to
+        # detect in case that happens again, and fail the test case if so.  We
+        # do that by querying the number of nodes that have been updated, every
+        # 10s, and failing the test if that number does not change for 4 cycles
+        # i.e. for 40s.
         last_number = 0
         iterations_with_no_change = 0
         while True:
