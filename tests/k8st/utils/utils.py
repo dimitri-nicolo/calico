@@ -25,6 +25,8 @@ import time
 _log = logging.getLogger(__name__)
 
 ROUTER_IMAGE = os.getenv("ROUTER_IMAGE", "calico/bird:latest")
+K8ST_RIG = os.getenv("K8ST_RIG", "")
+DOCKER_RUN_NET_ARG = "--net=kind" if K8ST_RIG == "vanilla" else ""
 
 
 # Helps with printing diags after a test.
@@ -33,24 +35,35 @@ class DiagsCollector(object):
         pass
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # Print out diagnostics for the test. These will go to screen
-        # on test failure.
-        _log.info("===================================================")
-        _log.info("============= COLLECTING DIAGS FOR TEST ===========")
-        _log.info("===================================================")
-        kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
-        for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
-            _log.info("")
-            calicoctl("get " + resource + " -o yaml")
-        nodes, _, _ = node_info()
-        for node in nodes:
-            _log.info("")
-            run("docker exec " + node + " ip r")
-        kubectl("logs -n kube-system -l k8s-app=calico-node",
-                allow_fail=True)
-        _log.info("===================================================")
-        _log.info("============= COLLECTED DIAGS FOR TEST ============")
-        _log.info("===================================================")
+        if exc_type is not None:
+            # Print out diagnostics for the test. These will go to screen
+            # on test failure.
+            _log.info("===================================================")
+            _log.info("============= COLLECTING DIAGS FOR TEST ===========")
+            _log.info("===================================================")
+            kubectl("get deployments,pods,svc,endpoints --all-namespaces -o wide")
+            for resource in ["node", "bgpconfig", "bgppeer", "gnp", "felixconfig"]:
+                _log.info("")
+                calicoctl("get " + resource + " -o yaml")
+            nodes, _, _ = node_info()
+            for node in nodes:
+                _log.info("")
+                run("docker exec " + node + " ip r")
+                run("docker exec " + node + " ip l")
+            for pod_name in calico_node_pod_names():
+                kubectl("exec -n kube-system %s -- cat /etc/calico/confd/config/bird_aggr.cfg" % pod_name,
+                        allow_fail=True)
+                kubectl("exec -n kube-system %s -- cat /etc/calico/confd/config/bird_ipam.cfg" % pod_name,
+                        allow_fail=True)
+                kubectl("logs -n kube-system %s" % pod_name,
+                        allow_fail=True)
+            _log.info("===================================================")
+            _log.info("============= COLLECTED DIAGS FOR TEST ============")
+            _log.info("===================================================")
+        else:
+            _log.info("===================================================")
+            _log.info("========= TEST COMPLETED WITHOUT EXCEPTION ========")
+            _log.info("===================================================")
 
 def log_calico_node(node_ip):
     pod_name = run(" kubectl get pod -n kube-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
@@ -61,7 +74,11 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
     run("df -h")
 
     # Setup external node: use privileged mode for setting routes.
-    run("docker run -d --privileged --name %s %s" % (name, ROUTER_IMAGE))
+    run("docker run -d --privileged %s --name %s %s" % (
+        DOCKER_RUN_NET_ARG,
+        name,
+        ROUTER_IMAGE)
+    )
 
     # Check how much space there is inside the container.  We may need
     # to retry this, as it may take a while for the image to download
@@ -191,7 +208,7 @@ def run(command, logerr=True, allow_fail=False, allow_codes=[]):
         _log.info("Output:\n%s", out)
     except subprocess.CalledProcessError as e:
         if logerr:
-            _log.exception("Failure output:\n%s", e.output)
+            _log.info("Failure output:\n%s", e.output)
         if not (allow_fail or e.returncode in allow_codes):
             raise
     return out
@@ -267,3 +284,8 @@ def stop_for_debug():
     _log.info("stop on file /code/stop")
     while os.path.isfile('/code/stop'):
         os.system("sleep 3")
+
+
+def calico_node_pod_names():
+    return kubectl("get po -n kube-system -l k8s-app=calico-node" +
+                   " -o jsonpath='{.items[*].metadata.name}'").split()

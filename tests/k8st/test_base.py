@@ -22,6 +22,7 @@ from unittest import TestCase
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
+from utils.utils import DOCKER_RUN_NET_ARG
 from utils.utils import retry_until_success, run, kubectl
 
 logger = logging.getLogger(__name__)
@@ -256,6 +257,14 @@ class TestBase(TestCase):
         api.replace_namespaced_daemon_set(ds, ns, node_ds)
 
         # Wait until the DaemonSet reports that all nodes have been updated.
+        # In the past we've seen that the calico-node on kind-control-plane can
+        # hang, in a not Ready state, for about 15 minutes.  Here we want to
+        # detect in case that happens again, and fail the test case if so.  We
+        # do that by querying the number of nodes that have been updated, every
+        # 10s, and failing the test if that number does not change for 4 cycles
+        # i.e. for 40s.
+        last_number = 0
+        iterations_with_no_change = 0
         while True:
             time.sleep(10)
             node_ds = api.read_namespaced_daemon_set_status("calico-node", "kube-system")
@@ -264,6 +273,17 @@ class TestBase(TestCase):
                       node_ds.status.desired_number_scheduled)
             if node_ds.status.updated_number_scheduled == node_ds.status.desired_number_scheduled:
                 break
+            if node_ds.status.updated_number_scheduled == last_number:
+                iterations_with_no_change += 1
+                if iterations_with_no_change == 4:
+                    run("docker exec kind-control-plane conntrack -L", allow_fail=True)
+                    self.fail("calico-node DaemonSet update failed to make progress for 40s")
+            else:
+                last_number = node_ds.status.updated_number_scheduled
+                iterations_with_no_change = 0
+
+        # Wait until all calico-node pods are ready.
+        kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n kube-system --timeout=300s")
 
     def scale_deployment(self, deployment, ns, replicas):
         return kubectl("scale deployment %s -n %s --replicas %s" %
@@ -279,7 +299,11 @@ TestBase.dual_tor = False
 class Container(object):
 
     def __init__(self, image, args, flags=""):
-        self.id = run("docker run --rm -d %s %s %s" % (flags, image, args)).strip().split("\n")[-1].strip()
+        self.id = run("docker run --rm -d %s %s %s %s" % (
+            DOCKER_RUN_NET_ARG,
+            flags,
+            image,
+            args)).strip().split("\n")[-1].strip()
         self._ip = None
 
     def kill(self):
@@ -321,16 +345,14 @@ class Pod(object):
 %s
 EOF
 """ % yaml)
-        elif annotations:
-            # Caller wants specified image, plus annotations.
+        else:
+            # Build YAML with specified namespace, name and image.
             pod = {
                 "apiVersion": "v1",
                 "kind": "Pod",
                 "metadata": {
-                    "annotations": annotations,
                     "name": name,
                     "namespace": ns,
-                    "labels": labels,
                 },
                 "spec": {
                     "containers": [
@@ -344,13 +366,15 @@ EOF
             }
             if node:
                 pod["spec"]["nodeName"] = node
+            if annotations:
+                pod["metadata"]["annotations"] = annotations
+            if labels:
+                pod["metadata"]["labels"] = labels
             kubectl("""apply -f - <<'EOF'
 %s
 EOF
 """ % json.dumps(pod))
-        else:
-            # Caller just wants the specified image.
-            kubectl("run %s -n %s --generator=run-pod/v1 --image=%s" % (name, ns, image))
+
         self.name = name
         self.ns = ns
         self._ip = None
