@@ -39,6 +39,7 @@ The controller leverages the following:
 ### How To
 
   - [Add honeypod controller to cluster](#add-honeypod-controller-to-cluster)
+  - [Troubleshooting](#troubleshooting)
 
 #### Add honeypod controller to cluster
 
@@ -47,3 +48,7 @@ Add the honeypod controller to each cluster configured for honeypods using the f
 ```shell
 kubectl apply -f {{ "/manifests/threatdef/honeypod/controller.yaml" | absolute_url }} 
 ```
+
+#### Troubleshooting
+
+To troubleshoot honeypod controller, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshoot/troubleshooting)

@@ -36,6 +36,7 @@ You configure honeypods on a per-cluster basis using "template" honeypod manifes
 
   - [Configure namespace and RBAC for honeypods](#configure-namespace-and-rbac-for-honeypods)
   - [Deploy honeypods in clusters](#deploy-honeypods-in-clusters)
+  - [Troubleshooting](#troubleshooting)
 
 #### Configure namespace and RBAC for honeypods
 
@@ -77,3 +78,7 @@ Expose a SQL service that contains an empty database with easy access. The pod c
 ```shell
 kubectl apply -f {{ "/manifests/threatdef/honeypod/vuln-svc.yaml" | absolute_url }} 
 ```
+
+#### Troubleshooting
+
+To troubleshoot honeypods, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshoot/troubleshooting)
