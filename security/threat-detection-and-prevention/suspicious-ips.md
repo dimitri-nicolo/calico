@@ -212,6 +212,8 @@ In this demo, we will apply the policy only to a test workload (so we do not imp
        docs.tigera.io/tutorial: threat-feed
      name: tf-ubuntu
    spec:
+     nodeSelector:
+       kubernetes.io/os: linux
      containers:
      - command:
        - sleep

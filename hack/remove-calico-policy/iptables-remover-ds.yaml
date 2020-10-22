@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: calico-remove-iptables
@@ -21,6 +21,11 @@ spec:
                   operator: NotIn
                   values:
                   - "true"
+              - matchExpressions:
+                - key: kubernetes.io/os
+                  operator: In
+                  values:
+                  - linux
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists

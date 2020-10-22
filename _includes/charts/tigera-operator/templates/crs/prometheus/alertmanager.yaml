@@ -9,6 +9,6 @@ spec:
   version: {{.Values.alertmanager.tag}}
   baseImage: {{.Values.alertmanager.image}}
   nodeSelector:
-    beta.kubernetes.io/os: linux
+    kubernetes.io/os: linux
   replicas: 3
 {{ end }}

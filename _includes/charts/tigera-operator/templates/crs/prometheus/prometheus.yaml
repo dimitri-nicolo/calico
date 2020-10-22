@@ -8,7 +8,7 @@ metadata:
 spec:
   baseImage: {{ .Values.prometheus.image }}
   nodeSelector:
-    beta.kubernetes.io/os: linux
+    kubernetes.io/os: linux
   serviceAccountName: prometheus
   serviceMonitorSelector:
     matchLabels:

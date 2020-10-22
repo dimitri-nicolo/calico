@@ -17,7 +17,7 @@ spec:
         operator: prometheus
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator

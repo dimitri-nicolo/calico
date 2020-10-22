@@ -82,6 +82,8 @@ spec:
       serviceAccountName: tigera-license-agent
       imagePullSecrets:
         - name: tigera-pull-secret
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
         - name: license-agent
           image: {{page.registry}}{% include component_image component="license-agent" %}

@@ -48,6 +48,8 @@ spec:
         version: v1
     spec:
       serviceAccountName: database
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
       - name: database
         image: calico/yaobank-database:latest
@@ -98,6 +100,8 @@ spec:
         version: v1
     spec:
       serviceAccountName: summary
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
       - name: summary
         image: calico/yaobank-summary:latest
@@ -142,6 +146,8 @@ spec:
         version: v1
     spec:
       serviceAccountName: customer
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
       - name: customer
         image: calico/yaobank-customer:latest

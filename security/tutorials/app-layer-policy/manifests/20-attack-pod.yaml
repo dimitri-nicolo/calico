@@ -28,6 +28,8 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
       - name: attacker
         image: tutum/curl

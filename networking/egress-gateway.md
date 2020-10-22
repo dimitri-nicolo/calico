@@ -234,6 +234,8 @@ spec:
     spec:
       imagePullSecrets:
       - name: tigera-pull-secret
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
       - name: egress-gateway
         image: {{page.registry}}{% include component_image component="egress-gateway" %}

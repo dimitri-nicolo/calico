@@ -378,7 +378,7 @@ spec:
 {{- tuple .Values.queryserver "cnx-queryserver" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
 {{ if .Values.controlPlaneNodeSelector }}
 {{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
 {{- end }}

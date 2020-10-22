@@ -85,7 +85,7 @@ spec:
         k8s-app: tigera-firewall-controller
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       serviceAccountName: tigera-firewall-controller
       tolerations:
         - key: node-role.kubernetes.io/master

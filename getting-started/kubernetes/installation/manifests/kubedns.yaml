@@ -56,6 +56,8 @@ spec:
         configMap:
           name: kube-dns
           optional: true
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
       - name: kubedns
         image: gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4

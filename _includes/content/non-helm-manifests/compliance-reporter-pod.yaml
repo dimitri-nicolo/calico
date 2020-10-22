@@ -18,7 +18,7 @@ spec:
         k8s-app: compliance-reporter
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       restartPolicy: Always
       serviceAccount: tigera-compliance-reporter
       serviceAccountName: tigera-compliance-reporter

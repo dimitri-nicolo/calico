@@ -121,6 +121,8 @@ metadata:
  annotations:
    k8s.v1.cni.cncf.io/networks: additional-calico-network@cali1
 spec:
+ nodeSelector:
+   kubernetes.io/os: linux
  containers:
    - name: multus-test
      command: ["/bin/sh", "-c", "trap : TERM INT; sleep infinity & wait"]

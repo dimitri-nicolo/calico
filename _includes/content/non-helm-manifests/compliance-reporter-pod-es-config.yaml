@@ -7,7 +7,7 @@ metadata:
     k8s-app: compliance-reporter
 spec:
   nodeSelector:
-    beta.kubernetes.io/os: linux
+    kubernetes.io/os: linux
   restartPolicy: Never
   serviceAccountName: tigera-compliance-reporter
   tolerations:
