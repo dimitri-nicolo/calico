@@ -235,14 +235,10 @@ func main() {
 	}
 
 	enableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
-	if err != nil {
-		panic("IDS_ENABLE_EVENT_FORWARDING must be a valid boolean")
-	} else {
-		if enableForwarding {
-			f := forwarder.NewEventForwarder("eventforwarder-1", e)
-			f.Run(ctx)
-			defer f.Close()
-		}
+	if err == nil && enableForwarding {
+		f := forwarder.NewEventForwarder("eventforwarder-1", e)
+		f.Run(ctx)
+		defer f.Close()
 	}
 
 	hs := health.NewServer(health.Pingers{s, a, a2}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
