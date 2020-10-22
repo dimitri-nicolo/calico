@@ -133,7 +133,13 @@ roleRef:
 
 Capture files will be stored on the host mounted volume used for calico nodes. These can be visualized using tools such as Wireshark.
 
-To access the capture files locally, you must extract the files from the Fluentd pods similar to the below commands:
+To access the capture files locally, you can use [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI:
+
+```shell
+calicoctl captured-packets copy sample-capture -namespace sample --destination /tmp
+```
+
+Alternatively, you can access the capture files locally from the Fluentd pods using similar commands like the ones below:
 
 ```shell
 kubectl get pods -A -l <REPLACE_WITH_LABEL_SELECTOR> -o jsonpath="{..nodeName}"
@@ -150,7 +156,15 @@ kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sam
 Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
 The active packet capture file will be identified using the following schema: {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
 
-Packet capture files will not be deleted after a capture has stopped. The following command can be used to clean up capture files:
+Packet capture files will not be deleted after a capture has stopped. 
+
+[calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI can be used to clean capture files:
+
+```shell
+calicoctl captured-packets clean sample-capture -namespace sample
+```
+
+Alternatively, the following command can be used to clean up capture files:
 
 ```shell
 kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"

@@ -21,6 +21,8 @@ section:
         path: /reference/calicoctl/bgp/overview
       - title: peers
         path: /reference/calicoctl/bgp/peers
+    - title: captured-packets
+      path: /reference/calicoctl/captured-packets
     - title: cluster
       path: /reference/calicoctl/cluster/
       section:

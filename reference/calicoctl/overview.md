@@ -30,22 +30,23 @@ calicoctl commands.
 Usage:
   calicoctl [options] <command> [<args>...]
 
-    create       Create a resource by file, directory or stdin.
-    replace      Replace a resource by file, directory or stdin.
-    apply        Apply a resource by file, directory or stdin.  This creates a resource
-                 if it does not exist, and replaces a resource if it does exists.
-    patch        Patch a pre-exisiting resource in place.
-    delete       Delete a resource identified by file, directory, stdin or resource type and
-                 name.
-    get          Get a resource identified by file, directory, stdin or resource type and
-                 name.
-    label        Add or update labels of resources.
-    convert      Convert config files between different API versions.
-    ipam         IP address management.
-    cluster      Access cluster information.
-    bgp          Access BGP related information.
-    node         Calico node management.
-    version      Display the version of calicoctl.
+    create                   Create a resource by file, directory or stdin.
+    replace                  Replace a resource by file, directory or stdin.
+    apply                    Apply a resource by file, directory or stdin.  This creates a resource
+                             if it does not exist, and replaces a resource if it does exists.
+    patch                    Patch a pre-exisiting resource in place.
+    delete                   Delete a resource identified by file, directory, stdin or resource type and
+                             name.
+    get                      Get a resource identified by file, directory, stdin or resource type and
+                             name.
+    label                    Add or update labels of resources.
+    convert                  Convert config files between different API versions.
+    ipam                     IP address management.
+    cluster                  Access cluster information.
+    bgp                      Access BGP related information.
+    node                     Calico node management.
+    captured-packets         Capture packet file command
+    version                  Display the version of calicoctl.
 
 Options:
   -h --help               Show this screen.
@@ -60,6 +61,7 @@ Description:
   See 'calicoctl <command> --help' to read about a specific subcommand.
 ```
 {: .no-select-button}
+-  [calicoctl version]({{ site.baseurl }}/reference/calicoctl/version)
 
 ## Top level command line options
 
@@ -67,6 +69,7 @@ Details on the `calicoctl` commands are described in the documents linked below
 organized by top level command.
 
 -  [calicoctl create]({{ site.baseurl }}/reference/calicoctl/create)
+-  [calicoctl captured-packets]({{ site.baseurl }}/reference/calicoctl/captured-packets)
 -  [calicoctl replace]({{ site.baseurl }}/reference/calicoctl/replace)
 -  [calicoctl apply]({{ site.baseurl }}/reference/calicoctl/apply)
 -  [calicoctl patch]({{ site.baseurl }}/reference/calicoctl/patch)
