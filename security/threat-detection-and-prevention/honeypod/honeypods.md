@@ -10,7 +10,7 @@ Configure honeypods in your clusters and get alerts that may indicate a compromi
 
 ### Value
 
-Based on the well-known cybersecurity method, “honeypots,” {{site.prodname}} honeypods are used to detect and counter cyber attacks. You place decoys disguised as a sensitive asset (called canary pods) at different locations in your Kubernetes cluster. You configure all valid resources to not make connections to the honeypots. Then, if any resources do reach the honeypots, you can assume the connection is suspicious, and that a resource may be compromised.
+Based on the well-known cybersecurity method, “honeypots,” {{site.prodname}} honeypods are used to detect and counter cyber attacks. You place decoys disguised as a sensitive asset (called canary pods) at different locations in your Kubernetes cluster. You configure all valid resources to not make connections to the honeypods. Then, if any resources do reach the honeypods, you can assume the connection is suspicious, and that a resource may be compromised.
 
 {{site.prodname}} honeypods can be used to detect attacks such as:
 
@@ -84,7 +84,7 @@ kubectl apply -f {{ "/manifests/threatdef/honeypod/vuln-svc.yaml" | absolute_url
 
 #### Verify honeypods deployment
 
-To verify the installation, ensure that within `tigera-internal` namespace, honeypods are running:
+To verify the installation, ensure that honeypods are running within the `tigera-internal` namespace:
 
 ```shell
 $ kubectl get pods -n tigera-internal
@@ -97,7 +97,7 @@ tigera-internal-dashboard-6df998578c-mtmqr   1/1     Running   0          2m15s
 tigera-internal-db-5c57bd5987-k5ksj          1/1     Running   0          2m10s
 ```
 
-And ensure global alerts for honeypods are set:
+And verify that global alerts are set for honeypods:
 
 ```shell
 $ kubectl get globalalerts
@@ -108,3 +108,8 @@ honeypod.network.ssh   2020-10-22T03:43:40Z
 honeypod.port.scan     2020-10-22T03:44:31Z
 honeypod.vuln.svc      2020-10-22T03:44:40Z
 ```
+
+### Above and beyond
+
+- [Monitor honeypods]({{site.baseurl}}/security/threat-detection-and-prevention/honeypod/honeypod-controller)
+- [GlobalAlerts]({{site.baseurl}}/reference/resources/globalalert)

@@ -11,7 +11,7 @@ Monitor honeypod behavior to gain insight on what attackers are doing using pack
 ### Value
 
 Adding monitoring to honeypods extends your ability to thwart activities including
-generating alerts if traffic to honeypods match any Intrusion Detection System(Snort) signatures, and scanning traffic if activities are detected.
+generating alerts if traffic to honeypods match any Intrusion Detection System (Snort) signatures, and scanning traffic if activities are detected.
 
 ### Features
 
@@ -21,9 +21,9 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Concepts
 
-#### Monitoring implementation
+#### About monitoring honeypods
 
-Monitoring honeypods is done using a controller that periodically polls selected honeypods for suspicious activity and scans its traffic. Alerts are generated in the Events tab of {{site.prodname}} Manager UI.
+Honeypods can be optionally be monitored using a {{site.prodname}} controller that periodically polls selected honeypods for suspicious activity and scans its traffic. Alerts are generated in the Events tab of {{site.prodname}} Manager UI.
 
 The controller leverages the following:
 
@@ -51,7 +51,7 @@ kubectl apply -f {{ "/manifests/threatdef/honeypod/controller.yaml" | absolute_u
 
 #### Verify honeypod controller deployment
 
-To verify the installation, ensure that within `tigera-intrusion-detection` namespace, honeypod controller is running:
+To verify the installation, ensure that honeypod controller is running within the `tigera-intrusion-detection` namespace:
 
 ```shell
 $ kubectl get pods -n tigera-intrusion-detection
@@ -63,3 +63,7 @@ honeypod-controller-k9nz4                        1/1     Running     0          
 intrusion-detection-controller-bf9794dd7-5qxjs   1/1     Running     0          15m
 intrusion-detection-es-job-installer-nfd7t       0/1     Completed   0          15m
 ```
+
+### Above and beyond
+
+- [Packet capture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture)
