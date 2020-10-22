@@ -36,18 +36,19 @@ You configure honeypods on a per-cluster basis using "template" honeypod manifes
 
   - [Configure namespace and RBAC for honeypods](#configure-namespace-and-rbac-for-honeypods)
   - [Deploy honeypods in clusters](#deploy-honeypods-in-clusters)
+  - [Verify honeypods deployment](#verify-honeypods-deployment)
 
 #### Configure namespace and RBAC for honeypods
 
 Apply the following manifest to create a namespace and RBAC for the honeypods: 
 
-```shell
+```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/common.yaml" | absolute_url }} 
 ```
 
 Add `tigera-pull-secret` into the namespace `tigera-internal`:
 
-```shell
+```bash
 kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<pull-secrets.json> --type=kubernetes.io/dockerconfigjson -n tigera-internal
 ```
 
@@ -58,22 +59,52 @@ Use one of the following sample honeypods manifests to customize for your implem
 > Note: If you change the manifest or customize a honeypod, you must update the [globalalert manifest]({{site.baseurl}}/reference/resources/globalalert).
 
 - **IP Enumeration** 
-The pod can only be reached locally (adjacent pods within same node), by not setting a service:
 
-```shell
+  The pod can only be reached locally (adjacent pods within same node), by not setting a service:
+
+```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/ip-enum.yaml" | absolute_url }} 
 ```
 
 - **Exposed service (nginx)**
-Expose a nginx service that serves a generic page. The pod can be discovered via ClusterIP or DNS lookup. An unreachable service `tigera-dashboard-internal-service` is created to entice the attacker to find and reach, `tigera-dashboard-internal-debug`:
 
-```shell
+  Expose a nginx service that serves a generic page. The pod can be discovered via ClusterIP or DNS lookup. An unreachable service `tigera-dashboard-internal-service` is created to entice the attacker to find and reach, `tigera-dashboard-internal-debug`:
+
+```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/expose-svc.yaml" | absolute_url }} 
 ```
 
 - **Vulnerable Service (MySQL)**
-Expose a SQL service that contains an empty database with easy access. The pod can be discovered via ClusterIP or DNS lookup:
+
+  Expose a SQL service that contains an empty database with easy access. The pod can be discovered via ClusterIP or DNS lookup:
+
+```bash
+kubectl apply -f {{ "/manifests/threatdef/honeypod/vuln-svc.yaml" | absolute_url }} 
+```
+
+#### Verify honeypods deployment
+
+To verify the installation, ensure that within `tigera-internal` namespace, honeypods are running:
 
 ```shell
-kubectl apply -f {{ "/manifests/threatdef/honeypod/vuln-svc.yaml" | absolute_url }} 
+$ kubectl get pods -n tigera-internal
+NAME                                         READY   STATUS    RESTARTS   AGE
+tigera-internal-app-28c85                    1/1     Running   0          2m19s
+tigera-internal-app-8c5bt                    1/1     Running   0          2m19s
+tigera-internal-app-l64nz                    1/1     Running   0          2m19s
+tigera-internal-app-qc7gv                    1/1     Running   0          2m19s
+tigera-internal-dashboard-6df998578c-mtmqr   1/1     Running   0          2m15s
+tigera-internal-db-5c57bd5987-k5ksj          1/1     Running   0          2m10s
+```
+
+And ensure global alerts for honeypods are set:
+
+```shell
+$ kubectl get globalalerts
+NAME                   CREATED AT
+honeypod.fake.svc      2020-10-22T03:44:36Z
+honeypod.ip.enum       2020-10-22T03:44:31Z
+honeypod.network.ssh   2020-10-22T03:43:40Z
+honeypod.port.scan     2020-10-22T03:44:31Z
+honeypod.vuln.svc      2020-10-22T03:44:40Z
 ```

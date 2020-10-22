@@ -26,7 +26,7 @@ section:
 - title: Honeypods
   path: /security/threat-detection-and-prevention/honeypod/
   section:
-  - title: Honeypods
+  - title: Configure honeypods
     path: /security/threat-detection-and-prevention/honeypod/honeypods
   - title: Monitor honeypods
     path: /security/threat-detection-and-prevention/honeypod/honeypod-controller
