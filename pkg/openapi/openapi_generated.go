@@ -5571,7 +5571,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"bpfDataIfacePattern": {
 						SchemaProps: spec.SchemaProps{
-							Description: "BPFDataIfacePattern is a regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network.  This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.  It should not match the workload interfaces (usually named cali...). [Default: ^(en.*|eth.*|tunl0$)]",
+							Description: "BPFDataIfacePattern is a regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network.  This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.  It should not match the workload interfaces (usually named cali...). [Default: ^(en[opsx].*|eth.*|tunl0$|wireguard.cali$)]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5924,6 +5924,19 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"dnsCacheEpoch": {
+						SchemaProps: spec.SchemaProps{
+							Description: "An arbitrary number that can be changed, at runtime, to tell Felix to discard all its learnt DNS information. [Default: 0].",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"dnsExtraTTL": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. [Default: 0s].",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 					"dnsLogsFlushInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DNSLogsFlushInterval configures the interval at which Felix exports DNS logs. [Default: 300s]",
@@ -6100,6 +6113,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					"awsSrcDstCheck": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Set source-destination-check on AWS EC2 instances. Accepted value must be one of \"DoNothing\", \"Enabled\" or \"Disabled\". [Default: DoNothing]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"serviceLoopPrevention": {
+						SchemaProps: spec.SchemaProps{
+							Description: "When service IP advertisement is enabled, prevent routing loops to service IPs that are not in use, by dropping or rejecting packets that do not get DNAT'd by kube-proxy. Unless set to \"Disabled\", in which case such routing loops continue to be allowed. [Default: Drop]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7686,7 +7706,7 @@ func schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"cidr", "strictAffinity", "allocations", "unallocated", "attributes", "deleted"},
+				Required: []string{"cidr", "strictAffinity", "allocations", "unallocated", "attributes"},
 			},
 		},
 		Dependencies: []string{
@@ -7928,6 +7948,12 @@ func schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref common.ReferenceCallback
 									},
 								},
 							},
+						},
+					},
+					"deleted": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
 						},
 					},
 				},
