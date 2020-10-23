@@ -20,43 +20,53 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/asm"
 )
 
+type SectionInfo struct {
+	name string
+	Type elf.SectionType
+	info uint32
+	data []byte
+}
+
 type Loader struct {
-	programs map[string]*ProgramInfo
-	mapFds   map[string]bpf.MapFD
-	eInfo    elfInfo
+	mapFds map[string]bpf.MapFD
+	eInfo  *elfInfo
 }
 
 type ProgramInfo struct {
-	fd   bpf.ProgFD
-	Type uint32
+	Insns asm.Insns
+	Type  uint32
 }
 
 type elfInfo struct {
 	elfFile  *elf.File
 	filePtr  *os.File
 	fileName string
+	sections map[string]*SectionInfo
 }
 
 func NewLoader(fileName string, maps ...bpf.Map) *Loader {
 	BpfLoader := &Loader{
-		programs: make(map[string]*ProgramInfo),
-		mapFds:   make(map[string]bpf.MapFD),
+		mapFds: make(map[string]bpf.MapFD),
 	}
 	for _, pinnedMap := range maps {
 		BpfLoader.mapFds[pinnedMap.GetName()] = pinnedMap.MapFD()
 	}
-	BpfLoader.eInfo.fileName = fileName
+	BpfLoader.eInfo = &elfInfo{
+		fileName: fileName,
+		sections: make(map[string]*SectionInfo),
+	}
+
 	return BpfLoader
 }
 
@@ -65,24 +75,20 @@ func (l *Loader) MapFD(mapName string) (bpf.MapFD, error) {
 	if present {
 		return fd, nil
 	}
-	return 0, errors.Errorf("Map FD not found")
+	return 0, fmt.Errorf("Map FD not found %s", mapName)
 }
 
 func (l *Loader) ElfInfo() *elfInfo {
-	return &(l.eInfo)
+	return (l.eInfo)
 }
 
 func (l *Loader) GetFDMap() map[string]bpf.MapFD {
 	return l.mapFds
 }
 
-func (l *Loader) Programs() map[string]*ProgramInfo {
-	return l.programs
-}
-
 // Read the license section and return the license string which
 // is needed for loading the BPF program
-func (e *elfInfo) ReadLicense() (error, string) {
+func (e *elfInfo) readLicense() (error, string) {
 	file := e.elfFile
 	lsec := file.Section("license")
 	if lsec != nil {
@@ -97,13 +103,13 @@ func (e *elfInfo) ReadLicense() (error, string) {
 
 // Get the relocation offset and the name of the map whose FD needs to be added to the
 // BPF instruction
-func (e *elfInfo) GetMapRelocations(data []byte) (error, map[uint64]string) {
+func (e *elfInfo) getMapRelocations(data []byte) (map[uint64]string, error) {
 	var symbol elf.Symbol
 	var symMap map[uint64]string
 	file := e.elfFile
 	symbols, err := file.Symbols()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	var rel elf.Rel64
 	br := bytes.NewReader(data)
@@ -112,9 +118,9 @@ func (e *elfInfo) GetMapRelocations(data []byte) (error, map[uint64]string) {
 		err := binary.Read(br, file.ByteOrder, &rel)
 		if err != nil {
 			if err == io.EOF {
-				return nil, symMap
+				return symMap, nil
 			}
-			return err, symMap
+			return symMap, err
 		}
 		symNo := rel.Info >> 32
 		symbol = symbols[symNo-1]
@@ -122,23 +128,23 @@ func (e *elfInfo) GetMapRelocations(data []byte) (error, map[uint64]string) {
 		if symbolSec.Name == "maps" {
 			symMap[rel.Off] = symbol.Name
 		} else {
-			return errors.Errorf("Invalid relocation section"), symMap
+			return symMap, fmt.Errorf("Invalid relocation section %s", symbolSec.Name)
 		}
 	}
-	return nil, symMap
+	return symMap, nil
 
 }
 
 // Relocate the imm value in the BPF instruction with map fd
 func (e *elfInfo) relocate(data, rdata []byte, bpfMap map[string]bpf.MapFD) error {
-	err, symMap := e.GetMapRelocations(data)
+	symMap, err := e.getMapRelocations(data)
 	if err != nil {
 		return err
 	}
 	for offset, mapName := range symMap {
 		fd, ok := bpfMap[mapName]
 		if ok != true {
-			return errors.Errorf("Map FD not found")
+			return fmt.Errorf("Map FD not found %s", mapName)
 		}
 		err = asm.RelocateBpfInsn(uint32(fd), rdata, offset)
 		if err != nil {
@@ -149,125 +155,89 @@ func (e *elfInfo) relocate(data, rdata []byte, bpfMap map[string]bpf.MapFD) erro
 }
 
 // Basic validation of the ELF file
-func (e *elfInfo) ReadElfFile() error {
+func (e *elfInfo) readElfFile() error {
 	var fileReader io.ReaderAt
 	var file *elf.File
 	freader, err := os.Open(e.fileName)
 	if err != nil {
-		return errors.Errorf("Error opening file")
+		return fmt.Errorf("Error opening file %w", err)
 	}
 	fileReader = freader
 	file, err = elf.NewFile(fileReader)
 	if err != nil {
-		return errors.Errorf("Error reading elf file")
+		return fmt.Errorf("Error reading elf file %w", err)
 	}
 	if file.Class != elf.ELFCLASS64 {
-		return errors.Errorf("Unsupported file format")
+		return fmt.Errorf("Unsupported file format")
 	}
 	e.elfFile = file
 	e.filePtr = freader
 	return nil
 }
 
-func (e *elfInfo) GetRelocationSectionData(sec *elf.Section) ([]byte, []byte, *elf.Section, error) {
-	file := e.elfFile
-	if sec.Type == elf.SHT_REL {
+func (e *elfInfo) readSectionData() error {
+	for _, sec := range e.elfFile.Sections {
 		data, err := sec.Data()
 		if err != nil {
-			return nil, nil, nil, errors.Errorf("Error reading section data")
-		}
-		if len(data) == 0 {
-			return nil, nil, nil, nil
-		}
-		relocSec := file.Sections[sec.Info]
-		progType := GetProgTypeFromSecName(relocSec.Name)
-		if progType != unix.BPF_PROG_TYPE_UNSPEC {
-			relData, err := relocSec.Data()
-			if err != nil {
-				return nil, nil, nil, errors.Errorf("Error reading relocation data")
-			}
-			if len(relData) == 0 {
-				return nil, nil, nil, nil
-			}
-			return data, relData, relocSec, nil
-		}
-	}
-	return nil, nil, nil, nil
-}
-
-func (l *Loader) Load() error {
-	var err error
-	eInfo := l.ElfInfo()
-	err = eInfo.ReadElfFile()
-	defer eInfo.filePtr.Close()
-	if err != nil {
-		return err
-	}
-	err, license := eInfo.ReadLicense()
-	if err != nil {
-		return errors.Errorf("Error reading license")
-	}
-	file := eInfo.elfFile
-	loaded := make([]bool, len(file.Sections))
-	for i, sec := range file.Sections {
-		if loaded[i] == true {
-			continue
-		}
-		data, relData, relocSec, err := eInfo.GetRelocationSectionData(sec)
-		if err != nil {
-			return errors.Errorf("Error handling relocation section")
-		} else {
-			if data == nil && relData == nil && relocSec == nil {
-				continue
-			}
-			err = eInfo.relocate(data, relData, l.GetFDMap())
-			if err != nil {
-				return errors.Errorf("Error handling relocation section")
-			}
-			insns := asm.GetBPFInsns(relData)
-			progType := GetProgTypeFromSecName(relocSec.Name)
-			progFd, err := bpf.LoadBPFProgramFromInsns(insns, license, progType)
-			if progFd == 0 {
-				return errors.Errorf("Error loading section %v %v", relocSec.Name, err)
-			}
-			loaded[i] = true
-			loaded[sec.Info] = true
-			l.programs[relocSec.Name] = &ProgramInfo{
-				fd:   progFd,
-				Type: progType,
-			}
-		}
-	}
-	for i, sec := range file.Sections {
-		if loaded[i] == true {
-			continue
-		}
-		data, err := sec.Data()
-		if err != nil {
-			return errors.Errorf("Error reading section data")
+			return err
 		}
 		if len(data) == 0 {
 			continue
 		}
-		progType := GetProgTypeFromSecName(sec.Name)
-		if progType != unix.BPF_PROG_TYPE_UNSPEC {
-			insns := asm.GetBPFInsns(data)
-			progFd, err := bpf.LoadBPFProgramFromInsns(insns, license, progType)
-			if progFd == 0 {
-				return errors.Errorf("Error loading section %v %v", sec.Name, err)
-			}
-			loaded[i] = true
-			l.programs[sec.Name] = &ProgramInfo{
-				fd:   progFd,
-				Type: progType,
-			}
+		if unix.BPF_PROG_TYPE_UNSPEC != GetProgTypeFromSecName(sec.Name) {
+			e.sections[sec.Name] = &SectionInfo{name: sec.Name, Type: sec.Type, info: sec.Info}
+			e.sections[sec.Name].data = make([]byte, len(data))
+			copy(e.sections[sec.Name].data[:], data[:])
 		}
 	}
 	return nil
 }
 
+func (l *Loader) Program() (map[string]*ProgramInfo, string, error) {
+	var err error
+	eInfo := l.ElfInfo()
+	err = eInfo.readElfFile()
+	defer eInfo.filePtr.Close()
+	if err != nil {
+		return nil, "", err
+	}
+	err, license := eInfo.readLicense()
+	if err != nil {
+		return nil, "", fmt.Errorf("Error reading license %w", err)
+	}
+
+	err = eInfo.readSectionData()
+	if err != nil {
+		return nil, "", err
+	}
+
+	file := eInfo.elfFile
+	for _, sInfo := range eInfo.sections {
+		if sInfo.Type == elf.SHT_REL {
+			rName := file.Sections[sInfo.info].Name
+			rSec, ok := eInfo.sections[rName]
+			if ok != true {
+				return nil, "", fmt.Errorf("Failed to retrieve relocation section data: %s", sInfo.name)
+			}
+			err = eInfo.relocate(sInfo.data, rSec.data, l.GetFDMap())
+			if err != nil {
+				return nil, "", fmt.Errorf("Failed to relocate section %s", sInfo.name)
+			}
+		}
+	}
+	insnMap := make(map[string]*ProgramInfo)
+
+	for _, sInfo := range eInfo.sections {
+		if sInfo.Type != elf.SHT_REL {
+			progType := GetProgTypeFromSecName(sInfo.name)
+			insnMap[sInfo.name] = &ProgramInfo{Insns: asm.GetBPFInsns(sInfo.data), Type: progType}
+		}
+	}
+	return insnMap, license, nil
+}
+
 func GetProgTypeFromSecName(secName string) uint32 {
-	if strings.HasPrefix(secName, "kprobe/") {
+	if strings.Contains(secName, "kprobe") {
 		return uint32(unix.BPF_PROG_TYPE_KPROBE)
 	}
 	return uint32(unix.BPF_PROG_TYPE_UNSPEC)

@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
+	//"github.com/projectcalico/felix/bpf/asm"
 	"github.com/projectcalico/felix/bpf/elf"
 )
 
@@ -33,30 +34,21 @@ func TestBpfProgramLoaderWithMultipleSections(t *testing.T) {
 	fileName := "../../bpf-gpl/ut/loader_test_with_multiple_sections.o"
 	loader := elf.NewLoader(fileName)
 	Expect(loader).NotTo(BeNil())
-
-	eInfo := loader.ElfInfo()
-	err := eInfo.ReadElfFile()
-	Expect(err).NotTo(HaveOccurred())
-
-	err, license := eInfo.ReadLicense()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(license).To(Equal("GPL"))
-
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(0))
 
-	err = loader.Load()
+	insnMap, license, err := loader.Program()
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.Programs()
-	Expect(len(programMap)).To(Equal(2))
+	Expect(len(insnMap)).To(Equal(2))
 
-	_, ok := programMap["kprobe/tcp_sendmsg"]
+	_, ok := insnMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
-	_, ok = programMap["kprobe/tcp_recvmsg"]
+	_, ok = insnMap["kprobe/tcp_recvmsg"]
 	Expect(ok).To(Equal(true))
+
+	loadProgram(license, insnMap)
 }
-
 func TestBpfProgramLoaderWithoutRelocation(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -66,13 +58,13 @@ func TestBpfProgramLoaderWithoutRelocation(t *testing.T) {
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(0))
 
-	err := loader.Load()
+	insnMap, license, err := loader.Program()
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.Programs()
-	Expect(len(programMap)).To(Equal(1))
-	_, ok := programMap["kprobe/tcp_sendmsg"]
+	Expect(len(insnMap)).To(Equal(1))
+	_, ok := insnMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
+	loadProgram(license, insnMap)
 }
 
 func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
@@ -91,13 +83,13 @@ func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(2))
 
-	err = loader.Load()
+	insnMap, license, err := loader.Program()
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.Programs()
-	Expect(len(programMap)).To(Equal(1))
-	_, ok := programMap["kprobe/tcp_sendmsg"]
+	Expect(len(insnMap)).To(Equal(1))
+	_, ok := insnMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
+	loadProgram(license, insnMap)
 }
 
 func TestBpfProgramLoaderWithSingleMap(t *testing.T) {
@@ -111,13 +103,21 @@ func TestBpfProgramLoaderWithSingleMap(t *testing.T) {
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(1))
-	err = loader.Load()
+	insnMap, license, err := loader.Program()
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.Programs()
-	Expect(len(programMap)).To(Equal(1))
-	_, ok := programMap["kprobe/tcp_sendmsg"]
+	Expect(len(insnMap)).To(Equal(1))
+	_, ok := insnMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
+	loadProgram(license, insnMap)
+}
+
+func loadProgram(license string, insnMap map[string]*elf.ProgramInfo) {
+	Expect(license).To(Equal("GPL"))
+	for _, v := range insnMap {
+		_, err := bpf.LoadBPFProgramFromInsns(v.Insns, license, v.Type)
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 func CreateTestMap(mapName, mapType string, keySize, valueSize, maxEntries, flags int) (error, bpf.Map) {
