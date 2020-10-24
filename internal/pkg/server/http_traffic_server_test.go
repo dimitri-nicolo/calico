@@ -3,25 +3,24 @@
 package server_test
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
-	"net/http/httptest"
-	"net/url"
-
-	"golang.org/x/net/http2"
-
-	"crypto/tls"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-
 	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
-	"github.com/tigera/voltron/internal/pkg/test"
+	"golang.org/x/net/http2"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 func init() {
@@ -30,22 +29,29 @@ func init() {
 }
 
 var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
-	var k8sAPI = test.NewK8sSimpleFakeClient(nil, nil)
-	var authenticator = authentication.NewFakeAuthenticator()
-	var srv *server.Server
-	var externalCertFile string
-	var externalKeyFile string
-	var internalCertFile string
-	var internalKeyFile string
-	var externalCACert string
-	var externalServerName string
-	var internalCACert string
-	var internalServerName string
-	var listener net.Listener
-	var address net.Addr
+	var (
+		k8sAPI bootstrap.K8sClient
+
+		authenticator      = authentication.NewFakeAuthenticator()
+		srv                *server.Server
+		externalCertFile   string
+		externalKeyFile    string
+		internalCertFile   string
+		internalKeyFile    string
+		externalCACert     string
+		externalServerName string
+		internalCACert     string
+		internalServerName string
+		listener           net.Listener
+		address            net.Addr
+	)
 
 	JustBeforeEach(func() {
 		var err error
+		k8sAPI = &k8sClient{
+			Interface:                k8sfake.NewSimpleClientset(),
+			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
+		}
 
 		By("Creating a default destination server that return 200 OK")
 		defaultServer := httptest.NewServer(

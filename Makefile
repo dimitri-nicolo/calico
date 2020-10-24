@@ -2,7 +2,7 @@
 
 APP_NAME        = voltron
 PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
-GO_BUILD_VER   ?= v0.45
+GO_BUILD_VER   ?= v0.49
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 # Used by Makefile.common

@@ -1,6 +1,6 @@
 module github.com/tigera/voltron
 
-go 1.14
+go 1.15
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c // indirect
