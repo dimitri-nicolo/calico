@@ -130,11 +130,3 @@
       image: calico/pod2daemon-flexvol
       version: master
       registry: quay.io
-    cpHorizontalAutoscaler:
-      image: google-containers/cluster-proportional-autoscaler-amd64
-      version: 1.1.2-r2
-      registry: gcr.io
-    cpVerticalAutoscaler:
-      image: google-containers/cpvpa-amd64
-      version: v0.6.0
-      registry: gcr.io

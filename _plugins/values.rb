@@ -730,14 +730,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{versions["flexvol"].registry}/#{versions["flexvol"].image}
       tag: #{versions["flexvol"].version}
 
-    cpHorizontalAutoscaler:
-      image: #{versions["cpHorizontalAutoscaler"].registry}/#{versions["cpHorizontalAutoscaler"].image}
-      tag: #{versions["cpHorizontalAutoscaler"].version}
-
-    cpVerticalAutoscaler:
-      image: #{versions["cpVerticalAutoscaler"].registry}/#{versions["cpVerticalAutoscaler"].image}
-      tag: #{versions["cpVerticalAutoscaler"].version}
-
     # Optional configuration for setting custom BGP templates where
     # key is the filename of the template and value is the contents of the template.
     bgp: {}
