@@ -65,11 +65,10 @@ type Server struct {
 
 	tunSrv *tunnel.Server
 
-	certFile         string
-	keyFile          string
-	internalCertFile string
-	internalKeyFile  string
-	addr             string
+	externalCert tls.Certificate
+	internalCert tls.Certificate
+
+	addr string
 
 	// Creds to be used for the tunnel endpoints and to generate creds for the
 	// tunnel clients a.k.a guardians
@@ -107,21 +106,13 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator authenticat
 	srv.proxyMux = http.NewServeMux()
 
 	cfg := &tls.Config{}
-	certExt, err := tls.LoadX509KeyPair(srv.certFile, srv.keyFile)
-	if err != nil {
-		log.Errorf("Could not load certificates for external traffic(UI) due to - %s", err)
-		return nil, err
-	}
-	cfg.Certificates = append(cfg.Certificates, certExt)
 
-	if len(srv.internalKeyFile) != 0 || len(srv.internalCertFile) != 0 {
-		certInt, err := tls.LoadX509KeyPair(srv.internalCertFile, srv.internalKeyFile)
-		if err != nil {
-			log.Errorf("Could not load certificates for internal traffic due to - %s", err)
-			return nil, err
-		}
-		cfg.Certificates = append(cfg.Certificates, certInt)
+	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
+
+	if len(srv.internalCert.Certificate) > 0 {
+		cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 	}
+
 	cfg.BuildNameToCertificate()
 
 	srv.http = &http.Server{

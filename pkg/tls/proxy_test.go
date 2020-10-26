@@ -70,6 +70,7 @@ var _ = Describe("ListenAndProxy", func() {
 
 			wg.Add(1)
 			go func() {
+				defer GinkgoRecover()
 				defer wg.Done()
 				_, err := cli.Write([]byte(requestString))
 				Expect(err).ShouldNot(HaveOccurred())
@@ -120,6 +121,7 @@ var _ = Describe("ListenAndProxy", func() {
 			var wg sync.WaitGroup
 			wg.Add(1)
 			go func() {
+				defer GinkgoRecover()
 				defer wg.Done()
 				_, err := cli.Write([]byte(requestString))
 				Expect(err).ShouldNot(HaveOccurred())

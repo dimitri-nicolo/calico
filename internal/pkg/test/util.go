@@ -247,6 +247,7 @@ func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject:      pkix.Name{CommonName: clusterName},
+		DNSNames:     []string{"voltron"},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(1000000 * time.Hour), // XXX TBD
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
@@ -258,7 +259,7 @@ func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey
 		return nil, nil, "", err
 	}
 
-	x509Cert, _ := x509.ParseCertificate(bytes)
+	x509Cert, err := x509.ParseCertificate(bytes)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -280,4 +281,92 @@ func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey
 
 	return cert, key, fingerprint, nil
 
+}
+
+func CreateCACertificateTemplate(sans ...string) *x509.Certificate {
+	certTemplate := DefaultCertificationTemplate()
+	certTemplate.IsCA = true
+	certTemplate.IPAddresses = []net.IP{net.IPv4(127, 0, 0, 1)}
+	certTemplate.DNSNames = sans
+	certTemplate.KeyUsage = x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+
+	return certTemplate
+}
+
+func CreateServerCertificateTemplate(sans ...string) *x509.Certificate {
+	certTemplate := DefaultCertificationTemplate()
+	certTemplate.IsCA = false
+	certTemplate.DNSNames = sans
+	certTemplate.KeyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
+	certTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
+
+	return certTemplate
+}
+
+func CreateClientCertificateTemplate(cn string, sans ...string) *x509.Certificate {
+	certTemplate := DefaultCertificationTemplate()
+	certTemplate.IsCA = false
+	certTemplate.DNSNames = sans
+	certTemplate.Subject = pkix.Name{CommonName: cn}
+	certTemplate.KeyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
+	certTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+
+	return certTemplate
+}
+
+func DefaultCertificationTemplate() *x509.Certificate {
+	now := time.Now()
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		panic(err)
+	}
+
+	return &x509.Certificate{
+		SerialNumber:          serialNumber,
+		NotBefore:             now.Add(-365 * 24 * time.Hour),
+		NotAfter:              now.Add(365 * 24 * time.Hour),
+		BasicConstraintsValid: true,
+	}
+}
+
+func CreateCertPair(template *x509.Certificate, parentCert *x509.Certificate, parentKey *rsa.PrivateKey) (*rsa.PrivateKey, *x509.Certificate, error) {
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if parentCert == nil {
+		parentCert = template
+	}
+
+	if parentKey == nil {
+		parentKey = privKey
+	}
+
+	rootBytes, err := x509.CreateCertificate(rand.Reader, template, parentCert, privKey.Public(), parentKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cert, err := x509.ParseCertificate(rootBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return privKey, cert, nil
+}
+
+func CertToPemBytes(cert *x509.Certificate) []byte {
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+}
+
+func KeyToPemBytes(key *rsa.PrivateKey) []byte {
+	privBytes := x509.MarshalPKCS1PrivateKey(key)
+
+	return pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: privBytes})
+}
+
+func CertificateFingerprint(cert *x509.Certificate) string {
+	return fmt.Sprintf("%x", md5.Sum(cert.Raw))
 }

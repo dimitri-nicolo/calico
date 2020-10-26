@@ -4,14 +4,13 @@ package server
 
 import (
 	"crypto"
+	"crypto/tls"
 	"crypto/x509"
-	"os"
+	"io/ioutil"
 	"regexp"
 	"time"
 
 	"github.com/tigera/voltron/internal/pkg/proxy"
-
-	"github.com/pkg/errors"
 )
 
 // Option is a common format for New() options
@@ -41,45 +40,59 @@ type ProxyTarget struct {
 	Dest    string
 }
 
-var missingFileErrorMessage = "file %s not found : %s"
-
 // WithExternalCredsFiles sets the default cert and key to be used for the TLS
 // connections for external traffic (UI).
-func WithExternalCredsFiles(cert, key string) Option {
+func WithExternalCredsFiles(certFile, keyFile string) Option {
 	return func(s *Server) error {
-		// Check if files exist
-		if _, err := os.Stat(cert); os.IsNotExist(err) {
-			return errors.Errorf(missingFileErrorMessage, cert, err)
+		var err error
+
+		certPEMBlock, err := ioutil.ReadFile(certFile)
+		if err != nil {
+			return err
+		}
+		keyPEMBlock, err := ioutil.ReadFile(keyFile)
+		if err != nil {
+			return err
 		}
 
-		if _, err := os.Stat(key); os.IsNotExist(err) {
-			return errors.Errorf(missingFileErrorMessage, key, err)
-		}
+		return WithExternalCreds(certPEMBlock, keyPEMBlock)(s)
+	}
+}
 
-		s.certFile = cert
-		s.keyFile = key
-
-		return nil
+// WithExternalCreds creates the default cert and key from the given pem bytes to be used for the TLS connections for
+// external traffic (UI).
+func WithExternalCreds(certBytes []byte, keyBytes []byte) Option {
+	return func(s *Server) error {
+		var err error
+		s.externalCert, err = tls.X509KeyPair(certBytes, keyBytes)
+		return err
 	}
 }
 
 // WithInternalCredsFiles sets the default cert and key to be used for the TLS
 // connections within the management cluster.
-func WithInternalCredFiles(cert, key string) Option {
+func WithInternalCredFiles(certFile, keyFile string) Option {
 	return func(s *Server) error {
-		// Check if files exist
-		if _, err := os.Stat(cert); os.IsNotExist(err) {
-			return errors.Errorf(missingFileErrorMessage, cert, err)
+		certPEMBlock, err := ioutil.ReadFile(certFile)
+		if err != nil {
+			return err
+		}
+		keyPEMBlock, err := ioutil.ReadFile(keyFile)
+		if err != nil {
+			return err
 		}
 
-		if _, err := os.Stat(key); os.IsNotExist(err) {
-			return errors.Errorf(missingFileErrorMessage, key, err)
-		}
+		return WithInternalCreds(certPEMBlock, keyPEMBlock)(s)
+	}
+}
 
-		s.internalCertFile = cert
-		s.internalKeyFile = key
-
-		return nil
+// WithInternalCreds creates the default cert and key from the given pem bytes to be used for the TLS connections within
+// the management cluster.
+func WithInternalCreds(certBytes []byte, keyBytes []byte) Option {
+	return func(s *Server) error {
+		var err error
+		s.internalCert, err = tls.X509KeyPair(certBytes, keyBytes)
+		return err
 	}
 }
 
