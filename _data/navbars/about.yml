@@ -3,21 +3,5 @@ description: Learn about Kubernetes, and how to adopt a zero trust network model
 path: /about/
 order: 0
 section:
-  - title: About Calico Enterprise
-    path: /about/about-calico-enterprise
-  - title: Adopt a zero trust network model for security
-    path: /security/adopt-zero-trust   
-  - title: Networking
-    path: /about/about-networking
-  - title: Kubernetes networking
-    path: /about/about-kubernetes-networking
-  - title: Network policy
-    path: /about/about-network-policy
-  - title: Kubernetes services
-    path: /about/about-kubernetes-services
-  - title: Kubernetes ingress
-    path: /about/about-kubernetes-ingress
-  - title: Kubernetes ingress
-    path: /about/about-kubernetes-ingress
-  - title: eBPF
-    path: /about/about-ebpf
+- title: Calico Enterprise use cases
+  path: /about/about-calico-enterprise

@@ -2,6 +2,8 @@ title: "Network policy"
 path: /policy/
 order: 3
 section:
+- title: Adopt zero trust network model for security
+  path: /security/adopt-zero-trust
 - title: Tiered network policy
   path: /security/
   section:

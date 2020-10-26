@@ -1,114 +1,171 @@
 ---
-title: About Calico Enterprise
-description: The value of using Calico Enterprise for networking and network policy for workloads and hosts.
+title: Calico Enterprise use cases
+description: Find the Calico Enterprise features that remove major blockers in your Kubernetes journey.
 show_title: false
 canonical_url: '/about/about-calico-enterprise'
 custom_css: css/intro.css
 ---
 
-<div id="why-use-calico-1" class="row">
-  <div class="col-md-6">
-    <img style="max-width: 330px" class="img-responsive center-block" src="{{site.baseurl}}/images/calico_enterprise_logo.png">
-  </div>
-  <div class="col-md-6">
-    <h3 id="what-is" style="margin-top: 5px">What is {{site.prodname}}?</h3>
-    <p> Modern applications are more distributed, dynamically orchestrated, and run across multi-cloud infrastructure. To protect workloads and enforce compliance, connectivity must be established and secured in a highly dynamic environment that includes microservices, containers, and virtual machines. </p>
-<p>{{site.prodname}} provides secure application connectivity across multi-cloud and legacy environments, with the enterprise control and compliance capabilities required for mission-critical deployments.</p>
-<p>Designed from the ground up as cloud-native software, {{site.prodname}} builds on leading open source projects like <a href="https://docs.projectcalico.org/">Calico</a>. It connects and secures container, virtual machine, and bare metal host workloads in public cloud and private data centers. </p>
-  </div>
-</div>
+### Your Kubernetes journey...
 
-<hr/>
+During each stage, there are common use cases that block initiatives from moving forward.
+Learn about the {{site.prodname}} features that remove these blockers.
 
-<div style="text-align: center">
-  <h2 id="why-use">Why use {{site.prodname}}?</h2>
-</div>
+![kubernetes-journey]({{site.baseurl}}/images/stages.svg)
 
-<hr/>
+#### Stages 1-2: Open source Calico Essentials
 
-<div id="why-use-calico-6" class="row">
-  <div class="col-md-6">
-    <h3 id="familiar" style="margin-top: 5px">Choice of dataplanes</h3>
-    <p>{{site.prodname}} gives you a choice of dataplanes, including a pure Linux eBPF dataplane, a standard Linux networking dataplane, and a Windows HNS dataplane. Whether you prefer cutting edge features of eBPF, or the familiarity of the standard primitives that existing system administrators already know, Calico has you covered.</p>
-    <p>Whichever choice is right for you, you’ll get the same, easy to use, base networking, network policy and IP address management capabilities, that have made Calico the most trusted networking and network policy solution for mission-critical cloud-native applications.</p>
-  </div>
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/multiple-dataplanes.png">
-  </div>
-</div>
+![calico-logo]({{site.baseurl}}/images/calico-logo.svg)   
 
-<hr/>
+- Training
+- Personalized workshops
+- Enterprise integration strategies
+- Troubleshooting strategies
 
-<div id="why-use-calico-2" class="row">
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/best-practices.png">
-  </div>
-  <div class="col-md-6">
-    <h3 id="best-practices" style="margin-top: 5px">Best practices for network security</h3>
-    <p>{{site.prodname}}’s rich network policy model makes it easy to lock down communication so the only traffic that flows is the traffic you want to flow. Plus with built in support for Wireguard encryption, securing your pod-to-pod traffic across the network has never been easier.</p>
+#### Stages 3-5: Calico Enterprise solutions
 
-    <p>{{site.prodname}}’s policy engine can enforce the same policy model at the host networking layer and (if using Istio & Envoy) at the service mesh layer, protecting your infrastructure from compromised workloads and protecting your workloads from compromised infrastructure.</p>
-  </div>
-</div>
+![enterprise-logo]({{site.baseurl}}/images/enterprise-logo.svg)
 
-<hr/>
+- [Egress access controls](#egress-access-controls)
+- [Visibility and troubleshooting](#visibility-and-troubleshooting)
+- [Enterprise security controls](#enterprise-security-controls)
+- [Extend firewalls to Kubernetes](#extend-firewalls-to-kubernetes)
+- [Enable self service network security](#enable-self-service-network-security)
+- [Microsegmentation](#microsegmentation)
+- [Intrusion detection](#intrusion-detection)
+- [Zero trust network security](#zero-trust-network-security)
 
-<div id="why-use-calico-3" class="row">
-  <div class="col-md-6">
-    <h3 id="performance" style="margin-top: 5px">Performance</h3>
-    <p>Depending on your preference, {{site.prodname}} uses either Linux eBPF or the Linux kernel's highly optimized standard networking pipeline to deliver high performance networking. {{site.prodname}}'s networking options are flexible enough to run without using overlays in most environments, avoiding the overheads of packet encap/decap. {{site.prodname}}’s control plane and policy engine has been fine tuned over many years of production use to minimize overall CPU usage and occupancy.</p>
-  </div>
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/performance.png">
-  </div>
-</div>
 
-<hr/>
+### Egress access controls
 
-<div id="why-use-calico-4" class="row">
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/scale.png">
-  </div>
-  <div class="col-md-6">
-    <h3 id="scalability" style="margin-top: 5px">Scalability</h3>
-    <p>{{site.prodname}}’s core design principles leverage best practice cloud-native design patterns combined with proven standards based network protocols trusted worldwide by the largest internet carriers. The result is a solution with exceptional scalability that has been running at scale in production for years. {{site.prodname}}’s development test cycle includes regularly testing multi-thousand node clusters.  Whether you are running a 10 node cluster, 100 node cluster, or more, you reap the benefits of the improved performance and scalability characteristics demanded by the largest Kubernetes clusters.</p>
-  </div>
-</div>
+{{site.prodname}} packages several features that enable fine-grained access controls between your microservices and databases, cloud services, APIs, and other applications that are protected behind a firewall. 
 
-<hr/>
+**2-minute video**
 
-<div id="why-use-calico-5" class="row">
-  <div class="col-md-6">
-    <h3 id="interoperability" style="margin-top: 5px">Interoperability</h3>
-    <p>{{site.prodname}} enables Kubernetes workloads and non-Kubernetes or legacy workloads to communicate seamlessly and securely.  Kubernetes pods are first class citizens on your network and able to communicate with any other workload on your network.  In addition {{site.prodname}} can seamlessly extend to secure your existing host based workloads (whether in public cloud or on-prem on VMs or bare metal servers) alongside Kubernetes.  All workloads are subject to the same network policy model so the only traffic that is allowed to flow is the traffic you expect to flow.</p>
-  </div>
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/interoperability.png">
-  </div>
-</div>
+<script src="https://fast.wistia.com/embed/medias/v60ur89tn9.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_v60ur89tn9 videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/v60ur89tn9/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
 
-<hr/>
 
-<div id="why-use-calico-7" class="row">
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/deployed.png">
-  </div>
-  <div class="col-md-6">
-    <h3 id="real-world-production" style="margin-top: 5px">Real world production hardened</h3>
-    <p>{{site.prodname}} is trusted and running in production at large enterprises including SaaS providers, financial services companies, and manufacturers.  The largest public cloud providers have selected {{site.prodname}} to provide network security for their hosted Kubernetes services (Amazon EKS, Azure AKS, Google GKE, and IBM IKS) running across tens of thousands of clusters.</p>
-  </div>
-</div>
+**Documentation**
+- [Control outbound traffic through egress gateways]({{site.baseurl}}/networking/egress-gateway)
+- [DNS policy]({{site.baseurl}}/security/domain-based-policy)
+- [AWS Security group integration]({{site.baseurl}}/security/aws-integration/)
 
-<hr/>
+### Visibility and troubleshooting 
 
-<div id="why-use-calico-8" class="row">
-  <div class="col-md-6">
-    <h3 id="full-kubernetes-support" style="margin-top: 5px">Full Kubernetes network policy support</h3>
-    <p>{{site.prodname}}’s network policy engine formed the original reference implementation of Kubernetes network policy during the development of the API. {{site.prodname}} is distinguished in that it implements the full set of features defined by the API giving users all the capabilities and flexibility envisaged when the API was defined. And for users that require even more power, {{site.prodname}} supports an extended set of network policy capabilities that work seamlessly alongside the Kubernetes API giving users even more flexibility in how they define their network policies.</p>
-  </div>
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="{{ site.baseurl }}/images/intro/policy.png">
-  </div>
-</div>
+Connectivity issues between microservices are difficult to troubleshoot. Troubleshooting often requires collaboration between multiple teams to identify and resolve the problem.
 
-<hr/>
+{{site.prodname}} offers tools to rapidly pinpoint and resolve the source of a connectivity issue between your microservices running on Kubernetes clusters, as well as tools to identify and resolve potential connectivity issues before they happen.
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/11w6ccb5x9.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_11w6ccb5x9 videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/11w6ccb5x9/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [Flow visualizer]({{site.baseurl}}/security/get-started-cem)
+- [Flow logs in Kibana]({{site.baseurl}}/security/logs/elastic/)
+- [Alerts]({{site.baseurl}}/security/threat-detection-and-prevention/alerts) 
+- [Packet capture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture)
+- [DNS logs and dashboards]({{site.baseurl}}/security/logs/elastic/dns)
+
+### Enterprise security controls
+
+Many applications have compliance requirements such as workload isolation, ensuring dev cannot talk to prod, and implementing network zones (e.g. microservices in the DMZ can communicate with the public internet but not directly with your backend databases). With {{site.prodname}}, you can;
+
+- Implement security controls at a higher precedent policy tier that cannot be changed or overridden by other users
+- Alert on changes to your security controls
+- Generate audit reports that demonstrate compliance now and historically
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/u4e7n863ek.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_u4e7n863ek videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/u4e7n863ek/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [Create tiered network policy]({{site.baseurl}}/security/tiered-policy)
+- [Compliance reports]({{site.baseurl}}/security/compliance-reports/)
+- [CIS benchmarks]({{site.baseurl}}/security/compliance-reports-cis)
+- [Audit logs]({{site.baseurl}}/security/logs/elastic/ee-audit)
+
+### Extend firewalls to Kubernetes
+
+When deploying microservices to an environment managed by firewalls, it may become necessary to work within the confines of your IT Security Architecture. For applications that make or accept connections with the internet, or need to connect to databases, a firewall is typically going to be part of that architecture.
+
+Most security teams are short-staffed and don’t have the capacity to take on new tools that understand workload orchestration like Kubernetes. Defining a firewall rule for ingress or egress access controls does not work in this architecture and can block deployments or worse, result in service disruptions if implemented improperly. Furthermore, defining a zone-based security architecture in your cluster using a firewall requires routing all service-to-service traffic through the firewall, introducing latency into your application.
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/lj6z9042vd.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_lj6z9042vd videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/lj6z9042vd/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [AWS security groups]({{site.baseurl}}/security/aws-integration/) 
+- [Extend Fortigate firewalls to Kubernetes]({{site.baseurl}}/security/firewall-integration)
+- [Egress gateways]({{site.baseurl}}/networking/egress-gateway)
+
+### Enable self service network security
+
+When deploying a new microservice to a secure cluster, it needs to be deployed along with a network policy to enable the service to communicate with other services and APIs. Often this means having a central function that reviews or creates policies for every microservice deployment. Otherwise, a deployment may inadvertently override an important security policy implemented to protect sensitive workloads that process payment information, customer data, etc. This process does not scale when 100’s or 1000’s of microservices are being deployed daily and deployments are delayed.
+
+{{site.prodname}} enables self-service deployments to a secure cluster without the risk of an important policy being overridden or otherwise violated. No central person or team is required to create or review policies and deployments along with the network policies required to allow access are completely automated.
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/1ii0v1bquq.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_1ii0v1bquq videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/1ii0v1bquq/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [Tiered network policy]({{site.baseurl}}/security/tiered-policy) 
+- [RBAC for tiered network policy]({{site.baseurl}}/security/rbac-tiered-policies)
+- [Policy recommendations]({{site.baseurl}}/security/generate-policy-recommendation)
+- [Policy impact preview]({{site.baseurl}}/security/policy-impact-preview)
+- [Staged network policies]({{site.baseurl}}/security/staged-network-policies)
+
+### Microsegmentation
+
+Every cloud and hosting environment has a unique approach to segmentation, which leads to operational overhead and security gaps when segmenting traffic within and between these environments. {{site.prodname}} provides a common segmentation protocol that works across all of your environments, and scales at the pace of your microservices environment.
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/yggh00gd73.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_yggh00gd73 videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/yggh00gd73/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [Install Calico Enterprise on non-cluster hosts]({{site.baseurl}}/getting-started/bare-metal/)
+
+### Intrusion detection
+
+In addition to cloud microsegmentation and zero trust network security, {{site.prodname}} provides another layer of security through its Intrusion detection system (IDS).
+
+{{site.prodname}} IDS identifies Advanced persistent threats (APTs) through behavior-based detection using machine learning and a rule-based engine that enables active monitoring.
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/kpt6n4r40b.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_kpt6n4r40b videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/kpt6n4r40b/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [Alerts]({{site.baseurl}}/security/threat-detection-and-prevention/alerts)
+- [Anomaly detection]({{site.baseurl}}/security/threat-detection-and-prevention/anomaly-detection/)
+- [Threat intelligence feeds]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips)
+
+### Zero trust network security
+
+Zero trust network security is a strong security posture that assumes that something in your application or infrastructure has been compromised and is currently hosting some form of malware.
+
+Kubernetes is particularly vulnerable to the spread of malware due to the open nature of cluster networking; by default, any pod can connect to any other pod, even across namespaces. It is very difficult to detect malware or its spread within a Kubernetes cluster without implementing a strong security framework like zero trust.
+
+**2-minute video**
+
+<script src="https://fast.wistia.com/embed/medias/7wpdipagkg.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:18% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:25%;left:0;position:absolute;top:0;width:25%;"><div class="wistia_embed wistia_async_7wpdipagkg videoFoam=true" style="height:25%;position:relative;width:25%"><div class="wistia_swatch" style="height:25%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:25%;"><img src="https://fast.wistia.com/embed/medias/7wpdipagkg/swatch" style="filter:blur(5px);height:25%;object-fit:contain;width:25%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" /></div></div></div></div>
+
+
+**Documentation**
+
+- [Adopt zero trust network security model]({{site.baseurl}}/security/adopt-zero-trust)
