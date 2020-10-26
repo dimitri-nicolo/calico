@@ -8,7 +8,7 @@ LOCAL_CHECKS     = mod-download
 
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID)
 
-build: es-proxy
+build: local_build es-proxy
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -33,6 +33,18 @@ endif
 # SSH_AUTH_DIR doesn't work with MacOS but we can optionally volume mount keys
 ifdef SSH_AUTH_DIR
 EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
+endif
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../lma:/go/src/github.com/tigera/lma:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../apiserver:/go/src/github.com/tigera/apiserver:rw
+local_build:
+	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	go mod edit -replace=github.com/tigera/lma=../lma
+	go mod edit -replace=github.com/tigera/apiserver=../apiserver
+else
+local_build:
 endif
 
 include Makefile.common

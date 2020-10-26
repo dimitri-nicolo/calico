@@ -182,6 +182,11 @@ func Start(cfg *Config) error {
 				middleware.AuthenticateRequest(authenticator,
 					middleware.AuthorizeRequest(authz,
 						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
+		sm.Handle("/flow",
+			middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.NewFlowHandler(esClient, k8sClientFactory)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
