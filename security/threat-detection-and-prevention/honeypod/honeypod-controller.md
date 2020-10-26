@@ -10,8 +10,7 @@ Monitor honeypod behavior to gain insight on what attackers are doing using pack
 
 ### Value
 
-Adding monitoring to honeypods extends your ability to thwart activities including
-generating alerts if traffic to honeypods match any Intrusion Detection System (Snort) signatures, and scanning traffic if activities are detected.
+Adding monitoring to honeypods extends your ability to thwart activities including generating alerts if traffic to honeypods match any Intrusion Detection System (Snort) signatures, and scanning traffic if activities are detected.
 
 ### Features
 

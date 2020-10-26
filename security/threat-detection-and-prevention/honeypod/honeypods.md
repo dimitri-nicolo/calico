@@ -54,9 +54,9 @@ kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<
 
 #### Deploy honeypods in clusters
 
-Use one of the following sample honeypods manifests to customize for your implementation. All images contain a minimal container that runs or mimics a running application. Note that the namespace `tigera-internal`, as well as the pods and service names can be changed to disguise the honeypods further.
+Use one of the following sample honeypods manifests or customize them for your implementation. All images contain a minimal container that runs or mimics a running application. The images provided has been harden with built-in protections to reduce the risk of them being compromised.
 
-> Note: If you change the manifest or customize a honeypod, you must update the [globalalert manifest]({{site.baseurl}}/reference/resources/globalalert).
+> Note: when modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes.
 
 - **IP Enumeration** 
 
