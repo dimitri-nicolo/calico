@@ -24,7 +24,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
-	//"github.com/projectcalico/felix/bpf/asm"
 	"github.com/projectcalico/felix/bpf/elf"
 )
 
