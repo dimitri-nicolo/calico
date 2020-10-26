@@ -12,6 +12,8 @@ Resource Types:
 </li><li>
 <a href="#operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration</a>
 </li><li>
+<a href="#operator.tigera.io/v1.Authentication">Authentication</a>
+</li><li>
 <a href="#operator.tigera.io/v1.Compliance">Compliance</a>
 </li><li>
 <a href="#operator.tigera.io/v1.Installation">Installation</a>
@@ -266,6 +268,145 @@ to all ENIs in the VPC.</p>
 <em>
 <a href="#operator.tigera.io/v1.AmazonCloudIntegrationStatus">
 AmazonCloudIntegrationStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.Authentication">Authentication
+</h3>
+<p>Authentication is the Schema for the authentications API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br>
+string</td>
+<td>
+<code>
+operator.tigera.io/v1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br>
+string
+</td>
+<td><code>Authentication</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br>
+<em>
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationSpec">
+AuthenticationSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>managerDomain</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ManagerDomain is the domain name of the Manager</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>usernamePrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, UsernamePrefix is prepended to each user obtained from the identity provider. Note that
+Kibana does not support a user prefix, so this prefix is removed from Kubernetes User when translating log access
+ClusterRoleBindings into Elastic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>groupsPrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, GroupsPrefix is prepended to each group obtained from the identity provider. Note that
+Kibana does not support a groups prefix, so this prefix is removed from Kubernetes Groups when translating log access
+ClusterRoleBindings into Elastic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oidc</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationOIDC">
+AuthenticationOIDC
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OIDC contains the configuration needed to setup OIDC authentication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>openshift</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationOpenshift">
+AuthenticationOpenshift
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Openshift contains the configuration needed to setup Openshift OAuth authentication.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationStatus">
+AuthenticationStatus
 </a>
 </em>
 </td>
@@ -1510,7 +1651,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -1564,10 +1705,6 @@ string
 </table>
 <h3 id="operator.tigera.io/v1.AuthMethod">AuthMethod
 (<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.AuthenticationSpec">AuthenticationSpec</a>)
-</p>
 <h3 id="operator.tigera.io/v1.AuthType">AuthType
 (<code>string</code> alias)</h3>
 <p>
@@ -1576,101 +1713,6 @@ string
 </p>
 <p>AuthType represents the type of authentication to use. Valid
 options are: Token, Basic, OIDC, OAuth</p>
-<h3 id="operator.tigera.io/v1.Authentication">Authentication
-</h3>
-<p>Authentication is the Schema for the authentications API</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>metadata</code><br>
-<em>
-<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthenticationSpec">
-AuthenticationSpec
-</a>
-</em>
-</td>
-<td>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>method</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthMethod">
-AuthMethod
-</a>
-</em>
-</td>
-<td>
-<p>Method configures the method of authentication used by Kibana.
-Default: Basic</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>managerDomain</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>ManagerDomain is the domain name of the Manager</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>oidc</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthenticationOIDC">
-AuthenticationOIDC
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>OIDC contains the configuration needed to setup OIDC authentication. If the method is OIDC then this is required, if
-the method is not OIDC then this must not be specified.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<code>status</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthenticationStatus">
-AuthenticationStatus
-</a>
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.tigera.io/v1.AuthenticationOIDC">AuthenticationOIDC
 </h3>
 <p>
@@ -1716,8 +1758,8 @@ string
 </em>
 </td>
 <td>
-<p>RequestedScopes is a list of scopes to request from the OIDC provider. If not provided, all the available scopes
-are requested.</p>
+<p>RequestedScopes is a list of scopes to request from the OIDC provider. If not provided, the following scopes are
+requested: [&ldquo;openid&rdquo;, &ldquo;email&rdquo;, &ldquo;profile&rdquo;, &ldquo;groups&rdquo;, &ldquo;offline_access&rdquo;].</p>
 </td>
 </tr>
 <tr>
@@ -1729,9 +1771,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>If specified, UsernamePrefix is prepended to each user obtained from the claims specified by UsernameClaim. Note that
-Kibana does not support a user prefix, so this prefix is removed from Kubernetes User when translating log access
-ClusterRoleBindings into Elastic.</p>
+<p>Deprecated. Please use Authentication.Spec.UsernamePrefix instead.</p>
 </td>
 </tr>
 <tr>
@@ -1755,9 +1795,35 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>If specified, GroupsPrefix is prepended to each group obtained from the claims specified by GroupsClaim. Note that
-Kibana does not support a groups prefix, so this prefix is removed from Kubernetes Groups when translating log access
-ClusterRoleBindings into Elastic.</p>
+<p>Deprecated. Please use Authentication.Spec.GroupsPrefix instead.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.AuthenticationOpenshift">AuthenticationOpenshift
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AuthenticationSpec">AuthenticationSpec</a>)
+</p>
+<p>AuthenticationOpenshift is the configuration needed to setup Openshift.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>issuerURL</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: <a href="https://api.my-ocp-domain.com:6443" data-proofer-ignore>https://api.my-ocp-domain.com:6443</a></p>
 </td>
 </tr>
 </tbody>
@@ -1779,20 +1845,6 @@ ClusterRoleBindings into Elastic.</p>
 <tbody>
 <tr>
 <td>
-<code>method</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthMethod">
-AuthMethod
-</a>
-</em>
-</td>
-<td>
-<p>Method configures the method of authentication used by Kibana.
-Default: Basic</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>managerDomain</code><br>
 <em>
 string
@@ -1800,6 +1852,34 @@ string
 </td>
 <td>
 <p>ManagerDomain is the domain name of the Manager</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>usernamePrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, UsernamePrefix is prepended to each user obtained from the identity provider. Note that
+Kibana does not support a user prefix, so this prefix is removed from Kubernetes User when translating log access
+ClusterRoleBindings into Elastic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>groupsPrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, GroupsPrefix is prepended to each group obtained from the identity provider. Note that
+Kibana does not support a groups prefix, so this prefix is removed from Kubernetes Groups when translating log access
+ClusterRoleBindings into Elastic.</p>
 </td>
 </tr>
 <tr>
@@ -1813,8 +1893,21 @@ AuthenticationOIDC
 </td>
 <td>
 <em>(Optional)</em>
-<p>OIDC contains the configuration needed to setup OIDC authentication. If the method is OIDC then this is required, if
-the method is not OIDC then this must not be specified.</p>
+<p>OIDC contains the configuration needed to setup OIDC authentication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>openshift</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationOpenshift">
+AuthenticationOpenshift
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Openshift contains the configuration needed to setup Openshift OAuth authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -2916,7 +3009,7 @@ Auth
 </td>
 <td>
 <em>(Optional)</em>
-<p>The last successfully applied authentication configuration.</p>
+<p>Deprecated. Please use the Authentication CR for configuring authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -3152,7 +3245,7 @@ Kubernetes core/v1.ResourceRequirements
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
@@ -3454,6 +3547,7 @@ string
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.TigeraStatus">TigeraStatus</a>)
 </p>
+<p>TigeraStatusSpec defines the desired state of TigeraStatus</p>
 <h3 id="operator.tigera.io/v1.TigeraStatusStatus">TigeraStatusStatus
 </h3>
 <p>
