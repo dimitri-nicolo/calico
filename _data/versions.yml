@@ -42,6 +42,9 @@
     dikastes:
       image: tigera/dikastes
       version: master
+    dex:
+      image: dexidp/dex
+      version: v2.25.0
     fluentd:
       image: tigera/fluentd
       version: master
