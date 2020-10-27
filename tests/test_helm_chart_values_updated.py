@@ -63,8 +63,6 @@ EXCLUDED_IMAGES = [
     # third party images
     'elasticsearch',
     'elasticsearch-operator',
-    'cpHorizontalAutoscaler',
-    'cpVerticalAutoscaler',
 ]
 
 REGISTRY_EXCEPTION = [

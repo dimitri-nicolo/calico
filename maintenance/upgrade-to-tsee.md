@@ -53,11 +53,6 @@ If your cluster already has {{site.prodname}} installed, follow the [Upgrading {
 
 > **Note**: EKS upgrades from open source Calico are not production ready due to limited testing.
 >
-> When upgrading from older versions of open source Calico, delete the unused
-> deployment `calico-typha-horizontal-autoscaler` with the following command:
->  ```
->  kubectl -n kube-system delete deployments.apps calico-typha-horizontal-autoscaler
->  ```
 {: .alert .alert-info}
 
 {% include content/upgrade-operator-simple.md upgradeFrom="OpenSource" provider="EKS" %}

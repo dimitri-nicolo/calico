@@ -70,8 +70,6 @@ imageNames:
   prometheus: quay.io/prometheus/prometheus
   elasticsearchOperator: upmcenterprises/elasticsearch-operator
   prometheusOperator: quay.io/coreos/prometheus-operator
-  cpHorizontalAutoscaler: k8s.gcr.io/cluster-proportional-autoscaler-amd64
-  cpVerticalAutoscaler: k8s.gcr.io/cpvpa-amd64
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
@@ -153,5 +151,3 @@ defaults:
         prometheus: quay.io/prometheus/prometheus
         elasticsearchOperator: upmcenterprises/elasticsearch-operator
         prometheusOperator: quay.io/coreos/prometheus-operator
-        cpHorizontalAutoscaler: k8s.gcr.io/cluster-proportional-autoscaler-amd64
-        cpVerticalAutoscaler: k8s.gcr.io/cpvpa-amd64
