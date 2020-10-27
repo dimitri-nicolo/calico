@@ -746,6 +746,40 @@ spec:
 
 ---
 
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  labels:
+    projectcalico.org/tier: allow-tigera
+  name: allow-tigera.allow-elastic-curator
+  namespace: tigera-elasticsearch
+spec:
+  egress:
+    - action: Allow
+      destination:
+        namespaceSelector: projectcalico.org/name == "kube-system"
+        ports:
+          - 53
+        selector: k8s-app == "kube-dns"
+      protocol: UDP
+      source: {}
+    - action: Allow
+      destination:
+        namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+        Ports:
+          - 9200
+        selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      protocol: TCP
+      source: {}
+  order: 1
+  selector: k8s-app == "elastic-curator"
+  tier: allow-tigera
+  types:
+    - Ingress
+    - Egress
+
+---
+
 kind: NetworkPolicy
 apiVersion: projectcalico.org/v3
 metadata:
