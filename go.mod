@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.1 // indirect
 	github.com/Microsoft/hcsshim v0.8.9
-	github.com/aws/aws-sdk-go v1.34.31
+	github.com/aws/aws-sdk-go v1.35.7
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/containernetworking/plugins v0.8.5
 	github.com/davecgh/go-spew v1.1.1
@@ -42,7 +42,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028
+	github.com/tigera/licensing v1.0.1-0.20201023072957-26a844bae62b
 	github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392
 	github.com/vishvananda/netlink v1.0.0
 	github.com/willf/bitset v1.1.11
@@ -68,8 +68,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201015143623-85a92e7c9375
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201015145447-e4ac973350c4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201023165933-3f6e8227c1a9
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201023171453-77f1a15a2c54
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/multidict"
 	"github.com/projectcalico/felix/proto"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -92,6 +93,7 @@ type EventSequencer struct {
 	pendingIPSecBlacklistRemoves set.Set
 	pendingWireguardUpdates      map[string]*model.Wireguard
 	pendingWireguardDeletes      set.Set
+	pendingGlobalBGPConfig       *proto.GlobalBGPConfigUpdate
 	pendingPacketCaptureUpdates  map[string]*proto.PacketCaptureUpdate
 	pendingPacketCaptureRemovals map[string]*proto.PacketCaptureRemove
 
@@ -730,6 +732,12 @@ func (buf *EventSequencer) Flush() {
 	buf.flushHostIPUpdates()
 	buf.flushIPPoolDeletes()
 	buf.flushIPPoolUpdates()
+
+	// Flush global BGPConfiguration updates.
+	if buf.pendingGlobalBGPConfig != nil {
+		buf.Callback(buf.pendingGlobalBGPConfig)
+		buf.pendingGlobalBGPConfig = nil
+	}
 }
 
 func (buf *EventSequencer) flushRemovedIPSets() {
@@ -991,6 +999,16 @@ func (buf *EventSequencer) OnWireguardRemove(nodename string) {
 	}).Debug("Wireguard removed")
 	delete(buf.pendingWireguardUpdates, nodename)
 	buf.pendingWireguardDeletes.Add(nodename)
+}
+
+func (buf *EventSequencer) OnGlobalBGPConfigUpdate(cfg *v3.BGPConfiguration) {
+	log.WithField("cfg", cfg).Debug("Global BGPConfiguration updated")
+	buf.pendingGlobalBGPConfig = &proto.GlobalBGPConfigUpdate{}
+	if cfg != nil {
+		for _, block := range cfg.Spec.ServiceClusterIPs {
+			buf.pendingGlobalBGPConfig.ServiceClusterCidrs = append(buf.pendingGlobalBGPConfig.ServiceClusterCidrs, block.CIDR)
+		}
+	}
 }
 
 func (buf *EventSequencer) flushNamespaces() {
