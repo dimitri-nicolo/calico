@@ -766,8 +766,7 @@ spec:
     - action: Allow
       destination:
         namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-        Ports:
-          - 9200
+        ports: [9200]
         selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
       protocol: TCP
       source: {}
