@@ -6,7 +6,7 @@ canonical_url: /security/threat-detection-and-prevention/honeypod/honeypods
 
 ### Big picture
 
-Configure honeypods in your clusters and get alerts that may indicate a compromised resource.
+Configure honeypods in your clusters and get alerts that indicate resources may be compromised.
 
 ### Value
 
@@ -56,7 +56,7 @@ kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<
 
 Use one of the following sample honeypods manifests or customize them for your implementation. All images contain a minimal container that runs or mimics a running application. The images provided has been harden with built-in protections to reduce the risk of them being compromised.
 
-> Note: when modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes.
+> **Note**: When modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes.
 
 - **IP Enumeration** 
 
