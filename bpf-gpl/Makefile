@@ -31,6 +31,7 @@ CFLAGS +=  \
 	-D__KERNEL__ \
 	-D__ASM_SYSREG_H \
 	-D__LINUX_BPF_H__ \
+	-D__TARGET_ARCH_$(ARCH) \
 	-Wno-unused-value \
 	-Wno-pointer-sign \
 	-Wno-compare-distinct-pointer-types \
@@ -50,7 +51,7 @@ UT_C_FILES:=$(shell find ut -name '*.c')
 UT_OBJS:=$(UT_C_FILES:.c=.o) $(shell ./list-ut-objs)
 
 OBJS:=$(shell ./list-objs)
-C_FILES:=tc.c connect_balancer.c
+C_FILES:=tc.c connect_balancer.c tcp_kprobe.c
 
 all: $(OBJS)
 ut-objs: $(UT_OBJS)
@@ -59,6 +60,8 @@ COMPILE=$(CC) $(CFLAGS) `./calculate-flags $@` -c $< -o $@
 connect_time_%v4.ll: connect_balancer.c connect_balancer.d calculate-flags
 	$(COMPILE)
 connect_time_%v6.ll: connect_balancer_v6.c connect_balancer_v6.d calculate-flags
+	$(COMPILE)
+tcp_%kprobe.ll: tcp_kprobe.c tcp_kprobe.d calculate-flags
 	$(COMPILE)
 
 UT_CFLAGS=\
@@ -93,6 +96,8 @@ bin/test%.o: test%.ll | bin
 bin/connect_time_%v4.o: connect_time_%v4.ll | bin
 	$(LINK)
 bin/connect_time_%v6.o: connect_time_%v6.ll | bin
+	$(LINK)
+bin/tcp_%kprobe.o: tcp_%kprobe.ll | bin
 	$(LINK)
 ut/%.o: ut/%.ll
 	$(LINK)

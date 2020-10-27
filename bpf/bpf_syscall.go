@@ -17,6 +17,7 @@
 package bpf
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"strings"
@@ -465,4 +466,20 @@ func (m *MapIterator) Close() error {
 	runtime.SetFinalizer(m, nil)
 
 	return nil
+}
+
+func PerfEventOpenTracepoint(id int, progFd int) (int, error) {
+	efd, err := C.perf_event_open_tracepoint(C.int(id), -1 /* pid */, 0 /* cpu */, -1 /* group_fd */, C.PERF_FLAG_FD_CLOEXEC)
+	if efd < 0 {
+		return -1, fmt.Errorf("perf_event_open error: %v", err)
+	}
+
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(efd), C.PERF_EVENT_IOC_ENABLE, 0); err != 0 {
+		return -1, fmt.Errorf("error enabling perf event: %v", err)
+	}
+
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(efd), C.PERF_EVENT_IOC_SET_BPF, uintptr(progFd)); err != 0 {
+		return -1, fmt.Errorf("error attaching bpf program to perf event: %v", err)
+	}
+	return int(efd), nil
 }
