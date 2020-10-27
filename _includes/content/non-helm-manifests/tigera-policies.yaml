@@ -115,6 +115,13 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
+      # This egress rule allows to communicate with tigera-dex.
+      namespaceSelector: projectcalico.org/name == 'tigera-dex'
+      selector: k8s-app == 'tigera-dex'
+      ports: [5556]
+  - action: Allow
+    protocol: TCP
+    destination:
       # This egress rule in this policy allows compliance to communicate with kubernetes api server.
       namespaceSelector: projectcalico.org/name == 'default'
       selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
@@ -194,6 +201,14 @@ spec:
       selector: k8s-app == 'kube-dns'
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule allows to communicate with tigera-dex.
+      namespaceSelector: projectcalico.org/name == 'tigera-dex'
+      selector: k8s-app == 'tigera-dex'
+      ports: [5556]
+
 ---
 
 # This manifest creates a network policy to allow traffic to Alertmanager
@@ -466,6 +481,13 @@ spec:
       selector: k8s-app == 'kube-dns'
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule allows to communicate with tigera-dex.
+      namespaceSelector: projectcalico.org/name == 'tigera-dex'
+      selector: k8s-app == 'tigera-dex'
+      ports: [5556]
 ---
 
 # Allow internal communication within the ElasticSearch cluster
@@ -636,6 +658,92 @@ spec:
       ports: [53]
 {%- endif %}
   - action: Allow
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.allow-tigera-dex-ingress
+  namespace: tigera-dex
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-dex'
+  types:
+    - Ingress
+    - Egress
+  ingress:
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: k8s-app == 'tigera-manager'
+        namespaceSelector: name == 'tigera-manager'
+      destination:
+        ports: [5556]
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+        namespaceSelector: name == 'tigera-elasticsearch'
+      destination:
+        ports: [5556]
+    - action: Allow
+      destination:
+        ports: [5556]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-server'
+        namespaceSelector: name == 'tigera-compliance'
+  egress:
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+    - action: Allow
+      protocol: UDP
+      destination:
+        # This rule allows to communicate with openshift-dns.
+        namespaceSelector: projectcalico.org/name == "openshift-dns"
+        selector: dns.operator.openshift.io/daemonset-dns == "default"
+        ports: [5353]
+{%- else %}
+    - action: Allow
+      protocol: UDP
+      destination:
+        # This rule allows communicate with kube-dns.
+        namespaceSelector: projectcalico.org/name == "kube-system"
+        selector: k8s-app == "kube-dns"
+        ports: [53]
+{%- endif %}
+    - action: Allow
+      protocol: TCP
+      destination:
+        # This egress rule in this policy allows tigera-dex to communicate with kubernetes api server.
+        namespaceSelector: projectcalico.org/name == 'default'
+        selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+        # By default, kubernetes api server listens on [6443, 443]. If Api server is customized to listen
+        # on different port, Include the port number below.
+        ports: [443, 6443]
+    - action: Allow
+      protocol: TCP
+      destination:
+        # This rule is intended to allow egress between dex and your identity provider.
+        ports: [443]
+        selector: k8s-app == 'tigera-dex-external-idp'
+        namespaceSelector: name == 'tigera-dex'
+
+---
+
+# This network set is added to represent the address(es) where your identity provider is running. If you make this network
+# set more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
+apiVersion: projectcalico.org/v3
+kind: NetworkSet
+metadata:
+  name: tigera-external-identity-provider
+  namespace: tigera-dex
+  labels:
+    k8s-app: tigera-dex-external-idp
+spec:
+  nets: ['0.0.0.0/0']
+
 ---
 
 kind: NetworkPolicy
@@ -719,3 +827,17 @@ spec:
   types:
   - Ingress
   - Egress
+
+---
+
+kind: NetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: allow-tigera.default-deny
+  namespace: tigera-dex
+spec:
+  tier: allow-tigera
+  selector: all()
+  types:
+    - Ingress
+    - Egress
