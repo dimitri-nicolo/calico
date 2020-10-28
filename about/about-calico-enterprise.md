@@ -103,7 +103,7 @@ Most security teams are short-staffed and don’t have the capacity to take on n
 **Documentation**
 
 - [AWS security groups]({{site.baseurl}}/security/aws-integration/) 
-- [Extend Fortigate firewalls to Kubernetes]({{site.baseurl}}/security/firewall-integration)
+- [Extend Fortigate firewalls to Kubernetes]({{site.baseurl}}/security/fortinet-integration/overview)
 - [Egress gateways]({{site.baseurl}}/networking/egress-gateway)
 
 ### Enable self service network security
