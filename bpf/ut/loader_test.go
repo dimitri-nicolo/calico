@@ -17,13 +17,14 @@
 package ut
 
 import (
+	"encoding/binary"
 	"testing"
 
 	. "github.com/onsi/gomega"
-
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/bpf/asm"
 	"github.com/projectcalico/felix/bpf/elf"
 )
 
@@ -114,6 +115,49 @@ func TestBpfProgramLoaderWithSingleMap(t *testing.T) {
 	Expect(ok).To(Equal(true))
 	loadProgram(license, insnMap)
 }
+
+func TestBpfLoaderFailureCases(t *testing.T) {
+	RegisterTestingT(t)
+
+	fileName := "dummy_test.o"
+	loader, err := elf.NewLoaderFromFile(fileName)
+	Expect(err).To(HaveOccurred())
+	Expect(loader).To(BeNil())
+
+	fileName = "../../bpf-gpl/ut/loader_test_single_map.o"
+
+	loader, err = elf.NewLoaderFromFile(fileName)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(loader).NotTo(BeNil())
+
+	insnMap, license, err := loader.Programs()
+	Expect(err).To(HaveOccurred())
+	Expect(insnMap).To(BeNil())
+	Expect(license).To(Equal(""))
+
+	err, testMap := CreateTestMap("cali_test_kp", "hash", 4, 8, 511000, unix.BPF_F_NO_PREALLOC)
+	Expect(err).NotTo(HaveOccurred())
+
+	loader, err = elf.NewLoaderFromFile(fileName, testMap)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(loader).NotTo(BeNil())
+
+	insnMap, license, err = loader.Programs()
+	Expect(err).NotTo(HaveOccurred())
+
+	programInfo := insnMap["kprobe/tcp_sendmsg"]
+	Expect(programInfo.Insns).NotTo(BeNil())
+
+	for i, insn := range programInfo.Insns {
+		if insn.Src() == asm.RPseudoMapFD {
+			binary.LittleEndian.PutUint32(insn[4:], 0xdeadbeaf)
+			copy(programInfo.Insns[i][:], insn[:])
+		}
+	}
+	_, err = bpf.LoadBPFProgramFromInsns(programInfo.Insns, license, programInfo.Type)
+	Expect(err).To(HaveOccurred())
+}
+
 func loadProgram(license string, insnMap map[string]*elf.ProgramInfo) {
 	Expect(license).To(Equal("GPL"))
 	for _, v := range insnMap {
