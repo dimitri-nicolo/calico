@@ -289,6 +289,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				DNSTrustedServers:                  configParams.DNSTrustedServers,
 				NATOutgoingAddress:                 configParams.NATOutgoingAddress,
 				BPFEnabled:                         configParams.BPFEnabled,
+				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 			},
 
 			Wireguard: wireguard.Config{
@@ -368,6 +369,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			XDPAllowGeneric:                    configParams.GenericXDPEnabled,
 			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
 			RouteTableManager:                  routeTableIndexAllocator,
+			MTUIfacePattern:                    configParams.MTUIfacePattern,
 
 			KubeClientSet: k8sClientSet,
 

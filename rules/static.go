@@ -570,6 +570,13 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 		},
 	)
 
+	// Jump to chain for blocking service CIDR loops.
+	rules = append(rules,
+		Rule{
+			Action: JumpAction{Target: ChainCIDRBlock},
+		},
+	)
+
 	// Accept packet if policies above set ACCEPT mark.
 	rules = append(rules,
 		Rule{
@@ -790,6 +797,13 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 			Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
 			Action:  r.filterAllowAction,
 			Comment: []string{"Host endpoint policy accepted packet."},
+		},
+	)
+
+	// Jump to chain for blocking service CIDR loops.
+	rules = append(rules,
+		Rule{
+			Action: JumpAction{Target: ChainCIDRBlock},
 		},
 	)
 
