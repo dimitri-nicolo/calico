@@ -26,36 +26,37 @@ import (
 )
 
 const (
-	IPSetIndexPattern         = ".tigera.ipset.%s"
-	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
-	FlowLogIndexPattern       = "tigera_secure_ee_flows.%s.*"
-	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
-	EventIndexPattern         = "tigera_secure_ee_events.%s"
-	AuditIndexPattern         = "tigera_secure_ee_audit_*.%s.*"
-	ForwarderConfigIndex      = ".tigera.forwarderconfig" // ForwarderConfigIndex is an index for maintaining internal state for the event forwarder
-	WatchIndex                = ".watches"
-	WatchNamePrefixPattern    = "tigera_secure_ee_watch.%s."
-	QuerySize                 = 1000
-	AuditQuerySize            = 0
-	MaxClauseCount            = 1024
-	CreateIndexFailureDelay   = time.Second * 15
-	CreateIndexWaitTimeout    = time.Minute
-	PingTimeout               = time.Second * 5
-	PingPeriod                = time.Minute
-	Create                    = "create"
-	Delete                    = "delete"
-	DefaultReplicas           = 0
-	DefaultShards             = 5
+	IPSetIndexPattern           = ".tigera.ipset.%s"
+	DomainNameSetIndexPattern   = ".tigera.domainnameset.%s"
+	FlowLogIndexPattern         = "tigera_secure_ee_flows.%s.*"
+	DNSLogIndexPattern          = "tigera_secure_ee_dns.%s.*"
+	EventIndexPattern           = "tigera_secure_ee_events.%s"
+	AuditIndexPattern           = "tigera_secure_ee_audit_*.%s.*"
+	ForwarderConfigIndexPattern = ".tigera.forwarderconfig.%s"
+	WatchIndex                  = ".watches"
+	WatchNamePrefixPattern      = "tigera_secure_ee_watch.%s."
+	QuerySize                   = 1000
+	AuditQuerySize              = 0
+	MaxClauseCount              = 1024
+	CreateIndexFailureDelay     = time.Second * 15
+	CreateIndexWaitTimeout      = time.Minute
+	PingTimeout                 = time.Second * 5
+	PingPeriod                  = time.Minute
+	Create                      = "create"
+	Delete                      = "delete"
+	DefaultReplicas             = 0
+	DefaultShards               = 5
 )
 
 var (
-	IPSetIndex         string
-	DomainNameSetIndex string
-	EventIndex         string
-	FlowLogIndex       string
-	DNSLogIndex        string
-	AuditIndex         string
-	WatchNamePrefix    string
+	IPSetIndex           string
+	DomainNameSetIndex   string
+	EventIndex           string
+	FlowLogIndex         string
+	DNSLogIndex          string
+	AuditIndex           string
+	WatchNamePrefix      string
+	ForwarderConfigIndex string // ForwarderConfigIndex is an index for maintaining internal state for the event forwarder
 )
 
 func init() {
@@ -70,6 +71,7 @@ func init() {
 	DNSLogIndex = fmt.Sprintf(DNSLogIndexPattern, clusterName)
 	AuditIndex = fmt.Sprintf(AuditIndexPattern, clusterName)
 	WatchNamePrefix = fmt.Sprintf(WatchNamePrefixPattern, clusterName)
+	ForwarderConfigIndex = fmt.Sprintf(ForwarderConfigIndexPattern, clusterName)
 }
 
 type ipSetDoc struct {
