@@ -174,7 +174,7 @@ at the same time that subcomponent release branches are cut, often well before t
 
 1. In [netlify/_redirects](netlify/_redirects) add a line for the new release following the other examples
 (Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
-This makes sure that requests coming to `/vX.Y` (without a slash) don't fail with 404.
+This makes sure that requests coming to `/vX.Y` (without a slash) don't fail with 404 when this branch is promoted to latest.
 
 1. If appropriate, update the list of tested versions for different platforms in the appropriate documents.
 
@@ -213,6 +213,11 @@ add below proxy rules for the release candidate site at the top of `redirects` r
       to = "https://tigera-vX-Y.netlify.app/vX.Y/:splat"
       status = 200
    ```
+
+1. In current production branch's [netlify/_redirects](netlify/_redirects) add a line for the new release following the other examples
+(Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
+This makes sure that requests coming to `/vX.Y` (candidate site, without a trailing slash) don't fail with 404.
+
 
 1. Ensure that these proxy rules are cherry-picked to `master` branch so that future releases, which would be cut from master, will have references to this releases.
 
