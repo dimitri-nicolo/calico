@@ -18,15 +18,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type mockDialer struct {
-	tun *tunnel.Tunnel
-	err error
-}
-
-func (m *mockDialer) Dial() (*tunnel.Tunnel, error) {
-	return m.tun, m.err
-}
-
 type ConnOpener interface {
 	Open() (net.Conn, error)
 }
@@ -59,7 +50,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				conn, err := m.Open()
 				Expect(err).ShouldNot(HaveOccurred())
@@ -82,7 +73,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				conn, err := m.Open()
 				Expect(err).ShouldNot(HaveOccurred())
@@ -107,7 +98,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				Expect(tun.Close()).ShouldNot(HaveOccurred())
 				conn, err := m.Open()
@@ -124,7 +115,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener, err := m.Listener()
 				Expect(err).ShouldNot(HaveOccurred())
@@ -150,7 +141,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener, err := m.Listener()
 				Expect(err).ShouldNot(HaveOccurred())
@@ -174,7 +165,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener, err := m.Listener()
 				Expect(err).ShouldNot(HaveOccurred())
@@ -201,7 +192,7 @@ var _ = Describe("Manager", func() {
 
 				m := tunnelmgr.NewManager()
 				defer m.Close()
-				Expect(m.RunWithTunnel(tun)).ShouldNot(HaveOccurred())
+				Expect(m.SetTunnel(tun)).ShouldNot(HaveOccurred())
 
 				listener1, err := m.Listener()
 				Expect(err).ShouldNot(HaveOccurred())
@@ -227,6 +218,77 @@ var _ = Describe("Manager", func() {
 
 				wg.Wait()
 			})
+
+			Context("Dialing for the tunnel", func() {
+				It("Successfully dials for a tunnel and allows the user to get a listener", func() {
+					cliConn, srvConn := net.Pipe()
+					defer cliConn.Close()
+					defer srvConn.Close()
+
+					tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
+					Expect(err).ShouldNot(HaveOccurred())
+
+					mockDialer := new(tunnel.MockDialer)
+					mockDialer.On("Dial").Return(tun, nil)
+
+					m := tunnelmgr.NewManagerWithDialer(mockDialer)
+					defer m.Close()
+
+					Eventually(func() error {
+						_, err := m.Listener()
+						return err
+					}, "5s", "100ms").ShouldNot(HaveOccurred())
+				})
+				Context("when dialing hangs", func() {
+					It("All functions access the manager state should return ErrStillDialing and then work without error"+
+						"after the dialer has finished",
+						func() {
+							cliConn, srvConn := net.Pipe()
+							defer cliConn.Close()
+
+							srv := getServerFromConnection(srvConn, "Response")
+							defer srv.Close()
+
+							tun, err := tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
+							Expect(err).ShouldNot(HaveOccurred())
+
+							// We use this to block the dialer so we can test a hanging dialer
+							waitChan := make(chan time.Time)
+							defer close(waitChan)
+
+							mockDialer := new(tunnel.MockDialer)
+							mockDialer.On("Dial").Return(tun, nil).WaitUntil(waitChan)
+
+							m := tunnelmgr.NewManagerWithDialer(mockDialer)
+							defer m.Close()
+
+							// While dialing all the functions should return ErrStillDialing errors.
+							_, err = m.Listener()
+							Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
+
+							_, err = m.Open()
+							Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
+
+							_, err = m.OpenTLS(&tls.Config{})
+							Expect(err).Should(Equal(tunnelmgr.ErrStillDialing))
+
+							waitChan <- time.Now()
+
+							// Once dialing is done we should be able to get listeners and open connections.
+							Eventually(func() error {
+								_, err := m.Listener()
+								return err
+							}, "5s", "100ms").ShouldNot(HaveOccurred())
+
+							// If the previous check succeeded we know the dialing is complete so we don't need an eventually
+							// check
+							conn, err := m.Open()
+							Expect(err).ShouldNot(HaveOccurred())
+							Expect(conn).ShouldNot(BeNil())
+						},
+					)
+				})
+			})
 		})
 		Context("Manager closed", func() {
 			It("returns errors", func() {
@@ -244,10 +306,10 @@ var _ = Describe("Manager", func() {
 				cliConn, srvConn := net.Pipe()
 				defer cliConn.Close()
 				defer srvConn.Close()
+
 				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				Expect(err).ShouldNot(Equal(tunnelmgr.ErrManagerClosed))
-				Expect(m.RunWithTunnel(tun)).Should(Equal(tunnelmgr.ErrManagerClosed))
-				Expect(m.RunWithDialer(&mockDialer{tun: tun})).Should(Equal(tunnelmgr.ErrManagerClosed))
+				Expect(m.SetTunnel(tun)).Should(Equal(tunnelmgr.ErrManagerClosed))
 			})
 		})
 	})

@@ -469,6 +469,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
+					WaitForClusterToConnect(k8sAPI, clusterA)
+
 					cli := &http.Client{
 						Transport: &http2.Transport{
 							TLSClientConfig: &tls.Config{
@@ -550,6 +552,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 							RootCAs:      voltronTunnelCAs,
 						})
 						Expect(err).NotTo(HaveOccurred())
+
+						WaitForClusterToConnect(k8sAPI, clusterB)
 
 						cli := &http.Client{
 							Transport: &http2.Transport{
@@ -800,6 +804,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						panic("unexpected user was impersonated")
 					}
 				})
+
+				WaitForClusterToConnect(k8sAPI, clusterA)
+
 				authenticator.AddValidApiResponse(janeBearerToken, "jane", []string{"developers"})
 				authJane()
 			})
@@ -1054,4 +1061,16 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authe
 	}()
 
 	return srv, lisHTTPS.Addr().String(), lisTun.Addr().String(), &wg
+}
+
+func WaitForClusterToConnect(k8sAPI bootstrap.K8sClient, clusterName string) {
+	Eventually(func() calicov3.ManagedClusterStatus {
+		managedCluster, err := k8sAPI.ManagedClusters().Get(clusterName, metav1.GetOptions{})
+		Expect(err).ShouldNot(HaveOccurred())
+		return managedCluster.Status
+	}, 5*time.Second, 100*time.Millisecond).Should(Equal(calicov3.ManagedClusterStatus{
+		Conditions: []calicov3.ManagedClusterStatusCondition{
+			{Status: calicov3.ManagedClusterStatusValueTrue, Type: calicov3.ManagedClusterStatusTypeConnected},
+		},
+	}))
 }

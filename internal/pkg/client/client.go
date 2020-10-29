@@ -38,6 +38,9 @@ type Client struct {
 
 	tunnelDialRetryAttempts int
 	tunnelDialRetryInterval time.Duration
+
+	connRetryAttempts int
+	connRetryInterval time.Duration
 }
 
 // New returns a new Client
@@ -50,6 +53,9 @@ func New(addr string, opts ...Option) (*Client, error) {
 
 		tunnelDialRetryAttempts: 5,
 		tunnelDialRetryInterval: 2 * time.Second,
+
+		connRetryAttempts: 5,
+		connRetryInterval: 2 * time.Second,
 	}
 
 	client.tunnelAddr = addr
@@ -79,6 +85,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 			tunnelCert := client.tunnelCert
 			tunnelRootCAs := client.tunnelRootCAs
 			dialerFunc = func() (*tunnel.Tunnel, error) {
+				log.Debug("Dialing tunnel...")
 				return tunnel.DialTLS(
 					tunnelAddress,
 					&tls.Config{
@@ -97,10 +104,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 		)
 	}
 
-	client.tunnelManager = tunnelmgr.NewManager()
-	if err := client.tunnelManager.RunWithDialer(client.tunnelDialer); err != nil {
-		return nil, err
-	}
+	client.tunnelManager = tunnelmgr.NewManagerWithDialer(client.tunnelDialer)
 
 	for _, target := range client.targets {
 		log.Infof("Will route traffic to %s for requests matching %s", target.Dest, target.Path)
@@ -120,10 +124,24 @@ func New(addr string, opts ...Option) (*Client, error) {
 
 // ServeTunnelHTTP starts serving HTTP requests through the tunnel
 func (c *Client) ServeTunnelHTTP() error {
-	listener, err := c.tunnelManager.Listener()
+	log.Debug("Getting listener for tunnel.")
+
+	var listener net.Listener
+	var err error
+
+	for i := 1; i <= c.connRetryAttempts; i++ {
+		listener, err = c.tunnelManager.Listener()
+		if err == nil || err != tunnelmgr.ErrStillDialing {
+			break
+		}
+
+		time.Sleep(c.connRetryInterval)
+	}
+
 	if err != nil {
 		return err
 	}
+
 	if c.tunnelCert != nil {
 		// we need to upgrade the tunnel to a TLS listener to support HTTP2
 		// on this side.
@@ -147,7 +165,18 @@ func (c *Client) AcceptAndProxy(listener net.Listener) error {
 		if err != nil {
 			return err
 		}
-		dstConn, err := c.tunnelManager.Open()
+
+		var dstConn net.Conn
+
+		for i := 1; i <= c.connRetryAttempts; i++ {
+			dstConn, err = c.tunnelManager.Open()
+			if err == nil || err != tunnelmgr.ErrStillDialing {
+				break
+			}
+
+			time.Sleep(c.connRetryInterval)
+		}
+
 		if err != nil {
 			if err := srcConn.Close(); err != nil {
 				log.WithError(err).Error("failed to close source connection")

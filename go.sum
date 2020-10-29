@@ -610,17 +610,11 @@ github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2/go.mod h1:hkRG
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/apiserver v0.0.0-20200921231118-75f006459034 h1:Gktz+e+bN/tup6Iuc9iP4Ic0AICQ6iL1mMe0EqvgShU=
-github.com/tigera/apiserver v0.0.0-20200921231118-75f006459034/go.mod h1:K6rwySjuJrM+ujlmJ/4ODC2c2lsSS9iLf/OVcPE5gHM=
 github.com/tigera/apiserver v0.0.0-20201009181127-0a204605c07c h1:GZYnAF/EWYP3nI6DkMqTrxQP3yK/9qp77IAajQYh05M=
 github.com/tigera/apiserver v0.0.0-20201009181127-0a204605c07c/go.mod h1:izfsxF23GfkumV5oroYvPgsf7D3FfZ94tB9Ir9LAUhI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c h1:WkciU2y9T7ZFVfRBNlhWCngFyo6eQKbiljrMLkCF2fQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c/go.mod h1:XY6QJ8t0s/48gYiY1PxLdLVvWjbzH/fyKMWoIZZSrWA=
 github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
-github.com/tigera/lma v0.0.0-20201006174804-a4de0c49eef8 h1:HMz8hBOGv7R55J1TiOpUkPF5lCXGAbVfD6gPCmniEsg=
-github.com/tigera/lma v0.0.0-20201006174804-a4de0c49eef8/go.mod h1:Ai4+g/VAWG6Mr2UlbuaFxpyv8N0OLRGWHmOg/Jp70l4=
-github.com/tigera/lma v0.0.0-20201013230047-4026f4d19474 h1:iUIvA/2aBCNFlGlwBJiCIyHLqC9YL4Q/WX/QrdVA9+I=
-github.com/tigera/lma v0.0.0-20201013230047-4026f4d19474/go.mod h1:uFbc1GWZNObp7VALcE/Gu3EU+aaRjNgsUA+yRUVy064=
 github.com/tigera/lma v0.0.0-20201014202455-01dd28429dd9 h1:Gp+IfyDS5ZsG5FQv0nZcFZyu3qZIaK93iCvLx9fqFpQ=
 github.com/tigera/lma v0.0.0-20201014202455-01dd28429dd9/go.mod h1:uFbc1GWZNObp7VALcE/Gu3EU+aaRjNgsUA+yRUVy064=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
@@ -839,6 +833,7 @@ golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8T
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+golang.zx2c4.com/wireguard v0.0.20200121 h1:vcswa5Q6f+sylDfjqyrVNNrjsFUUbPsgAQTBCAg/Qf8=
 golang.zx2c4.com/wireguard v0.0.20200121/go.mod h1:P2HsVp8SKwZEufsnezXZA4GRX/T49/HlU7DGuelXsU4=
 golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf/go.mod h1:UdS9frhv65KTfwxME1xE8+rHYoFpbm36gOud1GhBe9c=
 gonum.org/v1/gonum v0.0.0-20190331200053-3d26580ed485/go.mod h1:2ltnJ7xHfj0zHS40VVPYEAAMTa3ZGguvHGBSJeRWqE0=

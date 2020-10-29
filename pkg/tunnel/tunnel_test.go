@@ -5,6 +5,7 @@ package tunnel_test
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -448,6 +449,107 @@ var _ = Describe("tunnel tests", func() {
 				Expect(srvConn.Close()).ToNot(HaveOccurred())
 				wg.Wait()
 			}, 100)
+		})
+	})
+})
+
+var _ = Describe("Tunnel Dialing", func() {
+	Context("DialInRoutineWithTimeout", func() {
+		It("sends the tunnel over the result channel if dialing was successful", func() {
+			mockDialer := new(tunnel.MockDialer)
+			mockDialer.On("Dial").Return(&tunnel.Tunnel{}, nil)
+
+			results := make(chan interface{})
+
+			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 2*time.Second)
+			defer close(closeChan)
+
+			timer := time.NewTimer(1 * time.Second)
+			defer timer.Stop()
+
+			select {
+			case result, ok := <-results:
+				Expect(ok).Should(BeTrue())
+				Expect(result).Should(BeAssignableToTypeOf(&tunnel.Tunnel{}))
+			case <-timer.C:
+				Fail("timed out waiting for result")
+			}
+
+			mockDialer.AssertExpectations(GinkgoT())
+		})
+
+		It("sends the error over the result channel if dialing returned an error", func() {
+			mockDialer := new(tunnel.MockDialer)
+			mockDialer.On("Dial").Return(nil, fmt.Errorf("failed to dial"))
+
+			results := make(chan interface{})
+
+			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 2*time.Second)
+			defer close(closeChan)
+
+			timer := time.NewTimer(1 * time.Second)
+			defer timer.Stop()
+
+			select {
+			case result, ok := <-results:
+				Expect(ok).Should(BeTrue())
+				Expect(result).Should(BeAssignableToTypeOf(fmt.Errorf("")))
+			case <-timer.C:
+				Fail("timed out waiting for result")
+			}
+
+			mockDialer.AssertExpectations(GinkgoT())
+		})
+
+		It("returns nothing and closes the results channel if the close channel was closed", func() {
+			mockDialer := new(tunnel.MockDialer)
+			mockDialer.On("Dial").Return(nil, fmt.Errorf("failed to dial"))
+
+			results := make(chan interface{})
+
+			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 2*time.Second)
+			close(closeChan)
+
+			// Wait a second just in case it takes a moment to close the channel.
+			time.Sleep(1 * time.Second)
+
+			timer := time.NewTimer(1 * time.Second)
+			defer timer.Stop()
+
+			// We expect the results channel to be closed.
+			select {
+			case _, ok := <-results:
+				Expect(ok).Should(BeFalse())
+			case <-timer.C:
+				Fail("timed out waiting for result")
+			}
+
+			mockDialer.AssertExpectations(GinkgoT())
+		})
+
+		It("returns nothing and closes the results channel if the close channel was closed", func() {
+			mockDialer := new(tunnel.MockDialer)
+			mockDialer.On("Dial").Return(nil, fmt.Errorf("failed to dial"))
+
+			results := make(chan interface{})
+
+			closeChan := tunnel.DialInRoutineWithTimeout(mockDialer, results, 100*time.Millisecond)
+			defer close(closeChan)
+
+			time.Sleep(1 * time.Second)
+
+			timer := time.NewTimer(1 * time.Second)
+			defer timer.Stop()
+
+			// We expect the results channel to be closed.
+			select {
+			case _, ok := <-results:
+				Expect(ok).Should(BeFalse())
+			case <-timer.C:
+				Fail("timed out waiting for result")
+			}
+
+			mockDialer.AssertExpectations(GinkgoT())
 		})
 	})
 })
