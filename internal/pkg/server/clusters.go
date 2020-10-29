@@ -332,17 +332,12 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	}
 
 	known := make(map[string]struct{})
-	updateClusterStatus := make(map[string]struct{})
 
 	cs.Lock()
 	defer cs.Unlock()
 
 	for _, mc := range list.Items {
 		id := mc.ObjectMeta.Name
-
-		if startupSync && mc.Status.Conditions != nil {
-			updateClusterStatus = getClustersWithConnectedStatus(mc, updateClusterStatus)
-		}
 
 		mc := &jclust.ManagedCluster{
 			ID:                id,
@@ -355,6 +350,19 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		err = cs.updateLocked(mc, true)
 		if err != nil {
 			log.Errorf("ManagedClusters listing failed: %s", err)
+		}
+
+		if c, ok := cs.clusters[id]; ok {
+			if startupSync {
+				c.Lock()
+
+				// Just update the cluster status even if it's already set to false, we just do this on startup.
+				if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
+					c.Unlock()
+					return "", errors.Errorf("failed to update the connection status for cluster %s during startup.", c.ID)
+				}
+				c.Unlock()
+			}
 		}
 	}
 
@@ -369,12 +377,6 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		log.Infof("Cluster id %q removed", id)
 	}
 
-	if startupSync {
-		err = cs.setConnectedStatus(updateClusterStatus)
-		if err != nil {
-			return "", err
-		}
-	}
 	return list.ListMeta.ResourceVersion, nil
 }
 
@@ -399,24 +401,6 @@ func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
 		default:
 		}
 	}
-}
-
-// setConnectedStatus updates the MangedClusterConnected condition to False in ManagedCluster CR.
-// This function is invoked when cs.clusters is populated for the first time, tunnel cannot exist before that.
-// If ManagedClusterConnected status is true before tunnel is established, it is likely that previous tunnel was closed without updating the status,
-// this function set status to False for those clusters.
-func (cs *clusters) setConnectedStatus(updateClusterStatus map[string]struct{}) error {
-	for id := range updateClusterStatus {
-		if c, ok := cs.clusters[id]; ok {
-			c.Lock()
-			if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
-				c.Unlock()
-				return errors.Errorf("failed to update the connection status for cluster %s during startup.", c.ID)
-			}
-			c.Unlock()
-		}
-	}
-	return nil
 }
 
 func (c *cluster) checkTunnelState() {
@@ -565,15 +549,4 @@ func (c *cluster) stop() {
 func proxyVoidDirector(*http.Request) {
 	// do nothing with the request, we pass it forward as is, the other side of
 	// the tunnel should do whatever it needs to proxy it further
-}
-
-// getClustersWithConnectedStatus returns clusters with MangedClusterConnected status True.
-func getClustersWithConnectedStatus(mc apiv3.ManagedCluster, updateClusterStatus map[string]struct{}) map[string]struct{} {
-	for _, c := range mc.Status.Conditions {
-		if c.Type == calicov3.ManagedClusterStatusTypeConnected && c.Status == calicov3.ManagedClusterStatusValueTrue {
-			updateClusterStatus[mc.ObjectMeta.Name] = struct{}{}
-			return updateClusterStatus
-		}
-	}
-	return updateClusterStatus
 }
