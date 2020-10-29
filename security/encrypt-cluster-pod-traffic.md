@@ -17,13 +17,13 @@ This how-to guide uses the following {{site.prodname}} features:
 
 - **Felix configuration resource** with WireGuard configuration parameters
 
-### Before you begin...
+### Before you begin
 
 **Supported**
 
 The following platforms using only IPv4:
 - Kubernetes, on-premises
-- OpenShift, v4.3
+- OpenShift, v4.3 and later
 - EKS using Calico CNI only
 
 **Required**
@@ -187,5 +187,5 @@ kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"wireguardE
 
 ### Above and beyond
 
-- [Secure Calico component communications]({{ site.baseurl }}/security/comms)
-- [Configure MTU to maximize network performance]({{ site.baseurl }}/networking/mtu)
+- [Secure {{site.prodname}} component communications]({{site.baseurl}}/security/comms)
+- [Configure MTU to maximize network performance]({{site.baseurl}}/networking/mtu)
