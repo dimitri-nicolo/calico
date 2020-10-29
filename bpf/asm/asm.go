@@ -606,3 +606,34 @@ func (b *Block) nextInsnReachble() bool {
 		return true
 	}
 }
+
+// RelocateBpfInsn replaces the imm in the insn with the map FD
+// The imm value is set to the mapFD and the src reg is set to a
+// special value BPF_PSEUDO_MAP_FD whose value is 1. Setting the
+// src reg to BPF_PSEUDO_MAP_FD, tells the verifier that the value
+// in imm is a map FD and it should replace it with the address
+// of the map
+func RelocateBpfInsn(fd uint32, data []byte, offset uint64) error {
+	insn := bpfInsn(data, offset)
+	binary.LittleEndian.PutUint32(insn[4:], fd)
+	insn[1] = uint8((RPseudoMapFD << 4) | insn[1]&0x0f)
+	copy(data[offset:], insn[:])
+	return nil
+}
+
+func bpfInsn(data []byte, offset uint64) Insn {
+	var insn Insn
+	copy(insn[:], data[offset:])
+	return insn
+}
+
+func GetBPFInsns(data []byte) Insns {
+	var insns Insns
+	var insn Insn
+	for i := 0; i < len(data); i += len(insn) {
+		insn = bpfInsn(data, uint64(i))
+		insns = append(insns, insn)
+	}
+
+	return insns
+}
