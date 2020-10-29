@@ -17,14 +17,14 @@
 package ut
 
 import (
-	"encoding/binary"
 	"testing"
+
+	"os"
 
 	. "github.com/onsi/gomega"
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/asm"
 	"github.com/projectcalico/felix/bpf/elf"
 )
 
@@ -135,27 +135,15 @@ func TestBpfLoaderFailureCases(t *testing.T) {
 	Expect(insnMap).To(BeNil())
 	Expect(license).To(Equal(""))
 
-	err, testMap := CreateTestMap("cali_test_kp", "hash", 4, 8, 511000, unix.BPF_F_NO_PREALLOC)
+	err = corruptElf(fileName)
 	Expect(err).NotTo(HaveOccurred())
 
-	loader, err = elf.NewLoaderFromFile(fileName, testMap)
+	loader, err = elf.NewLoaderFromFile("loader_corrupt_elf.o")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
-
-	insnMap, license, err = loader.Programs()
-	Expect(err).NotTo(HaveOccurred())
-
-	programInfo := insnMap["kprobe/tcp_sendmsg"]
-	Expect(programInfo.Insns).NotTo(BeNil())
-
-	for i, insn := range programInfo.Insns {
-		if insn.Src() == asm.RPseudoMapFD {
-			binary.LittleEndian.PutUint32(insn[4:], 0xdeadbeaf)
-			copy(programInfo.Insns[i][:], insn[:])
-		}
-	}
-	_, err = bpf.LoadBPFProgramFromInsns(programInfo.Insns, license, programInfo.Type)
+	_, _, err = loader.Programs()
 	Expect(err).To(HaveOccurred())
+	os.Remove("loader_corrupt_elf.o")
 }
 
 func loadProgram(license string, insnMap map[string]*elf.ProgramInfo) {
@@ -182,4 +170,35 @@ func CreateTestMap(mapName, mapType string, keySize, valueSize, maxEntries, flag
 	err := testMap.EnsureExists()
 	return err, testMap
 
+}
+
+func corruptElf(fileName string) error {
+	fp, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+
+	finfo, err := fp.Stat()
+	if err != nil {
+		return err
+	}
+	fsize := finfo.Size()
+	buffer := make([]byte, fsize)
+
+	_, err = fp.Read(buffer)
+	if err != nil {
+		return err
+	}
+	temp := [4]byte{0xde, 0xad, 0xbe, 0xaf}
+	copy(buffer[0:], temp[:])
+
+	fp, err = os.Create("loader_corrupt_elf.o")
+	if err != nil {
+		return err
+	}
+	_, err = fp.Write(buffer)
+	if err != nil {
+		return err
+	}
+	return nil
 }
