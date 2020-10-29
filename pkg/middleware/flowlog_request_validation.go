@@ -145,39 +145,49 @@ func validateLabelSelector(labelSelectors []LabelSelector) bool {
 	return true
 }
 
-func getPolicyPreview(preview string) (*PolicyPreview, error) {
-	if preview == "" {
+func getPolicyPreviews(previews []string) ([]PolicyPreview, error) {
+	if len(previews) == 0 {
 		return nil, nil
 	}
-	var policyPreview PolicyPreview
+	var policyPreviews []PolicyPreview
 
 	// Decode the policy preview JSON data. We should fail if there are unhandled fields in the request. Validation of
 	// the actual data is done within PIP as part of the xrefcache population.
-	decoder := json.NewDecoder(strings.NewReader(preview))
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&policyPreview)
-	if err != nil {
-		return nil, err
+	for _, preview := range previews {
+		var policyPreview PolicyPreview
+		decoder := json.NewDecoder(strings.NewReader(preview))
+		decoder.DisallowUnknownFields()
+		err := decoder.Decode(&policyPreview)
+		if err != nil {
+			return nil, err
+		}
+		if decoder.More() {
+			return nil, errPreviewResourceExtraData
+		}
+		policyPreviews = append(policyPreviews, policyPreview)
 	}
-	if decoder.More() {
-		return nil, errPreviewResourceExtraData
-	}
-	return &policyPreview, nil
+	return policyPreviews, nil
 }
 
-func validatePolicyPreview(policyPreview PolicyPreview) bool {
-	if policyPreview.Verb == "" || policyPreview.NetworkPolicy == nil {
-		return false
+func validatePolicyPreviews(policyPreviews []PolicyPreview) bool {
+	if policyPreviews == nil {
+		return true
 	}
-	switch policyPreview.Verb {
-	case policyPreviewVerbCreate:
-		break
-	case policyPreviewVerbUpdate:
-		break
-	case policyPreviewVerbDelete:
-		break
-	default:
-		return false
+
+	for _, policyPreview := range policyPreviews {
+		if policyPreview.Verb == "" || policyPreview.NetworkPolicy == nil {
+			return false
+		}
+		switch policyPreview.Verb {
+		case policyPreviewVerbCreate:
+			break
+		case policyPreviewVerbUpdate:
+			break
+		case policyPreviewVerbDelete:
+			break
+		default:
+			return false
+		}
 	}
 	return true
 }

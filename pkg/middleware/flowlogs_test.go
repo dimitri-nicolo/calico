@@ -225,9 +225,10 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params.Actions[1]).To(BeEquivalentTo("unknown"))
 			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
 			Expect(params.SourceDestNamePrefix).To(BeEquivalentTo("coredns"))
-			Expect(params.PolicyPreview.NetworkPolicy).To(BeAssignableToTypeOf(&v3.NetworkPolicy{}))
-			Expect(params.PolicyPreview.NetworkPolicy.(*v3.NetworkPolicy).Name).To(BeEquivalentTo("default.calico-node-alertmanager-mesh"))
-			Expect(params.PolicyPreview.NetworkPolicy.(*v3.NetworkPolicy).Namespace).To(BeEquivalentTo("tigera-prometheus"))
+			Expect(params.PolicyPreviews).To(HaveLen(1))
+			Expect(params.PolicyPreviews[0].NetworkPolicy).To(BeAssignableToTypeOf(&v3.NetworkPolicy{}))
+			Expect(params.PolicyPreviews[0].NetworkPolicy.(*v3.NetworkPolicy).Name).To(BeEquivalentTo("default.calico-node-alertmanager-mesh"))
+			Expect(params.PolicyPreviews[0].NetworkPolicy.(*v3.NetworkPolicy).Namespace).To(BeEquivalentTo("tigera-prometheus"))
 		})
 	})
 
@@ -374,15 +375,16 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation.json")
 			Expect(err).To(Not(HaveOccurred()))
-			preview, err := getPolicyPreview(string(validPreview))
+			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
+			Expect(previews).To(HaveLen(1))
 
 			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
-				PolicyPreview: preview,
-				Limit:         1,
+				PolicyPreviews: previews,
+				Limit:          1,
 			}
 
 			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
@@ -404,15 +406,15 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
-			preview, err := getPolicyPreview(string(validPreview))
+			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
 
 			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
-				PolicyPreview: preview,
-				Limit:         2,
+				PolicyPreviews: previews,
+				Limit:          2,
 			}
 
 			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
@@ -433,15 +435,15 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
-			preview, err := getPolicyPreview(string(validPreview))
+			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
-			preview.ImpactedOnly = true
 
 			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
-				PolicyPreview: preview,
+				PolicyPreviews: previews,
+				ImpactedOnly: true,
 			}
 
 			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
@@ -460,7 +462,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{""})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
-				PolicyPreview: &PolicyPreview{},
+				PolicyPreviews: []PolicyPreview{},
 			}
 
 			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
@@ -508,15 +510,15 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation_rbac.json")
 			Expect(err).To(Not(HaveOccurred()))
-			preview, err := getPolicyPreview(string(validPreview))
+			previews, err := getPolicyPreviews([]string{string(validPreview)})
 			Expect(err).To(Not(HaveOccurred()))
 
 			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
-				PolicyPreview: preview,
-				Limit:         1,
+				PolicyPreviews: previews,
+				Limit:          1,
 			}
 
 			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
