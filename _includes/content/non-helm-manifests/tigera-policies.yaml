@@ -774,22 +774,9 @@ spec:
       destination:
         # This rule is intended to allow egress between dex and your identity provider.
         ports: [443]
-        selector: k8s-app == 'tigera-dex-external-idp'
-        namespaceSelector: name == 'tigera-dex'
-
----
-
-# This network set is added to represent the address(es) where your identity provider is running. If you make this network
-# set more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
-apiVersion: projectcalico.org/v3
-kind: NetworkSet
-metadata:
-  name: tigera-external-identity-provider
-  namespace: tigera-dex
-  labels:
-    k8s-app: tigera-dex-external-idp
-spec:
-  nets: ['0.0.0.0/0']
+        # This subnet is added to represent the address(es) where your identity provider is running. If you make this subnet
+        # more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
+        nets: ['0.0.0.0/0']
 
 ---
 
