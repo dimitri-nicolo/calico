@@ -1,7 +1,7 @@
 # !/bin/bash
 # save paths for the packages we want to manually cleanup.
-packagefiles=()
-for OUTPUT in $(rpm -ql elfutils-libelf elfutils-libelf elfutils-default-yama-scope lua libdb dbus-libs dbus-python dbus dbus-glib bzip2-libs rpm rpm-python rpm-libs rpm-build-libs yum-metadata-parser yum yum-plugin-ovl yum-plugin-fastestmirror yum-utils)
+packagefiles=('/var/log/yum.log')
+for OUTPUT in $(rpm -ql elfutils-libelf elfutils-libelf elfutils-default-yama-scope lua libdb dbus-libs dbus-python dbus dbus-glib bzip2-libs rpm rpm-python rpm-libs rpm-build-libs yum-metadata-parser yum yum-plugin-ovl yum-plugin-fastestmirror yum-utils curl libcurl sqlite file-libs python python-libs libxml2 libxml2-python)
 do
         packagefiles+=($OUTPUT)
 done
