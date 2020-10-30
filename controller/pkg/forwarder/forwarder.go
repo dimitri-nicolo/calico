@@ -5,9 +5,10 @@ package forwarder
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"math"
 	"os"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -409,6 +410,11 @@ func (f *eventForwarder) retrieveAndForward(start time.Time, numAttempts uint, d
 			func() error {
 				// Calling MarshalJSON should never return an error
 				b, _ := rawEvent.Data.MarshalJSON()
+
+				// We will unmarshall the raw data into a generic payload object
+				// in order to:
+				//   (1) Ensure any unwanted characters (like newlines or tags) are stripped out
+				//   (2) Extract the time field for each event to keep for record keeping
 				payload := map[string]interface{}{}
 				err := json.Unmarshal(b, &payload)
 				if err != nil {
@@ -418,19 +424,34 @@ func (f *eventForwarder) retrieveAndForward(start time.Time, numAttempts uint, d
 					"payload": payload,
 				}).Debug("attempting dispatcher.Dispatch(rawEvent) for event ...")
 
-				if v, ok := payload["time"]; !ok {
-					return errors.New("error unmarshalling event payload from datastore")
-				} else {
-					if t, ok := (v.(string)); ok {
-						convertedT, err := strconv.ParseInt(t, 10, 0)
-						if err == nil {
-							epoch := time.Unix(convertedT, 0)
-							f.config.LastSuccessfulEventTime = &epoch
-						}
+				if v, ok := payload["time"]; ok {
+					l.WithFields(log.Fields{
+						"time": v,
+					}).Debugf("found event time which is type %s", reflect.TypeOf(v))
+					if t, ok := (v.(float64)); ok {
+						sec, dec := math.Modf(t)
+						epoch := time.Unix(int64(sec), int64(dec*(1e9)))
+						l.WithFields(log.Fields{
+							"epoch":         epoch,
+							"convertedTime": t,
+						}).Debug("attempting to set LastSuccessfulEventTime for config ...")
+						f.config.LastSuccessfulEventTime = &epoch
 					}
-					f.config.LastSuccessfulEventID = &rawEvent.ID
 				}
-				return f.dispatcher.Dispatch(b)
+				f.config.LastSuccessfulEventID = &rawEvent.ID
+
+				// Fix for issue with Global Alert events generated using Elastic watch jobs.
+				// They contain unwanted newline/tab characters. Fluentd rejects these logs
+				// when ingesting the data as JSON because it considers newlines invalid JSON.
+				// https://tigera.atlassian.net/browse/SAAS-1183
+				// A better solution will be to ensure the Elastic watch jobs do not inject
+				// the newlines/tabs.
+				transformed, err := json.Marshal(payload)
+				if err != nil {
+					return err
+				}
+
+				return f.dispatcher.Dispatch(transformed)
 			},
 			retry.Attempts(numAttempts),
 			retry.Delay(500*time.Millisecond),
