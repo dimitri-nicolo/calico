@@ -199,6 +199,11 @@ spec:
     protocol: TCP
     destination:
       ports: [9081]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # Egress access for BGP metrics
+      ports: [9900]
 ---
 
 # This policy ensures Fluentd POD is marked as protected by compliance 
