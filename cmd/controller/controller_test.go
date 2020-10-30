@@ -59,7 +59,7 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 				"dest_name_aggr":   "Don't Care",
 				"count":            1,
 			},
-			"time": time.Now(),
+			"time": time.Now().Unix(),
 		}
 		//Create 1 generic entry to ensure it works
 		_, err = p.Client.Backend().Index().Index("tigera_secure_ee_events.cluster").BodyJson(json_res).Do(ctx)
