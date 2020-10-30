@@ -140,7 +140,7 @@ func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, a *api.Alert) e
 					"Other":       alert.Other,
 				},
 			},
-			"time": time.Now(),
+			"time": time.Now().Unix(),
 		}
 		res, err := p.Client.Backend().Index().Index(hp.Index).Id("").BodyJson(body).Do(p.Ctx)
 
