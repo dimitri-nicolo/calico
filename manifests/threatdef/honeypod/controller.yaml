@@ -3,7 +3,6 @@ layout: null
 --- 
 
 ---
-
 # Required RBAC:
 # - get/list workloadenpoints and pods
 apiVersion: v1
@@ -11,24 +10,17 @@ kind: ServiceAccount
 metadata:
   name: honeypod-controller 
   namespace: tigera-intrusion-detection
-
 ---
-
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   namespace: tigera-intrusion-detection
   name: honeypod-controller-role
 rules:
-  - apiGroups: ["projectcalico.org"]
-    resources: ["workloadendpoints"]
-    verbs: ["get"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list","get"]
-
 ---
-
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -41,9 +33,7 @@ roleRef:
   kind: ClusterRole
   name: honeypod-controller-role
   apiGroup: rbac.authorization.k8s.io
-
 ---
-
 # Packet Capture
 apiVersion: projectcalico.org/v3
 kind: PacketCapture
@@ -52,9 +42,7 @@ metadata:
   namespace: tigera-internal
 spec:
   selector: all()
-
 ---
-
 # The actual honeypod-controller deployment
 apiVersion: apps/v1
 kind: DaemonSet
@@ -151,5 +139,53 @@ spec:
           type: Directory 
       - name: snort
         emptyDir: {}
-
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.allow-honeypod-controller
+  namespace: tigera-intrusion-detection
+spec:
+  tier: allow-tigera
+  order: 1
+  selector: app == 'honeypod-controller'
+  types:
+  - Ingress
+  - Egress
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: name == 'tigera-elasticsearch'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      ports:
+      - 9200
+  - action: Allow
+    protocol: UDP
+    destination:
+      namespaceSelector: projectcalico.org/name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.elasticsearch-access-honeypod-controller
+  namespace: tigera-elasticsearch
+spec:
+  tier: allow-tigera
+  order: 1
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    destination:
+      ports:
+      - 9200
+    protocol: TCP
+    source:
+      namespaceSelector: name == 'tigera-intrusion-detection'
+      selector:  app == 'honeypod-controller'
 ---

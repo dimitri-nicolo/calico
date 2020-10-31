@@ -86,8 +86,11 @@ kubectl apply -f {{ "/manifests/threatdef/honeypod/vuln-svc.yaml" | absolute_url
 
 To verify the installation, ensure that honeypods are running within the `tigera-internal` namespace:
 
+```bash
+kubectl get pods -n tigera-internal
+```
+
 ```shell
-$ kubectl get pods -n tigera-internal
 NAME                                         READY   STATUS    RESTARTS   AGE
 tigera-internal-app-28c85                    1/1     Running   0          2m19s
 tigera-internal-app-8c5bt                    1/1     Running   0          2m19s
@@ -99,8 +102,11 @@ tigera-internal-db-5c57bd5987-k5ksj          1/1     Running   0          2m10s
 
 And verify that global alerts are set for honeypods:
 
+```bash
+kubectl get globalalerts
+```
+
 ```shell
-$ kubectl get globalalerts
 NAME                   CREATED AT
 honeypod.fake.svc      2020-10-22T03:44:36Z
 honeypod.ip.enum       2020-10-22T03:44:31Z

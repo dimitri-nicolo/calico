@@ -37,6 +37,7 @@ spec:
         - containerPort: 443
         resources:
           limits:
+            cpu: 100m
             memory: 200Mi
           requests:
             cpu: 100m
@@ -45,7 +46,6 @@ spec:
           privileged: false
           allowPrivilegeEscalation: false
 ---
-
 # Create two service, one unreachable, one debug
 kind: Service
 apiVersion: v1
@@ -76,7 +76,6 @@ spec:
   selector:
     app: tigera-internal-dashboard
 ---
-
 # Global Alert Template and Global Alert for Fake Service access
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate

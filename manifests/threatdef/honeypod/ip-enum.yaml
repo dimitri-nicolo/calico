@@ -33,6 +33,7 @@ spec:
         image: {{page.registry}}{% include component_image component="honeypod" %}
         resources:
           limits:
+            cpu: 100m
             memory: 200Mi
           requests:
             cpu: 100m
@@ -41,7 +42,6 @@ spec:
             privileged: false
             allowPrivilegeEscalation: false
 ---
-
 # Global Alert Template and Global Alert for IP Enumeration
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
@@ -66,7 +66,6 @@ spec:
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
 ---
-
 # Global Alert Template and Global Alert for IP Enumeration
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate

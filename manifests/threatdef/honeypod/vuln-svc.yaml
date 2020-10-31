@@ -39,6 +39,7 @@ spec:
           value: 'yes'
         resources:
           limits:
+            cpu: 100m
             memory: 400Mi
           requests:
             cpu: 100m
@@ -47,7 +48,6 @@ spec:
             privileged: false
             allowPrivilegeEscalation: false
 ---
-
 # Create Mysql service
 kind: Service
 apiVersion: v1
@@ -64,7 +64,6 @@ spec:
   selector:
     app: tigera-internal-db
 ---
-
 # Global Alert Template and Global Alert for Vulnerable Service access
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
