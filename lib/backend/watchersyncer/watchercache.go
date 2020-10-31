@@ -115,13 +115,12 @@ mainLoop:
 				wc.handleWatchListEvent(kvp)
 			case api.WatchError:
 				// Handle a WatchError. This error triggered from upstream, all type
-				// of WatchError are treated equally,log the Error and trigger a full resync.
-
-				wc.logger.WithField("EventType", event.Type).Errorf("Watch error received from Upstream")
-				wc.onWaitForDatastore()
+				// of WatchError are treated equally,log the Error and trigger a full resync. We only log at info
+				// because errors may occur due to compaction causing revisions to no longer be valid - in this case
+				// we simply need to do a full resync.
+				wc.logger.WithError(event.Error).Infof("Watch error received from Upstream")
 				wc.currentWatchRevision = ""
 				wc.resyncAndCreateWatcher(ctx)
-
 			default:
 				// Unknown event type - not much we can do other than log.
 				wc.logger.WithField("EventType", event.Type).Errorf("Unknown event type received from the datastore")
@@ -177,7 +176,7 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 		}
 
 		if performFullResync {
-			wc.logger.Debug("Full resync is required")
+			wc.logger.Info("Full resync is required")
 
 			// Notify the converter that we are resyncing.
 			if wc.resourceType.UpdateProcessor != nil {
@@ -190,7 +189,6 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 			if err != nil {
 				// Failed to perform the list.  Pause briefly (so we don't tight loop) and retry.
 				wc.logger.WithError(err).Info("Failed to perform list of current data during resync")
-				wc.onWaitForDatastore()
 
 				// Need to send back an error here for handling. Only callbacks with connection failure handling should actually kick off anything.
 				wc.results <- errorSyncBackendError{
@@ -265,11 +263,7 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 			// actually failed.
 
 			// We hit an error creating the Watch.  Trigger a full resync.
-			// TODO We should be able to improve this by handling specific error cases with another
-			//      watch retry.  This would require some care to ensure the correct errors are captured
-			//      for the different datastore drivers.
 			wc.logger.WithError(err).WithField("performFullResync", performFullResync).Info("Failed to create watcher")
-			wc.onWaitForDatastore()
 			performFullResync = true
 			continue
 		}
@@ -294,9 +288,8 @@ func (wc *watcherCache) cleanExistingWatcher() {
 // We may also need to send deleted messages for old resources that were not validated in the
 // resync (i.e. they must have since been deleted).
 func (wc *watcherCache) finishResync() {
-	// If we haven't already sent an InSync event (or signalled the inverse by sending a WaitForDatastore event),
-	// then send a synced notification.  The watcherSyncer will send a Synced event when it has received synced
-	// events from each cache.
+	// If we haven't already sent an InSync event then send a synced notification.  The watcherSyncer will send a Synced
+	// event when it has received synced events from each cache. Once in-sync the cache remains in-sync.
 	if !wc.hasSynced {
 		wc.logger.Info("Sending synced update")
 		wc.results <- api.InSync
@@ -429,15 +422,5 @@ func (wc *watcherCache) markAsValid(resourceKey string) {
 			wc.resources[resourceKey] = oldResource
 			delete(wc.oldResources, resourceKey)
 		}
-	}
-}
-
-// If a syncer is in-sync state, the onWaitForDatastore method, sends WaitForDatastore event.
-// See finishResync() for how the watcherCache goes back to in-sync.
-func (wc *watcherCache) onWaitForDatastore() {
-	wc.logger.Debug("Send WaitforDatastore event if sync isn't in-sync")
-	if wc.hasSynced {
-		wc.results <- api.WaitForDatastore
-		wc.hasSynced = false
 	}
 }
