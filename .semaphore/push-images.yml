@@ -8,9 +8,11 @@ execution_time_limit:
   minutes: 120
 global_job_config:
   secrets:
+    - name: docker-hub
     - name: google-service-account-for-gcr
   prologue:
     commands:
+      - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
       # Login to GCR in order to push images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       - checkout
