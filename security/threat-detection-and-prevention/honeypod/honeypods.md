@@ -115,6 +115,13 @@ honeypod.port.scan     2020-10-22T03:44:31Z
 honeypod.vuln.svc      2020-10-22T03:44:40Z
 ```
 
+Once you have verified that the honeypods are installed and working, it is recommended to remove the pull secret from the namespace:
+
+```bash
+kubectl delete secret tigera-pull-secret -n tigera-internal
+```
+
+
 ### Above and beyond
 
 - [Monitor honeypods]({{site.baseurl}}/security/threat-detection-and-prevention/honeypod/honeypod-controller)
