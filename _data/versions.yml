@@ -109,7 +109,7 @@
     elasticsearch-operator:
       registry: docker.elastic.co
       image: eck/eck-operator
-      version: 1.0.1
+      version: 1.2.1
     prometheus-operator:
       image: coreos/prometheus-operator
       version: v0.38.1
