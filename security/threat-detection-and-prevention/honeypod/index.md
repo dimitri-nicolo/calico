@@ -1,5 +1,5 @@
 ---
-description: Honeypods for canary threat detection
+description: Deploy honeypods (decoys disguised as sensitive assets in your Kubernetes cluster) to monitor threats.
 show_read_time: false
 show_toc: false
 ---

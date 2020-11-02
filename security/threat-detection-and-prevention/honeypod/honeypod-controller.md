@@ -10,7 +10,7 @@ Monitor honeypod behavior to gain insight on what attackers are doing using pack
 
 ### Value
 
-Adding monitoring to honeypods extends your ability to thwart activities including generating alerts if traffic to honeypods match any Intrusion Detection System (Snort) signatures, and scanning traffic if activities are detected.
+Adding monitoring to honeypods improves your ability to detect and confirm known threats by analyzing and alerting on network traffic to honeypods that match any Intrusion Detection System (Snort) signatures.
 
 ### Features
 
@@ -42,6 +42,8 @@ The controller leverages the following:
 
 #### Add honeypod controller to cluster
 
+> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture) manifest to target your honeypods. Honeypod controller requires the name to be `capture-honey` at this release.
+
 Add the honeypod controller to each cluster configured for honeypods using the following command:
 
 ```bash
@@ -52,8 +54,11 @@ kubectl apply -f {{ "/manifests/threatdef/honeypod/controller.yaml" | absolute_u
 
 To verify the installation, ensure that honeypod controller is running within the `tigera-intrusion-detection` namespace:
 
+```bash
+kubectl get pods -n tigera-intrusion-detection
+```
+
 ```shell
-$ kubectl get pods -n tigera-intrusion-detection
 NAME                                             READY   STATUS      RESTARTS   AGE
 honeypod-controller-57vwk                        1/1     Running     0          22s
 honeypod-controller-8vtj6                        1/1     Running     0          22s

@@ -10,7 +10,7 @@ Configure honeypods in your clusters and get alerts that indicate resources may 
 
 ### Value
 
-Based on the well-known cybersecurity method, “honeypots,” {{site.prodname}} honeypods are used to detect and counter cyber attacks. You place decoys disguised as a sensitive asset (called canary pods) at different locations in your Kubernetes cluster. You configure all valid resources to not make connections to the honeypods. Then, if any resources do reach the honeypods, you can assume the connection is suspicious, and that a resource may be compromised.
+Based on the well-known cybersecurity method, “honeypots,” {{site.prodname}} honeypods are used to detect suspicious activity within a Kubernetes cluster. The feature enables you to deploy decoys disguised as a sensitive asset (called honeypods) at different locations in your Kubernetes cluster. Any resources make attempts to communicate with the honeypods, it can be considered indicative of a suspicious connection and the cluster may be compromised.
 
 {{site.prodname}} honeypods can be used to detect attacks such as:
 
@@ -30,7 +30,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Honeypod implementation
 
-You configure honeypods on a per-cluster basis using "template" honeypod manifests that are easily customizable. Any alerts triggered are displayed in the Alerts tab in {{site.prodname}} Manager UI. The Honeypod Dashboard in Kibana provides an easy way to monitor and analyze traffic reaching the honeypods.
+Honeypods can be configured on a per-cluster basis using "template" honeypod manifests that are easily customizable. Any alerts triggered are displayed in the Alerts tab in {{site.prodname}} Manager UI. The Honeypod Dashboard in Kibana provides an easy way to monitor and analyze traffic reaching the honeypods.
 
 ### How To
 
@@ -54,13 +54,13 @@ kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<
 
 #### Deploy honeypods in clusters
 
-Use one of the following sample honeypods manifests or customize them for your implementation. All images contain a minimal container that runs or mimics a running application. The images provided has been harden with built-in protections to reduce the risk of them being compromised.
+Use one of the following sample honeypods manifests or customize them for your implementation. All images include a minimal container that runs or mimics a running application. The images provided have been hardened with built-in protections to reduce the risk of them being compromised.
 
-> **Note**: When modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes.
+> **Note**: When modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes. Ensure the alert name has the prefix `honeypod`, for example `honeypod.new.alert`.
 
 - **IP Enumeration** 
 
-  The pod can only be reached locally (adjacent pods within same node), by not setting a service:
+  Expose a empty pod that can only be reached via PodIP, we can see when the attacker is probing the pod network:
 
 ```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/ip-enum.yaml" | absolute_url }} 
