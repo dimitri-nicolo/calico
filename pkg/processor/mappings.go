@@ -183,7 +183,8 @@ const EventMapping = `{
           "type" : "keyword"
         },
         "time" : {
-          "type" : "date"
+          "type" : "date",
+          "format": "strict_date_optional_time||epoch_second"
         },
         "type" : {
           "type" : "keyword"
