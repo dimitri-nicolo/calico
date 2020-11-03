@@ -100,6 +100,15 @@
     egress-gateway:
       image: tigera/egress-gateway
       version: master
+    honeypod:
+      image: tigera/honeypod
+      version: master
+    honeypod-exp-service:
+      image: tigera/honeypod-exp-service
+      version: master
+    honeypod-controller:
+      image: tigera/honeypod-controller
+      version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
     dex:

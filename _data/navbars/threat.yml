@@ -23,3 +23,10 @@ section:
   path: /security/ingress
 - title: Anonymization attacks  
   path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
+- title: Honeypods
+  path: /security/threat-detection-and-prevention/honeypod/
+  section:
+  - title: Configure honeypods
+    path: /security/threat-detection-and-prevention/honeypod/honeypods
+  - title: Monitor honeypods
+    path: /security/threat-detection-and-prevention/honeypod/honeypod-controller
