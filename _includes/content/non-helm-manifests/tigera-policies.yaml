@@ -147,17 +147,17 @@ spec:
 {%- endif %}
 ---
 
-# Allow internal communication from compliance-benchmarker, compliance-controller, compliance-snapshotter
-# to apiserver and coredns.
+# Allow internal communication from compliance-benchmarker, compliance-controller, compliance-snapshotter, compliance-reporter
+# to apiserver, coredns and elasticsearch.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tigera.compliance-kube-api-access
+  name: allow-tigera.compliance-access
   namespace: tigera-compliance
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'compliance-benchmarker' || k8s-app == 'compliance-controller' || k8s-app == 'compliance-snapshotter'
+  selector: k8s-app == 'compliance-benchmarker' || k8s-app == 'compliance-controller' || k8s-app == 'compliance-snapshotter' || k8s-app == 'compliance-reporter'
   types:
   - Egress
   egress:
@@ -187,6 +187,12 @@ spec:
       selector: k8s-app == 'kube-dns'
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      ports: [9200]
 ---
 
 # Allow internal communication to compliance-server from Manager.
@@ -661,6 +667,23 @@ spec:
     destination:
       nets:
       - "fe80::/10"
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == "kube-system"
+      selector: k8s-app == "kube-dns"
+      ports: [53]
+{%- endif %}
   # Pass to subsequent tiers or profiles for further refinement
   - action: Pass
 
