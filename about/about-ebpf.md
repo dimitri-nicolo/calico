@@ -154,4 +154,4 @@ NAT overhead from service connections.
 ### Above and beyond
 
 * For more information and performance metrics for the eBPF dataplane, see the [announcement blog post](https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/).
-* If you'd like to try eBPF mode in your Kubernetes cluster, follow the [Trying the eBPF dataplane]({{site.baseurl}}/getting-started/kubernetes/trying-ebpf) guide.
+* If you'd like to try eBPF mode in your Kubernetes cluster, follow the [Enable the eBPF dataplane]({{site.baseurl}}/maintenance/performance/ebpf/enabling-ebpf) guide.

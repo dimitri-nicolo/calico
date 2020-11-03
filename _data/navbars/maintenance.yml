@@ -94,6 +94,13 @@ section:
 - title: Performance and scaling
   path: /maintenance/performance/
   section:
+  - title: eBPF
+    path: /maintenance/performance/ebpf/
+    section: 
+    - title: Enable the eBPF dataplane
+      path: /maintenance/performance/ebpf/enabling-ebpf
+    - title: Creating an EKS cluster for eBPF mode
+      path: /maintenance/performance/ebpf/ebpf-and-eks
   - title: Reduce node impacts on datastore
     path: /reference/typha/overview
 - title: Remove nodes from a cluster
