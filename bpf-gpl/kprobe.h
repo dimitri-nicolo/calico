@@ -38,6 +38,7 @@ struct __attribute__((__packed__)) calico_tcp_kprobe_v4_key {
 
 struct calico_tcp_kprobe_v4_value {
 	uint32_t txBytes;
+	uint32_t rxBytes;
 	__u64	timestamp;
 };
 

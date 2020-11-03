@@ -1,3 +1,5 @@
+// +build !windows
+
 // Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,30 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package intdataplane
+package ut
 
 import (
-	log "github.com/sirupsen/logrus"
+	"testing"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/bpf/events"
 	"github.com/projectcalico/felix/bpf/kprobe"
 )
 
-func initKprobe(logLevel string, mc *bpf.MapContext) error {
-	err := bpf.MountDebugfs()
-	if err != nil {
-		log.WithError(err).Panic("Failed to mount debug fs")
-	}
+func TestKprobe(t *testing.T) {
+	RegisterTestingT(t)
+	mc := &bpf.MapContext{}
+	perfEvnt, err := events.New(mc, events.SourcePerfEvents)
+	Expect(err).NotTo(HaveOccurred())
+	err = kprobe.NewKprobe("debug", perfEvnt, mc)
+	Expect(err).NotTo(HaveOccurred())
 
-	tcpv4Map := kprobe.TcpV4Map(mc)
-	err = tcpv4Map.EnsureExists()
-	if err != nil {
-		log.WithError(err).Panic("Failed to create kprobe tcp v4 BPF map.")
-	}
-
-	err = kprobe.Install(logLevel, "tcp", "tcp_sendmsg", tcpv4Map)
-	if err != nil {
-		return err
-	}
-	return nil
 }

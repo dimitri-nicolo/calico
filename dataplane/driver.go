@@ -356,6 +356,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			SidecarAccelerationEnabled:      configParams.SidecarAccelerationEnabled,
 
 			BPFEnabled:                         configParams.BPFEnabled,
+			BPFKprobeEnabled:                   configParams.BPFKprobeEnabled,
 			BPFDisableUnprivileged:             configParams.BPFDisableUnprivileged,
 			BPFConnTimeLBEnabled:               configParams.BPFConnectTimeLoadBalancingEnabled,
 			BPFKubeProxyIptablesCleanupEnabled: configParams.BPFKubeProxyIptablesCleanupEnabled,

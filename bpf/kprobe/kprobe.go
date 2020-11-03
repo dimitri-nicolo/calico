@@ -20,9 +20,13 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/elf"
+	"github.com/projectcalico/felix/bpf/events"
 )
 
 func progFileName(protocol, logLevel string) string {
@@ -33,40 +37,77 @@ func progFileName(protocol, logLevel string) string {
 	return fmt.Sprintf("%s_%s_kprobe.o", protocol, logLevel)
 }
 
-func Install(logLevel, protocol, fn string, tcpV4Map bpf.Map) error {
+func NewKprobe(logLevel string, perfEvnt events.Events, mc *bpf.MapContext) error {
+	err := bpf.MountDebugfs()
+	if err != nil {
+		log.WithError(err).Panic("Failed to mount debug fs")
+	}
+
+	tcpv4Map := TcpV4Map(mc)
+	err = tcpv4Map.EnsureExists()
+	if err != nil {
+		log.WithError(err).Panic("Failed to create kprobe tcp v4 BPF map.")
+	}
+
+	var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
+	err = installKprobe(logLevel, "tcp", tcpFns, tcpv4Map, perfEvnt.Map(), tcpv4Map)
+	if err != nil {
+		return fmt.Errorf("Error installing kprobes")
+	}
+	return nil
+}
+
+func installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) error {
 	filename := path.Join(bpf.ObjectDir, progFileName(protocol, logLevel))
-	loader := elf.NewLoader(filename, tcpV4Map)
-	insnMap, license, err := loader.Program()
+	loader, err := elf.NewLoaderFromFile(filename, maps...)
+	if err != nil {
+		fmt.Errorf("Error reading elf file")
+	}
+	insnMap, license, err := loader.Programs()
 	if err != nil {
 		return fmt.Errorf("Error loading kprobe program %s %w", filename, err)
 	}
-	sectionName := "kprobe/" + fn
-	programInfo, ok := insnMap[sectionName]
-	if ok != true {
-		return fmt.Errorf("Kprobe section not found")
+	for _, fn := range fns {
+		sectionName := "kprobe/" + fn
+		programInfo, ok := insnMap[sectionName]
+		if ok != true {
+			return fmt.Errorf("Kprobe section %s not found", fn)
+		}
+		progFd, err := bpf.LoadBPFProgramFromInsns(programInfo.Insns, license, programInfo.Type)
+		if err != nil {
+			return err
+		}
+		err = attachKprobe(progFd, fn)
+		if err != nil {
+			return fmt.Errorf("Error attaching kprobe to fn %s", fn)
+		}
 	}
-	progFd, err := bpf.LoadBPFProgramFromInsns(programInfo.Insns, license, programInfo.Type)
-	if err != nil {
-		return err
-	}
-	return attachKprobe(progFd, fn)
+	return nil
 }
 
 func attachKprobe(progFd bpf.ProgFD, fn string) error {
-	kprobeEventsFileName := "/sys/kernel/debug/tracing/kprobe_events"
-	f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		return fmt.Errorf("Error opening kprobe events file %w", err)
-	}
-	defer f.Close()
-	cmd := fmt.Sprintf("p:p%s %s", fn, fn)
-	if _, err = f.WriteString(cmd); err != nil {
-		return fmt.Errorf("Error writing to kprobe events file %w", err)
-	}
 	kprobeIdFile := fmt.Sprintf("/sys/kernel/debug/tracing/events/kprobes/p%s/id", fn)
 	kbytes, err := ioutil.ReadFile(kprobeIdFile)
 	if err != nil {
-		return fmt.Errorf("Error reading kprobe event id %w", err)
+		pathErr, ok := err.(*os.PathError)
+		if ok && pathErr.Err == syscall.ENOENT {
+			kprobeEventsFileName := "/sys/kernel/debug/tracing/kprobe_events"
+			f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0666)
+			if err != nil {
+				return fmt.Errorf("Error opening kprobe events file %w", err)
+			}
+			defer f.Close()
+			cmd := fmt.Sprintf("p:p%s %s", fn, fn)
+			if _, err = f.WriteString(cmd); err != nil {
+				return fmt.Errorf("Error writing to kprobe events file %w", err)
+			}
+			kbytes, err = ioutil.ReadFile(kprobeIdFile)
+			if err != nil {
+				return fmt.Errorf("Error reading kprobe event id %w", err)
+			}
+		} else {
+			return err
+		}
 	}
 	kprobeId, err := strconv.Atoi(strings.TrimSpace(string(kbytes)))
 	if err != nil {

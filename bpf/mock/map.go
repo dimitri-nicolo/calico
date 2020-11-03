@@ -62,6 +62,10 @@ func (m Map) Iter(f bpf.IterCallback) error {
 	return nil
 }
 
+func (m Map) Size() int {
+	return m.MapParameters.MaxEntries
+}
+
 func (m Map) Update(k, v []byte) error {
 	if len(k) != m.KeySize {
 		m.logCxt.Panicf("Key had wrong size (%d)", len(k))
@@ -147,4 +151,8 @@ func (*DummyMap) Get(k []byte) ([]byte, error) {
 
 func (*DummyMap) Delete(k []byte) error {
 	return nil
+}
+
+func (*DummyMap) Size() int {
+	return 0
 }
