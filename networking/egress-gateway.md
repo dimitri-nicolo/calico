@@ -135,7 +135,7 @@ happens to be on the same node as the client).
 
 **Supported**
 
-- Kubernetes on-premises, AWS, GCE, and Azure
+- Kubernetes on-premises only
 
 ### How to
 
