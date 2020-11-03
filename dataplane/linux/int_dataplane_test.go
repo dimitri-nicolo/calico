@@ -16,6 +16,7 @@ package intdataplane_test
 
 import (
 	"net"
+	"regexp"
 	"time"
 
 	"github.com/projectcalico/felix/capture"
@@ -101,6 +102,8 @@ var _ = Describe("Constructor test", func() {
 			IPIPMTU:          configParams.IpInIpMtu,
 			HealthAggregator: healthAggregator,
 			Collector:        col,
+
+			MTUIfacePattern: regexp.MustCompile(".*"),
 
 			LookPathOverride: func(file string) (string, error) {
 				return file, nil

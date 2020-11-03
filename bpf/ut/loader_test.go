@@ -19,12 +19,12 @@ package ut
 import (
 	"testing"
 
-	. "github.com/onsi/gomega"
+	"os"
 
+	. "github.com/onsi/gomega"
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
-	//"github.com/projectcalico/felix/bpf/asm"
 	"github.com/projectcalico/felix/bpf/elf"
 )
 
@@ -32,12 +32,13 @@ func TestBpfProgramLoaderWithMultipleSections(t *testing.T) {
 	RegisterTestingT(t)
 
 	fileName := "../../bpf-gpl/ut/loader_test_with_multiple_sections.o"
-	loader := elf.NewLoader(fileName)
+	loader, err := elf.NewLoaderFromFile(fileName)
+	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(0))
 
-	insnMap, license, err := loader.Program()
+	insnMap, license, err := loader.Programs()
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(len(insnMap)).To(Equal(2))
@@ -53,12 +54,13 @@ func TestBpfProgramLoaderWithoutRelocation(t *testing.T) {
 	RegisterTestingT(t)
 
 	fileName := "../../bpf-gpl/ut/loader_test_without_relocation.o"
-	loader := elf.NewLoader(fileName)
+	loader, err := elf.NewLoaderFromFile(fileName)
+	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(0))
 
-	insnMap, license, err := loader.Program()
+	insnMap, license, err := loader.Programs()
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(len(insnMap)).To(Equal(1))
@@ -78,12 +80,13 @@ func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
 	err, testPerfMap := CreateTestMap("cali_test_map2", "hash", 4, 4, 511000, unix.BPF_F_NO_PREALLOC)
 	Expect(err).NotTo(HaveOccurred())
 
-	loader := elf.NewLoader(fileName, testHashMap, testPerfMap)
+	loader, err := elf.NewLoaderFromFile(fileName, testHashMap, testPerfMap)
+	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(2))
 
-	insnMap, license, err := loader.Program()
+	insnMap, license, err := loader.Programs()
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(len(insnMap)).To(Equal(1))
@@ -99,17 +102,48 @@ func TestBpfProgramLoaderWithSingleMap(t *testing.T) {
 
 	err, testMap := CreateTestMap("cali_test_kp", "hash", 4, 8, 511000, unix.BPF_F_NO_PREALLOC)
 	Expect(err).NotTo(HaveOccurred())
-	loader := elf.NewLoader(fileName, testMap)
+	loader, err := elf.NewLoaderFromFile(fileName, testMap)
+	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
 	fdMap := loader.GetFDMap()
 	Expect(len(fdMap)).To(Equal(1))
-	insnMap, license, err := loader.Program()
+	insnMap, license, err := loader.Programs()
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(len(insnMap)).To(Equal(1))
 	_, ok := insnMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
 	loadProgram(license, insnMap)
+}
+
+func TestBpfLoaderFailureCases(t *testing.T) {
+	RegisterTestingT(t)
+
+	fileName := "dummy_test.o"
+	loader, err := elf.NewLoaderFromFile(fileName)
+	Expect(err).To(HaveOccurred())
+	Expect(loader).To(BeNil())
+
+	fileName = "../../bpf-gpl/ut/loader_test_single_map.o"
+
+	loader, err = elf.NewLoaderFromFile(fileName)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(loader).NotTo(BeNil())
+
+	insnMap, license, err := loader.Programs()
+	Expect(err).To(HaveOccurred())
+	Expect(insnMap).To(BeNil())
+	Expect(license).To(Equal(""))
+
+	err = corruptElf(fileName)
+	Expect(err).NotTo(HaveOccurred())
+
+	loader, err = elf.NewLoaderFromFile("loader_corrupt_elf.o")
+	Expect(err).NotTo(HaveOccurred())
+	Expect(loader).NotTo(BeNil())
+	_, _, err = loader.Programs()
+	Expect(err).To(HaveOccurred())
+	os.Remove("loader_corrupt_elf.o")
 }
 
 func loadProgram(license string, insnMap map[string]*elf.ProgramInfo) {
@@ -136,4 +170,35 @@ func CreateTestMap(mapName, mapType string, keySize, valueSize, maxEntries, flag
 	err := testMap.EnsureExists()
 	return err, testMap
 
+}
+
+func corruptElf(fileName string) error {
+	fp, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+
+	finfo, err := fp.Stat()
+	if err != nil {
+		return err
+	}
+	fsize := finfo.Size()
+	buffer := make([]byte, fsize)
+
+	_, err = fp.Read(buffer)
+	if err != nil {
+		return err
+	}
+	temp := [4]byte{0xde, 0xad, 0xbe, 0xaf}
+	copy(buffer[0:], temp[:])
+
+	fp, err = os.Create("loader_corrupt_elf.o")
+	if err != nil {
+		return err
+	}
+	_, err = fp.Write(buffer)
+	if err != nil {
+		return err
+	}
+	return nil
 }
