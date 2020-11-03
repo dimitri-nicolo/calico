@@ -1,6 +1,6 @@
 ## Install {{include.cli}} as a kubectl plugin on a single host
 
-1. Log into the host, open a terminal prompt, and navigate to the location where
+1. Log in to the host, open a terminal prompt, and navigate to the location where
 you want to install the binary.
 
    > **Note**: In order to install `{{include.cli}}` as a kubectl plugin, the binary must be located in your `PATH`. For example,

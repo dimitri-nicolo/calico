@@ -47,6 +47,27 @@
 {%- endif %}
 {%- if include.upgradeFrom != "OpenSource" %}
 
+1. If your cluster has OIDC login configured, follow these steps:
+   
+   a.  Save a copy of your Manager for reference.
+   ```bash
+   kubectl get manager tigera-secure -o yaml > manager.yaml
+   ```
+
+   b.  Remove the deprecated fields from your Manager resource.
+   ```bash
+   kubectl patch manager tigera-secure --type merge -p '{"spec": null}'
+   ```
+
+   c.  If you are currently using v3.2 and are using OIDC with Kibana verify that you have the following resources in your cluster:
+   ```bash
+   kubectl get authentication tigera-secure
+   kubectl get secret -n tigera-operator
+   ```
+   Both of these resources should be present and you are ready with this step. Otherwise, use the instructions to [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider) to configure OIDC.
+
+   d) Follow [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider).
+
 1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
    CR to your cluster.
    ```bash

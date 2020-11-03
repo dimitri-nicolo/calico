@@ -126,6 +126,6 @@ There’s nothing fancy about it, but audit logs are the way you can see changes
 
 ### Above and beyond
 
-- [Create a user and log in to Calico Enterprise Manager]({{site.baseurl}}/getting-started/cnx/create-user-login)
+- [Create a user and log in to Calico Enterprise Manager]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
 - [Create tiered policy]({{site.baseurl}}/security/tiered-policy)
 - [Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)

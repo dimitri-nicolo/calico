@@ -102,4 +102,5 @@ You can now access the manager UI in your browser at `https://localhost:9443`.
 
 ### Above and beyond
 
-- [Configure user access and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)
+- [Authentication quickstart]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
+- [Configure your own identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)

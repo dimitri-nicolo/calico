@@ -107,7 +107,8 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 **Recommended**
 
 - [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- [Configure user authentication and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)
+- [Authentication quickstart]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
+- [Configure your own identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)
 
 **Recommended - Networking**
 

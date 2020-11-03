@@ -30,7 +30,7 @@ Elasticsearch resources are associated with the **Kubernetes API group**, `lma.t
 | tigera_secure_ee_audit_ee   | audit_ee                      | Access to indices with data for {{site.prodname}} audit logs.                                |
 | tigera_secure_ee_audit_kube | audit_kube                    | Access to indices with data for Kubernetes audit logs                                        |
 | tigera_secure_ee_events     | events                        | Access to indices with data for {{site.prodname}} intrusion detection events.                |
-| kibana_login                | kibana_login                  | Allows an OIDC user to log into Kibana and have read permissions for discover, visualize and dashboard.            |
+| kibana_login                | kibana_login                  | Allows an OIDC user to log in to Kibana and have read permissions for discover, visualize and dashboard.            |
 | superuser                   | elasticsearch_superuser       | Grants superuser access for all Elastic related actions, which include Kibana user and license management.         |
 
 > **Note**: Because the `lma.tigera.io` API group is used only for RBAC, and is not backed by an actual API, it does not provide access to any other Kubernetes resources. 
@@ -40,7 +40,7 @@ Elasticsearch resources are associated with the **Kubernetes API group**, `lma.t
 
 **Required**
 
-- A `tigera-network-admin` role with full permissions to create and modify resources. For help, see [Log in to {{site.prodname}} Manager](({{site.baseurl}}/getting-started/create-user-login).
+- A `tigera-network-admin` role with full permissions to create and modify resources. For help, see [Log in to {{site.prodname}} Manager](({{site.baseurl}}/getting-started/authentication-quickstart).
 
 - To see Elasticsearch resources in {{site.prodname}} Manager, uses must have [minimum permissions]({{site.baseurl}}/security/rbac-tiered-policies).
 

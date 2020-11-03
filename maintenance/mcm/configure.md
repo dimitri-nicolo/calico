@@ -40,7 +40,7 @@ After installation, you control your managed clusters in the {{site.prodname}} M
 
 #### User authentication and authorization
 
-Multi-cluster management provides a single source for authorization across managed clusters. The default authentication method for user access to the management cluster is [Token authentication]({{site.baseurl}}/getting-started/cnx/create-user-login). You define user access to managed clusters using Kubernetes RBAC roles and cluster roles. For example, you can define access to specific log types (DNS, flow, audit) and specific clusters. 
+Multi-cluster management provides a single source for authorization across managed clusters. The default authentication method for user access to the management cluster is [Token authentication]({{site.baseurl}}/getting-started/cnx/authentication-quickstart). You define user access to managed clusters using Kubernetes RBAC roles and cluster roles. For example, you can define access to specific log types (DNS, flow, audit) and specific clusters. 
 
 ### Before you begin...
 
@@ -317,7 +317,7 @@ You have now successfully installed a managed cluster!
 
 To access resources belonging to a managed cluster from the {{site.prodname}} Manager UI, the service or user account used to log in must have appropriate permissions defined in the managed cluster.
 
-Let's define admin-level permissions for the service account (`mcm-user`) we created to log into the Manager UI. Run the following command against your managed cluster.
+Let's define admin-level permissions for the service account (`mcm-user`) we created to log in to the Manager UI. Run the following command against your managed cluster.
 
 ```bash
 kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-network-admin

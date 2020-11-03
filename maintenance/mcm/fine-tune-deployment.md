@@ -60,7 +60,7 @@ In the [Install multi-cluster management guide]({{site.baseurl}}/maintenance/mcm
 
 When defining roles and permissions across your clusters, make note of the following:
 
-- All users that log into the {{site.prodname}} Manager UI must use a valid service account or user account in the management cluster.
+- All users that log in to the {{site.prodname}} Manager UI must use a valid service account or user account in the management cluster.
 - When the management cluster performs actions on a managed cluster, it passes the user ID of the current logged in user to the managed cluster for authorization. As a requirement, the user must have the same username defined across the management cluster and managed clusters. A user can have different permissions for accessing resources in each managed cluster, as defined by Kubernetes Role and ClusterRole objects, but the username used in the corresponding RoleBinding and ClusterRoleBinding objects must always match what is in the management cluster.
 
 #### Review user permissions for managed cluster log data
@@ -115,7 +115,7 @@ The rule below allows access to any cluster for all log types.
 #### Filter log data for a managed cluster in Kibana
 
 1. Log in to {{site.prodname}} Manager.
-1. In the left navigation, click Kibana and [log into the Kibana dashboard]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana).
+1. In the left navigation, click Kibana and [log in to the Kibana dashboard]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana).
 1. Navigate to the Discovery view and filter logs by managed cluster indexes.
 1. Select a type of log (audit, dns, events, flow).
 1. From the Available Fields section in the side panel, select the `_index` field.

@@ -1,6 +1,6 @@
 ## Install {{include.cli}} as a binary on a single host
 
-1. Log into the host, open a terminal prompt, and navigate to the location where
+1. Log in to the host, open a terminal prompt, and navigate to the location where
 you want to install the binary.
 
    > **Tip**: Consider navigating to a location that's in your `PATH`. For example,

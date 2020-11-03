@@ -29,7 +29,7 @@ This how-to guide uses the following {{site.prodname}} features:
 **Required**
 - Install {{site.prodname}} for your managed cloud provider using [Managed public cloud]({{site.baseurl}}/getting-started/kubernetes/eks)
 - Configure access to the [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- Create a [user login]({{site.baseurl}}/getting-started/cnx/create-user-login)
+- Create a [user login]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
 
 **Support**
 

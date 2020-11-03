@@ -7,8 +7,10 @@ section:
   section:
   - title: Configure access to the Manager UI
     path: /getting-started/cnx/access-the-manager
-  - title: Configure user authentication
-    path: /getting-started/cnx/create-user-login
+  - title: Authentication quickstart
+    path: /getting-started/cnx/authentication-quickstart
+  - title: Configure an identity provider
+    path: /getting-started/cnx/configure-identity-provider
 - title: Secure component communications
   path: /security/comms/
   section:
