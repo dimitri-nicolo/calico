@@ -42,6 +42,9 @@
     dikastes:
       image: tigera/dikastes
       version: master
+    dex:
+      image: tigera/dex
+      version: master
     fluentd:
       image: tigera/fluentd
       version: master
@@ -111,10 +114,6 @@
       version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
-    dex:
-      image: dexidp/dex
-      registry: quay.io
-      version: v2.25.0
     elasticsearch-operator:
       registry: docker.elastic.co
       image: eck/eck-operator
