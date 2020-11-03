@@ -1513,7 +1513,6 @@ var _ = Describe("Static", func() {
 					Action:  AcceptAction{},
 					Comment: []string{"Host endpoint policy accepted packet."},
 				},
-				{Action: JumpAction{Target: ChainCIDRBlock}},
 			},
 		}
 
