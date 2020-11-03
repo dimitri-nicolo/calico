@@ -2,7 +2,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 ##############################################################################
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
-GO_BUILD_VER   ?= v0.45
+GO_BUILD_VER   ?= v0.49
 GIT_USE_SSH     = true
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 BUILD_IMAGE    ?= tigera/intrusion-detection-controller
@@ -240,7 +240,7 @@ st:
 
 .PHONY: clean
 clean: clean-bin clean-build-image
-	rm -rf vendor
+	rm -rf vendor Makefile.common*
 clean-build-image:
 	docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1 || true
 
