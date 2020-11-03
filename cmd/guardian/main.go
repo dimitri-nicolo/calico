@@ -46,6 +46,9 @@ type config struct {
 	TunnelDialRetryInterval         time.Duration `default:"5s" split_words:"true"`
 	TunnelDialRecreateOnTunnelClose bool          `default:"true" split_words:"true"`
 
+	ConnectionRetryAttempts int           `default:"25" split_words:"true"`
+	ConnectionRetryInterval time.Duration `default:"5s" split_words:"true"`
+
 	Listen     bool   `default:"true"`
 	ListenHost string `default:"" split_words:"true"`
 	ListenPort string `default:"8080" split_words:"true"`
@@ -135,6 +138,8 @@ func main() {
 		client.WithTunnelCreds(pemCert, pemKey, ca),
 		client.WithTunnelDialRetryAttempts(cfg.TunnelDialRetryAttempts),
 		client.WithTunnelDialRetryInterval(cfg.TunnelDialRetryInterval),
+		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
+		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
 	)
 
 	if err != nil {

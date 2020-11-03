@@ -444,7 +444,7 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	// called with RLock held
-	if err := c.tunnelManager.RunWithTunnel(t); err != nil {
+	if err := c.tunnelManager.SetTunnel(t); err != nil {
 		return err
 	}
 

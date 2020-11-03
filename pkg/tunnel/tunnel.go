@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 // Package tunnel defines an authenticated tunnel API, that allows creating byte
 // pipes in both directions, initiated from either side of the tunnel.
@@ -19,6 +19,47 @@ import (
 
 // ErrTunnelClosed is used to notify a caller that an action can't proceed because the tunnel is closed
 var ErrTunnelClosed = fmt.Errorf("tunnel closed")
+
+// DialInRoutineWithTimeout calls dialer.Dial() in a routine and sends the result back on the given resultsChan. The
+// timeout given is not the timeout for dialing (the implementation of the Dialer needs to take care of that), but used
+// to timeout writing to the resultsChan in the event that the channel is blocked.
+//
+// The channel return is needed to signal the routine that we no longer need the result. This channel should be closed
+// to send that signal, and is the responsibility of the caller to close that channel regardless.
+func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeout time.Duration) chan struct{} {
+	closeChan := make(chan struct{})
+
+	go func() {
+		defer close(resultsChan)
+
+		log.Debug("Dialing tunnel")
+		tun, err := dialer.Dial()
+
+		var result interface{}
+		if err != nil {
+			result = err
+		} else {
+			result = tun
+		}
+
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+
+		select {
+		case <-closeChan:
+			log.Debug("Received signal to close, dropping dialing result.")
+			return
+		case resultsChan <- result:
+		case <-timer.C:
+			log.Error("Timed out trying to send the result over the results channel")
+			return
+		}
+
+		log.Debug("Finished dialing tunnel.")
+	}()
+
+	return closeChan
+}
 
 // Dialer is an interface that supports dialing to create a *Tunnel
 type Dialer interface {
@@ -302,7 +343,16 @@ func DialTLS(target string, config *tls.Config, opts ...Option) (*Tunnel, error)
 		return nil, errors.Errorf("nil config")
 	}
 
-	c, err := tls.Dial("tcp", target, config)
+	log.Debugf("Starting TLS dial to %s", target)
+
+	// We need to explicitly set the timeout as it seems it's possible for this to hang indefinitely if we
+	// don't.
+	dialer := &net.Dialer{
+		Timeout: 2 * time.Second,
+	}
+
+	c, err := tls.DialWithDialer(dialer, "tcp", target, config)
+	log.Debugf("Finished TLS dial to %s", target)
 	if err != nil {
 		return nil, errors.Errorf("tcp.tls.Dial failed: %s", err)
 	}

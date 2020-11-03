@@ -85,3 +85,21 @@ func WithTunnelDialRetryInterval(tunnelDialRetryInterval time.Duration) Option {
 		return nil
 	}
 }
+
+// WithConnectionRetryAttempts sets the number of times the client should retry opening or accepting a connection over
+// the tunnel before failing permanently.
+func WithConnectionRetryAttempts(connRetryAttempts int) Option {
+	return func(c *Client) error {
+		c.connRetryAttempts = connRetryAttempts
+		return nil
+	}
+}
+
+// WithConnectionRetryInterval sets the interval that the client should wait before retrying to open or accept a connection
+// over the tunnel after failing.
+func WithConnectionRetryInterval(connRetryInterval time.Duration) Option {
+	return func(c *Client) error {
+		c.connRetryInterval = connRetryInterval
+		return nil
+	}
+}
