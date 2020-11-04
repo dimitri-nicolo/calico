@@ -1,10 +1,78 @@
 ---
-title: Create kubeconfig files
-description: Required pre-installation steps for each cluster in the federation. 
+title: Configure federated endpoint identity 
+description: Configure a local cluster to pull endpoint data from a remote cluster. 
 canonical_url: /networking/federation/kubeconfig
 ---
 
-Before installing {{site.prodname}}, you must complete the following steps on each cluster in the federation.
+### Big picture
+
+Configure a local cluster to pull endpoint data from a remote cluster. 
+
+### Value
+
+Federating endpoints allows teams to write policies in a local cluster that references/selects endpoints in remote clusters. This expands efficiency and self-service.
+
+### Features
+
+This how to guide uses the following {{site.prodname}} features:
+
+- **RemoteClusterConfiguration** resource
+
+### Concepts
+
+#### Local and remote clusters
+
+Each cluster in the federation acts as both a local and remote cluster.
+
+- Local clusters retrieve endpoint data from remote clusters
+- Remote clusters allow local clusters to retrieve endpoint data
+
+#### Configure access to remote clusters 
+
+To allow a local cluster to access resources on a remote cluster, you create a **RemoteClusterConfiguration**. The configuration contains information like secrets, namespace, and role bindings. The connection in a remote cluster configuration is one-way: information flows only from the remote cluster to the local cluster. If you want to share information from a local cluster to a remote cluster, you must create a remote cluster configuration resource on the remote cluster.
+
+In the following example, we federate three clusters with each other: `cluster-a`, `cluster-b`, and `cluster-c`:
+
+- **cluster a**
+
+  Create two RemoteClusterConfiguration resources: 1 for cluster-b, 1 for cluster-c
+
+- **cluster b**
+
+  Create two RemoteClusterConfiguration resources: 1 for cluster-a, 1 for cluster-c
+
+- **cluster c**
+
+  Create two Remote Cluster Configuration resources: 1 for cluster-a, 1 for cluster-b
+
+>**Note**: Although this example applies remote cluster configurations symmetrically across clusters, this is not required; add RemoteClusterConfiguration resources only where needed. 
+{: .alert .alert-info}
+
+### Before you begin
+
+**Supported networking**
+
+- {{site.prodname}} with BGP
+- AKS/Azure, EKS/AWS, and GKE with VPC
+
+**Required**
+
+- [Install {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes) 
+- [Install and configure calicoq]({{site.baseurl}}/maintenance/clis/calicoq/installing)
+
+### How to
+
+- [Create kubeconfig files](#create-kubeconfig-files)
+- [Create secrets](#create-secrets)
+- [Create access to secrets for clusters](#create-access-to-secrets-for-clusters)
+- [Add remote cluster configurations](#add-remote-cluster-configurations)
+- [Configure IP pool resources](#configure-ip-pool-resources)
+- [Use policy to reference pods on a remote cluster](#use-policy-to-reference-pods-on-a-remote-cluster)
+- [Troubleshoot remote clusters](#troubleshoot-remote-clusters)
+
+#### Create kubeconfig files
+
+For each cluster in the federation, follow these steps.
 
 1. Access the cluster using a `kubeconfig` with administrative privileges.
 
@@ -147,3 +215,145 @@ Before installing {{site.prodname}}, you must complete the following steps on ea
    ```
 
    You should see your cluster listed.
+   
+   
+#### Create secrets
+
+The simplest method to create a secret for a remote cluster is to use the `kubectl` command because it correctly encodes the data and formats the file.
+
+Create a secret for a remote cluster with a command like the following.
+
+```bash
+kubectl create secret generic remote-cluster-secret-name -n calico-system \
+    --from-literal=datastoreType=kubernetes \
+    --from-file=kubeconfig=<kubeconfig file>
+```
+
+Additional arguments:
+- `--from-literal=<key>=<value>` to add literal values
+- `--from-file=<key>=<file>` to add values with file contents
+
+#### Create access to secrets for clusters
+
+{{site.prodname}} does not generally have access to all secrets in a cluster so it is necessary to create a Role and RoleBinding for each namespace where the secrets for RemoteClusterConfigurations are created. You can reduce the number of Role and RoleBindings needed by putting the remote cluster Secrets in a dedicated namespace.
+
+```bash
+kubectl create -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: remote-cluster-secret-access
+  namespace: <namespace>
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["watch", "list", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: remote-cluster-secret-access
+  namespace: <namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: remote-cluster-secret-access
+subjects:
+- kind: ServiceAccount
+  name: calico-typha
+  namespace: calico-system
+EOF
+```
+
+#### Add remote cluster configurations
+
+Add remote cluster configuration where needed. Each instance of the [Remote Cluster Configuration]({{site.baseurl}}/reference/resources/remoteclusterconfiguration)
+resource represents a single remote cluster from which the local cluster can retrieve endpoint information. 
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: RemoteClusterConfiguration
+metadata:
+  name: cluster-n
+spec:
+  clusterAccessSecret:
+    name: remote-cluster-secret-name
+    namespace: remote-cluster-secret-namespace
+    kind: Secret
+```
+
+#### Configure IP pool resources
+
+For local clusters with `NATOutgoing` configured on your IP pools, verify the following:
+
+- Configure additional IP pools to cover the IP ranges of your remote clusters. This ensures that outgoing NAT is not performed on packets bound for the remote clusters. 
+- On the new IP pools, ensure that `disabled` is set to `true` to ensure the pools are not used for IP assignment on the local cluster.
+- Verify that the IP pool CIDR used for pod IP allocation does not overlap with any of the IP ranges used by the pods and nodes of any other federated cluster.
+
+For example, you can configure the following on your local cluster, referring to the `IPPool` on a remote cluster:
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: cluster1-main-pool
+spec:
+  cidr: 192.168.0.0/18
+  disabled: true
+```
+Congratulations! You have completed configuration of federated endpoint identity. 
+
+#### Use policy to reference pods on a remote cluster
+
+For federated clusters, use labels to reference pods on a remote cluster in the local policy rules, rather than referencing them by IP address. The main policy selector still refers only to local endpoints; and that selector chooses which local endpoints to apply the policy. 
+
+For policy rule selectors on the local cluster to correctly reference endpoints across all of the clusters, you must align the following between clusters.   
+
+- Namespace names
+- Host endpoint label names and values
+- Pod label names and values within the namespace
+- Service accounts (if you configure {{site.prodname}} federated services)
+
+#### Troubleshoot remote clusters 
+
+To verify that remote clusters are accessible, use the following command. 
+
+```
+$ calicoq eval "all()"
+```
+
+If all remote clusters are accessible, `calicoq` returns something like the following. In this example, the `remote-cluster-1` prefix indicates the remote cluster endpoints (as configured in the RemoteClusterConfiguration resource).
+
+```
+Endpoints matching selector all():
+  Workload endpoint remote-cluster-1/host-1/k8s/kube-system.kube-dns-5fbcb4d67b-h6686/eth0
+  Workload endpoint remote-cluster-1/host-2/k8s/kube-system.cnx-manager-66c4dbc5b7-6d9xv/eth0
+  Workload endpoint host-a/k8s/kube-system.kube-dns-5fbcb4d67b-7wbhv/eth0
+  Workload endpoint host-b/k8s/kube-system.cnx-manager-66c4dbc5b7-6ghsm/eth0
+```
+
+If a remote cluster is inaccessible, (network failure or a misconfiguration), the `calicoq` output includes details about the error.
+
+**Example**: Remote-cluster-secret is not accessible
+
+```
+E0615 12:24:04.895079   30873 reflector.go:153] github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster/secret_watcher.go:111: Failed to list *v1.Secret: secrets "remote-cluster-secret" is forbidden: User "system:serviceaccount:policy-demo:limited-sa" cannot list resource "secrets" in API group "" in the namespace "remote-cluster-ns"
+Endpoints matching selector all():
+  Workload endpoint host-a/k8s/kube-system.kube-dns-5fbcb4d67b-7wbhv/eth0
+  Workload endpoint host-b/k8s/kube-system.cnx-manager-66c4dbc5b7-6ghsm/eth0
+```
+
+**Example**: Incorrect connection information in the Remote Cluster Configuration
+
+```
+Endpoints matching selector all():
+  Workload endpoint host-a/k8s/kube-system.kube-dns-5fbcb4d67b-7wbhv/eth0
+  Workload endpoint host-b/k8s/kube-system.cnx-manager-66c4dbc5b7-6ghsm/eth0
+The following problems were encountered connecting to the remote clusters
+which may have resulted in incomplete data:
+-  RemoteClusterConfiguration(remote-cluster-1): connection to remote cluster failed: Get https://192.168.0.55:6443/api/v1/pods: dial tcp 192.168.0.55:6443: i/o timeout
+```
+
+### Next steps
+
+[Configure federated services]({{site.baseurl}}/networking/federation/services-controller)

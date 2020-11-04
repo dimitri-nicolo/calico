@@ -1,77 +1,48 @@
 ---
 title: Overview
-description: Learn the interaction between local and remote clusters in a federated implementation.  
-canonical_url: /networking/federation/
+description: Configure local clusters for cross-cluster workload and host endpoints sharing, and cross-cluster service discovery. 
+canonical_url: /networking/federation/overview
 ---
 
-## About federation
+### Big picture
 
-Federation allows you to:
+Configure local clusters for cross-cluster workload and host endpoints sharing, and cross-cluster service discovery.
 
-- [Create policies that reference pods and host endpoints across multiple clusters](#federated-endpoint-identity).
+### Value
 
-- [Create Kubernetes services that span multiple clusters while still keeping fine-grained policy](#federated-services).
+At some point in your Kubernetes journey, you may have multiple teams (development, QA, and others) that need to work in parallel across multiple clusters, without negative impacts on each other. By default, deployed Kubernetes pods can only see pods within their cluster. Using network policy and services, you can grant access to other clusters and the applications they are running. {{site.prodname}} provides these federation features:
 
-## Terminology
+- **Federated endpoint identity** 
 
-When discussing federation, we use the following terms:
+  Allow a local Kubernetes cluster to include the workload endpoints (pods) and host endpoints of a remote cluster in the calculation of local policies applied on each node of the local cluster. 
 
-- **Local clusters** retrieve endpoint data from remote clusters.
+- **Federated services** 
 
-- **Remote clusters** allow local clusters to retrieve endpoint data.
+  Provides cross-cluster service discovery for a local cluster.
 
-Each cluster in the federation acts as both a local and remote cluster.
+### Concepts
 
-## Federated endpoint identity
+#### Federation: network layer features
 
-Federated endpoint identity allows a local Kubernetes cluster to include the workload endpoints (i.e. pods) and host
-endpoints of a remote cluster in the calculation of the local policies that are applied on each node of the local
-cluster. Pods on a remote cluster may be referenced by label in the local policy rules, rather than needing to reference
-them by IP address. The main policy selector still only refers to local endpoints; that selector chooses which local
-endpoints the policy is applied to.
+{{site.prodname}} federated endpoint identity and federated services are implemented in Kubernetes at the network layer. To apply fine-grained network policy between multiple clusters, the pod source and destination IPs must be preserved. So these features are valuable only if your clusters are designed with common networking across clusters with no encapsulation (for example, BGP routing or VPC routing). (Although there are ways to achieve a common networking equivalent across clusters using overlays, this is outside the realm of this article.) 
 
-As an example, you can easily create a policy which applies to the local endpoints denying inbound traffic from all pods
-in a remote cluster except for those within the same namespace.
+#### Federated endpoint identity
 
-Federated endpoint identity does not cause the network policies to be federated, i.e., the policies from a remote
-cluster won't apply to the endpoints on the local cluster. Similarly, the policy from the local cluster is only rendered
-locally and applied to the local endpoints.
+A simple example of implementing policy across multiple clusters is: 
 
-Policy rule selectors on the local cluster should be able to reference the correct endpoints across all of the clusters.
-This requires coordination between clusters for the following:
-   -  Namespace names
-   -  Host Endpoint label names and values
-   -  Pod label names and values within the namespace
+"Cluster A's network policy allows **web** to talk to **db**, but all of the **web** is in cluster A, and all of the **db** is in cluster B." 
 
-Configuration for this feature is through the [Remote Cluster Configuration]({{site.baseurl}}/reference/resources/remoteclusterconfiguration)
-resource. A Remote Cluster Configuration resource should be added for each remote cluster that you want to include.
-Similar configuration should be applied on the remote clusters if you require Federated Endpoint Identity on those
-clusters.
+Federated endpoint identity solves this by allowing a local Kubernetes cluster to include the workload endpoints (pods) and host endpoints of a remote cluster in the calculation of the local policies for each node. 
 
-Refer to [Configuring remote clusters](./configure-rcc) for more information.
-
-## Federated Services
-
-For pod-to-pod communication it is usually necessary to use a service discovery mechanism to locate the pod IP addresses.
-Kubernetes provides `services` for accessing related sets of pods. If a Kubernetes service has a pod selector specified
-then Kubernetes will manage that service, populating the service endpoints from the local pods that match the selector.
-
-Tigera Federated Services Controller is used alongside Federated Endpoint
-Identity to provide discovery of remote pods. It extends the standard Kubernetes service and endpoints functionality to
-provide federation of [Kubernetes endpoints](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#endpoints-v1-core){:target="_blank"} across all of the clusters.
-
-Configuration of the Federated Services feature requires:
-- [Setting up a remote cluster configuration](./configure-rcc) for the remote cluster that will have endpoints federated.
-- [Configuring a service in the local cluster with a special annotation]({{site.baseurl}}/networking/federation/services-controller#configuring-a-federated-service).
-
-> **Note**: The controller always uses the pod IP for the service endpoints even for pods in remote clusters,
-> thus if a pod on the local cluster uses a federated service to access a pod in a remote cluster, source and
-> destination IP addresses are preserved allowing {{site.prodname}} fine-grained policy to be applied.
->
-> Contrast this to Kubernetes Federation, where federated services use the public service IP to access a remote service.
-> The use of the public IP requires NAT and is therefore not suitable for Federated Endpoint Identity.
+> **Note**: This feature does not *federate network policies*; policies from a remote cluster are not applied to the endpoints on the local cluster, and the policy from the local cluster is rendered only locally and applied to the local endpoints.
 {: .alert .alert-info}
 
-The `calicoq` command line tool will display the endpoints from remote clusters.
+#### Federated services 
 
-At this time, neither the {{site.prodname}} Manager nor `calicoctl` can be used to view endpoints from remote clusters.
+Federated services works with federated endpoint identity, providing cross-cluster service discovery for a local cluster. If you have an existing service discovery mechanism, this feature is optional. 
+
+Federated services use the Tigera Federated Services Controller to federate all {% include open-new-window.html text='Kubernetes endpoints' url='https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#endpoints-v1-core' %} (workload and host endpoints) across all of the clusters. The Federated Services Controller accesses service and endpoints data in the remote clusters directly through the Kubernetes API.
+
+### Next steps
+
+[Configure federated endpoint identity ]({{site.baseurl}}/networking/federation/kubeconfig)

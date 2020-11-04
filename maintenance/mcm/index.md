@@ -1,6 +1,7 @@
 ---
 title: Multi-cluster management
-description: Set up a single management plane to simplify administration of multiple Calico Enterprise installations by connecting the individual clusters together through a centralized management cluster.
+description: Manage clusters from a single management plane.
+canonical_url: '/maintenance/mcm/index'
 show_read_time: false
 show_toc: false
 ---
