@@ -25,8 +25,15 @@ section:
 - title: Policy for firewalls
   path: /security/policy-firewalls/
   section: 
-  - title: FortiGate firewalls integration
-    path: /security/firewall-integration
+  - title: Fortinet firewall integrations
+    path: /security/fortinet-integration/
+    section:
+    - title: Determine the best Calico Enterprise/Fortinet solution
+      path: /security/fortinet-integration/overview
+    - title: Extend Kubernetes to Fortinet firewall devices
+      path: /security/fortinet-integration/firewall-integration
+    - title: Extend FortiManager firewall policies to Kubernetes
+      path: /security/fortinet-integration/fortimgr-integration
   - title: AWS security groups integration
     path: /security/aws-integration/
     section:
