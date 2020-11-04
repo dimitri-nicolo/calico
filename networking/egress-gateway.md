@@ -131,6 +131,12 @@ name]({{site.baseurl}}/security/domain-based-policy) here, because the gateway's
 the DNS protocol that maps a destination name to the underlying IP addresses (unless the gateway
 happens to be on the same node as the client).
 
+### Before you begin
+
+**Supported**
+
+- Kubernetes on-premises only
+
 ### How to
 
 -  [Enable egress gateway support](#enable-egress-gateway-support)
