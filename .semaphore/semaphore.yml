@@ -89,7 +89,7 @@ blocks:
       commands:
       - make check-wireguard
       - make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
-      parallelism: 3
+      parallelism: 6
     epilogue:
       always:
         commands:
