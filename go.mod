@@ -26,7 +26,7 @@ replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20201103041309-88863f730b0e
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20201104043043-a15037573ba6
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20201104233414-e70ece1563da
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201104193713-9a4673b8a2b2
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201102235539-1aff1d7b6364
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201103030439-f02d63b2e4aa
