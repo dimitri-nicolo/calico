@@ -38,13 +38,12 @@ require (
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
 	github.com/spf13/cobra v0.0.6
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
 	github.com/tigera/licensing v1.0.1-0.20201023072957-26a844bae62b
 	github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392
-	github.com/vishvananda/netlink v1.0.0
+	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
@@ -52,7 +51,6 @@ require (
 	golang.org/x/tools v0.0.0-20200502202811-ed308ab3e770 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/grpc v1.26.0
-	gopkg.in/ini.v1 v1.46.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
 	// The matching kubernetes subsidiary projects have matching tags that are one major version behind the main repo.
