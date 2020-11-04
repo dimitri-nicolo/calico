@@ -75,7 +75,7 @@ blocks:
     prologue:
       commands:
       # Free up space on the build machine.
-      - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl
+      - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl ~/.sbt ~/.npm /usr/lib/jvm /opt/firefox* /opt/apache-maven* /opt/scala /usr/local/golang
       - checkout
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
@@ -89,7 +89,7 @@ blocks:
       commands:
       - make check-wireguard
       - make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
-      parallelism: 3
+      parallelism: 6
     epilogue:
       always:
         commands:
