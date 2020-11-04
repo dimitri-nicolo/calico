@@ -59,6 +59,18 @@ global_job_config:
         - cd process/testing/winfv && NAME_PREFIX="${CLUSTER_NAME}" ./setup-fv.sh -q -u
 
 blocks:
+- name: Trigger pin updates
+  skip:
+    when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"
+  task:
+    secrets:
+      - name: semaphore-api
+    jobs:
+      - name: Trigger pin updates
+        commands:
+          - checkout
+          - make semaphore-run-auto-pin-update-workflows
+
 - name: Windows FV 
   task:
     env_vars:
