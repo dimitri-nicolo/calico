@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.47
+GO_BUILD_VER?=v0.49
 
 GIT_USE_SSH = true
 

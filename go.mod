@@ -1,6 +1,6 @@
 module github.com/projectcalico/node
 
-go 1.14
+go 1.15
 
 require (
 	github.com/kelseyhightower/confd v0.0.0-00010101000000-000000000000
