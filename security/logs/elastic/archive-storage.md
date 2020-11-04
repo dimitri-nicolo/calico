@@ -26,8 +26,6 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Archive logs to Amazon S3
 
-**Operator install**
-
 1. Create an AWS bucket to store your logs.
    You will need the bucket name, region, key, secret key, and the path in the following steps.
 
@@ -65,14 +63,7 @@ This how-to guide uses the following {{site.prodname}} features:
    kubectl edit logcollector tigera-secure
    ```
 
-**Helm deployment**
-
-{% include content/s3_fluentd.md %}
-
-
 #### Archive logs to Syslog
-
-**Operator install**
 
 1. Update the
    [LogCollector]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
@@ -88,25 +79,53 @@ This how-to guide uses the following {{site.prodname}} features:
    spec:
      additionalStores:
        syslog:
-         # Syslog endpoint, in the format protocol://host:port
+         # (Required) Syslog endpoint, in the format protocol://host:port
          endpoint: tcp://1.2.3.4:514
-         # Packetsize is optional, if messages are being truncated set this
-         #packetSize: 1024
+         # (Optional) If messages are being truncated set this field
+         packetSize: 1024
    ```
-   This can be done during installation by editing the custom-resources.yaml
-   by applying it or after installation by editing the resource with the command:
+   This can be done during installation by editing the custom-resources.yaml by applying it or after installation by editing the resource with the command:
    ```
    kubectl edit logcollector tigera-secure
    ```
+2. You can control which types of {{site.prodname}} log data you would like to send to syslog. 
+   The [Syslog section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec) 
+   contains a field called `logTypes` which allows you to list which log types you would like to include. 
+   The allowable log types are:
+    - Audit
+    - DNS
+    - Flows
+    - IDSEvents
 
-**Helm deployment**
+   Refer to the [Syslog section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec) for more details on what data each log type represents.
 
-{% include content/syslog-fluentd.md %}
+   Building on the example from the previous step:
+   ```
+   apiVersion: operator.tigera.io/v1
+   kind: LogCollector
+   metadata:
+     name: tigera-secure
+   spec:
+     additionalStores:
+       syslog:
+         # (Required) Syslog endpoint, in the format protocol://host:port
+         endpoint: tcp://1.2.3.4:514
+         # (Optional) If messages are being truncated set this field
+         packetSize: 1024
+         # (Required) Types of logs to forward to Syslog (must specify at least one option)
+         logTypes:
+         - Audit
+         - DNS
+         - Flows
+         - IDSEvents
+   ```
 
+   > **Note**: The log type `IDSEvents` is only supported for a cluster that has [LogStorage]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogStorage) configured. Is is because intrusion detection event data is pulled from the corresponding LogStorage datastore directly. 
+   {: .alert .alert-info}
+
+   The `logTypes` field is a required, which means you must specify at least one type of log to export to syslog.
 
 #### Archive logs to Splunk
-
-**Operator deployment**
 
 {{site.prodname}} uses Splunk's **HTTP Event Collector** to send data to Splunk server. To copy the flow, audit, and dns logs to Splunk, follow these steps:
 
@@ -143,7 +162,3 @@ This how-to guide uses the following {{site.prodname}} features:
    ```
    kubectl edit logcollector tigera-secure
    ```
-
-**Helm deployment**
-
-Currently not supported.
