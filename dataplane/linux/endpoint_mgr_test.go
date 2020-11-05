@@ -1615,9 +1615,102 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 						It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab"))
 
-						It("should have removed the 169.254.1.1 address", func() {
+						// The 169.254.1.1 should NOT be removed here,
+						// because removing that address can also cause the
+						// device route `<gateway IP>/32 dev cali12345` to
+						// disappear, which means the gateway can no longer
+						// be used.  There's no fundamental problem with
+						// leaving the address present, and it's likely that
+						// the gateway pod will regain the gateway role
+						// shortly - i.e. have some other pods configured to
+						// use it - and so require the address again.
+						It("should not have removed the 169.254.1.1 address", func() {
 							if ipVersion == 4 {
-								Expect(nlDataplane.DeletedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+								Expect(nlDataplane.DeletedAddrs.Len()).To(BeZero())
+							}
+						})
+					})
+
+					Context("with WEP deleted and recreated with the same interface", func() {
+						JustBeforeEach(func() {
+							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
+								Id: &wlEPID1,
+							})
+							err := epMgr.CompleteDeferredWork()
+							Expect(err).ToNot(HaveOccurred())
+
+							epMgr.OnUpdate(&ifaceUpdate{
+								Name:  "cali12345-ab",
+								State: "down",
+							})
+							err = epMgr.CompleteDeferredWork()
+							Expect(err).ToNot(HaveOccurred())
+
+							link, err := nlDataplane.LinkByName("cali12345-ab")
+							Expect(err).ToNot(HaveOccurred())
+							err = nlDataplane.LinkDel(link)
+							Expect(err).ToNot(HaveOccurred())
+
+							nlDataplane.ResetDeltas()
+
+							nlDataplane.AddIface(28, "cali12345-ab", true, true)
+
+							epMgr.OnUpdate(&ifaceUpdate{
+								Name:  "cali12345-ab",
+								State: "up",
+							})
+							epMgr.OnUpdate(&ifaceAddrsUpdate{
+								Name:  "cali12345-ab",
+								Addrs: set.New(),
+							})
+							err = epMgr.CompleteDeferredWork()
+							Expect(err).ToNot(HaveOccurred())
+
+							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
+								Id: &wlEPID1,
+								Endpoint: &proto.WorkloadEndpoint{
+									State:           "active",
+									Mac:             "01:02:03:04:05:06",
+									Name:            "cali12345-ab",
+									ProfileIds:      []string{},
+									Tiers:           tiers,
+									Ipv4Nets:        []string{"10.0.240.2/24"},
+									Ipv6Nets:        []string{"2001:db8:2::2/128"},
+									IsEgressGateway: true,
+								},
+							})
+							err = epMgr.CompleteDeferredWork()
+							Expect(err).ToNot(HaveOccurred())
+						})
+
+						It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab:egress-gateway"))
+
+						It("should set routes", func() {
+							if ipVersion == 6 {
+								routeTable.checkRoutes("cali12345-ab", []routetable.Target{{
+									CIDR:    ip.MustParseCIDROrIP("2001:db8:2::2/128"),
+									DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
+								}})
+							} else {
+								routeTable.checkRoutes("cali12345-ab", []routetable.Target{{
+									CIDR:    ip.MustParseCIDROrIP("10.0.240.0/24"),
+									DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
+								}})
+							}
+						})
+
+						It("should have configured the interface for gateway role", func() {
+							if ipVersion == 4 {
+								Expect(nlDataplane.AddedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+								mockProcSys.checkState(map[string]string{
+									"/proc/sys/net/ipv4/conf/cali12345-ab/forwarding":     "1",
+									"/proc/sys/net/ipv4/conf/cali12345-ab/route_localnet": "1",
+									"/proc/sys/net/ipv4/conf/cali12345-ab/proxy_arp":      "1",
+									"/proc/sys/net/ipv4/neigh/cali12345-ab/proxy_delay":   "0",
+									"/proc/sys/net/ipv4/conf/cali12345-ab/rp_filter":      "2",
+									"/proc/sys/net/ipv6/conf/cali12345-ab/accept_ra":      "0",
+								})
+								Expect(nlDataplane.DeletedAddrs.Len()).To(BeZero())
 							}
 						})
 					})

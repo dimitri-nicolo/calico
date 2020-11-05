@@ -24,6 +24,7 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
 const nameserverPrefix = "nameserver "
@@ -132,21 +133,86 @@ var _ = Describe("DNS Policy", func() {
 		})
 	})
 
+	getLastMicrosoftALog := func() (lastLog string) {
+		logFile := path.Join(dnsDir, "dns.log")
+		fileExists, err := BeARegularFile().Match(logFile)
+		Expect(err).To(Succeed())
+		if fileExists {
+			logBytes, err := ioutil.ReadFile(logFile)
+			Expect(err).NotTo(HaveOccurred())
+			logs := string(logBytes)
+			for _, log := range strings.Split(logs, "\n") {
+				if strings.Contains(log, `"qname":"microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
+					lastLog = log
+				}
+			}
+		}
+		return
+	}
+
 	Context("after wget microsoft.com", func() {
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()
 		})
 
-		It("should emit DNS logs with latency", func() {
-			logFile := path.Join(dnsDir, "dns.log")
-			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
-			logBytes, err := ioutil.ReadFile(logFile)
-			Expect(err).NotTo(HaveOccurred())
-			logs := string(logBytes)
-			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
-			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
-			Expect(logs).To(MatchRegexp(`"latency":{"count":[1234]`))
+		It("should emit microsoft.com DNS log with latency", func() {
+			Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency":{"count":[1-9]`))
+		})
+
+		Context("with a preceding DNS request that went unresponded", func() {
+			JustBeforeEach(func() {
+				hep := api.NewHostEndpoint()
+				hep.Name = "felix-eth0"
+				hep.Labels = map[string]string{"host-endpoint": "yes"}
+				hep.Spec.Node = felix.Hostname
+				hep.Spec.InterfaceName = "eth0"
+				_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				udp := numorstring.ProtocolFromString("udp")
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "deny-dns"
+				policy.Spec.Selector = "host-endpoint == 'yes'"
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:   api.Deny,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+					{
+						Action: api.Allow,
+					},
+				}
+				policy.Spec.ApplyOnForward = true
+				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				// DNS should now fail, leaving at least one unresponded DNS
+				// request.
+				cannotWgetMicrosoft()
+
+				// Delete the policy again.
+				_, err = client.GlobalNetworkPolicies().Delete(utils.Ctx, "deny-dns", options.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Delete the host endpoint again.
+				_, err = client.HostEndpoints().Delete(utils.Ctx, "felix-eth0", options.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Wait 11 seconds so that the unresponded request timestamp is
+				// eligible for cleanup.
+				time.Sleep(11 * time.Second)
+
+				// Now DNS and outbound connection should work.
+				canWgetMicrosoft()
+			})
+
+			It("should emit microsoft.com DNS log with latency", func() {
+				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency":{"count":[1-9]`))
+			})
 		})
 
 		Context("with DNS latency disabled", func() {
@@ -154,15 +220,8 @@ var _ = Describe("DNS Policy", func() {
 				enableLatency = false
 			})
 
-			It("should emit DNS logs without latency", func() {
-				logFile := path.Join(dnsDir, "dns.log")
-				Eventually(logFile, "10s", "1s").Should(BeARegularFile())
-				logBytes, err := ioutil.ReadFile(logFile)
-				Expect(err).NotTo(HaveOccurred())
-				logs := string(logBytes)
-				Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
-				Expect(logs).To(ContainSubstring(`"qtype":"A"`))
-				Expect(logs).To(MatchRegexp(`"latency":{"count":0`))
+			It("should emit microsoft.com DNS log without latency", func() {
+				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency":{"count":0`))
 			})
 		})
 
@@ -184,13 +243,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("should emit DNS logs", func() {
-			logFile := path.Join(dnsDir, "dns.log")
-			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
-			logBytes, err := ioutil.ReadFile(logFile)
-			Expect(err).NotTo(HaveOccurred())
-			logs := string(logBytes)
-			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
-			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
+			Eventually(getLastMicrosoftALog, "10s", "1s").ShouldNot(BeEmpty())
 		})
 
 		Context("with DNS logs disabled", func() {
