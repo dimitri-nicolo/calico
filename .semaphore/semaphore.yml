@@ -160,3 +160,15 @@ blocks:
     - name: CI excluding FV
       commands:
       - make ci EXCEPT=fv
+- name: Trigger pin updates
+  dependencies: []
+  skip:
+    when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"
+  task:
+    secrets:
+      - name: semaphore-api
+    jobs:
+      - name: Trigger pin updates
+        commands:
+          - checkout
+          - make semaphore-run-auto-pin-update-workflows
