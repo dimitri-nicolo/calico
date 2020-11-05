@@ -1615,18 +1615,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 						It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab"))
 
-						// The 169.254.1.1 should NOT be removed here,
-						// because removing that address can also cause the
-						// device route `<gateway IP>/32 dev cali12345` to
-						// disappear, which means the gateway can no longer
-						// be used.  There's no fundamental problem with
-						// leaving the address present, and it's likely that
-						// the gateway pod will regain the gateway role
-						// shortly - i.e. have some other pods configured to
-						// use it - and so require the address again.
-						It("should not have removed the 169.254.1.1 address", func() {
+						It("should have removed the 169.254.1.1 address", func() {
 							if ipVersion == 4 {
-								Expect(nlDataplane.DeletedAddrs.Len()).To(BeZero())
+								Expect(nlDataplane.DeletedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
 							}
 						})
 					})
