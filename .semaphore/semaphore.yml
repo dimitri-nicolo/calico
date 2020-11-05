@@ -45,7 +45,7 @@ promotions:
     # If the block has passed and the branch is for master or a release branch then run the pin updates. Note that
     # this doesn't try to restrict which release branches, as the presence of this auto promotion code means that
     # it can handle updating the pins in this fashion.
-    when: "(result = 'passed') and ((branch = 'master') or (branch =~ 'release-calient-v\d*\.\d*'))"
+    when: "(result = 'passed') and ((branch = 'master') or (branch =~ '^release-calient-v\d*\.\d*'))"
 
 blocks:
 - name: Build
@@ -75,7 +75,7 @@ blocks:
     prologue:
       commands:
       # Free up space on the build machine.
-      - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl
+      - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl ~/.sbt ~/.npm /usr/lib/jvm /opt/firefox* /opt/apache-maven* /opt/scala /usr/local/golang
       - checkout
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
@@ -89,7 +89,7 @@ blocks:
       commands:
       - make check-wireguard
       - make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
-      parallelism: 3
+      parallelism: 6
     epilogue:
       always:
         commands:
@@ -160,3 +160,15 @@ blocks:
     - name: CI excluding FV
       commands:
       - make ci EXCEPT=fv
+- name: Trigger pin updates
+  dependencies: []
+  skip:
+    when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"
+  task:
+    secrets:
+      - name: semaphore-api
+    jobs:
+      - name: Trigger pin updates
+        commands:
+          - checkout
+          - make semaphore-run-auto-pin-update-workflows
