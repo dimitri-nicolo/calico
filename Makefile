@@ -5,6 +5,9 @@ PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
 GO_BUILD_VER   ?= v0.49
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
+
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_VOLTRON_PROJECT_ID)
+
 # Used by Makefile.common
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 
