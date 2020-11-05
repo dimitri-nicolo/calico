@@ -32,7 +32,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20200929223531-dfc3c9936e90
+	github.com/projectcalico/pod2daemon v0.0.0-20201104205331-f2a8dd6dfef1
 	github.com/projectcalico/typha v0.7.3-0.20201007232318-2dba00d728ad
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
@@ -41,7 +41,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/licensing v1.0.1-0.20201023072957-26a844bae62b
+	github.com/tigera/licensing v1.0.1-0.20201102205955-dfaedc85780d
 	github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
@@ -66,8 +66,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201023165933-3f6e8227c1a9
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201023171453-77f1a15a2c54
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201105005517-6abc2f5a0b0d
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201105174210-5e1e109762c1
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
