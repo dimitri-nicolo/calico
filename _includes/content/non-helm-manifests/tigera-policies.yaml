@@ -850,6 +850,7 @@ spec:
   selector: job-name == 'intrusion-detection-es-job-installer'
   types:
     - Egress
+  egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
     protocol: UDP
