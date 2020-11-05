@@ -5,10 +5,10 @@ go 1.15
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201104193713-9a4673b8a2b2
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201105014657-a8a5dcf58ef0
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201105005517-6abc2f5a0b0d
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201103030439-f02d63b2e4aa
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201105011218-c2c615a9ca74
 
 	k8s.io/api => k8s.io/api v0.17.2
 
