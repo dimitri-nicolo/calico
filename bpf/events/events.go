@@ -20,10 +20,13 @@ import (
 	"runtime"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
 )
+
+import "C"
 
 // Type defines the type of constants used for determinig the type of an event.
 type Type uint16
@@ -33,7 +36,8 @@ const (
 	MaxCPUs = 512
 
 	// TypeLostEvents does not carry any other information except thenumber of lost events.
-	TypeLostEvents Type = iota
+	TypeLostEvents  Type = iota
+	TypeTcpv4Events Type = 1
 )
 
 // Event represents the common denominator of all events
@@ -85,6 +89,7 @@ type eventRaw interface {
 type Events interface {
 	Next() (Event, error)
 	Map() bpf.Map
+	Poll()
 	Close() error
 }
 
@@ -160,9 +165,53 @@ func (e *perfEventsReader) Map() bpf.Map {
 	return e.bpfMap
 }
 
+func parseTcpStats(tcpStats Tcpv4Events) {
+	// Parse TCP stats and send it to flow collector
+}
+
+func (e *perfEventsReader) Poll() {
+	go func() {
+		for {
+			event, err := e.Next()
+			if err != nil {
+				log.WithError(err).Warn("Failed to get next event")
+				continue
+			}
+			if event == nil {
+				continue
+			}
+			switch event.Type() {
+			case TypeTcpv4Events:
+				if tcpStats, ok := event.(Tcpv4Events); !ok {
+					log.WithError(err).Warn("Failed to get proper event data")
+					continue
+				} else {
+					parseTcpStats(tcpStats)
+				}
+			default:
+				continue
+			}
+		}
+	}()
+	return
+}
+
 type eventHdr struct {
 	Type uint16
 	Len  uint16
+}
+
+type perfEventTcpStats struct {
+	Pid     uint32
+	Saddr   uint32
+	Daddr   uint32
+	Sport   uint16
+	Dport   uint16
+	TxBytes uint32
+	RxBytes uint32
+	SndBuf  uint32
+	RcvBuf  uint32
+	Comm    [16]byte
 }
 
 func parseEvent(raw eventRaw) (Event, error) {
@@ -177,6 +226,12 @@ func parseEvent(raw eventRaw) (Event, error) {
 	rd.TrimEnd(int(hdr.Len))
 
 	switch Type(hdr.Type) {
+	case TypeTcpv4Events:
+		var tcpStats perfEventTcpStats
+		if err := binary.Read(rd, binary.LittleEndian, &tcpStats); err != nil {
+			return nil, errors.Errorf("Error reading data")
+		}
+		return Tcpv4Events(tcpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
@@ -184,8 +239,13 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 // LostEvents is an event that reports how many events were missed.
 type LostEvents int
+type Tcpv4Events perfEventTcpStats
 
 // Type returns TypeLostEvents
 func (LostEvents) Type() Type {
 	return TypeLostEvents
+}
+
+func (Tcpv4Events) Type() Type {
+	return TypeTcpv4Events
 }

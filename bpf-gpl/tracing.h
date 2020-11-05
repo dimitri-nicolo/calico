@@ -42,6 +42,10 @@
 	#undef bpf_target_defined
 #endif
 
+#ifndef bpf_target_defined
+	#define bpf_target_x86
+#endif
+
 #if defined(bpf_target_x86)
 #define PT_REGS_PARM1(x) ((x)->rdi)
 #define PT_REGS_PARM2(x) ((x)->rsi)

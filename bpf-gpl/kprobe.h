@@ -28,6 +28,7 @@
 #include "bpf.h"
 #include "tracing.h"
 
+#define SEND_DATA_INTERVAL 2000000000
 struct __attribute__((__packed__)) calico_tcp_kprobe_v4_key {
 	__u32 pid;
 	uint32_t saddr;
