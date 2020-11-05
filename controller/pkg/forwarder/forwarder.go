@@ -267,11 +267,13 @@ func (f *eventForwarder) Run(ctx context.Context) {
 		go runloop.RunLoop(
 			f.ctx,
 			func() {
-				var start time.Time
+				var start, end time.Time
 				var err error
 
+				// ---------------------------------------------------------------------------------------------------
 				// 1. Figure out the start time to use for retrieving the next batch of events to forward. We want to
-				// continue forwarding events by starting where the last successful run finished.
+				//    continue forwarding events by starting where the last successful run finished.
+				// ---------------------------------------------------------------------------------------------------
 
 				// If we have a successufl savepoint already, start from there
 				if lastSuccessfulEndTime != nil {
@@ -288,7 +290,9 @@ func (f *eventForwarder) Run(ctx context.Context) {
 						l.WithFields(log.Fields{
 							"forwarderConfig": f.config,
 						}).Debugf("Found forwarder config with events.GetForwarderConfig(...)")
-						start = *f.config.LastSuccessfulRunEndTime
+						// Start the next run from the very next time tick (second), because the time range query includes
+						// both start and end times.
+						start = (*f.config.LastSuccessfulRunEndTime).Add(time.Second)
 						l.Debugf("Continuing forwarder from time [%v]", start)
 					} else {
 						// In the case we don't have a savedpoint for where we left off on the last successful run,
@@ -302,15 +306,35 @@ func (f *eventForwarder) Run(ctx context.Context) {
 					}
 				}
 
-				// 2. Attempt to retrieve next batch of events (using settings time range & last successful end time)
-				// and forward
-				err = f.retrieveAndForward(start, settings.numForwardingAttempts, time.Second)
+				// ---------------------------------------------------------------------------------------------------
+				// 2. Figure out the end of the query time range. Our time range will go from [start] to
+				//    [start + settings.pollingTimeRange - 1]. We deduct a time.Second from the end to avoid time
+				//    creep (since each period we add time.Second to the start time).
+				// ---------------------------------------------------------------------------------------------------
+				end = start.Add(settings.pollingTimeRange).Add(-time.Second)
 
-				// 3. If current run was successful, then persist the new last successful end time
+				// Edge case: Ensure we don't start querying in a time window that hasn't happened yet (i.e. the end of
+				// the time window should not be in the future). If it does, then bail on this run without doing anything
+				// further. We will try again on the next run.
+				if end.After(time.Now()) {
+					l.WithFields(log.Fields{
+						"start": start,
+						"end":   end,
+					}).Infof("Forwarder query time range has not occurred yet, cancelling run (wait until next interval).")
+					return
+				}
+
+				// ---------------------------------------------------------------------------------------------------
+				// 3. Attempt to retrieve next batch of events (using the computed start and end times).
+				// ---------------------------------------------------------------------------------------------------
+				err = f.retrieveAndForward(start, end, settings.numForwardingAttempts, time.Second)
+
+				// ---------------------------------------------------------------------------------------------------
+				// 4. If current run was successful, then persist the new last successful end time
+				// ---------------------------------------------------------------------------------------------------
 				if err == nil {
-					t := start.Add(settings.pollingTimeRange)
-					lastSuccessfulEndTime = &t
-					f.config.LastSuccessfulRunEndTime = &t
+					lastSuccessfulEndTime = &end
+					f.config.LastSuccessfulRunEndTime = &end
 
 					l.Infof("Updated forwarder config after successful run [%+v]", f.config)
 
@@ -354,13 +378,12 @@ func (f *eventForwarder) Close() {
 }
 
 // retrieveAndForward handles the actual querying for events and forwarding to file.
-func (f *eventForwarder) retrieveAndForward(start time.Time, numAttempts uint, delay time.Duration) error {
+func (f *eventForwarder) retrieveAndForward(start, end time.Time, numAttempts uint, delay time.Duration) error {
 	l := f.logger.WithFields(logrus.Fields{"func": "retrieveAndForward"})
 
-	// Set the end point of the time range query
-	end := start.Add(settings.pollingTimeRange)
-
+	// ---------------------------------------------------------------------------------------------------
 	// 1. Attempt to query for security events
+	// ---------------------------------------------------------------------------------------------------
 	rawEvents := []db.SecurityEvent{}
 	var err error
 	err = retry.Do(
@@ -396,7 +419,9 @@ func (f *eventForwarder) retrieveAndForward(start time.Time, numAttempts uint, d
 		l.WithFields(log.Fields{"start": start, "end": end}).Debugf("Retrieved no events for this time range")
 	}
 
+	// ---------------------------------------------------------------------------------------------------
 	// 2. Attempt to write all retrieved events to file
+	// ---------------------------------------------------------------------------------------------------
 	for i, rawEvent := range rawEvents {
 		var err error
 
