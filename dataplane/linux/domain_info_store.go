@@ -789,7 +789,7 @@ func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp []uint8) 
 	for id, requestTime := range s.requestTimestamp {
 		if time.Since(requestTime) > 10*time.Second {
 			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
-			delete(s.requestTimestamp, dns.ID)
+			delete(s.requestTimestamp, id)
 		}
 	}
 	return

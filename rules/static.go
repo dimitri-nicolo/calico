@@ -528,6 +528,19 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	// Packets will be accepted if they passed through both workload and host endpoint policy
 	// and were returned.
 
+	// Snoop DNS messages to or from a local workload.  Place this first as it only snoops and
+	// does not accept or drop.  There are cases where we can snoop some DNS info and the packet
+	// is then dropped, e.g. because of host endpoint ingress policy.  However we are still
+	// filtering on trusted DNS servers, so the DNS info is trustworthy even if the packet gets
+	// dropped later by policy.  Also, if we placed this after host endpoint policy processing,
+	// we might be too late because of the packet already having been accepted.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding DNS snooping rules")
+		ifaceMatch := prefix + "+"
+		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
+		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
+	}
+
 	// Jump to from-host-endpoint dispatch chains.
 	rules = append(rules,
 		Rule{
@@ -548,8 +561,6 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
-		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
-		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules,
 			Rule{
 				Match:  Match().InInterface(ifaceMatch),

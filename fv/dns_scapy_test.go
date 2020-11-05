@@ -421,6 +421,57 @@ var _ = Describe("DNS Policy", func() {
 		})
 	})
 
+	Context("with host endpoint and ApplyOnForward policy", func() {
+		BeforeEach(func() {
+			hep := api.NewHostEndpoint()
+			hep.Name = "felix-eth0"
+			hep.Labels = map[string]string{"host-endpoint": "yes"}
+			hep.Spec.Node = felix.Hostname
+			hep.Spec.InterfaceName = "eth0"
+			_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			policy := api.NewGlobalNetworkPolicy()
+			policy.Name = "allow-xyz-only"
+			policy.Spec.Selector = "host-endpoint == 'yes'"
+			policy.Spec.Egress = []api.Rule{
+				{
+					Action:      api.Allow,
+					Destination: api.EntityRule{Domains: []string{"xyz.com"}},
+				},
+				{
+					Action: api.Deny,
+				},
+			}
+			policy.Spec.ApplyOnForward = true
+			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Allow 2s for Felix to see and process that policy.
+			time.Sleep(2 * time.Second)
+
+			// We use the etcd container as a target IP for the workload to ping, so
+			// arrange for it to route back to the workload.
+			etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+
+			// Create a chain of DNS info that maps xyz.com to that IP.
+			dnsServerSetup(scapyTrusted)
+			sendDNSResponses(scapyTrusted, []string{
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + etcd.IP + "')))",
+			})
+			scapyTrusted.Stdin.Close()
+		})
+
+		It("workload can ping etcd", func() {
+			// Allow 4 seconds for Felix to see the DNS responses and update ipsets.
+			time.Sleep(4 * time.Second)
+			// Ping should now go through.
+			Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
+		})
+	})
+
 	Context("with a chain of DNS info for xyz.com", func() {
 		BeforeEach(func() {
 			// We use the etcd container as a target IP for the workload to ping, so

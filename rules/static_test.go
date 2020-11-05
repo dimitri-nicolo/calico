@@ -222,16 +222,16 @@ var _ = Describe("Static", func() {
 						Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&Chain{
 							Name: "cali-FORWARD",
 							Rules: []Rule{
-								// Incoming host endpoint chains.
-								{Action: ClearMarkAction{Mark: 0xe0}},
-								{Match: Match().MarkClear(0x10),
-									Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 								// DNS response capture.
 								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 								// DNS request capture.
 								{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+								// Incoming host endpoint chains.
+								{Action: ClearMarkAction{Mark: 0xe0}},
+								{Match: Match().MarkClear(0x10),
+									Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 								// Per-prefix workload jump rules.
 								{Match: Match().InInterface("cali+"),
 									Action: JumpAction{Target: ChainFromWorkloadDispatch}},
