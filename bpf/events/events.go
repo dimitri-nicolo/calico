@@ -26,8 +26,6 @@ import (
 	"github.com/projectcalico/felix/bpf/perf"
 )
 
-import "C"
-
 // Type defines the type of constants used for determinig the type of an event.
 type Type uint16
 
