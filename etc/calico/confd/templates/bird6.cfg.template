@@ -107,7 +107,7 @@ protocol kernel {
                      # flapping since multiple nodes update their BGP
                      # configuration at the same time, GR is not guaranteed to
                      # work correctly in this scenario.
-  merge paths on;
+  merge paths on;    # Allow export multipath routes (ECMP)
 }
 
 # Watch interface up/down events.
@@ -233,6 +233,9 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- end}}
 {{- if $data.password}}
   password "{{$data.password}}";
+{{- end}}
+{{- if and (ne $data.as_num $node_as_num) ($data.keep_next_hop)}}
+  next hop keep;
 {{- end}}
 }
 {{- end}}

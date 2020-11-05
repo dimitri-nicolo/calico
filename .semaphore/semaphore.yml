@@ -36,6 +36,19 @@ blocks:
           commands:
             - make ci
 
+  - name: Trigger pin updates
+    dependencies: []
+    skip:
+      when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"
+    task:
+      secrets:
+        - name: semaphore-api
+      jobs:
+        - name: Trigger pin updates
+          commands:
+            - checkout
+            - make semaphore-run-auto-pin-update-workflows
+
 promotions:
   # Run the pin update process in case there were a backlog of pin update requests
   - name: Update Pins
