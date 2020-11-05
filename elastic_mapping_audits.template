@@ -30,7 +30,8 @@
 					"kind": { "type": "keyword" },
 					"metadata": { "type": "object", "enabled": false },
 					"spec": { "type": "object", "enabled": false },
-					"status": { "type": "object", "enabled": false }
+					"status": { "type": "object", "enabled": false },
+					"data": { "type": "object", "enabled": false }
 				}
 			},
 			"responseStatus": {
