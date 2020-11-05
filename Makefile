@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/libcalico-go
-GO_BUILD_VER=v0.48
+GO_BUILD_VER=v0.49
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_TYPHA_PRIVATE_PROJECT_ID) $(SEMAPHORE_CONFD_PRIVATE_PROJECT_ID) $(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID) \
