@@ -86,7 +86,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient, cfg := GetClient(cbs.configFile)
-	syncer := felixsyncer.New(bclient, cfg.Spec, cbs, true)
+	syncer := felixsyncer.New(bclient, cfg.Spec, cbs, false, true)
 	syncer.Start()
 }
 

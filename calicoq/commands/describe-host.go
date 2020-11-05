@@ -128,7 +128,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	disp.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient, cfg := GetClient(configFile)
-	syncer := felixsyncer.New(bclient, cfg.Spec, cbs, true)
+	syncer := felixsyncer.New(bclient, cfg.Spec, cbs, false, true)
 	syncer.Start()
 
 	// The describeCmd will notify us once it's in sync and has finished outputting.

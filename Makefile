@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/calicoq
-GO_BUILD_VER    ?= v0.45
+GO_BUILD_VER    ?= v0.49
 GOMOD_VENDOR     = true
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
