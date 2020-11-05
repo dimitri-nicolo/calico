@@ -3,6 +3,8 @@ GO_BUILD_VER=v0.49
 
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID)
 
+SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_TS_QUERYSERVER_PROJECT_ID)
+
 GIT_USE_SSH = true
 
 ###############################################################################
