@@ -120,6 +120,8 @@ github.com/containerd/typeurl v0.0.0-20180627222232-a93fcdb778cd/go.mod h1:Cm3kw
 github.com/containerd/typeurl v0.0.0-20190228175220-2a93cfde8c20/go.mod h1:Cm3kwCdlkCfMSHURc+r6fwoGH6/F1hH3S4sg0rLFWPc=
 github.com/containernetworking/cni v0.7.1 h1:fE3r16wpSEyaqY4Z4oFrLMmIGfBYIKpPrHK31EJ9FzE=
 github.com/containernetworking/cni v0.7.1/go.mod h1:LGwApLUm2FpoOfxTDEeq8T9ipbpZ61X79hmU3w8FmsY=
+github.com/containernetworking/cni v0.8.0 h1:BT9lpgGoH4jw3lFC7Odz2prU5ruiYKcgAjMCbgybcKI=
+github.com/containernetworking/cni v0.8.0/go.mod h1:LGwApLUm2FpoOfxTDEeq8T9ipbpZ61X79hmU3w8FmsY=
 github.com/containernetworking/plugins v0.8.5 h1:pCvEMrFf7yzJI8+/D/7jkvE96KD52b7/Eu+jpahihy8=
 github.com/containernetworking/plugins v0.8.5/go.mod h1:UZ2539umj8djuRQmBxuazHeJbYrLV8BSBejkk+she6o=
 github.com/coredns/corefile-migration v1.0.4/go.mod h1:OFwBp/Wc9dJt5cAZzHWMNhK1r5L0p0jDwIBc6j8NC8E=
@@ -719,8 +721,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZGmS0R0G2V6lLTawuNLmYXOhgBn8K7qClxJjj7A9A=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
-github.com/tigera/cni-plugin-private v1.11.1-0.20201104043043-a15037573ba6 h1:0Lq7HfmHs542Ts+s1T+3H5cNv6iOkv+O6yQ9nUbXJO0=
-github.com/tigera/cni-plugin-private v1.11.1-0.20201104043043-a15037573ba6/go.mod h1:pQEBTGGNnVl6YLGYcn6ND/LmG4fG8DJml57JIrcYaVc=
+github.com/tigera/cni-plugin-private v1.11.1-0.20201104233414-e70ece1563da h1:YPz8eXhNd7tzqkGjPo27IFMY2cvGDmQ0ipc+60KEfQk=
+github.com/tigera/cni-plugin-private v1.11.1-0.20201104233414-e70ece1563da/go.mod h1:wcvSTP0YR8kGfn87n1M0wjF/F6+UHPKrFgogvnhiDPs=
 github.com/tigera/confd-private v1.0.1-0.20201103041309-88863f730b0e h1:McNmKYd+cW7x6ruTMFPh1qb183X77utepLwUh3o6qoo=
 github.com/tigera/confd-private v1.0.1-0.20201103041309-88863f730b0e/go.mod h1:Vc776yCNwd4cW3HTXueXIKy5h1SiVLfodiItm92ICSg=
 github.com/tigera/felix-private v0.0.0-20201104193713-9a4673b8a2b2 h1:TqclZJoT9EzENsTXM9CWKg6r10yfmlzFUsfEfDaGGSQ=
