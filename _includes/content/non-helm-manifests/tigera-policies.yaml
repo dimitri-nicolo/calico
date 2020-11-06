@@ -400,12 +400,63 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
+      # This egress rule in this policy allows prometheus to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
+  - action: Allow
+    protocol: TCP
+    destination:
       ports: [9081]
   - action: Allow
     protocol: TCP
     destination:
       # Egress access for BGP metrics
       ports: [9900]
+---
+
+# This manifest creates a network policy to allow the prometheus-operator
+# to access the kube-apiserver
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.prometheus-operator
+  namespace: tigera-prometheus
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: operator == 'prometheus'
+  types:
+    - Egress
+  egress:
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+    - action: Allow
+      protocol: UDP
+      destination:
+        # This rule allows to communicate with openshift-dns.
+        namespaceSelector: projectcalico.org/name == "openshift-dns"
+        selector: dns.operator.openshift.io/daemonset-dns == "default"
+        ports: [5353]
+{%- else %}
+    - action: Allow
+      protocol: UDP
+      destination:
+        # This rule allows communicate with kube-dns.
+        namespaceSelector: projectcalico.org/name == 'kube-system'
+        selector: k8s-app == 'kube-dns'
+        ports: [53]
+{%- endif %}
+    - action: Allow
+      protocol: TCP
+      destination:
+        # This egress rule in this policy allows prometheus-operator to communicate with kubernetes api server.
+        namespaceSelector: projectcalico.org/name == 'default'
+        selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+        # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+        # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+        ports: [443, 6443, 12388]
 ---
 
 # Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
@@ -737,7 +788,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tigera.allow-tigera-dex-ingress
+  name: allow-tigera.allow-tigera-dex
   namespace: tigera-dex
 spec:
   order: 1
@@ -799,7 +850,7 @@ spec:
       protocol: TCP
       destination:
         # This rule is intended to allow egress between dex and your identity provider.
-        ports: [443]
+        ports: [443, 6443]
         # This subnet is added to represent the address(es) where your identity provider is running. If you make this subnet
         # more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
         nets: ['0.0.0.0/0']
@@ -809,20 +860,27 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  labels:
-    projectcalico.org/tier: allow-tigera
   name: allow-tigera.allow-elastic-curator
   namespace: tigera-elasticsearch
 spec:
   egress:
+{%- if include.containerOrchestrationPlatform == "openshift" %}
     - action: Allow
-      destination:
-        namespaceSelector: projectcalico.org/name == "kube-system"
-        ports:
-          - 53
-        selector: k8s-app == "kube-dns"
       protocol: UDP
-      source: {}
+      destination:
+        # This rule allows to communicate with openshift-dns.
+        namespaceSelector: projectcalico.org/name == "openshift-dns"
+        selector: dns.operator.openshift.io/daemonset-dns == "default"
+        ports: [5353]
+{%- else %}
+    - action: Allow
+      protocol: UDP
+      destination:
+        # This rule allows communicate with kube-dns.
+        namespaceSelector: projectcalico.org/name == "kube-system"
+        selector: k8s-app == "kube-dns"
+        ports: [53]
+{% endif %}
     - action: Allow
       destination:
         namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
