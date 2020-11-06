@@ -7,6 +7,8 @@ GIT_USE_SSH     = true
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 BUILD_IMAGE    ?= tigera/intrusion-detection-controller
 
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
+
 build: $(BUILD_IMAGE)
 
 ##############################################################################
