@@ -192,20 +192,19 @@ This makes sure that requests coming to `/vX.Y` (without a slash) don't fail wit
 
 ### Publishing the candidate release branch
 
-1. Check out to the candidate release branch that is created as per the instructions [here](#creating-a-candidate-release-branch). 
+1. Check out the candidate release branch that is created as per the instructions [here](#creating-a-candidate-release-branch). 
 
    ```
    git checkout release-calient-vX.Y
    ```
 
-1. On netlify create a new site using the `release-calient-vX.Y` branch (You should at least have write access to this repo for site creation) 
+1. On Netlify create a new site using the `release-calient-vX.Y` branch. You must have write access to this repo for site creation.
 
-1. Rename the randomly generated site name to follow the same naming convention as other releases (Ex: `tigera-vX-Y`).
+1. Rename the randomly generated site name to follow the same naming convention as other releases (use `tigera-vX-Y`).
 
 1. Ensure that the site is generated properly by visiting site URL (Ex. https://tigera-vX-Y.netlify.app/vX.Y/).  
 
-1. After ensuring that the site deployment is successful, in current production branch's [netlify.toml](netlify.toml) (this is the branch from which `docs.tigera.io` site gets deployed on Netlify), 
-add below proxy rules for the release candidate site at the top of `redirects` rules.
+1. Next, create a PR off of the `release-calient-vX.Y` branch and add the below proxy rule for the release candidate site at the top of `redirects` rules to [netlify.toml](netlify.toml). This ensures that Netlify will redirect to the correct site, when the user enters any URL prefixed by `/vX.Y`.
 
    ```toml
     [[redirects]]
@@ -213,17 +212,14 @@ add below proxy rules for the release candidate site at the top of `redirects` r
       to = "https://tigera-vX-Y.netlify.app/vX.Y/:splat"
       status = 200
    ```
+   
+   Also, while on the same PR off of the `release-calient-vX.Y` branch, add a rule at the top of [netlify/_redirects](netlify/_redirects) for the page we should redirect to when a user enters `/vX.Y` for the new candidate release. Note: The actual page to redirect to may vary from release-to-release, but it should be a valid page that we know exists for this candidate release. This ensures that requests coming to `/vX.Y` (without a trailing slash) for the candidate site do not return an HTTP 404 error.
 
-1. In current production branch's [netlify/_redirects](netlify/_redirects) add a line for the new release following the other examples
-(Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
-This makes sure that requests coming to `/vX.Y` (candidate site, without a trailing slash) don't fail with 404.
+1. Get the PR reviewed and merged. This ensures when this candidate release branch is promoted to production, we have access to `docs.tigera.io/vX.Y/`. 
 
+1. Next, cherry pick the above proxy rule changes to `master` branch so that future releases, which would be cut from master, will have references to this releases.
 
-1. Ensure that these proxy rules are cherry-picked to `master` branch so that future releases, which would be cut from master, will have references to this releases.
-
-1. Ensure that proxy rules are cherry picked to `candidate` branch too (unlike for OS, OS has an extra build to handle this case without redirect rules) so that when this branch is promoted to production, we still have access to `docs.tigera.io/vX.Y/`. 
-
-1. Open a pull request to upstream production branch, get it reviewed and merged. This would make the candidate site docs available at `docs.tigera.io/vX.Y/` (Note: the trailing slash)
+1. Next, cherry pick the above proxy rule changes to current production release branch (i.e. the release preceeding our new candidate release). This is the current production site (since we haven't promoted the new candidate release yet). This is necessary because during the test cycle / valdiation phase for the new release we want the candidate release to be available to use (e.g. for our hashrelease system).  
 
 ### Promoting to be the latest release in the docs
 
@@ -251,7 +247,7 @@ as described in the section above.
    ```
    git commit -m "Updates for release vX.Y.Z"
    ```
-
+   
 1. Push your branch and open a pull request to the upstream release-calient-vX.Y branch. Get it reviewed and wait for it to pass CI.
 
 1. Merge the PR. 
