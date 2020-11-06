@@ -59,6 +59,10 @@ EXCLUDED_IMAGES = [
     'tigera-cni',
     'egress-gateway',
     'guardian',
+    'dex',
+    'honeypod-controller',
+    'honeypod',
+    'honeypod-exp-service',
 
     # third party images
     'elasticsearch',
