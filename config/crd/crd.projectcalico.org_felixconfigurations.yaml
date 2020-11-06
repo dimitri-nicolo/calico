@@ -79,10 +79,6 @@ spec:
                 description: 'BPFEnabled, if enabled Felix will use the BPF dataplane.
                   [Default: false]'
                 type: boolean
-              bpfKprobeEnabled:
-                description: 'BPFKprobeEnabled, if enabled Felix will load the bpf kprobe programs and attach functions
-		  to kprobe [Default: false]'
-                type: boolean
               bpfExternalServiceMode:
                 description: 'BPFExternalServiceMode in BPF mode, controls how connections
                   from outside the cluster to services (node ports and cluster IPs)
@@ -93,6 +89,10 @@ spec:
                   node appears to use the IP of the ingress node; this requires a
                   permissive L2 network.  [Default: Tunnel]'
                 type: string
+              bpfKprobeEnabled:
+                description: 'BPFKprobeEnabled, if enabled Felix will load the kprobe
+                  BPF programs and attach it to functions. [Default: false]'
+                type: boolean
               bpfKubeProxyEndpointSlicesEnabled:
                 description: BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls
                   whether Felix's embedded kube-proxy accepts EndpointSlices or not.

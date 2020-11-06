@@ -5247,6 +5247,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"bpfKprobeEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFKprobeEnabled, if enabled Felix will load the kprobe BPF programs and attach it to functions. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"bpfDisableUnprivileged": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFDisableUnprivileged, if enabled, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable unprivileged use of BPF.  This ensures that unprivileged users cannot access Calico's BPF maps and cannot insert their own BPF programs to interfere with Calico's. [Default: true]",
