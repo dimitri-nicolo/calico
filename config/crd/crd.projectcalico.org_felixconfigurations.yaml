@@ -79,6 +79,10 @@ spec:
                 description: 'BPFEnabled, if enabled Felix will use the BPF dataplane.
                   [Default: false]'
                 type: boolean
+              bpfKprobeEnabled:
+                description: 'BPFKprobeEnabled, if enabled Felix will load the bpf kprobe programs and attach functions
+		  to kprobe [Default: false]'
+                type: boolean
               bpfExternalServiceMode:
                 description: 'BPFExternalServiceMode in BPF mode, controls how connections
                   from outside the cluster to services (node ports and cluster IPs)
