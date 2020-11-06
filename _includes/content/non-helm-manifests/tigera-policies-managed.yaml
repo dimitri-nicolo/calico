@@ -200,6 +200,15 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
+      # This egress rule in this policy allows prometheu to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
+  - action: Allow
+    protocol: TCP
+    destination:
       ports: [9081]
   - action: Allow
     protocol: TCP
@@ -242,7 +251,7 @@ spec:
     - action: Allow
       protocol: TCP
       destination:
-        # This egress rule in this policy allows tigera-dex to communicate with kubernetes api server.
+        # This egress rule in this policy allows prometheus-operator to communicate with kubernetes api server.
         namespaceSelector: projectcalico.org/name == 'default'
         selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
         # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
