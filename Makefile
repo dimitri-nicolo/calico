@@ -1,7 +1,12 @@
 PACKAGE_NAME?=github.com/tigera/licensing
-GO_BUILD_VER?=v0.34
+GO_BUILD_VER?=v0.49
 
 GIT_USE_SSH = true
+
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LICENSING_PRIVATE_PROJECT_ID)
+
+SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_FELIX_PRIVATE_PROJECT_ID) $(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID) \
+	$(SEMAPHORE_API_SERVER_PROJECT_ID)
 
 ###############################################################################
 # Download and include Makefile.common before anything else

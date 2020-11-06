@@ -1,5 +1,5 @@
 version: v1.0
-name: First pipeline
+name: Licensing
 agent:
   machine:
     type: e1-standard-2
@@ -30,3 +30,14 @@ blocks:
             - make test
       secrets:
         - name: marvin-github-ssh-private-key
+  - name: Trigger pin updates
+    skip:
+      when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"
+    task:
+      secrets:
+        - name: semaphore-api
+      jobs:
+        - name: Trigger pin updates
+          commands:
+            - checkout
+            - make semaphore-run-auto-pin-update-workflows
