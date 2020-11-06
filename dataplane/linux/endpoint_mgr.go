@@ -50,6 +50,7 @@ type routeTable interface {
 	SetRoutes(ifaceName string, targets []routetable.Target)
 	RouteRemove(ifaceName string, cidr ip.CIDR)
 	SetL2Routes(ifaceName string, targets []routetable.L2Target)
+	QueueResyncIface(ifaceName string)
 }
 
 type endpointManagerCallbacks struct {
@@ -1139,6 +1140,11 @@ func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
 		return
 	}
 	log.WithField("address", addr).Info("Removed address from egress gateway device")
+
+	// Removing this address causes the egress gateway device route to disappear, so tell the
+	// route table to resync in order to reinstate it.
+	m.routeTable.QueueResyncIface(name)
+
 	return
 }
 

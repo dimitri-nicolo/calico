@@ -683,6 +683,7 @@ func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Ta
 
 func (t *mockRouteTable) OnIfaceStateChanged(string, ifacemonitor.State) {}
 func (t *mockRouteTable) QueueResync()                                   {}
+func (t *mockRouteTable) QueueResyncIface(string)                        {}
 func (t *mockRouteTable) Apply() error {
 	return nil
 }
