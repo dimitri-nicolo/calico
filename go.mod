@@ -57,8 +57,8 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cobra v0.0.6
-	github.com/tigera/apiserver v0.0.0-20201106003055-5358341fee7c
-	github.com/tigera/lma v0.0.0-20201106003935-84aed4095111
+	github.com/tigera/apiserver v0.0.0-20201106173357-c4838d77e9b2
+	github.com/tigera/lma v0.0.0-20201106174131-99e627f8f0ea
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
