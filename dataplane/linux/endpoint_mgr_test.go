@@ -1624,12 +1624,14 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 					Context("with WEP deleted and recreated with the same interface", func() {
 						JustBeforeEach(func() {
+							By("removing WEP")
 							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 								Id: &wlEPID1,
 							})
 							err := epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
+							By("signaling WEP iface down")
 							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-ab",
 								State: "down",
@@ -1637,6 +1639,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
+							By("removing WEP iface from mock dataplane")
 							link, err := nlDataplane.LinkByName("cali12345-ab")
 							Expect(err).ToNot(HaveOccurred())
 							err = nlDataplane.LinkDel(link)
@@ -1644,8 +1647,10 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 							nlDataplane.ResetDeltas()
 
+							By("recreating WEP iface in mock dataplane")
 							nlDataplane.AddIface(28, "cali12345-ab", true, true)
 
+							By("signaling WEP iface up")
 							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-ab",
 								State: "up",
@@ -1657,6 +1662,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
+							By("recreating WEP")
 							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 								Id: &wlEPID1,
 								Endpoint: &proto.WorkloadEndpoint{

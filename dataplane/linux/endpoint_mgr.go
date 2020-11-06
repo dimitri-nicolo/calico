@@ -344,6 +344,14 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 		m.pendingIfaceUpdates[msg.Name] = msg.State
 	case *ifaceAddrsUpdate:
 		log.WithField("update", msg).Debug("Interface addrs changed.")
+		// If we added an address to this interface for egress gateway function, check if it
+		// is still there, and update our tracking if not, so that we don't try to remove it
+		// again later.  This is part of the normal endpoint deletion process.
+		egressAddr := m.egressGatewayAddressAdded[msg.Name]
+		if egressAddr.IPNet != nil && !msg.Addrs.Contains(egressAddr.IP.String()) {
+			log.Debug("Egress gateway address has disappeared")
+			delete(m.egressGatewayAddressAdded, msg.Name)
+		}
 		if m.wlIfacesRegexp.MatchString(msg.Name) {
 			log.WithField("update", msg).Debug("Workload interface, ignoring.")
 			return
