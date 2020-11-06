@@ -788,7 +788,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tigera.allow-tigera-dex-ingress
+  name: allow-tigera.allow-tigera-dex
   namespace: tigera-dex
 spec:
   order: 1
@@ -850,7 +850,7 @@ spec:
       protocol: TCP
       destination:
         # This rule is intended to allow egress between dex and your identity provider.
-        ports: [443]
+        ports: [443, 6443]
         # This subnet is added to represent the address(es) where your identity provider is running. If you make this subnet
         # more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
         nets: ['0.0.0.0/0']
