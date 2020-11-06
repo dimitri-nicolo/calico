@@ -3,8 +3,8 @@ module github.com/tigera/intrusion-detection/controller
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200730204338-ab34dfe6eeda
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201106173357-c4838d77e9b2
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.17.2
@@ -42,13 +42,13 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/apiserver v0.0.0-20200602183955-40e8ca4efae0
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
