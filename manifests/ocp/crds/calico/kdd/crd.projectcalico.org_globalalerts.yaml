@@ -34,6 +34,8 @@ spec:
                   type: string
                 dataSet:
                   type: string
+                description:
+                  type: string
                 field:
                   type: string
                 lookback:
@@ -52,6 +54,7 @@ spec:
                   type: number
               required:
                 - dataSet
+                - description
                 - severity
               type: object
             status:
