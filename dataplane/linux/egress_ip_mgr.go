@@ -485,11 +485,20 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		logCxt := log.WithField("id", id)
 		currentIndex, ipsetToIndexExists := m.egressIPSetToTableIndex[id]
 		if ips, found := m.activeEgressIPSet[id]; !found {
-			// EgressIPSet been removed.
+			// IP set is 'dirty' - i.e. we have recently received one or more proto
+			// messages for it - but missing from m.activeEgressIPSet, which means it's
+			// no longer wanted.  We should clean up the underlying route table.
 			rTable := m.tableIndexToRouteTable[currentIndex]
 			if !ipsetToIndexExists || rTable == nil {
-				// Something wrong, this should not happen. Panic.
-				log.Panic("Removing an egress IPSet with invalid table index")
+				// But in this case there is no underlying route table, so nothing
+				// to do.  This can happen if an IP set is created and fairly
+				// quickly deleted again, and this code ('Work out egress ip set
+				// updates') did not get a chance to run in between those two
+				// events.  For example, if Felix has only recently started and the
+				// egress IP VXLAN device was not immediately configured.
+				logCxt.Debugf("Route table does not exist for dirty egress IPSet ipsetToIndexExists=%v rTable=%v",
+					ipsetToIndexExists, rTable)
+				continue
 			}
 
 			// Remove routes.
