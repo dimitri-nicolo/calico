@@ -41,7 +41,15 @@ MAPPED_COMPONENTS = {
     'firewall-integration': 'firewall-integration',
     'egress-gateway': 'egress-gateway',
     'guardian': 'voltron',
+    'dex': 'dexidp-docker',
+    'honeypod-controller': 'honeypod-controller',
 }
+
+# Honeypod images aren't part of the release process.
+SKIP_COMPONENTS = [
+    'honeypod',
+    'honeypod-exp-service'
+]
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
@@ -50,9 +58,10 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
 
 def test_all_tigera_images_are_mapped():
+
   mapped_images = MAPPED_COMPONENTS
 
-  version_compoments = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/')}
+  version_compoments = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/') and k not in SKIP_COMPONENTS}
 
   assert len(mapped_images.keys()) == len(version_compoments.keys())
   assert set(mapped_images.keys()) == set(version_compoments.keys())
