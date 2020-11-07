@@ -34,6 +34,13 @@
   echo "url: $DEPLOY_PRIME_URL" > _config_url.yml
   jekyll build --config _config.yml,_config_url.yml
   '''
+
+ [[redirects]]
+  from = "/v3.4/*"
+  to = "https://tigera-v3-4.netlify.app/v3.4/:splat"
+  status = 200
+  headers = {X-From = "Netlify"} 
+  
 [[redirects]]
   from = "/v3.3/*"
   to = "https://tigera-v3-3.netlify.app/v3.3/:splat"
