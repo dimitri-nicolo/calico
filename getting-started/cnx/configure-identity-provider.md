@@ -116,33 +116,58 @@ We currently support three identity providers:
   '<label:Openshift>'
 
 <%
-1. Apply the Authentication CR to your cluster to let the operator configure your login. The Openshift userID is used as the user for cluster role bindings.
-
+1. Create values for some required variables. `MANAGER_URL` is the URL where {{site.prodname}} Manager will be accessed,
+   `CLUSTER_DOMAIN` is the domain (excl. port) where your Openshift cluster is accessed and `CLIENT_SECRET` is a value of your choosing.
+   ```bash
+   MANAGER_URL=<manager-host>:<port>
+   CLUSTER_DOMAIN=<domain-of-your-ocp-cluster>
+   CLIENT_SECRET=<clientSecret>
    ```
+
+1. Add an OAuthClient to your Openshift cluster.
+
+   ```bash
+   kubectl apply -f - <<EOF
+   kind: OAuthClient
+   apiVersion: oauth.openshift.io/v1
+   metadata:
+     # The name is used as the clientID by Dex.
+     name: tigera-dex
+   # The secret is used as the clientSecret by Dex
+   secret: $CLIENT_SECRET
+   # List of valid addresses for the callback. 
+   redirectURIs:
+    - "$MANAGER_URL/dex/callback" 
+   grantMethod: prompt
+   EOF
+   ```
+
+1. Apply the Authentication CR to your cluster to let the operator configure your login.
+
+   ```bash
+   kubectl apply -f - <<EOF
    apiVersion: operator.tigera.io/v1
    kind: Authentication
    metadata:
      name: tigera-secure
    spec:
-     managerDomain: https://<domain-of-manager-ui>
+     managerDomain: $MANAGER_URL
      openshift:
-       issuerURL: https://api.<your-openshift-domain>
-
+       issuerURL: https://api.$CLUSTER_DOMAIN:6443
+   EOF
    ```
 
-1. Apply the secret to your cluster with your Openshift credentials. The Client ID and Client Secret can be set up in the Openshift OAuth Config menu of your cluster.
-   The `rootCA` field should either contain the root CA of your openshift cluster in pem format, or the bundle of the public certs of the Openshift API and the Openshift Authentication server in pem format.
-
+1. Obtain the certificates that are used to connect with openshift and store them in a file called `dex.pem`.
+   ```bash
+   echo | openssl s_client -servername oauth-openshift.apps.$CLUSTER_DOMAIN -connect oauth-openshift.apps.$CLUSTER_DOMAIN:443 |  sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > dex.pem
+   echo | openssl s_client -servername api.$CLUSTER_DOMAIN -connect api.$CLUSTER_DOMAIN:6443 |  sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' >> dex.pem
    ```
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: tigera-openshift-credentials
-     namespace: tigera-operator
-   data:
-     clientID: <your-base64-clientid>
-     clientSecret: <your-base64-clientid-secret>
-     rootCA: <your-base64-openshift-root-ca-pem>
+   Alternatively, you can use the root CA of your cluster and store it in `dex.pem`.
+
+1. Apply a secret to your cluster with your Openshift credentials.
+
+   ```bash
+   kubectl create secret generic tigera-openshift-credentials -n tigera-operator --from-file=rootCA=dex.pem --from-literal=clientID=tigera-dex --from-literal=clientSecret=$CLIENT_SECRET
    ```
    
 %>
@@ -159,6 +184,8 @@ For regular users with view-only permissions apply this role.
   ```bash
   kubectl create clusterrolebinding <user>-tigera-ui-user --user=<user> --clusterrole=tigera-ui-user
   ```
+> Note: Openshift users can also apply these cluster roles from the Openshift console. Navigate to "User Management" and then select "users".
+{: .alert .alert-info}
 
 #### Allow {{site.prodname}} URIs in your IdP
 Most IdPs require redirect URIs to be allowed in order to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
