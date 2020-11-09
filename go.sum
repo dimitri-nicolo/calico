@@ -496,6 +496,7 @@ github.com/pmezard/go-difflib v0.0.0-20151028094244-d8ed2627bdf0/go.mod h1:iKH77
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021/go.mod h1:prYjPmNq4d1NPVmpShWobRqXY3q7Vp+80DqgxxUrUIA=
+github.com/projectcalico/felix v3.8.9+incompatible/go.mod h1:sXkI80qPUY4Nyon/P0JUD7ziCjHTg6HI6rxczHG3AY8=
 github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba h1:aaF2byUCZhzszHsfPEr2M3qcU4ibtD/yk/il2R7T1PU=
 github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba/go.mod h1:q8EdCgBdMQzgiX/uk4GXLWLk+gIHd1a7mWUAamJKDb4=
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54 h1:Jt2Pic9dxgJisekm8q2WV9FaWxUJhhRfwHSP640drww=
@@ -579,8 +580,8 @@ github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5 h1:1rnMrAadhqq3KF22CntRJNdOfSvA8GPpUIiY5iFYdsA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5/go.mod h1:tots0PLC1yjgvKhTIHhnXW8JtFt5GhVDogynKRMa+Wg=
-github.com/tigera/licensing v1.0.1-0.20201102205955-dfaedc85780d h1:esz8fKLmQWoqmrIYl2KJhmaBJBTxKXmWKFTvO0paNJ0=
-github.com/tigera/licensing v1.0.1-0.20201102205955-dfaedc85780d/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
+github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19 h1:SLVtrxhWnoK95w7xmDZ9d2uiuXRhdp4Vt6CbjdW9k5M=
+github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe3N3H+CHVaceVY9N9eVQ3ulK6jJVl9lWIs6Wv2s=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
