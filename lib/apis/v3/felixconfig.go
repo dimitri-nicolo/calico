@@ -319,8 +319,6 @@ type FelixConfigurationSpec struct {
 
 	// BPFEnabled, if enabled Felix will use the BPF dataplane. [Default: false]
 	BPFEnabled *bool `json:"bpfEnabled,omitempty" validate:"omitempty"`
-	// BPFKprobeEnabled, if enabled Felix will load the kprobe BPF programs and attach it to functions. [Default: false]
-	BPFKprobeEnabled *bool `json:"bpfKprobeEnabled,omitempty" validate:"omitempty"`
 	// BPFDisableUnprivileged, if enabled, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable
 	// unprivileged use of BPF.  This ensures that unprivileged users cannot access Calico's BPF maps and
 	// cannot insert their own BPF programs to interfere with Calico's. [Default: true]
@@ -385,6 +383,8 @@ type FelixConfigurationSpec struct {
 	FlowLogsEnableNetworkSets *bool `json:"flowLogsEnableNetworkSets,omitempty"`
 	// FlowLogsMaxOriginalIPsIncluded specifies the number of unique IP addresses (if relevant) that should be included in Flow logs.
 	FlowLogsMaxOriginalIPsIncluded *int `json:"flowLogsMaxOriginalIPsIncluded,omitempty"`
+	// FlowLogsCollectProcessInfo, if enabled Felix will load the kprobe BPF programs to collect process info. [Default: false]
+	FlowLogsCollectProcessInfo *bool `json:"flowLogsCollectProcessInfo,omitempty" validate:"omitempty"`
 
 	// Enable Flow logs reporting to AWS CloudWatch.
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`

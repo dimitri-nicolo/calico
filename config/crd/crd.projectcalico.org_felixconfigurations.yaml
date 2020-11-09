@@ -89,10 +89,6 @@ spec:
                   node appears to use the IP of the ingress node; this requires a
                   permissive L2 network.  [Default: Tunnel]'
                 type: string
-              bpfKprobeEnabled:
-                description: 'BPFKprobeEnabled, if enabled Felix will load the kprobe
-                  BPF programs and attach it to functions. [Default: false]'
-                type: boolean
               bpfKubeProxyEndpointSlicesEnabled:
                 description: BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls
                   whether Felix's embedded kube-proxy accepts EndpointSlices or not.
@@ -423,6 +419,10 @@ spec:
                   is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled
                   is set to true.
                 type: integer
+              flowLogsCollectProcessInfo:
+                description: 'FlowLogsCollectProcessInfo, if enabled Felix will load
+                  the kprobe BPF programs to collect process info. [Default: false]'
+                type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
                   dynamically changing aggregation levels. Default is true.

@@ -1690,11 +1690,6 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.BPFKprobeEnabled != nil {
-		in, out := &in.BPFKprobeEnabled, &out.BPFKprobeEnabled
-		*out = new(bool)
-		**out = **in
-	}
 	if in.BPFDisableUnprivileged != nil {
 		in, out := &in.BPFDisableUnprivileged, &out.BPFDisableUnprivileged
 		*out = new(bool)
@@ -1748,6 +1743,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.FlowLogsMaxOriginalIPsIncluded != nil {
 		in, out := &in.FlowLogsMaxOriginalIPsIncluded, &out.FlowLogsMaxOriginalIPsIncluded
 		*out = new(int)
+		**out = **in
+	}
+	if in.FlowLogsCollectProcessInfo != nil {
+		in, out := &in.FlowLogsCollectProcessInfo, &out.FlowLogsCollectProcessInfo
+		*out = new(bool)
 		**out = **in
 	}
 	if in.CloudWatchLogsReporterEnabled != nil {
