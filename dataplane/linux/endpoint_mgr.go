@@ -1112,6 +1112,14 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 	return nil
 }
 
+func lookupLink(nlHandle netlinkHandle, name string) (link netlink.Link, err error, notFound bool) {
+	link, err = nlHandle.LinkByName(name)
+	if err != nil {
+		_, notFound = err.(netlink.LinkNotFoundError)
+	}
+	return
+}
+
 func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
 	addr, added := m.egressGatewayAddressAdded[name]
 	if !added {
@@ -1130,13 +1138,19 @@ func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
 	delete(m.egressGatewayAddressAdded, name)
 
 	// Look up the interface.
-	link, err := m.nlHandle.LinkByName(name)
-	if err != nil {
-		// Presumably the link has been removed.  Address already gone.
+	link, err, notFound := lookupLink(m.nlHandle, name)
+	if notFound {
+		// The link has been removed.  Address already gone.
+		return
+	} else if err != nil {
+		log.WithError(err).Warning("Failed to look up egress gateway device link")
 		return
 	}
 	if err = m.nlHandle.AddrDel(link, &addr); err != nil {
-		log.WithField("address", addr).WithError(err).Warning("Failed to remove address from egress gateway device")
+		// Only emit the following warning log if the link still exists.
+		if _, _, notFound = lookupLink(m.nlHandle, name); !notFound {
+			log.WithField("address", addr).WithError(err).Warning("Failed to remove address from egress gateway device")
+		}
 		return
 	}
 	log.WithField("address", addr).Info("Removed address from egress gateway device")
