@@ -4,7 +4,7 @@ go 1.15
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201106173357-c4838d77e9b2
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201109201235-5e3876aa4e7d
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.17.2
