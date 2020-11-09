@@ -384,7 +384,7 @@ check-dirty: undo-go-sum
 	fi
 
 ## Deploys images to registry
-cd: check-dirty
+cd: check-dirty image-all
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
