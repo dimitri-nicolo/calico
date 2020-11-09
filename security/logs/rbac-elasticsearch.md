@@ -36,13 +36,13 @@ Elasticsearch resources are associated with the **Kubernetes API group**, `lma.t
 > **Note**: Because the `lma.tigera.io` API group is used only for RBAC, and is not backed by an actual API, it does not provide access to any other Kubernetes resources. 
 {: .alert .alert-info}
 
-### Before you begin...
+### Before you begin
 
 **Required**
 
-- A `tigera-network-admin` role with full permissions to create and modify resources. For help, see [Log in to {{site.prodname}} Manager](({{site.baseurl}}/getting-started/authentication-quickstart).
+- A `tigera-network-admin` role with full permissions to create and modify resources. For help, see [Log in to {{site.prodname}} Manager]({{site.baseurl}}/getting-started/cnx/authentication-quickstart).
 
-- To see Elasticsearch resources in {{site.prodname}} Manager, uses must have [minimum permissions]({{site.baseurl}}/security/rbac-tiered-policies).
+- To view Elasticsearch resources in {{site.prodname}} Manager, users must have [minimum permissions]({{site.baseurl}}/security/rbac-tiered-policies).
 
 ### How to
 
