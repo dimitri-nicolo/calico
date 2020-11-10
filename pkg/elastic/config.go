@@ -71,3 +71,11 @@ func LoadConfig() (*Config, error) {
 
 	return config, nil
 }
+
+// CopyConfig creates copy of the given config. This copy has no pointer references to the original configuration.
+func CopyConfig(cfg *Config) *Config {
+	cp := *cfg
+	parsedElasticURL := *cfg.ParsedElasticURL
+	cp.ParsedElasticURL = &parsedElasticURL
+	return &cp
+}

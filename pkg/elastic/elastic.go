@@ -60,6 +60,12 @@ type client struct {
 	indexSettings IndexSettings
 }
 
+func NewWithClient(cli *elastic.Client) Client {
+	return &client{
+		Client: cli,
+	}
+}
+
 // doFunc invokes the Do on the search service. This is added to allow us to mock out the client in test code.
 func (c *client) Do(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error) {
 	return s.Do(ctx)

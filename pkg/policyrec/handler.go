@@ -9,14 +9,10 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	authzv1 "k8s.io/api/authorization/v1"
-
 	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/auth"
 )
 
 const (
-	lmaGroup    = "lma.tigera.io"
 	esFlowIndex = "tigera_secure_ee_flows*"
 )
 
@@ -66,37 +62,6 @@ func ValidatePolicyRecommendationParams(params *PolicyRecommendationParams) erro
 	}
 
 	return nil
-}
-
-func ValidatePermissions(req *http.Request, k8sAuth auth.K8sAuthInterface) (int, error) {
-	// Retrieve the cluster name from the "x-cluster-id" header. If it does not exist, this is
-	// in a single cluster environment and the cluster name is defaulted to "cluster".
-	clusterName := "cluster"
-	if val := req.Header.Get("x-cluster-id"); val != "" {
-		clusterName = val
-	}
-
-	// Check permissions against our custom resource for verifying the appropriate permissions
-	resAtr := &authzv1.ResourceAttributes{
-		Verb:     "get",
-		Group:    lmaGroup,
-		Resource: clusterName,
-		Name:     "flows",
-	}
-
-	if stat, err := checkAuthorized(req, *resAtr, k8sAuth); err != nil {
-		return stat, fmt.Errorf("Not authorized to get flow logs")
-	}
-
-	// Authorized for all actions on all resources required
-	return 0, nil
-}
-
-func checkAuthorized(req *http.Request, atr authzv1.ResourceAttributes, k8sAuth auth.K8sAuthInterface) (int, error) {
-	ctx := auth.NewContextWithReviewResource(req.Context(), &atr)
-	reqWithCtx := req.WithContext(ctx)
-
-	return k8sAuth.Authorize(reqWithCtx)
 }
 
 func QueryElasticsearchFlows(ctx context.Context, ca CompositeAggregator, params *PolicyRecommendationParams) ([]*api.Flow, error) {
