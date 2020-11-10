@@ -28,6 +28,11 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
+MOCKERY_FILE_PATHS= \
+	pkg/datastore/ClusterCtxK8sClientFactory \
+	pkg/list/Source \
+	pkg/syncer/SyncerCallbacks
+
 # Build mounts for running in "local build" mode. Developers will need to make sure they have the correct local version
 # otherwise the build will fail.
 PHONY:local_build
@@ -37,8 +42,12 @@ EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/github.com/tigera/libcalico-go:ro
 endif
 ifdef LOCAL_BUILD
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../lma:/go/src/github.com/tigera/lma:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../apiserver:/go/src/github.com/tigera/apiserver:rw
 local_build:
 	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	go mod edit -replace=github.com/tigera/lma=../lma
+	go mod edit -replace=github.com/tigera/apiserver=../apiserver
 else
 local_build:
 endif

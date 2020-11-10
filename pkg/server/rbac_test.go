@@ -8,6 +8,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/stretchr/testify/mock"
+
+	"k8s.io/apiserver/pkg/endpoints/request"
+
+	auth2 "github.com/tigera/lma/pkg/auth"
+
 	k8suser "k8s.io/apiserver/pkg/authentication/user"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -54,19 +60,19 @@ const (
 	cannot = false
 )
 
-func authTestEntry(user string, authorize bool, operation, name string) TableEntry {
+func authTestEntry(user string, authorize bool, operation, name string, authStatus int, authError error) TableEntry {
 	if authorize {
-		return Entry(fmt.Sprintf("User %s can %s on %s", user, operation, name), user, true, operation, name)
+		return Entry(fmt.Sprintf("User %s can %s on %s", user, operation, name), user, true, operation, name, authStatus, authError)
 	} else {
-		return Entry(fmt.Sprintf("User %s cannot %s on %s", user, operation, name), user, false, operation, name)
+		return Entry(fmt.Sprintf("User %s cannot %s on %s", user, operation, name), user, false, operation, name, authStatus, authError)
 	}
 }
 
-func viewTestEntry(user string, authorize bool, operation, reportTypeName, reportName string) TableEntry {
+func viewTestEntry(user string, authorize bool, operation, reportTypeName, reportName string, authStatus int, authError error) TableEntry {
 	if authorize {
-		return Entry(fmt.Sprintf("User %s can %s on %s/%s", user, operation, reportTypeName, reportName), user, true, operation, reportTypeName, reportName)
+		return Entry(fmt.Sprintf("User %s can %s on %s/%s", user, operation, reportTypeName, reportName), user, true, operation, reportTypeName, reportName, authStatus, authError)
 	} else {
-		return Entry(fmt.Sprintf("User %s cannot %s on %s/%s", user, operation, reportTypeName, reportName), user, false, operation, reportTypeName, reportName)
+		return Entry(fmt.Sprintf("User %s cannot %s on %s/%s", user, operation, reportTypeName, reportName), user, false, operation, reportTypeName, reportName, authStatus, authError)
 	}
 }
 
@@ -100,22 +106,19 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		Expect(k8sClient).NotTo(BeNil())
 
 	})
-	AfterEach(func() {
-	})
 
 	// This test validates that the rbac is configured correctly for the
 	// composite test. If this test fails then rbac is not configured correctly
 	// and the results of the composite tests are invalid.
 	// See the test/rbac folder for the users (in *.csv) and roles and bindings for them.
 	DescribeTable("Test rbac configuration",
-		func(user string, can bool, operation string, name string) {
+		func(username string, can bool, operation string, name string, authStat int, authError error) {
+			req := &http.Request{Header: http.Header{"Authorization": authHeaders[username]}}
+			req = req.WithContext(request.WithUser(req.Context(), &k8suser.DefaultInfo{Name: username}))
 
-			req := &http.Request{Header: http.Header{"Authorization": authHeaders[user]}}
-
-			k8sauth := newMock(user, can, operation, name)
-			creds := fakeRESTFactory{k8sauth: k8sauth}
-			factory := server.NewStandardRbacHelperFactory(&creds)
-			auth := factory.NewReportRbacHelper(req)
+			mockAuthorizer := new(auth2.MockRBACAuthorizer)
+			mockAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(authStat, authError)
+			auth := server.NewReportRbacHelper(mockAuthorizer, req)
 
 			var stat bool
 			var err error
@@ -131,6 +134,8 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 				panic(fmt.Sprintf("Invalid operation in test: %s", operation))
 			}
 
+			mockAuthorizer.AssertExpectations(GinkgoT())
+
 			if can {
 				Expect(err).To(BeNil())
 				Expect(stat).To(Equal(can), "Should be allowed")
@@ -138,105 +143,104 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 				Expect(err).To(Not(BeNil()))
 				Expect(stat).To(Equal(cannot), "Should be denied")
 			}
+
 		},
 
 		//basic-auth based tests ---------------------------------------------------------
 
 		//BasicAll user has access to all reports and report types
-		authTestEntry(user_BasicUserAll, can, perform_get_reporttype, on_report_type_audit),
-		authTestEntry(user_BasicUserAll, can, perform_get_reporttype, on_report_type_inventory),
-		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_AuditReport1),
-		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_AuditReport2),
-		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_AuditReport1),
-		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_AuditReport2),
-		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_InventoryReport1),
-		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_InventoryReport2),
-		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_InventoryReport1),
-		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_InventoryReport2),
+		authTestEntry(user_BasicUserAll, can, perform_get_reporttype, on_report_type_audit, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_get_reporttype, on_report_type_inventory, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_AuditReport2, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_AuditReport2, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_list_report, on_report_InventoryReport2, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_BasicUserAll, can, perform_get_report, on_report_InventoryReport2, 0, nil),
 
 		//BasicUserLimited user has limited access
 		//can access both types
 		//can get and list inventory1report  cannot get or list inventory2report
 		//can list audit1report and get audit2report
-		authTestEntry(user_BasicUserLimited, can, perform_get_reporttype, on_report_type_audit),
-		authTestEntry(user_BasicUserLimited, can, perform_get_reporttype, on_report_type_inventory),
-		authTestEntry(user_BasicUserLimited, can, perform_list_report, on_report_AuditReport1),
-		authTestEntry(user_BasicUserLimited, cannot, perform_list_report, on_report_AuditReport2),
-		authTestEntry(user_BasicUserLimited, cannot, perform_get_report, on_report_AuditReport1),
-		authTestEntry(user_BasicUserLimited, can, perform_get_report, on_report_AuditReport2),
-		authTestEntry(user_BasicUserLimited, can, perform_list_report, on_report_InventoryReport1),
-		authTestEntry(user_BasicUserLimited, cannot, perform_list_report, on_report_InventoryReport2),
-		authTestEntry(user_BasicUserLimited, can, perform_get_report, on_report_InventoryReport1),
-		authTestEntry(user_BasicUserLimited, cannot, perform_get_report, on_report_InventoryReport2),
+		authTestEntry(user_BasicUserLimited, can, perform_get_reporttype, on_report_type_audit, 0, nil),
+		authTestEntry(user_BasicUserLimited, can, perform_get_reporttype, on_report_type_inventory, 0, nil),
+		authTestEntry(user_BasicUserLimited, can, perform_list_report, on_report_AuditReport1, 0, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserLimited, cannot, perform_list_report, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserLimited, cannot, perform_get_report, on_report_AuditReport1, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserLimited, can, perform_get_report, on_report_AuditReport2, 0, nil),
+		authTestEntry(user_BasicUserLimited, can, perform_list_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_BasicUserLimited, cannot, perform_list_report, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserLimited, can, perform_get_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_BasicUserLimited, cannot, perform_get_report, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
 
 		//BasicUserNoAudit user only has access to inventory type
 		//however here does have access to list and get audit1report
 		//this is for testing composite access rules
-		authTestEntry(user_BasicUserInvOnly, cannot, perform_get_reporttype, on_report_type_audit),
-		authTestEntry(user_BasicUserInvOnly, can, perform_get_reporttype, on_report_type_inventory),
-		authTestEntry(user_BasicUserInvOnly, can, perform_list_report, on_report_AuditReport1),
-		authTestEntry(user_BasicUserInvOnly, cannot, perform_list_report, on_report_AuditReport2),
-		authTestEntry(user_BasicUserInvOnly, can, perform_get_report, on_report_AuditReport1),
-		authTestEntry(user_BasicUserInvOnly, cannot, perform_get_report, on_report_AuditReport2),
-		authTestEntry(user_BasicUserInvOnly, can, perform_list_report, on_report_InventoryReport1),
-		authTestEntry(user_BasicUserInvOnly, can, perform_list_report, on_report_InventoryReport2),
-		authTestEntry(user_BasicUserInvOnly, can, perform_get_report, on_report_InventoryReport1),
-		authTestEntry(user_BasicUserInvOnly, cannot, perform_get_report, on_report_InventoryReport2),
+		authTestEntry(user_BasicUserInvOnly, cannot, perform_get_reporttype, on_report_type_audit, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserInvOnly, can, perform_get_reporttype, on_report_type_inventory, 0, nil),
+		authTestEntry(user_BasicUserInvOnly, can, perform_list_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_BasicUserInvOnly, cannot, perform_list_report, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserInvOnly, can, perform_get_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_BasicUserInvOnly, cannot, perform_get_report, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_BasicUserInvOnly, can, perform_list_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_BasicUserInvOnly, can, perform_list_report, on_report_InventoryReport2, 0, nil),
+		authTestEntry(user_BasicUserInvOnly, can, perform_get_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_BasicUserInvOnly, cannot, perform_get_report, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
 
 		//Token based tests ---------------------------------------------------------
 
 		//TokenAll user has access to all reports and report types
-		authTestEntry(user_TokenUserAll, can, perform_get_reporttype, on_report_type_audit),
-		authTestEntry(user_TokenUserAll, can, perform_get_reporttype, on_report_type_inventory),
-		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_AuditReport1),
-		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_AuditReport2),
-		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_AuditReport1),
-		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_AuditReport2),
-		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_InventoryReport1),
-		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_InventoryReport2),
-		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_InventoryReport1),
-		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_InventoryReport2),
+		authTestEntry(user_TokenUserAll, can, perform_get_reporttype, on_report_type_audit, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_get_reporttype, on_report_type_inventory, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_AuditReport2, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_AuditReport2, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_list_report, on_report_InventoryReport2, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_TokenUserAll, can, perform_get_report, on_report_InventoryReport2, 0, nil),
 
 		//TokenUserLimited user has limited access
 		//can access both types
 		//can get and list inventory1report  cannot get or list inventory2report
 		//can list audit1report and get audit2report
-		authTestEntry(user_TokenUserLimited, can, perform_get_reporttype, on_report_type_audit),
-		authTestEntry(user_TokenUserLimited, can, perform_get_reporttype, on_report_type_inventory),
-		authTestEntry(user_TokenUserLimited, can, perform_list_report, on_report_AuditReport1),
-		authTestEntry(user_TokenUserLimited, cannot, perform_list_report, on_report_AuditReport2),
-		authTestEntry(user_TokenUserLimited, cannot, perform_get_report, on_report_AuditReport1),
-		authTestEntry(user_TokenUserLimited, can, perform_get_report, on_report_AuditReport2),
-		authTestEntry(user_TokenUserLimited, can, perform_list_report, on_report_InventoryReport1),
-		authTestEntry(user_TokenUserLimited, cannot, perform_list_report, on_report_InventoryReport2),
-		authTestEntry(user_TokenUserLimited, can, perform_get_report, on_report_InventoryReport1),
-		authTestEntry(user_TokenUserLimited, cannot, perform_get_report, on_report_InventoryReport2),
+		authTestEntry(user_TokenUserLimited, can, perform_get_reporttype, on_report_type_audit, 0, nil),
+		authTestEntry(user_TokenUserLimited, can, perform_get_reporttype, on_report_type_inventory, 0, nil),
+		authTestEntry(user_TokenUserLimited, can, perform_list_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_TokenUserLimited, cannot, perform_list_report, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_TokenUserLimited, cannot, perform_get_report, on_report_AuditReport1, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_TokenUserLimited, can, perform_get_report, on_report_AuditReport2, 0, nil),
+		authTestEntry(user_TokenUserLimited, can, perform_list_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_TokenUserLimited, cannot, perform_list_report, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_TokenUserLimited, can, perform_get_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_TokenUserLimited, cannot, perform_get_report, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
 
 		//TokenUserNoAudit user only has access to inventory type
 		//however here it does have access to list and get audit1report
 		//this however will be denied becase the user does not have access to the report type
 		//this is for testing composite access rules
-		authTestEntry(user_TokenUserInvOnly, cannot, perform_get_report, on_report_type_audit),
-		authTestEntry(user_TokenUserInvOnly, can, perform_get_reporttype, on_report_type_inventory),
-		authTestEntry(user_TokenUserInvOnly, can, perform_list_report, on_report_AuditReport1),
-		authTestEntry(user_TokenUserInvOnly, cannot, perform_list_report, on_report_AuditReport2),
-		authTestEntry(user_TokenUserInvOnly, can, perform_get_report, on_report_AuditReport1),
-		authTestEntry(user_TokenUserInvOnly, cannot, perform_get_report, on_report_AuditReport2),
-		authTestEntry(user_TokenUserInvOnly, can, perform_list_report, on_report_InventoryReport1),
-		authTestEntry(user_TokenUserInvOnly, can, perform_list_report, on_report_InventoryReport2),
-		authTestEntry(user_TokenUserInvOnly, can, perform_get_report, on_report_InventoryReport1),
-		authTestEntry(user_TokenUserInvOnly, cannot, perform_get_report, on_report_InventoryReport2),
+		authTestEntry(user_TokenUserInvOnly, cannot, perform_get_report, on_report_type_audit, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_TokenUserInvOnly, can, perform_get_reporttype, on_report_type_inventory, 0, nil),
+		authTestEntry(user_TokenUserInvOnly, can, perform_list_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_TokenUserInvOnly, cannot, perform_list_report, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_TokenUserInvOnly, can, perform_get_report, on_report_AuditReport1, 0, nil),
+		authTestEntry(user_TokenUserInvOnly, cannot, perform_get_report, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
+		authTestEntry(user_TokenUserInvOnly, can, perform_list_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_TokenUserInvOnly, can, perform_list_report, on_report_InventoryReport2, 0, nil),
+		authTestEntry(user_TokenUserInvOnly, can, perform_get_report, on_report_InventoryReport1, 0, nil),
+		authTestEntry(user_TokenUserInvOnly, cannot, perform_get_report, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
 	)
 
 	DescribeTable("Test composite authorization",
-		func(user string, can bool, operation string, reportTypeName, reportName string) {
-
-			req := &http.Request{Header: http.Header{"Authorization": authHeaders[user]}}
-
-			k8sauth := newMock(user, can, operation, reportName)
-			creds := fakeRESTFactory{k8sauth: k8sauth}
-			factory := server.NewStandardRbacHelperFactory(&creds)
-			auth := factory.NewReportRbacHelper(req)
+		func(username string, can bool, operation string, reportTypeName, reportName string, authStat int, authError error) {
+			req := &http.Request{Header: http.Header{"Authorization": authHeaders[username]}}
+			req = req.WithContext(request.WithUser(req.Context(), &k8suser.DefaultInfo{Name: username}))
+			mockAuthorizer := new(auth2.MockRBACAuthorizer)
+			mockAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(authStat, authError)
+			auth := server.NewReportRbacHelper(mockAuthorizer, req)
 
 			var stat bool
 			var err error
@@ -259,78 +263,37 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 		//Basic-auth based tests ---------------------------------------------------------
 
-		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1),
-		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport2),
-		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport1),
-		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport2),
+		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1, 0, nil),
+		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport2, 0, nil),
+		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport1, 0, nil),
+		viewTestEntry(user_BasicUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport2, 0, nil),
 
-		viewTestEntry(user_BasicUserLimited, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1),
-		viewTestEntry(user_BasicUserLimited, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2),
-		viewTestEntry(user_BasicUserLimited, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1),
-		viewTestEntry(user_BasicUserLimited, can, perform_view_report, on_report_type_audit, on_report_AuditReport2),
+		viewTestEntry(user_BasicUserLimited, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1, 0, nil),
+		viewTestEntry(user_BasicUserLimited, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_BasicUserLimited, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_BasicUserLimited, can, perform_view_report, on_report_type_audit, on_report_AuditReport2, 0, nil),
 
-		viewTestEntry(user_BasicUserInvOnly, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1),
-		viewTestEntry(user_BasicUserInvOnly, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2),
-		viewTestEntry(user_BasicUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1),
-		viewTestEntry(user_BasicUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport2),
+		viewTestEntry(user_BasicUserInvOnly, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1, 0, nil),
+		viewTestEntry(user_BasicUserInvOnly, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_BasicUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_BasicUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
 
 		//Token based tests ---------------------------------------------------------
 
-		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1),
-		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport2),
-		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport1),
-		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport2),
+		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1, 0, nil),
+		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport2, 0, nil),
+		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport1, 0, nil),
+		viewTestEntry(user_TokenUserAll, can, perform_view_report, on_report_type_audit, on_report_AuditReport2, 0, nil),
 
-		viewTestEntry(user_TokenUserLimited, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1),
-		viewTestEntry(user_TokenUserLimited, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2),
-		viewTestEntry(user_TokenUserLimited, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1),
-		viewTestEntry(user_TokenUserLimited, can, perform_view_report, on_report_type_audit, on_report_AuditReport2),
+		viewTestEntry(user_TokenUserLimited, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1, 0, nil),
+		viewTestEntry(user_TokenUserLimited, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_TokenUserLimited, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_TokenUserLimited, can, perform_view_report, on_report_type_audit, on_report_AuditReport2, 0, nil),
 
-		viewTestEntry(user_TokenUserInvOnly, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1),
-		viewTestEntry(user_TokenUserInvOnly, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2),
-		viewTestEntry(user_TokenUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1),
-		viewTestEntry(user_TokenUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport2),
+		viewTestEntry(user_TokenUserInvOnly, can, perform_view_report, on_report_type_inventory, on_report_InventoryReport1, 0, nil),
+		viewTestEntry(user_TokenUserInvOnly, cannot, perform_view_report, on_report_type_inventory, on_report_InventoryReport2, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_TokenUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport1, 401, fmt.Errorf("not allowed")),
+		viewTestEntry(user_TokenUserInvOnly, cannot, perform_view_report, on_report_type_audit, on_report_AuditReport2, 401, fmt.Errorf("not allowed")),
 	)
 
 })
-
-type mock struct {
-	shouldIt bool
-}
-
-func newMock(user string, can bool, operation string, name string) *mock {
-	return &mock{
-		shouldIt: can,
-	}
-}
-
-func (m *mock) KubernetesAuthn(handler http.Handler) http.Handler {
-	return handler
-}
-
-// KubernetesAuthnAuthz to satisfy K8sAuthInterface
-func (m *mock) KubernetesAuthnAuthz(handler http.Handler) http.Handler {
-	return handler
-}
-
-// Authorized to satisfy K8sAuthInterface
-func (m *mock) Authenticate(req *http.Request) (*http.Request, int, error) {
-	return req, 0, nil
-}
-
-// Authorized to satisfy K8sAuthInterface
-func (m *mock) Authorize(req *http.Request) (status int, err error) {
-	if m.shouldIt {
-		return 0, nil
-	} else {
-		return http.StatusUnauthorized, fmt.Errorf("Error performing AccessReview")
-	}
-}
-
-func (m *mock) AuthenticateToken(req *http.Request) (u k8suser.Info, status int, err error) {
-	return nil, 0, nil
-}
-
-func (m *mock) AuthorizeUser(req *http.Request, user k8suser.Info) (status int, err error) {
-	return 0, nil
-}

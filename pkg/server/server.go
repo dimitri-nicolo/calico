@@ -9,18 +9,23 @@ import (
 
 	"github.com/bmizerany/pat"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/lma/pkg/elastic"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // New creates a new server.
-func New(rcf datastore.RESTClientFactory, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
+func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.ClusterContextClientFactory,
+	authenticator authentication.Authenticator, addr string, key string, cert string) ServerControl {
+
 	s := &server{
-		key:  key,
-		cert: cert,
-		rcf:  rcf,
-		rhf:  rhf,
+		key:       key,
+		cert:      cert,
+		csFactory: csFactory,
+		esFactory: esFactory,
 	}
 
 	// Create a new pattern matching MUX.
@@ -32,9 +37,8 @@ func New(rcf datastore.RESTClientFactory, rhf RbacHelperFactory, addr string, ke
 	// We always authenticate in the local cluster (where server is running). This will add UserInfo to the context.
 	// The the UserInfo will be used for authz in the target cluster (which could be a different cluster in a multi-
 	// cluster setup.
-	auth := rcf.K8sAuth(datastore.DefaultCluster)
-	mux.Get(UrlList, auth.KubernetesAuthn(http.HandlerFunc(s.handleListReports)))
-	mux.Get(UrlDownload, auth.KubernetesAuthn(http.HandlerFunc(s.handleDownloadReports)))
+	mux.Get(UrlList, authenticateRequest(authenticator, s.handleListReports))
+	mux.Get(UrlDownload, authenticateRequest(authenticator, s.handleDownloadReports))
 
 	// Create a new server using the MUX.
 	s.server = &http.Server{
@@ -45,15 +49,27 @@ func New(rcf datastore.RESTClientFactory, rhf RbacHelperFactory, addr string, ke
 	return s
 }
 
+func authenticateRequest(auth authentication.Authenticator, handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		req, stat, err := authentication.AuthenticateRequest(auth, req)
+		if err != nil {
+			log.WithError(err).Debug("Kubernetes auth failure")
+			http.Error(w, err.Error(), stat)
+			return
+		}
+		handlerFunc.ServeHTTP(w, req)
+	}
+}
+
 // server implements the compliance server, and implements the ServerControl interface.
 type server struct {
-	running bool
-	server  *http.Server
-	key     string
-	cert    string
-	wg      sync.WaitGroup
-	rcf     datastore.RESTClientFactory
-	rhf     RbacHelperFactory
+	running   bool
+	server    *http.Server
+	key       string
+	cert      string
+	wg        sync.WaitGroup
+	csFactory datastore.ClusterCtxK8sClientFactory
+	esFactory elastic.ClusterContextClientFactory
 
 	// Track all of the reports and report types. We don't expect these to change too often, so we only need to
 	// update the lists every so often. Access to this data should be through getReportTypes.
@@ -64,7 +80,6 @@ type server struct {
 
 // Start will start the compliance api server and return. Call Wait() to block until server termination.
 func (s *server) Start() {
-
 	if s.key != "" && s.cert != "" {
 		log.WithField("Addr", s.server.Addr).Info("Starting HTTPS server")
 		s.wg.Add(1)

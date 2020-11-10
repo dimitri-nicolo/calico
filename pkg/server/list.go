@@ -19,11 +19,18 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	clusterID := request.Header.Get(datastore.XClusterIDHeader)
 	log.Infof("Request url %v and x-cluster-id: %v ", request.URL, clusterID)
 
+	authorizer, err := s.csFactory.RBACAuthorizerForCluster(clusterID)
+	if err != nil {
+		log.Errorf("Failed to create authorizer: %s", err.Error())
+		http.Error(response, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	// Create an RBAC helper for determining which reports we should include in the returned list.
-	rbac := s.rhf.NewReportRbacHelper(request)
+	rbacHelper := NewReportRbacHelper(authorizer, request)
 
 	// First check if the user is able to List reports.
-	if canList, err := rbac.CanListReports(); err != nil {
+	if canList, err := rbacHelper.CanListReports(); err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
 		return
@@ -45,9 +52,15 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		Reports: []Report{},
 	}
 
+	esClient, err := s.esFactory.ClientForCluster(clusterID)
+	if err != nil {
+		log.WithError(err).Error("failed to create elasticsearch client")
+		http.Error(response, "Internal Server Error", http.StatusInternalServerError)
+	}
+
 	// Query elastic search to determine the set of reportTypeName/reportName that match the filter.
 	var filteredReportNameAndType []api.ReportTypeAndName
-	reportNameAndTypes, err := s.rcf.ESClient(clusterID).RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
+	reportNameAndTypes, err := esClient.RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
 	if err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
@@ -58,7 +71,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	// view.
 	for _, r := range reportNameAndTypes {
 		log.Debugf("Checking user RBAC for Report Type '%s' and Report '%s'", r.ReportTypeName, r.ReportName)
-		if include, err := rbac.CanViewReportSummary(r.ReportName); err != nil {
+		if include, err := rbacHelper.CanViewReportSummary(r.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
@@ -85,7 +98,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	}
 
 	// Pull the report summaries from elastic
-	reportSummaries, err := s.rcf.ESClient(clusterID).RetrieveArchivedReportSummaries(request.Context(), *qparams)
+	reportSummaries, err := esClient.RetrieveArchivedReportSummaries(request.Context(), *qparams)
 	if err != nil {
 		errString := fmt.Sprintf("Unable to list reports: %v", err)
 		http.Error(response, errString, http.StatusServiceUnavailable)
@@ -102,7 +115,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 		// If user can list the report then include it in the list. This should not be necessary since we filter out
 		// reports we can't view, but better to be safe here.
-		if include, err := rbac.CanViewReportSummary(v.ReportName); err != nil {
+		if include, err := rbacHelper.CanViewReportSummary(v.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
@@ -132,7 +145,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 		// If the user can view the report then include the download url and formats.
 		var downloadUrl string
-		if include, err := rbac.CanViewReport(v.ReportTypeName, v.ReportName); err != nil {
+		if include, err := rbacHelper.CanViewReport(v.ReportTypeName, v.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return

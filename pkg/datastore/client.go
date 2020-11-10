@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 package datastore
 
 import (
@@ -25,6 +25,13 @@ type ClientSet interface {
 
 	calicoInterface
 	list.Source
+}
+
+func NewClientSet(k8sCli k8sInterface, calicoCli calicoInterface) ClientSet {
+	return &clientSet{
+		k8sInterface:    k8sCli,
+		calicoInterface: calicoCli,
+	}
 }
 
 // MustGetKubernetesClient returns a kubernetes client.

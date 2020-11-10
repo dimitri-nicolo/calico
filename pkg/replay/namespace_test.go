@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -191,12 +192,7 @@ func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
-type mockNamespaceTestClient struct {
-	deleteBeforeSync bool
-	getAuditCalls    int
-}
-
-func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *time.Time, sortAscendingTime bool) (*list.TimestampedResourceList, error) {
+func resourceListForType(tm metav1.TypeMeta) *list.TimestampedResourceList {
 	var l resources.ResourceList
 	switch tm {
 	case resources.TypeCalicoGlobalNetworkPolicies:
@@ -270,104 +266,129 @@ func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *tim
 			Items:    []corev1.ServiceAccount{sa1, sa2},
 		}
 	default:
-		panic(fmt.Errorf("Unexpected resource type: %v", tm))
+		panic(fmt.Errorf("unexpected resource type: %v", tm))
 	}
 
 	return &list.TimestampedResourceList{
 		ResourceList:              l,
 		RequestStartedTimestamp:   metav1.Time{Time: nowMinus48Hrs},
 		RequestCompletedTimestamp: metav1.Time{Time: nowMinus48Hrs},
-	}, nil
-}
-
-func (c *mockNamespaceTestClient) StoreList(tm metav1.TypeMeta, resourceList *list.TimestampedResourceList) error {
-	panic(fmt.Errorf("StoreList should not be called from replayer: %v", tm))
-}
-
-func (c *mockNamespaceTestClient) GetAuditEvents(cxt context.Context, start *time.Time, end *time.Time) <-chan *api.AuditEventResult {
-	// We expect this to be called twice. Once to get determine the initial start of day snapshot and once to determine
-	// the changing events within the requested interval.
-	c.getAuditCalls++
-
-	Expect(c.getAuditCalls).To(BeNumerically("<", 3))
-
-	ch := make(chan *api.AuditEventResult, 2)
-
-	// Return a namespace deletion for namespace1 depending on when the test wants the delete sent.
-	if (c.getAuditCalls == 1 && c.deleteBeforeSync) || (c.getAuditCalls == 2 && !c.deleteBeforeSync) {
-		ch <- &api.AuditEventResult{
-			Event: &auditv1.Event{
-				Stage: auditv1.StageResponseComplete,
-				Verb:  api.EventVerbDelete,
-				ObjectRef: &auditv1.ObjectReference{
-					Resource:        "namespaces",
-					Name:            namespace1,
-					APIGroup:        "",
-					APIVersion:      "v1",
-					ResourceVersion: "",
-				},
-			},
-		}
 	}
-
-	// Close the channel, the current contents of the channel can still be read.
-	close(ch)
-
-	return ch
 }
 
 var _ = Describe("Replay namespace deletion", func() {
-	var cb *mockCallbacks
-	var replayer syncer.Starter
-	var client *mockNamespaceTestClient
+	var (
+		mockListDestination *api.MockListDestination
+		mockEventFetcher    *api.MockEventFetcher
+		mockSyncerCallbacks *syncer.MockSyncerCallbacks
+		replayer            syncer.Starter
+	)
+
 	BeforeEach(func() {
-		cb = &mockCallbacks{}
-		client = &mockNamespaceTestClient{}
-		replayer = New(nowMinus24Hrs, now, client, client, cb)
+		mockSyncerCallbacks = new(syncer.MockSyncerCallbacks)
+		mockListDestination = new(api.MockListDestination)
+		mockEventFetcher = new(api.MockEventFetcher)
+		replayer = New(nowMinus24Hrs, now, mockListDestination, mockEventFetcher, mockSyncerCallbacks)
+	})
+
+	AfterEach(func() {
+		mockSyncerCallbacks.AssertExpectations(GinkgoT())
 	})
 
 	It("should handle namespace deletion before the in-sync", func() {
 		By("running the replayed with a namespace deletion in the first event query")
-		client.deleteBeforeSync = true
-		replayer.Start(context.Background())
+		for _, helper := range resources.GetAllResourceHelpers() {
+			resourceList := resourceListForType(helper.TypeMeta())
+			mockListDestination.On("RetrieveList", helper.TypeMeta(), mock.Anything, mock.Anything, mock.Anything).Return(resourceList, nil)
+		}
 
-		By("Checking for status update complete")
-		Expect(cb.statusUpdates).To(ContainElement(syncer.NewStatusUpdateComplete()))
+		mockEventFetcher.On("GetAuditEvents", mock.Anything, &nowMinus48Hrs, &nowMinus24Hrs).Return(
+			createAuditEventChannel(&api.AuditEventResult{
+				Event: &auditv1.Event{
+					Stage: auditv1.StageResponseComplete,
+					Verb:  api.EventVerbDelete,
+					ObjectRef: &auditv1.ObjectReference{
+						Resource:        "namespaces",
+						Name:            namespace1,
+						APIGroup:        "",
+						APIVersion:      "v1",
+						ResourceVersion: "1",
+					},
+				},
+			})).Once()
+		mockEventFetcher.On("GetAuditEvents", mock.Anything, &nowMinus24Hrs, &now).Return(createAuditEventChannel()).Once()
 
 		By("Checking for the expected updates")
-		// There should be one update of each kind and none from namespace 2. We should get no deletion events.
-		Expect(cb.updates).To(HaveLen(11))
-		checkUpdates(cb.updates, syncer.UpdateTypeSet, []resources.Resource{
-			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &np2, &knp2, &ep2, &pod2, &sa2, &ns2,
-		})
+		resourceList := []resources.Resource{&gnp1, &sgnp1, &gns1, &tier1, &hep1, &np2, &knp2, &ep2, &pod2, &sa2, &ns2}
+		for _, resource := range resourceList {
+			mockSyncerCallbacks.On("OnUpdates", []syncer.Update{{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(resource), Resource: resource}})
+		}
+
+		By("Checking for status update complete")
+		mockSyncerCallbacks.On("OnStatusUpdate", syncer.NewStatusUpdateInSync()).Return()
+		mockSyncerCallbacks.On("OnStatusUpdate", syncer.NewStatusUpdateComplete()).Return()
+
+		replayer.Start(context.Background())
 	})
 
 	It("should handle namespace deletion after the in-sync", func() {
 		By("running the replayed with a namespace deletion in the second event query")
-		client.deleteBeforeSync = false
-		replayer.Start(context.Background())
+		for _, helper := range resources.GetAllResourceHelpers() {
+			resourceList := resourceListForType(helper.TypeMeta())
+			mockListDestination.On("RetrieveList", helper.TypeMeta(), mock.Anything, mock.Anything, mock.Anything).Return(resourceList, nil)
+		}
 
-		By("Checking for status update complete")
-		Expect(cb.statusUpdates).To(ContainElement(syncer.NewStatusUpdateComplete()))
+		mockEventFetcher.On("GetAuditEvents", mock.Anything, &nowMinus48Hrs, &nowMinus24Hrs).Return(createAuditEventChannel()).Once()
+		mockEventFetcher.On("GetAuditEvents", mock.Anything, &nowMinus24Hrs, &now).Return(
+			createAuditEventChannel(&api.AuditEventResult{
+				Event: &auditv1.Event{
+					Stage: auditv1.StageResponseComplete,
+					Verb:  api.EventVerbDelete,
+					ObjectRef: &auditv1.ObjectReference{
+						Resource:        "namespaces",
+						Name:            namespace1,
+						APIGroup:        "",
+						APIVersion:      "v1",
+						ResourceVersion: "1",
+					},
+				},
+			})).Once()
 
 		By("Checking for the expected updates")
-		// There should be one update of each resource, followed by delete events for everything in namespace2.
-		Expect(cb.updates).To(HaveLen(29))
-		checkUpdates(cb.updates[:20], syncer.UpdateTypeSet, []resources.Resource{
-			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &netset1, &np1, &snp1, &np2, &knp1, &sknp1, &knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
+		deletedResourceList := []resources.Resource{&pod1, &sa1, &ep1, &np1, &snp1, &knp1, &sknp1, &netset1, &ns1}
+
+		var deletedResources []resources.Resource
+		mockSyncerCallbacks.On("OnUpdates", mock.MatchedBy(func(updates []syncer.Update) bool {
+			if len(updates) != len(deletedResourceList) {
+				return false
+			}
+
+			for _, update := range updates {
+				if update.Type != syncer.UpdateTypeDeleted {
+					return false
+				}
+			}
+
+			return true
+		})).Run(func(args mock.Arguments) {
+			updates := args.Get(0).([]syncer.Update)
+			for _, update := range updates {
+				deletedResources = append(deletedResources, update.Resource)
+			}
 		})
 
-		checkUpdates(cb.updates[20:], syncer.UpdateTypeDeleted, []resources.Resource{
-			&np1, &snp1, &knp1, &sknp1, &netset1, &ep1, &pod1, &sa1, &ns1,
-		})
+		updatedResourceList := []resources.Resource{&gnp1, &sgnp1, &gns1, &tier1, &hep1, &netset1, &np1, &snp1, &np2, &knp1, &sknp1,
+			&knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2}
+		for _, resource := range updatedResourceList {
+			mockSyncerCallbacks.On("OnUpdates", []syncer.Update{{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(resource), Resource: resource}})
+		}
+
+		By("Checking for status update complete")
+		mockSyncerCallbacks.On("OnStatusUpdate", syncer.NewStatusUpdateInSync()).Return()
+		mockSyncerCallbacks.On("OnStatusUpdate", syncer.NewStatusUpdateComplete()).Return()
+
+		replayer.Start(context.Background())
+
+		Expect(deletedResources).Should(ConsistOf([]resources.Resource{&pod1, &sa1, &ep1, &np1, &snp1, &knp1, &sknp1, &netset1, &ns1}))
 	})
 })
-
-func checkUpdates(updates []syncer.Update, expectedType syncer.UpdateType, expectedResources []resources.Resource) {
-	r := []resources.Resource{}
-	for i, update := range updates {
-		Expect(update.Type).To(Equal(expectedType), fmt.Sprintf("Unexpected type at index %d", i))
-		r = append(r, update.Resource)
-	}
-	Expect(r).Should(ConsistOf(expectedResources))
-}

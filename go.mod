@@ -5,7 +5,7 @@ go 1.15
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201109135105-8bf63db4fbd3
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201109205355-083a0cf25b87
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201106003636-b0a1165ebd9c
@@ -57,8 +57,9 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cobra v0.0.6
+	github.com/stretchr/testify v1.6.1
 	github.com/tigera/apiserver v0.0.0-20201109201235-5e3876aa4e7d
-	github.com/tigera/lma v0.0.0-20201109202247-86cf112fcbfa
+	github.com/tigera/lma v0.0.0-20201110005436-85ae6cce349c
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

@@ -2,54 +2,149 @@
 package server_test
 
 import (
+	"fmt"
 	"net/http"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/stretchr/testify/mock"
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+
+	"github.com/tigera/compliance/pkg/datastore"
+
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/elastic"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 )
 
 var _ = Describe("Download tests", func() {
-	It("", func() {
-		By("Starting a test server")
-		t := startTester()
+	var mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory
+	var mockESFactory *elastic.MockClusterContextClientFactory
 
-		By("Setting available types to")
-		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
-		}
+	var mockAuthenticator *authentication.MockAuthenticator
+	var mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
+	var mockESClient *elastic.MockClient
 
-		By("Setting reports and forecasts with allowed types and reports ")
-		t.report = reportGetTypeGet
-		forecasts := []forecastFile{forecastFile1, forecastFile2}
+	BeforeEach(func() {
+		mockClientSetFactory = new(datastore.MockClusterCtxK8sClientFactory)
+		mockESFactory = new(elastic.MockClusterContextClientFactory)
 
-		By("Running a download query that should succeed")
-		t.downloadSingle(reportGetTypeGet.UID(), http.StatusOK, forecastFile1)
-		By("Running a multi download query that should succeed")
-		t.downloadMulti(reportGetTypeGet.UID(), http.StatusOK, forecasts)
+		mockAuthenticator = new(authentication.MockAuthenticator)
+		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
+		mockESClient = new(elastic.MockClient)
 
-		By("Setting reports to reports with a not allowed report type")
-		t.report = reportGetTypeGet
-		forecasts = []forecastFile{forecastFile1, forecastFile2}
-
-		By("Running a download query that should be denied because of report type")
-		t.downloadSingle(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecastFile1)
-		By("Running a multi download query that should be denied because of report type")
-		t.downloadMulti(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecasts)
-
-		By("Running a download query with an invalid report name")
-		t.downloadSingle("not a valid report ID", http.StatusForbidden, forecastFile1)
-
-		By("Setting reports to reports with a not allowed report")
-		t.report = reportGetTypeNoGet
-		forecasts = []forecastFile{forecastFile1, forecastFile2}
-
-		By("Running a download query that should be denied because of report name")
-		t.downloadSingle(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecastFile1)
-		By("Running a multi download query that should be denied because of report name")
-		t.downloadMulti(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecasts)
-
-		By("Stopping the server")
-		t.stop()
+		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, 0, nil)
 	})
+
+	AfterEach(func() {
+		mockClientSetFactory.AssertExpectations(GinkgoT())
+		mockESFactory.AssertExpectations(GinkgoT())
+		mockAuthenticator.AssertExpectations(GinkgoT())
+		mockRBACAuthorizer.AssertExpectations(GinkgoT())
+		mockESClient.AssertExpectations(GinkgoT())
+	})
+
+	DescribeTable(
+		"Authorized Report Downloads",
+		func(id string, expStatus int, forecasts []forecastFile, authorizedAttrs []*authzv1.ResourceAttributes) {
+			By("Starting a test server")
+			t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+			defer t.stop()
+
+			for _, authorizedAttr := range authorizedAttrs {
+				mockRBACAuthorizer.On("Authorize", mock.Anything, authorizedAttr, mock.Anything).Return(0, nil)
+			}
+
+			mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
+			mockESClient.On("RetrieveArchivedReport", mock.Anything).Return(reportGetTypeGet, nil)
+			mockESFactory.On("ClientForCluster", mock.Anything).Return(mockESClient, nil)
+
+			calicoCli := fake.NewSimpleClientset(&reportTypeGettable, &reportTypeNotGettable)
+			mockClientSetFactory.On("ClientSetForCluster", mock.Anything).Return(datastore.NewClientSet(nil, calicoCli.ProjectcalicoV3()), nil)
+
+			By("Running a download query that should succeed")
+			if len(forecasts) > 1 {
+				t.downloadMulti(id, expStatus, forecasts)
+			} else {
+				t.downloadSingle(id, expStatus, forecasts[0])
+			}
+		},
+		Entry(
+			"Single report",
+			reportGetTypeGet.UID(), http.StatusOK, []forecastFile{forecastFile1},
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get"},
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryGet"},
+			},
+		),
+		Entry(
+			"Multiple reports",
+			reportGetTypeGet.UID(), http.StatusOK, []forecastFile{forecastFile1, forecastFile2},
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get"},
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryGet"},
+			},
+		),
+	)
+
+	DescribeTable(
+		"Unauthorized Report Downloads",
+		func(id string, expStatus int, forecasts []forecastFile, authorizedAttrs, unAuthorizedAttrs []*authzv1.ResourceAttributes) {
+			By("Starting a test server")
+			t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
+			defer t.stop()
+
+			for _, attr := range authorizedAttrs {
+				mockRBACAuthorizer.On("Authorize", mock.Anything, attr, mock.Anything).Return(0, nil)
+			}
+
+			for _, attr := range unAuthorizedAttrs {
+				mockRBACAuthorizer.On("Authorize", mock.Anything, attr, mock.Anything).Return(403, fmt.Errorf("no go"))
+			}
+
+			mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
+			By("Running a download query that should succeed")
+			if len(forecasts) > 1 {
+				t.downloadMulti(id, expStatus, forecasts)
+			} else {
+				t.downloadSingle(id, expStatus, forecasts[0])
+			}
+		},
+		Entry("single report globalreports get access but no globalreporttypes access for inventoryNoGo",
+			reportGetTypeNoGet.UID(), http.StatusUnauthorized, []forecastFile{forecastFile1},
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get"},
+			},
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryNoGo"},
+			},
+		),
+		Entry("multiple reports globalreports get access but no globalreporttypes access for inventoryNoGo",
+			reportGetTypeNoGet.UID(), http.StatusUnauthorized, []forecastFile{forecastFile1, forecastFile2},
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get"},
+			},
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryNoGo"},
+			},
+		),
+		Entry("single report no access to globalreports",
+			reportGetTypeNoGet.UID(), http.StatusUnauthorized, []forecastFile{forecastFile1}, nil,
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get"},
+			},
+		),
+		Entry("multiple reports no access to globalreports",
+			reportGetTypeNoGet.UID(), http.StatusUnauthorized, []forecastFile{forecastFile1, forecastFile2}, nil,
+			[]*authzv1.ResourceAttributes{
+				{Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get"},
+			},
+		),
+	)
 })
