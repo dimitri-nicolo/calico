@@ -346,22 +346,6 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests _BPF
 			}
 
 			checkConnectivity()
-			/*
-				// Describe the connectivity that we now expect.
-				// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
-				cc = &connectivity.Checker{}
-				cc.ExpectSome(ep1_1, connectivity.TargetIP(clusterIP), uint16(svcPort)) // allowed by np1-1
-				cc.ExpectSome(ep1_1, ep2_2)                                             // allowed by np3-3
-				cc.ExpectNone(ep1_1, ep2_3)                                             // denied by np2-4
-
-				cc.ExpectSome(ep2_1, ep1_1) // allowed by profile
-				cc.ExpectNone(ep2_2, ep1_1) // denied by np1-1
-				cc.ExpectNone(ep2_3, ep1_1) // denied by gnp2-2
-
-				// Do 3 rounds of connectivity checking.
-				cc.CheckConnectivity()
-				cc.CheckConnectivity()
-				cc.CheckConnectivity()*/
 
 			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
 			// 10% leeway over the polling jitter of 10%)
@@ -375,7 +359,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests _BPF
 		}
 	})
 
-	It("should test expected connectivity with policy tiers in BPF", func() {
+	It("should test connectivity between workloads with policy tiers in BPF mode", func() {
 		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
 			Skip("skipping test for non-bpf mode, as it is already test")
 		}
