@@ -20,6 +20,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"os"
+
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
@@ -60,7 +62,7 @@ var (
 
 // These tests include tests of Kubernetes policies as well as other policy types. To ensure we have the correct
 // behavior, run using the Kubernetes infrastructure only.
-var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests _BPF-SAFE_", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 	const (
 		wepPort = 8055
@@ -76,19 +78,23 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		client                     client.Interface
 		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
 		cc                         *connectivity.Checker
+		checkConnectivity          func()
 	)
+	clusterIP := "10.101.0.10"
 
 	BeforeEach(func() {
 		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.IPIPEnabled = false
-		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
-		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
-		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
-		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
-		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
-		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
-		opts.EnableFlowLogsFile("INCLUDESERVICE", "true")
+		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
+			opts.EnableFlowLogsFile("INCLUDESERVICE", "true")
+		}
 
 		// Start felix instances.
 		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)
@@ -261,10 +267,8 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		snp.Spec.Ingress = []api.Rule{{Action: api.Allow}}
 		_, err = client.StagedNetworkPolicies().Create(utils.Ctx, snp, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
-
 		// Create a service that maps to ep2_1. Rather than checking connectivity to the endpoint we'll go via
 		// the service to test the destination service name handling.
-		clusterIP := "10.101.0.10"
 		svcName := "test-service"
 		k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp")
@@ -298,58 +302,90 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		}
 		Eventually(epCorrectFn, "10s").ShouldNot(HaveOccurred())
 
-		// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-		rulesProgrammed := func() bool {
-			out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
-			Expect(err).NotTo(HaveOccurred())
-			out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
-			Expect(err).NotTo(HaveOccurred())
-			return strings.Count(out0, "APE0|default.ep1-1-allow-all") > 0 &&
-				strings.Count(out1, "APE0|default.ep1-1-allow-all") == 0 &&
-				strings.Count(out0, "DPI|default/staged:default.np3-4") == 0 &&
-				strings.Count(out1, "DPI|default/staged:default.np3-4") > 0
-		}
-		Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
-			"Expected iptables rules to appear on the correct felix instances")
+		checkConnectivity = func() {
+			// Describe the connectivity that we now expect.
+			// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
+			cc = &connectivity.Checker{}
+			cc.ExpectSome(ep1_1, connectivity.TargetIP(clusterIP), uint16(svcPort)) // allowed by np1-1
+			cc.ExpectSome(ep1_1, ep2_2)                                             // allowed by np3-3
+			cc.ExpectNone(ep1_1, ep2_3)                                             // denied by np2-4
 
-		// Mimic the kube-proxy service iptable clusterIP rule.
-		for _, f := range felixes {
-			f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-				"-p", "tcp",
-				"-d", clusterIP,
-				"-m", "tcp", "--dport", svcPortStr,
-				"-j", "DNAT", "--to-destination",
-				ep2_1.IP+":"+wepPortStr)
+			cc.ExpectSome(ep2_1, ep1_1) // allowed by profile
+			cc.ExpectNone(ep2_2, ep1_1) // denied by np1-1
+			cc.ExpectNone(ep2_3, ep1_1) // denied by gnp2-2
+
+			// Do 3 rounds of connectivity checking.
+			cc.CheckConnectivity()
+			cc.CheckConnectivity()
+			cc.CheckConnectivity()
 		}
 
-		// Describe the connectivity that we now expect.
-		// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
-		cc = &connectivity.Checker{}
-		cc.ExpectSome(ep1_1, connectivity.TargetIP(clusterIP), uint16(svcPort)) // allowed by np1-1
-		cc.ExpectSome(ep1_1, ep2_2)                                             // allowed by np3-3
-		cc.ExpectNone(ep1_1, ep2_3)                                             // denied by np2-4
+		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
+			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
+			rulesProgrammed := func() bool {
+				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				return strings.Count(out0, "APE0|default.ep1-1-allow-all") > 0 &&
+					strings.Count(out1, "APE0|default.ep1-1-allow-all") == 0 &&
+					strings.Count(out0, "DPI|default/staged:default.np3-4") == 0 &&
+					strings.Count(out1, "DPI|default/staged:default.np3-4") > 0
+			}
+			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected iptables rules to appear on the correct felix instances")
 
-		cc.ExpectSome(ep2_1, ep1_1) // allowed by profile
-		cc.ExpectNone(ep2_2, ep1_1) // denied by np1-1
-		cc.ExpectNone(ep2_3, ep1_1) // denied by gnp2-2
+			// Mimic the kube-proxy service iptable clusterIP rule.
+			for _, f := range felixes {
+				f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+					"-p", "tcp",
+					"-d", clusterIP,
+					"-m", "tcp", "--dport", svcPortStr,
+					"-j", "DNAT", "--to-destination",
+					ep2_1.IP+":"+wepPortStr)
+			}
 
-		// Do 3 rounds of connectivity checking.
-		cc.CheckConnectivity()
-		cc.CheckConnectivity()
-		cc.CheckConnectivity()
+			checkConnectivity()
+			/*
+				// Describe the connectivity that we now expect.
+				// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
+				cc = &connectivity.Checker{}
+				cc.ExpectSome(ep1_1, connectivity.TargetIP(clusterIP), uint16(svcPort)) // allowed by np1-1
+				cc.ExpectSome(ep1_1, ep2_2)                                             // allowed by np3-3
+				cc.ExpectNone(ep1_1, ep2_3)                                             // denied by np2-4
 
-		// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
-		// 10% leeway over the polling jitter of 10%)
-		time.Sleep(6 * time.Second)
+				cc.ExpectSome(ep2_1, ep1_1) // allowed by profile
+				cc.ExpectNone(ep2_2, ep1_1) // denied by np1-1
+				cc.ExpectNone(ep2_3, ep1_1) // denied by gnp2-2
 
-		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
-		// to expire quickly.
-		for ii := range felixes {
-			felixes[ii].Exec("conntrack", "-F")
+				// Do 3 rounds of connectivity checking.
+				cc.CheckConnectivity()
+				cc.CheckConnectivity()
+				cc.CheckConnectivity()*/
+
+			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// 10% leeway over the polling jitter of 10%)
+			time.Sleep(6 * time.Second)
+
+			// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
+			// to expire quickly.
+			for ii := range felixes {
+				felixes[ii].Exec("conntrack", "-F")
+			}
 		}
 	})
 
+	It("should test expected connectivity with policy tiers in BPF", func() {
+		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
+			Skip("skipping test for non-bpf mode, as it is already test")
+		}
+		checkConnectivity()
+	})
+
 	It("should get expected flow logs", func() {
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			Skip("Skipping flow logs test for BPF dataplane")
+		}
 
 		Eventually(func() error {
 			flowTester := metrics.NewFlowTester(felixes, true, true, wepPort)

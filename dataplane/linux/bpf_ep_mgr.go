@@ -682,21 +682,9 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	//   when we cannot encap the packet - non-GSO & too close to veth MTU
 	ap.TunnelMTU = uint16(m.vxlanMTU - 50)
 
-	var tier *proto.TierInfo
-	var profileIDs []string
-	if endpoint != nil {
-		profileIDs = endpoint.ProfileIds
-		if len(endpoint.Tiers) != 0 {
-			tier = endpoint.Tiers[0]
-		}
-	} else {
-		log.WithField("name", ifaceName).Debug(
-			"Workload interface with no endpoint in datastore, installing default-drop program.")
-	}
-
 	// If tier or profileIDs is nil, this will return an empty set of rules but updatePolicyProgram appends a
 	// drop rule, giving us default drop behaviour in that case.
-	rules := m.extractRules(tier, profileIDs, polDirection)
+	rules := m.extractRules(endpoint.Tiers, endpoint.ProfileIds, polDirection)
 
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
 	if jumpMapFD != 0 {
@@ -912,27 +900,26 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType
 	return ap
 }
 
-func (m *bpfEndpointManager) extractRules(tier *proto.TierInfo, profileNames []string, direction PolDirection) [][][]*proto.Rule {
+func (m *bpfEndpointManager) extractRules(tiers2 []*proto.TierInfo, profileNames []string, direction PolDirection) [][][]*proto.Rule {
 	var allRules [][][]*proto.Rule
-	if tier != nil {
+	for _, tier := range tiers2 {
 		var pols [][]*proto.Rule
-
 		directionalPols := tier.IngressPolicies
 		if direction == PolDirnEgress {
 			directionalPols = tier.EgressPolicies
 		}
-
-		if len(directionalPols) > 0 {
-			for _, polName := range directionalPols {
-				pol := m.policies[proto.PolicyID{Tier: tier.Name, Name: polName}]
-				if direction == PolDirnIngress {
-					pols = append(pols, pol.InboundRules)
-				} else {
-					pols = append(pols, pol.OutboundRules)
-				}
-			}
-			allRules = append(allRules, pols)
+		if len(directionalPols) == 0 {
+			continue
 		}
+		for _, polName := range directionalPols {
+			pol := m.policies[proto.PolicyID{Tier: tier.Name, Name: polName}]
+			if direction == PolDirnIngress {
+				pols = append(pols, pol.InboundRules)
+			} else {
+				pols = append(pols, pol.OutboundRules)
+			}
+		}
+		allRules = append(allRules, pols)
 	}
 	var profs [][]*proto.Rule
 	for _, profName := range profileNames {
