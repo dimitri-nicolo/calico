@@ -31,7 +31,7 @@ func TestKprobe(t *testing.T) {
 	mc := &bpf.MapContext{}
 	perfEvnt, err := events.New(mc, events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
-	err = kprobe.NewKprobe("debug", perfEvnt, mc)
+	err = kprobe.New("debug", perfEvnt, mc)
 	Expect(err).NotTo(HaveOccurred())
 
 }

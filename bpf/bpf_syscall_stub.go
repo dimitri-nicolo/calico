@@ -81,3 +81,7 @@ func (m *MapIterator) Next() (k, v []byte, err error) {
 func (m *MapIterator) Close() error {
 	return nil
 }
+
+func PerfEventOpenTracepoint(id int, progFd int) (int, error) {
+	panic("BPF syscall stub")
+}

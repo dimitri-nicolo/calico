@@ -163,7 +163,7 @@ func (e *perfEventsReader) Map() bpf.Map {
 	return e.bpfMap
 }
 
-func parseTcpStats(tcpStats Tcpv4Events) {
+func parseTcpStats(tcpStats TCPv4Events) {
 	// Parse TCP stats and send it to flow collector
 }
 
@@ -180,7 +180,7 @@ func (e *perfEventsReader) Poll() {
 			}
 			switch event.Type() {
 			case TypeTcpv4Events:
-				if tcpStats, ok := event.(Tcpv4Events); !ok {
+				if tcpStats, ok := event.(TCPv4Events); !ok {
 					log.WithError(err).Warn("Failed to get proper event data")
 					continue
 				} else {
@@ -229,7 +229,7 @@ func parseEvent(raw eventRaw) (Event, error) {
 		if err := binary.Read(rd, binary.LittleEndian, &tcpStats); err != nil {
 			return nil, errors.Errorf("Error reading data")
 		}
-		return Tcpv4Events(tcpStats), nil
+		return TCPv4Events(tcpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
@@ -237,13 +237,13 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 // LostEvents is an event that reports how many events were missed.
 type LostEvents int
-type Tcpv4Events perfEventTcpStats
+type TCPv4Events perfEventTcpStats
 
 // Type returns TypeLostEvents
 func (LostEvents) Type() Type {
 	return TypeLostEvents
 }
 
-func (Tcpv4Events) Type() Type {
+func (TCPv4Events) Type() Type {
 	return TypeTcpv4Events
 }

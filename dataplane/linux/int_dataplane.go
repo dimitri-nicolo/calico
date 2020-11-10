@@ -182,7 +182,6 @@ type Config struct {
 	ExternalNodesCidrs []string
 
 	BPFEnabled                         bool
-	BPFKprobeEnabled                   bool
 	BPFDisableUnprivileged             bool
 	BPFKubeProxyIptablesCleanupEnabled bool
 	BPFLogLevel                        string
@@ -196,6 +195,7 @@ type Config struct {
 	BPFNodePortDSREnabled              bool
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
+	FlowLogsCollectProcessInfo         bool
 
 	SidecarAccelerationEnabled bool
 
@@ -631,16 +631,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		RepinningEnabled: config.BPFMapRepin,
 	}
 
-	if config.BPFKprobeEnabled {
+	if config.FlowLogsCollectProcessInfo {
 		perfEvnt, err := events.New(bpfMapContext, events.SourcePerfEvents)
 		if err != nil {
-			log.WithError(err).Info("Failed to create perf event")
+			log.WithError(err).Panic("Failed to create perf event")
 		}
 		// start the event poller to read data from the Perf event buffers
 		perfEvnt.Poll()
-		err = kprobe.NewKprobe(config.BPFLogLevel, perfEvnt, bpfMapContext)
+		err = kprobe.New(config.BPFLogLevel, perfEvnt, bpfMapContext)
 		if err != nil {
-			log.WithError(err).Info("Failed to install kprobes")
+			log.WithError(err).Panic("Failed to install kprobes")
 		}
 	}
 	if config.BPFEnabled {

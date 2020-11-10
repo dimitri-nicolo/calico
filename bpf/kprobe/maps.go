@@ -17,8 +17,6 @@
 package kprobe
 
 import (
-	"golang.org/x/sys/unix"
-
 	"github.com/projectcalico/felix/bpf"
 )
 
@@ -26,13 +24,12 @@ const tcpV4KeySize = 16
 const tcpV4ValueSize = 16
 
 var TcpV4MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_tcp_kp",
-	Type:       "hash",
+	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_tcpkp",
+	Type:       "lru_hash",
 	KeySize:    tcpV4KeySize,
 	ValueSize:  tcpV4ValueSize,
 	MaxEntries: 511000,
-	Name:       "cali_v4_tcp_kp",
-	Flags:      unix.BPF_F_NO_PREALLOC,
+	Name:       "cali_v4_tcpkp",
 }
 
 func TcpV4Map(mc *bpf.MapContext) bpf.Map {

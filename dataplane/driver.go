@@ -356,7 +356,6 @@ func StartDataplaneDriver(configParams *config.Config,
 			SidecarAccelerationEnabled:      configParams.SidecarAccelerationEnabled,
 
 			BPFEnabled:                         configParams.BPFEnabled,
-			BPFKprobeEnabled:                   configParams.BPFKprobeEnabled,
 			BPFDisableUnprivileged:             configParams.BPFDisableUnprivileged,
 			BPFConnTimeLBEnabled:               configParams.BPFConnectTimeLoadBalancingEnabled,
 			BPFKubeProxyIptablesCleanupEnabled: configParams.BPFKubeProxyIptablesCleanupEnabled,
@@ -371,6 +370,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
 			RouteTableManager:                  routeTableIndexAllocator,
 			MTUIfacePattern:                    configParams.MTUIfacePattern,
+			FlowLogsCollectProcessInfo:         configParams.FlowLogsCollectProcessInfo,
 
 			KubeClientSet: k8sClientSet,
 

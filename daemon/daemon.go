@@ -372,10 +372,10 @@ configRetry:
 		}
 	}
 
-	if configParams.BPFKprobeEnabled {
+	if configParams.FlowLogsCollectProcessInfo {
 		if err := dp.SupportsBPF(); err != nil {
-			log.Error("BPF Kprobe enabled but not supported by the kernel. Skipping kprobe installation.")
-			_, err := configParams.OverrideParam("BPFKprobeEnabled", "false")
+			log.Error("FlowLogsCollectProcessInfo enabled but BPF not supported by the kernel. Disabling FlowLogsCollectProcessInfo.")
+			_, err := configParams.OverrideParam("FlowLogsCollectProcessInfo", "false")
 			if err != nil {
 				log.WithError(err).Panic("Bug: failed to override config parameter")
 			}

@@ -48,5 +48,6 @@ struct sock_common {
         unsigned short          skc_family;
         volatile unsigned char  skc_state;
 };
+
 #endif
 

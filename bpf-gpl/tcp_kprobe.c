@@ -34,11 +34,11 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 	struct calico_tcp_kprobe_v4_key key = {};
 
 	if (sk_cmn) {
-		bpf_probe_read (&family, 2, &sk_cmn->skc_family);
-		bpf_probe_read (&sport, 2, &sk_cmn->skc_num);
-		bpf_probe_read (&dport, 2, &sk_cmn->skc_dport);
-		bpf_probe_read (&saddr, 4, &sk_cmn->skc_rcv_saddr);
-		bpf_probe_read (&daddr, 4, &sk_cmn->skc_daddr);
+		bpf_probe_read(&family, 2, &sk_cmn->skc_family);
+		bpf_probe_read(&sport, 2, &sk_cmn->skc_num);
+		bpf_probe_read(&dport, 2, &sk_cmn->skc_dport);
+		bpf_probe_read(&saddr, 4, &sk_cmn->skc_rcv_saddr);
+		bpf_probe_read(&daddr, 4, &sk_cmn->skc_daddr);
 		pid = bpf_get_current_pid_tgid() >> 32;
 		ts = bpf_ktime_get_ns();
 		if (family == 2) {
@@ -47,16 +47,16 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 			key.sport = sport;
 			key.daddr = daddr;
 			key.dport = dport;
-			val = cali_v4_tcp_kp_lookup_elem(&key);
+			val = cali_v4_tcpkp_lookup_elem(&key);
 			if (val == NULL) {
-                                v4_value.timestamp = ts;
+				v4_value.timestamp = ts;
 				if (tx) {
-                                	v4_value.txBytes = bytes;
+					v4_value.txBytes = bytes;
 				} else {
 					v4_value.rxBytes = bytes;
 				}
 				event_tcp_flow(ctx, saddr, sport, daddr, dport, v4_value.txBytes, v4_value.rxBytes);	
-                                ret = cali_v4_tcp_kp_update_elem(&key, &v4_value, 0);
+				ret = cali_v4_tcpkp_update_elem(&key, &v4_value, 0);
 				if (ret < 0) {
 					goto error;
 				}
@@ -65,14 +65,14 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 				if (diff >= SEND_DATA_INTERVAL)
 				{
 					event_tcp_flow(ctx, saddr, sport, daddr, dport, val->txBytes, val->rxBytes);	
-                                        val->timestamp = ts;
+					val->timestamp = ts;
 				}
 				if (tx) {
 					val->txBytes += bytes;
 				} else {
 					val->rxBytes += bytes;
 				}
-				ret = cali_v4_tcp_kp_update_elem(&key, val, BPF_F_LOCK);
+				ret = cali_v4_tcpkp_update_elem(&key, val, BPF_F_LOCK);
 				if (ret < 0) {
 					goto error;
 				}
@@ -83,6 +83,7 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 error:
 	return -1;
 }
+
 __attribute__((section("kprobe/tcp_cleanup_rbuf")))
 int kprobe__tcp_cleanup_rbuf(struct pt_regs *ctx)
 {
@@ -98,6 +99,7 @@ int kprobe__tcp_cleanup_rbuf(struct pt_regs *ctx)
 	}
 	return -1;
 }
+
 __attribute__((section("kprobe/tcp_sendmsg")))
 int kprobe__tcp_sendmsg(struct pt_regs *ctx)
 {

@@ -475,10 +475,12 @@ func PerfEventOpenTracepoint(id int, progFd int) (int, error) {
 	}
 
 	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(efd), C.PERF_EVENT_IOC_ENABLE, 0); err != 0 {
+		syscall.Close(int(efd))
 		return -1, fmt.Errorf("error enabling perf event: %v", err)
 	}
 
 	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(efd), C.PERF_EVENT_IOC_SET_BPF, uintptr(progFd)); err != 0 {
+		syscall.Close(int(efd))
 		return -1, fmt.Errorf("error attaching bpf program to perf event: %v", err)
 	}
 	return int(efd), nil
