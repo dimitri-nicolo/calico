@@ -50,6 +50,7 @@ type routeTable interface {
 	SetRoutes(ifaceName string, targets []routetable.Target)
 	RouteRemove(ifaceName string, cidr ip.CIDR)
 	SetL2Routes(ifaceName string, targets []routetable.L2Target)
+	QueueResyncIface(ifaceName string)
 }
 
 type endpointManagerCallbacks struct {
@@ -190,6 +191,8 @@ type endpointManager struct {
 	activeHostEpIDToIfaceNames map[proto.HostEndpointID][]string
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
+	// Interfaces to which we've added a host-side address, for egress IP function to work.
+	egressGatewayAddressAdded map[string]netlink.Addr
 
 	needToCheckDispatchChains     bool
 	needToCheckEndpointMarkChains bool
@@ -299,6 +302,7 @@ func newEndpointManagerWithShims(
 		activeHostIfaceToRawChains:    map[string][]*iptables.Chain{},
 		activeHostIfaceToFiltChains:   map[string][]*iptables.Chain{},
 		activeHostIfaceToMangleChains: map[string][]*iptables.Chain{},
+		egressGatewayAddressAdded:     map[string]netlink.Addr{},
 
 		// Caches of the current dispatch chains indexed by chain name.  We use these to
 		// calculate deltas when we need to update the chains.
@@ -341,6 +345,14 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 		m.pendingIfaceUpdates[msg.Name] = msg.State
 	case *ifaceAddrsUpdate:
 		log.WithField("update", msg).Debug("Interface addrs changed.")
+		// If we added an address to this interface for egress gateway function, check if it
+		// is still there, and update our tracking if not, so that we don't try to remove it
+		// again later.  This is part of the normal endpoint deletion process.
+		egressAddr := m.egressGatewayAddressAdded[msg.Name]
+		if egressAddr.IPNet != nil && !msg.Addrs.Contains(egressAddr.IP.String()) {
+			log.Debug("Egress gateway address has disappeared")
+			delete(m.egressGatewayAddressAdded, msg.Name)
+		}
 		if m.wlIfacesRegexp.MatchString(msg.Name) {
 			log.WithField("update", msg).Debug("Workload interface, ignoring.")
 			return
@@ -1096,7 +1108,58 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
 		return err
 	}
+	m.egressGatewayAddressAdded[name] = addr
 	return nil
+}
+
+func lookupLink(nlHandle netlinkHandle, name string) (link netlink.Link, err error, notFound bool) {
+	link, err = nlHandle.LinkByName(name)
+	if err != nil {
+		_, notFound = err.(netlink.LinkNotFoundError)
+	}
+	return
+}
+
+func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
+	addr, added := m.egressGatewayAddressAdded[name]
+	if !added {
+		// We haven't added an address to this interface, so nothing to remove.
+		return
+	}
+
+	log.WithField("iface", name).Debug("Remove configuration for egress gateway role")
+
+	// In all cases, we only want to try deleting the added address once, as the possible cases
+	// are:
+	// 1. Link not found - the address will already be gone.
+	// 2. Address deletion failed - no point trying the same thing again.
+	// 3. Address deletion succeeded.
+	// So remove the entry from our tracking map upfront here.
+	delete(m.egressGatewayAddressAdded, name)
+
+	// Look up the interface.
+	link, err, notFound := lookupLink(m.nlHandle, name)
+	if notFound {
+		// The link has been removed.  Address already gone.
+		return
+	} else if err != nil {
+		log.WithError(err).Warning("Failed to look up egress gateway device link")
+		return
+	}
+	if err = m.nlHandle.AddrDel(link, &addr); err != nil {
+		// Only emit the following warning log if the link still exists.
+		if _, _, notFound = lookupLink(m.nlHandle, name); !notFound {
+			log.WithField("address", addr).WithError(err).Warning("Failed to remove address from egress gateway device")
+		}
+		return
+	}
+	log.WithField("address", addr).Info("Removed address from egress gateway device")
+
+	// Removing this address causes the egress gateway device route to disappear, so tell the
+	// route table to resync in order to reinstate it.
+	m.routeTable.QueueResyncIface(name)
+
+	return
 }
 
 func (m *endpointManager) interfaceExistsInProcSys(name string) (bool, error) {
@@ -1143,6 +1206,8 @@ func (m *endpointManager) configureInterface(name string) error {
 			if err := m.configureEgressGatewayInterface(name); err != nil {
 				return err
 			}
+		} else {
+			m.removeEgressGatewayInterfaceAddress(name)
 		}
 		// Enable routing to localhost.  This is required to allow for NAT to the local
 		// host.
