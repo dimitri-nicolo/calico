@@ -720,7 +720,7 @@ github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe
 github.com/tigera/lma v0.0.0-20201110180451-2ee7cdf4aaa5 h1:+krVEo38ttueuI5fe6roawmDYTIIgnjRoDXmPQQU1h4=
 github.com/tigera/lma v0.0.0-20201110180451-2ee7cdf4aaa5/go.mod h1:WCQ1rJk7QgmXYIatCeydGqww6sAe8X08O6WoOn/F0NU=
 github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20201110173442-873846221e48/go.mod h1:14UpgQByA8yK6JPMpBydjy62AtXdVJzflCLABILP3sk=
+github.com/tigera/typha-private v0.6.0-beta1.0.20201110181147-79c25aa7fdd0/go.mod h1:gUZUFK5J0Wo64XHlmnKJMOgej1s4JirTAMW/xVDK4G4=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
