@@ -681,10 +681,19 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	//   for resizing the packet, so we have to reduce the apparent MTU by another 50 bytes
 	//   when we cannot encap the packet - non-GSO & too close to veth MTU
 	ap.TunnelMTU = uint16(m.vxlanMTU - 50)
+	var profileIDs []string
+	var tiers []*proto.TierInfo
+	if endpoint != nil {
+		profileIDs = endpoint.ProfileIds
+		tiers = endpoint.Tiers
+	} else {
+		log.WithField("name", ifaceName).Debug(
+			"Workload interface with no endpoint in datastore, installing default-drop program.")
+	}
 
 	// If tier or profileIDs is nil, this will return an empty set of rules but updatePolicyProgram appends a
 	// drop rule, giving us default drop behaviour in that case.
-	rules := m.extractRules(endpoint.Tiers, endpoint.ProfileIds, polDirection)
+	rules := m.extractRules(tiers, profileIDs, polDirection)
 
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
 	if jumpMapFD != 0 {
