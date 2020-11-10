@@ -44,7 +44,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	var k8sClient k8s.Interface
 	var dhh *DummyHttpHandler
 	var rr *httptest.ResponseRecorder
-	var k8sAuth auth.K8sAuthInterface
+	var authorizer auth.RBACAuthorizer
 	var authenticator authentication.Authenticator
 
 	BeforeEach(func() {
@@ -61,7 +61,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		dhh = &DummyHttpHandler{serveCalled: false}
 		rr = httptest.NewRecorder()
 		authenticator = fv.NewAuthnClient()
-		k8sAuth = auth.NewK8sAuth(k8sClient, authenticator)
+		authorizer = auth.NewRBACAuthorizer(k8sClient)
 	})
 	AfterEach(func() {
 	})
@@ -71,7 +71,9 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	// Forbidden.
 	It("Should cause StatusForbidden with valid token but missing URL", func() {
 		By("authenticating the token", func() {
-			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut := middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authorizer, dhh)))
 			req := &http.Request{Header: http.Header{"Authorization": []string{"Bearer deadbeef"}}}
 			uut.ServeHTTP(rr, req)
 
@@ -91,7 +93,9 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 				URL: &url.URL{Path: tigeraFlowPath},
 			}
 
-			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut := middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authorizer, dhh)))
 			uut.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusForbidden),
@@ -102,7 +106,9 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 	DescribeTable("Invalid login causes StatusUnauthorized",
 		func(req *http.Request) {
-			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut := middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authorizer, dhh)))
 			uut.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusUnauthorized),
@@ -130,7 +136,9 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	// and bindings for them.
 	DescribeTable("Test valid Authorization Headers",
 		func(req *http.Request) {
-			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut := middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authorizer, dhh)))
 			uut.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK),
@@ -242,7 +250,9 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 	DescribeTable("Test valid Authorization Headers to unauthorized resource causes Forbidden",
 		func(req *http.Request) {
-			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut := middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authorizer, dhh)))
 			uut.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusForbidden),
@@ -310,7 +320,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 	It("Should cause StatusForbidden when no ResourceAttribute is set on the context", func() {
 		By("authorizing the request", func() {
-			uut := k8sAuth.KubernetesAuthnAuthz(dhh)
+			uut := middleware.AuthenticateRequest(authenticator, middleware.AuthorizeRequest(authorizer, dhh))
 			req := &http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
 				// The URL should not matter but include it anyway to ensure the
@@ -328,7 +338,9 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	Context("Test non resource URL", func() {
 		DescribeTable("RBAC enforcement on access to non resource URL",
 			func(req *http.Request, statusCode int, isServeCalled bool) {
-				uut := dummyNonResourceMiddleware(k8sAuth.KubernetesAuthnAuthz(dhh))
+				uut := dummyNonResourceMiddleware(
+					middleware.AuthenticateRequest(authenticator,
+						middleware.AuthorizeRequest(authorizer, dhh)))
 				uut.ServeHTTP(rr, req)
 
 				Expect(rr.Code).To(Equal(statusCode),

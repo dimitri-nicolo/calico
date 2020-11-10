@@ -7,11 +7,13 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	k8s "k8s.io/client-go/kubernetes"
 
+	"github.com/tigera/compliance/pkg/datastore"
 	lmaerror "github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/policyrec"
 	"github.com/tigera/lma/pkg/rbac"
+
+	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
 const (
@@ -24,7 +26,7 @@ type PolicyRecommendationResponse struct {
 }
 
 // PolicyRecommendationHandler returns a handler that writes a json response containing recommended policies.
-func PolicyRecommendationHandler(mcmAuth MCMAuth, k8sClient k8s.Interface, c policyrec.CompositeAggregator) http.Handler {
+func PolicyRecommendationHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, k8sClient datastore.ClientSet, c policyrec.CompositeAggregator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Check that the request has the appropriate method. Should it be GET or POST?
 
@@ -35,19 +37,32 @@ func PolicyRecommendationHandler(mcmAuth MCMAuth, k8sClient k8s.Interface, c pol
 			return
 		}
 
-		// Retrieve the cluster name from the "x-cluster-id" header. Add it to the req context, such that the auth checks
-		// can be performed.
-		req = createRequestWithClusterKey(req, req.Header.Get("x-cluster-id"))
+		clusterID := req.Header.Get(clusterIdHeader)
+		authorizer, err := k8sClientFactory.RBACAuthorizerForCluster(clusterID)
+		if err != nil {
+			log.WithError(err).Error("failed to get authorizer from client factory")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		user, ok := k8srequest.UserFrom(req.Context())
+		if !ok {
+			log.WithError(err).Error("user not found in context")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		flowHelper := rbac.NewCachedFlowHelper(user, authorizer)
 
 		// Check that the user is allowed to access flow logs. This happens in the current cluster.
-		if stat, err := policyrec.ValidatePermissions(req, mcmAuth.DefaultK8sAuth()); err != nil {
+		if stat, err := authorizer.Authorize(user, createLMAResourceAttributes(clusterID, "flows"), nil); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
 
 		// Check that user has sufficient permissions to list flows for the requested endpoint. This happens in the
 		// selected cluster from the UI drop-down menu.
-		if stat, err := ValidateRecommendationPermissions(req, mcmAuth, params); err != nil {
+		if stat, err := ValidateRecommendationPermissions(flowHelper, params); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
@@ -105,16 +120,15 @@ func PolicyRecommendationHandler(mcmAuth MCMAuth, k8sClient k8s.Interface, c pol
 }
 
 // ValidateRecommendationPermissions checks that the user is able to list flows for the specified endpoint.
-func ValidateRecommendationPermissions(req *http.Request, mcmAuth MCMAuth, params *policyrec.PolicyRecommendationParams) (int, error) {
-	fh := rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req})
+func ValidateRecommendationPermissions(flowHelper rbac.FlowHelper, params *policyrec.PolicyRecommendationParams) (int, error) {
 	if params.Namespace != "" {
-		if ok, err := fh.CanListPods(params.Namespace); err != nil {
+		if ok, err := flowHelper.CanListPods(params.Namespace); err != nil {
 			return http.StatusInternalServerError, err
 		} else if !ok {
 			return http.StatusForbidden, fmt.Errorf("user cannot list flows for pods in namespace %s", params.Namespace)
 		}
 	} else {
-		if ok, err := fh.CanListHostEndpoints(); err != nil {
+		if ok, err := flowHelper.CanListHostEndpoints(); err != nil {
 			return http.StatusInternalServerError, err
 		} else if !ok {
 			return http.StatusForbidden, fmt.Errorf("user cannot list flows for hostendpoints")

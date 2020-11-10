@@ -7,31 +7,20 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	authzv1 "k8s.io/api/authorization/v1"
-
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
+
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-type PolicyImpactRbacHelperFactory interface {
-	NewPolicyImpactRbacHelper(*http.Request) PolicyImpactRbacHelper
-}
-
-type standardPolicyImpactRbacHelperFactor struct {
-	mcmAuth MCMAuth
-}
-
-func (s *standardPolicyImpactRbacHelperFactor) NewPolicyImpactRbacHelper(req *http.Request) PolicyImpactRbacHelper {
+func NewPolicyImpactRbacHelper(usr user.Info, authz lmaauth.RBACAuthorizer) PolicyImpactRbacHelper {
 	return &policyImpactRbacHelper{
-		Request: req,
-		mcmAuth: s.mcmAuth,
+		user:  usr,
+		authz: authz,
 	}
-}
-
-func NewStandardPolicyImpactRbacHelperFactory(mcmAuth MCMAuth) PolicyImpactRbacHelperFactory {
-	return &standardPolicyImpactRbacHelperFactor{mcmAuth: mcmAuth}
 }
 
 type PolicyImpactRbacHelper interface {
@@ -41,15 +30,15 @@ type PolicyImpactRbacHelper interface {
 // policyImpactRbacHelper is used by a single API request to to determine if a user can
 // view and modify a policy
 type policyImpactRbacHelper struct {
-	Request *http.Request
-	mcmAuth MCMAuth
+	user  user.Info
+	authz lmaauth.RBACAuthorizer
 }
 
 // CheckCanPreviewPolicyAction returns true if the user can perform the preview action on the requested
 // policy. If the user is not permitted, an error detailing the reason is returned.
-func (h *policyImpactRbacHelper) CheckCanPreviewPolicyAction(action string, policy resources.Resource) (status int, err error) {
+func (h *policyImpactRbacHelper) CheckCanPreviewPolicyAction(verb string, policy resources.Resource) (status int, err error) {
 	// We must be able to perform the action we are attempting to preview.
-	return h.checkCanPerformPolicyAction(action, policy)
+	return h.checkCanPerformPolicyAction(verb, policy)
 }
 
 func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res resources.Resource) (status int, err error) {
@@ -162,10 +151,7 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 
 // isAuthorized returns true if the request is allowed for the resources decribed in the attributes
 func (h *policyImpactRbacHelper) isAuthorized(atr authzv1.ResourceAttributes) (int, error) {
-	ctx := lmaauth.NewContextWithReviewResource(h.Request.Context(), &atr)
-	req := h.Request.WithContext(ctx)
-	cluster := ctx.Value(clusterKey)
-	return h.mcmAuth.K8sAuth(fmt.Sprintf("%v", cluster)).Authorize(req)
+	return h.authz.Authorize(h.user, &atr, nil)
 }
 
 // getTier extracts the tier from a Calico tiered policy. If the resource is not a Calico tiered policy an empty string

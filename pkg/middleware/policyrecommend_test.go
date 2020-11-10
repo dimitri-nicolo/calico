@@ -10,10 +10,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
+
+	"github.com/stretchr/testify/mock"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+
+	"github.com/tigera/compliance/pkg/datastore"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/lma/pkg/auth"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -291,33 +298,44 @@ var (
 
 var _ = Describe("Policy Recommendation", func() {
 	var (
-		fakeKube  k8s.Interface
-		ec        *fakeAggregator
-		fakeAuthz *fakeAuthorizer
+		fakeKube           k8s.Interface
+		ec                 *fakeAggregator
+		mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
 	)
 	BeforeEach(func() {
 		fakeKube = fake.NewSimpleClientset(app1Dep, app1Rs, nginxDep, nginxRs)
 		ec = newFakeAggregator()
-		fakeAuthz = newFakeAuthorizer()
+		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
 	})
 	DescribeTable("Recommend policies for matching flows and endpoint",
 		func(queryResults []*elastic.CompositeAggregationBucket, queryError error,
 			query *policyrec.PolicyRecommendationParams,
 			expectedResponse *PolicyRecommendationResponse, statusCode int) {
 
+			mockClientSet := datastore.NewClientSet(fakeKube, nil)
+
+			mockK8sClientFactory := new(datastore.MockClusterCtxK8sClientFactory)
+			mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+			mockK8sClientFactory.On("ClientSetForCluster", mock.Anything).Return(mockClientSet, nil)
+
 			By("Initializing the engine") // Tempted to say "Start your engines!"
-			hdlr := PolicyRecommendationHandler(fakeAuthz, fakeKube, ec)
+			hdlr := PolicyRecommendationHandler(mockK8sClientFactory, mockClientSet, ec)
 
 			jsonQuery, err := json.Marshal(query)
 			Expect(err).To(BeNil())
-			req, err := http.NewRequest(http.MethodPost, recommendURLPath, bytes.NewBuffer([]byte(jsonQuery)))
+
+			req, err := http.NewRequest(http.MethodPost, recommendURLPath, bytes.NewBuffer(jsonQuery))
 			Expect(err).To(BeNil())
+
+			mockRBACAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(200, nil)
+
+			// add a bogus user
+			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
 
 			By("setting up next results")
 			ec.setNextResults(queryResults)
 			ec.setNextError(queryError)
 			// Always allow
-			fakeAuthz.setNextResult(0)
 
 			w := httptest.NewRecorder()
 			hdlr.ServeHTTP(w, req)
@@ -386,7 +404,6 @@ var _ = Describe("Policy Recommendation", func() {
 				Namespace:    "default",
 			}, nil, http.StatusInternalServerError),
 	)
-
 })
 
 // fakeAggregator is a test utility that implements the CompositeAggregator interface
@@ -426,46 +443,4 @@ func (fa *fakeAggregator) setNextResults(cab []*elastic.CompositeAggregationBuck
 
 func (fa *fakeAggregator) setNextError(err error) {
 	fa.nextError = err
-}
-
-// fakeAuthorizer implements the K8sAuthInterface
-type fakeAuthorizer struct {
-	nextResult int
-	nextError  error
-}
-
-func newFakeAuthorizer() *fakeAuthorizer {
-	return &fakeAuthorizer{}
-}
-
-func (fa *fakeAuthorizer) KubernetesAuthnAuthz(h http.Handler) http.Handler {
-	// This is unused in this test.
-	// TODO(doublek): Should make the interface in authorizer tighter.
-	panic("This method should be unused")
-}
-
-func (fa *fakeAuthorizer) KubernetesAuthn(h http.Handler) http.Handler {
-	// This is unused in this test.
-	panic("This method should be unused")
-}
-
-func (fa *fakeAuthorizer) Authorize(*http.Request) (int, error) {
-	return fa.nextResult, fa.nextError
-}
-
-func (fa *fakeAuthorizer) Authenticate(*http.Request) (*http.Request, int, error) {
-	// This is unused in this test.
-	panic("This method should be unused")
-}
-
-func (fa *fakeAuthorizer) setNextResult(nr int) {
-	fa.nextResult = nr
-}
-
-func (fa *fakeAuthorizer) DefaultK8sAuth() auth.K8sAuthInterface {
-	return fa
-}
-
-func (fa *fakeAuthorizer) K8sAuth(clusterID string) auth.K8sAuthInterface {
-	return fa
 }

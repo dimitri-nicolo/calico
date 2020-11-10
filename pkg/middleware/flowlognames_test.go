@@ -711,124 +711,151 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			Expect(names[3]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
 		})
 
-		It("should only return endpoints when global endpoints are not allowed due to RBAC", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{globalResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods":        []string{""},
-				"networksets": []string{""},
+		Context("getNamesFromElastic RBAC filtering", func() {
+			var mockFlowHelper *rbac.MockFlowHelper
+			BeforeEach(func() {
+				mockFlowHelper = new(rbac.MockFlowHelper)
 			})
 
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "",
-				Namespace:   "",
-				Strict:      true,
-			}
-
-			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(names).To(HaveLen(2))
-			Expect(names[0]).To(Equal("test-app-83958379dc"))
-			Expect(names[1]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
-		})
-
-		It("should properly filter endpoints based on allowed namespaces", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{globalResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods":        []string{"tigera-elasticsearch"},
-				"networksets": []string{"tigera-elasticsearch"},
+			AfterEach(func() {
+				mockFlowHelper.AssertExpectations(GinkgoT())
 			})
 
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "",
-				Namespace:   "",
-				Strict:      true,
-			}
+			It("should only return endpoints when global endpoints are not allowed due to RBAC", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{globalResponse})
 
-			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(names).To(HaveLen(1))
-			Expect(names[0]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
-		})
+				mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+				mockFlowHelper.On("CanListGlobalNetworkSets").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "").Return(true, nil)
+				mockFlowHelper.On("CanListPods", "").Return(true, nil)
 
-		It("should properly filter out endpoints based on the endpoint type per namespace", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{globalResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods":        []string{"default"},
-				"networksets": []string{"default", "tigera-elasticsearch"},
+				params := &FlowLogNamesParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "",
+					Namespace:   "",
+					Strict:      true,
+				}
+
+				names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(names).To(HaveLen(2))
+				Expect(names[0]).To(Equal("test-app-83958379dc"))
+				Expect(names[1]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
 			})
 
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "",
-				Namespace:   "",
-				Strict:      true,
-			}
+			It("should properly filter endpoints based on allowed namespaces", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{globalResponse})
 
-			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(names).To(HaveLen(1))
-			Expect(names[0]).To(Equal("test-app-83958379dc"))
-		})
+				mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+				mockFlowHelper.On("CanListGlobalNetworkSets").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "default").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "tigera-elasticsearch").Return(true, nil)
 
-		It("should properly filter out endpoints based on the endpoint type globally", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{globalResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods":          []string{"default"},
-				"networksets":   []string{"tigera-elasticsearch"},
-				"hostendpoints": []string{""},
+				params := &FlowLogNamesParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "",
+					Namespace:   "",
+					Strict:      true,
+				}
+
+				names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(names).To(HaveLen(1))
+				Expect(names[0]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
 			})
 
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "",
-				Namespace:   "",
-				Strict:      true,
-			}
+			It("should properly filter out endpoints based on the endpoint type per namespace", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{globalResponse})
 
-			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(names).To(HaveLen(1))
-			Expect(names[0]).To(Equal("tigera-cluster-*"))
-		})
+				mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+				mockFlowHelper.On("CanListGlobalNetworkSets").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "default").Return(true, nil)
+				mockFlowHelper.On("CanListPods", "").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "tigera-elasticsearch").Return(false, nil)
 
-		It("should return all endpoints as long as RBAC permissions exist for one endpoint in the flow", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{duplicateNamesResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods": []string{"tigera-compliance"},
+				params := &FlowLogNamesParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "",
+					Namespace:   "",
+					Strict:      true,
+				}
+
+				names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(names).To(HaveLen(1))
+				Expect(names[0]).To(Equal("test-app-83958379dc"))
 			})
 
-			By("Creating params without strict RBAC enforcement")
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "",
-				Namespace:   "",
-			}
+			It("should properly filter out endpoints based on the endpoint type globally", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{globalResponse})
 
-			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(names).To(HaveLen(5))
-			Expect(names[0]).To(Equal("compliance-benchmarker-*"))
-			Expect(names[1]).To(Equal("compliance-controller-c7f4b94dd-*"))
-			Expect(names[2]).To(Equal("compliance-server-69c97dffcf-*"))
-			Expect(names[3]).To(Equal("default/kse.kubernetes"))
-			Expect(names[4]).To(Equal("tigera-manager-778447894c-*"))
+				mockFlowHelper.On("CanListHostEndpoints").Return(true, nil)
+				mockFlowHelper.On("CanListGlobalNetworkSets").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "default").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "tigera-elasticsearch").Return(false, nil)
+
+				params := &FlowLogNamesParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "",
+					Namespace:   "",
+					Strict:      true,
+				}
+
+				names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(names).To(HaveLen(1))
+				Expect(names[0]).To(Equal("tigera-cluster-*"))
+			})
+
+			It("should return all endpoints as long as RBAC permissions exist for one endpoint in the flow", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{duplicateNamesResponse})
+				mockFlowHelper := new(rbac.MockFlowHelper)
+
+				mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+				mockFlowHelper.On("CanListGlobalNetworkSets").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "").Return(false, nil)
+				mockFlowHelper.On("CanListNetworkSets", "default").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "tigera-manager").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "tigera-elasticsearch").Return(false, nil)
+				mockFlowHelper.On("CanListPods", "tigera-compliance").Return(true, nil)
+
+				By("Creating params without strict RBAC enforcement")
+				params := &FlowLogNamesParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "",
+					Namespace:   "",
+				}
+
+				names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(names).To(HaveLen(5))
+				Expect(names[0]).To(Equal("compliance-benchmarker-*"))
+				Expect(names[1]).To(Equal("compliance-controller-c7f4b94dd-*"))
+				Expect(names[2]).To(Equal("compliance-server-69c97dffcf-*"))
+				Expect(names[3]).To(Equal("default/kse.kubernetes"))
+				Expect(names[4]).To(Equal("tigera-manager-778447894c-*"))
+			})
 		})
 	})
 

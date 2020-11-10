@@ -65,15 +65,16 @@ func RequestToResource(h http.Handler) http.Handler {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		newReq := req.WithContext(auth.NewContextWithReviewResource(req.Context(), getResourceAttributes(cluster, resourceName)))
+		newReq := req.WithContext(auth.NewContextWithReviewResource(req.Context(), createLMAResourceAttributes(cluster, resourceName)))
 		newReq.URL.Path = urlPath
 		newReq.URL.RawPath = urlPath
 		h.ServeHTTP(w, newReq)
 	})
 }
 
-// Get the resource attributes for an RBAC request based on the cluster you want to access.
-func getResourceAttributes(cluster, resourceName string) *authzv1.ResourceAttributes {
+// createLMAResourceAttributes an authzv1.ResourceAttributes for the lma.tiger.io api group, setting the Resource to the
+// given cluster and the Name to the given resourceName.
+func createLMAResourceAttributes(cluster, resourceName string) *authzv1.ResourceAttributes {
 	return &authzv1.ResourceAttributes{
 		Verb:     "get",
 		Group:    "lma.tigera.io",

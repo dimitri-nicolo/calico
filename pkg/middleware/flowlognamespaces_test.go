@@ -570,95 +570,112 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(namespaces).To(HaveLen(0))
 		})
 
-		It("should filter out namespaces it does not have RBAC permissions to access", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{prefixResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods": []string{"tigera-elasticsearch"},
+		Context("getNamespacesFromElastic RBAC filtering", func() {
+			var mockFlowHelper *rbac.MockFlowHelper
+			BeforeEach(func() {
+				mockFlowHelper = new(rbac.MockFlowHelper)
 			})
 
-			By("Creating params with strict RBAC enforcement")
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-				Strict:      true,
-			}
-
-			namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(namespaces).To(HaveLen(1))
-			Expect(namespaces[0].Name).To(Equal("tigera-elasticsearch"))
-		})
-
-		It("should return all namespaces as long as RBAC permissions exist for one side of each flow", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{duplicatesResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods": []string{"tigera-compliance"},
+			AfterEach(func() {
+				mockFlowHelper.AssertExpectations(GinkgoT())
 			})
 
-			By("Creating params without strict RBAC enforcement")
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-			}
+			It("should filter out namespaces it does not have RBAC permissions to access", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{prefixResponse})
 
-			namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(namespaces).To(HaveLen(3))
-			Expect(namespaces[0].Name).To(Equal("kube-system"))
-			Expect(namespaces[1].Name).To(Equal("tigera-compliance"))
-			Expect(namespaces[2].Name).To(Equal("tigera-fluentd"))
-		})
+				mockFlowHelper.On("IncludeNamespace", "").Return(false, nil)
+				mockFlowHelper.On("IncludeNamespace", "tigera-eck-operator").Return(false, nil)
+				mockFlowHelper.On("IncludeNamespace", "tigera-elasticsearch").Return(true, nil)
 
-		It("should return the global namespace if allowed", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{globalNamespaceResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods":          []string{"tigera-elasticsearch"},
-				"hostendpoints": []string{""},
+				By("Creating params with strict RBAC enforcement")
+				params := &FlowLogNamespaceParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "cluster",
+					Strict:      true,
+				}
+
+				namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(namespaces).To(HaveLen(1))
+				Expect(namespaces[0].Name).To(Equal("tigera-elasticsearch"))
 			})
 
-			By("Creating params with strict RBAC enforcement")
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-				Strict:      true,
-			}
+			It("should return all namespaces as long as RBAC permissions exist for one side of each flow", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{duplicatesResponse})
 
-			namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(namespaces).To(HaveLen(2))
-			Expect(namespaces[0].Name).To(Equal("-"))
-			Expect(namespaces[1].Name).To(Equal("tigera-elasticsearch"))
-		})
+				for _, namespace := range []string{"", "tigera-fluentd", "tigera-elasticsearch", "tigera-prometheus", "tigera-manager",
+					"tigera-system", "tigera-eck-operator", "tigera-kibana", "tigera-intrusion-detection"} {
+					mockFlowHelper.On("IncludeNamespace", namespace).Return(false, nil)
+				}
 
-		It("should omit the global namespace if not allowed", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = NewMockSearchClient([]interface{}{globalNamespaceResponse})
-			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
-				"pods": []string{"tigera-elasticsearch"},
+				mockFlowHelper.On("IncludeNamespace", "tigera-compliance").Return(true, nil)
+
+				By("Creating params without strict RBAC enforcement")
+				params := &FlowLogNamespaceParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "cluster",
+				}
+
+				namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(namespaces).To(HaveLen(3))
+				Expect(namespaces[0].Name).To(Equal("kube-system"))
+				Expect(namespaces[1].Name).To(Equal("tigera-compliance"))
+				Expect(namespaces[2].Name).To(Equal("tigera-fluentd"))
 			})
 
-			By("Creating params with strict RBAC enforcement")
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-				Strict:      true,
-			}
+			It("should return the global namespace if allowed", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{globalNamespaceResponse})
 
-			namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(namespaces).To(HaveLen(1))
-			Expect(namespaces[0].Name).To(Equal("tigera-elasticsearch"))
+				mockFlowHelper.On("IncludeGlobalNamespace").Return(true, nil)
+				mockFlowHelper.On("IncludeNamespace", "").Return(false, nil)
+				mockFlowHelper.On("IncludeNamespace", "tigera-elasticsearch").Return(true, nil)
+
+				By("Creating params with strict RBAC enforcement")
+				params := &FlowLogNamespaceParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "cluster",
+					Strict:      true,
+				}
+
+				namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(namespaces).To(HaveLen(2))
+				Expect(namespaces[0].Name).To(Equal("-"))
+				Expect(namespaces[1].Name).To(Equal("tigera-elasticsearch"))
+			})
+
+			It("should omit the global namespace if not allowed", func() {
+				By("Creating a mock ES client with a mocked out search results")
+				esClient = NewMockSearchClient([]interface{}{globalNamespaceResponse})
+
+				mockFlowHelper.On("IncludeGlobalNamespace").Return(false, nil)
+				mockFlowHelper.On("IncludeNamespace", "").Return(false, nil)
+				mockFlowHelper.On("IncludeNamespace", "tigera-elasticsearch").Return(true, nil)
+
+				By("Creating params with strict RBAC enforcement")
+				params := &FlowLogNamespaceParams{
+					Limit:       2000,
+					Actions:     []string{"allow", "deny", "unknown"},
+					Prefix:      "",
+					ClusterName: "cluster",
+					Strict:      true,
+				}
+
+				namespaces, err := getNamespacesFromElastic(params, esClient, mockFlowHelper)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(namespaces).To(HaveLen(1))
+				Expect(namespaces[0].Name).To(Equal("tigera-elasticsearch"))
+			})
 		})
 	})
 
