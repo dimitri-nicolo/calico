@@ -8,7 +8,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/cni-plugin v1.11.1-0.20200811150549-55fa20e1ad20
-	github.com/projectcalico/felix v0.0.0-20200924080351-1f7f81f6ebf3
+	github.com/projectcalico/felix v3.8.9+incompatible
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
 	github.com/projectcalico/typha v0.7.3-0.20201007232318-2dba00d728ad
@@ -25,11 +25,11 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20201106041339-51f9097bcc98
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20201106043358-3fad38a3361d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201109135105-8bf63db4fbd3
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201106003636-b0a1165ebd9c
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20201110182341-272d1894885d
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20201109222118-ba649ad35d90
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201110190917-07e36963573c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201110175853-81b3fba3aa79
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201110181147-79c25aa7fdd0
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
