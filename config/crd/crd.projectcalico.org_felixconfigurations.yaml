@@ -419,6 +419,10 @@ spec:
                   is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled
                   is set to true.
                 type: integer
+              flowLogsCollectProcessInfo:
+                description: 'FlowLogsCollectProcessInfo, if enabled Felix will load
+                  the kprobe BPF programs to collect process info. [Default: false]'
+                type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
                   dynamically changing aggregation levels. Default is true.

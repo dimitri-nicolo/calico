@@ -5382,6 +5382,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"flowLogsCollectProcessInfo": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsCollectProcessInfo, if enabled Felix will load the kprobe BPF programs to collect process info. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"cloudWatchLogsReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Enable Flow logs reporting to AWS CloudWatch.",
