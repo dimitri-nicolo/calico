@@ -781,8 +781,8 @@ github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZ
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
 github.com/tigera/apiserver v0.0.0-20201109201235-5e3876aa4e7d h1:sSUvvObbuCMZRn3mXypdCiMMJZganT7r5dMHyYsR02A=
 github.com/tigera/apiserver v0.0.0-20201109201235-5e3876aa4e7d/go.mod h1:WpraQZxCNMc75cuqOTdltzn38gGGWqAmI59U9LKx+Bw=
-github.com/tigera/compliance v0.0.0-20201110183434-80f8a78e56c3 h1:blMYoc/WAOAzx0/Fuze6pj7DDlr3hy5PCJOjj9Ci/Kg=
-github.com/tigera/compliance v0.0.0-20201110183434-80f8a78e56c3/go.mod h1:xUergFnt16u8gYD8GXFY5BkiB7R2sL7aQ3C9x2D8gAE=
+github.com/tigera/compliance v0.0.0-20201111102233-3633c72c24aa h1:W83Wo5dJAH8eqMD2MBui7ginEwQX6RvDh0KWRrcGxLc=
+github.com/tigera/compliance v0.0.0-20201111102233-3633c72c24aa/go.mod h1:hfOXG09nx2kG+0mIQUj8bYMjEwBw/YXu1dRSMhnXANw=
 github.com/tigera/felix-private v0.0.0-20201110205817-83ab9d57b3eb h1:dPL+fQPAjnTdydHIeeKGCl7jyAWGLhrKQ/ZcGNriUlE=
 github.com/tigera/felix-private v0.0.0-20201110205817-83ab9d57b3eb/go.mod h1:DcXuVx+3ikh2rpqjg+p/Q/pgDfG2ZFKj0fpQIQMvlbQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458 h1:ClzymjLXLHmiF3GbgQ9/PAfD3OJuFIMhLM2VaT0APdY=
@@ -792,7 +792,7 @@ github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe
 github.com/tigera/lma v0.0.0-20201111101227-9a89db463fd0 h1:JWf6ufZMpB3YKO34bVSIv1kCp3JmXKDZkaHCaGNxdj8=
 github.com/tigera/lma v0.0.0-20201111101227-9a89db463fd0/go.mod h1:DIfEFotgHnZhAdcrsn+oHdo2PpDwSq8FBiMdmCBiZJg=
 github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20201110181147-79c25aa7fdd0/go.mod h1:gUZUFK5J0Wo64XHlmnKJMOgej1s4JirTAMW/xVDK4G4=
+github.com/tigera/typha-private v0.6.0-beta1.0.20201111102314-74ad1759de86/go.mod h1:UABsVT1au5IPorznrZ72t5ByZPhj+BsZs1HESEfqZGg=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
