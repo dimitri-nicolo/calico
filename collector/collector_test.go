@@ -14,14 +14,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/nfnetlink"
-	"github.com/tigera/nfnetlink/nfnl"
-
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
+
+	"github.com/tigera/nfnetlink"
+	"github.com/tigera/nfnetlink/nfnl"
 )
 
 const (
@@ -689,7 +689,54 @@ var _ = Describe("Conntrack Datasource", func() {
 		})
 	})
 	Describe("Test conntrack TCP Protoinfo State", func() {
-		It("Handle TCP conntrack entries with TCP state TIME_WAIT", func() {
+		It("Handle TCP conntrack entries with TCP state TIME_WAIT after NFLOGs gathered", func() {
+			By("handling a conntrack update to start tracking stats for tuple")
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+
+			By("handling a conntrack update with updated counters")
+			inCtEntryUpdatedCounters := inCtEntry
+			inCtEntryUpdatedCounters.OriginalCounters.Packets = inCtEntry.OriginalCounters.Packets + 1
+			inCtEntryUpdatedCounters.OriginalCounters.Bytes = inCtEntry.OriginalCounters.Bytes + 10
+			inCtEntryUpdatedCounters.ReplyCounters.Packets = inCtEntry.ReplyCounters.Packets + 2
+			inCtEntryUpdatedCounters.ReplyCounters.Bytes = inCtEntry.ReplyCounters.Bytes + 50
+			c.handleCtEntry(inCtEntryUpdatedCounters)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data = c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
+
+			By("handling a conntrack update with TCP CLOSE_WAIT")
+			inCtEntryStateCloseWait := inCtEntryUpdatedCounters
+			inCtEntryStateCloseWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_CLOSE_WAIT
+			inCtEntryStateCloseWait.ReplyCounters.Packets = inCtEntryUpdatedCounters.ReplyCounters.Packets + 1
+			inCtEntryStateCloseWait.ReplyCounters.Bytes = inCtEntryUpdatedCounters.ReplyCounters.Bytes + 10
+			c.handleCtEntry(inCtEntryStateCloseWait)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data = c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Bytes)))
+
+			By("handling an nflog update for destination matching on policy - all policy info is now gathered")
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, ingressPktAllow)
+
+			By("handling a conntrack update with TCP TIME_WAIT")
+			inCtEntryStateTimeWait := inCtEntry
+			inCtEntryStateTimeWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_TIME_WAIT
+			c.handleCtEntry(inCtEntryStateTimeWait)
+			Expect(c.epStats).ShouldNot(HaveKey(*t))
+		})
+		It("Handle TCP conntrack entries with TCP state TIME_WAIT before NFLOGs gathered", func() {
 			By("handling a conntrack update to start tracking stats for tuple")
 			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			c.handleCtEntry(inCtEntry)
@@ -731,6 +778,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			inCtEntryStateTimeWait := inCtEntry
 			inCtEntryStateTimeWait.ProtoInfo.State = nfnl.TCP_CONNTRACK_TIME_WAIT
 			c.handleCtEntry(inCtEntryStateTimeWait)
+			Expect(c.epStats).Should(HaveKey(*t))
+
+			By("handling an nflog update for destination matching on policy - all policy info is now gathered")
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, ingressPktAllow)
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})

@@ -169,6 +169,16 @@ func (t *RuleTrace) ToString() string {
 	return fmt.Sprintf("%s/%s/%d/%v", ruleID.Tier, ruleID.Name, ruleID.Index, ruleID.Action)
 }
 
+func (t *RuleTrace) ToRuleString() string {
+	var parts []string
+	for _, r := range t.path {
+		if r != nil {
+			parts = append(parts, r.Name)
+		}
+	}
+	return "( " + strings.Join(parts, " , ") + " )"
+}
+
 func (t *RuleTrace) Action() rules.RuleAction {
 	ruleID := t.VerdictRuleID()
 	if ruleID == nil {
@@ -347,7 +357,8 @@ type Data struct {
 	updatedAt     time.Duration
 	ruleUpdatedAt time.Duration
 
-	dirty bool
+	dirty   bool
+	expired bool
 }
 
 func NewData(tuple Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize int) *Data {
@@ -483,6 +494,29 @@ func (d *Data) SetConntrackCounters(packets int, bytes int) {
 	d.touch()
 }
 
+// SetExpired flags the connection as expired for later cleanup.
+func (d *Data) SetExpired() {
+	d.expired = true
+	d.setDirtyFlag()
+	d.touch()
+}
+
+// IsExpired returns true if the connection has been flagged as expired.
+func (d *Data) IsExpired() bool {
+	return d.expired
+}
+
+// VerdictFound returns true if the verdict has been found for the local endpoints in this flow.
+func (d *Data) VerdictFound() bool {
+	if d.srcEp != nil && d.srcEp.IsLocal && !d.EgressRuleTrace.FoundVerdict() {
+		return false
+	}
+	if d.dstEp != nil && d.dstEp.IsLocal && !d.IngressRuleTrace.FoundVerdict() {
+		return false
+	}
+	return true
+}
+
 // Set In Counters' values to packets and bytes. Use the SetConntrackCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetConntrackCountersReverse(packets int, bytes int) {
@@ -517,6 +551,7 @@ func (d *Data) IncreaseHTTPRequestDeniedCounter(delta int) {
 // the data.
 func (d *Data) ResetConntrackCounters() {
 	d.isConnection = false
+	d.expired = false
 	d.conntrackPktsCtr.Reset()
 	d.conntrackBytesCtr.Reset()
 	d.conntrackPktsCtrReverse.Reset()
