@@ -1,3 +1,6 @@
+// +build !windows
+
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnl
 
 // Message Types

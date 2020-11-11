@@ -1,10 +1,8 @@
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnetlink
 
 import (
 	"net"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ParseNflog", func() {

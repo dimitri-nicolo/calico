@@ -1,3 +1,6 @@
+// +build !windows
+
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnl
 
 import (
@@ -11,6 +14,7 @@ const (
 	SizeofNflogMsgConfigCmd    = 0x1
 	SizeofNflogMsgConfigBufSiz = 0x4
 	SizeofNflogMsgConfigMode   = 0x6
+	SizeofNflogMsgConfigFlag   = 0x2
 )
 
 type NflogMsgPktHdr struct {
@@ -97,4 +101,26 @@ func (msg *NflogMsgConfigBufSiz) Len() int {
 
 func (msg *NflogMsgConfigBufSiz) Serialize() []byte {
 	return (*(*[SizeofNflogMsgConfigBufSiz]byte)(unsafe.Pointer(msg)))[:]
+}
+
+type NflogMsgConfigFlag struct {
+	flag uint16
+}
+
+func NewNflogMsgConfigFlag(flag int) *NflogMsgConfigFlag {
+	return &NflogMsgConfigFlag{
+		flag: htons(uint16(flag)),
+	}
+}
+
+func DeserializeNflogMsgConfigFlag(b []byte) *NflogMsgConfigFlag {
+	return (*NflogMsgConfigFlag)(unsafe.Pointer(&b[0:SizeofNflogMsgConfigFlag][0]))
+}
+
+func (msg *NflogMsgConfigFlag) Len() int {
+	return SizeofNflogMsgConfigFlag
+}
+
+func (msg *NflogMsgConfigFlag) Serialize() []byte {
+	return (*(*[SizeofNflogMsgConfigFlag]byte)(unsafe.Pointer(msg)))[:]
 }

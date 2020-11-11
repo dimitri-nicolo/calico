@@ -1,3 +1,4 @@
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnetlink
 
 import (
@@ -84,7 +85,7 @@ func (cte *CtEntry) IsDNAT() bool {
 	return false
 }
 
-func (cte *CtEntry) OriginalTupleWithoutDNAT() (CtTuple, error) {
+func (cte *CtEntry) OriginalTuplePostDNAT() (CtTuple, error) {
 	if !cte.IsDNAT() {
 		return EmptyCtTuple, errors.New("Entry is not DNAT-ed")
 	}

@@ -1,3 +1,4 @@
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnetlink
 
 type NflogPacketHeader struct {
@@ -40,16 +41,22 @@ func (np *NflogPrefix) Equals(cmp *NflogPrefix) bool {
 }
 
 type NflogPacket struct {
-	Header    NflogPacketHeader
-	Mark      int
-	Timestamp NflogPacketTimestamp
-	Prefix    NflogPrefix
-	Gid       int
-	Tuple     NflogPacketTuple
-	Bytes     int
+	Header        NflogPacketHeader
+	Mark          int
+	Timestamp     NflogPacketTimestamp
+	Prefix        NflogPrefix
+	Gid           int
+	Tuple         NflogPacketTuple
+	Bytes         int
+	IsDNAT        bool
+	OriginalTuple CtTuple
 }
 
 type NflogPacketAggregate struct {
 	Tuple    NflogPacketTuple
 	Prefixes []NflogPrefix
+
+	// If DNAT then original tuple is also included. This is a CtTuple since it is derived from a CT hook in nflog.
+	IsDNAT        bool
+	OriginalTuple CtTuple
 }
