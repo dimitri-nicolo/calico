@@ -327,8 +327,6 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
-		cc.CheckConnectivity()
-		cc.CheckConnectivity()
 	})
 
 	AfterEach(func() {
