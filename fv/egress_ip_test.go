@@ -18,6 +18,7 @@ package fv_test
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -185,6 +186,43 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 	Context("EnabledPerNamespaceOrPerPod", func() {
 		BeforeEach(func() {
 			supportLevel = "EnabledPerNamespaceOrPerPod"
+		})
+
+		It("keeps gateway device route when client goes away", func() {
+			By("Create a gateway and client")
+			gw := makeGateway("10.10.10.1", "gw1")
+			defer gw.Stop()
+			app := makeClient("10.65.0.2", "app")
+			appExists := true
+			defer func() {
+				if appExists {
+					app.Stop()
+				}
+			}()
+
+			By("Check gateway route exists")
+			checkGatewayRoute := func() (err error) {
+				routes, err := felix.ExecOutput("ip", "r")
+				if err != nil {
+					return
+				}
+				for _, route := range strings.Split(routes, "\n") {
+					if matched, _ := regexp.MatchString("^10.10.10.1 dev cali", route); matched {
+						return
+					}
+				}
+				return fmt.Errorf("10.10.10.1 device route is not present in:\n%v", routes)
+			}
+			Eventually(checkGatewayRoute, "10s", "1s").Should(Succeed())
+
+			By("Remove the client again")
+			app.RemoveFromInfra(infra)
+			app.Stop()
+			appExists = false
+
+			By("Check gateway route still present")
+			Expect(checkGatewayRoute()).To(Succeed())
+			Consistently(checkGatewayRoute, "5s", "1s").Should(Succeed())
 		})
 
 		It("updates rules and routing as gateways are added and removed", func() {

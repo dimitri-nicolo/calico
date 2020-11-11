@@ -41,7 +41,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/licensing v1.0.1-0.20201102205955-dfaedc85780d
+	github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19
 	github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
@@ -66,7 +66,7 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201106003636-b0a1165ebd9c
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320

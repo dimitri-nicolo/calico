@@ -353,6 +353,10 @@ func (r *RouteTable) markIfaceForUpdate(ifaceName string, resync bool) {
 	}
 }
 
+func (r *RouteTable) QueueResyncIface(ifaceName string) {
+	r.markIfaceForUpdate(ifaceName, true)
+}
+
 // SetRoutes sets the full set of targets for the specified interface. This recalculates the deltas from the current
 // set of programmed routes.
 func (r *RouteTable) SetRoutes(ifaceName string, targets []Target) {

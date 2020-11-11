@@ -683,6 +683,7 @@ func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Ta
 
 func (t *mockRouteTable) OnIfaceStateChanged(string, ifacemonitor.State) {}
 func (t *mockRouteTable) QueueResync()                                   {}
+func (t *mockRouteTable) QueueResyncIface(string)                        {}
 func (t *mockRouteTable) Apply() error {
 	return nil
 }
@@ -1615,30 +1616,23 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 						It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab"))
 
-						// The 169.254.1.1 should NOT be removed here,
-						// because removing that address can also cause the
-						// device route `<gateway IP>/32 dev cali12345` to
-						// disappear, which means the gateway can no longer
-						// be used.  There's no fundamental problem with
-						// leaving the address present, and it's likely that
-						// the gateway pod will regain the gateway role
-						// shortly - i.e. have some other pods configured to
-						// use it - and so require the address again.
-						It("should not have removed the 169.254.1.1 address", func() {
+						It("should have removed the 169.254.1.1 address", func() {
 							if ipVersion == 4 {
-								Expect(nlDataplane.DeletedAddrs.Len()).To(BeZero())
+								Expect(nlDataplane.DeletedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
 							}
 						})
 					})
 
 					Context("with WEP deleted and recreated with the same interface", func() {
 						JustBeforeEach(func() {
+							By("removing WEP")
 							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 								Id: &wlEPID1,
 							})
 							err := epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
+							By("signaling WEP iface down")
 							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-ab",
 								State: "down",
@@ -1646,6 +1640,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
+							By("removing WEP iface from mock dataplane")
 							link, err := nlDataplane.LinkByName("cali12345-ab")
 							Expect(err).ToNot(HaveOccurred())
 							err = nlDataplane.LinkDel(link)
@@ -1653,8 +1648,10 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 							nlDataplane.ResetDeltas()
 
+							By("recreating WEP iface in mock dataplane")
 							nlDataplane.AddIface(28, "cali12345-ab", true, true)
 
+							By("signaling WEP iface up")
 							epMgr.OnUpdate(&ifaceUpdate{
 								Name:  "cali12345-ab",
 								State: "up",
@@ -1666,6 +1663,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
+							By("recreating WEP")
 							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 								Id: &wlEPID1,
 								Endpoint: &proto.WorkloadEndpoint{
