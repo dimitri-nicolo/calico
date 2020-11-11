@@ -96,10 +96,6 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 	a.Latency.Count += b.Latency.Count
 }
 
-func (a *DNSSpec) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.Encode())
-}
-
 func (a *DNSSpec) Encode() *DNSSpecEncoded {
 	b := &DNSSpecEncoded{
 		RRSets:       a.RRSets,
