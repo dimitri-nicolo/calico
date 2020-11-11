@@ -33,7 +33,7 @@ func startEventPoller(e events.Events) error {
 			}
 			switch event.Type() {
 			case events.TypeTcpv4Events:
-				log.Debugf("Received TCP v4 event")
+				log.WithField("event", event).Debug("Received TCP v4 event")
 			default:
 				log.Warn("Unknown event type")
 				continue
