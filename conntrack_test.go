@@ -1,3 +1,4 @@
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnetlink
 
 import (
@@ -5,10 +6,10 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/tigera/nfnetlink/nfnl"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/tigera/nfnetlink/nfnl"
 )
 
 var _ = Describe("Conntrack Entry DNAT", func() {
@@ -59,7 +60,7 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 			Expect(cte.IsSNAT()).To(Equal(false))
 		})
 		It("should return tuple after parsing DNAT info", func() {
-			t, _ := cte.OriginalTupleWithoutDNAT()
+			t, _ := cte.OriginalTuplePostDNAT()
 			Expect(t.Src).To(Equal(reply.Dst))
 			Expect(t.Dst).To(Equal(reply.Src))
 			Expect(t.L3ProtoNum).To(Equal(original_dnat.L3ProtoNum))

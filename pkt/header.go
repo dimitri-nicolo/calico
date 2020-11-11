@@ -1,3 +1,4 @@
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package pkt
 
 import (
@@ -109,11 +110,11 @@ type IPv6Header struct {
 	FlowLabel    uint32
 	// Payload length in bytes. This is the length of the packet data
 	// following the IPv6 packet header.
-	Length       uint16
-	NextHeader   uint8
-	HopLimit     uint8
-	Saddr        net.IP
-	Daddr        net.IP
+	Length     uint16
+	NextHeader uint8
+	HopLimit   uint8
+	Saddr      net.IP
+	Daddr      net.IP
 }
 
 func ParseIPv6Header(b []byte) IPv6Header {

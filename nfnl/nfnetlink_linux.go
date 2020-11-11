@@ -1,3 +1,6 @@
+// +build !windows
+
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnl
 
 import (
@@ -19,7 +22,7 @@ const (
 	NFNL_SUBSYS_COUNT
 )
 
-const NLA_TYPE_MASK int = ^(syscall.NLA_F_NESTED | syscall.NLA_F_NET_BYTEORDER)
+const NLA_TYPE_MASK = ^(int(syscall.NLA_F_NESTED | syscall.NLA_F_NET_BYTEORDER))
 
 const (
 	SizeofNfGenMsg = 0x4
@@ -99,19 +102,19 @@ type NetlinkNetfilterAttr struct {
 	Value []byte
 }
 
-func ParseNetfilterAttr(b []byte, attrs []NetlinkNetfilterAttr) error {
+func ParseNetfilterAttr(b []byte, attrs []NetlinkNetfilterAttr) (int, error) {
 	j := 0
 	for len(b) >= SizeofNfAttr {
 		a, vbuf, alen, err := netlinkNetfilterAttrAndValue(b)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		ra := NetlinkNetfilterAttr{Attr: *a, Value: vbuf[:int(a.NlAttr.Len)-SizeofNfAttr]}
 		attrs[j] = ra
 		b = b[alen:]
 		j++
 	}
-	return nil
+	return j, nil
 }
 
 func netlinkNetfilterAttrAndValue(b []byte) (*NfAttr, []byte, int, error) {

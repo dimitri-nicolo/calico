@@ -1,3 +1,6 @@
+// +build !windows
+
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnetlink
 
 import (
@@ -6,9 +9,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink/nl"
+
 	"github.com/tigera/nfnetlink/nfnl"
 	"github.com/tigera/nfnetlink/pkt"
-	"github.com/vishvananda/netlink/nl"
 )
 
 const (
@@ -31,7 +35,7 @@ type DataWithTimestamp struct {
 
 func SubscribeDNS(groupNum int, bufSize int, ch chan<- DataWithTimestamp, done <-chan struct{}) error {
 	log.Infof("Subscribe to NFLOG group %v for DNS responses", groupNum)
-	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true)
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true, false)
 	if err != nil {
 		return err
 	}
@@ -39,8 +43,8 @@ func SubscribeDNS(groupNum int, bufSize int, ch chan<- DataWithTimestamp, done <
 	return nil
 }
 
-func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
-	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), false)
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}, includeConnTrack bool) error {
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), false, includeConnTrack)
 	if err != nil {
 		return err
 	}
@@ -48,7 +52,9 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	return nil
 }
 
-func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chanCap int, immediateFlush bool) (chan [][]byte, error) {
+func openAndReadNFNLSocket(
+	groupNum int, bufSize int, done <-chan struct{}, chanCap int, immediateFlush bool, includeConnTrack bool,
+) (chan [][]byte, error) {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
 		return nil, err
@@ -95,6 +101,19 @@ func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chan
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
 		return nil, err
+	}
+
+	if includeConnTrack {
+		// Conntrack
+		req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
+		nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
+		req.AddData(nfgenmsg)
+		nflogct := nfnl.NewNflogMsgConfigFlag(nfnl.NFULNL_CFG_F_CONNTRACK)
+		nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_FLAGS, nflogct.Serialize())
+		req.AddData(nfattr)
+		if err := sock.Send(req); err != nil {
+			return nil, err
+		}
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -217,6 +236,12 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 						pktAggr.Prefixes = append(pktAggr.Prefixes, nflogPacket.Prefix)
 						aggregate[nflogPacket.Tuple] = pktAggr
 					}
+
+					// Copy across any pre-DNAT info, if newly discovered through a CT message.
+					if !pktAggr.IsDNAT && nflogPacket.IsDNAT {
+						pktAggr.IsDNAT = true
+						pktAggr.OriginalTuple = nflogPacket.OriginalTuple
+					}
 				}
 			case <-sendTicker.C:
 				for t, pktAddr := range aggregate {
@@ -263,20 +288,19 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 
 func getNflogPacketData(m []byte) (packetData []byte, timestamp []uint8, err error) {
 	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
-	err = nfnl.ParseNetfilterAttr(m, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
 		return
 	}
-	for _, attr := range attrs {
-		if attr.Attr.Type == nfnl.NFULA_TIMESTAMP {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
+		attrType := int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK
+		switch attrType {
+		case nfnl.NFULA_TIMESTAMP:
 			log.Infof("DNS-LATENCY: NFULA_TIMESTAMP: %T %v", attr.Value, attr.Value)
 			timestamp = attr.Value
-		}
-	}
-	for _, attr := range attrs {
-		if attr.Attr.Type == nfnl.NFULA_PAYLOAD {
+		case nfnl.NFULA_PAYLOAD:
 			packetData = attr.Value
-			return
 		}
 	}
 	return
@@ -285,15 +309,16 @@ func getNflogPacketData(m []byte) (packetData []byte, timestamp []uint8, err err
 func parseNflog(m []byte) (NflogPacket, error) {
 	nflogPacket := NflogPacket{}
 	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(m, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
 		return nflogPacket, err
 	}
 
-	for _, attr := range attrs {
-
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
+		attrType := int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK
 		native := binary.BigEndian
-		switch attr.Attr.Type {
+		switch attrType {
 		case nfnl.NFULA_PACKET_HDR:
 			nflogPacket.Header.HwProtocol = int(native.Uint16(attr.Value[0:2]))
 			nflogPacket.Header.Hook = int(attr.Value[2])
@@ -308,6 +333,8 @@ func parseNflog(m []byte) (NflogPacket, error) {
 			nflogPacket.Prefix = p
 		case nfnl.NFULA_GID:
 			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
+		case nfnl.NFULA_CT:
+			parseConntrack(&nflogPacket, attr.Value)
 		}
 	}
 	nflogPacket.Prefix.Packets = 1
@@ -348,6 +375,18 @@ func parseLayer4Header(tuple *NflogPacketTuple, l4payload []byte) error {
 		header := pkt.ParseUDPHeader(l4payload)
 		tuple.L4Src.Port = int(header.Source)
 		tuple.L4Dst.Port = int(header.Dest)
+	}
+	return nil
+}
+
+func parseConntrack(packet *NflogPacket, ct []byte) error {
+	cte, err := conntrackEntryFromNfAttrs(ct[:], syscall.AF_INET)
+	if err != nil {
+		return err
+	}
+	if cte.IsDNAT() {
+		packet.OriginalTuple = cte.OriginalTuple
+		packet.IsDNAT = true
 	}
 	return nil
 }

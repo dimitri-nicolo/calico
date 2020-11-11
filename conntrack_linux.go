@@ -1,3 +1,6 @@
+// +build !windows
+
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 package nfnetlink
 
 import (
@@ -6,8 +9,9 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/tigera/nfnetlink/nfnl"
 	"github.com/vishvananda/netlink/nl"
+
+	"github.com/tigera/nfnetlink/nfnl"
 )
 
 type ConntrackEntryHandler func(cte CtEntry)
@@ -39,7 +43,7 @@ func ConntrackList(ceh ConntrackEntryHandler) error {
 func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	ctentry := CtEntry{}
 	var attrs [nfnl.CTA_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(m, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
 		return ctentry, err
 	}
@@ -47,7 +51,8 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	native := binary.BigEndian
 
 	// Start building a Conntrack Entry
-	for _, attr := range attrs {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
 		attrType := int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK
 		isNestedAttr := int(attr.Attr.Type)&syscall.NLA_F_NESTED == syscall.NLA_F_NESTED
 
@@ -98,14 +103,15 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 
 func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
 	var attrs [nfnl.CTA_TUPLE_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
 		return err
 	}
 	tuple.L3ProtoNum = int(family)
 
 	native := binary.BigEndian
-	for _, attr := range attrs {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
 		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
 		isNestedAttr := int(attr.Attr.Type)&syscall.NLA_F_NESTED == syscall.NLA_F_NESTED
 
@@ -132,12 +138,14 @@ func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
 
 func parseTupleIp(tuple *CtTuple, value []byte) error {
 	var attrs [nfnl.CTA_IP_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
 		return err
 	}
-	for _, attr := range attrs {
-		switch attr.Attr.Type {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
+		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
+		switch attrType {
 		case nfnl.CTA_IP_V4_SRC, nfnl.CTA_IP_V6_SRC:
 			copy(tuple.Src[:], net.IP(attr.Value).To16()[:16])
 		case nfnl.CTA_IP_V4_DST, nfnl.CTA_IP_V6_DST:
@@ -149,13 +157,15 @@ func parseTupleIp(tuple *CtTuple, value []byte) error {
 
 func parseTupleProto(tuple *CtTuple, value []byte) error {
 	var attrs [nfnl.CTA_PROTO_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
 		return err
 	}
 	native := binary.BigEndian
-	for _, attr := range attrs {
-		switch attr.Attr.Type {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
+		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
+		switch attrType {
 		case nfnl.CTA_PROTO_NUM:
 			tuple.ProtoNum = int(attr.Value[0])
 		case nfnl.CTA_PROTO_SRC_PORT:
@@ -176,13 +186,15 @@ func parseTupleProto(tuple *CtTuple, value []byte) error {
 func parseConntrackCounters(value []byte) (CtCounters, error) {
 	counters := CtCounters{}
 	var attrs [nfnl.CTA_COUNTERS_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
 		return counters, err
 	}
 	native := binary.BigEndian
-	for _, attr := range attrs {
-		switch attr.Attr.Type {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
+		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
+		switch attrType {
 		case nfnl.CTA_COUNTERS_PACKETS:
 			counters.Packets = int(native.Uint64(attr.Value[0:8]))
 		case nfnl.CTA_COUNTERS_BYTES:
@@ -198,12 +210,13 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 
 func parseProtoInfo(cpi *CtProtoInfo, value []byte) error {
 	var attrs [nfnl.CTA_PROTOINFO_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
 		return err
 	}
 
-	for _, attr := range attrs {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
 		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
 		isNestedAttr := int(attr.Attr.Type)&syscall.NLA_F_NESTED == syscall.NLA_F_NESTED
 
@@ -225,12 +238,14 @@ func parseProtoInfo(cpi *CtProtoInfo, value []byte) error {
 
 func parseProtoInfoTCP(cpi *CtProtoInfo, value []byte) error {
 	var attrs [nfnl.CTA_PROTOINFO_TCP_MAX]nfnl.NetlinkNetfilterAttr
-	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	n, err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
 		return err
 	}
-	for _, attr := range attrs {
-		switch attr.Attr.Type {
+	for idx := 0; idx < n; idx++ {
+		attr := attrs[idx]
+		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
+		switch attrType {
 		case nfnl.CTA_PROTOINFO_TCP_STATE:
 			cpi.State = int(attr.Value[0])
 			// We don't support other TCP protoinfo parameters for now.
