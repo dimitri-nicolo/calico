@@ -157,7 +157,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("should emit microsoft.com DNS log with latency", func() {
-			Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency":{"count":[1-9]`))
+			Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
 		})
 
 		Context("with a preceding DNS request that went unresponded", func() {
@@ -211,7 +211,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("should emit microsoft.com DNS log with latency", func() {
-				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency":{"count":[1-9]`))
+				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
 			})
 		})
 
@@ -221,7 +221,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("should emit microsoft.com DNS log without latency", func() {
-				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency":{"count":0`))
+				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":0`))
 			})
 		})
 
