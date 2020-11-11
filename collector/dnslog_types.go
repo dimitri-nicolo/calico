@@ -96,19 +96,6 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 	a.Latency.Count += b.Latency.Count
 }
 
-func (a *DNSSpec) Encode() *DNSSpecEncoded {
-	b := &DNSSpecEncoded{
-		RRSets:       a.RRSets,
-		ClientLabels: a.ClientLabels,
-		DNSStats:     a.DNSStats,
-		Latency:      a.Latency,
-	}
-	for e, l := range a.Servers {
-		b.Servers = append(b.Servers, DNSServer{e, l})
-	}
-	return b
-}
-
 type DNSName struct {
 	Name  string
 	Class DNSClass
@@ -452,7 +439,15 @@ type DNSExcessLog struct {
 }
 
 func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
-	e := d.DNSSpec.Encode()
+	e := &DNSSpecEncoded{
+		RRSets:       d.RRSets,
+		ClientLabels: d.ClientLabels,
+		DNSStats:     d.DNSStats,
+		Latency:      d.Latency,
+	}
+	for endpointMeta, labels := range d.Servers {
+		e.Servers = append(e.Servers, DNSServer{endpointMeta, labels})
+	}
 
 	res := &DNSLog{
 		StartTime:       startTime,
