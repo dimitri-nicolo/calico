@@ -4,12 +4,12 @@ go 1.15
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201110205817-83ab9d57b3eb
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201110175853-81b3fba3aa79
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201110181147-79c25aa7fdd0
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201109201235-5e3876aa4e7d
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20201110183434-80f8a78e56c3
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20201110180451-2ee7cdf4aaa5
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20201111101227-9a89db463fd0
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
