@@ -15,6 +15,43 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+// This struct is based on struct sock_common from the kernel with the below
+// license
+
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * INET		An implementation of the TCP/IP protocol suite for the LINUX
+ *		operating system.  INET is implemented using the  BSD Socket
+ *		interface as the means of communication with the user level.
+ *
+ *		Definitions for the AF_INET socket handler.
+ *
+ * Version:	@(#)sock.h	1.0.4	05/13/93
+ *
+ * Authors:	Ross Biro
+ *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
+ *		Corey Minyard <wf-rch!minyard@relay.EU.net>
+ *		Florian La Roche <flla@stud.uni-sb.de>
+ *
+ * Fixes:
+ *		Alan Cox	:	Volatiles in skbuff pointers. See
+ *					skbuff comments. May be overdone,
+ *					better to prove they can be removed
+ *					than the reverse.
+ *		Alan Cox	:	Added a zapped field for tcp to note
+ *					a socket is reset and must stay shut up
+ *		Alan Cox	:	New fields for options
+ *	Pauline Middelink	:	identd support
+ *		Alan Cox	:	Eliminate low level recv/recvfrom
+ *		David S. Miller	:	New socket lookup architecture.
+ *              Steve Whitehouse:       Default routines for sock_ops
+ *              Arnaldo C. Melo :	removed net_pinfo, tp_pinfo and made
+ *              			protinfo be just a void pointer, as the
+ *              			protocol specific parts were moved to
+ *              			respective headers and ipv4/v6, etc now
+ *              			use private slabcaches for its socks
+ *              Pedro Hortas	:	New flags field for socket options
+ */
 #ifndef _SOCK_H
 #define _SOCK_H
 

@@ -636,8 +636,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if err != nil {
 			log.WithError(err).Panic("Failed to create perf event")
 		}
-		// start the event poller to read data from the Perf event buffers
-		perfEvnt.Poll()
+		err = startEventPoller(perfEvnt)
+		if err != nil {
+			log.WithError(err).Panic("Failed to start the event poller")
+		}
 		err = kprobe.New(config.BPFLogLevel, perfEvnt, bpfMapContext)
 		if err != nil {
 			log.WithError(err).Panic("Failed to install kprobes")

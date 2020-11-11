@@ -18,9 +18,9 @@ import (
 	"encoding/binary"
 	"io"
 	"runtime"
+	"unsafe"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
@@ -87,7 +87,6 @@ type eventRaw interface {
 type Events interface {
 	Next() (Event, error)
 	Map() bpf.Map
-	Poll()
 	Close() error
 }
 
@@ -167,39 +166,12 @@ func parseTcpStats(tcpStats TCPv4Events) {
 	// Parse TCP stats and send it to flow collector
 }
 
-func (e *perfEventsReader) Poll() {
-	go func() {
-		for {
-			event, err := e.Next()
-			if err != nil {
-				log.WithError(err).Warn("Failed to get next event")
-				continue
-			}
-			if event == nil {
-				continue
-			}
-			switch event.Type() {
-			case TypeTcpv4Events:
-				if tcpStats, ok := event.(TCPv4Events); !ok {
-					log.WithError(err).Warn("Failed to get proper event data")
-					continue
-				} else {
-					parseTcpStats(tcpStats)
-				}
-			default:
-				continue
-			}
-		}
-	}()
-	return
-}
-
 type eventHdr struct {
 	Type uint16
 	Len  uint16
 }
 
-type perfEventTcpStats struct {
+type eventTcpStats struct {
 	Pid     uint32
 	Saddr   uint32
 	Daddr   uint32
@@ -225,10 +197,10 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 	switch Type(hdr.Type) {
 	case TypeTcpv4Events:
-		var tcpStats perfEventTcpStats
-		if err := binary.Read(rd, binary.LittleEndian, &tcpStats); err != nil {
-			return nil, errors.Errorf("Error reading data")
-		}
+		var tcpStats eventTcpStats
+		tcpStatsPtr := (unsafe.Pointer)(&tcpStats)
+		tcpStatsAsBytes := *(*[unsafe.Sizeof(eventTcpStats{})]byte)(tcpStatsPtr)
+		copy(tcpStatsAsBytes[:], raw.Data())
 		return TCPv4Events(tcpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
@@ -237,7 +209,7 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 // LostEvents is an event that reports how many events were missed.
 type LostEvents int
-type TCPv4Events perfEventTcpStats
+type TCPv4Events eventTcpStats
 
 // Type returns TypeLostEvents
 func (LostEvents) Type() Type {

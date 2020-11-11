@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kprobe
+package intdataplane
 
 import (
-	"github.com/projectcalico/felix/bpf"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/bpf/events"
 )
 
-const tcpV4KeySize = 16
-const tcpV4ValueSize = 16
-
-var TCPv4MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_tcpkp",
-	Type:       "lru_hash",
-	KeySize:    tcpV4KeySize,
-	ValueSize:  tcpV4ValueSize,
-	MaxEntries: 511000,
-	Name:       "cali_v4_tcpkp",
-}
-
-func AttachTCPv4(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(TCPv4MapParameters)
+func startEventPoller(e events.Events) error {
+	go func() {
+		for {
+			event, err := e.Next()
+			if err != nil {
+				log.WithError(err).Warn("Failed to get next event")
+				continue
+			}
+			if event == nil {
+				continue
+			}
+			switch event.Type() {
+			case events.TypeTcpv4Events:
+				log.Debugf("Received TCP v4 event")
+			default:
+				log.Warn("Unknown event type")
+				continue
+			}
+		}
+	}()
+	return nil
 }

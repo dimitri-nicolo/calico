@@ -15,6 +15,11 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+// This contents of this file are taken bpf-tracing.h from the kernel with
+// the below license
+
+/* SPDX-License-Identifier: (LGPL-2.1 OR BSD-2-Clause) */
+
 #ifndef __TRACING_H__
 #define __TRACING_H__
 #if defined(__TARGET_ARCH_amd64)

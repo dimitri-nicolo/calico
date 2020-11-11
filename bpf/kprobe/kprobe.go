@@ -47,7 +47,7 @@ func New(logLevel string, evnt events.Events, mc *bpf.MapContext) error {
 		log.WithError(err).Panic("Failed to mount debug fs")
 	}
 
-	tcpv4Map := TcpV4Map(mc)
+	tcpv4Map := AttachTCPv4(mc)
 	err = tcpv4Map.EnsureExists()
 	if err != nil {
 		log.WithError(err).Panic("Failed to create kprobe tcp v4 BPF map.")
