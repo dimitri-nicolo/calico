@@ -40,8 +40,9 @@ type FlowLogsParams struct {
 	Actions              []string        `json:"actions"`
 	Namespace            string          `json:"namespace"`
 	SourceDestNamePrefix string          `json:"srcDstNamePrefix"`
-	PolicyPreview        *PolicyPreview  `json:"policyPreview"`
+	PolicyPreviews       []PolicyPreview `json:"policyPreviews"`
 	Unprotected          bool            `json:"unprotected"`
+	ImpactedOnly         bool            `json:"impactedOnly"`
 
 	// Parsed timestamps
 	startDateTime       *time.Time
@@ -56,25 +57,22 @@ type LabelSelector struct {
 	Values   []string `json:"values"`
 }
 
-//TODO: What was wrong with ResourceChange type. Why do we no longer support multiple updates in a single preview
-// transaction?  Let's get rid of this and go back to a slice of ResourceChange
 type PolicyPreview struct {
 	Verb          string             `json:"verb"`
 	NetworkPolicy resources.Resource `json:"networkPolicy"`
-	ImpactedOnly  bool               `json:"impactedOnly"`
 }
 
-// policyPreviewTrial is used to temporarily unmarshal the PolicyPreview so that we can extract the TypeMeta from
+// policyPreviewTrial is used to temporarily unmarshal the PolicyPreviews so that we can extract the TypeMeta from
 // the resource definition.
 type policyPreviewTrial struct {
 	NetworkPolicy metav1.TypeMeta `json:"networkPolicy"`
 }
 
-// Defined an alias for the ResourceChange so that we can json unmarshal it from the PolicyPreview.UnmarshalJSON
+// Defined an alias for the ResourceChange so that we can json unmarshal it from the PolicyPreviews.UnmarshalJSON
 // without causing recursion (since aliased types do not inherit methods).
 type AliasedPolicyPreview *PolicyPreview
 
-// UnmarshalJSON allows unmarshalling of a PolicyPreview from JSON bytes. This is required because the Resource
+// UnmarshalJSON allows unmarshalling of a PolicyPreviews from JSON bytes. This is required because the Resource
 // field is an interface, and so it needs to be set with a concrete type before it can be unmarshalled.
 func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
 	// Unmarshal into the "trial" struct that allows us to easily extract the TypeMeta of the resource.
@@ -168,7 +166,7 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 
 		var response interface{}
 		var stat int
-		if params.PolicyPreview == nil {
+		if len(params.PolicyPreviews) == 0 {
 			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
 		} else {
 			rbacHelper := NewPolicyImpactRbacHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
@@ -222,7 +220,7 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	actions := lowerCaseParams(url["actions"])
 	namespace := strings.ToLower(url.Get("namespace"))
 	srcDstNamePrefix := strings.ToLower(url.Get("srcDstNamePrefix"))
-	policyPreview, err := getPolicyPreview(url.Get("policyPreview"))
+	policyPreviews, err := getPolicyPreviews(url["policyPreview"])
 	if err != nil {
 		log.WithError(err).Info("Error extracting policyPreview")
 		return nil, errParseRequest
@@ -230,6 +228,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	unprotected := false
 	if unprotectedValue := url.Get("unprotected"); unprotectedValue != "" {
 		if unprotected, err = strconv.ParseBool(unprotectedValue); err != nil {
+			return nil, errParseRequest
+		}
+	}
+	impactedOnly := false
+	if impactedOnlyValue := url.Get("impactedOnly"); impactedOnlyValue != "" {
+		if impactedOnly, err = strconv.ParseBool(impactedOnlyValue); err != nil {
 			return nil, errParseRequest
 		}
 	}
@@ -258,7 +262,8 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		Actions:              actions,
 		Namespace:            namespace,
 		SourceDestNamePrefix: srcDstNamePrefix,
-		PolicyPreview:        policyPreview,
+		PolicyPreviews:       policyPreviews,
+		ImpactedOnly:         impactedOnly,
 		Unprotected:          unprotected,
 		startDateTime:        startDateTime,
 		endDateTime:          endDateTime,
@@ -293,11 +298,9 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	if !valid {
 		return nil, errInvalidActionUnprotected
 	}
-	if params.PolicyPreview != nil {
-		policyPreviewValid := validatePolicyPreview(*policyPreview)
-		if !policyPreviewValid {
-			return nil, errInvalidPolicyPreview
-		}
+	policyPreviewValid := validatePolicyPreviews(params.PolicyPreviews)
+	if !policyPreviewValid {
+		return nil, errInvalidPolicyPreview
 	}
 
 	return params, nil
@@ -422,18 +425,24 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	query := buildFlowLogsQuery(params)
 	index := getClusterFlowIndex(params.ClusterName)
 
-	policyChange := pippkg.ResourceChange{
-		Action:   params.PolicyPreview.Verb,
-		Resource: params.PolicyPreview.NetworkPolicy,
+	// Convert the input format to the PIP format.
+	// TODO(rlb): We don't need both formats, and the PIP format has the more generically named "Resource" field rather
+	//            than limiting to network policies.
+	resourceChanges := make([]pippkg.ResourceChange, len(params.PolicyPreviews))
+	for i, pp := range params.PolicyPreviews {
+		resourceChanges[i] = pippkg.ResourceChange{
+			Action:   pp.Verb,
+			Resource: pp.NetworkPolicy,
+		}
 	}
 
 	return &pippkg.PolicyImpactParams{
 		Query:           query,
 		DocumentIndex:   index,
 		ClusterName:     params.ClusterName,
-		ResourceActions: []pippkg.ResourceChange{policyChange},
+		ResourceActions: resourceChanges,
 		Limit:           params.Limit,
-		ImpactedOnly:    params.PolicyPreview.ImpactedOnly,
+		ImpactedOnly:    params.ImpactedOnly,
 		FromTime:        params.startDateTime,
 		ToTime:          params.endDateTime,
 	}
@@ -443,9 +452,15 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 // verify RBAC based on the previewed settings and return the results from elastic.
 func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, pip pippkg.PIP, rbacHelper PolicyImpactRbacHelper) (interface{}, int, error) {
 
-	if params.PolicyPreview.NetworkPolicy == nil {
+	// Check a NP is supplied in every request.
+	if len(params.PolicyPreviews) == 0 {
 		// Expect the policy preview to contain a network policy.
 		return nil, http.StatusBadRequest, errors.New("no network policy specified in preview request")
+	}
+	for i := range params.PolicyPreviews {
+		if params.PolicyPreviews[i].NetworkPolicy == nil {
+			return nil, http.StatusBadRequest, errors.New("no network policy specified in preview request")
+		}
 	}
 
 	// This is a PIP request. Extract the PIP parameters.

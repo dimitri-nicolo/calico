@@ -36,6 +36,7 @@ replace (
 )
 
 require (
+	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0

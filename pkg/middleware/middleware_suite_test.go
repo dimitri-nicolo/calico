@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPolicyCalc(t *testing.T) {
+func TestMiddleware(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Middleware Suite")

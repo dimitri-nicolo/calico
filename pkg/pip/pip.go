@@ -84,19 +84,19 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 	// If there was an error, check for a time out. If it timed out just flag this in the response, but return whatever
 	// data we already have. Otherwise return the error.
 	// For timeouts we have a couple of mechanisms for hitting this:
-	// -  The elastic search query returns a timeout.
 	// -  We exceed the context deadline.
+	// -  The elastic search query returns a timeout.
 	var timedOut bool
 	if err != nil {
-		if err == err.(pelastic.TimedOutError) {
-			// Response from ES indicates a handled timeout.
-			log.Info("Response from ES indicates time out - flag results as timedout")
-			timedOut = true
-		} else if ctxIn.Err() == nil && ctxWithTimeout.Err() == context.DeadlineExceeded {
+		if ctxIn.Err() == nil && ctxWithTimeout.Err() == context.DeadlineExceeded {
 			// The context passed to us has no error, but our context with timeout is indicating it has timed out.
 			// We need to check the context error rather than checking the returned error since elastic wraps the
 			// original context error.
 			log.Info("Context deadline exceeded - flag results as timedout")
+			timedOut = true
+		} else if _, ok := err.(pelastic.TimedOutError); ok {
+			// Response from ES indicates a handled timeout.
+			log.Info("Response from ES indicates time out - flag results as timedout")
 			timedOut = true
 		} else {
 			// Just pass the received error up the stack.
