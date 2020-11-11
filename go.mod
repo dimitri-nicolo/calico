@@ -3,7 +3,7 @@ module github.com/tigera/es-proxy
 go 1.15
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201110190917-07e36963573c
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201110205817-83ab9d57b3eb
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201110175853-81b3fba3aa79
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201110181147-79c25aa7fdd0
@@ -36,7 +36,6 @@ replace (
 )
 
 require (
-	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
