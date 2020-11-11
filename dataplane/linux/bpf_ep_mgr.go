@@ -691,7 +691,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 			"Workload interface with no endpoint in datastore, installing default-drop program.")
 	}
 
-	// If tier or profileIDs is nil, this will return an empty set of rules but updatePolicyProgram appends a
+	// If tiers or profileIDs is nil, this will return an empty set of rules but updatePolicyProgram appends a
 	// drop rule, giving us default drop behaviour in that case.
 	rules := m.extractRules(tiers, profileIDs, polDirection)
 
@@ -909,9 +909,9 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType
 	return ap
 }
 
-func (m *bpfEndpointManager) extractRules(tiers2 []*proto.TierInfo, profileNames []string, direction PolDirection) [][][]*proto.Rule {
+func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames []string, direction PolDirection) [][][]*proto.Rule {
 	var allRules [][][]*proto.Rule
-	for _, tier := range tiers2 {
+	for _, tier := range tiers {
 		var pols [][]*proto.Rule
 		directionalPols := tier.IngressPolicies
 		if direction == PolDirnEgress {
