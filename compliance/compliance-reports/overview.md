@@ -1,6 +1,7 @@
 ---
 title: Configure compliance reports
 description: Get the reports you need for regulatory compliance on Kubernetes workloads and environments.
+canonical_url: '/compliance/compliance-reports/overview'
 ---
 
 ### Big picture

@@ -1,6 +1,7 @@
 ---
 title: Configure compliance reporting for managed cloud providers
 description: Configure compliance reporting and audit logs for your managed Kubernetes cloud provider.
+canonical_url: '/compliance/compliance-reports/compliance-managed-cloud'
 ---
 
 ### Big picture
@@ -123,5 +124,5 @@ data:
 
 ### Above and beyond
 
-- [Inventory auditing]({{site.baseurl}}/security/compliance-reports)
-- [CIS benchmarks]({{site.baseurl}}/security/compliance-reports-cis)
+- [Inventory auditing]({{site.baseurl}}/compliance/compliance-reports/)
+- [CIS benchmarks]({{site.baseurl}}/compliance/compliance-reports-cis)
