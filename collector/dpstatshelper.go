@@ -120,6 +120,7 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 			InitialReportingDelay:        DefaultInitialReportingDelay,
 			ExportingInterval:            DefaultExportingInterval,
 			ConntrackPollingInterval:     DefaultConntrackPollingInterval,
+			EnableServices:               configParams.FlowLogsFileIncludeService,
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
 		},

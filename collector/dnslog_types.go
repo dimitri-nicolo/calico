@@ -60,14 +60,6 @@ type DNSSpec struct {
 	Latency DNSLatency
 }
 
-type DNSSpecEncoded struct {
-	RRSets       DNSRRSets   `json:"rrsets"`
-	Servers      []DNSServer `json:"servers"`
-	ClientLabels DNSLabels   `json:"clientLabels"`
-	DNSStats
-	Latency DNSLatency `json:"latency"`
-}
-
 func (a *DNSSpec) Merge(b DNSSpec) {
 	for e, l := range b.Servers {
 		if _, ok := a.Servers[e]; ok {
@@ -94,23 +86,6 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 		a.Latency.Max = b.Latency.Max
 	}
 	a.Latency.Count += b.Latency.Count
-}
-
-func (a *DNSSpec) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.Encode())
-}
-
-func (a *DNSSpec) Encode() *DNSSpecEncoded {
-	b := &DNSSpecEncoded{
-		RRSets:       a.RRSets,
-		ClientLabels: a.ClientLabels,
-		DNSStats:     a.DNSStats,
-		Latency:      a.Latency,
-	}
-	for e, l := range a.Servers {
-		b.Servers = append(b.Servers, DNSServer{e, l})
-	}
-	return b
 }
 
 type DNSName struct {
@@ -456,7 +431,11 @@ type DNSExcessLog struct {
 }
 
 func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
-	e := d.DNSSpec.Encode()
+	// Convert servers from a map to a slice.
+	var dnsServers []DNSServer
+	for endpointMeta, labels := range d.Servers {
+		dnsServers = append(dnsServers, DNSServer{endpointMeta, labels})
+	}
 
 	res := &DNSLog{
 		StartTime:       startTime,
@@ -467,13 +446,13 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		ClientNameAggr:  d.ClientMeta.AggregatedName,
 		ClientNamespace: d.ClientMeta.Namespace,
 		ClientLabels:    d.ClientLabels,
-		Servers:         e.Servers,
+		Servers:         dnsServers,
 		QName:           QName(d.Question.Name),
 		QClass:          d.Question.Class,
 		QType:           d.Question.Type,
 		RCode:           d.ResponseCode,
-		RRSets:          e.RRSets,
-		Latency:         e.Latency,
+		RRSets:          d.RRSets,
+		Latency:         d.Latency,
 	}
 
 	if d.ClientMeta.IP != flowLogFieldNotIncluded {
@@ -483,7 +462,7 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 	if !includeLabels {
 		res.ClientLabels = nil
 		res.Servers = nil
-		for _, server := range e.Servers {
+		for _, server := range dnsServers {
 			server.Labels = nil
 			res.Servers = append(res.Servers, server)
 		}
