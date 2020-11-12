@@ -51,7 +51,7 @@ type CalicoServerOptions struct {
 	DisableAuth bool
 
 	// Print a swagger file at desired path and exit.
-	PrintSwagger bool
+	PrintSwagger    bool
 	SwaggerFilePath string
 
 	// Enable Admission Controller support.
