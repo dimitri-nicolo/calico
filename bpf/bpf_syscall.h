@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <linux/perf_event.h>
 
 union bpf_attr *bpf_attr_alloc() {
    union bpf_attr *attr = malloc(sizeof(union bpf_attr));
@@ -168,3 +169,18 @@ int bpf_map_load_multi(__u32 map_fd,
    }
    return count;
 }
+
+int perf_event_open_tracepoint(int tracepoint_id, int pid, int cpu,
+                           int group_fd, unsigned long flags)
+{
+        struct perf_event_attr attr = {0,};
+        attr.type = PERF_TYPE_TRACEPOINT;
+        attr.sample_type = PERF_SAMPLE_RAW;
+        attr.sample_period = 1;
+        attr.wakeup_events = 1;
+        attr.config = tracepoint_id;
+
+        return syscall(__NR_perf_event_open, &attr, pid, cpu,
+                      group_fd, flags);
+}
+

@@ -33,7 +33,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20201104205331-f2a8dd6dfef1
+	github.com/projectcalico/pod2daemon v0.0.0-20201110235807-ac6493bc3a0a
 	github.com/projectcalico/typha v0.7.3-0.20201007232318-2dba00d728ad
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
@@ -67,8 +67,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201110175853-81b3fba3aa79
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201110181147-79c25aa7fdd0
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201111102314-74ad1759de86
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

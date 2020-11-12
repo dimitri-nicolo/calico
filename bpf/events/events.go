@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"io"
 	"runtime"
+	"unsafe"
 
 	"github.com/pkg/errors"
 
@@ -33,7 +34,8 @@ const (
 	MaxCPUs = 512
 
 	// TypeLostEvents does not carry any other information except thenumber of lost events.
-	TypeLostEvents Type = iota
+	TypeLostEvents  Type = iota
+	TypeTcpv4Events Type = 1
 )
 
 // Event represents the common denominator of all events
@@ -84,6 +86,7 @@ type eventRaw interface {
 // Events is an interface for consuming events
 type Events interface {
 	Next() (Event, error)
+	Map() bpf.Map
 	Close() error
 }
 
@@ -155,9 +158,30 @@ func (e *perfEventsReader) Next() (Event, error) {
 	return e.next()
 }
 
+func (e *perfEventsReader) Map() bpf.Map {
+	return e.bpfMap
+}
+
+func parseTcpStats(tcpStats TCPv4Events) {
+	// Parse TCP stats and send it to flow collector
+}
+
 type eventHdr struct {
 	Type uint16
 	Len  uint16
+}
+
+type eventTcpStats struct {
+	Pid     uint32
+	Saddr   uint32
+	Daddr   uint32
+	Sport   uint16
+	Dport   uint16
+	TxBytes uint32
+	RxBytes uint32
+	SndBuf  uint32
+	RcvBuf  uint32
+	Comm    [16]byte
 }
 
 func parseEvent(raw eventRaw) (Event, error) {
@@ -172,6 +196,12 @@ func parseEvent(raw eventRaw) (Event, error) {
 	rd.TrimEnd(int(hdr.Len))
 
 	switch Type(hdr.Type) {
+	case TypeTcpv4Events:
+		var tcpStats eventTcpStats
+		tcpStatsPtr := (unsafe.Pointer)(&tcpStats)
+		tcpStatsAsBytes := *(*[unsafe.Sizeof(eventTcpStats{})]byte)(tcpStatsPtr)
+		copy(tcpStatsAsBytes[:], raw.Data())
+		return TCPv4Events(tcpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
@@ -179,8 +209,13 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 // LostEvents is an event that reports how many events were missed.
 type LostEvents int
+type TCPv4Events eventTcpStats
 
 // Type returns TypeLostEvents
 func (LostEvents) Type() Type {
 	return TypeLostEvents
+}
+
+func (TCPv4Events) Type() Type {
+	return TypeTcpv4Events
 }

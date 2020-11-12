@@ -79,7 +79,8 @@ const (
 	sockmapEndpointsMapVersion = "v1"
 	sockmapEndpointsMapName    = "calico_sk_endpoints_" + sockmapEndpointsMapVersion
 
-	defaultBPFfsPath = "/sys/fs/bpf"
+	defaultBPFfsPath   = "/sys/fs/bpf"
+	defaultDebugfsPath = "/sys/kernel/debug"
 )
 
 var (
@@ -193,6 +194,20 @@ func NewBPFLib(binDir string) (*BPFLib, error) {
 		cgroupV2Dir: cgroupV2Dir,
 		xdpDir:      xdpDir,
 	}, nil
+}
+
+func MountDebugfs() error {
+	var err error
+
+	mnt, err := isMount(defaultDebugfsPath)
+	if err != nil {
+		return err
+	}
+
+	if !mnt {
+		return syscall.Mount(defaultDebugfsPath, defaultDebugfsPath, "debugfs", 0, "")
+	}
+	return nil
 }
 
 func MaybeMountBPFfs() (string, error) {

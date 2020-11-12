@@ -291,7 +291,7 @@ ALL_BPF_PROGS=$(BPF_GPL_O_FILES) $(BPF_APACHE_O_FILES)
 build-bpf:
 	rm -f bpf-gpl/*.d bpf-apache/*.d
 	$(DOCKER_GO_BUILD) sh -c "make -j -C bpf-apache all && \
-	                          make -j -C bpf-gpl all ut-objs"
+	                          make -j -C bpf-gpl all ut-objs ARCH=$(ARCH)"
 
 clean-bpf:
 	rm -f bpf-gpl/*.d bpf-apache/*.d

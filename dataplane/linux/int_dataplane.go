@@ -41,7 +41,9 @@ import (
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
+	"github.com/projectcalico/felix/bpf/events"
 	bpfipsets "github.com/projectcalico/felix/bpf/ipsets"
+	"github.com/projectcalico/felix/bpf/kprobe"
 	"github.com/projectcalico/felix/bpf/nat"
 	bpfproxy "github.com/projectcalico/felix/bpf/proxy"
 	"github.com/projectcalico/felix/bpf/routes"
@@ -193,6 +195,7 @@ type Config struct {
 	BPFNodePortDSREnabled              bool
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
+	FlowLogsCollectProcessInfo         bool
 
 	SidecarAccelerationEnabled bool
 
@@ -624,12 +627,26 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	for i, r := range config.RulesConfig.WorkloadIfacePrefixes {
 		interfaceRegexes[i] = "^" + r + ".*"
 	}
+	bpfMapContext := &bpf.MapContext{
+		RepinningEnabled: config.BPFMapRepin,
+	}
 
+	if config.FlowLogsCollectProcessInfo {
+		perfEvnt, err := events.New(bpfMapContext, events.SourcePerfEvents)
+		if err != nil {
+			log.WithError(err).Panic("Failed to create perf event")
+		}
+		err = startEventPoller(perfEvnt)
+		if err != nil {
+			log.WithError(err).Panic("Failed to start the event poller")
+		}
+		err = kprobe.New(config.BPFLogLevel, perfEvnt, bpfMapContext)
+		if err != nil {
+			log.WithError(err).Panic("Failed to install kprobes")
+		}
+	}
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
-		bpfMapContext := &bpf.MapContext{
-			RepinningEnabled: config.BPFMapRepin,
-		}
 		// Register map managers first since they create the maps that will be used by the endpoint manager.
 		// Important that we create the maps before we load a BPF program with TC since we make sure the map
 		// metadata name is set whereas TC doesn't set that field.

@@ -87,6 +87,8 @@ MAKEFUNC(int, skb_pull_data, void *ctx, __u32 len)
 MAKEFUNC(int, csum_diff, __be32 *from, __u32 from_size, __be32 *to, __u32 to_size, __wsum seed)
 MAKEFUNC(uint64_t, get_socket_cookie, void *ctx)
 MAKEFUNC(__u64, get_current_pid_tgid, void)
+MAKEFUNC(int, probe_read, void *dst, __u32 size, const void *unsafe_ptr)
+MAKEFUNC(int, get_current_comm, void *buf, __u32 size_of_buf)
 MAKEFUNC(int, perf_event_output, void *ctx, void *map, __u64 flags, void *data, __u64 size)
 
 CALI_BPF_INLINE __u32 port_to_host(__u32 port) {

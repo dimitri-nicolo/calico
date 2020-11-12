@@ -372,6 +372,15 @@ configRetry:
 		}
 	}
 
+	if configParams.FlowLogsCollectProcessInfo {
+		if err := dp.SupportsBPF(); err != nil {
+			log.Error("FlowLogsCollectProcessInfo enabled but BPF not supported by the kernel. Disabling FlowLogsCollectProcessInfo.")
+			_, err := configParams.OverrideParam("FlowLogsCollectProcessInfo", "false")
+			if err != nil {
+				log.WithError(err).Panic("Bug: failed to override config parameter")
+			}
+		}
+	}
 	// We're now both live and ready.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 
