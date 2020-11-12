@@ -205,6 +205,12 @@ gen-files .generate_files: lint-cache-dir .generate_execs clean-generated
 	touch .generate_files
 	$(MAKE) fix
 
+.PHONY: gen-swagger
+gen-swagger: $(BINDIR)/apiserver run-kubernetes-server
+	$(BINDIR)/apiserver --secure-port 5443 \
+		--print-swagger \
+		--kubeconfig test/test-apiserver-kubeconfig.conf --swagger-file-path artifacts/swagger
+
 ###############################################################################
 # ensure we have a real imagetag
 ###############################################################################
