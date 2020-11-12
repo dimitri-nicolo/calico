@@ -86,12 +86,14 @@ func (f *clientSetFactory) RBACAuthorizerForCluster(clusterId string) (auth.RBAC
 
 func (f *clientSetFactory) restConfigForCluster(clusterID string) *rest.Config {
 	restConfig := f.copyRESTConfig()
-	restConfig.Host = f.multiClusterForwardingEndpoint
-	restConfig.CAFile = f.multiClusterForwardingCA
-	restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-		return &addHeaderRoundTripper{
-			headers: map[string][]string{XClusterIDHeader: {clusterID}},
-			rt:      rt,
+	if clusterID != "" && clusterID != DefaultCluster {
+		restConfig.Host = f.multiClusterForwardingEndpoint
+		restConfig.CAFile = f.multiClusterForwardingCA
+		restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+			return &addHeaderRoundTripper{
+				headers: map[string][]string{XClusterIDHeader: {clusterID}},
+				rt:      rt,
+			}
 		}
 	}
 
