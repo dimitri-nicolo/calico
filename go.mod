@@ -13,6 +13,7 @@ require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/go-ini/ini v1.44.0
+	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.4.2
@@ -42,7 +43,7 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
 	github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19
-	github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392
+	github.com/tigera/nfnetlink v0.0.0-20201111230626-bbfcd8d4b9bd
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7

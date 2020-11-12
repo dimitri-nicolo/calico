@@ -21,13 +21,13 @@ import (
 	"github.com/mipearson/rfw"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/nfnetlink"
-	"github.com/tigera/nfnetlink/nfnl"
-
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
+
+	"github.com/tigera/nfnetlink"
+	"github.com/tigera/nfnetlink/nfnl"
 )
 
 const (
@@ -49,6 +49,7 @@ type Config struct {
 	InitialReportingDelay time.Duration
 	ExportingInterval     time.Duration
 	EnableNetworkSets     bool
+	EnableServices        bool
 
 	MaxOriginalSourceIPsIncluded int
 }
@@ -105,12 +106,12 @@ func (c *collector) ReportingChannel() chan<- *proto.DataplaneStats {
 // to NFLog stats.
 // TODO: This will be removed when NFLOG and Conntrack handling is moved to the int_dataplane.
 func (c *collector) SubscribeToNflog() {
-	err := subscribeToNflog(c.config.IngressGroup, c.config.NfNetlinkBufSize, c.nfIngressC, c.nfIngressDoneC)
+	err := subscribeToNflog(c.config.IngressGroup, c.config.NfNetlinkBufSize, c.nfIngressC, c.nfIngressDoneC, c.config.EnableServices)
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
 	}
-	err = subscribeToNflog(c.config.EgressGroup, c.config.NfNetlinkBufSize, c.nfEgressC, c.nfEgressDoneC)
+	err = subscribeToNflog(c.config.EgressGroup, c.config.NfNetlinkBufSize, c.nfEgressC, c.nfEgressDoneC, c.config.EnableServices)
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
@@ -250,14 +251,21 @@ func (c *collector) applyConntrackStatUpdate(
 		data.SetConntrackCountersReverse(reversePackets, reverseBytes)
 
 		if entryExpired {
-			// Try to report metrics first before trying to expire the data.
-			// This needs to be done in this order because if this is the
-			// first time we are seeing this connection then we'll have
-			// to report an update followed by expiring it signaling
-			// the completion.
-			c.reportMetrics(data)
-			c.expireMetrics(data)
-			c.deleteData(data)
+			if !data.VerdictFound() {
+				// We have not yet found the verdict trace index, so expiring this flow will contain incomplete
+				// NFLOG data. Mark as expire and dirty and let this be picked up by a subsequent sweep either from
+				// timer or NFLOG update.
+				data.SetExpired()
+			} else {
+				// Try to report metrics first before trying to expire the data.
+				// This needs to be done in this order because if this is the
+				// first time we are seeing this connection then we'll have
+				// to report an update followed by expiring it signaling
+				// the completion.
+				c.reportMetrics(data)
+				c.expireMetrics(data)
+				c.deleteData(data)
+			}
 		}
 	}
 }
@@ -288,6 +296,18 @@ func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchI
 		// The rule has just been set, update the last rule update time. This provides a window during which we can
 		// gather any remaining rule hits.
 		data.ruleUpdatedAt = monotime.Now()
+
+		// If the connection is marked as expired and we now have complete policy set, then expire the flow and delete
+		// it.
+		if data.IsExpired() && data.VerdictFound() {
+			c.reportMetrics(data)
+			c.expireMetrics(data)
+			c.deleteData(data)
+		} else {
+			// The rule has just been set, update the last rule update time. This provides a window during which we can
+			// gather any remaining rule hits.
+			data.ruleUpdatedAt = monotime.Now()
+		}
 	}
 }
 
@@ -351,10 +371,8 @@ func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// than the actual workload/host endpoint. To continue processing
 	// this conntrack entry, we need the actual IP address that corresponds
 	// to a Workload/Host Endpoint.
-	// TODO(rlb): OriginalTupleWithoutDNAT is a misleading name IMHO - really we are getting the final DNATed
-	//            tuple.
 	if ctEntry.IsDNAT() {
-		ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
+		ctTuple, err = ctEntry.OriginalTuplePostDNAT()
 		if err != nil {
 			log.Error("Error when extracting tuple without DNAT:", err)
 			return
@@ -374,8 +392,6 @@ func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
 	if data := c.getDataAndUpdateEndpoints(tuple, entryExpired, expectedLocalEither); data != nil {
-		// Pre-DNAT service information is only available through conn track, so use this opportunity to update the
-		// dest service information if it's not already established.
 		if data.dstSvc.Name == "" {
 			if ctEntry.IsDNAT() {
 				// Destination is NATed, look up service from the pre-DNAT record.
@@ -424,6 +440,19 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 		localMatchData = localEp.Egress
 	default:
 		return
+	}
+
+	// If no service name has been determined, check if the destination corresponds to a service.
+	if data.dstSvc.Name == "" {
+		log.Debug("No service name configured")
+		if nPktAggr.IsDNAT {
+			// Destination is NATed, look up service from the pre-DNAT record.
+			origTuple := extractTupleFromCtEntryTuple(nPktAggr.OriginalTuple)
+			data.dstSvc, _ = c.luc.GetServiceFromPreDNATDest(origTuple.dst, origTuple.l4Dst, tuple.proto)
+		} else if _, ok := c.luc.GetNode(tuple.dst); ok {
+			// Destination is a node, so could be a node port service.
+			data.dstSvc, _ = c.luc.GetNodePortService(tuple.l4Dst, tuple.proto)
+		}
 	}
 
 	for _, prefix := range nPktAggr.Prefixes {
@@ -549,8 +578,8 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 }
 
-func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}) error {
-	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan)
+func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}, enableServices bool) error {
+	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan, enableServices)
 }
 
 func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
