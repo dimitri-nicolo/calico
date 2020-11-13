@@ -1,4 +1,4 @@
 FROM scratch
 
 ADD bin/envoy-collector-amd64 /envoy-collector
-CMD ["/ingress-collector"]
+CMD ["/envoy-collector"]

@@ -5,10 +5,10 @@ version: 2
 cli:
   server: https://app.fossa.com
   fetcher: custom
-  project: git@github.com:tigera/ingress-collector.git
+  project: git@github.com:tigera/envoy-collector.git
 analyze:
   modules:
-  - name: github.com/tigera/ingress-collector/cmd/ingress-collector
+  - name: github.com/tigera/envoy-collector/cmd/envoy-collector
     type: go
-    target: github.com/tigera/ingress-collector/cmd/ingress-collector
-    path: cmd/ingress-collector
+    target: github.com/tigera/envoy-collector/cmd/envoy-collector
+    path: cmd/envoy-collector

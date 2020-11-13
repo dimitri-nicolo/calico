@@ -7,10 +7,10 @@ import (
 	"flag"
 	"sync"
 
-	"github.com/tigera/ingress-collector/pkg/collector"
-	"github.com/tigera/ingress-collector/pkg/config"
-	"github.com/tigera/ingress-collector/pkg/felixclient"
-	"github.com/tigera/ingress-collector/uds"
+	"github.com/tigera/envoy-collector/pkg/collector"
+	"github.com/tigera/envoy-collector/pkg/config"
+	"github.com/tigera/envoy-collector/pkg/felixclient"
+	"github.com/tigera/envoy-collector/uds"
 )
 
 func main() {

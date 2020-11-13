@@ -5,5 +5,5 @@ bin/
 report/
 Makefile.common*
 .envoy-collector*
-.ingress-collector*
+*.log
 .idea/

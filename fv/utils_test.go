@@ -14,11 +14,11 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/libcalico-go/lib/logutils"
-	"github.com/tigera/ingress-collector/pkg/collector"
-	"github.com/tigera/ingress-collector/pkg/config"
-	"github.com/tigera/ingress-collector/pkg/felixclient"
-	"github.com/tigera/ingress-collector/proto"
-	"github.com/tigera/ingress-collector/uds"
+	"github.com/tigera/envoy-collector/pkg/collector"
+	"github.com/tigera/envoy-collector/pkg/config"
+	"github.com/tigera/envoy-collector/pkg/felixclient"
+	"github.com/tigera/envoy-collector/proto"
+	"github.com/tigera/envoy-collector/uds"
 )
 
 const ListenerSocket = "policysync.sock"

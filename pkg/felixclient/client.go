@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/tigera/ingress-collector/pkg/collector"
-	"github.com/tigera/ingress-collector/proto"
+	"github.com/tigera/envoy-collector/pkg/collector"
+	"github.com/tigera/envoy-collector/proto"
 )
 
 type FelixClient interface {

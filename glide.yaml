@@ -1,4 +1,4 @@
-package: github.com/tigera/ingress-collector
+package: github.com/tigera/envoy-collector
 import:
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git

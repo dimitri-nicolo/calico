@@ -112,7 +112,7 @@ else
 endif
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go build $(LDFLAGS) -v -o bin/envoy-collector-$(ARCH) \
-	   	./cmd/ingress-collector'
+	   	./cmd/envoy-collector'
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -374,8 +374,8 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /ingress-collector --version | grep '^$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /ingress-collector --version` "\nExpected version: $(VERSION)"; \
+	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /envoy-collector --version | grep '^$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /envoy-collector --version` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \

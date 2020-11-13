@@ -1,4 +1,4 @@
-module github.com/tigera/ingress-collector
+module github.com/tigera/envoy-collector
 
 go 1.13
 
