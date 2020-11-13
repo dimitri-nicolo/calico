@@ -8,13 +8,13 @@ canonical_url: '/maintenance/troubleshoot/elasticsearch'
 
 The following user-configured resources are related to Elasticsearch:
 
-- Log storage settings
-  - Elasticsearch (for example, nodeCount amd replicas)
+- [LogStorage]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogStorage). It has settings for:
+  - Elasticsearch (for example, nodeCount and replicas)
   - Kubernetes (for example, resourceRequirements, storage and nodeSelectors)
   - Tigera (for example, data retention)
 
-- Storage classes and persistent volume provisioners
-  - Storage classes define different types of storage
+- [StorageClasses]({{site.baseurl}}/getting-started/create-storage)
+  - A StorageClass provides a way for administrators to describe different types of storage.
   - Persistent volumes for pod storage can be configured through storage classes or dynamic provisioners from cloud providers
 
 ### Diagnostic checklist
@@ -34,37 +34,60 @@ The following user-configured resources are related to Elasticsearch:
    `kubectl get all -n tigera-kibana` and/or `kubectl get all -n tigera-elasticsearch`
 1. Check if any of the pods in the `tigera-elasticsearch` namespace are pending.  
    `kubectl get pod -n tigera-elasticsearch`
-1. Check the TigerStatus for problems.  
+1. Check the TigeraStatus for problems.  
    `kubectl get tigerastatus -o yaml`
-1. Check pod status and variables. 
-1. Exec into Kibana and verify that the pod is running:
-      ```
-      $ df
-      $ cat /usr/share/kibana/config/kibana.yml
-      ```
-      Exec into a fluentd pod and verify these variables:
-      ```
-      echo $ELASTIC_HOST
-      echo $ELASTIC_PASSWORD
-      echo $ELASTIC_PORT
-      echo $ELASTIC_USERNAME
-      exit
-      ```
-1. Exec into Elasticsearch and verify that the pod is running:
-      ```
-      $ df
-      $ cat /mnt/elastic-internal/elasticsearch-config/elasticsearch.yml
-      ```
-      Then, port forward the Elasticsearch service and see if the variables work:
 
-     `kubectl port-forward -n tigera-elasticsearch svc/tigera-secure-es-http 9200:9200`
-     `curl https://localhost:9200 -k -u"$ELASTIC_USERNAME:$ELASTIC_PASSWORD"`  
+### How to apply a valid license
+- If you have an platinum license, log in to Kibana and apply the license.
+- If you have an enterprise license, apply it [using kubectl](https://www.elastic.co/guide/en/cloud-on-k8s/1.3/k8s-licensing.html) in the `tigera-eck-operator` namespace.
+
+### How to create a new cluster
+> **Important**: Be aware that removing LogStorage temporarily removes Elasticsearch from your cluster. Features that depend on LogStorage are temporarily unavailable, including the dashboards in the Manager UI. Data ingestion is also temporarily paused, but will resume when the LogStorage is up and running again.
+{: .alert .alert-danger}
+   
+Follow these steps to create a new Elasticsearch cluster. A new trial will be started that is valid for 30 days.
+1. (Optional) To delete all current data follow this step. For each PersistentVolume in StorageClass `tigera-elasticsearch` that is currently mounted, set the ReclaimPolicy to `Recycle` or `Delete`.
+1. Export your current LogStorage resource to a file.
+```bash
+kubectl get logstorage tigera-secure -o yaml --export=true > log-storage.yaml
+```
+
+1. Delete logstorage.
+```bash
+kubectl delete -f log-storage.yaml
+```
+
+1. Delete the trial license.
+```bash
+kubectl delete secret -n tigera-eck-operator trial-status
+```
+
+1. (Optional) If you made changes to the ReclaimPolicy in step 1, revert them so that it matches the value in StorageClass `tigera-elasticsearch` again.
+
+1. Apply the LogStorage again to create a new Elasticsearch cluster with a trial.
+```bash
+kubectl apply -f log-storage.yaml
+```
+
+1. Wait until your cluster is back up and running.
+```bash
+watch kubectl get tigerastatus
+```
+
+1. (Optional) If you have a valid license, [apply a license](#how-to-apply-a-valid-license).
 
 ### Common problems
 
+#### License is expired
+**Problem**: You did not replace the 30-day trial license with a valid license within 30 days of the installation. Or, you have deleted an Elasticsearch cluster, which can invalidate the trial license.
+
+**Solution/workaround**: [Apply a valid license](#how-to-apply-a-valid-license). Note that Elasticsearch still works without a license, 
+but threat defense and SSO login for Kibana are no longer available. It is possible to [reset Elasticsearch](#how-to-create-a-new-cluster) with another trial license 
+at the cost of losing data.
+
 #### Elasticsearch is pending
 
-**Solution/workaround**: Most often, the reason is due to the absence of a persistent volume that matches the PVC. Check that there is a Kubernetes node with enough CPU and memory. Check if the user is using `dataNodeSelector` in LogStorage.
+**Solution/workaround**: Most often, the reason is due to the absence of a PersistentVolume that matches the PersistentVolumeClaim. Check that there is a Kubernetes node with enough CPU and memory. If the field `dataNodeSelector` in  the LogStorage resource is used, make sure there are pods that match all the requirements.
 
 #### Pod cannot reach Elasticsearch
 
@@ -76,18 +99,12 @@ The following user-configured resources are related to Elasticsearch:
 
 If you are using a version prior to v2.8, the issue may be caused by the ValidatingWebhookConfiguration. Although we do not support modifying this admission webhook, consider deleting it as follows:
 
-`kubectl delete validatingwebhookconfigurations validating-webhook-configuration`
-`kubectl delete service -n tigera-eck-operator elastic-webhook-service`
+```bash
+kubectl delete validatingwebhookconfigurations validating-webhook-configuration
+kubectl delete service -n tigera-eck-operator elastic-webhook-service
+```
 
-As a last resort, you can temporarily remove your LogStorage and reapply it to the cluster. **Important!** Be aware that removing LogStorage temporarily removes Elasticsearch from your cluster. Features that depend on LogStorage are temporarily unavailable, including the dashboards in the Manager UI. Data ingestion is also temporarily paused, but will resume when the LogStorage is up and running again.
-
-Follow these steps:
-
-1. Export your current LogStorage CR to a file.  
-    `kubectl get logstorage tigera-secure -o yaml --export=true > log-storage.yaml`
-   
-1. Apply the LogStorage CR.  
-    `kubectl apply -f log-storage.yaml`
+As a last resort, create a new [Elasticsearch cluster](#how-to-create-a-new-cluster).
 
 #### Elasticsearch is slow 
 
