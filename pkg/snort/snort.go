@@ -61,9 +61,11 @@ func parseTime(timeStr dateSrcDst) (time.Time, error) {
 func RunScanSnort(a *api.Alert, pcap string, outPath string) error {
 	//We setup the directory for the snort alert result to be stored in
 	output := fmt.Sprintf("%s/%s", outPath, *a.Record.DestNameAggr)
+
+	log.Info("Running Snort Scan on: ", pcap)
 	err := os.MkdirAll(output, 0755)
 	if err != nil {
-		log.WithError(err).Error("Failed to create snort folder")
+		log.WithError(err).Error("Failed to create Snort folder")
 		return err
 	}
 	//Exec snort with pre-set flags, and redirect Stdout to a buffer
@@ -81,7 +83,6 @@ func RunScanSnort(a *api.Alert, pcap string, outPath string) error {
 		log.WithError(err).Error("Error running Alert on pcap: ", output)
 		return err
 	}
-	log.Info("Signature Triggered")
 	return nil
 }
 
@@ -89,11 +90,11 @@ func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, stor
 	//We look at the directory in which the snort alerts is stored
 	snortAlertDirs, err := filepath.Glob(fmt.Sprintf("%s/*", outPath))
 	if err != nil {
-		log.WithError(err).Error("Error matching snort directory")
+		log.WithError(err).Error("Error matching Snort directory")
 		return err
 	}
 
-	log.Info("Alert Directory found: ", snortAlertDirs)
+	log.Info("Parsing Snort result: ", snortAlertDirs)
 	for _, match := range snortAlertDirs {
 		//If found, we iterate each entry, parse it and filter the ones that we already sent to elasticsearch
 		path := fmt.Sprintf("%s/alert", match)
@@ -121,11 +122,11 @@ func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, stor
 	}
 	return nil
 }
-func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, a *api.Alert) error {
+func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, alert *api.Alert) error {
 
 	//Iterate list of Alert alerts and send them to Elasticsearch
-	for _, alert := range snortEvents {
-		description := fmt.Sprintf("[Alert] Signature Triggered on %s/%s", *a.Record.DestNamespace, *a.Record.DestNameAggr)
+	for _, event := range snortEvents {
+		description := fmt.Sprintf("[Alert] Signature Triggered on %s/%s", *alert.Record.DestNamespace, *alert.Record.DestNameAggr)
 		body := map[string]interface{}{
 			"severity":    100,
 			"description": description,
@@ -133,23 +134,24 @@ func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, a *api.Alert) e
 			"type":        "alert",
 			"record": map[string]interface{}{
 				"snort": map[string]interface{}{
-					"Description": alert.SigName,
-					"Category":    alert.Category,
-					"Occurence":   alert.DateSrcDst,
-					"Flags":       alert.Flags,
-					"Other":       alert.Other,
+					"Description": event.SigName,
+					"Category":    event.Category,
+					"Occurence":   event.DateSrcDst,
+					"Flags":       event.Flags,
+					"Other":       event.Other,
 				},
 			},
 			"time": time.Now().Unix(),
 		}
-		res, err := p.Client.Backend().Index().Index(hp.Index).Id("").BodyJson(body).Do(p.Ctx)
+		_, err := p.Client.Backend().Index().Index(hp.Index).Id("").BodyJson(body).Do(p.Ctx)
 
 		//If theres any issue sending the snort alert to ES, we log and exit
 		if err != nil {
 			log.WithError(err).Error("Error sending Alert alert")
 			return err
 		}
-		log.Infof("Alert alert sent: %v", res)
+		log.Infof("Alert: %v triggered Snort signature triggered: %v", alert.Alert, event.SigName)
 	}
+	log.Infof("%v Snort events created and sent to Elastic", len(snortEvents))
 	return nil
 }

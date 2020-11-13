@@ -21,7 +21,7 @@ import (
 func getNodeName() (string, error) {
 	//Get node name by reading NODENAME env variable.
 	nodename := os.Getenv("NODENAME")
-	log.Info("HoneyPod controller is running on node: ", nodename)
+	log.Info("Honeypod controller is running on node: ", nodename)
 	if nodename == "" {
 		return "", fmt.Errorf("empty NODENAME variable")
 	}
@@ -44,6 +44,24 @@ func GetPcaps(a *api.Alert, path string) ([]string, error) {
 	return matches, nil
 }
 
+func validateAlerts(res *api.AlertResult, node string) error {
+
+	if !strings.Contains(res.Alert.Alert, "honeypod.") {
+		return fmt.Errorf("skipping non honeypod alert")
+	}
+
+	record := res.Alert.Record
+	if record.DestNameAggr == nil || record.DestNamespace == nil || record.SourceNameAggr == nil || record.SourceNamespace == nil || record.HostKeyword == nil {
+		return fmt.Errorf("skipping invalid honeypod alert")
+	}
+
+	if *record.HostKeyword != node {
+		return fmt.Errorf("skipping non honeypod alert")
+	}
+
+	return nil
+}
+
 func loop(p *hp.HoneyPodLogProcessor, node string) error {
 	//We only look at the past 10min of alerts
 	endTime := time.Now()
@@ -58,11 +76,11 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 			return e.Err
 		}
 
-		//Skip alerts that are not Honeypod related and are not on our node
-		if !strings.Contains(e.Alert.Alert, "honeypod.") || *e.Record.HostKeyword != node {
+		err := validateAlerts(e, node)
+		if err != nil {
 			continue
 		}
-		log.Info("Valid alert Found: ", e.Alert)
+
 		//Store HoneyPod in buckets, using destination pod name aggregate
 		if filteredAlerts[*e.Alert.Record.DestNameAggr] == nil {
 			filteredAlerts[*e.Alert.Record.DestNameAggr] = e.Alert
@@ -74,27 +92,28 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 	for _, alert := range filteredAlerts {
 		// Alina: go leak routines
 		go func(alert *api.Alert) {
+			log.Infof("Processing Alert: %v", alert.Alert)
 			//Retrieve Pcap locations
 			pcapArray, err := GetPcaps(alert, hp.PcapPath)
 			if err != nil {
-				log.WithError(err).Error("Failed to retrieve Pcaps")
+				log.WithError(err).Error("Failed to retrieve pcaps")
 			}
-			log.Infof("HoneyPod Controller scanning: %v", pcapArray)
+			log.Infof("Alert: %v, scanning: %v", alert.Alert, pcapArray)
 			//Run snort on each pcap and send new alerts to Elasticsearch
 			for _, pcap := range pcapArray {
 				err := snort.RunScanSnort(alert, pcap, hp.SnortPath)
 				if err != nil {
-					log.WithError(err).Error("Failed to run snort on pcap")
+					log.WithError(err).Error("Failed to run Snort on pcap")
 				}
 			}
 			err = snort.ProcessSnort(alert, p, hp.SnortPath, store)
 			if err != nil {
-				log.WithError(err).Error("Failed to process snort on pcap")
+				log.WithError(err).Error("Failed to process Snort on pcap")
 			}
+			log.Infof("Alert: %v scanning completed", alert.Alert)
 		}(alert)
 	}
 
-	log.Info("HoneyPod controller loop completed")
 	p.LastProcessingTime = endTime
 
 	return nil
@@ -103,7 +122,7 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 func main() {
 
 	//Get Default Elastic client config, then modify URL
-	log.Info("Honeypod Controller started")
+	log.Info("Honeypod controller started")
 	cfg := elastic.MustLoadConfig()
 
 	//Try to connect to Elasticsearch
@@ -130,7 +149,7 @@ func main() {
 	//Start controller loop
 	// Alina : Make a ticker
 	for c := time.Tick(10 * time.Minute); ; <-c {
-		log.Info("HoneyPod controller loop started")
+		log.Info("Honeypod controller loop started")
 		// Alina: What is loop lasts longer ?
 		err = loop(p, node)
 		if err != nil {
