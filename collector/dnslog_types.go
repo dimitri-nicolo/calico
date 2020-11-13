@@ -414,6 +414,9 @@ type DNSLog struct {
 	RCode           DNSResponseCode   `json:"rcode"`
 	RRSets          DNSRRSets         `json:"rrsets"`
 	Latency         DNSLatency        `json:"latency"`
+	LatencyCount    int               `json:"latency_count"`
+	LatencyMean     time.Duration     `json:"latency_mean"`
+	LatencyMax      time.Duration     `json:"latency_max"`
 }
 
 type QName string
@@ -453,6 +456,9 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		RCode:           d.ResponseCode,
 		RRSets:          d.RRSets,
 		Latency:         d.Latency,
+		LatencyCount:    d.Latency.Count,
+		LatencyMean:     d.Latency.Mean,
+		LatencyMax:      d.Latency.Max,
 	}
 
 	if d.ClientMeta.IP != flowLogFieldNotIncluded {
