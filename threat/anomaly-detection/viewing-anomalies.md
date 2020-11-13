@@ -1,7 +1,7 @@
 ---
 title: View anomalies
 description: What you should know when viewing anomalies.
-canonical_url: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
+canonical_url: /threat/anomaly-detection/viewing-anomalies
 ---
 
 ### Running Anomaly Detection Jobs

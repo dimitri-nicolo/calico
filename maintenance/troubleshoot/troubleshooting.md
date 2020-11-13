@@ -225,4 +225,4 @@ Error when starting job from Machine Learning tab in Kibana:
 <job_datafeed_id> failed to start
 ```
 
-For anomaly detection jobs to start, the Elasticsearch cluster requires sufficient available memory. See Elasticsearch [sizing guidelines]({{site.baseurl}}/security/threat-detection-and-prevention/anomaly-detection/enabling).
+For anomaly detection jobs to start, the Elasticsearch cluster requires sufficient available memory. See Elasticsearch [sizing guidelines]({{site.baseurl}}/threat/anomaly-detection/enabling).

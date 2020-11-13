@@ -2,31 +2,33 @@ title: "Threat defense"
 path: /threat/
 order: 6
 section:
+- title: Threat defense
+  path: /threat/
 - title: Anomaly detection
-  path: /security/threat-detection-and-prevention/anomaly-detection/
+  path: /threat/anomaly-detection/
   section:
   - title: Overview
-    path: /security/threat-detection-and-prevention/anomaly-detection/overview
+    path: /threat/anomaly-detection/overview
   - title: Enable anomaly detection
-    path: /security/threat-detection-and-prevention/anomaly-detection/enabling
+    path: /threat/anomaly-detection/enabling
   - title: View anomalies
-    path: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
+    path: /threat/anomaly-detection/viewing-anomalies
   - title: Anomaly detection job descriptions
-    path: /security/threat-detection-and-prevention/anomaly-detection/job-descriptions
+    path: /threat/anomaly-detection/job-descriptions
   - title: Customize anomaly detection jobs
-    path: /security/threat-detection-and-prevention/anomaly-detection/customizing
+    path: /threat/anomaly-detection/customizing
 - title: Suspicious IPs
-  path: /security/threat-detection-and-prevention/suspicious-ips
+  path: /threat/suspicious-ips
 - title: Suspicious domains
-  path: /security/threat-detection-and-prevention/suspicious-domains
+  path: /threat/suspicious-domains
 - title: External IP addresses that access clusters
-  path: /security/ingress
+  path: /threat/ingress
 - title: Anonymization attacks  
-  path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
+  path: /threat/tor-vpn-feed-and-dashboard
 - title: Honeypods
-  path: /security/threat-detection-and-prevention/honeypod/
+  path: /threat/honeypod/
   section:
   - title: Configure honeypods
-    path: /security/threat-detection-and-prevention/honeypod/honeypods
+    path: /threat/honeypod/honeypods
   - title: Monitor honeypods
-    path: /security/threat-detection-and-prevention/honeypod/honeypod-controller
+    path: /threat/honeypod/honeypod-controller

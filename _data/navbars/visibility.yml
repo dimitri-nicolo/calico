@@ -5,9 +5,9 @@ section:
 - title: Get started with Calico Enterprise Manager UI
   path: /security/get-started-cem
 - title: Alerts
-  path: /security/threat-detection-and-prevention/alerts
+  path: /threat/alerts
 - title: Packet capture
-  path: /security/threat-detection-and-prevention/packetcapture  
+  path: /threat/packetcapture  
 - title: Elasticsearch logs
   path: /security/logs/elastic/
   section:

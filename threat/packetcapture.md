@@ -1,7 +1,7 @@
 ---
 title: Packet capture
 description: Capture live traffic for debugging microservices and application interaction.
-canonical_url: /security/threat-detection-and-prevention/packetcapture
+canonical_url: /threat/packetcapture
 ---
 >**Warning**: This feature is experimental.  Experimental features may change significantly or not be supported in future releases.
 {: .alert .alert-danger}

@@ -1,7 +1,7 @@
 ---
 title: Configure alerts
 description: Define alert criteria for the Alerts page in Calico Enterprise Manager. 
-canonical_url: /security/threat-detection-and-prevention/alerts
+canonical_url: /threat/alerts
 ---
 
 ### Big picture

@@ -65,8 +65,8 @@ Connectivity issues between microservices are difficult to troubleshoot. Trouble
 
 - [Flow visualizer]({{site.baseurl}}/security/get-started-cem)
 - [Flow logs in Kibana]({{site.baseurl}}/security/logs/elastic/)
-- [Alerts]({{site.baseurl}}/security/threat-detection-and-prevention/alerts) 
-- [Packet capture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture)
+- [Alerts]({{site.baseurl}}/threat/alerts) 
+- [Packet capture]({{site.baseurl}}/threat/packetcapture)
 - [DNS logs and dashboards]({{site.baseurl}}/security/logs/elastic/dns)
 
 ### Enterprise security controls
@@ -151,9 +151,9 @@ In addition to cloud microsegmentation and zero trust network security, {{site.p
 
 **Documentation**
 
-- [Alerts]({{site.baseurl}}/security/threat-detection-and-prevention/alerts)
-- [Anomaly detection]({{site.baseurl}}/security/threat-detection-and-prevention/anomaly-detection/)
-- [Threat intelligence feeds]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips)
+- [Alerts]({{site.baseurl}}/threat/alerts)
+- [Anomaly detection]({{site.baseurl}}/threat/anomaly-detection/)
+- [Threat intelligence feeds]({{site.baseurl}}/threat/suspicious-ips)
 
 ### Zero trust network security
 

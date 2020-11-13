@@ -1,7 +1,7 @@
 ---
 title: Trace and block suspicious IPs
 description: Add threat intelligence feeds to trace network flows of suspicious IP addresses, and optionally block traffic to them.
-canonical_url: /security/threat-detection-and-prevention/suspicious-ips
+canonical_url: /threat/suspicious-ips
 ---
 
 ### Big picture
@@ -242,7 +242,7 @@ In this demo, we will apply the policy only to a test workload (so we do not imp
          url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
      globalNetworkSet:
        labels:
-         docs.tigera.io/threatfeed: feodo
+         docs.tigera.io/threat/feed: feodo
    ```
 
 4. Reapply the new YAML.
@@ -276,7 +276,7 @@ We will now apply a GlobalNetworkPolicy that blocks the test workload from conne
      egress:
      - action: Deny
        destination:
-         selector: docs.tigera.io/threatfeed == 'feodo'
+         selector: docs.tigera.io/threat/feed == 'feodo'
      - action: Allow
    ```
 

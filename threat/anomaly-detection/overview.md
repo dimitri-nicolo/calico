@@ -1,7 +1,7 @@
 ---
 title: Anomaly detection
 description: What is anomaly detection?
-canonical_url: /security/threat-detection-and-prevention/anomaly-detection
+canonical_url: /threat/anomaly-detection
 ---
 
 {{site.prodname}} includes software that analyzes the logs of network communications
@@ -12,4 +12,4 @@ logs. You can configure the jobs to continuously analyze your logs as they are
 added to the Elasticsearch cluster, or you can manually control the exact time
 range you wish to analyze.
 
-[flow logs]: ../../logs/elastic/datatypes
+[flow logs]: /security/logs/elastic/datatypes

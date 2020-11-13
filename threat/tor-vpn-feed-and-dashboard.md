@@ -1,7 +1,7 @@
 ---
 title: Anonymization attacks
 description: Detect and analyse malicious anonymization activity using Tor-VPN feeds.
-canonical_url: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
+canonical_url: /threat/tor-vpn-feed-and-dashboard
 ---
 
 ### Big picture
@@ -57,11 +57,11 @@ In this section we will look at how to add Tor and VPN feeds to {{site.prodname}
 1. Add threat feed to the cluster.
    For EJR VPN,
    ```shell
-   kubectl apply -f {{ "/manifests/threatdef/ejr-vpn.yaml" | absolute_url }}
+   kubectl apply -f {{ "/manifests/threat/def/ejr-vpn.yaml" | absolute_url }}
    ```
    For Tor Bulk Exit Feed,
    ```shell
-   kubectl apply -f {{ "/manifests/threatdef/tor-exit-feed.yaml" | absolute_url }}
+   kubectl apply -f {{ "/manifests/threat/def/tor-exit-feed.yaml" | absolute_url }}
    ```
 2. Now, you can monitor the Dashboard for any malicious activity. The dashboard can be found at {{site.prodname}} Manager, go to "kibana" and then go to "Dashboard". Select "Tor-VPN Dashboard".
 3. Additionally, feeds can be checked using following command:
@@ -72,4 +72,4 @@ In this section we will look at how to add Tor and VPN feeds to {{site.prodname}
 ### Above and beyond
 
 * See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
-* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips)
+* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/threat/suspicious-ips)

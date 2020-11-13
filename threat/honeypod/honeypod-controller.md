@@ -1,7 +1,7 @@
 ---
 title: Monitor honeypods
 description: Monitor honeypod behavior to gain insight on what attackers are doing.
-canonical_url: /security/threat-detection-and-prevention/honeypod/honeypod-controller
+canonical_url: /threat/honeypod/honeypod-controller
 ---
 
 ### Big picture
@@ -26,14 +26,14 @@ Honeypods can optionally be monitored using a {{site.prodname}} controller that 
 
 The controller leverages the following:
 
-- [Packet capture feature]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture) to collect honeypod traffic in clusters.
+- [Packet capture feature]({{site.baseurl}}/threat/packetcapture) to collect honeypod traffic in clusters.
 - Open source {% include open-new-window.html text='Snort' url='https://www.snort.org/' %} to scan honeypod traffic.
 
 ### Before you begin
 
 #### Required
 
-[Honeypods are configured]({{site.baseurl}}/security/threat-detection-and-prevention/honeypod/honeypods) for clusters, and alerts are generated when the honeypods are accessed.
+[Honeypods are configured]({{site.baseurl}}/threat/honeypod/honeypods) for clusters, and alerts are generated when the honeypods are accessed.
 
 ### How To
 
@@ -42,12 +42,12 @@ The controller leverages the following:
 
 #### Add honeypod controller to cluster
 
-> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture) manifest to target your honeypods. Honeypod controller requires the name to be `capture-honey` at this release.
+> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/threat/packetcapture) manifest to target your honeypods. Honeypod controller requires the name to be `capture-honey` at this release.
 
 Add the honeypod controller to each cluster configured for honeypods using the following command:
 
 ```bash
-kubectl apply -f {{ "/manifests/threatdef/honeypod/controller.yaml" | absolute_url }} 
+kubectl apply -f {{ "/manifests/threat/def/honeypod/controller.yaml" | absolute_url }} 
 ```
 
 #### Verify honeypod controller deployment
@@ -70,4 +70,4 @@ intrusion-detection-es-job-installer-nfd7t       0/1     Completed   0          
 
 ### Above and beyond
 
-- [Packet capture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture)
+- [Packet capture]({{site.baseurl}}/threat/packetcapture)
