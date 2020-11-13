@@ -163,6 +163,15 @@
             "type": "long"
           }
         }
+      },
+      "latency_count": {
+        "type": "long"
+      },
+      "latency_mean": {
+        "type": "long"
+      },
+      "latency_max": {
+        "type": "long"
       }
     }
   }
