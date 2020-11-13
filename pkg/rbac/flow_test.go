@@ -68,13 +68,13 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.globalnetworkpolicies"},
 						mock.Anything).Return(401, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.globalnetworkpolicies", Name: "tier1.*"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -85,10 +85,10 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.globalnetworkpolicies"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -122,13 +122,13 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.stagedglobalnetworkpolicies"},
 						mock.Anything).Return(401, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.stagedglobalnetworkpolicies", Name: "tier1.*"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -139,10 +139,10 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.stagedglobalnetworkpolicies"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -176,13 +176,13 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
 						mock.Anything).Return(401, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies", Name: "tier1.*"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -193,10 +193,10 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -230,7 +230,7 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "networking.k8s.io", Resource: "networkpolicies"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
@@ -264,7 +264,7 @@ var _ = Describe("FlowHelper tests", func() {
 				func(mockAuthorizer *auth.MockRBACAuthorizer) {
 					mockAuthorizer.On("Authorize", mock.Anything,
 						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "stagedkubernetesnetworkpolicies"},
-						mock.Anything).Return(200, nil)
+						mock.Anything).Return(0, nil)
 				},
 			},
 		},
