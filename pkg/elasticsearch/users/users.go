@@ -25,6 +25,7 @@ const (
 	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
+	ElasticsearchUserNameOperator              ElasticsearchUserName = "tigera-ee-operator"
 )
 
 // ElasticsearchUsers returns a map of ElasticsearchUserNames as keys and elasticsearch.Users as values. The clusterName
@@ -242,6 +243,19 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 					Indices: []elasticsearch.RoleIndex{{
 						// Curator needs to trim all the logs, so we don't set the cluster name on the index pattern
 						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), indexPattern("tigera_secure_ee_events", "*", "")},
+						Privileges: []string{"all"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameOperator: {
+			Username: formatName(ElasticsearchUserNameOperator, clusterName, true),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameOperator, clusterName, true),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates", "manage_ilm", "read_ilm"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{"tigera_secure_ee_*"},
 						Privileges: []string{"all"},
 					}},
 				},
