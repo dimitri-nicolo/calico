@@ -2,10 +2,12 @@ version: v1.0
 name: node-private
 agent:
   machine:
-    type: e1-standard-4
+    type: e1-standard-2
     os_image: ubuntu1804
+
 execution_time_limit:
   minutes: 120
+
 global_job_config:
   secrets:
     - name: docker-hub
@@ -29,85 +31,157 @@ global_job_config:
       - git fetch --unshallow
 
 blocks:
-# Run the full set of tests. Each job can potentially be run in parallel,
-# provided Semaphore has enough boxes available.
-- name: "Tests"
-  execution_time_limit:
-    # Semaphore's default is 1 hour, and these tests take about that time or a little
-    # longer.
-    minutes: 90
-  dependencies: []
-  task:
-    secrets:
-      # Mount the github SSH secret for pulling private repositories.
-      - name: private-repo
-      # Mount a secret for pulling images from GCR.
-      - name: tigera-dev-ci-pull-credentials
-    prologue:
-      commands:
-        # Correct permissions since they are too open by default:
-        - chmod 0600 ~/.keys/*
-        # Add the key to the ssh agent:
-        - ssh-add ~/.keys/*
-        # Login to docker in order to pull images.
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
-        - checkout
-        # Semaphore is doing shallow clone on a commit without tags.
-        # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-        - git fetch --unshallow
-    jobs:
-    - name: "make ci"
-      commands:
-      - make ci
-    - name: "make k8s-test (dual stack)"
-      commands:
-      - make k8s-test
-    - name: "make k8s-test (vanilla)"
-      commands:
-      - make k8s-test K8ST_RIG=vanilla
-    - name: "make dual-tor-test"
-      commands:
-      - make dual-tor-test
+  - name: "Tests"
+    dependencies: []
+    task:
+      secrets:
+        # Mount the github SSH secret for pulling private repositories.
+        - name: private-repo
+        # Mount a secret for pulling images from GCR.
+        - name: tigera-dev-ci-pull-credentials
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+          - checkout
+          # Semaphore is doing shallow clone on a commit without tags.
+          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+          - git fetch --unshallow
+          - make mod-download
+      jobs:
+      - name: "Static Checks / UT and FV tests"
+        commands:
+          - make static-checks
+          - make ut
+          - make fv
 
-# If tests passed, then build and push images.
-# We'll only do this on non-PR builds, where we have credentials to do so.
-- name: "Push images and Windows installation zip file (non-PR builds only)"
-  dependencies: ["Tests"]
-  task:
-    secrets:
-      # Mount a secret for pulling images from GCR.
-      - name: google-service-account-for-gcr
-      # Mount a secret so we can push Windows zip files to GCS. 
-      - name: gcp-registry-pusher-service-account
-    prologue:
-      commands:
-        # Correct permissions since they are too open by default:
-        - chmod 0600 ~/.keys/*
-        # Add the key to the ssh agent:
-        - ssh-add ~/.keys/*
-        # Login to docker in order to pull images.
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - checkout
-        # Semaphore is doing shallow clone on a commit without tags.
-        # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-        - git fetch --unshallow
-    jobs:
-    - name: "make cd"
-      commands:
-      - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-      - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
-    - name: "make windows"
-      commands:
-      - |
-        if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
-          make push-windows-archive-gcs
-          artifact push workflow ${WINDOWS_ZIP_WILDCARD} --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
-        fi
-      env_vars:
-        - name: SEMAPHORE_ARTIFACT_EXPIRY
-          value: 1w
-        - name: WINDOWS_ZIP_WILDCARD
-          value: "./dist/tigera-calico-windows*.zip"
+  - name: "System Tests"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: e1-standard-4
+          os_image: ubuntu1804
+      secrets:
+        # Mount the github SSH secret for pulling private repositories.
+        - name: private-repo
+        # Mount a secret for pulling images from GCR.
+        - name: tigera-dev-ci-pull-credentials
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+          - checkout
+          # Semaphore is doing shallow clone on a commit without tags.
+          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+          - git fetch --unshallow
+          - make mod-download
+      jobs:
+        - name: "BGP Tests"
+          commands:
+            - ST_TO_RUN=tests/st/bgp/ make st
+        - name: "CalicoCtl Tests"
+          commands:
+            - ST_TO_RUN=tests/st/calicoctl/ make st
+#        Config tests don't seem to work and seem like they were never run
+#        - name: "Config Tests"
+#          commands:
+#            - ST_TO_RUN=tests/st/config/ make st
+        - name: "Enterprise Tests"
+          commands:
+            - ST_TO_RUN=tests/st/enterprise/ make st
+        - name: "IPAM Tests"
+          commands:
+            - ST_TO_RUN=tests/st/ipam/ make st
+        - name: "Policy Tests"
+          commands:
+            - ST_TO_RUN=tests/st/policy/ make st
+        - name: "Utils Tests"
+          commands:
+            - ST_TO_RUN=tests/st/utils/ make st
+
+  - name: "Specialized Tests"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: e1-standard-4
+          os_image: ubuntu1804
+      secrets:
+        # Mount the github SSH secret for pulling private repositories.
+        - name: private-repo
+        # Mount a secret for pulling images from GCR.
+        - name: tigera-dev-ci-pull-credentials
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+          - checkout
+          # Semaphore is doing shallow clone on a commit without tags.
+          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+          - git fetch --unshallow
+      jobs:
+        - name: "Dual Stack Tests"
+          commands:
+            - make k8s-test
+        - name: "Vanilla Tests"
+          commands:
+            - make k8s-test K8ST_RIG=vanilla
+        - name: "Dual Tor Tests"
+          commands:
+            - make dual-tor-test
+
+  # If tests passed, then build and push images.
+  # We'll only do this on non-PR builds, where we have credentials to do so.
+  - name: "Push images and Windows installation zip file (non-PR builds only)"
+    dependencies: ["Tests", "System Tests", "Specialized Tests"]
+    task:
+      secrets:
+        # Mount a secret for pulling images from GCR.
+        - name: google-service-account-for-gcr
+        # Mount a secret so we can push Windows zip files to GCS.
+        - name: gcp-registry-pusher-service-account
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - checkout
+          # Semaphore is doing shallow clone on a commit without tags.
+          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+          - git fetch --unshallow
+      jobs:
+      - name: "make cd"
+        commands:
+        - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
+      - name: "make windows"
+        commands:
+        - |
+          if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+            make push-windows-archive-gcs
+            artifact push workflow ${WINDOWS_ZIP_WILDCARD} --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+          fi
+        env_vars:
+          - name: SEMAPHORE_ARTIFACT_EXPIRY
+            value: 1w
+          - name: WINDOWS_ZIP_WILDCARD
+            value: "./dist/tigera-calico-windows*.zip"
 
 promotions:
   # Run the pin update process in case there were a backlog of pin update requests
