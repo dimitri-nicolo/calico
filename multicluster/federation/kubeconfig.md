@@ -1,7 +1,7 @@
 ---
 title: Configure federated endpoint identity 
 description: Configure a local cluster to pull endpoint data from a remote cluster. 
-canonical_url: /networking/federation/kubeconfig
+canonical_url: /multicluster/federation/kubeconfig
 ---
 
 ### Big picture
@@ -356,4 +356,4 @@ which may have resulted in incomplete data:
 
 ### Next steps
 
-[Configure federated services]({{site.baseurl}}/networking/federation/services-controller)
+[Configure federated services]({{site.baseurl}}/multicluster/federation/services-controller)

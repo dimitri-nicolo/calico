@@ -1,7 +1,7 @@
 ---
 title: Configure Calico Enterprise for multi-cluster management, Kubernetes
 description: Configure Calico Enterprise to manage clusters from a single management plane for Kubernetes.
-canonical_url: '/maintenance/mcm/configure'
+canonical_url: '/multicluster/mcm/configure'
 ---
 
 ### Big picture
@@ -57,7 +57,7 @@ Multi-cluster management provides a single source for authorization across manag
 
 ### How to
 
-The following steps install multi-cluster management on two new Kubernetes clusters (a management cluster and a managed cluster). This is the simplest way to get started using multi-cluster management for non-production. As you move to production, you can exchange existing standalone {{site.prodname}} clusters to be the management cluster or the managed cluster, using [Change cluster types]({{site.baseurl}}/maintenance/mcm/change-cluster-type). 
+The following steps install multi-cluster management on two new Kubernetes clusters (a management cluster and a managed cluster). This is the simplest way to get started using multi-cluster management for non-production. As you move to production, you can exchange existing standalone {{site.prodname}} clusters to be the management cluster or the managed cluster, using [Change cluster types]({{site.baseurl}}/multicluster/mcm/change-cluster-type). 
 
 - [Install Calico Enterprise](#install-calico-enterprise)
 - [Turn a cluster into a management cluster](#turn-the-cluster-into-a-management-cluster)
@@ -134,7 +134,7 @@ Follow these steps in the cluster you intend to use as the management cluster.
 To control managed clusters from your central management plane, you must ensure it is reachable for connections. The simplest way to get started (but not for production scenarios), is to configure a `NodePort` service to expose the management cluster. Note that the service must live within the `tigera-manager` namespace.
 
 1.  Create a service to expose the management cluster. 
-    The following example of a NodePort service may not be suitable for production and high availability. For options, see [Fine-tune multi-cluster management for production]({{site.baseurl}}/maintenance/mcm/fine-tune-deployment).
+    The following example of a NodePort service may not be suitable for production and high availability. For options, see [Fine-tune multi-cluster management for production]({{site.baseurl}}/multicluster/mcm/fine-tune-deployment).
     Apply the following service manifest.
  
     ```bash
@@ -329,5 +329,5 @@ You have now successfully completed the setup for multi-cluster management.
 
 ### Next steps
 
-- When you are ready to fine-tune your multi-cluster management deployment for production, see [Fine-tune multi-cluster management]({{site.baseurl}}/maintenance/mcm/fine-tune-deployment)
-- To change an existing {{site.prodname}} standalone cluster to a management or managed cluster, see [Change cluster types]({{site.baseurl}}/maintenance/mcm/change-cluster-type)
+- When you are ready to fine-tune your multi-cluster management deployment for production, see [Fine-tune multi-cluster management]({{site.baseurl}}/multicluster/mcm/fine-tune-deployment)
+- To change an existing {{site.prodname}} standalone cluster to a management or managed cluster, see [Change cluster types]({{site.baseurl}}/multicluster/mcm/change-cluster-type)

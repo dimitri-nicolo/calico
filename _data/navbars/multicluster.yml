@@ -3,19 +3,19 @@ path: /multicluster/
 order: 5
 section:
 - title: Configure multi-cluster management
-  path: /maintenance/mcm/configure
+  path: /multicluster/mcm/configure
 - title: Fine-tune multi-cluster management for production
-  path: /maintenance/mcm/fine-tune-deployment
+  path: /multicluster/mcm/fine-tune-deployment
 - title: Change a cluster type
-  path: /maintenance/mcm/change-cluster-type
+  path: /multicluster/mcm/change-cluster-type
 - title: Federate identity endpoints and services
-  path: /networking/federation/
+  path: /multicluster/federation/
   section:
   - title: Overview
-    path: /networking/federation/overview
+    path: /multicluster/federation/overview
   - title: Configure federated endpoint identity
-    path: /networking/federation/kubeconfig
+    path: /multicluster/federation/kubeconfig
   - title: Configure federated services
-    path: /networking/federation/services-controller
+    path: /multicluster/federation/services-controller
   - title: Federation example for an AWS cluster
-    path: /networking/federation/aws
+    path: /multicluster/federation/aws

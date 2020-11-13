@@ -1,7 +1,7 @@
 ---
 title: Overview
 description: Configure local clusters for cross-cluster workload and host endpoints sharing, and cross-cluster service discovery. 
-canonical_url: /networking/federation/overview
+canonical_url: /multicluster/federation/overview
 ---
 
 ### Big picture
@@ -45,4 +45,4 @@ Federated services use the Tigera Federated Services Controller to federate all 
 
 ### Next steps
 
-[Configure federated endpoint identity ]({{site.baseurl}}/networking/federation/kubeconfig)
+[Configure federated endpoint identity ]({{site.baseurl}}/multicluster/federation/kubeconfig)

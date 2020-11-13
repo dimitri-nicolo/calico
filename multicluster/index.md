@@ -1,6 +1,6 @@
 ---
-title: Multi-cluster management
-description: Set up a single management plane for centralized cluster management.
+title: Multi-cluster management and federation
+description: Calico Enterprise features for scaling to production.
 canonical_url: '/multicluster/index'
 show_read_time: false
 show_toc: false

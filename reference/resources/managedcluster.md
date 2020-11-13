@@ -69,4 +69,4 @@ plane and managed plane will be reported as following:
 | type | Type of status that is being reported | - | string | `ManagedClusterConnected` |
 | status | Status of the connection between a Managed cluster and management cluster | `Unkown`, `True`, `False` | string | `Unknown` |
 
-[Multi-cluster management]: ../../maintenance/mcm/
+[Multi-cluster management]({{site.baseurl}}/multicluster/mcm/configure)

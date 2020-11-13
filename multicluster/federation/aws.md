@@ -1,7 +1,7 @@
 ---
 title: Federation example for an AWS cluster
 description: A sample configuration of Calico Enterprise federated endpoint identity and federated services for an AWS cluster.
-canonical_url: /networking/federation/aws
+canonical_url: /multicluster/federation/aws
 ---
 
 ### Big picture

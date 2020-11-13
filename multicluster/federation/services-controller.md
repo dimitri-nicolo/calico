@@ -1,7 +1,7 @@
 ---
 title: Configure federated services
 description: Configure a federated service for cross-cluster service discovery for local clusters.
-canonical_url: /networking/federation/services-controller
+canonical_url: /multicluster/federation/services-controller
 ---
 
 ### Big picture
@@ -75,7 +75,7 @@ You can also match services using a label. The label is implicitly added to each
 
 **Required**
 
-- [Configure federated endpoint identity]({{site.baseurl}}/networking/federation/kubeconfig)
+- [Configure federated endpoint identity]({{site.baseurl}}/multicluster/federation/kubeconfig)
 
 ### How to
 
@@ -213,5 +213,5 @@ subsets:
 
 ### Above and beyond
 
-- [Federated identity and services example for AWS]({{site.baseurl}}/networking/federation/aws)
+- [Federated identity and services example for AWS]({{site.baseurl}}/multicluster/federation/aws)
 - [Federated service controller]({{site.baseurl}}/reference/kube-controllers/configuration)

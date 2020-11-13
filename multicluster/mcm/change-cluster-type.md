@@ -1,7 +1,7 @@
 ---
 title: Change a cluster type
 description: Change an existing Calico Enterprise cluster type to a management cluster, a managed cluster, or standalone. 
-canonical_url: '/maintenance/mcm/change-cluster-type'
+canonical_url: '/multicluster/mcm/change-cluster-type'
 ---
 
 ### Big picture
@@ -39,7 +39,7 @@ We do not support having both `ManagementCluster` and `ManagementClusterConnecti
 #### Change a standalone cluster to a management cluster
 
 1. Create a service to expose the management cluster. 
-   The following example of a NodePort service may not be suitable for production and high availability. For options, see [Fine-tune multi-cluster management for production]({{site.baseurl}}/maintenance/mcm/fine-tune-deployment).
+   The following example of a NodePort service may not be suitable for production and high availability. For options, see [Fine-tune multi-cluster management for production]({{site.baseurl}}/multicluster/mcm/fine-tune-deployment).
    Apply the following service manifest.
 
    ```bash
