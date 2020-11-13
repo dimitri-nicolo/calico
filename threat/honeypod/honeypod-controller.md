@@ -39,11 +39,11 @@ The controller leverages the following:
 
   - [Enable packet capture on honeypods](#enable-packet-capture-on-honeypods)
   - [Add honeypod controller to cluster](#add-honeypod-controller-to-cluster)
-  - [Verify honeypod controller deployment](#verify-honeypod-controller-deployment)
+  - [Verify honeypod controller](#verify-honeypod-controller)
 
 #### Enable packet capture on honeypods
 
-The following manifest enables packet capture on default [honeypods]({{site.baseurl}}/security/threat-detection-and-prevention/honeypod/honeypods). Be sure to modify the namespace and selector if honeypods are placed elsewhere. For help, see [PacketCapture]({{site.baseurl}}/security/threat-detection-and-prevention/packetcapture).
+The following manifest enables packet capture on default [honeypods]({{site.baseurl}}/threat/honeypod/honeypods). Be sure to modify the namespace and selector if honeypods are placed elsewhere. For help, see [PacketCapture]({{site.baseurl}}/threat/packetcapture).
 
 ```yaml
 apiVersion: projectcalico.org/v3
