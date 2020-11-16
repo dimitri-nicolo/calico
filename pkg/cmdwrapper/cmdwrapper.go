@@ -21,9 +21,10 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/typha/pkg/config"
 	"github.com/projectcalico/typha/pkg/logutils"
-	"github.com/sirupsen/logrus"
 )
 
 const (
