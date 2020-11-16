@@ -6,17 +6,14 @@ KIBANA_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/kibana
 
 GTM_INTEGRATION?=disable
 
+ifdef IMAGE_PREFIX
+	LATEST_TAG=$(IMAGE_PREFIX)-latest
+else
+	LATEST_TAG=latest
+endif
 
 ci:
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-ifdef IMAGE_PREFIX
-	$(eval BRANCH_NAME_TAG := $(IMAGE_PREFIX)-$(BRANCH_NAME))
-else
-	$(eval BRANCH_NAME_TAG := $(BRANCH_NAME))
-endif
-	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) --pull -t $(KIBANA_IMAGE):$(BRANCH_NAME_TAG) ./
+	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) --pull -t $(KIBANA_IMAGE):$(LATEST_TAG) ./
 
 
 cd:
@@ -33,8 +30,11 @@ else
 	$(eval BRANCH_NAME_TAG := $(BRANCH_NAME))
 	$(eval GIT_VERSION_TAG := $(GIT_VERSION))
 endif
+	docker tag $(KIBANA_IMAGE):$(LATEST_TAG) \
+	           $(KIBANA_IMAGE):$(BRANCH_NAME_TAG)
 	docker push $(KIBANA_IMAGE):$(BRANCH_NAME_TAG)
-	docker tag $(KIBANA_IMAGE):$(BRANCH_NAME_TAG) \
+
+	docker tag $(KIBANA_IMAGE):$(LATEST_TAG) \
 	           $(KIBANA_IMAGE):$(GIT_VERSION_TAG)
 	docker push $(KIBANA_IMAGE):$(GIT_VERSION_TAG)
 
