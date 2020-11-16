@@ -1,15 +1,20 @@
 .PHONY: ci cd
 
-ci:
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-	docker build --pull -t gcr.io/unique-caldron-775/cnx/tigera/kibana:$(BRANCH_NAME) ./
-
 GIT_VERSION?=$(shell git describe --tags --dirty --always --long)
 
-# The image name for GCR
-PUSH_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/kibana
+KIBANA_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/kibana
+
+GTM_INTEGRATION?=disable
+
+ifdef IMAGE_PREFIX
+	LATEST_TAG=$(IMAGE_PREFIX)-latest
+else
+	LATEST_TAG=latest
+endif
+
+ci:
+	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) --pull -t $(KIBANA_IMAGE):$(LATEST_TAG) ./
+
 
 cd:
 ifndef CONFIRM
@@ -18,10 +23,20 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	docker push $(PUSH_IMAGE):$(BRANCH_NAME)
-	docker tag $(PUSH_IMAGE):$(BRANCH_NAME) \
-	           $(PUSH_IMAGE):$(GIT_VERSION)
-	docker push $(PUSH_IMAGE):$(GIT_VERSION)
+ifdef IMAGE_PREFIX
+	$(eval BRANCH_NAME_TAG := $(IMAGE_PREFIX)-$(BRANCH_NAME))
+	$(eval GIT_VERSION_TAG := $(IMAGE_PREFIX)-$(GIT_VERSION))
+else
+	$(eval BRANCH_NAME_TAG := $(BRANCH_NAME))
+	$(eval GIT_VERSION_TAG := $(GIT_VERSION))
+endif
+	docker tag $(KIBANA_IMAGE):$(LATEST_TAG) \
+	           $(KIBANA_IMAGE):$(BRANCH_NAME_TAG)
+	docker push $(KIBANA_IMAGE):$(BRANCH_NAME_TAG)
+
+	docker tag $(KIBANA_IMAGE):$(LATEST_TAG) \
+	           $(KIBANA_IMAGE):$(GIT_VERSION_TAG)
+	docker push $(KIBANA_IMAGE):$(GIT_VERSION_TAG)
 
 dev:
 	docker-compose -f docker-compose.dev.yml up --build
