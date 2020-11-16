@@ -17,7 +17,11 @@ limitations under the License.
 package server
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"os"
+	gpath "path"
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/klog"
@@ -73,6 +77,16 @@ func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer)
 				f.Close()
 				return nil
 			})
+
+		if opts.PrintSwagger {
+			server.GenericAPIServer.AddPostStartHook("swagger-printer",
+				func(context genericapiserver.PostStartHookContext) error {
+					WriteSwaggerJSON(server.GenericAPIServer.Handler, opts.SwaggerFilePath)
+					// PrintSwagger option prints and exit.
+					os.Exit(0)
+					return nil
+				})
+		}
 		if err := server.GenericAPIServer.PrepareRun().Run(allStop); err != nil {
 			klog.Errorln("Error running API server: ", err)
 		}
@@ -86,3 +100,31 @@ func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer)
 
 	return nil
 }
+
+func WriteSwaggerJSON(handler *genericapiserver.APIServerHandler, path string) {
+	req, err := http.NewRequest("GET", "/openapi/v2", nil)
+	if err != nil {
+		panic(fmt.Sprintf("Could not fetch swagger. Reason: %v", err))
+		return
+	}
+	swaggerPath := gpath.Join(path, "swagger.json")
+	f, err := os.Create(swaggerPath)
+	if err != nil {
+		panic(fmt.Sprintf("Could not create file at '%s'. Reason: %v", swaggerPath, err))
+		return
+	}
+	defer f.Close()
+	resp := &fileResponseWriter{f}
+	handler.ServeHTTP(resp, req)
+}
+
+// Write response to a file (any io.Writer really).
+type fileResponseWriter struct {
+	io.Writer
+}
+
+func (fileResponseWriter) Header() http.Header {
+	return http.Header{}
+}
+
+func (fileResponseWriter) WriteHeader(int) {}

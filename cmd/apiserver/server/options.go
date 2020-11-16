@@ -50,6 +50,10 @@ type CalicoServerOptions struct {
 	// DisableAuth disables delegating authentication and authorization for testing scenarios
 	DisableAuth bool
 
+	// Print a swagger file at desired path and exit.
+	PrintSwagger    bool
+	SwaggerFilePath string
+
 	// Enable Admission Controller support.
 	EnableAdmissionController bool
 
@@ -70,6 +74,10 @@ func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 	s.RecommendedOptions.AddFlags(flags)
 	flags.BoolVar(&s.EnableAdmissionController, "enable-admission-controller-support", s.EnableAdmissionController,
 		"If true, admission controller hooks will be enabled.")
+	flags.BoolVar(&s.PrintSwagger, "print-swagger", false,
+		"If true, prints swagger to stdout and exits.")
+	flags.StringVar(&s.SwaggerFilePath, "swagger-file-path", "./",
+		"If print-swagger is set true, then write swagger.json to location specified. Default is current directory.")
 	flags.BoolVar(&s.EnableManagedClustersCreateAPI, "enable-managed-clusters-create-api", false,
 		"If true, --set-managed-clusters-ca-cert and --set-managed-clusters-ca-key will be evaluated.")
 	flags.StringVar(&s.ManagedClustersCACertPath, "set-managed-clusters-ca-cert",
@@ -134,6 +142,9 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA}
 	serverConfig.SecureServing.CipherSuites = cipherSuites
 
+	if o.PrintSwagger {
+		o.DisableAuth = true
+	}
 	if !o.DisableAuth {
 		if err := o.RecommendedOptions.Authentication.ApplyTo(&serverConfig.Authentication, serverConfig.SecureServing, serverConfig.OpenAPIConfig); err != nil {
 			return nil, err
