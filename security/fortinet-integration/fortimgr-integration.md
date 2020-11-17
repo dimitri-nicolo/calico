@@ -35,7 +35,7 @@ The basic workflow is:
 1. Create firewall policies using the address groups for IPv4 Source address and IPv4 Destination Address, and select services and actions as you normally would to allow or deny the traffic. Under the covers, the {{site.prodname}} integration controller periodically reads the FortiManager firewall policies for your Kubernetes cluster, converts them to {{site.prodname}} global network policies, and applies them to clusters.
 1. Use the {{site.prodname}} Manager UI to verify the integration, and then FortiManager UI to make all updates to policy rules.
 
->**Note**: The default value for reading FortiManager firewall policies is three seconds. To change the value, modify environment variable FW_FORTIMGR_EW_POLL_INTERVAL in FortiManager integration manifest. 
+>**Note**: The default value for reading FortiManager firewall policies is three seconds. To change the value, modify environment variable FW_FORTIMGR_EW_POLL_INTERVAL in FortiManager integration manifest; units are in seconds.
 {: .alert .alert-info}
 
 ### Before you begin
@@ -80,6 +80,12 @@ Create a [{{site.prodname}} tier]({{site.baseurl}}/security/tiered-policy) in th
 1. Note the username and password.
 
 ### Create a FortiManager config map
+
+1. Create a namespace for the tigera-firewall-controller.
+
+    ```bash
+     kubectl create namespace tigera-firewall-controller
+    ```
 
 1. In this [FortiManager ConfigMap manifest]({{site.baseurl}}/manifests/fortimanager-device-configmap.yaml ), add your FortiManager device information in the data section: `tigera.firewall.fortimanager-policies`. For example:
 

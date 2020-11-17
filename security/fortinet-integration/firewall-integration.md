@@ -191,6 +191,10 @@ The basic workflow is:
           name: fortimgr-east1
           key: pwd-fortimgr-east1
     ```
+
+**Note** If you are not using FortiManager in the integration, include only the following field in the ConfigMap data section. `tigera.firewall.fortimgr: |`
+{: .alert .alert-info}
+
 1. Apply the manifest.
 
    ```
