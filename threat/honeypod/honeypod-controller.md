@@ -45,7 +45,8 @@ The controller leverages the following:
 
 The following manifest enables packet capture on default [honeypods]({{site.baseurl}}/threat/honeypod/honeypods). Be sure to modify the namespace and selector if honeypods are placed elsewhere. For help, see [PacketCapture]({{site.baseurl}}/threat/packetcapture).
 
-```yaml
+```bash
+kubectl create -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: PacketCapture
 metadata:
@@ -53,6 +54,7 @@ metadata:
   namespace: tigera-internal
 spec:
   selector: all()
+EOF
 ```
 
 In order for the honeypod controller to find the packet captures, the name `capture-honey` is required for the PacketCapture resource.
