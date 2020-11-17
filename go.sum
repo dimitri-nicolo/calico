@@ -693,10 +693,10 @@ github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19 h1:SLVtrxhWnoK9
 github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe3N3H+CHVaceVY9N9eVQ3ulK6jJVl9lWIs6Wv2s=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320/go.mod h1:erKr0bew1q/9lZOLYs49JrRBaUBIj/zAfJylAmcrGD0=
-github.com/tigera/typha-private v0.6.0-beta1.0.20201111102314-74ad1759de86 h1:Thev4lgQmh+ANaFnji/2yesblOlCEXs+L1EUmIQ1J/k=
-github.com/tigera/typha-private v0.6.0-beta1.0.20201111102314-74ad1759de86/go.mod h1:UABsVT1au5IPorznrZ72t5ByZPhj+BsZs1HESEfqZGg=
 github.com/tigera/nfnetlink v0.0.0-20201111230626-bbfcd8d4b9bd h1:7UcjsM9pAHAcf4LuLN5U6DKfRhcC971hZ05CZ/egMws=
 github.com/tigera/nfnetlink v0.0.0-20201111230626-bbfcd8d4b9bd/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
+github.com/tigera/typha-private v0.6.0-beta1.0.20201111102314-74ad1759de86 h1:Thev4lgQmh+ANaFnji/2yesblOlCEXs+L1EUmIQ1J/k=
+github.com/tigera/typha-private v0.6.0-beta1.0.20201111102314-74ad1759de86/go.mod h1:UABsVT1au5IPorznrZ72t5ByZPhj+BsZs1HESEfqZGg=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
