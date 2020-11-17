@@ -101,7 +101,7 @@ section:
     section: 
     - title: Enable the eBPF dataplane
       path: /maintenance/performance/ebpf/enabling-ebpf
-    - title: Creating an EKS cluster for eBPF mode
+    - title: Create an EKS cluster for eBPF mode
       path: /maintenance/performance/ebpf/ebpf-and-eks
   - title: Reduce node impacts on datastore
     path: /reference/typha/overview

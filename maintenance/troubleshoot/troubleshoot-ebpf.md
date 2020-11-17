@@ -1,5 +1,5 @@
 ---
-title: Troubleshooting eBPF mode
+title: Troubleshoot eBPF mode
 description: How to troubleshoot when running in eBPF mode. 
 canonical_url: '/maintenance/troubleshoot/troubleshoot-ebpf'
 ---
