@@ -34,15 +34,6 @@ roleRef:
   name: honeypod-controller-role
   apiGroup: rbac.authorization.k8s.io
 ---
-# Packet Capture
-apiVersion: projectcalico.org/v3
-kind: PacketCapture
-metadata:
-  name: capture-honey
-  namespace: tigera-internal
-spec:
-  selector: all()
----
 # The actual honeypod-controller deployment
 apiVersion: apps/v1
 kind: DaemonSet

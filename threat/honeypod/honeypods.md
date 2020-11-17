@@ -10,7 +10,7 @@ Configure honeypods in your clusters and get alerts that indicate resources may 
 
 ### Value
 
-Based on the well-known cybersecurity method, “honeypots,” {{site.prodname}} honeypods are used to detect suspicious activity within a Kubernetes cluster. The feature enables you to deploy decoys disguised as a sensitive asset (called honeypods) at different locations in your Kubernetes cluster. Any resources make attempts to communicate with the honeypods, it can be considered indicative of a suspicious connection and the cluster may be compromised.
+Based on the well-known cybersecurity method, “honeypots”, {{site.prodname}} honeypods are used to detect suspicious activity within a Kubernetes cluster. The feature enables you to deploy decoys disguised as a sensitive asset (called honeypods) at different locations in your Kubernetes cluster. Any resources make attempts to communicate with the honeypods, it can be considered indicative of a suspicious connection and the cluster may be compromised.
 
 {{site.prodname}} honeypods can be used to detect attacks such as:
 

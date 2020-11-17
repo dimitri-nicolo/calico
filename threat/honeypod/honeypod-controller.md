@@ -37,12 +37,29 @@ The controller leverages the following:
 
 ### How To
 
+  - [Enable packet capture on honeypods](#enable-packet-capture-on-honeypods)
   - [Add honeypod controller to cluster](#add-honeypod-controller-to-cluster)
-  - [Verify honeypod controller deployment](#verify-honeypod-controller-deployment)
+  - [Verify honeypod controller](#verify-honeypod-controller)
+
+#### Enable packet capture on honeypods
+
+The following manifest enables packet capture on default [honeypods]({{site.baseurl}}/threat/honeypod/honeypods). Be sure to modify the namespace and selector if honeypods are placed elsewhere. For help, see [PacketCapture]({{site.baseurl}}/threat/packetcapture).
+
+```bash
+kubectl create -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: PacketCapture
+metadata:
+  name: capture-honey
+  namespace: tigera-internal
+spec:
+  selector: all()
+EOF
+```
+
+In order for the honeypod controller to find the packet captures, the name `capture-honey` is required for the PacketCapture resource.
 
 #### Add honeypod controller to cluster
-
-> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/threat/packetcapture) manifest to target your honeypods. Honeypod controller requires the name to be `capture-honey` at this release.
 
 Add the honeypod controller to each cluster configured for honeypods using the following command:
 
@@ -50,7 +67,7 @@ Add the honeypod controller to each cluster configured for honeypods using the f
 kubectl apply -f {{ "/manifests/threat/def/honeypod/controller.yaml" | absolute_url }} 
 ```
 
-#### Verify honeypod controller deployment
+#### Verify honeypod controller
 
 To verify the installation, ensure that honeypod controller is running within the `tigera-intrusion-detection` namespace:
 
