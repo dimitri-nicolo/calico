@@ -54,7 +54,7 @@ func LoadConfig() (*Config, error) {
 
 	// Default the IngressLogPath to /var/log/calico/ingress/ingress.log
 	if config.IngressLogPath == "" {
-		config.IngressLogPath = "/var/log/calico/ingress/ingress.log"
+		config.IngressLogPath = "/tmp/envoy.log"
 	}
 
 	// Default the IngressLogInterval to 5 seconds

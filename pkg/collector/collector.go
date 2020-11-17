@@ -8,25 +8,25 @@ import (
 	"github.com/tigera/envoy-collector/pkg/config"
 )
 
-type IngressCollector interface {
+type EnvoyCollector interface {
 	ReadLogs(context.Context)
-	Report() <-chan IngressInfo
-	ParseRawLogs(string) (IngressLog, error)
+	Report() <-chan EnvoyInfo
+	ParseRawLogs(string) (EnvoyLog, error)
 }
 
-func NewIngressCollector(cfg *config.Config) IngressCollector {
+func NewEnvoyCollector(cfg *config.Config) EnvoyCollector {
 	// Currently it will only return a log file collector but
 	// this should inspect the config to return other collectors
 	// once they need to be implemented.
 	return NewNginxCollector(cfg)
 }
 
-type IngressInfo struct {
-	Logs        []IngressLog
+type EnvoyInfo struct {
+	Logs        []EnvoyLog
 	Connections map[TupleKey]int
 }
 
-type IngressLog struct {
+type EnvoyLog struct {
 	SrcIp    string `json:"source_ip"`
 	DstIp    string `json:"destination_ip"`
 	SrcPort  int32  `json:"source_port"`
@@ -39,7 +39,7 @@ type IngressLog struct {
 }
 
 // TupleKey is an object just for holding the
-// Ingress log's 5 tuple information.
+// Envoy log's 5 tuple information.
 type TupleKey struct {
 	SrcIp    string
 	DstIp    string
@@ -48,58 +48,58 @@ type TupleKey struct {
 	Protocol string
 }
 
-// BatchIngressLogs represents a "batch" of logs
+// BatchEnvoyLog represents a "batch" of logs
 // that we will use to collect HTTP request level info.
 // This is used to limit the amount of request level
 // data we send to Felix.
-type BatchIngressLog struct {
-	logs map[string]IngressLog
+type BatchEnvoyLog struct {
+	logs map[string]EnvoyLog
 	size int
 }
 
-func NewBatchIngressLog(size int) *BatchIngressLog {
+func NewBatchEnvoyLog(size int) *BatchEnvoyLog {
 	if size < 0 {
-		return &BatchIngressLog{
-			logs: make(map[string]IngressLog),
+		return &BatchEnvoyLog{
+			logs: make(map[string]EnvoyLog),
 			size: size,
 		}
 	}
-	return &BatchIngressLog{
-		logs: make(map[string]IngressLog, size),
+	return &BatchEnvoyLog{
+		logs: make(map[string]EnvoyLog, size),
 		size: size,
 	}
 }
 
-func (b BatchIngressLog) Insert(log IngressLog) {
-	logKey := IngressLogKey(log)
+func (b BatchEnvoyLog) Insert(log EnvoyLog) {
+	logKey := EnvoyLogKey(log)
 	if !b.Full() {
 		b.logs[logKey] = log
 	}
 }
 
-func (b BatchIngressLog) Full() bool {
+func (b BatchEnvoyLog) Full() bool {
 	if b.size < 0 {
 		return false
 	}
 	return len(b.logs) == b.size
 }
 
-func (b BatchIngressLog) Clear() {
+func (b BatchEnvoyLog) Clear() {
 	if b.size < 0 {
-		b.logs = make(map[string]IngressLog)
+		b.logs = make(map[string]EnvoyLog)
 	}
-	b.logs = make(map[string]IngressLog, b.size)
+	b.logs = make(map[string]EnvoyLog, b.size)
 }
 
-func (b BatchIngressLog) Logs() []IngressLog {
-	logs := []IngressLog{}
+func (b BatchEnvoyLog) Logs() []EnvoyLog {
+	logs := []EnvoyLog{}
 	for _, val := range b.logs {
 		logs = append(logs, val)
 	}
 	return logs
 }
 
-func IngressLogKey(log IngressLog) string {
+func EnvoyLogKey(log EnvoyLog) string {
 	// Only use 1 IP as the key
 	if log.XRealIp != "" && log.XRealIp != "-" {
 		return log.XRealIp
@@ -107,7 +107,7 @@ func IngressLogKey(log IngressLog) string {
 	return log.XForwardedFor
 }
 
-func TupleKeyFromIngressLog(log IngressLog) TupleKey {
+func TupleKeyFromEnvoyLog(log EnvoyLog) TupleKey {
 	return TupleKey{
 		SrcIp:    log.SrcIp,
 		DstIp:    log.DstIp,
@@ -117,8 +117,8 @@ func TupleKeyFromIngressLog(log IngressLog) TupleKey {
 	}
 }
 
-func IngressLogFromTupleKey(key TupleKey) IngressLog {
-	return IngressLog{
+func EnvoyLogFromTupleKey(key TupleKey) EnvoyLog {
+	return EnvoyLog{
 		SrcIp:    key.SrcIp,
 		DstIp:    key.DstIp,
 		SrcPort:  key.SrcPort,

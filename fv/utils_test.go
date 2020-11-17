@@ -28,7 +28,7 @@ const IngressLogFile = "ingress.log"
 // needed for running collector FV tests.
 type CollectorTestHandler struct {
 	config     *config.Config
-	collector  collector.IngressCollector
+	collector  collector.EnvoyCollector
 	client     felixclient.FelixClient
 	context    context.Context
 	cancel     context.CancelFunc
@@ -39,7 +39,7 @@ type CollectorTestHandler struct {
 
 func NewCollectorTestHandler() *CollectorTestHandler {
 	cfg := createTestConfig()
-	c := collector.NewIngressCollector(cfg)
+	c := collector.NewEnvoyCollector(cfg)
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(cfg.DialTarget, opts)
 	ctx := context.Background()

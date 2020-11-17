@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	fullLog = collector.IngressLog{
+	fullLog = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -20,7 +20,7 @@ var (
 		XForwardedFor: "1.1.1.1",
 		XRealIp:       "8.8.8.8",
 	}
-	noProtoLog = collector.IngressLog{
+	noProtoLog = collector.EnvoyLog{
 		SrcIp:         "10.100.1.1",
 		DstIp:         "10.10.100.1",
 		SrcPort:       int32(40),
@@ -28,7 +28,7 @@ var (
 		XForwardedFor: "2.2.2.2",
 		XRealIp:       "7.7.7.7",
 	}
-	multipleForwardLog = collector.IngressLog{
+	multipleForwardLog = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -37,7 +37,7 @@ var (
 		XForwardedFor: "1.1.1.1, 2.2.2.2",
 		XRealIp:       "8.8.8.8",
 	}
-	emptyForwardLog = collector.IngressLog{
+	emptyForwardLog = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -46,7 +46,7 @@ var (
 		XForwardedFor: "",
 		XRealIp:       "8.8.8.8",
 	}
-	emptyRealLog = collector.IngressLog{
+	emptyRealLog = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -55,7 +55,7 @@ var (
 		XForwardedFor: "1.1.1.1",
 		XRealIp:       "-",
 	}
-	emptyHeaderLog = collector.IngressLog{
+	emptyHeaderLog = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -64,7 +64,7 @@ var (
 		XForwardedFor: "-",
 		XRealIp:       "-",
 	}
-	similarLog1 = collector.IngressLog{
+	similarLog1 = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -73,7 +73,7 @@ var (
 		XForwardedFor: "1.1.1.2",
 		XRealIp:       "8.8.8.9",
 	}
-	similarLog2 = collector.IngressLog{
+	similarLog2 = collector.EnvoyLog{
 		SrcIp:         "10.100.10.1",
 		DstIp:         "10.100.100.1",
 		SrcPort:       int32(40),
@@ -84,7 +84,7 @@ var (
 	}
 )
 
-var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", func() {
+var _ = Describe("Felix Client Converting EnvoyLog to DataplaneStats test", func() {
 	testClient := &felixClient{}
 	Context("With a log with all fields filled in", func() {
 		It("Should create dataplane stats with the correct fields", func() {
@@ -156,15 +156,15 @@ var _ = Describe("Felix Client Converting IngressLog to DataplaneStats test", fu
 	})
 })
 
-var _ = Describe("Felix Client batching and converting IngressLog to DataplaneStats test", func() {
+var _ = Describe("Felix Client batching and converting EnvoyLog to DataplaneStats test", func() {
 	testClient := &felixClient{}
 	Context("With a set of logs with different 5 tuple data", func() {
-		logs := []collector.IngressLog{fullLog, noProtoLog}
-		info := collector.IngressInfo{
+		logs := []collector.EnvoyLog{fullLog, noProtoLog}
+		info := collector.EnvoyInfo{
 			Logs: logs,
 		}
 		It("Should create dataplane stats with only one HttpData each", func() {
-			data := testClient.batchAndConvertIngressLogs(info)
+			data := testClient.batchAndConvertEnvoyLogs(info)
 			Expect(len(data)).To(Equal(len(logs)))
 			for _, dpStats := range data {
 				Expect(len(dpStats.HttpData)).To(Equal(1))
@@ -172,12 +172,12 @@ var _ = Describe("Felix Client batching and converting IngressLog to DataplaneSt
 		})
 	})
 	Context("With a set of logs with same 5 tuple data", func() {
-		logs := []collector.IngressLog{fullLog, similarLog1, similarLog2}
-		info := collector.IngressInfo{
+		logs := []collector.EnvoyLog{fullLog, similarLog1, similarLog2}
+		info := collector.EnvoyInfo{
 			Logs: logs,
 		}
 		It("Should create dataplane stats with multiple HttpData", func() {
-			data := testClient.batchAndConvertIngressLogs(info)
+			data := testClient.batchAndConvertEnvoyLogs(info)
 			Expect(len(data)).To(Equal(1))
 			for _, dpStats := range data {
 				Expect(len(dpStats.HttpData)).To(Equal(len(logs)))

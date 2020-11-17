@@ -25,7 +25,7 @@ var _ = Describe("NGINX Ingress Log Collector ParseRawLogs test", func() {
 	c := NewNginxCollector(&config.Config{})
 
 	Context("With a log with the information json in the beginning of the log", func() {
-		It("should return the expected IngressLog", func() {
+		It("should return the expected EnvoyLog", func() {
 			log, err := c.ParseRawLogs(testLogBeginning)
 			Expect(err).To(BeNil())
 			Expect(log.SrcIp).To(Equal("1.1.1.1"))
@@ -36,7 +36,7 @@ var _ = Describe("NGINX Ingress Log Collector ParseRawLogs test", func() {
 		})
 	})
 	Context("With a log with the information json in the middle of the log", func() {
-		It("should return the expected IngressLog", func() {
+		It("should return the expected EnvoyLog", func() {
 			log, err := c.ParseRawLogs(testLogMiddle)
 			Expect(err).To(BeNil())
 			Expect(log.SrcIp).To(Equal("1.1.1.1"))
@@ -47,7 +47,7 @@ var _ = Describe("NGINX Ingress Log Collector ParseRawLogs test", func() {
 		})
 	})
 	Context("With a log with the information json in the end of the log", func() {
-		It("should return the expected IngressLog", func() {
+		It("should return the expected EnvoyLog", func() {
 			log, err := c.ParseRawLogs(testLogEnd)
 			Expect(err).To(BeNil())
 			Expect(log.SrcIp).To(Equal("1.1.1.1"))
@@ -58,7 +58,7 @@ var _ = Describe("NGINX Ingress Log Collector ParseRawLogs test", func() {
 		})
 	})
 	Context("With a log with the multiple sets of information json", func() {
-		It("should return the IngressLog from the first blob of json", func() {
+		It("should return the EnvoyLog from the first blob of json", func() {
 			log, err := c.ParseRawLogs(testLogMultipleSections)
 			Expect(err).To(BeNil())
 			Expect(log.SrcIp).To(Equal("1.1.1.1"))

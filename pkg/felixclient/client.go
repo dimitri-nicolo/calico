@@ -14,8 +14,8 @@ import (
 )
 
 type FelixClient interface {
-	SendStats(context.Context, collector.IngressCollector)
-	SendData(context.Context, proto.PolicySyncClient, collector.IngressInfo) error
+	SendStats(context.Context, collector.EnvoyCollector)
+	SendData(context.Context, proto.PolicySyncClient, collector.EnvoyInfo) error
 }
 
 // felixClient provides the means to send data to Felix
@@ -32,7 +32,7 @@ func NewFelixClient(target string, opts []grpc.DialOption) FelixClient {
 }
 
 // SendStats listens for data from the collector and sends it.
-func (fc *felixClient) SendStats(ctx context.Context, collector collector.IngressCollector) {
+func (fc *felixClient) SendStats(ctx context.Context, collector collector.EnvoyCollector) {
 	log.Info("Starting sending DataplaneStats to Policy Sync server")
 	conn, err := grpc.Dial(fc.target, fc.dialOpts...)
 	if err != nil {
@@ -57,11 +57,11 @@ func (fc *felixClient) SendStats(ctx context.Context, collector collector.Ingres
 	}
 }
 
-// SendData takes IngressLog data and sends the it with the
+// SendData takes EnvoyLog data and sends the it with the
 // protobuf client.
-func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClient, logData collector.IngressInfo) error {
+func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClient, logData collector.EnvoyInfo) error {
 	// Batch the data by 5 tuple
-	data := fc.batchAndConvertIngressLogs(logData)
+	data := fc.batchAndConvertEnvoyLogs(logData)
 
 	// Send the batched data
 	for _, d := range data {
@@ -81,14 +81,14 @@ func (fc *felixClient) SendData(ctx context.Context, client proto.PolicySyncClie
 	return nil
 }
 
-func (fc *felixClient) batchAndConvertIngressLogs(info collector.IngressInfo) map[collector.TupleKey]*proto.DataplaneStats {
+func (fc *felixClient) batchAndConvertEnvoyLogs(info collector.EnvoyInfo) map[collector.TupleKey]*proto.DataplaneStats {
 	data := make(map[collector.TupleKey]*proto.DataplaneStats)
 	for _, log := range info.Logs {
-		// Convert the IngressLog to DataplaneStats
+		// Convert the EnvoyLog to DataplaneStats
 		d := fc.dataPlaneStatsFromIngressLog(log)
 
 		// Join the HttpData fields by 5 tuple
-		tupleKey := collector.TupleKeyFromIngressLog(log)
+		tupleKey := collector.TupleKeyFromEnvoyLog(log)
 		if existing, ok := data[tupleKey]; ok {
 			// Add the HttpData to the existing log
 			existing.HttpData = append(existing.HttpData, d.HttpData...)
@@ -111,7 +111,7 @@ func (fc *felixClient) batchAndConvertIngressLogs(info collector.IngressInfo) ma
 	// include requests we have recorded.
 	for key, count := range info.Connections {
 		if _, ok := data[key]; !ok {
-			log := collector.IngressLogFromTupleKey(key)
+			log := collector.EnvoyLogFromTupleKey(key)
 			d := fc.dataPlaneStatsFromIngressLog(log)
 			// Add the count statistics
 			httpStat := &proto.Statistic{
@@ -130,7 +130,7 @@ func (fc *felixClient) batchAndConvertIngressLogs(info collector.IngressInfo) ma
 	return data
 }
 
-func (fc *felixClient) dataPlaneStatsFromIngressLog(logData collector.IngressLog) *proto.DataplaneStats {
+func (fc *felixClient) dataPlaneStatsFromIngressLog(logData collector.EnvoyLog) *proto.DataplaneStats {
 	// Unless the protocol is specified, the protocol will be
 	// TCP since the feature requires the user of HTTP headers
 	// in order to function properly.

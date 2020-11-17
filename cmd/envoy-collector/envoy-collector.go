@@ -29,7 +29,7 @@ func main() {
 	cfg.InitializeLogging()
 
 	// Instantiate the log collector
-	c := collector.NewIngressCollector(cfg)
+	c := collector.NewEnvoyCollector(cfg)
 
 	// Instantiate the felix client
 	opts := uds.GetDialOptions()
@@ -39,7 +39,7 @@ func main() {
 	CollectAndSend(context.Background(), felixClient, c)
 }
 
-func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.IngressCollector) {
+func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector) {
 	ctx, cancel := context.WithCancel(ctx)
 	wg := sync.WaitGroup{}
 

@@ -18,18 +18,18 @@ import (
 const INGRESSLOGJSONPREFIX = "tigera_secure_ee_ingress:"
 
 type nginxCollector struct {
-	collectedLogs    chan IngressInfo
+	collectedLogs    chan EnvoyInfo
 	config           *config.Config
-	batch            *BatchIngressLog
+	batch            *BatchEnvoyLog
 	seen             map[string]struct{}
 	connectionCounts map[TupleKey]int
 }
 
-func NewNginxCollector(cfg *config.Config) IngressCollector {
+func NewNginxCollector(cfg *config.Config) EnvoyCollector {
 	return &nginxCollector{
-		collectedLogs:    make(chan IngressInfo),
+		collectedLogs:    make(chan EnvoyInfo),
 		config:           cfg,
-		batch:            NewBatchIngressLog(cfg.IngressRequestsPerInterval),
+		batch:            NewBatchEnvoyLog(cfg.IngressRequestsPerInterval),
 		connectionCounts: make(map[TupleKey]int),
 		seen:             make(map[string]struct{}),
 	}
@@ -102,9 +102,9 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 			nc.batch.Insert(ingressLog)
 
 			// Count the unique IPs per connection
-			logKey := IngressLogKey(ingressLog)
+			logKey := EnvoyLogKey(ingressLog)
 			if _, exists := nc.seen[logKey]; !exists {
-				tupleKey := TupleKeyFromIngressLog(ingressLog)
+				tupleKey := TupleKeyFromEnvoyLog(ingressLog)
 				nc.connectionCounts[tupleKey] = nc.connectionCounts[tupleKey] + 1
 				nc.seen[logKey] = struct{}{}
 			}
@@ -118,28 +118,28 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 func (nc *nginxCollector) ingestLogs() {
 	intervalBatch := nc.batch
 	intervalCounts := nc.connectionCounts
-	nc.batch = NewBatchIngressLog(nc.config.IngressRequestsPerInterval)
+	nc.batch = NewBatchEnvoyLog(nc.config.IngressRequestsPerInterval)
 	nc.connectionCounts = make(map[TupleKey]int)
 	nc.seen = make(map[string]struct{})
 
 	// Send a batch if there is data.
 	logs := intervalBatch.Logs()
 	if len(logs) != 0 {
-		nc.collectedLogs <- IngressInfo{Logs: logs, Connections: intervalCounts}
+		nc.collectedLogs <- EnvoyInfo{Logs: logs, Connections: intervalCounts}
 	}
 }
 
-func (nc *nginxCollector) Report() <-chan IngressInfo {
+func (nc *nginxCollector) Report() <-chan EnvoyInfo {
 	return nc.collectedLogs
 }
 
 // ParseRawLogs takes a log in the format:
 // <info> tigera_secure_ee_ingress: { <ingress info> } <more info>
-// and returns an IngressLog with the relevant information.
-func (nc *nginxCollector) ParseRawLogs(text string) (IngressLog, error) {
+// and returns an EnvoyLog with the relevant information.
+func (nc *nginxCollector) ParseRawLogs(text string) (EnvoyLog, error) {
 	keyIndex := strings.Index(text, INGRESSLOGJSONPREFIX+" ")
 	if keyIndex == -1 {
-		return IngressLog{}, fmt.Errorf("Log information not found in this log line")
+		return EnvoyLog{}, fmt.Errorf("Log information not found in this log line")
 	}
 
 	numOpen := 0
@@ -168,17 +168,17 @@ func (nc *nginxCollector) ParseRawLogs(text string) (IngressLog, error) {
 	// Skip lines of the log that do not include the logging
 	// information we are looking for.
 	if ingressText == "" {
-		return IngressLog{}, fmt.Errorf("Log information not properly formatted in this log line")
+		return EnvoyLog{}, fmt.Errorf("Log information not properly formatted in this log line")
 	}
 
 	// TODO: Add something that will properly quote IPs for the users.
-	// Unmarshall the bytes into the IngressLog data
-	var ingressLog IngressLog
+	// Unmarshall the bytes into the EnvoyLog data
+	var ingressLog EnvoyLog
 	err := json.Unmarshal([]byte(ingressText), &ingressLog)
 	if err != nil {
 		// TODO: Figure out proper error handling
 		log.Warnf("Failed to unmarshal ingress logs. Logs may be formatted incorrectly: %v", err)
-		return IngressLog{}, err
+		return EnvoyLog{}, err
 	}
 
 	return ingressLog, nil
