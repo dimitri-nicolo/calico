@@ -1,4 +1,4 @@
-.PHONY: ci cd
+.PHONY: ci cd image
 
 GIT_VERSION?=$(shell git describe --tags --dirty --always --long)
 
@@ -12,11 +12,13 @@ else
 	LATEST_TAG=latest
 endif
 
-ci:
+
+image:
 	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) --pull -t $(KIBANA_IMAGE):$(LATEST_TAG) ./
 
+ci: image
 
-cd:
+cd: image
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
