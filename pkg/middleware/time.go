@@ -75,7 +75,7 @@ func ParseElasticsearchTime(now time.Time, tstr *string) (*time.Time, interface{
 	if t, err := time.Parse(time.RFC3339, *tstr); err == nil {
 		clog.Debug("Time is in valid RFC3339 format")
 		tutc := t.UTC()
-		return &tutc, tutc, nil
+		return &tutc, tutc.Unix(), nil
 	} else {
 		clog.Debug("Time format is not recognized")
 		return nil, nil, err
