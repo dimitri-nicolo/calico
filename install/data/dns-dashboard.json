@@ -378,6 +378,28 @@
     ]
   },
   {
+    "id": "281eb820-2862-11eb-8334-294e1044009f",
+    "type": "visualization",
+    "version": "1",
+    "attributes": {
+      "title": "DNS Latency",
+      "visState": "{\"title\":\"DNS Latency\",\"type\":\"line\",\"params\":{\"type\":\"line\",\"grid\":{\"categoryLines\":false},\"categoryAxes\":[{\"id\":\"CategoryAxis-1\",\"type\":\"category\",\"position\":\"bottom\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\"},\"labels\":{\"show\":true,\"filter\":true,\"truncate\":100},\"title\":{}}],\"valueAxes\":[{\"id\":\"ValueAxis-1\",\"name\":\"LeftAxis-1\",\"type\":\"value\",\"position\":\"left\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\",\"mode\":\"normal\"},\"labels\":{\"show\":true,\"rotate\":0,\"filter\":false,\"truncate\":100},\"title\":{\"text\":\"Nano seconds\"}}],\"seriesParams\":[{\"show\":true,\"type\":\"histogram\",\"mode\":\"normal\",\"data\":{\"label\":\"Max Latency (ns)\",\"id\":\"1\"},\"valueAxis\":\"ValueAxis-1\",\"drawLinesBetweenPoints\":true,\"lineWidth\":2,\"interpolate\":\"cardinal\",\"showCircles\":true},{\"show\":true,\"type\":\"histogram\",\"mode\":\"normal\",\"data\":{\"id\":\"3\",\"label\":\"Average Latency (ns)\"},\"valueAxis\":\"ValueAxis-1\",\"drawLinesBetweenPoints\":true,\"lineWidth\":2,\"interpolate\":\"cardinal\",\"showCircles\":true},{\"show\":true,\"type\":\"area\",\"mode\":\"normal\",\"data\":{\"id\":\"4\",\"label\":\"Min Latency (ns)\"},\"valueAxis\":\"ValueAxis-1\",\"drawLinesBetweenPoints\":true,\"lineWidth\":2,\"interpolate\":\"cardinal\",\"showCircles\":true}],\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"times\":[],\"addTimeMarker\":false,\"labels\":{},\"thresholdLine\":{\"show\":false,\"value\":10,\"width\":1,\"style\":\"full\",\"color\":\"#E7664C\"},\"dimensions\":{\"x\":{\"accessor\":0,\"format\":{\"id\":\"date\",\"params\":{\"pattern\":\"HH:mm\"}},\"params\":{\"date\":true,\"interval\":\"PT1M\",\"intervalESValue\":1,\"intervalESUnit\":\"m\",\"format\":\"HH:mm\"},\"label\":\"DNS latency observed\",\"aggType\":\"date_histogram\"},\"y\":[{\"accessor\":1,\"format\":{\"id\":\"number\",\"params\":{\"parsedUrl\":{\"origin\":\"https://127.0.0.1:9443\",\"pathname\":\"/tigera-kibana/app/kibana\",\"basePath\":\"/tigera-kibana\"}}},\"params\":{},\"label\":\"Max Latency (ns)\",\"aggType\":\"avg\"},{\"accessor\":2,\"format\":{\"id\":\"number\",\"params\":{\"parsedUrl\":{\"origin\":\"https://127.0.0.1:9443\",\"pathname\":\"/tigera-kibana/app/kibana\",\"basePath\":\"/tigera-kibana\"}}},\"params\":{},\"label\":\"Average Latency (ns)\",\"aggType\":\"avg\"},{\"accessor\":3,\"format\":{\"id\":\"number\",\"params\":{\"parsedUrl\":{\"origin\":\"https://127.0.0.1:9443\",\"pathname\":\"/tigera-kibana/app/kibana\",\"basePath\":\"/tigera-kibana\"}}},\"params\":{},\"label\":\"Min Latency (ns)\",\"aggType\":\"min\"}]}},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"avg\",\"schema\":\"metric\",\"params\":{\"field\":\"latency_max\",\"customLabel\":\"Max Latency (ns)\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"date_histogram\",\"schema\":\"segment\",\"params\":{\"field\":\"@timestamp\",\"timeRange\":{\"from\":\"now-15m\",\"to\":\"now\"},\"useNormalizedEsInterval\":true,\"scaleMetricValues\":false,\"interval\":\"m\",\"drop_partials\":false,\"min_doc_count\":1,\"extended_bounds\":{},\"customLabel\":\"DNS latency observed\"}},{\"id\":\"3\",\"enabled\":true,\"type\":\"avg\",\"schema\":\"metric\",\"params\":{\"field\":\"latency_mean\",\"customLabel\":\"Average Latency (ns)\"}},{\"id\":\"4\",\"enabled\":true,\"type\":\"min\",\"schema\":\"metric\",\"params\":{\"field\":\"latency_mean\",\"customLabel\":\"Min Latency (ns)\"}}]}",
+      "uiStateJSON": "{}",
+      "description": "",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+      }
+    },
+    "references": [
+      {
+        "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
+        "type": "index-pattern",
+        "id": "5f6d8b00-be26-11e9-9c64-c32fd05522ef"
+      }
+    ]
+  },
+  {
     "id": "3a849d80-e970-11ea-83c8-edded0d3c4d6",
     "type": "dashboard",
     "version": "1",
@@ -385,7 +407,7 @@
       "title": "DNS Dashboard",
       "hits": 0,
       "description": "",
-      "panelsJSON": "[{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":0,\"w\":9,\"h\":14,\"i\":\"44842c81-8e7d-4cb4-b0c0-41801e1f8913\"},\"panelIndex\":\"44842c81-8e7d-4cb4-b0c0-41801e1f8913\",\"embeddableConfig\":{},\"panelRefName\":\"panel_0\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":9,\"y\":0,\"w\":10,\"h\":14,\"i\":\"e3a807a8-d022-46ef-8bcc-ce1ae9e26092\"},\"panelIndex\":\"e3a807a8-d022-46ef-8bcc-ce1ae9e26092\",\"embeddableConfig\":{},\"panelRefName\":\"panel_1\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":19,\"y\":0,\"w\":10,\"h\":14,\"i\":\"a11a76e4-afaf-41f7-abcd-40a748a3a463\"},\"panelIndex\":\"a11a76e4-afaf-41f7-abcd-40a748a3a463\",\"embeddableConfig\":{},\"panelRefName\":\"panel_2\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":29,\"y\":0,\"w\":19,\"h\":14,\"i\":\"155fa449-4618-4a38-8432-6162e85e7e63\"},\"panelIndex\":\"155fa449-4618-4a38-8432-6162e85e7e63\",\"embeddableConfig\":{},\"panelRefName\":\"panel_3\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":14,\"w\":15,\"h\":19,\"i\":\"88293110-0d4a-4816-93b4-95ba69f2fa94\"},\"panelIndex\":\"88293110-0d4a-4816-93b4-95ba69f2fa94\",\"embeddableConfig\":{},\"panelRefName\":\"panel_4\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":15,\"y\":14,\"w\":17,\"h\":19,\"i\":\"de463c32-59ab-4359-a7e1-6f40c2d9c3ed\"},\"panelIndex\":\"de463c32-59ab-4359-a7e1-6f40c2d9c3ed\",\"embeddableConfig\":{},\"panelRefName\":\"panel_5\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":32,\"y\":14,\"w\":16,\"h\":19,\"i\":\"d6c90595-5db8-4841-98e3-f0536830ef43\"},\"panelIndex\":\"d6c90595-5db8-4841-98e3-f0536830ef43\",\"embeddableConfig\":{},\"panelRefName\":\"panel_6\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":33,\"w\":24,\"h\":10,\"i\":\"1a6c824f-e856-46cb-84da-95787c755ebc\"},\"panelIndex\":\"1a6c824f-e856-46cb-84da-95787c755ebc\",\"embeddableConfig\":{},\"panelRefName\":\"panel_7\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":24,\"y\":33,\"w\":24,\"h\":10,\"i\":\"d8d90914-540e-4ce6-9810-dd6cc28dc1f4\"},\"panelIndex\":\"d8d90914-540e-4ce6-9810-dd6cc28dc1f4\",\"embeddableConfig\":{},\"panelRefName\":\"panel_8\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":43,\"w\":24,\"h\":15,\"i\":\"91a56edb-6372-4abb-977f-83f08a09294c\"},\"panelIndex\":\"91a56edb-6372-4abb-977f-83f08a09294c\",\"embeddableConfig\":{},\"panelRefName\":\"panel_9\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":24,\"y\":43,\"w\":24,\"h\":15,\"i\":\"c2f5dc32-8805-4b9a-a42c-7c1e8d5f8244\"},\"panelIndex\":\"c2f5dc32-8805-4b9a-a42c-7c1e8d5f8244\",\"embeddableConfig\":{},\"panelRefName\":\"panel_10\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":58,\"w\":48,\"h\":22,\"i\":\"21496b26-a19d-4022-9680-d972b5b7a95e\"},\"panelIndex\":\"21496b26-a19d-4022-9680-d972b5b7a95e\",\"embeddableConfig\":{},\"panelRefName\":\"panel_11\"}]",
+      "panelsJSON": "[{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":0,\"w\":9,\"h\":14,\"i\":\"44842c81-8e7d-4cb4-b0c0-41801e1f8913\"},\"panelIndex\":\"44842c81-8e7d-4cb4-b0c0-41801e1f8913\",\"embeddableConfig\":{},\"panelRefName\":\"panel_0\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":9,\"y\":0,\"w\":10,\"h\":14,\"i\":\"e3a807a8-d022-46ef-8bcc-ce1ae9e26092\"},\"panelIndex\":\"e3a807a8-d022-46ef-8bcc-ce1ae9e26092\",\"embeddableConfig\":{},\"panelRefName\":\"panel_1\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":19,\"y\":0,\"w\":10,\"h\":14,\"i\":\"a11a76e4-afaf-41f7-abcd-40a748a3a463\"},\"panelIndex\":\"a11a76e4-afaf-41f7-abcd-40a748a3a463\",\"embeddableConfig\":{},\"panelRefName\":\"panel_2\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":29,\"y\":0,\"w\":19,\"h\":14,\"i\":\"155fa449-4618-4a38-8432-6162e85e7e63\"},\"panelIndex\":\"155fa449-4618-4a38-8432-6162e85e7e63\",\"embeddableConfig\":{},\"panelRefName\":\"panel_3\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":14,\"w\":16,\"h\":10,\"i\":\"d8d90914-540e-4ce6-9810-dd6cc28dc1f4\"},\"panelIndex\":\"d8d90914-540e-4ce6-9810-dd6cc28dc1f4\",\"embeddableConfig\":{},\"panelRefName\":\"panel_4\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":16,\"y\":14,\"w\":16,\"h\":10,\"i\":\"ba19836e-ce57-49ee-b5e9-25810b14be66\"},\"panelIndex\":\"ba19836e-ce57-49ee-b5e9-25810b14be66\",\"embeddableConfig\":{},\"panelRefName\":\"panel_5\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":32,\"y\":14,\"w\":16,\"h\":10,\"i\":\"1a6c824f-e856-46cb-84da-95787c755ebc\"},\"panelIndex\":\"1a6c824f-e856-46cb-84da-95787c755ebc\",\"embeddableConfig\":{},\"panelRefName\":\"panel_6\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":24,\"w\":16,\"h\":19,\"i\":\"88293110-0d4a-4816-93b4-95ba69f2fa94\"},\"panelIndex\":\"88293110-0d4a-4816-93b4-95ba69f2fa94\",\"embeddableConfig\":{},\"panelRefName\":\"panel_7\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":16,\"y\":24,\"w\":16,\"h\":19,\"i\":\"de463c32-59ab-4359-a7e1-6f40c2d9c3ed\"},\"panelIndex\":\"de463c32-59ab-4359-a7e1-6f40c2d9c3ed\",\"embeddableConfig\":{},\"panelRefName\":\"panel_8\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":32,\"y\":24,\"w\":16,\"h\":19,\"i\":\"d6c90595-5db8-4841-98e3-f0536830ef43\"},\"panelIndex\":\"d6c90595-5db8-4841-98e3-f0536830ef43\",\"embeddableConfig\":{},\"panelRefName\":\"panel_9\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":43,\"w\":24,\"h\":15,\"i\":\"91a56edb-6372-4abb-977f-83f08a09294c\"},\"panelIndex\":\"91a56edb-6372-4abb-977f-83f08a09294c\",\"embeddableConfig\":{},\"panelRefName\":\"panel_10\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":24,\"y\":43,\"w\":24,\"h\":15,\"i\":\"c2f5dc32-8805-4b9a-a42c-7c1e8d5f8244\"},\"panelIndex\":\"c2f5dc32-8805-4b9a-a42c-7c1e8d5f8244\",\"embeddableConfig\":{},\"panelRefName\":\"panel_11\"},{\"version\":\"7.6.2\",\"gridData\":{\"x\":0,\"y\":58,\"w\":48,\"h\":22,\"i\":\"21496b26-a19d-4022-9680-d972b5b7a95e\"},\"panelIndex\":\"21496b26-a19d-4022-9680-d972b5b7a95e\",\"embeddableConfig\":{},\"panelRefName\":\"panel_12\"}]",
       "optionsJSON": "{\"hidePanelTitles\":false,\"useMargins\":true}",
       "version": 1,
       "timeRestore": false,
@@ -417,40 +439,45 @@
       {
         "name": "panel_4",
         "type": "visualization",
-        "id": "a0146ec0-e95f-11ea-83c8-edded0d3c4d6"
+        "id": "03e21aa0-e970-11ea-83c8-edded0d3c4d6"
       },
       {
         "name": "panel_5",
         "type": "visualization",
-        "id": "7bd12de0-e960-11ea-83c8-edded0d3c4d6"
+        "id": "281eb820-2862-11eb-8334-294e1044009f"
       },
       {
         "name": "panel_6",
         "type": "visualization",
-        "id": "8a55fc60-e983-11ea-83c8-edded0d3c4d6"
+        "id": "42eb73f0-e96f-11ea-83c8-edded0d3c4d6"
       },
       {
         "name": "panel_7",
         "type": "visualization",
-        "id": "42eb73f0-e96f-11ea-83c8-edded0d3c4d6"
+        "id": "a0146ec0-e95f-11ea-83c8-edded0d3c4d6"
       },
       {
         "name": "panel_8",
         "type": "visualization",
-        "id": "03e21aa0-e970-11ea-83c8-edded0d3c4d6"
+        "id": "7bd12de0-e960-11ea-83c8-edded0d3c4d6"
       },
       {
         "name": "panel_9",
         "type": "visualization",
-        "id": "a8020cd0-e97a-11ea-83c8-edded0d3c4d6"
+        "id": "8a55fc60-e983-11ea-83c8-edded0d3c4d6"
       },
       {
         "name": "panel_10",
         "type": "visualization",
-        "id": "72ef3fc0-e97c-11ea-83c8-edded0d3c4d6"
+        "id": "a8020cd0-e97a-11ea-83c8-edded0d3c4d6"
       },
       {
         "name": "panel_11",
+        "type": "visualization",
+        "id": "72ef3fc0-e97c-11ea-83c8-edded0d3c4d6"
+      },
+      {
+        "name": "panel_12",
         "type": "search",
         "id": "702d5750-e3ef-11ea-9932-8743a242f14f"
       }
