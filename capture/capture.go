@@ -53,6 +53,7 @@ type rotatingPcapFile struct {
 	rotationSeconds int
 	maxFiles        int
 	done            chan struct{}
+	isDone          bool
 
 	// the parameters below should not be made available to users
 	currentSize  int
@@ -258,6 +259,10 @@ func (capture *rotatingPcapFile) cleanOlderFiles() {
 }
 
 func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
+	if capture.isDone {
+		return fmt.Errorf("capture has been already closed")
+	}
+
 	var err error
 	log.WithField("CAPTURE", capture.deviceName).Debug("Start writing packets to pcap files")
 	if err = capture.open(); err != nil {
@@ -303,6 +308,7 @@ func (capture *rotatingPcapFile) doDone() {
 	if err = capture.close(); err != nil {
 		log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not close file")
 	}
+	capture.isDone = true
 	capture.ticker.Stop()
 }
 
