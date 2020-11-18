@@ -504,19 +504,21 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			},
 		})
 
+		// open another packet with the same base name
+		var pcap2 = capture.NewRotatingPcapFile(baseDir, baseName, deviceName)
 		// Write again
 		var packets2 = make(chan gopacket.Packet)
 		defer close(packets2)
 		go func() {
 			defer GinkgoRecover()
 
-			err = pcap.Write(packets2)
+			err = pcap2.Write(packets2)
 			Expect(err).NotTo(HaveOccurred())
 		}()
 
 		// Write 1 packet
 		packets2 <- packet
-		defer pcap.Done()
+		defer pcap2.Done()
 
 		assertPcapFiles(baseDir, []outputFile{
 			{
@@ -555,6 +557,46 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 				Size: capture.GlobalHeaderLen + dummyPacketDataSize() + capture.PacketInfoLen,
 			},
 		})
+	}, 10)
+
+	It("Writes packets after it has been stopped", func(done Done) {
+		defer close(done)
+
+		var err error
+		var wg sync.WaitGroup
+
+		// Initialise a new capture
+		var pcap = capture.NewRotatingPcapFile(baseDir, baseName, deviceName)
+
+		// Capture listens to incoming packets
+		var packets = make(chan gopacket.Packet)
+		defer close(packets)
+
+		wg.Add(1)
+		go func() {
+			defer GinkgoRecover()
+
+			err = pcap.Write(packets)
+			Expect(err).NotTo(HaveOccurred())
+			wg.Done()
+		}()
+
+		packet := dummyPacket()
+
+		// Write 1 packet
+		packets <- packet
+
+		// Close the capture
+		pcap.Done()
+
+		// Wait for Write to complete
+		wg.Wait()
+
+		// Call write a second time
+		err = pcap.Write(packets)
+		// Expect an error to be returned
+		Expect(err).To(HaveOccurred())
+
 	}, 10)
 })
 
