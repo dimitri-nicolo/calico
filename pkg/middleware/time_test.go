@@ -94,7 +94,7 @@ var _ = Describe("Time parsing works", func() {
 		Expect(p).To(BeNil())
 	})
 
-	It("Parses an RFC3339 format time", func() {
+	It("Parses an RFC3339 format time and returns it as epoch seconds", func() {
 		now := time.Now().UTC()
 		s := now.Add(-5 * time.Second).UTC().Format(time.RFC3339)
 		t, p, err := middleware.ParseElasticsearchTime(now, &s)
@@ -102,6 +102,6 @@ var _ = Describe("Time parsing works", func() {
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t) / time.Second).To(BeEquivalentTo(5)) // Avoids ms accuracy in `now` but not in `t`.
 		Expect(p).NotTo(BeNil())
-		Expect(p).To(Equal(*t))
+		Expect(p).To(Equal(t.Unix()))
 	})
 })
