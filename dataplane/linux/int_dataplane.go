@@ -40,6 +40,7 @@ import (
 	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
 
 	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/bpf/arp"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/events"
 	bpfipsets "github.com/projectcalico/felix/bpf/ipsets"
@@ -663,6 +664,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if err != nil {
 			log.WithError(err).Panic("Failed to create state BPF map.")
 		}
+
+		arpMap := arp.Map(bpfMapContext)
+		err = arpMap.EnsureExists()
+		if err != nil {
+			log.WithError(err).Panic("Failed to create ARP BPF map.")
+		}
+
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		dp.RegisterManager(newBPFEndpointManager(
 			config.BPFLogLevel,
@@ -971,7 +979,7 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 			log.WithFields(fields).Debug("Skipping interface for MTU detection")
 			continue
 		}
-		log.WithFields(fields).Info("Examining link for MTU calculation")
+		log.WithFields(fields).Debug("Examining link for MTU calculation")
 		if l.Attrs().MTU < smallest || smallest == 0 {
 			smallest = l.Attrs().MTU
 		}
