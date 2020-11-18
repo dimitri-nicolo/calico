@@ -47,6 +47,11 @@ func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown 
 
 func (_ *mockCollector) SetDNSLogReporter(reporter collector.DNSLogReporterInterface) {}
 
+func (_ *mockCollector) LogL7(hd *proto.HTTPData, data *collector.Data, tuple collector.Tuple, httpDataCount int) {
+}
+
+func (_ *mockCollector) SetL7LogReporter(reporter collector.L7LogReporterInterface) {}
+
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
 	var dpConfig intdataplane.Config

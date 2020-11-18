@@ -75,6 +75,7 @@ type collector struct {
 	reporterMgr    *ReporterManager
 	ds             chan *proto.DataplaneStats
 	dnsLogReporter DNSLogReporterInterface
+	l7LogReporter  L7LogReporterInterface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -552,20 +553,25 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 	ips := make([]net.IP, 0, len(d.HttpData))
 	for _, hd := range d.HttpData {
-		var origSrcIP string
-		if len(hd.XRealIp) != 0 {
-			origSrcIP = hd.XRealIp
-		} else if len(hd.XForwardedFor) != 0 {
-			origSrcIP = hd.XForwardedFor
+		if hd.Type != "" {
+			// If the HttpData has a type, then this is an L7 log.
+			c.LogL7(hd, data, t, httpDataCount)
 		} else {
-			continue
+			var origSrcIP string
+			if len(hd.XRealIp) != 0 {
+				origSrcIP = hd.XRealIp
+			} else if len(hd.XForwardedFor) != 0 {
+				origSrcIP = hd.XForwardedFor
+			} else {
+				continue
+			}
+			sip := net.ParseIP(origSrcIP)
+			if sip == nil {
+				log.WithField("IP", origSrcIP).Warn("bad source IP")
+				continue
+			}
+			ips = append(ips, sip)
 		}
-		sip := net.ParseIP(origSrcIP)
-		if sip == nil {
-			log.WithField("IP", origSrcIP).Warn("bad source IP")
-			continue
-		}
-		ips = append(ips, sip)
 	}
 	if len(ips) != 0 {
 		if httpDataCount == 0 {
@@ -707,5 +713,37 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *tim
 			"dst": dst,
 			"dns": dns,
 		}).Error("Failed to log DNS packet")
+	}
+}
+
+func (c *collector) SetL7LogReporter(reporter L7LogReporterInterface) {
+	c.l7LogReporter = reporter
+}
+
+func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataCount int) {
+	// Translate endpoint data into L7Update
+	update := L7Update{
+		Tuple:         tuple,
+		SrcEp:         data.srcEp,
+		DstEp:         data.dstEp,
+		Duration:      int(hd.Duration),
+		DurationMax:   int(hd.DurationMax),
+		BytesReceived: int(hd.BytesReceived),
+		BytesSent:     int(hd.BytesSent),
+		ResponseCode:  int(hd.ResponseCode),
+		Method:        hd.RequestMethod,
+		Path:          hd.RequestPath,
+		UserAgent:     hd.UserAgent,
+		Type:          hd.Type,
+		Count:         int(hd.Count),
+		Domain:        hd.Domain,
+	}
+
+	// Send the update to the reporter
+	if err := c.l7LogReporter.Log(update); err != nil {
+		log.WithError(err).WithFields(log.Fields{
+			"src": tuple.src,
+			"dst": tuple.src,
+		}).Error("Failed to log request")
 	}
 }

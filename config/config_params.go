@@ -323,6 +323,15 @@ type Config struct {
 	DNSLogsFilePerNodeLimit    int           `config:"int;0"`
 	DNSLogsLatency             bool          `config:"bool;true"`
 
+	L7LogsFlushInterval     time.Duration `config:"seconds;300"`
+	L7LogsFileEnabled       bool          `config:"bool;false"`
+	L7LogsFileDirectory     string        `config:"string;/var/log/calico/l7logs"`
+	L7LogsFileMaxFiles      int           `config:"int;5"`
+	L7LogsFileMaxFileSizeMB int           `config:"int;100"`
+	// TODO: Figure out the appropriate aggregation levels
+	L7LogsFileAggregationKind int `config:"int(0:1);1"`
+	L7LogsFilePerNodeLimit    int `config:"int;0"`
+
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
 	NATOutgoingAddress net.IP             `config:"ipv4;"`
