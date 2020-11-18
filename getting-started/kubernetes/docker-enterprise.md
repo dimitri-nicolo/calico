@@ -12,25 +12,24 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 **Docker requirements**
 
-- A compatible [Docker Enterprise](https://docs.docker.com/ee/){:target="_blank"} installation on Linux. See [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/){:target="_blank"}. For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
-  - During the installation of UCP, you must set the flag `--unmanaged-cni` so UCP does not install the default Calico networking plugin.
+- Docker EE 3.1 with UCP 3.3.1 install with:
 
-- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html){:target="_blank"} for details.
+   - A minimum of three nodes for non-production deployments
+   - CNI flag set to unmanaged, `--unmanaged-cni` so UCP does not install the default Calico networking plugin
+
+   For help, see {% include open-new-window.html text='Docker Enterprise' url='https://docs.docker.com/ee/' %} and {% include open-new-window.html text='Docker EE Best Practices and Design Considerations' url='https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html' %}
+
+- Install UCP control plane to access the cluster using {% include open-new-window.html text='Docker Universal Control Plane CLI-Based Access' url='https://docs.docker.com/ee/ucp/user-access/cli/' %}. After installing the control plane, enable the option "Allow all authenticated users, including service accounts, to schedule on all nodes, including UCP managers and DTR nodes."
 
 **{{site.prodname}} requirements**
 
-- Your Docker Enterprise cluster meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements).
+- Your Docker Enterprise cluster meets the [{{site.prodname}} system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements)
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
 - [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
-- Install the UCP client bundle for accessing the cluster. See [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/){:target="_blank"}.
-
-- After installing the "Universal Control Plane (UCP)", enable the option "Allow all authenticated users,
-  including service accounts, to schedule on all nodes, including UCP managers and DTR nodes."
-
-- Install `kubectl` CLI tool. See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/){:target="_blank"}.
+- Install `kubectl` CLI tool. See {% include open-new-window.html text='Install kubectl' url='https://kubernetes.io/docs/tasks/tools/install-kubectl/' %}
 
 ### How to
 
@@ -43,9 +42,9 @@ The geeky details of what you get:
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
+1. [Configure a storage class for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
-1. Install Docker EE specific role bindings
+1. Install Docker EE specific role bindings.
 
    ```
    kubectl create -f {{ "/manifests/docker-enterprise/bindings.yaml" | absolute_url }}
@@ -122,7 +121,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 - [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 - [Authentication quickstart]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
-- [Configure your own identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)
+- [Configure an external identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)
 
 **Recommended - Networking**
 
