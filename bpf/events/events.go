@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/felix/bpf/perf"
 )
 
-// Type defines the type of constants used for determinig the type of an event.
+// Type defines the type of constants used for determining the type of an event.
 type Type uint16
 
 const (
@@ -24,6 +24,7 @@ const (
 	TypeLostEvents Type = iota
 	//TypeProtoStatsV4 protocol v4 stats
 	TypeProtoStatsV4 Type = 1
+	TypeDNSEvent     Type = 2
 )
 
 // Event represents the common denominator of all events
@@ -153,7 +154,7 @@ func parseEvent(raw eventRaw) (Event, error) {
 	consumed := copy(hdrBytes[:], data)
 	l := len(data)
 	if int(hdr.Len) > l {
-		return Event{}, errors.Errorf("mismatched lenght %d vs data length %d", hdr.Len, l)
+		return Event{}, errors.Errorf("mismatched length %d vs data length %d", hdr.Len, l)
 	}
 
 	return Event{

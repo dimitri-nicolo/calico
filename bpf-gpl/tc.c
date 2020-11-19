@@ -41,6 +41,8 @@
 #include "reasons.h"
 #include "icmp.h"
 #include "arp.h"
+#include "perf.h"
+#include "sendrecv.h"
 
 #ifndef CALI_FIB_LOOKUP_ENABLED
 #define CALI_FIB_LOOKUP_ENABLED true
@@ -370,6 +372,20 @@ deny:
 	return TC_ACT_SHOT;
 }
 
+static CALI_BPF_INLINE void calico_report_dns(struct __sk_buff *skb)
+{
+	int plen = skb->data_end - skb->data;
+	struct perf_event_timestamp_header hdr;
+	__builtin_memset(&hdr, 0, sizeof(hdr));
+	hdr.h.type = BPF_EVENT_DNS;
+	hdr.h.len = sizeof(hdr) + plen;
+	hdr.timestamp_ns = bpf_ktime_get_ns();
+	int err = perf_commit_event_ctx(skb, plen, &hdr, sizeof(hdr));
+	if (err) {
+		CALI_DEBUG("perf_commit_event_ctx error %d\n", err);
+	}
+}
+
 static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 {
 	struct cali_tc_state *state;
@@ -398,7 +414,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	state->tun_ip = 0;
 
 #ifdef CALI_SET_SKB_MARK
-	/* workaround for test since bpftool run cannot set it in context, wont
+	/* workaround for test since bpftool run cannot set it in context, won't
 	 * be necessary if fixed in kernel
 	 */
 	skb->mark = CALI_SET_SKB_MARK;
@@ -576,6 +592,95 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		state->sport = bpf_ntohs(udp_header->source);
 		state->dport = bpf_ntohs(udp_header->dest);
 		CALI_DEBUG("UDP; ports: s=%d d=%d\n", state->sport, state->dport);
+		if (CALI_F_FROM_WEP) {
+			// From Workload => potential DNS request.
+			// - Support UDP only; bail for TCP or any other IP protocol.
+			// - Message in hand has dst IP and port...
+
+			// Get the sending socket's cookie.  We need this to look up the
+			// apparent destination IP and port in the cali_v4_srmsg map, to
+			// discover if a DNAT was performed by our connect-time load
+			// balancer.
+			__u64 cookie = bpf_get_socket_cookie(skb);
+			if (!cookie) {
+				CALI_DEBUG("failed to get socket cookie for possible DNS request");
+				goto dns_no_cookie;
+			}
+			CALI_DEBUG("Got socket cookie 0x%lx for possible DNS\n", cookie);
+
+			// Lookup dst IP and port in cali_v4_srmsg map.  If there's a hit,
+			// henceforth use dst IP and port from the map entry.  (Hit
+			// implies that a DNAT has already happened, because of CTLB being
+			// in use, but now we have the pre-DNAT IP and port.  Miss implies
+			// that CTLB isn't in use or DNAT hasn't happened yet; either way
+			// the message in hand already had the dst IP and port that we
+			// need.)
+			__be32 dst_ip = ip_header->daddr;
+			__be16 dst_port = udp_header->dest;
+			struct sendrecv4_key key = {
+				.ip	= ip_header->daddr,
+				.port	= udp_header->dest,
+				.cookie	= cookie,
+			};
+			struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
+			if (revnat) {
+				CALI_DEBUG("Got cali_v4_srmsg entry\n");
+				dst_ip = revnat->ip;
+				dst_port = bpf_htons(ctx_port_to_host(revnat->port));
+			} else {
+				CALI_DEBUG("No cali_v4_srmsg entry\n");
+			}
+			CALI_DEBUG("Now have dst IP 0x%x port %d\n", bpf_ntohl(dst_ip), bpf_ntohs(dst_port));
+
+			// - Compare dst IP and port against 'ipset' for trusted DNS servers.
+			union ip4_set_lpm_key sip;
+			__builtin_memset(&sip, 0, sizeof(sip));
+			sip.ip.mask = 32 /* IP prefix length */ + 64 /* Match ID */ + 16 /* Match port */ + 8 /* Match protocol */;
+			sip.ip.set_id = bpf_cpu_to_be64(TRUSTED_DNS_SERVERS_ID);
+			sip.ip.addr = dst_ip;
+			sip.ip.port = bpf_ntohs(dst_port);
+			sip.ip.protocol = 17;
+			__u8 *sbytes = (__u8 *)&sip;
+			CALI_DEBUG("[ %u %u %u \n",
+				   (unsigned int)(sbytes[0]),
+				   (unsigned int)(sbytes[1]),
+				   (unsigned int)(sbytes[2]));
+			CALI_DEBUG("  %u %u %u \n",
+				   (unsigned int)(sbytes[3]),
+				   (unsigned int)(sbytes[4]),
+				   (unsigned int)(sbytes[5]));
+			CALI_DEBUG("  %u %u %u \n",
+				   (unsigned int)(sbytes[6]),
+				   (unsigned int)(sbytes[7]),
+				   (unsigned int)(sbytes[8]));
+			CALI_DEBUG("  %u %u %u \n",
+				   (unsigned int)(sbytes[9]),
+				   (unsigned int)(sbytes[10]),
+				   (unsigned int)(sbytes[11]));
+			CALI_DEBUG("  %u %u %u \n",
+				   (unsigned int)(sbytes[12]),
+				   (unsigned int)(sbytes[13]),
+				   (unsigned int)(sbytes[14]));
+			CALI_DEBUG("  %u %u %u \n",
+				   (unsigned int)(sbytes[15]),
+				   (unsigned int)(sbytes[16]),
+				   (unsigned int)(sbytes[17]));
+			CALI_DEBUG("  %u %u ] \n",
+				   (unsigned int)(sbytes[18]),
+				   (unsigned int)(sbytes[19]));
+			if (bpf_map_lookup_elem(&cali_v4_ip_sets, &sip)) {
+				CALI_DEBUG("Dst IP/port are trusted for DNS\n");
+				// Store 'trusted DNS connection' status in conntrack entry.
+				state->ct_result.flags |= CALI_CT_FLAG_TRUST_DNS;
+				// Emit perf event to pass (presumed) DNS request up to
+				// Felix userspace.
+				CALI_DEBUG("report probable DNS request\n");
+				calico_report_dns(skb);
+			} else {
+				CALI_DEBUG("Dst IP/port are not trusted for DNS\n");
+			}
+		}
+	dns_no_cookie:
 		break;
 	case IPPROTO_ICMP:
 		icmp_header = (void*)(ip_header+1);
@@ -631,6 +736,14 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	/* Do conntrack lookup before anything else */
 	state->ct_result = calico_ct_v4_lookup(&ct_lookup_ctx);
+
+	/* If this is on a trusted DNS connection, and UDP, pass up to
+	 * Felix for DNS response processing.
+	 */
+	if (CALI_F_TO_WEP && (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS)) {
+		CALI_DEBUG("report probable DNS response\n");
+		calico_report_dns(skb);
+	}
 
 	/* check if someone is trying to spoof a tunnel packet */
 	if (CALI_F_FROM_HEP && ct_result_tun_src_changed(state->ct_result.rc)) {
@@ -1002,6 +1115,8 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 		if (CALI_F_FROM_WEP && state->flags & CALI_ST_SKIP_FIB) {
 			ct_nat_ctx.flags |= CALI_CT_FLAG_SKIP_FIB;
 		}
+		/* Propagate the trusted DNS flag when updating conntrack entry. */
+		ct_nat_ctx.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
 
 		if (state->ip_proto == IPPROTO_TCP) {
 			if (!skb_has_data_after(skb, ip_header, sizeof(struct tcphdr))) {

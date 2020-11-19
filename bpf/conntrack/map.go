@@ -327,8 +327,8 @@ func (e Value) Data() EntryData {
 }
 
 func (e Value) String() string {
-	flagsStr := ""
 	flags := e.Flags()
+	flagsStr := fmt.Sprintf("%v", flags)
 
 	if flags == 0 {
 		flagsStr = " <none>"
