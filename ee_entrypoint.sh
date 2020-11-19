@@ -77,6 +77,10 @@ sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_AUDIT_
 sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_BGP_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_bgp.template
 sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_BGP_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_bgp.template
 
+# Set the number of shards and replicas for index tigera_secure_ee_l7
+sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_L7_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_l7.template
+sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_L7_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_l7.template
+
 # Build the fluentd configuration file bit by bit, because order is important.
 # Add the sources.
 cat /fluentd/etc/fluent_sources.conf >> /fluentd/etc/fluent.conf
@@ -91,6 +95,12 @@ fi
 # Append additional filter blocks to the fluentd config if provided.
 if [ "${FLUENTD_DNS_FILTERS}" == "true" ]; then
   cat /etc/fluentd/dns-filters.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Append additional filter blocks to the fluentd config if provided.
+if [ "${FLUENTD_L7_FILTERS}" == "true" ]; then
+  cat /etc/fluentd/l7-filters.conf >> /fluentd/etc/fluent.conf
   echo >> /fluentd/etc/fluent.conf
 fi
 
@@ -116,9 +126,12 @@ fi
 if [ -z ${DISABLE_ES_BGP_LOG} ] || [ "${DISABLE_ES_BGP_LOG}" == "false" ]; then
   cp /fluentd/etc/outputs/out-es-bgp.conf /fluentd/etc/output_bgp/out-es.conf
 fi
+if [ -z ${DISABLE_ES_L7_LOG} ] || [ "${DISABLE_ES_L7_LOG}" == "false" ]; then
+  cp /fluentd/etc/outputs/out-es-l7.conf /fluentd/etc/output_l7/out-es.conf
+fi
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-  for x in flows dns tsee_audit kube_audit bgp; do
+  for x in flows dns tsee_audit kube_audit bgp l7; do
     remove_secure_es_conf $x
   done
 fi
@@ -129,6 +142,7 @@ if [ "${S3_STORAGE}" == "true" ]; then
   cp /fluentd/etc/outputs/out-s3-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-s3.conf
   cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
   cp /fluentd/etc/outputs/out-s3-compliance-reports.conf /fluentd/etc/output_compliance_reports/out-s3.conf
+  cp /fluentd/etc/outputs/out-s3-l7.conf /fluentd/etc/output_l7/out-s3.conf
 fi
 
 source /bin/syslog-environment.sh
@@ -151,6 +165,12 @@ fi
 # Include output destination for DNS logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for DNS is turned on.
 if [ -z ${DISABLE_ES_DNS_LOG} ] || [ "${DISABLE_ES_DNS_LOG}" == "false" ] || [ "${SYSLOG_DNS_LOG}" == "true" ] || [ "${SPLUNK_DNS_LOG}" == "true" ] || [ "${SUMO_DNS_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
   cat /fluentd/etc/output_match/dns.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Include output destination for L7 logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for DNS is turned on.
+if [ -z ${DISABLE_ES_L7_LOG} ] || [ "${DISABLE_ES_L7_LOG}" == "false" ] || [ "${SYSLOG_L7_LOG}" == "true" ] || [ "${SPLUNK_L7_LOG}" == "true" ] || [ "${SUMO_L7_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat /fluentd/etc/output_match/l7.conf >> /fluentd/etc/fluent.conf
   echo >> /fluentd/etc/fluent.conf
 fi
 

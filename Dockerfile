@@ -22,6 +22,7 @@ ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
 ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
+ADD elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY output_match /fluentd/etc/output_match
@@ -37,6 +38,7 @@ ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 ENV BIRD_LOG_FILE=/var/log/calico/bird/current
 ENV BIRD6_LOG_FILE=/var/log/calico/bird6/current
 ENV IDS_EVENT_LOG_FILE=/var/log/calico/ids/events.log
+ENV L7_LOG_FILE=/var/log/calico/l7logs/l7.log
 
 ENV POS_DIR=/var/log/calico
 
@@ -57,6 +59,8 @@ ENV ELASTIC_FLOWS_INDEX_REPLICAS=0
 ENV ELASTIC_DNS_INDEX_SHARDS=1
 ENV ELASTIC_DNS_INDEX_REPLICAS=0
 ENV ELASTIC_AUDIT_INDEX_REPLICAS=0
+ENV ELASTIC_L7_INDEX_SHARDS=1
+ENV ELASTIC_L7_INDEX_REPLICAS=0
 ENV ELASTIC_TEMPLATE_OVERWRITE=true
 ENV ELASTIC_BGP_INDEX_SHARDS=1
 ENV ELASTIC_BGP_INDEX_REPLICAS=0
@@ -97,6 +101,7 @@ RUN mkdir /fluentd/etc/output_kube_audit
 RUN mkdir /fluentd/etc/output_compliance_reports
 RUN mkdir /fluentd/etc/output_bgp
 RUN mkdir /fluentd/etc/output_ids_events
+RUN mkdir /fluentd/etc/output_l7
 
 EXPOSE 24284
 

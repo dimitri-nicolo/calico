@@ -47,5 +47,19 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
   if [ "${SPLUNK_DNS_LOG}" == "true" ]; then
     cp /fluentd/etc/outputs/out-splunk-dns.conf /fluentd/etc/output_dns/out-splunk-dns.conf
   fi
+
+  # Optional Splunk l7 log output
+  if [ -z "${SPLUNK_L7_INDEX}" ]; then
+    sed -i 's|index .*||g' /fluentd/etc/outputs/out-splunk-l7.conf
+  fi
+  if [ -z "${SPLUNK_L7_SOURCETYPE}" ]; then
+    sed -i 's|sourcetype .*||g' /fluentd/etc/outputs/out-splunk-l7.conf
+  fi
+  if [ -z "${SPLUNK_L7_SOURCE}" ]; then
+    sed -i 's|source .*||g' /fluentd/etc/outputs/out-splunk-l7.conf
+  fi
+  if [ "${SPLUNK_L7_LOG}" == "true" ]; then
+    cp /fluentd/etc/outputs/out-splunk-l7.conf /fluentd/etc/output_l7/out-splunk-l7.conf
+  fi
 fi
 
