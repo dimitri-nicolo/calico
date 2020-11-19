@@ -83,16 +83,24 @@ section:
 - title: Upgrade
   path: /maintenance/upgrading
   section:
-  - title: OpenShift
-    path: /maintenance/openshift-upgrade
-  - title: Kubernetes
-    path: /maintenance/kubernetes-upgrade-tsee/
+  - title: Upgrade Calico Enterprise
+    path: /maintenance/upgrading-enterprise
     section:
-    - title: Operator upgrade
-      path: /maintenance/kubernetes-upgrade-tsee/operator
-    - title: Helm
-      path: /maintenance/helm-upgrade-tsee
+    - title: Kubernetes
+      path: /maintenance/kubernetes-upgrade-tsee/
+      section:
+      - title: Operator upgrade
+        path: /maintenance/kubernetes-upgrade-tsee/operator
+      - title: Helm
+        path: /maintenance/helm-upgrade-tsee
+    - title: OpenShift
+      path: /maintenance/openshift-upgrade
   - title: Upgrade from Calico to Calico Enterprise
-    path: /maintenance/upgrade-to-tsee  
+    path: /maintenance/upgrading-calico-to-calico-enterprise
+    section:
+    - title: Kubernetes
+      path: /maintenance/upgrade-to-tsee  
+    - title: OpenShift
+      path: /maintenance/upgrade-to-tsee-openshift
 - title: Install a patch release
   path: /maintenance/manifest-archive
