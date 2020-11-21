@@ -209,9 +209,9 @@ var _ = Describe("FlowFilter", func() {
 						"policies": {
 							Buckets: map[interface{}]int64{
 								"0|tier1|tier1.np1|pass":                     1000,
-								"1|tier1|staged:tier1.np1|allow":             1000,
+								"1|tier1|tier1.staged:np1|allow":             1000,
 								"2|tier2|ns1/tier2.np1|pass":                 1000,
-								"3|tier2|ns1/staged:tier2.np1|allow":         1000,
+								"3|tier2|ns1/tier2.staged:np1|allow":         1000,
 								"4|default|ns1/staged:knp.default.np1|allow": 1000,
 								"5|default|ns1/knp.default.np1|allow":        1000,
 							},
@@ -223,9 +223,9 @@ var _ = Describe("FlowFilter", func() {
 				},
 				map[interface{}]int64{
 					"0|tier1|tier1.np1|pass":                     1000,
-					"1|tier1|staged:tier1.np1|allow":             1000,
+					"1|tier1|tier1.staged:np1|allow":             1000,
 					"2|tier2|ns1/tier2.np1|pass":                 1000,
-					"3|tier2|ns1/staged:tier2.np1|allow":         1000,
+					"3|tier2|ns1/tier2.staged:np1|allow":         1000,
 					"4|default|ns1/staged:knp.default.np1|allow": 1000,
 					"5|default|ns1/knp.default.np1|allow":        1000,
 				},
@@ -298,11 +298,11 @@ var _ = Describe("FlowFilter", func() {
 	)
 })
 
-func mustParsePolicyHit(str string, count int64) *api.PolicyHit {
-	ph, ok := api.PolicyHitFromFlowLogPolicyString(str, count)
-	if !ok {
+func mustParsePolicyHit(str string, count int64) api.PolicyHit {
+	ph, err := api.PolicyHitFromFlowLogPolicyString(str, count)
+	if err != nil {
 		panic(fmt.Sprintf("failed to parse policy hit '%s'", str))
 	}
 
-	return &ph
+	return ph
 }

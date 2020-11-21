@@ -2,176 +2,195 @@
 package api_test
 
 import (
+	"fmt"
+	"strconv"
+
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/lma/pkg/api"
 )
 
-var _ = Describe("PolicyHit parsing", func() {
-	It("handles various policy strings", func() {
+type testPolicyHit struct {
+	action      api.Action
+	index       int
+	name        string
+	flowLogName string
+	namespace   string
+	tier        string
+	isKNP       bool
+	isKNS       bool
+	isStaged    bool
+	count       int64
+}
 
-		By("creating a PolicyHit from log string: 4|tier1|namespace1/policy1|allow")
-		ph1, ok := api.PolicyHitFromFlowLogPolicyString("4|tier1|namespace1/tier1.policy1|allow", 5)
-		Expect(ok).To(BeTrue())
-		Expect(ph1).To(Equal(api.PolicyHit{
-			MatchIndex: 4,
-			Tier:       "tier1",
-			Namespace:  "namespace1",
-			Name:       "tier1.policy1",
-			Action:     api.ActionFlagAllow,
-			Staged:     false,
-			Count:      5,
-		}))
-		Expect(ph1.IsKubernetes()).To(BeFalse())
-		Expect(ph1.FlowLogName()).To(Equal("namespace1/tier1.policy1"))
+var _ = Describe("PolicyHitFromFlowLogPolicyString", func() {
+	DescribeTable("Successful PolicyHit parsing",
+		func(policyStr string, docCount int, expectedPolicyHit testPolicyHit) {
+			policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(docCount))
+			Expect(err).ShouldNot(HaveOccurred())
 
-		By("creating a PolicyHit from log string: 2|tier2|policy3|deny")
-		ph2, ok := api.PolicyHitFromFlowLogPolicyString("2|tier2|tier2.policy3|deny", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph2).To(Equal(api.PolicyHit{
-			MatchIndex: 2,
-			Tier:       "tier2",
-			Name:       "tier2.policy3",
-			Action:     api.ActionFlagDeny,
-			Staged:     false,
-		}))
-		Expect(ph2.IsKubernetes()).To(BeFalse())
-		Expect(ph2.FlowLogName()).To(Equal("tier2.policy3"))
+			Expect(policyHit.Action()).Should(Equal(expectedPolicyHit.action))
+			Expect(policyHit.Index()).Should(Equal(expectedPolicyHit.index))
+			Expect(policyHit.Tier()).Should(Equal(expectedPolicyHit.tier))
+			Expect(policyHit.FlowLogName()).Should(Equal(expectedPolicyHit.flowLogName))
+			Expect(policyHit.Namespace()).Should(Equal(expectedPolicyHit.namespace))
+			Expect(policyHit.Count()).Should(Equal(expectedPolicyHit.count))
+			Expect(policyHit.IsKubernetes()).Should(Equal(expectedPolicyHit.isKNP))
+			Expect(policyHit.IsProfile()).Should(Equal(expectedPolicyHit.isKNS))
+			Expect(policyHit.IsStaged()).Should(Equal(expectedPolicyHit.isStaged))
+			Expect(policyHit.ToFlowLogPolicyString()).Should(Equal(policyStr))
+		},
+		Entry(
+			"properly handles a network policy",
+			"4|tierName|namespaceName/tierName.policyName|allow", 5,
+			testPolicyHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", flowLogName: "namespaceName/tierName.policyName", namespace: "namespaceName", count: 5,
+				isKNP: false, isKNS: false, isStaged: false,
+			}),
+		Entry(
+			"properly handles a staged network policy",
+			"4|tierName|namespaceName/tierName.staged:policyName|deny", 5,
+			testPolicyHit{
+				action: api.ActionDeny, index: 4, tier: "tierName", name: "policyName", flowLogName: "namespaceName/tierName.staged:policyName", namespace: "namespaceName", count: 5,
+				isKNP: false, isKNS: false, isStaged: true,
+			}),
+		Entry(
+			"properly handles a global network policy",
+			"4|tierName|tierName.policyName|allow", 5,
+			testPolicyHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", flowLogName: "tierName.policyName", namespace: "", count: 5,
+				isKNP: false, isKNS: false, isStaged: false,
+			}),
+		Entry(
+			"properly handles a staged global network policy",
+			"4|tierName|tierName.staged:policyName|allow", 5,
+			testPolicyHit{
+				action: api.ActionAllow, index: 4, tier: "tierName", name: "policyName", flowLogName: "tierName.staged:policyName", namespace: "", count: 5,
+				isKNP: false, isKNS: false, isStaged: true,
+			}),
+		Entry(
+			"properly handles a kubernetes network policy",
+			"4|default|namespaceName/knp.default.policyName|allow", 5,
+			testPolicyHit{
+				action: api.ActionAllow, index: 4, tier: "default", name: "policyName", flowLogName: "namespaceName/knp.default.policyName", namespace: "namespaceName", count: 5,
+				isKNP: true, isStaged: false,
+			}),
+		Entry(
+			"properly handles a staged kubernetes network policy",
+			"4|default|namespaceName/staged:knp.default.policyName|deny", 5,
+			testPolicyHit{
+				action: api.ActionDeny, index: 4, tier: "default", name: "policyName", flowLogName: "namespaceName/staged:knp.default.policyName", namespace: "namespaceName", count: 5,
+				isKNP: true, isKNS: false, isStaged: true,
+			}),
+		Entry(
+			"properly handles a kubernetes namespace profile",
+			"4|__PROFILE__|__PROFILE__.kns.namespaceName|allow", 5,
+			testPolicyHit{
+				action: api.ActionAllow, index: 4, tier: "__PROFILE__", name: "namespaceName", flowLogName: "__PROFILE__.kns.namespaceName", namespace: "", count: 5,
+				isKNP: false, isKNS: true, isStaged: false,
+			}),
+	)
 
-		By("creating a PolicyHit from log string: 5|__PROFILE__|__PROFILE.kns.namespace1|allow")
-		ph3, ok := api.PolicyHitFromFlowLogPolicyString("5|__PROFILE__|__PROFILE.kns.namespace1|pass", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph3).To(Equal(api.PolicyHit{
-			MatchIndex: 5,
-			Tier:       "__PROFILE__",
-			Name:       "__PROFILE.kns.namespace1",
-			Action:     api.ActionFlagNextTier,
-			Staged:     false,
-		}))
-		Expect(ph3.IsKubernetes()).To(BeFalse())
-		Expect(ph3.FlowLogName()).To(Equal("__PROFILE.kns.namespace1"))
+	DescribeTable("Unsuccessful PolicyHit parsing",
+		func(policyStr string, docCount int, expectedErr error) {
+			_, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(docCount))
+			Expect(err).Should(Equal(expectedErr))
+		},
+		Entry(
+			"fails to parse a policy string with extra pipes",
+			"4|tier1|namespace1/policy1|allow|extra|extra", 5,
+			fmt.Errorf("invalid policy string '4|tier1|namespace1/policy1|allow|extra|extra': pipe count must equal 4")),
+		Entry(
+			"fails to parse a policy string with an invalid index",
+			"x|tier1|namespace1/policy1|allow", 5,
+			fmt.Errorf("invalid policy index: %w", &strconv.NumError{Func: "Atoi", Num: "x", Err: fmt.Errorf("invalid syntax")})),
+		Entry(
+			"fails to parse a policy string with an invalid index",
+			"4|tier1|namespace1/policy1|badaction", 5,
+			fmt.Errorf("invalid action 'badaction'")),
+	)
 
-		// Test each section of the comparison
-		By("creating a PolicyHit from log string: 1|a|a/a.a|allow")
-		ph4, ok := api.PolicyHitFromFlowLogPolicyString("1|a|a/a.a|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph4).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "a",
-			Namespace:  "a",
-			Name:       "a.a",
-			Action:     api.ActionFlagAllow,
-			Staged:     false,
-		}))
-		Expect(ph4.IsKubernetes()).To(BeFalse())
-		Expect(ph4.FlowLogName()).To(Equal("a/a.a"))
+	When("changing fields with the Set functions", func() {
+		It("returns an updated copy of the original PolicyHit while keep the original unmodified", func() {
+			policyHit, err := api.PolicyHitFromFlowLogPolicyString("4|tierName|namespaceName/tierName.policyName|allow", int64(7))
+			Expect(err).ShouldNot(HaveOccurred())
 
-		By("creating a PolicyHit from log string: 1|a|a/staged:a.a|allow")
-		ph5, ok := api.PolicyHitFromFlowLogPolicyString("1|a|a/staged:a.a|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph5).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "a",
-			Namespace:  "a",
-			Name:       "a.a",
-			Action:     api.ActionFlagAllow,
-			Staged:     true,
-		}))
-		Expect(ph5.IsKubernetes()).To(BeFalse())
-		Expect(ph5.FlowLogName()).To(Equal("a/staged:a.a"))
+			updatedPolicyHit := policyHit.SetIndex(2).SetAction(api.ActionDeny).SetCount(20)
 
-		By("creating a PolicyHit from log string: 1|b|a/b.a|deny")
-		ph6, ok := api.PolicyHitFromFlowLogPolicyString("1|b|a/b.a|deny", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph6).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "b",
-			Namespace:  "a",
-			Name:       "b.a",
-			Action:     api.ActionFlagDeny,
-			Staged:     false,
-		}))
-		Expect(ph6.IsKubernetes()).To(BeFalse())
-		Expect(ph6.FlowLogName()).To(Equal("a/b.a"))
+			Expect(updatedPolicyHit.Index()).Should(Equal(2))
+			Expect(updatedPolicyHit.Action()).Should(Equal(api.ActionDeny))
+			Expect(updatedPolicyHit.Count()).Should(Equal(int64(20)))
 
-		By("creating a PolicyHit from log string: 1|b|a/b.a|allow")
-		ph7, ok := api.PolicyHitFromFlowLogPolicyString("1|b|a/b.a|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph7).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "b",
-			Namespace:  "a",
-			Name:       "b.a",
-			Action:     api.ActionFlagAllow,
-			Staged:     false,
-		}))
-		Expect(ph7.IsKubernetes()).To(BeFalse())
-		Expect(ph7.FlowLogName()).To(Equal("a/b.a"))
-
-		By("creating a PolicyHit from log string: 1|b|b/b.b|allow")
-		ph8, ok := api.PolicyHitFromFlowLogPolicyString("1|b|b/b.b|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph8).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "b",
-			Namespace:  "b",
-			Name:       "b.b",
-			Action:     api.ActionFlagAllow,
-			Staged:     false,
-		}))
-		Expect(ph8.IsKubernetes()).To(BeFalse())
-		Expect(ph8.FlowLogName()).To(Equal("b/b.b"))
-
-		By("creating a PolicyHit from log string: 1|b|b/b.a|allow")
-		ph9, ok := api.PolicyHitFromFlowLogPolicyString("1|b|b/b.a|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph9).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "b",
-			Namespace:  "b",
-			Name:       "b.a",
-			Action:     api.ActionFlagAllow,
-			Staged:     false,
-		}))
-		Expect(ph9.IsKubernetes()).To(BeFalse())
-		Expect(ph9.FlowLogName()).To(Equal("b/b.a"))
-
-		By("creating a PolicyHit from log string: 1|default|ns1/knp.default.thing|allow")
-		ph10, ok := api.PolicyHitFromFlowLogPolicyString("1|default|ns1/knp.default.thing|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph10).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "default",
-			Namespace:  "ns1",
-			Name:       "knp.default.thing",
-			Action:     api.ActionFlagAllow,
-			Staged:     false,
-		}))
-		Expect(ph10.IsKubernetes()).To(BeTrue())
-		Expect(ph10.FlowLogName()).To(Equal("ns1/knp.default.thing"))
-
-		By("creating a PolicyHit from log string: 1|default|ns1/staged:knp.default.thing|allow")
-		ph11, ok := api.PolicyHitFromFlowLogPolicyString("1|default|ns1/staged:knp.default.thing|allow", 0)
-		Expect(ok).To(BeTrue())
-		Expect(ph11).To(Equal(api.PolicyHit{
-			MatchIndex: 1,
-			Tier:       "default",
-			Namespace:  "ns1",
-			Name:       "knp.default.thing",
-			Action:     api.ActionFlagAllow,
-			Staged:     true,
-		}))
-		Expect(ph11.IsKubernetes()).To(BeTrue())
-		Expect(ph11.FlowLogName()).To(Equal("ns1/staged:knp.default.thing"))
-		Expect(ph11.ToFlowLogPolicyString()).To(Equal("1|default|ns1/staged:knp.default.thing|allow"))
-
-		By("failing to create a PolicyHit from log string: 4|tier1|namespace1/policy1|allow|extra")
-		_, ok = api.PolicyHitFromFlowLogPolicyString("4|tier1|namespace1/policy1|allow|extra|extra", 0)
-		Expect(ok).To(BeFalse())
-
-		By("failing to create a PolicyHit from log string: x|tier1|namespace1/policy1|allow")
-		_, ok = api.PolicyHitFromFlowLogPolicyString("x|tier1|namespace1/policy1|allow|extra", 0)
-		Expect(ok).To(BeFalse())
+			Expect(policyHit.Index()).Should(Equal(4))
+			Expect(policyHit.Action()).Should(Equal(api.ActionAllow))
+			Expect(policyHit.Count()).Should(Equal(int64(7)))
+		})
 	})
+})
+
+var _ = Describe("NewPolicyHit", func() {
+	DescribeTable("Creating a valid policy hit", func(
+		action api.Action, count int, index int, isStaged bool, name, namespace, tier string,
+		fullName, policyString string) {
+
+		policyHit, err := api.NewPolicyHit(action, int64(count), index, isStaged, name, namespace, tier)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		Expect(policyHit.FlowLogName()).Should(Equal(fullName))
+		Expect(policyHit.ToFlowLogPolicyString()).Should(Equal(policyString))
+		Expect(policyHit.Count()).Should(Equal(int64(count)))
+	},
+		Entry(
+			"properly handles a network policy",
+			api.ActionAllow, 5, 4, false, "tierName.policyName", "namespaceName", "tierName",
+			"namespaceName/tierName.policyName", "4|tierName|namespaceName/tierName.policyName|allow",
+		),
+		Entry(
+			"properly handles a staged network policy",
+			api.ActionDeny, 5, 4, true, "tierName.staged:policyName", "namespaceName", "tierName",
+			"namespaceName/tierName.staged:policyName", "4|tierName|namespaceName/tierName.staged:policyName|deny"),
+		Entry(
+			"properly handles a global network policy",
+			api.ActionAllow, 5, 4, false, "tierName.policyName", "", "tierName",
+			"tierName.policyName", "4|tierName|tierName.policyName|allow"),
+		Entry(
+			"properly handles a staged global network policy",
+			api.ActionAllow, 5, 4, true, "tierName.policyName", "", "tierName",
+			"tierName.staged:policyName", "4|tierName|tierName.staged:policyName|allow"),
+		Entry(
+			"properly handles a kubernetes network policy",
+			api.ActionAllow, 5, 4, false, "knp.default.policyName", "namespaceName", "default",
+			"namespaceName/knp.default.policyName", "4|default|namespaceName/knp.default.policyName|allow"),
+		Entry(
+			"properly handles a staged kubernetes network policy",
+			api.ActionDeny, 5, 4, true, "knp.default.policyName", "namespaceName", "default",
+			"namespaceName/staged:knp.default.policyName", "4|default|namespaceName/staged:knp.default.policyName|deny"),
+		Entry(
+			"properly handles a kubernetes namespace profile",
+			api.ActionAllow, 5, 4, false, "__PROFILE__.kns.namespaceName", "", "__PROFILE__",
+			"__PROFILE__.kns.namespaceName", "4|__PROFILE__|__PROFILE__.kns.namespaceName|allow"),
+	)
+
+	DescribeTable("Creating an invalid policy hit", func(
+		action api.Action, count int, index int, isStaged bool, name, namespace, tier string,
+		expectedErr error) {
+
+		_, err := api.NewPolicyHit(action, int64(count), index, isStaged, name, namespace, tier)
+		Expect(err).Should(Equal(expectedErr))
+	},
+		Entry(
+			"returns an error when action the is empty",
+			api.ActionInvalid, 5, 4, false, "tierName.policyName", "namespaceName", "tierName",
+			fmt.Errorf("a none empty Action must be provided")),
+		Entry(
+			"returns an error when the index is negative",
+			api.ActionDeny, 5, -1, false, "tierName.policyName", "namespaceName", "tierName",
+			fmt.Errorf("index must be a positive integer")),
+		Entry(
+			"returns an error when the count is negative",
+			api.ActionAllow, -1, 4, false, "policyName", "namespaceName", "tierName",
+			fmt.Errorf("count must be a positive integer")),
+	)
 })

@@ -97,18 +97,18 @@ func (_m *MockFlowHelper) CanListPods(namespace string) (bool, error) {
 }
 
 // CanListPolicy provides a mock function with given fields: p
-func (_m *MockFlowHelper) CanListPolicy(p *api.PolicyHit) (bool, error) {
+func (_m *MockFlowHelper) CanListPolicy(p api.PolicyHit) (bool, error) {
 	ret := _m.Called(p)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(*api.PolicyHit) bool); ok {
+	if rf, ok := ret.Get(0).(func(api.PolicyHit) bool); ok {
 		r0 = rf(p)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*api.PolicyHit) error); ok {
+	if rf, ok := ret.Get(1).(func(api.PolicyHit) error); ok {
 		r1 = rf(p)
 	} else {
 		r1 = ret.Error(1)
