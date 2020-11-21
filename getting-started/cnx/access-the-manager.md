@@ -1,6 +1,7 @@
 ---
-title: Configure access to Calico Enterprise Manager
-description: Configure user access to the Calico Enterprise Manager user interface. 
+title: Configure access to Calico Enterprise Manager UI
+description: Configure access to the Calico Enterprise Manager user interface.
+canonical_url: '/getting-started/cnx/access-the-manager'
 ---
 
 ### Big picture
@@ -9,27 +10,33 @@ Configure access to the {{site.prodname}} Manager user interface.
 
 ### Value
 
-By default, the manager UI is not exposed outside of the cluster. This article explains approaches for allowing access to the UI.
+For security, the {{site.prodname}} Manager UI is not exposed outside of the cluster by default. You can configure access to {{site.prodname}} Manager UI using ingress, a load balancer service, or port forwarding.
 
-### Before you begin...
+### Before you begin
 
-Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/).
+**Required**
+
+- [Install {{site.prodname}}]({{site.baseurl}}/getting-started/)
+- Choose one of the following access options and complete the required configuration:
+
+| Option             | Description                                                  | Requirement                                                  |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Kubernetes ingress | Configure your cluster with an ingress controller to implement the `Ingress` resource using {% include open-new-window.html text='Kubernetes ingress' url='https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer' %}. | Ensure the {{site.prodname}} Manager receives a HTTPS (TLS) connection (not unencrypted HTTP). If you require TLS termination at your ingress, you must use a proxy that supports transparent HTTP/2 proxying, (for example, Envoy), or re-originate a TLS connection from your proxy to the {{site.prodname}} Manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} Manager. |
+| Load balancer      | Configure your cluster with a service load balancer controller to implement the external load balancer. See {% include open-new-window.html text='Kubernetes loadbalancer' url='https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/' %} | Ensure the {{site.prodname}} Manager receives a HTTPS (TLS) connection (not unencrypted HTTP). If you require TLS termination at your load balancer, you must use a load balancer that supports transparent HTTP/2 proxying, or re-originate a TLS connection from your load balancer to the {{site.prodname}} Manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} Manager. |
+| Port forwarding    | Forward traffic from a local port to the Kubernetes API server, where it is proxied to the Manager UI. This approach is **not recommended for production**, but is useful if you do not have a load balancer or ingress infrastructure configured, or you need to get started quickly. |
 
 ### How to
 
-Choose one of the following methods for accessing the manager UI:
+#### Configure access to {{site.prodname}} Manager UI
 
-- [Access using Kubernetes ingress](#access-using-kubernetes-ingress)
-- [Access using a LoadBalancer service](#access-using-a-loadbalancer-service)
-- [Access using port-forwarding](#access-using-port-forwarding)
+{% tabs %}
 
-#### Access using Kubernetes ingress
-
-Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/){:target="_blank"}. This approach requires that your cluster is configured with an ingress controller to implement the `Ingress` resource.
+<label:Ingress,active:true>
+<%
 
 **Basic ingress controller, no modification**
 
- The following example uses `tigera-manager` as the backend service without modification. Use the `tigera-manager` service only when edits to the service are not required. (Note if you try to make changes to `tigera-manager`, changes may appear to take effect, but the service always resets to the default and is not overwritten.)
+The following example uses `tigera-manager` as the backend service without modification. Use the `tigera-manager` service only when edits to the service are not required. (Note if you try to make changes to `tigera-manager`, changes may appear to take effect, but the service always resets to the default and is not overwritten.)
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
@@ -45,7 +52,7 @@ spec:
 
 **Advanced ingress controllers, with modifications**
 
-If you need to annotate or modify the service, you must create your own service (`serviceName: <your own name>`) in the tigera-manager namespace, and use it in the Ingress resource. For example:
+If you need to annotate or modify the service, you must create your own service (`serviceName: <your own name>`) in the `tigera-manager` namespace, and use it in the ingress resource. For example:
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
@@ -58,12 +65,14 @@ spec:
     serviceName: annotated-service
     servicePort: 9443
 ```
+#### Log in to {{site.prodname}} Manager UI 
 
->**Note**: You must ensure the {{site.prodname}} manager receives a HTTPS (TLS) connection, not unencrypted HTTP. If you require TLS termination at your ingress, you will need to either use a proxy that supports transparent HTTP/2 proxying, for example, Envoy, or re-originate a TLS connection from your proxy to the {{site.prodname}} manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} manager.
+Access the {{site.prodname}} Manager UI in your browser at: `https://localhost:9443`
 
-#### Access using a LoadBalancer service
+%>
 
-Kubernetes services can be exposed outside of the cluster [by configuring type `LoadBalancer`](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/){:target="_blank"} in the service specification. This requires that your cluster be configured with a service load balancer controller to implement the external load balancer. Most managed Kubernetes platforms support this.
+<label: Load balancer service>
+<%
 
 To expose the manager using a load balancer, create the following service.
 
@@ -84,23 +93,32 @@ spec:
     protocol: TCP
 ```
 
-> Note: You must ensure the {{site.prodname}} manager receives a HTTPS (TLS) connection, not unencrypted HTTP. If you require TLS termination at your load balancer, you will need to either use a load balancer that supports transparent HTTP/2 proxying, or re-originate a TLS connection from your load balancer to the {{site.prodname}} manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} manager.
+After creating the service, it may take a few minutes for the load balancer to be created. Once complete, the load balancer IP address appears as an `ExternalIP` in `kubectl get services -n tigera-manager tigera-manager-external`.
 
-After creating the service, it may take a few minutes for the load balancer to be created. Once complete, the load balancer IP address will appear as an `ExternalIP` in `kubectl get services -n tigera-manager tigera-manager-external`.
+#### Log in to {{site.prodname}} Manager UI 
 
-#### Access using port-forwarding
+Access the {{site.prodname}} Manager UI in your browser at: `https://localhost:9443`
 
-You can use `kubectl` to forward a local port to the Kubernetes API server, where it will be proxied to the manager UI. This approach is not recommended for production, but is useful for scenarios where you do not have a load balancer or ingress infrastructure configured, or if you are looking to get started quickly.
+%>
+
+<label: Port forwarding>
+<%
 
 To forward traffic locally, use the following command:
 
-```
+```bash
 kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443
 ```
 
-You can now access the manager UI in your browser at `https://localhost:9443`.
+#### Log in to {{site.prodname}} Manager UI 
+
+Access the {{site.prodname}} Manager UI in your browser at: `https://localhost:9443`
+
+%>
+
+{% endtabs %}
 
 ### Above and beyond
 
 - [Authentication quickstart]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
-- [Configure your own identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)
+- [Configure an external identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)

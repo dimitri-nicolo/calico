@@ -5,12 +5,14 @@ section:
 - title: Calico Enterprise Manager UI
   path: /getting-started/cnx/
   section:
-  - title: Configure access to the Manager UI
+  - title: Configure access to Calico Enterprise Manager UI
     path: /getting-started/cnx/access-the-manager
   - title: Authentication quickstart
     path: /getting-started/cnx/authentication-quickstart
-  - title: Configure an identity provider
+  - title: Configure an external identity provider
     path: /getting-started/cnx/configure-identity-provider
+  - title: Configure user roles and permissions
+    path: /getting-started/cnx/roles-and-permissions  
 - title: Secure component communications
   path: /security/comms/
   section:

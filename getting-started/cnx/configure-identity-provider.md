@@ -1,45 +1,50 @@
 ---
-title: Configure your own identity provider
-description: Log in to Calico Enterprise Manager and Kibana using your own identity provider.
+title: Configure an external identity provider
+description: Configure an external identity provider for user access to Calico Enterprise Manager and Kibana.
+canonical_url: '/getting-started/cnx/roles-and-permissions'
 ---
 
 ### Big picture
 
-Configure an external identity provider (IdP), such as OIDC or Openshift, create a user with access to the manager UI, and log in to the {{site.prodname}} Manager UI and Kibana.
+Configure an external identity provider (IdP), create a user, and log in to {{site.prodname}} Manager UI. 
+
+(If you are just starting out, the quickest way to allow user access is to configure the default, [token authentication]({{site.baseurl}}/getting-started/cnx/authentication-quickstart).)
 
 ### Concepts
 
-When configuring your cluster, you may be asked to provide information on the following inputs:
+The {{site.prodname}} authentication method is configured through the [Authentication API resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Authentication) named, `tigera-secure`.
+
+When configuring your cluster, you may be asked for the following inputs:
 
 - **Client Id**: Id for exchanging data that are shared between the IdP and an application.
 - **Client Secret**: Secret associated with the `client id` used by server applications for exchanging tokens.
 - **Issuer URL**: URL where the IdP can be reached, based on the conventions of OAuth and OIDC.
 - **Claims**: Every time your IdP issues a token for a valid user, these claims add metadata about the user. {{site.prodname}} uses this to determine the username.
 
-### Before you begin...
+### Before you begin
 
-Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/) and have set up [access to the Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager).
+**Supported identity providers**
+
+- **OIDC authentication**: User identity is managed outside of the cluster by an OIDC authorization server.
+- **Google OIDC authentication**: User identity is managed by Google OIDC. Choose this option if you want to use GSuite groups.
+- **OpenShift authentication**: User identity is provided by the OpenShift OAuth server.
+
+**Required**
+
+- [Install {{site.prodname}}]({{site.baseurl}}/getting-started/) 
+- [Configure access to Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 
 ### How to
 
-> Note: For OpenShift, replace `kubectl` in the commands below with `oc`.
-{: .alert .alert-info}
+#### Configure an external identity provider for user authentication
 
-#### Configure your own Identity Provider
-
-The {{site.prodname}} authentication method can be configured through the [Authentication API resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Authentication) named `tigera-secure`.
-
-We currently support three identity providers: 
-- **OIDC authentication**: The user identity is managed outside of the cluster by an OIDC authorization server.
-- **Google OIDC authentication**: The user identity is managed by Google OIDC. Pick this option if you would like to make use of GSuite groups.
-- **Openshift authentication**: The user identity is provided by the OpenShift OAuth server.
 
 {% tabs %}
   <label:OIDC,active:true>
 <%
 
-1. Apply the Authentication CR to your cluster to let the operator configure your login. This example demonstrates the email claim. 
-   This means that from the JWT that your IdP issues, the email field is used as the username to bind privileges to.
+1. Apply the Authentication CR to your cluster to let the operator configure your login. 
+    The following example uses the email claim. The email field from the JWT (created by your IdP), is used as the username for binding privileges.
 
    ```
    apiVersion: operator.tigera.io/v1
@@ -53,7 +58,7 @@ We currently support three identity providers:
        usernameClaim: email
    ```
 
-1. Apply the secret to your cluster with your OIDC credentials. To obtain the values, please consult the documentation of your provider.
+1. Apply the secret to your cluster with your OIDC credentials. To get the values, consult the documentation of your provider.
 
    ```
    apiVersion: v1
@@ -70,9 +75,8 @@ We currently support three identity providers:
   '<label:Google OIDC>'
 
 <%
-1. Apply the Authentication CR to your cluster to let the operator configure your login. This example demonstrates the email claim. 
-   This means that from the JWT that your IdP creates, the email field is used as the username to bind privileges to. We recommend 
-   to match the `issuerURL` and `usernameClaim` with the configuration of your kube-apiserver.
+1. Apply the Authentication CR to your cluster to let the operator configure your login. 
+    The following example uses the email claim. The email field from the JWT (created by your IdP), is used as the username for binding privileges.
 
    ```
    apiVersion: operator.tigera.io/v1
@@ -113,21 +117,22 @@ We currently support three identity providers:
    ```
 
 %>
-  '<label:Openshift>'
+  '<label:OpenShift>'
 
 <%
+
 1. Create values for some required variables. `MANAGER_URL` is the URL where {{site.prodname}} Manager will be accessed,
-   `CLUSTER_DOMAIN` is the domain (excl. port) where your Openshift cluster is accessed and `CLIENT_SECRET` is a value of your choosing.
+   `CLUSTER_DOMAIN` is the domain (excl. port) where your OpenShift cluster is accessed and `CLIENT_SECRET` is a value of your choosing.
    ```bash
    MANAGER_URL=<manager-host>:<port>
    CLUSTER_DOMAIN=<domain-of-your-ocp-cluster>
    CLIENT_SECRET=<clientSecret>
    ```
 
-1. Add an OAuthClient to your Openshift cluster.
+1. Add an OAuthClient to your OpenShift cluster.
 
    ```bash
-   kubectl apply -f - <<EOF
+   oc apply -f - <<EOF
    kind: OAuthClient
    apiVersion: oauth.openshift.io/v1
    metadata:
@@ -145,7 +150,7 @@ We currently support three identity providers:
 1. Apply the Authentication CR to your cluster to let the operator configure your login.
 
    ```bash
-   kubectl apply -f - <<EOF
+   oc apply -f - <<EOF
    apiVersion: operator.tigera.io/v1
    kind: Authentication
    metadata:
@@ -157,45 +162,44 @@ We currently support three identity providers:
    EOF
    ```
 
-1. Obtain the certificates that are used to connect with openshift and store them in a file called `dex.pem`.
+1. Get the certificates that are used to connect with OpenShift and store them in a file called `dex.pem`.
    ```bash
    echo | openssl s_client -servername oauth-openshift.apps.$CLUSTER_DOMAIN -connect oauth-openshift.apps.$CLUSTER_DOMAIN:443 |  sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > dex.pem
    echo | openssl s_client -servername api.$CLUSTER_DOMAIN -connect api.$CLUSTER_DOMAIN:6443 |  sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' >> dex.pem
    ```
    Alternatively, you can use the root CA of your cluster and store it in `dex.pem`.
 
-1. Apply a secret to your cluster with your Openshift credentials.
+1. Apply a secret to your cluster with your OpenShift credentials.
 
    ```bash
-   kubectl create secret generic tigera-openshift-credentials -n tigera-operator --from-file=rootCA=dex.pem --from-literal=clientID=tigera-dex --from-literal=clientSecret=$CLIENT_SECRET
+   oc create secret generic tigera-openshift-credentials -n tigera-operator --from-file=rootCA=dex.pem --from-literal=clientID=tigera-dex --from-literal=clientSecret=$CLIENT_SECRET
    ```
    
 %>
 {% endtabs %}
 
-**Grant user login privileges** 
+#### Grant user login privileges
 
-For admin users apply this cluster role.
+>**Note**: For OpenShift users, replace `kubectl` with `oc` in the following commands, or apply cluster roles from the OpenShift console: **User Management**, **users**.
+{: .alert .alert-info}
+
+For admin users, apply this cluster role.
   ```bash
   kubectl create clusterrolebinding <user>-tigera-network-admin --user=<user> --clusterrole=tigera-network-admin
   ```
 
-For regular users with view-only permissions apply this role.
+For basic users with view-only permissions, apply this role.
   ```bash
   kubectl create clusterrolebinding <user>-tigera-ui-user --user=<user> --clusterrole=tigera-ui-user
   ```
-> Note: Openshift users can also apply these cluster roles from the Openshift console. Navigate to "User Management" and then select "users".
-{: .alert .alert-info}
 
-#### Allow {{site.prodname}} URIs in your IdP
-Most IdPs require redirect URIs to be allowed in order to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
-Please consult your IdPs documentation for authorizing your domain for the respective origins and destinations.
+#### (Optional) Allow {{site.prodname}} URIs in your IdP
+
+Most IdPs require redirect URIs to be allowed to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. Consult your IdP documentation for authorizing your domain for the respective origins and destinations.
 
 **Authorized redirect URIs**
 - `https://<host><port>/dex/callback`
 
 ### Above and beyond
 
-- [Learn more about the default authentication options]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)
-- [Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)
-- [Configure RBAC for Elasticsearch]({{site.baseurl}}/security/logs/rbac-elasticsearch)
+- [Configure user roles and permissions]({{site.baseurl}}/getting-started/cnx/roles-and-permissions)
