@@ -369,6 +369,7 @@ func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config,
 		variable *string
 		value    string
 	}{
+		{&configOverrides.CurrentContext, ca.K8sCurrentContext},
 		{&configOverrides.ClusterInfo.Server, ca.K8sAPIEndpoint},
 		{&configOverrides.AuthInfo.ClientCertificate, ca.K8sCertFile},
 		{&configOverrides.AuthInfo.ClientKey, ca.K8sKeyFile},
@@ -858,7 +859,7 @@ func (c *KubeClient) listHostConfig(ctx context.Context, l model.HostConfigListO
 
 	// First see if we were handed a specific host, if not list all Nodes
 	if l.Hostname == "" {
-		nodes, err := c.ClientSet.CoreV1().Nodes().List(metav1.ListOptions{})
+		nodes, err := c.ClientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return nil, resources.K8sErrorToCalico(err, l)
 		}
@@ -872,7 +873,7 @@ func (c *KubeClient) listHostConfig(ctx context.Context, l model.HostConfigListO
 			kvps = append(kvps, kvp)
 		}
 	} else {
-		node, err := c.ClientSet.CoreV1().Nodes().Get(l.Hostname, metav1.GetOptions{})
+		node, err := c.ClientSet.CoreV1().Nodes().Get(ctx, l.Hostname, metav1.GetOptions{})
 		if err != nil {
 			return nil, resources.K8sErrorToCalico(err, l)
 		}
