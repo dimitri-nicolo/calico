@@ -195,7 +195,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 			_, err = wepClient.CreateNonDefault(context.Background(), kvp)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			pod, err := k8sClient.CoreV1().Pods("testNamespace").Get("simplePod", metav1.GetOptions{})
+			pod, err := k8sClient.CoreV1().Pods("testNamespace").Get(context.Background(), "simplePod", metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pod.GetAnnotations()).Should(BeNil())
 		})
@@ -348,7 +348,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 			_, err = wepClient.UpdateNonDefault(context.Background(), kvp)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			pod, err := k8sClient.CoreV1().Pods("testNamespace").Get("simplePod", metav1.GetOptions{})
+			pod, err := k8sClient.CoreV1().Pods("testNamespace").Get(context.Background(), "simplePod", metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(pod.GetAnnotations()).Should(BeNil())
 

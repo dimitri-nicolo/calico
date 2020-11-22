@@ -278,7 +278,7 @@ func (c *networkPolicyClient) List(ctx context.Context, list model.ListInterface
 			}, scheme.ParameterCodec)
 		}
 	}
-	err = req.Do().Into(&networkPolicies)
+	err = req.Do(ctx).Into(&networkPolicies)
 	if err != nil {
 		log.WithError(err).Info("Unable to list K8s Network Policy resources")
 		return nil, K8sErrorToCalico(err, l)

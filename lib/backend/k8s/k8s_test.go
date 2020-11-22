@@ -392,7 +392,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			err = c.ClientSet.CoreV1().Pods(p.Namespace).Delete(ctx, p.Name, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				_, err = c.ClientSet.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
+				_, err = c.ClientSet.CoreV1().Pods(p.Namespace).Get(context.Background(), p.Name, metav1.GetOptions{})
 				return kerrors.IsNotFound(err)
 			}, 30*time.Second).Should(BeTrue())
 		}
@@ -3111,7 +3111,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testuti
 		Expect(err).NotTo(HaveOccurred())
 		// Ensure the namespace is removed
 		Eventually(func() bool {
-			err = c.ClientSet.CoreV1().Namespaces().Delete(ns.Name, &metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
+			err = c.ClientSet.CoreV1().Namespaces().Delete(context.Background(), ns.Name, metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
 			return kerrors.IsNotFound(err)
 		}, 30*time.Second).Should(BeTrue())
 	}
@@ -3137,15 +3137,11 @@ var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testuti
 
 	It("should handle creating and deleting a namespace", func() {
 		By("Creating a namespace", func() {
-			_, err := c.ClientSet.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{})
+			_, err := c.ClientSet.CoreV1().Namespaces().Create(context.Background(), &ns, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 		By("Deleting the namespace", func() {
-<<<<<<< HEAD
-			err := c.ClientSet.CoreV1().Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
-=======
-			err := c.ClientSet.CoreV1().Namespaces().Delete(ctx, ns.ObjectMeta.Name, metav1.DeleteOptions{})
->>>>>>> os/master
+			err := c.ClientSet.CoreV1().Namespaces().Delete(context.Background(), ns.ObjectMeta.Name, metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

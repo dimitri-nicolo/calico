@@ -287,7 +287,6 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 
 	// Build the request.
 	req := c.restClient.Get().
-		Context(ctx).
 		NamespaceIfScoped(namespace, c.namespaced).
 		Resource(c.resource)
 
@@ -311,7 +310,7 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 	}
 
 	// Perform the request.
-	err := req.Do().Into(reslOut)
+	err := req.Do(ctx).Into(reslOut)
 	if err != nil {
 		// Don't return errors for "not found".  This just
 		// means there are no matching Custom K8s Resources, and we should return

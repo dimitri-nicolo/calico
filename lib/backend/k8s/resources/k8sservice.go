@@ -68,7 +68,7 @@ func (c *serviceClient) Delete(ctx context.Context, key model.Key, revision stri
 
 func (c *serviceClient) Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
 	rk := key.(model.ResourceKey)
-	service, err := c.clientSet.CoreV1().Services(rk.Namespace).Get(rk.Name, metav1.GetOptions{ResourceVersion: revision})
+	service, err := c.clientSet.CoreV1().Services(rk.Namespace).Get(ctx, rk.Name, metav1.GetOptions{ResourceVersion: revision})
 	if err != nil {
 		return nil, K8sErrorToCalico(err, key)
 	}
@@ -102,7 +102,7 @@ func (c *serviceClient) List(ctx context.Context, list model.ListInterface, revi
 	}
 
 	// Listing all services.
-	serviceList, err := c.clientSet.CoreV1().Services(rl.Namespace).List(metav1.ListOptions{ResourceVersion: revision})
+	serviceList, err := c.clientSet.CoreV1().Services(rl.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: revision})
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}
@@ -134,7 +134,7 @@ func (c *serviceClient) Watch(ctx context.Context, list model.ListInterface, rev
 		opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
 	}
 
-	k8sWatch, err := c.clientSet.CoreV1().Services(rl.Namespace).Watch(opts)
+	k8sWatch, err := c.clientSet.CoreV1().Services(rl.Namespace).Watch(ctx, opts)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}
