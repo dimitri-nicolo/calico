@@ -1,17 +1,18 @@
 # !/bin/bash
 # save paths for the packages we want to manually cleanup.
 packagefiles=('/var/log/yum.log')
-for OUTPUT in $(rpm -ql elfutils-libelf elfutils-default-yama-scope lua libdb dbus-libs dbus-python dbus dbus-glib bzip2-libs rpm rpm-python rpm-libs rpm-build-libs yum-metadata-parser yum yum-plugin-ovl yum-plugin-fastestmirror yum-utils file-libs python python-libs libxml2 libxml2-python)
+for OUTPUT in $(rpm -ql elfutils-libelf elfutils-default-yama-scope lua libdb dbus-libs dbus-python dbus dbus-glib bzip2-libs rpm rpm-python rpm-libs rpm-build-libs yum-metadata-parser yum yum-plugin-ovl yum-plugin-fastestmirror yum-utils tar file-libs libdb-utils procps-ng libsmartcols libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base gnupg2 gpgme libtasn1 json-c systemd-libs shadow-utils bind-license systemd)
 do
 	packagefiles+=($OUTPUT)
 done
 
-# force remove system packages
 # elastic readiness probe shell script needs curl and bash.
-# TODO: This does nothing because libpng and freetype aren't installed.
-# Need to add set -o errexit, and cut this list down so that it still works.
-# At least libidn.so.11 is required to run curl.
-rpm -e tar file-libs libdb-utils procps-ng libssh2 libsmartcols krb5-libs libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base openldap libidn gnupg2 gpgme libpng libtasn1 json-c systemd-libs freetype shadow-utils bind-license systemd sqlite --nodeps
+# Curl Requirements:
+# libidn
+# libssh2
+# krb5-libs
+# openldap
+# eck-operator needs sqlite
 
 # cleanup binaries which can not be removed by rpm
 echo 'Removing related package paths:'
