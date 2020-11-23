@@ -3,7 +3,7 @@ module github.com/tigera/voltron
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458 // indirect
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50 // indirect
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -46,7 +46,7 @@ require (
 	github.com/tigera/lma v0.0.0-20201014202455-01dd28429dd9
 	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
-	k8s.io/apimachinery v0.17.3
-	k8s.io/apiserver v0.17.3
-	k8s.io/client-go v0.17.3
+	k8s.io/apimachinery v0.18.12
+	k8s.io/apiserver v0.18.12
+	k8s.io/client-go v0.18.12
 )
