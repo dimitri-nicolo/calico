@@ -23,6 +23,7 @@ import (
 const (
 	createIndexMaxRetries    = 3
 	createIndexRetryInterval = 1 * time.Second
+	applicationName          = "lma"
 )
 
 type IndexSettings struct {
@@ -172,7 +173,7 @@ func (c *client) ensureIndexExists(indexPrefix, mapping string) error {
 	aliasName := c.ClusterAlias(indexPrefix)
 	clog := log.WithField("indexPrefix", indexPrefix)
 
-	indexName := fmt.Sprintf("<%s{now/s{yyyyMMdd}}-000000>", aliasName)
+	indexName := fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
 	// Check if index exists.
 	exists, err := c.IndexExists(aliasName).Do(context.Background())
 	if err != nil {
