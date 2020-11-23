@@ -16,6 +16,7 @@
 package remotecluster
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -111,7 +112,7 @@ func (sw *secretWatcher) GetSecretData(namespace, name string) (map[string][]byt
 		return sw.watches[sk].secret.Data, nil
 	} else {
 		// There is no watch running for the secret so directly query it to start with.
-		secret, err := sw.k8sClientset.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+		secret, err := sw.k8sClientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		// Ensure that we're watching this secret.
 		sw.ensureWatchingSecret(sk)
 

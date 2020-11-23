@@ -1078,7 +1078,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 					remoteBackend = nil
 				}
 				if k8sClientset != nil {
-					_ = k8sClientset.CoreV1().Secrets("namespace-1").Delete(rccSecretName, &metav1.DeleteOptions{})
+					_ = k8sClientset.CoreV1().Secrets("namespace-1").Delete(ctx, rccSecretName, metav1.DeleteOptions{})
 				}
 				if remoteClient != nil {
 					_, _ = remoteClient.HostEndpoints().Delete(ctx, "hep1", options.DeleteOptions{})
@@ -1206,19 +1206,21 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 			// createRCCSecret creates a secret and an RCC that references the secret, both based on the remoteConfig
 			createRCCSecret := func() {
 				By("Creating secret for the RemoteClusterConfiguration")
-				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(&kapiv1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: rccSecretName, Namespace: "namespace-1"},
-					StringData: map[string]string{
-						"datastoreType": string(remoteConfig.Spec.DatastoreType),
-						"kubeconfig":    remoteConfig.Spec.KubeconfigInline,
-						"etcdEndpoints": remoteConfig.Spec.EtcdEndpoints,
-						"etcdUsername":  remoteConfig.Spec.EtcdUsername,
-						"etcdPassword":  remoteConfig.Spec.EtcdPassword,
-						"etcdKey":       remoteConfig.Spec.EtcdKey,
-						"etcdCert":      remoteConfig.Spec.EtcdCert,
-						"etcdCACert":    remoteConfig.Spec.EtcdCACert,
+				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(ctx,
+					&kapiv1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: rccSecretName, Namespace: "namespace-1"},
+						StringData: map[string]string{
+							"datastoreType": string(remoteConfig.Spec.DatastoreType),
+							"kubeconfig":    remoteConfig.Spec.KubeconfigInline,
+							"etcdEndpoints": remoteConfig.Spec.EtcdEndpoints,
+							"etcdUsername":  remoteConfig.Spec.EtcdUsername,
+							"etcdPassword":  remoteConfig.Spec.EtcdPassword,
+							"etcdKey":       remoteConfig.Spec.EtcdKey,
+							"etcdCert":      remoteConfig.Spec.EtcdCert,
+							"etcdCACert":    remoteConfig.Spec.EtcdCACert,
+						},
 					},
-				})
+					metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Configuring the RemoteClusterConfiguration referencing secret")
@@ -1235,14 +1237,14 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 			// modifyRCCSecret modifies an already created Secret that is referenced by an RCC
 			modifyRCCSecret := func() {
 				By("Modifying RCC Secret RemoteClusterConfiguration")
-				s, err := k8sClientset.CoreV1().Secrets("namespace-1").Get(rccSecretName, metav1.GetOptions{})
+				s, err := k8sClientset.CoreV1().Secrets("namespace-1").Get(ctx, rccSecretName, metav1.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				if remoteConfig.Spec.DatastoreType == apiconfig.Kubernetes {
 					s.StringData = map[string]string{"kubeconfig": "notreal"}
 				} else {
 					s.StringData = map[string]string{"etcdPassword": "fakeusername"}
 				}
-				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Update(s)
+				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Update(ctx, s, metav1.UpdateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
 

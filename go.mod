@@ -16,11 +16,12 @@ require (
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
 	github.com/google/gopacket v1.1.17
 	github.com/gorilla/websocket v1.4.1 // indirect
+	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.1 // indirect
 	github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
-	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200127152046-0ee521d56061
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.0
 	github.com/kelseyhightower/envconfig v0.0.0-20180517194557-dd1402a4d99d
 	github.com/leodido/go-urn v0.0.0-20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.14.1
@@ -37,6 +38,7 @@ require (
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
+	gonum.org/v1/netlib v0.0.0-20190331212654-76723241ea4e // indirect
 	google.golang.org/genproto v0.0.0-20191203220235-3fa9dbf08042 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
@@ -47,12 +49,12 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	gopkg.in/tchap/go-patricia.v2 v2.2.6
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
-	k8s.io/api v0.17.3
-	k8s.io/apimachinery v0.17.3
-	k8s.io/apiserver v0.17.3
-	k8s.io/client-go v0.17.3
-	k8s.io/code-generator v0.17.3
-	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
+	k8s.io/api v0.18.12
+	k8s.io/apimachinery v0.18.12
+	k8s.io/apiserver v0.18.12
+	k8s.io/client-go v0.18.12
+	k8s.io/code-generator v0.18.12
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 )
 
 replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico

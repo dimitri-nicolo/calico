@@ -65,7 +65,7 @@ func (c *endpointsClient) Delete(ctx context.Context, key model.Key, revision st
 
 func (c *endpointsClient) Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
 	rk := key.(model.ResourceKey)
-	endpoints, err := c.clientSet.CoreV1().Endpoints(rk.Namespace).Get(rk.Name, metav1.GetOptions{ResourceVersion: revision})
+	endpoints, err := c.clientSet.CoreV1().Endpoints(rk.Namespace).Get(ctx, rk.Name, metav1.GetOptions{ResourceVersion: revision})
 	if err != nil {
 		return nil, K8sErrorToCalico(err, key)
 	}
@@ -99,7 +99,7 @@ func (c *endpointsClient) List(ctx context.Context, list model.ListInterface, re
 	}
 
 	// Listing all endpointss.
-	endpointsList, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).List(metav1.ListOptions{ResourceVersion: revision})
+	endpointsList, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: revision})
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}
@@ -131,7 +131,7 @@ func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, r
 		opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
 	}
 
-	k8sWatch, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).Watch(opts)
+	k8sWatch, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).Watch(ctx, opts)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}

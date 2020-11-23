@@ -50,26 +50,26 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 		removeTestK8sConfig := func() {
 			if k8sBackend != nil {
 				// Clean up any endpoints left over by the test.
-				eps, err := k8sClientset.CoreV1().Endpoints("").List(metav1.ListOptions{})
+				eps, err := k8sClientset.CoreV1().Endpoints("").List(ctx, metav1.ListOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, ep := range eps.Items {
 					if isBuiltInService(ep.Name, ep.Namespace) {
 						continue
 					}
-					err = k8sClientset.CoreV1().Endpoints(ep.Namespace).Delete(ep.Name, &metav1.DeleteOptions{})
+					err = k8sClientset.CoreV1().Endpoints(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 				}
 
 				// Clean up any services left over by the test.
-				svcs, err := k8sClientset.CoreV1().Services("").List(metav1.ListOptions{})
+				svcs, err := k8sClientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, svc := range svcs.Items {
 					if isBuiltInService(svc.Name, svc.Namespace) {
 						continue
 					}
-					err = k8sClientset.CoreV1().Services(svc.Namespace).Delete(svc.Name, &metav1.DeleteOptions{})
+					err = k8sClientset.CoreV1().Services(svc.Namespace).Delete(ctx, svc.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 				}
 
@@ -147,38 +147,44 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			syncTester.ExpectUpdatesSanitized([]api.Update{}, false, updateSanitizer)
 
 			By("Configuring some services and endpoints")
-			s1, err := k8sClientset.CoreV1().Services("namespace-1").Create(&kapiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
-				Spec: kapiv1.ServiceSpec{
-					Ports: []kapiv1.ServicePort{
-						{
-							Name:       "nginx",
-							Port:       80,
-							TargetPort: intstr.IntOrString{Type: intstr.String, StrVal: "nginx"},
-							Protocol:   kapiv1.ProtocolTCP,
+			s1, err := k8sClientset.CoreV1().Services("namespace-1").Create(ctx,
+				&kapiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
+					Spec: kapiv1.ServiceSpec{
+						Ports: []kapiv1.ServicePort{
+							{
+								Name:       "nginx",
+								Port:       80,
+								TargetPort: intstr.IntOrString{Type: intstr.String, StrVal: "nginx"},
+								Protocol:   kapiv1.ProtocolTCP,
+							},
 						},
 					},
 				},
-			})
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			e1, err := k8sClientset.CoreV1().Endpoints("namespace-1").Create(&kapiv1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
-				Subsets:    []kapiv1.EndpointSubset{},
-			})
+			e1, err := k8sClientset.CoreV1().Endpoints("namespace-1").Create(ctx,
+				&kapiv1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
+					Subsets:    []kapiv1.EndpointSubset{},
+				},
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			s2, err := k8sClientset.CoreV1().Services("namespace-2").Create(&kapiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service1000", Namespace: "namespace-2"},
-				Spec: kapiv1.ServiceSpec{
-					Ports: []kapiv1.ServicePort{
-						{
-							Name:       "nginx",
-							Port:       8000,
-							TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: 80},
-							Protocol:   kapiv1.ProtocolUDP,
+			s2, err := k8sClientset.CoreV1().Services("namespace-2").Create(ctx,
+				&kapiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "service1000", Namespace: "namespace-2"},
+					Spec: kapiv1.ServiceSpec{
+						Ports: []kapiv1.ServicePort{
+							{
+								Name:       "nginx",
+								Port:       8000,
+								TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: 80},
+								Protocol:   kapiv1.ProtocolUDP,
+							},
 						},
 					},
 				},
-			})
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking we received updates for the local services and endpoints")
@@ -273,7 +279,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			syncTester.ExpectUpdatesSanitized(remoteExpectedUpdates, false, updateSanitizer)
 
 			By("Deleting service1000")
-			err = k8sClientset.CoreV1().Services("namespace-2").Delete("service1000", &metav1.DeleteOptions{})
+			err = k8sClientset.CoreV1().Services("namespace-2").Delete(ctx, "service1000", metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking we received updates for both the local and remote service")
@@ -327,26 +333,26 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 		removeTestK8sConfig := func() {
 			if k8sBackend != nil {
 				// Clean up any endpoints left over by the test.
-				eps, err := k8sClientset.CoreV1().Endpoints("").List(metav1.ListOptions{})
+				eps, err := k8sClientset.CoreV1().Endpoints("").List(ctx, metav1.ListOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, ep := range eps.Items {
 					if isBuiltInService(ep.Name, ep.Namespace) {
 						continue
 					}
-					err = k8sClientset.CoreV1().Endpoints(ep.Namespace).Delete(ep.Name, &metav1.DeleteOptions{})
+					err = k8sClientset.CoreV1().Endpoints(ep.Namespace).Delete(ctx, ep.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 				}
 
 				// Clean up any services left over by the test.
-				svcs, err := k8sClientset.CoreV1().Services("").List(metav1.ListOptions{})
+				svcs, err := k8sClientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, svc := range svcs.Items {
 					if isBuiltInService(svc.Name, svc.Namespace) {
 						continue
 					}
-					err = k8sClientset.CoreV1().Services(svc.Namespace).Delete(svc.Name, &metav1.DeleteOptions{})
+					err = k8sClientset.CoreV1().Services(svc.Namespace).Delete(ctx, svc.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 				}
 
@@ -400,38 +406,44 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			syncTester.ExpectUpdatesSanitized([]api.Update{}, false, updateSanitizer)
 
 			By("Configuring some services and endpoints")
-			s1, err := k8sClientset.CoreV1().Services("namespace-1").Create(&kapiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
-				Spec: kapiv1.ServiceSpec{
-					Ports: []kapiv1.ServicePort{
-						{
-							Name:       "nginx",
-							Port:       80,
-							TargetPort: intstr.IntOrString{Type: intstr.String, StrVal: "nginx"},
-							Protocol:   kapiv1.ProtocolTCP,
+			s1, err := k8sClientset.CoreV1().Services("namespace-1").Create(ctx,
+				&kapiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
+					Spec: kapiv1.ServiceSpec{
+						Ports: []kapiv1.ServicePort{
+							{
+								Name:       "nginx",
+								Port:       80,
+								TargetPort: intstr.IntOrString{Type: intstr.String, StrVal: "nginx"},
+								Protocol:   kapiv1.ProtocolTCP,
+							},
 						},
 					},
 				},
-			})
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			e1, err := k8sClientset.CoreV1().Endpoints("namespace-1").Create(&kapiv1.Endpoints{
-				ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
-				Subsets:    []kapiv1.EndpointSubset{},
-			})
+			e1, err := k8sClientset.CoreV1().Endpoints("namespace-1").Create(ctx,
+				&kapiv1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "namespace-1"},
+					Subsets:    []kapiv1.EndpointSubset{},
+				},
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			s2, err := k8sClientset.CoreV1().Services("namespace-2").Create(&kapiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service1000", Namespace: "namespace-2"},
-				Spec: kapiv1.ServiceSpec{
-					Ports: []kapiv1.ServicePort{
-						{
-							Name:       "nginx",
-							Port:       8000,
-							TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: 80},
-							Protocol:   kapiv1.ProtocolUDP,
+			s2, err := k8sClientset.CoreV1().Services("namespace-2").Create(ctx,
+				&kapiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "service1000", Namespace: "namespace-2"},
+					Spec: kapiv1.ServiceSpec{
+						Ports: []kapiv1.ServicePort{
+							{
+								Name:       "nginx",
+								Port:       8000,
+								TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: 80},
+								Protocol:   kapiv1.ProtocolUDP,
+							},
 						},
 					},
 				},
-			})
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking we received updates for the local services and endpoints")
@@ -484,7 +496,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 				}, "",
 			)
 			_ = k8sClientset.CoreV1().Secrets("namespace-1").Delete(
-				"remote-cluster-config", &metav1.DeleteOptions{})
+				ctx, "remote-cluster-config", metav1.DeleteOptions{})
 			removeTestK8sConfig()
 
 			if etcdBackend != nil {
@@ -506,13 +518,15 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 
 		createSecret := func() {
 			By("Creating secret for the RemoteClusterConfiguration for the remote")
-			_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(&kapiv1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "remote-cluster-config", Namespace: "namespace-1"},
-				StringData: map[string]string{
-					"datastoreType": string(k8sConfig.Spec.DatastoreType),
-					"kubeconfig":    k8sConfig.Spec.KubeconfigInline,
+			_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(ctx,
+				&kapiv1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "remote-cluster-config", Namespace: "namespace-1"},
+					StringData: map[string]string{
+						"datastoreType": string(k8sConfig.Spec.DatastoreType),
+						"kubeconfig":    k8sConfig.Spec.KubeconfigInline,
+					},
 				},
-			})
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}
 		createRCC := func() {
@@ -685,7 +699,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			It("should create delete events when deleting the access secret", func() {
 				By("deleting remote-cluster-config secret")
 				err = k8sClientset.CoreV1().Secrets("namespace-1").Delete(
-					"remote-cluster-config", &metav1.DeleteOptions{})
+					ctx, "remote-cluster-config", metav1.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				remoteExpectedDeletes := []api.Update{
