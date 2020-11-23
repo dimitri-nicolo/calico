@@ -2506,7 +2506,8 @@ int32
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.Installation">Installation</a>)
+<a href="#operator.tigera.io/v1.Installation">Installation</a>, 
+<a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>InstallationSpec defines configuration for a Calico or Calico Enterprise installation.</p>
 <table>
@@ -2724,6 +2725,20 @@ ProductVariant
 </td>
 <td>
 <p>Variant is the most recently observed installed variant - one of Calico or TigeraSecureEnterprise</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>computed</code><br>
+<em>
+<a href="#operator.tigera.io/v1.InstallationSpec">
+InstallationSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Computed is the final installation including overlaid resources.</p>
 </td>
 </tr>
 </tbody>
@@ -3353,7 +3368,7 @@ Kubernetes core/v1.ResourceRequirements
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
