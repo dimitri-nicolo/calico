@@ -4,6 +4,7 @@
 package nfnetlink
 
 import (
+	"bytes"
 	"encoding/binary"
 	"syscall"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/tigera/nfnetlink/nfnl"
 	"github.com/tigera/nfnetlink/pkt"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -30,7 +32,7 @@ const AggregationDuration = time.Duration(10) * time.Millisecond
 
 type DataWithTimestamp struct {
 	Data      []byte
-	Timestamp []uint8
+	Timestamp *uint64
 }
 
 func SubscribeDNS(groupNum int, bufSize int, ch chan<- DataWithTimestamp, done <-chan struct{}) error {
@@ -286,7 +288,7 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 	}()
 }
 
-func getNflogPacketData(m []byte) (packetData []byte, timestamp []uint8, err error) {
+func getNflogPacketData(m []byte) (packetData []byte, timestamp *uint64, err error) {
 	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
 	n, err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
@@ -297,8 +299,15 @@ func getNflogPacketData(m []byte) (packetData []byte, timestamp []uint8, err err
 		attrType := int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK
 		switch attrType {
 		case nfnl.NFULA_TIMESTAMP:
-			log.Infof("DNS-LATENCY: NFULA_TIMESTAMP: %T %v", attr.Value, attr.Value)
-			timestamp = attr.Value
+			log.Debugf("DNS-LATENCY: NFULA_TIMESTAMP: %T %v", attr.Value, attr.Value)
+			var tv unix.Timeval
+			err := binary.Read(bytes.NewReader(attr.Value), binary.BigEndian, &tv)
+			if err != nil {
+				log.WithError(err).Panic("binary.Read failed")
+			}
+			log.Debugf("DNS-LATENCY: tv=%v", tv)
+			timestampNS := uint64(tv.Usec*1000 + tv.Sec*1000000000)
+			timestamp = &timestampNS
 		case nfnl.NFULA_PAYLOAD:
 			packetData = attr.Value
 		}
