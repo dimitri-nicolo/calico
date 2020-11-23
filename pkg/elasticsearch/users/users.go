@@ -42,10 +42,10 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameFluentd, clusterName, management),
 				Definition: &elasticsearch.RoleDefinition{
-					Cluster: []string{"monitor", "manage_index_templates"},
+					Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*")},
-						Privileges: []string{"create_index", "write"},
+						Privileges: []string{"create_index", "write", "manage"},
 					}},
 				},
 			}},
@@ -58,7 +58,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{indexPattern("tigera_secure_ee_audit_kube", clusterName, ".*")},
-						Privileges: []string{"create_index", "read", "write"},
+						Privileges: []string{"create_index", "read", "write", "manage"},
 					}},
 				},
 			}},
@@ -71,7 +71,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{indexPattern("tigera_secure_ee_benchmark_results", clusterName, ".*")},
-						Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+						Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 					}},
 				},
 			}},
@@ -114,7 +114,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 						},
 						{
 							Names:      []string{indexPattern("tigera_secure_ee_compliance_reports", clusterName, ".*")},
-							Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+							Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 						},
 					},
 				},
@@ -128,7 +128,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{indexPattern("tigera_secure_ee_snapshots", clusterName, ".*")},
-						Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+						Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 					}},
 				},
 			}},

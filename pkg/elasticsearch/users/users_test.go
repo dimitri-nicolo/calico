@@ -20,10 +20,10 @@ var _ = Describe("ElasticseachUsers", func() {
 						Roles: []elasticsearch.Role{{
 							Name: "tigera-fluentd-managed-cluster",
 							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"monitor", "manage_index_templates"},
+								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_*.managed-cluster.*"},
-									Privileges: []string{"create_index", "write"},
+									Privileges: []string{"create_index", "write", "manage"},
 								}},
 							},
 						}},
@@ -36,7 +36,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_audit_kube.managed-cluster.*"},
-									Privileges: []string{"create_index", "read", "write"},
+									Privileges: []string{"create_index", "read", "write", "manage"},
 								}},
 							},
 						}},
@@ -49,7 +49,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_benchmark_results.managed-cluster.*"},
-									Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+									Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 								}},
 							},
 						}},
@@ -92,7 +92,7 @@ var _ = Describe("ElasticseachUsers", func() {
 									},
 									{
 										Names:      []string{"tigera_secure_ee_compliance_reports.managed-cluster.*"},
-										Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+										Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 									},
 								},
 							},
@@ -106,7 +106,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_snapshots.managed-cluster.*"},
-									Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+									Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 								}},
 							},
 						}},
@@ -173,10 +173,10 @@ var _ = Describe("ElasticseachUsers", func() {
 						Roles: []elasticsearch.Role{{
 							Name: "tigera-fluentd",
 							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"monitor", "manage_index_templates"},
+								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_*.cluster.*"},
-									Privileges: []string{"create_index", "write"},
+									Privileges: []string{"create_index", "write", "manage"},
 								}},
 							},
 						}},
@@ -189,7 +189,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_audit_kube.cluster.*"},
-									Privileges: []string{"create_index", "read", "write"},
+									Privileges: []string{"create_index", "read", "write", "manage"},
 								}},
 							},
 						}},
@@ -202,7 +202,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_benchmark_results.cluster.*"},
-									Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+									Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 								}},
 							},
 						}},
@@ -245,7 +245,7 @@ var _ = Describe("ElasticseachUsers", func() {
 									},
 									{
 										Names:      []string{"tigera_secure_ee_compliance_reports.cluster.*"},
-										Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+										Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 									},
 								},
 							},
@@ -259,7 +259,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_snapshots.cluster.*"},
-									Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+									Privileges: []string{"create_index", "write", "view_index_metadata", "read", "manage"},
 								}},
 							},
 						}},
