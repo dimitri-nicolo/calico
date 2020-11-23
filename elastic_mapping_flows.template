@@ -1,5 +1,7 @@
 {
-  "template": "tigera_secure_ee_flows*",
+  "index_patterns": [
+    "tigera_secure_ee_flows*"
+  ],
   "settings": {
     "number_of_shards": 1,
     "number_of_replicas": 0

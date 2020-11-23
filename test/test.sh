@@ -16,8 +16,7 @@ function generateAndCollectConfig() {
   ENV_FILE=$1
   OUT_FILE=$2
 
-  docker run -d --rm --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file $ENV_FILE tigera/fluentd:${IMAGETAG} >/dev/null
-  if [ $? -ne 0 ]; then echo "Running fluentd container failed"; exit 1; fi
+  docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file $ENV_FILE tigera/fluentd:${IMAGETAG} >/dev/null
   sleep 2
 
   docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' > $OUT_FILE
@@ -25,6 +24,10 @@ function generateAndCollectConfig() {
 
   docker stop generate-fluentd-config >/dev/null
   if [ $? -ne 0 ]; then echo "Stopping fluentd container failed"; exit 1; fi
+
+  docker rm generate-fluentd-config >/dev/null
+  if [ $? -ne 0 ]; then echo "Removing fluentd container failed"; exit 1; fi
+
   unset ADDITIONAL_MOUNT
 }
 

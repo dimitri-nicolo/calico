@@ -6,9 +6,10 @@ USER root
 RUN apk add --update --virtual .build-deps \
         build-base=0.5-r1 ruby-dev=2.5.8-r0 \
  && gem install \
-        fluent-plugin-elasticsearch:4.0.5 fluent-plugin-s3:1.3.0 \
+        fluent-plugin-elasticsearch:4.2.2 fluent-plugin-s3:1.3.0 \
         fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
         fluent-plugin-cloudwatch-logs:0.8.0 \
+        elasticsearch-xpack:7.6.0 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && apk del .build-deps \
