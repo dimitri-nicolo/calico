@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
-
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -71,9 +69,10 @@ func (c *client) RetrieveArchivedReport(id string) (*api.ArchivedReportData, err
 }
 
 // RetrieveArchivedReport implements the api.ReportStorer interface
-func (c *client) StoreArchivedReport(r *api.ArchivedReportData, t time.Time) error {
-	index := c.ClusterIndex(ReportsIndex, t.Format(IndexTimeFormat))
-	if err := c.ensureIndexExistsWithRetry(index, reportsMapping); err != nil {
+func (c *client) StoreArchivedReport(r *api.ArchivedReportData) error {
+	index := c.ClusterAlias(ReportsIndex)
+
+	if err := c.ensureIndexExistsWithRetry(ReportsIndex, reportsMapping); err != nil {
 		return err
 	}
 	res, err := c.Index().

@@ -19,7 +19,7 @@ func TestElastic(t *testing.T) {
 	RunSpecs(t, "Elastic Suite")
 }
 
-func testIndexSettings(cfg *Config, index string, settings map[string]string) {
+func testIndexSettings(cfg *Config, index string, settings map[string]interface{}) {
 	c, err := getESClient(cfg)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -27,6 +27,15 @@ func testIndexSettings(cfg *Config, index string, settings map[string]string) {
 		Eventually(func() (interface{}, error) {
 			return getIndexSetting(c, index, key)
 		}, 10, 1).Should(Equal(value))
+	}
+}
+
+func deleteIndex(cfg *Config, index string) {
+	client, err := getESClient(cfg)
+	Expect(err).ToNot(HaveOccurred())
+	_, err = client.DeleteIndex(index + "*").Do(context.Background())
+	if err != nil {
+		Expect(err).ToNot(HaveOccurred())
 	}
 }
 
@@ -45,6 +54,9 @@ func getIndexSetting(client *elastic.Client, index string, setting string) (inte
 	if err != nil {
 		return "", err
 	}
-	indexSettings := settings[index].Settings["index"].(map[string]interface{})
+	var indexSettings map[string]interface{}
+	for _, v := range settings {
+		indexSettings = v.Settings["index"].(map[string]interface{})
+	}
 	return indexSettings[setting], nil
 }

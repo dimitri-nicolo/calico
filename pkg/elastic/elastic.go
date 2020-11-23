@@ -28,6 +28,12 @@ const (
 type IndexSettings struct {
 	Replicas int `json:"number_of_replicas"`
 	Shards   int `json:"number_of_shards"`
+	LifeCycle LifeCycle `json:"lifecycle"`
+}
+
+type LifeCycle struct {
+	Name string `json:"name"`
+	RolloverAlias string `json:"rollover_alias"`
 }
 
 type Client interface {
@@ -44,6 +50,7 @@ type Client interface {
 	api.ListDestination
 	api.EventFetcher
 	ClusterIndex(string, string) string
+	ClusterAlias(string) string
 	Backend() *elastic.Client
 
 	SearchCompositeAggregations(
@@ -87,7 +94,6 @@ func NewFromConfig(cfg *Config) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	h := &http.Client{}
 	if cfg.ParsedElasticURL.Scheme == "https" {
 		if cfg.ElasticCA != "" {
@@ -134,7 +140,7 @@ func New(
 	for i := 0; i < retries; i++ {
 		log.Info("Connecting to elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
-			return &client{c, indexSuffix, IndexSettings{replicas, shards}}, nil
+			return &client{c, indexSuffix, IndexSettings{replicas, shards, LifeCycle{}}}, nil
 		}
 		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
@@ -162,46 +168,58 @@ func (c *client) ensureIndexExistsWithRetry(index, mapping string) error {
 	return err
 }
 
-func (c *client) ensureIndexExists(index, mapping string) error {
-	clog := log.WithField("index", index)
+func (c *client) ensureIndexExists(indexPrefix, mapping string) error {
+	aliasName := c.ClusterAlias(indexPrefix)
+	clog := log.WithField("indexPrefix", indexPrefix)
 
+	indexName := fmt.Sprintf("<%s{now/s{yyyyMMdd}}-000000>", aliasName)
 	// Check if index exists.
-	exists, err := c.IndexExists(index).Do(context.Background())
+	exists, err := c.IndexExists(aliasName).Do(context.Background())
 	if err != nil {
-		clog.WithError(err).Info("failed to check if index exists")
+		clog.WithError(err).Warn("failed to check if index exists")
 		return err
 	}
 
 	// Return if index exists
 	if exists {
-		clog.Info("index already exists")
+		clog.Info("indexPrefix already exists")
 		return nil
 	}
 
 	// Create index.
 	clog.Info("index doesn't exist, creating...")
+	aliasJson := "{\""+ aliasName +"\": {} }"
+	ilmPolicyName := indexPrefix + "_policy"
+	indexSettingCp := c.indexSettings
+	indexSettingCp.LifeCycle = LifeCycle{Name: ilmPolicyName, RolloverAlias: aliasName}
 	createIndex, err := c.
-		CreateIndex(index).
+		CreateIndex(indexName).
 		BodyJson(map[string]interface{}{
 			"mappings": json.RawMessage(mapping),
-			"settings": c.indexSettings,
+			"settings": indexSettingCp,
+			"aliases" : json.RawMessage(aliasJson),
+
 		}).
 		Do(context.Background())
 	if err != nil {
 		if elastic.IsConflict(err) {
-			clog.Info("index already exists")
+			clog.Info("indexPrefix already exists")
 			return nil
 		}
-		clog.WithError(err).Info("failed to create index")
+		clog.WithError(err).Warn("failed to create indexPrefix")
 		return err
 	}
 
 	// Check if acknowledged
 	if !createIndex.Acknowledged {
-		clog.Warn("index creation has not yet been acknowledged")
+		clog.Warn("indexPrefix creation has not yet been acknowledged")
 	}
-	clog.Info("index successfully created!")
+	clog.Info("indexPrefix successfully created!")
 	return nil
+}
+
+func (c *client) ClusterAlias(index string) string {
+	return fmt.Sprintf("%s.%s.", index, c.indexSuffix)
 }
 
 func (c *client) ClusterIndex(index, postfix string) string {
@@ -242,6 +260,10 @@ func (m mockComplianceClient) Backend() *elastic.Client {
 }
 
 func (m mockComplianceClient) ClusterIndex(string, string) string {
+	return "fake-index"
+}
+
+func (m mockComplianceClient) ClusterAlias(string) string {
 	return "fake-index"
 }
 

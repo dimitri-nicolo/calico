@@ -62,8 +62,8 @@ func (c *client) GetBenchmarks(cxt context.Context, id string) (*api.Benchmarks,
 
 // StoreBenchmarks stores the supplied benchmarks.
 func (c *client) StoreBenchmarks(ctx context.Context, b *api.Benchmarks) error {
-	index := c.ClusterIndex(BenchmarksIndex, b.Timestamp.Format(IndexTimeFormat))
-	if err := c.ensureIndexExistsWithRetry(index, benchmarksMapping); err != nil {
+	index := c.ClusterAlias(BenchmarksIndex)
+	if err := c.ensureIndexExistsWithRetry(BenchmarksIndex, benchmarksMapping); err != nil {
 		return err
 	}
 	res, err := c.Index().

@@ -185,6 +185,7 @@ var _ = Describe("Benchmark elastic tests", func() {
 
 	It("should create an index with the correct index settings", func() {
 		cfg := MustLoadConfig()
+		deleteIndex(cfg, BenchmarksIndex)
 		cfg.ElasticReplicas = 2
 		cfg.ElasticShards = 7
 
@@ -192,11 +193,15 @@ var _ = Describe("Benchmark elastic tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 		_ = elasticClient.StoreBenchmarks(context.Background(), b1)
 
-		index := elasticClient.ClusterIndex(BenchmarksIndex, b1.Timestamp.Format(IndexTimeFormat))
+		index := elasticClient.ClusterAlias(BenchmarksIndex)
 
-		testIndexSettings(cfg, index, map[string]string{
+		testIndexSettings(cfg, index, map[string]interface{}{
 			"number_of_replicas": "2",
 			"number_of_shards":   "7",
+			"lifecycle": map[string]interface{}{
+				"name":           BenchmarksIndex + "_policy",
+				"rollover_alias": index,
+			},
 		})
 	})
 })

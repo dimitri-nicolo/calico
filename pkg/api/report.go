@@ -19,7 +19,7 @@ type ReportRetriever interface {
 }
 
 type ReportStorer interface {
-	StoreArchivedReport(r *ArchivedReportData, t time.Time) error
+	StoreArchivedReport(r *ArchivedReportData) error
 }
 
 type AuditLogReportHandler interface {

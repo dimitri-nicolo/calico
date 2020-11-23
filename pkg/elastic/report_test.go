@@ -37,7 +37,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 				GenerationTime: metav1.Time{Time: ts.Add(-time.Duration(reportIdx) * time.Minute)},
 			},
 		}
-		Expect(elasticClient.StoreArchivedReport(rep, ts)).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep)).ToNot(HaveOccurred())
 		numReports++
 
 		// Increment the report index across this set of tests. This is used to make each report unique which avoids any
@@ -79,6 +79,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
 		Expect(err).NotTo(HaveOccurred())
 		elasticClient = MustGetElasticClient()
+		deleteIndex(MustLoadConfig(),ReportsIndex)
 		elasticClient.(Resetable).Reset()
 		numReports = 0
 	})
@@ -345,7 +346,6 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 	})
 
 	It("should create an index with the correct index settings", func() {
-
 		cfg := MustLoadConfig()
 		cfg.ElasticReplicas = 2
 		cfg.ElasticShards = 7
@@ -362,12 +362,16 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 		elasticClient, err := NewFromConfig(cfg)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(elasticClient.StoreArchivedReport(rep, t)).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep)).ToNot(HaveOccurred())
 
-		index := elasticClient.ClusterIndex(ReportsIndex, t.Format(IndexTimeFormat))
-		testIndexSettings(cfg, index, map[string]string{
+		index := elasticClient.ClusterAlias(ReportsIndex)
+		testIndexSettings(cfg, index, map[string]interface{}{
 			"number_of_replicas": "2",
 			"number_of_shards":   "7",
+			"lifecycle": map[string]interface{}{
+				"name":           ReportsIndex + "_policy",
+				"rollover_alias": index,
+			},
 		})
 	})
 })

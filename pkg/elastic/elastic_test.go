@@ -2,7 +2,6 @@ package elastic_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -36,6 +35,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
 		Expect(err).NotTo(HaveOccurred())
 		elasticClient = MustGetElasticClient()
+		deleteIndex(MustLoadConfig(),ReportsIndex)
 		elasticClient.(Resetable).Reset()
 	})
 
@@ -56,9 +56,8 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		Expect(elasticClient.StoreList(resources.TypeCalicoNetworkPolicies, npResList)).ToNot(HaveOccurred())
 
 		By("having the appropriate snapshot indices")
-		dateIndex := npResList.RequestCompletedTimestamp.Format(IndexTimeFormat)
 		indicesExist, _ := elasticClient.Backend().IndexExists(
-			fmt.Sprintf("tigera_secure_ee_snapshots.test_cluster.%s", dateIndex),
+			"tigera_secure_ee_snapshots.test_cluster.",
 		).Do(context.Background())
 		Expect(indicesExist).To(Equal(true))
 
@@ -80,14 +79,11 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 				EndTime:    metav1.Time{Time: ts.Add(time.Minute)},
 			},
 		}
-		reportTime := time.Now()
-		Expect(elasticClient.StoreArchivedReport(rep, reportTime)).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep)).ToNot(HaveOccurred())
 
 		By("having the appropriate report indices")
-		dateIndex := reportTime.Format(IndexTimeFormat)
-		indicesExist, _ := elasticClient.Backend().IndexExists(
-			fmt.Sprintf("tigera_secure_ee_compliance_reports.test_cluster.%s", dateIndex),
-		).Do(context.Background())
+		indicesExist, _ := elasticClient.Backend().IndexExists("tigera_secure_ee_compliance_reports.test_cluster.").
+			Do(context.Background())
 		Expect(indicesExist).To(Equal(true))
 
 		By("retrieving report summaries")
@@ -117,7 +113,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 				EndTime:    metav1.Time{Time: ts.Add(2 * time.Minute)},
 			},
 		}
-		Expect(elasticClient.StoreArchivedReport(rep2, reportTime.Add(time.Minute))).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep2)).ToNot(HaveOccurred())
 
 		By("retrieving last archived report summary")
 		get2 := func() (time.Time, error) {
@@ -136,7 +132,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 				EndTime:    metav1.Time{Time: ts.Add(3 * time.Minute)},
 			},
 		}
-		Expect(elasticClient.StoreArchivedReport(rep3, reportTime.Add(time.Minute))).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep3)).ToNot(HaveOccurred())
 
 		By("retrieving report-foo and not returning report-foo2")
 		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.Time.UTC()))
