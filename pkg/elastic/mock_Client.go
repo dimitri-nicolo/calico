@@ -5,7 +5,7 @@ package elastic
 import (
 	context "context"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	api "github.com/tigera/lma/pkg/api"
 
 	list "github.com/tigera/lma/pkg/list"

@@ -31,7 +31,6 @@ replace (
 require (
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/olivere/elastic v6.2.35+incompatible
 	github.com/olivere/elastic/v7 v7.0.6
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
