@@ -6,7 +6,6 @@ require (
 	github.com/Workiva/go-datastructures v1.0.50
 	github.com/docopt/docopt-go v0.0.0-20160216232012-784ddc588536
 	github.com/go-ini/ini v0.0.0-20190327024845-3be5ad479f69
-	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.0 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/onsi/ginkgo v1.14.1
@@ -22,6 +21,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
