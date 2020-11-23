@@ -5,7 +5,7 @@ package elastic
 import (
 	context "context"
 
-	"github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic"
 	api "github.com/tigera/lma/pkg/api"
 
 	list "github.com/tigera/lma/pkg/list"
@@ -35,6 +35,20 @@ func (_m *MockClient) Backend() *elastic.Client {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*elastic.Client)
 		}
+	}
+
+	return r0
+}
+
+// ClusterAlias provides a mock function with given fields: _a0
+func (_m *MockClient) ClusterAlias(_a0 string) string {
+	ret := _m.Called(_a0)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string) string); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Get(0).(string)
 	}
 
 	return r0
@@ -375,13 +389,13 @@ func (_m *MockClient) SearchFlowLogs(ctx context.Context, namespaces []string, s
 	return r0
 }
 
-// StoreArchivedReport provides a mock function with given fields: r, t
-func (_m *MockClient) StoreArchivedReport(r *api.ArchivedReportData, t time.Time) error {
-	ret := _m.Called(r, t)
+// StoreArchivedReport provides a mock function with given fields: r
+func (_m *MockClient) StoreArchivedReport(r *api.ArchivedReportData) error {
+	ret := _m.Called(r)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*api.ArchivedReportData, time.Time) error); ok {
-		r0 = rf(r, t)
+	if rf, ok := ret.Get(0).(func(*api.ArchivedReportData) error); ok {
+		r0 = rf(r)
 	} else {
 		r0 = ret.Error(0)
 	}
