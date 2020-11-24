@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -79,13 +80,13 @@ func rotateLabels(clientset *kubernetes.Clientset, nsPrefix string) error {
 		for nsName, maturity := range nsMaturity {
 			if maturity == changeFrom[ii] {
 				nsMaturity[nsName] = changeTo[ii]
-				ns_in, err := clientset.CoreV1().Namespaces().Get(nsName, v1.GetOptions{})
+				ns_in, err := clientset.CoreV1().Namespaces().Get(context.Background(), nsName, v1.GetOptions{})
 				log.WithField("ns_in", ns_in).Debug("Namespace retrieved")
 				if err != nil {
 					panic(err)
 				}
 				ns_in.ObjectMeta.Labels["maturity"] = changeTo[ii]
-				ns_out, err := clientset.CoreV1().Namespaces().Update(ns_in)
+				ns_out, err := clientset.CoreV1().Namespaces().Update(context.Background(), ns_in, v1.UpdateOptions{})
 				if err != nil {
 					log.WithField("ns_in", ns_in).Error("failed to update namespace")
 				}
