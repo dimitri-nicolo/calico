@@ -445,7 +445,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
 				PolicyPreviews: previews,
-				ImpactedOnly: true,
+				ImpactedOnly:   true,
 			}
 
 			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
@@ -584,10 +584,10 @@ type testHelper struct {
 	name   string
 }
 
-func (t *testHelper) CheckCanPreviewPolicyAction(action string, policy resources.Resource) (status int, err error) {
+func (t *testHelper) CheckCanPreviewPolicyAction(action string, policy resources.Resource) (bool, error) {
 	Expect(t.action).To(Equal(action))
 	Expect(t.name).To(Equal(policy.GetObjectMeta().GetName()))
-	return 200, nil
+	return true, nil
 }
 
 // mockList is used by both mockSource and mockDestination.

@@ -28,12 +28,16 @@ func AuthenticateRequest(authn authentication.Authenticator, handlerFunc http.Ha
 func AuthorizeRequest(authz lmaauth.RBACAuthorizer, handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		usr, res, nonRes := lmaauth.ExtractRBACFieldsFromContext(req.Context())
-		stat, err := authz.Authorize(usr, res, nonRes)
-		if err != nil {
+
+		if authorized, err := authz.Authorize(usr, res, nonRes); err != nil {
 			log.WithError(err).Debug("Failed to authorize request")
-			http.Error(w, err.Error(), stat)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if !authorized {
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
+
 		handler.ServeHTTP(w, req)
 	}
 }

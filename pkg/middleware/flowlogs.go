@@ -474,8 +474,10 @@ func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLog
 		if err := validateAction(action.Action); err != nil {
 			return nil, http.StatusBadRequest, err
 		}
-		if stat, err := rbacHelper.CheckCanPreviewPolicyAction(action.Action, action.Resource); err != nil {
-			return nil, stat, err
+		if authorized, err := rbacHelper.CheckCanPreviewPolicyAction(action.Action, action.Resource); err != nil {
+			return nil, http.StatusInternalServerError, err
+		} else if !authorized {
+			return nil, http.StatusForbidden, fmt.Errorf("Forbidden")
 		}
 	}
 
