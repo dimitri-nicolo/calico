@@ -382,8 +382,8 @@ See [Flow logs] for description of fields.
 | original_source_ips | IP, CIDR
 | num_original_source_ips | int | positive
 
-[Audit logs]: ../../security/logs/elastic/ee-audit
+[Audit logs]: ../../visibility/elastic/ee-audit
 [audit.k8s.io group v1]: https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/pkg/apis/audit/v1/types.go
-[DNS logs]: ../../security/logs/elastic/dns
-[Flow logs]: ../../security/logs/elastic/datatypes
+[DNS logs]: ../../visibility/elastic/dns
+[Flow logs]: /visibility/elastic/flow/datatypes
 [duration]: https://golang.org/pkg/time/#ParseDuration

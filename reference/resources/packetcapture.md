@@ -51,4 +51,5 @@ spec:
 
 {% include content/selectors.md %}
 
-[Packet Capture]: /threat/packetcapture
+[Packet Capture]: /visibility/packetcapture
+

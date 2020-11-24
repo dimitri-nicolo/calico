@@ -1,13 +1,13 @@
 ---
 title: iptables logs
 description: Learn how policy audit mode rules can affect the number of iptable logs.
-canonical_url: /security/logs/iptables
+canonical_url: /visibility/iptables
 ---
 
 ## About iptables logs
 
 iptables logs are produced by [policy audit mode](#policy-audit-mode) or by using the `Log` action in either
-[Network Policy](../../reference/resources/networkpolicy) or [Global Network Policy](../../reference/resources/globalnetworkpolicy).
+[Network Policy]({{site.baseurl}}/reference/resources/networkpolicy) or [Global Network Policy]({{site.baseurl}}/reference/resources/globalnetworkpolicy).
 These logs are written to syslog (specifically the `/dev/log` socket) on the nodes where the events are generated.
 Collection, rotation and other management of these logs is provided by your syslog agent, for example, journald or rsyslogd.
 

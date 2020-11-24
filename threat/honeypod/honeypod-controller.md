@@ -26,7 +26,7 @@ Honeypods can optionally be monitored using a {{site.prodname}} controller that 
 
 The controller leverages the following:
 
-- [Packet capture feature]({{site.baseurl}}/threat/packetcapture) to collect honeypod traffic in clusters.
+- [Packet capture feature]({{site.baseurl}}/visibility/packetcapture) to collect honeypod traffic in clusters.
 - Open source {% include open-new-window.html text='Snort' url='https://www.snort.org/' %} to scan honeypod traffic.
 
 ### Before you begin
@@ -43,7 +43,9 @@ The controller leverages the following:
 
 #### Enable packet capture on honeypods
 
-The following manifest enables packet capture on default [honeypods]({{site.baseurl}}/threat/honeypod/honeypods). Be sure to modify the namespace and selector if honeypods are placed elsewhere. For help, see [PacketCapture]({{site.baseurl}}/threat/packetcapture).
+The following manifest enables packet capture on default [honeypods]({{site.baseurl}}/threat/honeypod/honeypods). 
+Be sure to modify the namespace and selector if honeypods are placed elsewhere. 
+For help, see [PacketCapture]({{site.baseurl}}/visibility/packetcapture).
 
 ```bash
 kubectl create -f - <<EOF
@@ -60,6 +62,8 @@ EOF
 In order for the honeypod controller to find the packet captures, the name `capture-honey` is required for the PacketCapture resource.
 
 #### Add honeypod controller to cluster
+
+> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/visibility/packetcapture) manifest to target your honeypods. Honeypod controller requires the name to be `capture-honey` at this release.
 
 Add the honeypod controller to each cluster configured for honeypods using the following command:
 
@@ -87,4 +91,5 @@ intrusion-detection-es-job-installer-nfd7t       0/1     Completed   0          
 
 ### Above and beyond
 
-- [Packet capture]({{site.baseurl}}/threat/packetcapture)
+- [Packet capture]({{site.baseurl}}/visibility/packetcapture)
+

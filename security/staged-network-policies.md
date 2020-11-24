@@ -244,5 +244,5 @@ spec:
 - [Staged Kubernetes network policy]({{site.baseurl}}/reference/resources/stagedkubernetesnetworkpolicy)
 - For details on how to configure RBAC for staged policy resources, see [Configuring RBAC for tiered policy]({{site.baseurl}}/security/rbac-tiered-policies)
 - For details on staged policy metrics, see
-  - [Flow logs]({{site.baseurl}}/security/logs/elastic/datatypes)
+  - [Flow logs]({{site.baseurl}}/visibility/elastic/flow/datatypes)
   - [Prometheus statistics]({{site.baseurl}}/maintenance/monitor/metrics#content-main)

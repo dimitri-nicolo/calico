@@ -1,7 +1,7 @@
 ---
 title: Audit logs
 description: Enable and change default audit logs sent to Elasticsearch. 
-canonical_url: /security/logs/elastic/ee-audit
+canonical_url: /visibility/elastic/ee-audit
 ---
 
 ### Default audit logs sent to Elasticsearch
@@ -10,11 +10,11 @@ Our manifests include a policy that enables audit logging on the following {{sit
 
 | Resource              | Description                                                                           |
 | --------------------- | ------------------------------------------------------------------------------------- |
-| `GlobalNetworkPolicy` | [Reference documentation](../../../reference/resources/globalnetworkpolicy) |
-| `GlobalNetworkSet`    | [Reference documentation](../../../reference/resources/globalnetworkset)    |
-| `NetworkPolicy`       | [Reference documentation](../../../reference/resources/networkpolicy)       |
-| `Tier`                | [Reference documentation](../../../reference/resources/tier)                |
-| `HostEndpoint`        | [Reference documentation](../../../reference/resources/hostendpoint)        |
+| `GlobalNetworkPolicy` | [Reference documentation]({{site.baseurl}}/reference/resources/globalnetworkpolicy) |
+| `GlobalNetworkSet`    | [Reference documentation]({{site.baseurl}}/reference/resources/globalnetworkset)    |
+| `NetworkPolicy`       | [Reference documentation]({{site.baseurl}}/reference/resources/networkpolicy)       |
+| `Tier`                | [Reference documentation]({{site.baseurl}}/reference/resources/tier)                |
+| `HostEndpoint`        | [Reference documentation]({{site.baseurl}}/reference/resources/hostendpoint)        |
 
 By default, the logs:
 - Include `create`, `patch`, `update`, and `delete` events.

@@ -1,7 +1,7 @@
 ---
 title: Filter flow logs
 description: Filter Calico Enterprise flow logs. 
-canonical_url: /security/logs/elastic/filtering
+canonical_url: /visibility/elastic/flow/filtering
 ---
 
 ### Big picture
@@ -96,7 +96,7 @@ This example filters inbound internet traffic to the deployment with pods named,
   ```
 #### Add filters to ConfigMap file
 
-1. Create a `filters` directory with a file called `flow` with your desired filters. If you are also adding [dns filters]({{site.baseurl}}/security/logs/elastic/filtering-dns), add the `dns` file to the directory.
+1. Create a `filters` directory with a file called `flow` with your desired filters. If you are also adding [dns filters]({{site.baseurl}}/visibility/elastic/filtering-dns), add the `dns` file to the directory.
 
 1. Create the `fluentd-filters` ConfigMap in the `tigera-operator` namespace with the following command.
 
@@ -106,6 +106,6 @@ This example filters inbound internet traffic to the deployment with pods named,
 
 ### Above and beyond
 
-- [Flow log aggregation]({{site.baseurl}}/security/logs/elastic/aggregation)
-- [Archive logs to storage]({{site.baseurl}}/security/logs/elastic/archive-storage)
-- [Configure RBAC for Elasticsearch logs]({{site.baseurl}}/security/logs/rbac-elasticsearch)
+- [Flow log aggregation]({{site.baseurl}}/visibility/elastic/flow/aggregation)
+- [Archive logs to storage]({{site.baseurl}}/visibility/elastic/archive-storage)
+- [Configure RBAC for Elasticsearch logs]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch)

@@ -203,3 +203,5 @@ Most IdPs require redirect URIs to be allowed to redirect users at the end of th
 ### Above and beyond
 
 - [Configure user roles and permissions]({{site.baseurl}}/getting-started/cnx/roles-and-permissions)
+- [Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)
+- [Configure RBAC for Elasticsearch]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch)

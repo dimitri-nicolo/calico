@@ -1,7 +1,7 @@
 ---
 title: Access Elasticsearch logs
 description: Ways to view Elasticsearch logs.
-canonical_url: /security/logs/elastic/view
+canonical_url: /visibility/elastic/view
 show_toc: false
 ---
 

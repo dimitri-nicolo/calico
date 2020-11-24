@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting Elasticsearch
 description: Learn how to troubleshoot common issues with Elasticsearch.
-canonical_url: '/maintenance/troubleshoot/elasticsearch'
+canonical_url: '/visibility/troubleshoot'
 ---
 
 ### Elasticsearch resources and settings

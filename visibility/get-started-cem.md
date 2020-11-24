@@ -1,7 +1,7 @@
 ---
 title: Get started with Calico Enterprise Manager
 description: Tour the main features and learn how the user interface helps with visibility and compliance.
-canonical_url: /security/tiered-policy
+canonical_url: /visibility/get-started-cem
 ---
 
 ### Big picture

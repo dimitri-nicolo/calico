@@ -85,3 +85,5 @@ Once logged in, you can configure users and their privileges from the settings p
 
 - [Configure user roles and permissions]({{site.baseurl}}/getting-started/cnx/roles-and-permissions)
 - [Configure an external identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider)
+- [Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)
+- [Configure RBAC for Elasticsearch]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch)

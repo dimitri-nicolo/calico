@@ -1,22 +1,22 @@
 ---
 title: Filter DNS logs
 description: Suppress DNS logs of low significance using filters. 
-canonical_url: /security/logs/elastic/filtering-dns
+canonical_url: /visibility/elastic/filtering-dns
 ---
 
 {{site.prodname}} supports filtering out DNS logs based on user provided
 configuration. Use filtering to suppress logs of low significance.
 
-## Configure DNS filtering
+### Configure DNS filtering
 
 DNS log filtering is configured through a ConfigMap in the `tigera-operator`
 namespace.
 
 To enable DNS log filtering, follow these steps:
 
-1. Create a `filters` directory with a file calld `dns` with the contents of
-   your [desired filter](#filter-configuration-files).
-   If you are also adding [flow filters](filtering) also add the `flow` file
+1. Create a `filters` directory with a file named `dns` with the contents of
+   your desired filter using [Filter configuration files](#filter-configuration-files).
+   If you are also adding [flow filters]({{site.baseurl}}/visibility/elastic/flow/filtering) also add the `flow` file
    to the directory.
 1. Create the `fluentd-filters` ConfigMap in the `tigera-operator` namespace
    with the following command.
@@ -24,7 +24,7 @@ To enable DNS log filtering, follow these steps:
    kubectl create configmap fluentd-filters -n tigera-operator --from-file=filters
    ```
 
-## Filter configuration files
+### Filter configuration files
 
 The filters defined by the ConfigMap are inserted into the fluentd configuration file.
 The [upstream fluentd documentation](https://docs.fluentd.org/filter/grep){:target="_blank"}

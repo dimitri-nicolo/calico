@@ -115,7 +115,7 @@ The rule below allows access to any cluster for all log types.
 #### Filter log data for a managed cluster in Kibana
 
 1. Log in to {{site.prodname}} Manager.
-1. In the left navigation, click Kibana and [log in to the Kibana dashboard]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana).
+1. In the left navigation, click Kibana and [log in to the Kibana dashboard]({{site.baseurl}}/visibility/elastic/view#accessing-logs-from-kibana).
 1. Navigate to the Discovery view and filter logs by managed cluster indexes.
 1. Select a type of log (audit, dns, events, flow).
 1. From the Available Fields section in the side panel, select the `_index` field.

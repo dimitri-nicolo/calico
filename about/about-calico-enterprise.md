@@ -63,11 +63,12 @@ Connectivity issues between microservices are difficult to troubleshoot. Trouble
 
 **Documentation**
 
-- [Flow visualizer]({{site.baseurl}}/security/get-started-cem)
-- [Flow logs in Kibana]({{site.baseurl}}/security/logs/elastic/)
-- [Alerts]({{site.baseurl}}/threat/alerts) 
-- [Packet capture]({{site.baseurl}}/threat/packetcapture)
-- [DNS logs and dashboards]({{site.baseurl}}/security/logs/elastic/dns)
+- [Flow visualizer]({{site.baseurl}}/visibility/get-started-cem)
+- [Flow logs in Kibana]({{site.baseurl}}/visibility/elastic/)
+- [Alerts]({{site.baseurl}}/visibility/alerts) 
+- [Packet capture]({{site.baseurl}}/visibility/packetcapture)
+- [DNS logs and dashboards]({{site.baseurl}}/visibility/elastic/dns)
+
 
 ### Enterprise security controls
 
@@ -87,7 +88,7 @@ Many applications have compliance requirements such as workload isolation, ensur
 - [Create tiered network policy]({{site.baseurl}}/security/tiered-policy)
 - [Compliance reports]({{site.baseurl}}/compliance/compliance-reports/)
 - [CIS benchmarks]({{site.baseurl}}/compliance/compliance-reports-cis)
-- [Audit logs]({{site.baseurl}}/security/logs/elastic/ee-audit)
+- [Audit logs]({{site.baseurl}}/visibility/elastic/ee-audit)
 
 ### Extend firewalls to Kubernetes
 
@@ -151,9 +152,10 @@ In addition to cloud microsegmentation and zero trust network security, {{site.p
 
 **Documentation**
 
-- [Alerts]({{site.baseurl}}/threat/alerts)
+- [Alerts]({{site.baseurl}}/visibility/alerts)
 - [Anomaly detection]({{site.baseurl}}/threat/anomaly-detection/)
 - [Threat intelligence feeds]({{site.baseurl}}/threat/suspicious-ips)
+
 
 ### Zero trust network security
 

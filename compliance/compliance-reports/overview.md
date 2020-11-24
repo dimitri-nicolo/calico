@@ -97,7 +97,7 @@ Follow these steps to configure and produce audit logs:
 1. Start using `kubectl` (rather than calicoctl). Because compliance reports use audited data, you must use `kubectl`,
    the Kubernetes API, or the {{ site.prodname }} Manager to manage policy, tiers and host endpoints. If you use `calicoctl`
    you will not get audit logs for changes to these resources.
-1. [Configure Kubernetes audit logs]({{site.baseurl}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources).
+1. [Configure Kubernetes audit logs]({{site.baseurl}}/visibility/elastic/ee-audit#enabling-auditing-for-other-resources).
 
 #### Configure report permissions
 

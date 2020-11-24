@@ -67,7 +67,7 @@ The calico repository contains the Dockerfile for cnx-node, along with various c
 
 ### Elasticsearch and Kibana 
 
-**Main task**: Built-in search-engine and visualization dashboard for {{site.prodname}}. Installed and configured by default for easy onboarding. [Elasticsearch]({{site.baseurl}}/security/logs/).
+**Main task**: Built-in search-engine and visualization dashboard for {{site.prodname}}. Installed and configured by default for easy onboarding. [Elasticsearch]({{site.baseurl}}/visibility/).
 
 
 ### Manager UI

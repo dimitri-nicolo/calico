@@ -1,6 +1,6 @@
 ---
 title: Visibility
-description: Visibility into all network fraffic with Kubernetes context.
+description: Use Elasticsearch logs for visibility into all network fraffic with Kubernetes context.
 canonical_url: '/visibility/index'
 show_read_time: false
 show_toc: false

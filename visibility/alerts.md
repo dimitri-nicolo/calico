@@ -1,7 +1,7 @@
 ---
 title: Configure alerts
 description: Define alert criteria for the Alerts page in Calico Enterprise Manager. 
-canonical_url: /threat/alerts
+canonical_url: /visibility/alerts
 ---
 
 ### Big picture
@@ -117,10 +117,9 @@ for common tasks that can then be modified to suit your needs.
 
 ### Above and beyond
 
-For all global alert and template options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
-To troubleshoot alerts, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshoot/troubleshooting)
-
-[flow]: ../logs/elastic/flow
-[dns]: ../logs/elastic/dns
-[audit logs]: ../logs/elastic/ee-audit
-[45925]: https://www.exploit-db.com/exploits/45925
+- For all global alert and template options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
+- [Elasticsearch troubleshooting]({{site.baseurl}}/visibility/troubleshoot)
+- [flow logs]({{site.baseurl}}/visibility/elastic/flow)
+- [dns log]({{site.baseurl}}/visibility/elastic/dns)
+- [audit logs]({{site.baseurl}}/visibility/elastic/ee-audit)
+- {% include open-new-window.html text='Exploits database' url='https://www.exploit-db.com/exploits/45925' %}

@@ -1,7 +1,7 @@
 ---
 title: Configure flow log aggregation
 description: Configure flow log aggregation to reduce log volume and costs.
-canonical_url: /security/logs/elastic/filtering
+canonical_url: /visibility/elastic/flow/aggregation
 ---
 
 ### Big picture
@@ -16,7 +16,7 @@ Beyond using filtering to suppress flow logs, {{site.prodname}} provides control
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- **FelixConfiguration**.
+- **FelixConfiguration**
 
 ### Concepts
 
@@ -26,7 +26,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Aggregation flow log example
 
-The following is a sample flow log entry using aggregation by pod prefix for allowed traffic. For flow log fields and filter parameters, see [Filter flow logs]({{site.baseurl}}/security/logs/elastic/filtering).
+The following is a sample flow log entry using aggregation by pod prefix for allowed traffic. For flow log fields and filter parameters, see [Filter flow logs]({{site.baseurl}}/visibility/elastic/flow/filtering).
 
 ```
   {
@@ -449,10 +449,10 @@ kubectl get felixconfiguration.p -o yaml
 Before [changing the default aggregation level]({{site.baseurl}}/reference/resources/felixconfig#aggregationkind), note the following:
 
 - Although any change in aggregation level affects flow log volume, lowering the aggregation number (especially to `0` for no aggregation) will cause significant impacts to log storage. If you allow more flow logs, ensure that you provision more log storage.
-- Verify that the parameters that you want to see in your aggregation level, are not already [filtered]({{site.baseurl}}/security/logs/elastic/filtering)
+- Verify that the parameters that you want to see in your aggregation level, are not already [filtered]({{site.baseurl}}/visibility/elastic/flow/filtering)
 
 ### Above and beyond
 
-- [Archive logs to storage]({{site.baseurl}}/security/logs/elastic/archive-storage)
-- [Configure RBAC for Elasticsearch logs]({{site.baseurl}}/security/logs/rbac-elasticsearch)
-- [Configure data retention]({{site.baseurl}}/security/logs/retention)
+- [Archive logs to storage]({{site.baseurl}}/visibility/elastic/archive-storage)
+- [Configure RBAC for Elasticsearch logs]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch)
+- [Configure data retention]({{site.baseurl}}/visibility/elastic/retention)
