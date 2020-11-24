@@ -28,9 +28,10 @@ import (
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/util"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -56,7 +57,7 @@ var (
 func Run(args []string) error {
 	var err error
 	doc := `Usage:
-  calicoctl node run [--ip=<IP>] [--ip6=<IP6>] [--as=<AS_NUM>]
+  <BINARY_NAME> node run [--ip=<IP>] [--ip6=<IP6>] [--as=<AS_NUM>]
                      [--name=<NAME>]
                      [--ip-autodetection-method=<IP_AUTODETECTION_METHOD>]
                      [--ip6-autodetection-method=<IP6_AUTODETECTION_METHOD>]
@@ -77,7 +78,6 @@ Options:
                            will use the value configured on the node resource.
                            If there is no configured value and --as option is
                            omitted, the node will inherit the global AS number
-                           (see 'calicoctl config' for details).
      --ip=<IP>             Set the local IPv4 routing address for this node.
                            If omitted, it will use the value configured on the
                            node resource.  If there is no configured value
@@ -151,6 +151,10 @@ Description:
   This command is used to start a tigera/cnx-node container instance which provides
   Calico networking and network policy on your compute host.
 `
+	// Replace all instances of BINARY_NAME with the name of the binary.
+	binaryName, _ := util.NameAndDescription()
+	doc = strings.ReplaceAll(doc, "<BINARY_NAME>", binaryName)
+
 	arguments, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
 		log.Info(err)

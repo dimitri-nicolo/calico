@@ -3,7 +3,7 @@ package capture
 
 import (
 	"fmt"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
 	log "github.com/sirupsen/logrus"
 	"path"
 	"regexp"

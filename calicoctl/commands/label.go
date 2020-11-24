@@ -20,16 +20,17 @@ import (
 
 	docopt "github.com/docopt/docopt-go"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
-	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/resourcemgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/util"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func Label(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl label (<KIND> <NAME>
+  <BINARY_NAME> label (<KIND> <NAME>
   	              ( <key>=<value> [--overwrite] |
   	                <key> --remove )
                   [--config=<CONFIG>] [--namespace=<NS>])
@@ -39,13 +40,13 @@ func Label(args []string) error {
 
 Examples:
   # Label a workload endpoint
-  calicoctl label workloadendpoints nginx --namespace=default app=web
+  <BINARY_NAME> label workloadendpoints nginx --namespace=default app=web
 
   # Label a node and overwrite the original value of key 'cluster'
-  calicoctl label nodes node1 cluster=frontend --overwrite
+  <BINARY_NAME> label nodes node1 cluster=frontend --overwrite
 
   # Remove label with key 'cluster' of the node
-  calicoctl label nodes node1 cluster --remove
+  <BINARY_NAME> label nodes node1 cluster --remove
 
 Options:
   -h --help                    Show this screen.
@@ -95,6 +96,9 @@ Description:
   - gets an error if option --overwrite is not provided.
   - value of the key updates to specified value if option --overwrite is provided.
   `
+	// Replace all instances of BINARY_NAME with the name of the binary.
+	binaryName, _ := util.NameAndDescription()
+	doc = strings.ReplaceAll(doc, "<BINARY_NAME>", binaryName)
 
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {

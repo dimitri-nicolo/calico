@@ -26,10 +26,10 @@ import (
 
 	licClient "github.com/tigera/licensing/client"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/file"
-	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/file"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/resourcemgr"
 	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"

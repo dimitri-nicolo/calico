@@ -30,10 +30,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/crds"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/crds"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/util"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -47,7 +48,7 @@ import (
 
 func Import(args []string) error {
 	doc := `Usage:
-  calicoctl datastore migrate import --filename=<FILENAME> [--config=<CONFIG>]
+  <BINARY_NAME> datastore migrate import --filename=<FILENAME> [--config=<CONFIG>]
 
 Options:
   -h --help                 Show this screen.
@@ -61,6 +62,9 @@ Description:
   Import the contents of the etcdv3 datastore from the file created by the
   export command.
 `
+	// Replace all instances of BINARY_NAME with the name of the binary.
+	name, _ := util.NameAndDescription()
+	doc = strings.ReplaceAll(doc, "<BINARY_NAME>", name)
 
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
@@ -357,12 +361,12 @@ func importCRDs(cfg *apiconfig.CalicoAPIConfig) error {
 	}
 
 	for _, crd := range calicoCRDs {
-		_, err := cs.ApiextensionsV1().CustomResourceDefinitions().Create(crd)
+		_, err := cs.ApiextensionsV1().CustomResourceDefinitions().Create(context.Background(), crd, v1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				// If the CRD already exists attempt to update it.
 				// Need to retrieve the current CRD first.
-				currentCRD, err := cs.ApiextensionsV1().CustomResourceDefinitions().Get(crd.GetObjectMeta().GetName(), v1.GetOptions{})
+				currentCRD, err := cs.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), crd.GetObjectMeta().GetName(), v1.GetOptions{})
 				if err != nil {
 					return fmt.Errorf("Error retrieving existing CRD to update: %s: %s", crd.GetObjectMeta().GetName(), err)
 				}
@@ -371,7 +375,7 @@ func importCRDs(cfg *apiconfig.CalicoAPIConfig) error {
 				crd.GetObjectMeta().SetResourceVersion(currentCRD.GetObjectMeta().GetResourceVersion())
 
 				// Update the CRD.
-				_, err = cs.ApiextensionsV1().CustomResourceDefinitions().Update(crd)
+				_, err = cs.ApiextensionsV1().CustomResourceDefinitions().Update(context.Background(), crd, v1.UpdateOptions{})
 				if err != nil {
 					return fmt.Errorf("Error updating CRD %s: %s", crd.GetObjectMeta().GetName(), err)
 				}

@@ -32,7 +32,7 @@ import (
 
 	licClient "github.com/tigera/licensing/client"
 
-	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/resourcemgr"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
