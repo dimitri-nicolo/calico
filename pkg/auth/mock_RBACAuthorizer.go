@@ -15,14 +15,14 @@ type MockRBACAuthorizer struct {
 }
 
 // Authorize provides a mock function with given fields: usr, resources, nonResources
-func (_m *MockRBACAuthorizer) Authorize(usr user.Info, resources *v1.ResourceAttributes, nonResources *v1.NonResourceAttributes) (int, error) {
+func (_m *MockRBACAuthorizer) Authorize(usr user.Info, resources *v1.ResourceAttributes, nonResources *v1.NonResourceAttributes) (bool, error) {
 	ret := _m.Called(usr, resources, nonResources)
 
-	var r0 int
-	if rf, ok := ret.Get(0).(func(user.Info, *v1.ResourceAttributes, *v1.NonResourceAttributes) int); ok {
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(user.Info, *v1.ResourceAttributes, *v1.NonResourceAttributes) bool); ok {
 		r0 = rf(usr, resources, nonResources)
 	} else {
-		r0 = ret.Get(0).(int)
+		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
