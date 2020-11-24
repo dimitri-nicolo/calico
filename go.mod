@@ -10,21 +10,17 @@ require (
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2-0.20201110235728-977c570b2f4b
+	github.com/projectcalico/libcalico-go v1.7.2-0.20201119184045-34d8399da148
 	github.com/prometheus/client_golang v1.0.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
 	google.golang.org/genproto v0.0.0-20191206224255-0243a4be9c8f // indirect
 	gopkg.in/ini.v1 v1.44.0 // indirect
-
-	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
-	k8s.io/apimachinery v0.17.3
-
-	// k8s.io/client-go 1.16.3 is at 6c5935290e33
-	k8s.io/client-go v0.17.3
+	k8s.io/apimachinery v0.18.12
+	k8s.io/client-go v0.18.12
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
