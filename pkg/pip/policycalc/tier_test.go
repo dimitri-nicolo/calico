@@ -1090,12 +1090,9 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	It("checking source egress allow exact match when Source.ServiceAccounts is non-nil but empty", func() {
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagAllow,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow", 1),
+		}
 		np.Spec.Types = typesEgress
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
@@ -1171,12 +1168,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagAllow,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow", 1)}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
@@ -1191,12 +1184,9 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagNextTier,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Pass
@@ -1212,17 +1202,10 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagNextTier,
-		}, {
-			MatchIndex: 1,
-			Tier:       "__PROFILE__",
-			Name:       "__PROFILE__.kns.ns1",
-			Action:     api.ActionFlagAllow,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
+			mustCreatePolicyHit("0|__PROFILE__|__PROFILE__.kns.ns1|allow", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Pass
@@ -1237,17 +1220,10 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagNextTier,
-		}, {
-			MatchIndex: 1,
-			Tier:       "__PROFILE__",
-			Name:       "__PROFILE__.kns.ns1",
-			Action:     api.ActionFlagDeny,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
+			mustCreatePolicyHit("0|__PROFILE__|__PROFILE__.kns.ns1|deny", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Pass
@@ -1262,12 +1238,9 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagNextTier,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
@@ -1283,12 +1256,9 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagDeny, // <- change to end of tier deny when supported.
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
@@ -1304,17 +1274,10 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagAllow,
-		}, {
-			MatchIndex: 1,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagDeny,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Pass
@@ -1347,12 +1310,9 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
-		f.Policies = []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "meh",
-			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagDeny,
-		}}
+		f.Policies = []api.PolicyHit{
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny", 1),
+		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress = make([]v3.Rule, 2)
@@ -1485,3 +1445,10 @@ var _ = Describe("Compiled tiers and gnpolicies tests", func() {
 		Expect(compute().Action).To(Equal(api.ActionFlagAllow))
 	})
 })
+
+func mustCreatePolicyHit(policyStr string, count int) api.PolicyHit {
+	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(count))
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return policyHit
+}

@@ -789,8 +789,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458 h1:C
 github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458/go.mod h1:tots0PLC1yjgvKhTIHhnXW8JtFt5GhVDogynKRMa+Wg=
 github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19 h1:SLVtrxhWnoK95w7xmDZ9d2uiuXRhdp4Vt6CbjdW9k5M=
 github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe3N3H+CHVaceVY9N9eVQ3ulK6jJVl9lWIs6Wv2s=
-github.com/tigera/lma v0.0.0-20201124222909-8383094e9e76 h1:FFBJcB68EuHuvs7uKARQH9CTCFVIY7bMWU7rOKWjXq4=
-github.com/tigera/lma v0.0.0-20201124222909-8383094e9e76/go.mod h1:knZS96uauE/18r95fg38kCaooPPAFUkTZE6QF7BXtzw=
+github.com/tigera/lma v0.0.0-20201203175358-0a9869301ab3 h1:4y58zNgSW+iYU4YEnOHmG34c+zQVuIxRQJwo+H7JWUM=
+github.com/tigera/lma v0.0.0-20201203175358-0a9869301ab3/go.mod h1:knZS96uauE/18r95fg38kCaooPPAFUkTZE6QF7BXtzw=
 github.com/tigera/nfnetlink v0.0.0-20201111230626-bbfcd8d4b9bd/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20201116151154-7966ce4c6046/go.mod h1:/d5PhXZj10xXbJFa86GGhRylVxB7+ktXYcfqwoZxo9M=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
