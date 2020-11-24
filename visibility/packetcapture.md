@@ -3,8 +3,8 @@ title: Packet capture
 description: Capture live traffic for debugging microservices and application interaction.
 canonical_url: /visibility/packetcapture
 ---
->**Warning**: This feature is experimental.  Experimental features may change significantly or not be supported in future releases.
-{: .alert .alert-danger}
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
 
 ### Big picture
 

@@ -3,6 +3,10 @@ title: Basic policy demo
 description: An interactive demo to show how to apply basic network policy to pods in a Calico Enterprise for Windows cluster.
 canonical_url: '/getting-started/windows-calico/demo'
 ---
+
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
+
 This guide provides a simple demo to illustrate basic pod-to-pod connectivity and the application of network policy in a {{site.prodnameWindows}} cluster. We will create client and server pods on Linux and Windows nodes, verify connectivity between the pods, and then we'll apply a basic network policy to isolate pod traffic.
 
 ## Prerequisites

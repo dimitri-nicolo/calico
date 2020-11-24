@@ -4,8 +4,8 @@ description: Help for troubleshooting Calico Enterprise for Windows issues.
 canonical_url: /getting-started/windows-calico/troubleshoot
 ---
 
-**Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
-{: .alert .alert-warning}
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
 
 ### Useful troubleshooting commands
 

@@ -4,8 +4,8 @@ description: Review requirements for the standard install for Calico Enterprise 
 canonical_url: '/getting-started/windows-calico/requirements'
 ---
 
-**Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
-{: .alert .alert-warning}
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
 
 ### About {{site.prodnameWindows}}
 
