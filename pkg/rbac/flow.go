@@ -220,22 +220,21 @@ func (r flowHelper) authorized(rh resources.ResourceHelper, verb, namespace, nam
 
 	// Check if the user is authorized to perform the action.
 	log.Debugf("Checking if user action is authorized: %v", ra)
-	status, err := r.authorizer.Authorize(r.usr, &ra, nil)
+	authorized, err := r.authorizer.Authorize(r.usr, &ra, nil)
 	if err != nil {
 		log.WithError(err).Info("Unable to check permissions")
 		return false, err
 	}
-	canDo := status == 0
 
-	log.Debugf("Authorized=%v", canDo)
-	r.authorizedCache[ra] = canDo
-	return canDo, nil
+	log.Debugf("Authorized=%v", authorized)
+	r.authorizedCache[ra] = authorized
+	return authorized, nil
 }
 
 type alwaysAllowAuthorizer struct{}
 
-func (m *alwaysAllowAuthorizer) Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (status int, err error) {
-	return 0, nil
+func (m *alwaysAllowAuthorizer) Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
+	return true, nil
 }
 
 // NewAlwaysAllowFlowHelper returns an flow helper that always authorizes a request.

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"fmt"
-	"net/http"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,18 +25,18 @@ var _ = Describe("RBACAuthorizer", func() {
 		})
 
 		It("returns a forbidden status if the user is nil", func() {
-			status, err := rbacAuthorizer.Authorize(nil, &authzv1.ResourceAttributes{}, &authzv1.NonResourceAttributes{})
+			authorized, err := rbacAuthorizer.Authorize(nil, &authzv1.ResourceAttributes{}, &authzv1.NonResourceAttributes{})
 
 			Expect(err).Should(HaveOccurred())
-			Expect(status).Should(Equal(http.StatusForbidden))
+			Expect(authorized).Should(BeFalse())
 		})
 
 		It("returns a forbidden status if both the resource and non resource attributes are nil", func() {
 			rbacAuthorizer = NewRBACAuthorizer(fakeK8sCli)
-			status, err := rbacAuthorizer.Authorize(&user.DefaultInfo{}, nil, nil)
+			authorized, err := rbacAuthorizer.Authorize(&user.DefaultInfo{}, nil, nil)
 
 			Expect(err).Should(HaveOccurred())
-			Expect(status).Should(Equal(http.StatusForbidden))
+			Expect(authorized).Should(BeFalse())
 		})
 
 		It("tests all settable fields in the SubjectAccessReview are set correctly", func() {
@@ -100,7 +99,7 @@ var _ = Describe("RBACAuthorizer", func() {
 		})
 
 		DescribeTable("test returned statuses",
-			func(allowed bool, sarError error, expectedStatus int, expectedError error) {
+			func(allowed bool, sarError error, expectedStatus bool, expectedError error) {
 				fakeK8sCli.AddReactor("create", "subjectaccessreviews", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &authzv1.SubjectAccessReview{
 						Status: authzv1.SubjectAccessReviewStatus{
@@ -110,10 +109,10 @@ var _ = Describe("RBACAuthorizer", func() {
 
 				// The value of the parameters here don't matter because we're controlling the response for the created
 				// SubjectAccessReview
-				status, err := rbacAuthorizer.Authorize(
+				authorized, err := rbacAuthorizer.Authorize(
 					&user.DefaultInfo{}, &authzv1.ResourceAttributes{}, &authzv1.NonResourceAttributes{})
 
-				Expect(status).Should(Equal(expectedStatus))
+				Expect(authorized).Should(Equal(expectedStatus))
 				if expectedError == nil {
 					Expect(err).Should(BeNil())
 				} else {
@@ -121,16 +120,16 @@ var _ = Describe("RBACAuthorizer", func() {
 				}
 			},
 			Entry(
-				"returns a zero status if the subject access review returns as status of allowed",
-				true, nil, 0, nil,
+				"returns true if the subject access review returns as status of allowed",
+				true, nil, true, nil,
 			),
 			Entry(
-				"returns a 403 status if the subject access review returns as status of denied",
-				false, nil, 403,
-				fmt.Errorf("AccessReview Status %#v", authzv1.SubjectAccessReviewStatus{Allowed: false, Denied: true}),
+				"returns false if the subject access review returns as status of denied",
+				false, nil, false,
+				nil,
 			),
 			Entry("returns a 500 status if the subject access review returns an error",
-				false, fmt.Errorf("some error"), 500, fmt.Errorf("error performing AccessReview: some error"),
+				false, fmt.Errorf("some error"), false, fmt.Errorf("error performing AccessReview: some error"),
 			),
 		)
 	})

@@ -4,7 +4,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	log "github.com/sirupsen/logrus"
 
@@ -24,7 +23,7 @@ const (
 // RBACAuthorizer is an interface who's implementors are used to check if a user is authorised to access given K8s RBAC
 // attributes.
 type RBACAuthorizer interface {
-	Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (status int, err error)
+	Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error)
 }
 
 type rbacAuthorizer struct {
@@ -38,21 +37,24 @@ func NewRBACAuthorizer(k8sCli k8s.Interface) RBACAuthorizer {
 }
 
 // Authorize checks if the given user is authorized to access the given resources and non resources. If the user is authorized
-// a status of 0 is returned.
-func (auth *rbacAuthorizer) Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (int, error) {
+// true is returned, if not false is returned. An error that occurred is returned.
+func (auth *rbacAuthorizer) Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (bool, error) {
 	if usr == nil {
-		return http.StatusForbidden, fmt.Errorf("no user available to authorize against")
+		return false, fmt.Errorf("no user available to authorize against")
 	}
 
 	if resources == nil && nonResources == nil {
-		return http.StatusForbidden, fmt.Errorf("no resource available to authorize")
+		return false, fmt.Errorf("no resource available to authorize")
 	}
+
 	return auth.createSubjectAccessReview(usr, resources, nonResources)
 }
 
 // subjectAccessReview creates a authzv1.SubjectAccessReview to check if the given user is authorized to access the given
-// authzv1.ResourceAttributes and authzv1.NonResourceAttributes
-func (auth *rbacAuthorizer) createSubjectAccessReview(user user.Info, resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes) (int, error) {
+// authzv1.ResourceAttributes and authzv1.NonResourceAttributes.
+//
+// If the user is authorized true is returned, if not false is returned. An error that occurred is returned.
+func (auth *rbacAuthorizer) createSubjectAccessReview(user user.Info, resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes) (bool, error) {
 	sar := authzv1.SubjectAccessReview{
 		Spec: authzv1.SubjectAccessReviewSpec{
 			ResourceAttributes:    resource,
@@ -69,19 +71,15 @@ func (auth *rbacAuthorizer) createSubjectAccessReview(user user.Info, resource *
 	}
 
 	res, err := auth.k8sCli.AuthorizationV1().SubjectAccessReviews().Create(&sar)
+	if res != nil {
+		log.Debugf("Response to access review: %#v", res.Status)
+	}
+
 	if err != nil {
-		if res != nil {
-			log.Debugf("Response to access review: %v", res.Status)
-		}
-		return http.StatusInternalServerError, fmt.Errorf("error performing AccessReview: %v", err)
-	}
-	log.Debugf("Response to access review: %v", res.Status)
-
-	if res.Status.Allowed {
-		return 0, nil
+		return false, fmt.Errorf("error performing AccessReview: %v", err)
 	}
 
-	return http.StatusForbidden, fmt.Errorf("AccessReview Status %#v", res.Status)
+	return res.Status.Allowed, nil
 }
 
 // ExtractRBACFieldsFromContext retrieves the user, authzv1.ResourceAttributes, and authzv1.ResourceNonAttributes from the
