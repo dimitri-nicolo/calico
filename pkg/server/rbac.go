@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
-
 	lmaauth "github.com/tigera/lma/pkg/auth"
 
 	authzv1 "k8s.io/api/authorization/v1"
@@ -153,16 +151,10 @@ func (l *reportRbacHelper) checkAuthorized(atr authzv1.ResourceAttributes) (bool
 		return false, fmt.Errorf("no user found in request context")
 	}
 
-	stat, err := l.authorizer.Authorize(usr, &atr, nil)
-
-	switch stat {
-	case 0:
-		log.WithField("stat", stat).Info("Request authorized")
-		return true, nil
-	case http.StatusForbidden:
-		log.WithField("stat", stat).WithError(err).Info("Forbidden - not authorized")
-		return false, nil
+	authorize, err := l.authorizer.Authorize(usr, &atr, nil)
+	if err != nil {
+		return false, err
 	}
-	log.WithField("stat", stat).WithError(err).Info("Error authorizing")
-	return false, err
+
+	return authorize, nil
 }

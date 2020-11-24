@@ -2,7 +2,6 @@
 package server_test
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -127,19 +126,19 @@ var _ = Describe("List", func() {
 
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get",
-		}, mock.Anything).Return(0, nil)
+		}, mock.Anything).Return(true, nil)
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryGet",
-		}, mock.Anything).Return(0, nil)
+		}, mock.Anything).Return(true, nil)
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryNoGo",
-		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+		}, mock.Anything).Return(false, nil)
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "list", Group: "projectcalico.org", Resource: "globalreports",
-		}, mock.Anything).Return(0, nil)
+		}, mock.Anything).Return(true, nil)
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "somethingelse",
-		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+		}, mock.Anything).Return(false, nil)
 
 		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
@@ -208,7 +207,7 @@ var _ = Describe("List", func() {
 		mockRBACAuthorizer := new(lmaauth.MockRBACAuthorizer)
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "list", Group: "projectcalico.org", Resource: "globalreports",
-		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+		}, mock.Anything).Return(false, nil)
 
 		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
@@ -227,10 +226,10 @@ var _ = Describe("List", func() {
 
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "list", Group: "projectcalico.org", Resource: "globalreports",
-		}, mock.Anything).Return(0, nil)
+		}, mock.Anything).Return(true, nil)
 		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
 			Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "somethingelse",
-		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+		}, mock.Anything).Return(false, nil)
 
 		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
 
