@@ -97,12 +97,10 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.Audit
 
 type fakeReportStorer struct {
 	data *api.ArchivedReportData
-	time time.Time
 }
 
-func (r *fakeReportStorer) StoreArchivedReport(d *api.ArchivedReportData, t time.Time) error {
+func (r *fakeReportStorer) StoreArchivedReport(d *api.ArchivedReportData) error {
 	r.data = d
-	r.time = t
 	return nil
 }
 

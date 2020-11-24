@@ -241,7 +241,7 @@ func (r *reporter) run() error {
 	_ = r.archiver.StoreArchivedReport(&api.ArchivedReportData{
 		ReportData: r.data,
 		UISummary:  summary,
-	}, time.Now())
+	})
 
 	// Indicate we are healthy.
 	r.healthy()
