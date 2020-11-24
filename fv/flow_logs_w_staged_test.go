@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -269,7 +270,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp")
 		tSvcNamespace := tSvc.ObjectMeta.Namespace
-		_, err = k8sClient.CoreV1().Services(tSvcNamespace).Create(tSvc)
+		_, err = k8sClient.CoreV1().Services(tSvcNamespace).Create(context.Background(), tSvc, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the endpoints to be updated and for the address to be ready.

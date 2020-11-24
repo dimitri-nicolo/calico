@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -613,7 +614,7 @@ func realGetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 		return nil, err
 	}
 	svcClient := clientset.CoreV1().Services(namespace)
-	return svcClient.Get(svcName, metav1.GetOptions{})
+	return svcClient.Get(context.Background(), svcName, metav1.GetOptions{})
 }
 
 var GetKubernetesService = realGetKubernetesService

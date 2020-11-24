@@ -16,6 +16,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -203,9 +204,9 @@ var _ = Context("with a k8s clientset", func() {
 						heapAlloc,
 					)
 				}
-				panicIfError(clientset.CoreV1().Pods(nsName).Delete(pod1.ObjectMeta.Name, deleteImmediately))
-				panicIfError(clientset.CoreV1().Pods(nsName).Delete(pod2.ObjectMeta.Name, deleteImmediately))
-				panicIfError(clientset.CoreV1().Namespaces().Delete(nsName, deleteImmediately))
+				panicIfError(clientset.CoreV1().Pods(nsName).Delete(context.Background(), pod1.ObjectMeta.Name, deleteImmediately))
+				panicIfError(clientset.CoreV1().Pods(nsName).Delete(context.Background(), pod2.ObjectMeta.Name, deleteImmediately))
+				panicIfError(clientset.CoreV1().Namespaces().Delete(context.Background(), nsName, deleteImmediately))
 			}
 		})
 

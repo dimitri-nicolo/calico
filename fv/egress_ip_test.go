@@ -407,13 +407,13 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 			By("Add egress annotations to the default namespace.")
 			coreV1 := infra.(*infrastructure.K8sDatastoreInfra).K8sClient.CoreV1()
-			ns, err := coreV1.Namespaces().Get(app.WorkloadEndpoint.Namespace, metav1.GetOptions{})
+			ns, err := coreV1.Namespaces().Get(context.Background(), app.WorkloadEndpoint.Namespace, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			if ns.Annotations == nil {
 				ns.Annotations = map[string]string{}
 			}
 			ns.Annotations["egress.projectcalico.org/selector"] = "egress-code == 'red'"
-			_, err = coreV1.Namespaces().Update(ns)
+			_, err = coreV1.Namespaces().Update(context.Background(), ns, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Check ip rules.")
