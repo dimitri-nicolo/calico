@@ -2,7 +2,6 @@
 package server_test
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/stretchr/testify/mock"
@@ -56,7 +55,7 @@ var _ = Describe("Download tests", func() {
 			defer t.stop()
 
 			for _, authorizedAttr := range authorizedAttrs {
-				mockRBACAuthorizer.On("Authorize", mock.Anything, authorizedAttr, mock.Anything).Return(0, nil)
+				mockRBACAuthorizer.On("Authorize", mock.Anything, authorizedAttr, mock.Anything).Return(true, nil)
 			}
 
 			mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
@@ -100,11 +99,11 @@ var _ = Describe("Download tests", func() {
 			defer t.stop()
 
 			for _, attr := range authorizedAttrs {
-				mockRBACAuthorizer.On("Authorize", mock.Anything, attr, mock.Anything).Return(0, nil)
+				mockRBACAuthorizer.On("Authorize", mock.Anything, attr, mock.Anything).Return(true, nil)
 			}
 
 			for _, attr := range unAuthorizedAttrs {
-				mockRBACAuthorizer.On("Authorize", mock.Anything, attr, mock.Anything).Return(403, fmt.Errorf("no go"))
+				mockRBACAuthorizer.On("Authorize", mock.Anything, attr, mock.Anything).Return(false, nil)
 			}
 
 			mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)

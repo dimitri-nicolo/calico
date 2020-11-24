@@ -60,7 +60,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/apiserver v0.0.0-20201116185717-b66b4f63504a
-	github.com/tigera/lma v0.0.0-20201123232513-1caf5eb8ed29
+	github.com/tigera/lma v0.0.0-20201124222909-8383094e9e76
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
