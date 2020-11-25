@@ -4,6 +4,8 @@ order: 9
 section:
 - title: Installation API
   path: /reference/installation/api
+- title: API Docs
+  path: /reference/apidocs
 - title: CLIs
   path: /reference/clis/
   section:
