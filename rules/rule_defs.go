@@ -261,6 +261,7 @@ type RuleRenderer interface {
 
 	HostDispatchChains(map[string]proto.HostEndpointID, string, bool) []*iptables.Chain
 	FromHostDispatchChains(map[string]proto.HostEndpointID, string) []*iptables.Chain
+	ToHostDispatchChains(map[string]proto.HostEndpointID, string) []*iptables.Chain
 	HostEndpointToFilterChains(
 		ifaceName string,
 		tiers []*proto.TierInfo,
@@ -268,17 +269,22 @@ type RuleRenderer interface {
 		epMarkMapper EndpointMarkMapper,
 		profileIDs []string,
 	) []*iptables.Chain
+	HostEndpointToMangleEgressChains(
+		ifaceName string,
+		tiers []*proto.TierInfo,
+		profileIDs []string,
+	) []*iptables.Chain
 	HostEndpointToRawChains(
 		ifaceName string,
 		untrackedTiers []*proto.TierInfo,
 	) []*iptables.Chain
-	HostEndpointToMangleChains(
+	HostEndpointToMangleIngressChains(
 		ifaceName string,
 		preDNATTiers []*proto.TierInfo,
 	) []*iptables.Chain
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
-	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
+	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain)
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []iptables.Rule
 
 	MakeNatOutgoingRule(protocol string, action iptables.Action, ipVersion uint8) iptables.Rule

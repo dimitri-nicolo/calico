@@ -58,7 +58,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			"", // No fail-safe chains for workloads.
 			chainTypeNormal,
 			adminUp,
-			uint16(1),
+			NFLOGInboundGroup,
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
@@ -79,7 +79,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			"", // No fail-safe chains for workloads.
 			chainTypeNormal,
 			adminUp,
-			uint16(2),
+			NFLOGOutboundGroup,
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
@@ -124,7 +124,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ChainFailsafeOut,
 			chainTypeNormal,
 			true, // Host endpoints are always admin up.
-			uint16(2),
+			NFLOGOutboundGroup,
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
@@ -143,7 +143,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ChainFailsafeIn,
 			chainTypeNormal,
 			true, // Host endpoints are always admin up.
-			uint16(1),
+			NFLOGInboundGroup,
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
@@ -162,7 +162,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			"", // No fail-safe chains for forward traffic.
 			chainTypeForward,
 			true, // Host endpoints are always admin up.
-			uint16(2),
+			NFLOGOutboundGroup,
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
@@ -181,7 +181,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			"", // No fail-safe chains for forward traffic.
 			chainTypeForward,
 			true, // Host endpoints are always admin up.
-			uint16(1),
+			NFLOGInboundGroup,
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
@@ -205,6 +205,37 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 	return result
 }
 
+func (r *DefaultRuleRenderer) HostEndpointToMangleEgressChains(
+	ifaceName string,
+	tiers []*proto.TierInfo,
+	profileIDs []string,
+) []*Chain {
+	log.WithField("ifaceName", ifaceName).Debug("Render host endpoint mangle egress chain.")
+	return []*Chain{
+		// Chain for output traffic _to_ the endpoint.  Note, we use RETURN here rather than
+		// ACCEPT because the mangle table is typically used, if at all, for packet
+		// manipulations that might need to apply to our allowed traffic.
+		r.endpointIptablesChain(
+			tiers,
+			profileIDs,
+			ifaceName,
+			PolicyOutboundPfx,
+			ProfileOutboundPfx,
+			HostToEndpointPfx,
+			ChainFailsafeOut,
+			chainTypeNormal,
+			true, // Host endpoints are always admin up.
+			NFLOGOutboundGroup,
+			RuleDirEgress,
+			egressPolicy,
+			ReturnAction{},
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
+			NotAnEgressGateway,
+		),
+	}
+}
+
 func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 	ifaceName string,
 	untrackedTiers []*proto.TierInfo,
@@ -222,7 +253,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			ChainFailsafeOut,
 			chainTypeUntracked,
 			true, // Host endpoints are always admin up.
-			uint16(2),
+			NFLOGOutboundGroup,
 			RuleDirEgress,
 			egressPolicy,
 			AcceptAction{},
@@ -241,7 +272,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			ChainFailsafeIn,
 			chainTypeUntracked,
 			true, // Host endpoints are always admin up.
-			uint16(1),
+			NFLOGInboundGroup,
 			RuleDirIngress,
 			ingressPolicy,
 			AcceptAction{},
@@ -252,7 +283,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 	}
 }
 
-func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
+func (r *DefaultRuleRenderer) HostEndpointToMangleIngressChains(
 	ifaceName string,
 	preDNATTiers []*proto.TierInfo,
 ) []*Chain {
@@ -270,7 +301,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
 			ChainFailsafeIn,
 			chainTypePreDNAT,
 			true, // Host endpoints are always admin up.
-			uint16(1),
+			NFLOGInboundGroup,
 			RuleDirIngress,
 			ingressPolicy,
 			r.mangleAllowAction,

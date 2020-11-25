@@ -1413,14 +1413,19 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		})
 		t.InsertOrAppendRules("PREROUTING", rs)
 
+		rs = []iptables.Rule{}
 		for _, chain := range chains {
 			if chain.Name == rules.ChainManglePostroutingEgress {
-				t.InsertOrAppendRules("POSTROUTING", []iptables.Rule{{
+				rs = append(rs, iptables.Rule{
 					Action: iptables.JumpAction{Target: rules.ChainManglePostroutingEgress},
-				}})
+				})
 				break
 			}
 		}
+		rs = append(rs, iptables.Rule{
+			Action: iptables.JumpAction{Target: rules.ChainManglePostrouting},
+		})
+		t.InsertOrAppendRules("POSTROUTING", rs)
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {
