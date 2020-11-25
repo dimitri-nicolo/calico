@@ -577,7 +577,6 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021/go.mod h1:prYjPmNq4d1NPVmpShWobRqXY3q7Vp+80DqgxxUrUIA=
 github.com/pquerna/ffjson v0.0.0-20180717144149-af8b230fcd20/go.mod h1:YARuvh7BUWHNhzDq2OM5tzR2RiCcN2D7sapiKyCel/M=
-github.com/projectcalico/felix v3.8.9+incompatible/go.mod h1:sXkI80qPUY4Nyon/P0JUD7ziCjHTg6HI6rxczHG3AY8=
 github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba h1:aaF2byUCZhzszHsfPEr2M3qcU4ibtD/yk/il2R7T1PU=
 github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba/go.mod h1:q8EdCgBdMQzgiX/uk4GXLWLk+gIHd1a7mWUAamJKDb4=
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54 h1:Jt2Pic9dxgJisekm8q2WV9FaWxUJhhRfwHSP640drww=
@@ -686,8 +685,8 @@ github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tK
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50 h1:U+PygupKsIFQUDRp8iIxrY4UeOnoNlxlguWUn2a+5wI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50/go.mod h1:oTA2hqn5a9rGIbzvCjpp2Frcahtfp3C07ctf/crKRyY=
-github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19 h1:SLVtrxhWnoK95w7xmDZ9d2uiuXRhdp4Vt6CbjdW9k5M=
-github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe3N3H+CHVaceVY9N9eVQ3ulK6jJVl9lWIs6Wv2s=
+github.com/tigera/licensing v1.0.1-0.20201125013734-cdefa3febb57 h1:eCpmhZwzzevn+85ia+2b5RhQLA1lDVbN7MaZ+kaKFrc=
+github.com/tigera/licensing v1.0.1-0.20201125013734-cdefa3febb57/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320/go.mod h1:erKr0bew1q/9lZOLYs49JrRBaUBIj/zAfJylAmcrGD0=
 github.com/tigera/nfnetlink v0.0.0-20201111230626-bbfcd8d4b9bd h1:7UcjsM9pAHAcf4LuLN5U6DKfRhcC971hZ05CZ/egMws=
