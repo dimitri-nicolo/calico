@@ -714,7 +714,7 @@ var _ = Describe("Endpoints", func() {
 			})
 
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
-				Expect(renderer.HostEndpointToMangleChains(
+				Expect(renderer.HostEndpointToMangleIngressChains(
 					"eth0",
 					[]*proto.TierInfo{{
 						Name:            "default",
@@ -918,7 +918,7 @@ var _ = Describe("Endpoints", func() {
 			})
 
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
-				Expect(renderer.HostEndpointToMangleChains(
+				Expect(renderer.HostEndpointToMangleIngressChains(
 					"eth0",
 					[]*proto.TierInfo{{
 						Name:            "default",

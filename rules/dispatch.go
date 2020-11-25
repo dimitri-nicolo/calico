@@ -165,20 +165,29 @@ func (r *DefaultRuleRenderer) HostDispatchChains(
 	defaultIfaceName string,
 	applyOnForward bool,
 ) []*Chain {
-	return r.hostDispatchChains(endpoints, defaultIfaceName, false, applyOnForward)
+	return r.hostDispatchChains(endpoints, defaultIfaceName, "to+from", applyOnForward)
 }
 
+// For pre-DNAT policy, which only applies on ingress from a host endpoint.
 func (r *DefaultRuleRenderer) FromHostDispatchChains(
 	endpoints map[string]proto.HostEndpointID,
 	defaultIfaceName string,
 ) []*Chain {
-	return r.hostDispatchChains(endpoints, defaultIfaceName, true, false)
+	return r.hostDispatchChains(endpoints, defaultIfaceName, "from", false)
+}
+
+// For applying normal host endpoint egress policy to traffic from the host which has been DNAT'd.
+func (r *DefaultRuleRenderer) ToHostDispatchChains(
+	endpoints map[string]proto.HostEndpointID,
+	defaultIfaceName string,
+) []*Chain {
+	return r.hostDispatchChains(endpoints, defaultIfaceName, "to", false)
 }
 
 func (r *DefaultRuleRenderer) hostDispatchChains(
 	endpoints map[string]proto.HostEndpointID,
 	defaultIfaceName string,
-	fromOnly bool,
+	directions string,
 	applyOnForward bool,
 ) []*Chain {
 	// Extract endpoint names.
@@ -229,13 +238,26 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 		}
 	}
 
-	if fromOnly {
+	if directions == "from" {
 		return r.interfaceNameDispatchChains(
 			names,
 			HostFromEndpointPfx,
 			"",
 			ChainDispatchFromHostEndpoint,
 			"",
+			fromEndRules,
+			toEndRules,
+			gotoEndpointChain,
+		)
+	}
+
+	if directions == "to" {
+		return r.interfaceNameDispatchChains(
+			names,
+			"",
+			HostToEndpointPfx,
+			"",
+			ChainDispatchToHostEndpoint,
 			fromEndRules,
 			toEndRules,
 			gotoEndpointChain,
@@ -288,7 +310,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 	fromEndRules []Rule,
 	toEndRules []Rule,
 	perEndpointFn func(pfx, name string) Action,
-) []*Chain {
+) (chains []*Chain) {
 
 	log.WithField("ifaceNames", names).Debug("Rendering endpoint dispatch chains")
 
@@ -297,19 +319,21 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 	// chains based on the prefixes of the chains.
 	commonPrefix, prefixes, prefixToNames := r.sortAndDivideEndpointNamesToPrefixTree(names)
 
-	// Build from endpoint chains.
-	fromChildChains, fromRootChain, _ := r.buildSingleDispatchChains(
-		dispatchFromEndpointChainName,
-		commonPrefix,
-		prefixes,
-		prefixToNames,
-		fromEndpointPfx,
-		func(name string) MatchCriteria { return Match().InInterface(name) },
-		perEndpointFn,
-		fromEndRules,
-	)
-
-	chains := append(fromChildChains, fromRootChain)
+	if fromEndpointPfx != "" {
+		// Build from endpoint chains.
+		fromChildChains, fromRootChain, _ := r.buildSingleDispatchChains(
+			dispatchFromEndpointChainName,
+			commonPrefix,
+			prefixes,
+			prefixToNames,
+			fromEndpointPfx,
+			func(name string) MatchCriteria { return Match().InInterface(name) },
+			perEndpointFn,
+			fromEndRules,
+		)
+		chains = append(chains, fromChildChains...)
+		chains = append(chains, fromRootChain)
+	}
 
 	if toEndpointPfx != "" {
 		// Build to endpoint chains.

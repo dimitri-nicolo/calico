@@ -151,29 +151,43 @@ var fromHostDispatchEmpty = []*iptables.Chain{
 	},
 }
 
+var toHostDispatchEmpty = []*iptables.Chain{
+	{
+		Name:  "cali-to-host-endpoint",
+		Rules: []iptables.Rule{},
+	},
+}
+
 func hostChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
-	return append(chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "normal"),
-		chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "applyOnForward")...,
+	return append(chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "normal", false, iptables.AcceptAction{}),
+		chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "applyOnForward", false, iptables.AcceptAction{})...,
 	)
 }
 
+func mangleEgressChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "normal", true, iptables.SetMarkAction{Mark: 0x8}, iptables.ReturnAction{})
+}
+
 func rawChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
-	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "untracked")
+	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "untracked", false, iptables.AcceptAction{})
 }
 
 func preDNATChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
-	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "preDNAT")
+	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "preDNAT", false, iptables.AcceptAction{})
 }
 
 func wlChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
-	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, false, "normal")
+	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, false, "normal", false, iptables.AcceptAction{})
 }
 
 func chainsForIfaces(ipVersion uint8,
 	ifaceTierNames []string,
 	epMarkMapper rules.EndpointMarkMapper,
 	host bool,
-	tableKind string) []*iptables.Chain {
+	tableKind string,
+	egressOnly bool,
+	allowActions ...iptables.Action,
+) []*iptables.Chain {
 	const (
 		ProtoUDP  = 17
 		ProtoIPIP = 4
@@ -292,12 +306,14 @@ func chainsForIfaces(ipVersion uint8,
 		outRules := []iptables.Rule{}
 
 		if tableKind != "untracked" {
-			outRules = append(outRules,
-				iptables.Rule{
-					Match:  iptables.Match().ConntrackState("RELATED,ESTABLISHED"),
-					Action: iptables.AcceptAction{},
-				},
-			)
+			for _, allowAction := range allowActions {
+				outRules = append(outRules,
+					iptables.Rule{
+						Match:  iptables.Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: allowAction,
+					},
+				)
+			}
 			if !isEgressGateway {
 				outRules = append(outRules, iptables.Rule{
 					Match:  iptables.Match().ConntrackState("INVALID"),
@@ -389,12 +405,14 @@ func chainsForIfaces(ipVersion uint8,
 		inRules := []iptables.Rule{}
 
 		if tableKind != "untracked" {
-			inRules = append(inRules,
-				iptables.Rule{
-					Match:  iptables.Match().ConntrackState("RELATED,ESTABLISHED"),
-					Action: iptables.AcceptAction{},
-				},
-			)
+			for _, allowAction := range allowActions {
+				inRules = append(inRules,
+					iptables.Rule{
+						Match:  iptables.Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: allowAction,
+					},
+				)
+			}
 			if !isEgressGateway {
 				inRules = append(inRules, iptables.Rule{
 					Match:  iptables.Match().ConntrackState("INVALID"),
@@ -495,11 +513,15 @@ func chainsForIfaces(ipVersion uint8,
 					Name:  outPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 					Rules: outRules,
 				},
-				&iptables.Chain{
-					Name:  inPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
-					Rules: inRules,
-				},
 			)
+			if !egressOnly {
+				chains = append(chains,
+					&iptables.Chain{
+						Name:  inPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
+						Rules: inRules,
+					},
+				)
+			}
 		}
 
 		if host {
@@ -509,12 +531,14 @@ func chainsForIfaces(ipVersion uint8,
 					Action: iptables.GotoAction{Target: outPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
 				},
 			)
-			dispatchIn = append(dispatchIn,
-				iptables.Rule{
-					Match:  iptables.Match().InInterface(ifaceName),
-					Action: iptables.GotoAction{Target: inPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
-				},
-			)
+			if !egressOnly {
+				dispatchIn = append(dispatchIn,
+					iptables.Rule{
+						Match:  iptables.Match().InInterface(ifaceName),
+						Action: iptables.GotoAction{Target: inPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
+					},
+				)
+			}
 		} else {
 			dispatchOut = append(dispatchOut,
 				iptables.Rule{
@@ -530,7 +554,7 @@ func chainsForIfaces(ipVersion uint8,
 			)
 		}
 
-		if tableKind != "preDNAT" && tableKind != "untracked" {
+		if tableKind != "preDNAT" && tableKind != "untracked" && !egressOnly {
 			chains = append(chains,
 				&iptables.Chain{
 					Name: epMarkSetOnePrefix + ifaceName,
@@ -573,7 +597,7 @@ func chainsForIfaces(ipVersion uint8,
 		)
 	}
 
-	if tableKind != "preDNAT" && tableKind != "untracked" {
+	if tableKind != "preDNAT" && tableKind != "untracked" && !egressOnly {
 		epMarkSet = append(epMarkSet,
 			iptables.Rule{
 				Match:   iptables.Match().InInterface("cali+"),
@@ -634,11 +658,15 @@ func chainsForIfaces(ipVersion uint8,
 				Name:  outPrefix + hostOrWlDispatch,
 				Rules: dispatchOut,
 			},
-			&iptables.Chain{
-				Name:  inPrefix + hostOrWlDispatch,
-				Rules: dispatchIn,
-			},
 		)
+		if !egressOnly {
+			chains = append(chains,
+				&iptables.Chain{
+					Name:  inPrefix + hostOrWlDispatch,
+					Rules: dispatchIn,
+				},
+			)
+		}
 	}
 
 	return chains
@@ -923,6 +951,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				})
 				mangleTable.checkChains([][]*iptables.Chain{
 					preDNATChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
+					mangleEgressChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
 				})
 			}
 		}
@@ -939,6 +968,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				})
 				mangleTable.checkChains([][]*iptables.Chain{
 					fromHostDispatchEmpty,
+					toHostDispatchEmpty,
 				})
 			}
 		}
@@ -1499,6 +1529,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				})
 				mangleTable.checkChains([][]*iptables.Chain{
 					fromHostDispatchEmpty,
+					toHostDispatchEmpty,
 				})
 			}
 		}

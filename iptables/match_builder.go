@@ -168,6 +168,10 @@ func (m MatchCriteria) ConntrackOrigDst(dst string) MatchCriteria {
 	return append(m, fmt.Sprintf("-m conntrack --ctorigdst %v", dst))
 }
 
+func (m MatchCriteria) NotConntrackState(stateNames string) MatchCriteria {
+	return append(m, fmt.Sprintf("-m conntrack ! --ctstate %s", stateNames))
+}
+
 func (m MatchCriteria) Protocol(name string) MatchCriteria {
 	return append(m, fmt.Sprintf("-p %s", name))
 }
