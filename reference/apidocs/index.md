@@ -16,7 +16,7 @@ show_toc: false
 <script>
     window.addEventListener('load', function() {
       const ui = SwaggerUIBundle({
-        url: "https://petstore.swagger.io/v2/swagger.json",
+        url: "./swagger.json",
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
