@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/capture"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/capture"
 	"github.com/stretchr/testify/mock"
 
 	. "github.com/onsi/gomega"
