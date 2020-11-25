@@ -13,27 +13,30 @@ Learn about the {{site.prodname}} features that remove these blockers.
 
 ![kubernetes-journey]({{site.baseurl}}/images/stages.svg)
 
-#### Stages 1-2: Open source Calico Essentials
-
-![calico-logo]({{site.baseurl}}/images/calico-logo.svg)   
-
-- Training
-- Personalized workshops
-- Enterprise integration strategies
-- Troubleshooting strategies
-
-#### Stages 3-5: Calico Enterprise solutions
-
-![enterprise-logo]({{site.baseurl}}/images/enterprise-logo.svg)
-
-- [Egress access controls](#egress-access-controls)
-- [Visibility and troubleshooting](#visibility-and-troubleshooting)
-- [Enterprise security controls](#enterprise-security-controls)
-- [Extend firewalls to Kubernetes](#extend-firewalls-to-kubernetes)
-- [Enable self service network security](#enable-self-service-network-security)
-- [Microsegmentation](#microsegmentation)
-- [Intrusion detection](#intrusion-detection)
-- [Zero trust network security](#zero-trust-network-security)
+<div class="row">
+  <div class="col-xs-4">
+        <h4>Open source Calico Essentials</h4>
+        <ul>
+            <li>Training</li>
+            <li>Personalized workshops</li>
+            <li>Enterprise integration strategies</li>
+            <li>Troubleshooting strategies</li>
+        </ul>
+  </div>
+  <div class="col-xs-8">
+        <h4>Calico Enterprise solutions</h4>
+        <ul>
+            <li><a href="#egress-access-controls">Egress access controls</a></li>
+            <li><a href="#visibility-and-troubleshooting">Visibility and troubleshooting</a></li>
+            <li><a href="#enterprise-security-controls">Enterprise security controls</a></li>
+            <li><a href="#extend-firewalls-to-kubernetes">Extend firewalls to Kubernetes</a></li>
+            <li><a href="#enable-self-service-network-security">Enable self service network security</a></li>
+            <li><a href="#microsegmentation">Microsegmentation</a></li>
+            <li><a href="#intrusion-detection">Intrusion detection</a></li>
+            <li><a href="#zero-trust-network-security">Zero trust network security</a></li>
+        </ul>
+  </div>
+</div>
 
 
 ### Egress access controls
