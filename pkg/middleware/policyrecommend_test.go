@@ -327,7 +327,7 @@ var _ = Describe("Policy Recommendation", func() {
 			req, err := http.NewRequest(http.MethodPost, recommendURLPath, bytes.NewBuffer(jsonQuery))
 			Expect(err).To(BeNil())
 
-			mockRBACAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(0, nil)
+			mockRBACAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
 			// add a bogus user
 			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))

@@ -318,7 +318,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			}),
 	)
 
-	It("Should cause StatusForbidden when no ResourceAttribute is set on the context", func() {
+	It("Should cause an InternalServer error when no ResourceAttribute is set on the context", func() {
 		By("authorizing the request", func() {
 			uut := middleware.AuthenticateRequest(authenticator, middleware.AuthorizeRequest(authorizer, dhh))
 			req := &http.Request{
@@ -329,7 +329,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			}
 			uut.ServeHTTP(rr, req)
 
-			Expect(rr.Code).To(Equal(http.StatusForbidden),
+			Expect(rr.Code).To(Equal(http.StatusInternalServerError),
 				fmt.Sprintf("The message written to the request writer: %s", rr.Body.String()))
 			Expect(dhh.serveCalled).To(BeFalse())
 		})
