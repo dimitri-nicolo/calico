@@ -21,12 +21,12 @@ show_toc: false
         deepLinking: true,
         presets: [
           SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
+        //   SwaggerUIStandalonePreset
         ],
         plugins: [
           SwaggerUIBundle.plugins.DownloadUrl
         ],
-        layout: "StandaloneLayout"
+        // layout: "StandaloneLayout"
       });
 
       window.swaggerUI = ui;

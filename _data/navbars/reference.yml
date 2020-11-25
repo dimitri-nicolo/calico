@@ -5,7 +5,7 @@ section:
 - title: Installation API
   path: /reference/installation/api
 - title: API Docs
-  path: /reference/apidocs
+  path: /reference/apidocs/
 - title: CLIs
   path: /reference/clis/
   section:

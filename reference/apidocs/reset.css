@@ -1,8 +1,8 @@
 .swagger-ui pre {
-    display: unset;
-    line-height: unset;
-    word-break: unset;
-    background-color: unset;
-    border: unset;
-    border-radius: unset;
+    display: inherit;
+    line-height: inherit;
+    word-break: inherit;
+    background-color: inherit;
+    border: inherit;
+    border-radius: inherit;
 }
