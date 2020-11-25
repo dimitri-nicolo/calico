@@ -487,7 +487,6 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021/go.mod h1:prYjPmNq4d1NPVmpShWobRqXY3q7Vp+80DqgxxUrUIA=
 github.com/projectcalico/calicoctl v3.8.9+incompatible h1:9/nfg5vwPqjEYvHh81iRbm9b66MDsb6OuDXhpe37tTw=
 github.com/projectcalico/calicoctl v3.8.9+incompatible/go.mod h1:WVPqIw+17EubdfDQXQ1zZMPc+qSOQvEoZqntNfQGnk8=
-github.com/projectcalico/felix v3.8.9+incompatible/go.mod h1:sXkI80qPUY4Nyon/P0JUD7ziCjHTg6HI6rxczHG3AY8=
 github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba h1:aaF2byUCZhzszHsfPEr2M3qcU4ibtD/yk/il2R7T1PU=
 github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba/go.mod h1:q8EdCgBdMQzgiX/uk4GXLWLk+gIHd1a7mWUAamJKDb4=
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54 h1:Jt2Pic9dxgJisekm8q2WV9FaWxUJhhRfwHSP640drww=
@@ -571,8 +570,8 @@ github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50 h1:U+PygupKsIFQUDRp8iIxrY4UeOnoNlxlguWUn2a+5wI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50/go.mod h1:oTA2hqn5a9rGIbzvCjpp2Frcahtfp3C07ctf/crKRyY=
-github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19 h1:SLVtrxhWnoK95w7xmDZ9d2uiuXRhdp4Vt6CbjdW9k5M=
-github.com/tigera/licensing v1.0.1-0.20201109195418-1a28a42bef19/go.mod h1:mzgRe3N3H+CHVaceVY9N9eVQ3ulK6jJVl9lWIs6Wv2s=
+github.com/tigera/licensing v1.0.1-0.20201125013734-cdefa3febb57 h1:eCpmhZwzzevn+85ia+2b5RhQLA1lDVbN7MaZ+kaKFrc=
+github.com/tigera/licensing v1.0.1-0.20201125013734-cdefa3febb57/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
