@@ -3,7 +3,11 @@
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
 
-1. Download the new manifests for Prometheus operator. This step is required if you previously installed Prometheus operator as part of {{site.prodname}}.
+1. Download the new manifests for Prometheus operator.
+
+   **Note**: If you have an existing Prometheus operator in your cluster that you want to use, skip this step. To work with Calico Enterprise, your Prometheus operator must be v0.30.0 or higher.
+   {: .alert .alert-info}
+
    ```bash
    curl -L -O {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
