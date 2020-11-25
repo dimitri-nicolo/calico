@@ -34,19 +34,13 @@ require (
 	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-
-	// k8s.io/api v1.16.3 is at 16d7abae0d2a
-	k8s.io/api v0.17.3
-
-	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
-	k8s.io/apimachinery v0.17.3
-
-	// k8s.io/client-go 1.16.3 is at 6c5935290e33
-	k8s.io/client-go v0.17.3
-	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6
+	k8s.io/api v0.18.12
+	k8s.io/apimachinery v0.18.12
+	k8s.io/client-go v0.18.12
+	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

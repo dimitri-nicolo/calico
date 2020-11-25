@@ -112,7 +112,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	// Only attempt to fetch the calculate the podInterface from the pod if the policy type is k8s. This allows users to
 	// run the plugin under Kubernetes without needing it to access the Kubernetes API.
 	if conf.Policy.PolicyType == "k8s" {
-		pod, err = client.CoreV1().Pods(epIDs.Namespace).Get(epIDs.Pod, metav1.GetOptions{})
+		pod, err = client.CoreV1().Pods(epIDs.Namespace).Get(context.Background(), epIDs.Pod, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -905,7 +905,7 @@ func NewK8sClient(conf types.NetConf, logger *logrus.Entry) (*kubernetes.Clients
 }
 
 func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotations map[string]string, err error) {
-	ns, err := client.CoreV1().Namespaces().Get(podNamespace, metav1.GetOptions{})
+	ns, err := client.CoreV1().Namespaces().Get(context.Background(), podNamespace, metav1.GetOptions{})
 	logrus.Debugf("namespace info %+v", ns)
 	if err != nil {
 		return nil, err
@@ -951,7 +951,7 @@ func getPodCidr(client *kubernetes.Clientset, conf types.NetConf, nodename strin
 		nodename = conf.Kubernetes.NodeName
 	}
 
-	node, err := client.CoreV1().Nodes().Get(nodename, metav1.GetOptions{})
+	node, err := client.CoreV1().Nodes().Get(context.Background(), nodename, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}

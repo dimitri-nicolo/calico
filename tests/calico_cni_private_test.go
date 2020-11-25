@@ -116,7 +116,7 @@ var _ = Describe("CalicoCni Private", func() {
 				name := fmt.Sprintf("run%d", rand.Uint32())
 
 				// Create a K8s pod with AWS SG annotation
-				_, err = clientset.CoreV1().Pods("test2").Create(&v1.Pod{
+				_, err = clientset.CoreV1().Pods("test2").Create(context.Background(), &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        name,
 						Annotations: map[string]string{k8sconversion.AnnotationSecurityGroups: "[\"sg-test\"]"},
@@ -128,7 +128,7 @@ var _ = Describe("CalicoCni Private", func() {
 						}},
 						NodeName: hostname,
 					},
-				})
+				}, metav1.CreateOptions{})
 				if err != nil {
 					panic(err)
 				}
@@ -240,14 +240,14 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 		It("should fail to assign an IP when single allowed IPAM block is full", func() {
 			// Create the Namespace.
 			testNS := fmt.Sprintf("run%d", rand.Uint32())
-			_, err = clientset.CoreV1().Namespaces().Create(&v1.Namespace{
+			_, err = clientset.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testNS,
 					Annotations: map[string]string{
 						"cni.projectcalico.org/ipv4pools": "[\"50.60.0.0/24\"]",
 					},
 				},
-			})
+			}, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			type container struct {
@@ -267,7 +267,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 			for i := 0; i < 3; i++ {
 				// Now create a K8s pod.
 				name := fmt.Sprintf("run-%d-%d", i, rand.Uint32())
-				pod, err := clientset.CoreV1().Pods(testNS).Create(&v1.Pod{
+				pod, err := clientset.CoreV1().Pods(testNS).Create(context.Background(), &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        name,
 						Annotations: map[string]string{},
@@ -279,7 +279,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 						}},
 						NodeName: hostname,
 					},
-				})
+				}, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				log.Infof("Created POD object: %v", pod)
 
