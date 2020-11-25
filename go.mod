@@ -7,11 +7,9 @@ require (
 	github.com/emicklei/go-restful v2.11.1+incompatible // indirect
 	github.com/go-openapi/spec v0.19.4 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/felix v3.8.9+incompatible
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
@@ -24,4 +22,4 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201106000110-a0e8a37d02d5
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50

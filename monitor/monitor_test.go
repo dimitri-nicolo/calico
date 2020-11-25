@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sync"
 	"sort"
-	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/libcalico-go/lib/jitter"
 )
 
 func TestBasicFunction(t *testing.T) {
