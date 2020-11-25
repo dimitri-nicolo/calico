@@ -4,8 +4,6 @@ order: 9
 section:
 - title: Installation API
   path: /reference/installation/api
-- title: API Docs
-  path: /reference/apidocs/
 - title: CLIs
   path: /reference/clis/
   section:
@@ -176,8 +174,6 @@ section:
     path: /reference/cni-plugin/configuration
   - title: Calico Enterprise Kubernetes controllers
     path: /reference/kube-controllers/configuration
-    # - title: REST API Reference
-    #   path: /reference/cnx/apidocs
   - title: Calico Enterprise node (cnx-node)
     path: /reference/node/
     section: 
@@ -229,6 +225,8 @@ section:
     path: /reference/host-endpoints/summary
   - title: Connection tracking
     path: /reference/host-endpoints/conntrack
+- title: Calico Enterprise API
+  path: /reference/apidocs/
 - title: Attribution
   path: /reference/attribution/attribution
 - title: Frequently asked questions
