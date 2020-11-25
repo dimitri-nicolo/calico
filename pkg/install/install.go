@@ -38,7 +38,7 @@ type config struct {
 
 	// UpdateCNIBinaries controls whether or not to overwrite any binaries with the same name
 	// on the host.
-	UpdateCNIBinaries bool `envconfig:"UPDATE_CNI_BINARIES"`
+	UpdateCNIBinaries bool `envconfig:"UPDATE_CNI_BINARIES" default:"true"`
 
 	// The CNI network configuration to install.
 	CNINetworkConfig     string `envconfig:"CNI_NETWORK_CONFIG"`
@@ -206,7 +206,7 @@ func Install() error {
 			if c.skipBinary(binary.Name()) {
 				continue
 			}
-			if fileExists(target) && c.UpdateCNIBinaries {
+			if fileExists(target) && !c.UpdateCNIBinaries {
 				logrus.Infof("Skipping installation of %s", target)
 				continue
 			}
