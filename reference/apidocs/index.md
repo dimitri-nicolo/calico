@@ -6,7 +6,7 @@ show_read_time: false
 show_toc: false
 ---
 
-<link rel="stylesheet" type="text/css" href="./reset.css">
+<link rel="stylesheet" type="text/css" href="./style.css">
 <link rel="stylesheet" type="text/css" href="./swagger-ui.css">
 
 <div id="swagger-ui"></div>
