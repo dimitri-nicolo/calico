@@ -15,10 +15,10 @@
 package events
 
 import (
-	"bytes"
 	"encoding/binary"
 	"io"
 	"runtime"
+	"unsafe"
 
 	"github.com/pkg/errors"
 
@@ -33,6 +33,8 @@ const (
 	// MaxCPUs is the currenty supported max number of CPUs
 	MaxCPUs = 512
 
+	// Process Name max length
+	ProcessNameLen = 16
 	// TypeLostEvents does not carry any other information except thenumber of lost events.
 	TypeLostEvents  Type = iota
 	TypeTcpv4Events Type = 1
@@ -181,7 +183,7 @@ type eventTcpStats struct {
 	RxBytes     uint32
 	SndBuf      uint32
 	RcvBuf      uint32
-	ProcessName string
+	ProcessName [ProcessNameLen]byte
 }
 
 func parseEvent(raw eventRaw) (Event, error) {
@@ -198,16 +200,9 @@ func parseEvent(raw eventRaw) (Event, error) {
 	switch Type(hdr.Type) {
 	case TypeTcpv4Events:
 		var tcpStats eventTcpStats
-		tcpStats.Pid = binary.LittleEndian.Uint32(rd.data[0:4])
-		tcpStats.Saddr = binary.LittleEndian.Uint32(rd.data[4:8])
-		tcpStats.Daddr = binary.LittleEndian.Uint32(rd.data[8:12])
-		tcpStats.Sport = binary.LittleEndian.Uint16(rd.data[12:14])
-		tcpStats.Dport = binary.LittleEndian.Uint16(rd.data[14:16])
-		tcpStats.TxBytes = binary.LittleEndian.Uint32(rd.data[16:20])
-		tcpStats.RxBytes = binary.LittleEndian.Uint32(rd.data[20:24])
-		tcpStats.SndBuf = binary.LittleEndian.Uint32(rd.data[24:28])
-		tcpStats.RcvBuf = binary.LittleEndian.Uint32(rd.data[28:32])
-		tcpStats.ProcessName = string(bytes.Trim(rd.data[32:], "\x00"))
+		tcpStatsPtr := (unsafe.Pointer)(&tcpStats)
+		tcpStatsAsBytes := (*[unsafe.Sizeof(eventTcpStats{})]byte)(tcpStatsPtr)
+		copy(tcpStatsAsBytes[:], rd.data)
 		return TCPv4Events(tcpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
