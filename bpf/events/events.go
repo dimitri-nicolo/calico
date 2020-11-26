@@ -33,6 +33,8 @@ const (
 	// MaxCPUs is the currenty supported max number of CPUs
 	MaxCPUs = 512
 
+	// Process Name max length
+	ProcessNameLen = 16
 	// TypeLostEvents does not carry any other information except thenumber of lost events.
 	TypeLostEvents  Type = iota
 	TypeTcpv4Events Type = 1
@@ -172,16 +174,16 @@ type eventHdr struct {
 }
 
 type eventTcpStats struct {
-	Pid     uint32
-	Saddr   uint32
-	Daddr   uint32
-	Sport   uint16
-	Dport   uint16
-	TxBytes uint32
-	RxBytes uint32
-	SndBuf  uint32
-	RcvBuf  uint32
-	Comm    [16]byte
+	Pid         uint32
+	Saddr       uint32
+	Daddr       uint32
+	Sport       uint16
+	Dport       uint16
+	TxBytes     uint32
+	RxBytes     uint32
+	SndBuf      uint32
+	RcvBuf      uint32
+	ProcessName [ProcessNameLen]byte
 }
 
 func parseEvent(raw eventRaw) (Event, error) {
@@ -199,8 +201,8 @@ func parseEvent(raw eventRaw) (Event, error) {
 	case TypeTcpv4Events:
 		var tcpStats eventTcpStats
 		tcpStatsPtr := (unsafe.Pointer)(&tcpStats)
-		tcpStatsAsBytes := *(*[unsafe.Sizeof(eventTcpStats{})]byte)(tcpStatsPtr)
-		copy(tcpStatsAsBytes[:], raw.Data())
+		tcpStatsAsBytes := (*[unsafe.Sizeof(eventTcpStats{})]byte)(tcpStatsPtr)
+		copy(tcpStatsAsBytes[:], rd.data)
 		return TCPv4Events(tcpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
