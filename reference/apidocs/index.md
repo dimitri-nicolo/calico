@@ -7,12 +7,12 @@ show_toc: false
 ---
 
 <link rel="stylesheet" type="text/css" href="./style.css">
-<link rel="stylesheet" type="text/css" href="./swagger-ui.css">
+<link rel="stylesheet" type="text/css" href="/css/swagger-ui/swagger-ui.css">
 
 <div id="swagger-ui"></div>
 
-<script src="./swagger-ui-bundle.js" charset="UTF-8"></script>
-<script src="./swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+<script src="/js/swagger-ui/swagger-ui-bundle.js" charset="UTF-8"></script>
+<script src="/js/swagger-ui/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
 <script>
     window.addEventListener('load', function() {
       const ui = SwaggerUIBundle({
