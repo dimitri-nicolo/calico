@@ -21,7 +21,7 @@ By default, the logs:
 - Are at the `RequestResponse` level.
 - Omit the `RequestReceived` stage.
 
-The logs can be [viewed in Elasticsearch or Kibana](view)
+The logs can be viewed in Elasticsearch or Kibana.
 
 ### Changing audit policy for {{site.prodname}} resources
 

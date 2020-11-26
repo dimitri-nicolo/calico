@@ -15,8 +15,6 @@ section:
     path: /visibility/elastic/overview
   - title: Configure RBAC for Elasticsearch logs and events
     path: /visibility/elastic/rbac-elasticsearch
-  - title: Access Elasticsearch logs
-    path: /visibility/elastic/view
   - title: Configure flow logs
     path: /visibility/elastic/flow/
     section: 
