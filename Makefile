@@ -42,12 +42,15 @@ $(LOCAL_BUILD_DEP):
 		-replace=github.com/projectcalico/cni-plugin=../cni-plugin
 endif
 
+# These arches not yet building in node-private
+EXCLUDEARCH?=s390x arm64 ppc64le
+
 include Makefile.common
 
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
 # release is merged into node-private.
-CALICO_VERSION=v3.16.1
+CALICO_VERSION=v3.17.1
 
 ###############################################################################
 CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
