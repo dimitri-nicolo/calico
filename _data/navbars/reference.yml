@@ -86,7 +86,9 @@ section:
     - title: Policy
       path: /reference/calicoq/policy
     - title: Version
-      path: /reference/calicoq/version    
+      path: /reference/calicoq/version
+  - title: Calico Enterprise API
+    path: /reference/apidocs/
 - title: Networking and policy resource definitions
   path: /reference/resources/
   section:
@@ -225,8 +227,6 @@ section:
     path: /reference/host-endpoints/summary
   - title: Connection tracking
     path: /reference/host-endpoints/conntrack
-- title: Calico Enterprise API
-  path: /reference/apidocs/
 - title: Attribution
   path: /reference/attribution/attribution
 - title: Frequently asked questions
