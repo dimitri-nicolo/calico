@@ -28,6 +28,8 @@ import (
 
 func TestKprobe(t *testing.T) {
 	RegisterTestingT(t)
+	err := bpf.MountDebugfs()
+	Expect(err).NotTo(HaveOccurred())
 	mc := &bpf.MapContext{}
 	bpfEvnt, err := events.New(mc, events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
