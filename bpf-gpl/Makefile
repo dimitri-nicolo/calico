@@ -63,6 +63,8 @@ connect_time_%v6.ll: connect_balancer_v6.c connect_balancer_v6.d calculate-flags
 	$(COMPILE)
 tcp_%kprobe.ll: tcp_kprobe.c tcp_kprobe.d calculate-flags
 	$(COMPILE)
+udp_%kprobe.ll: udp_kprobe.c udp_kprobe.d calculate-flags
+	$(COMPILE)
 
 UT_CFLAGS=\
 	-D__BPFTOOL_LOADER__ \
@@ -98,6 +100,8 @@ bin/connect_time_%v4.o: connect_time_%v4.ll | bin
 bin/connect_time_%v6.o: connect_time_%v6.ll | bin
 	$(LINK)
 bin/tcp_%kprobe.o: tcp_%kprobe.ll | bin
+	$(LINK)
+bin/udp_%kprobe.o: udp_%kprobe.ll | bin
 	$(LINK)
 ut/%.o: ut/%.ll
 	$(LINK)

@@ -633,17 +633,25 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.FlowLogsCollectProcessInfo {
-		perfEvnt, err := events.New(bpfMapContext, events.SourcePerfEvents)
+		bpfEvnt, err := events.New(bpfMapContext, events.SourcePerfEvents)
 		if err != nil {
 			log.WithError(err).Panic("Failed to create perf event")
 		}
-		err = startEventPoller(perfEvnt)
+		err = startEventPoller(bpfEvnt)
 		if err != nil {
 			log.WithError(err).Panic("Failed to start the event poller")
 		}
-		err = kprobe.New(config.BPFLogLevel, perfEvnt, bpfMapContext)
+		err = bpf.MountDebugfs()
 		if err != nil {
-			log.WithError(err).Panic("Failed to install kprobes")
+			log.WithError(err).Panic("Failed to mount debug fs")
+		}
+		err = kprobe.AttachTCPv4(config.BPFLogLevel, bpfEvnt, bpfMapContext)
+		if err != nil {
+			log.WithError(err).Panic("Failed to install TCP v4 kprobes")
+		}
+		err = kprobe.AttachUDPv4(config.BPFLogLevel, bpfEvnt, bpfMapContext)
+		if err != nil {
+			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
 		}
 	}
 	if config.BPFEnabled {

@@ -25,7 +25,7 @@
 
 #define TASK_COMM_LEN 16
 
-struct event_tcp_stats {
+struct event_proto_stats_v4 {
 	struct perf_event_header hdr;
 	__u32 pid;
 	__u32 saddr;
@@ -43,11 +43,11 @@ static CALI_BPF_INLINE void event_tcp_flow(struct pt_regs *ctx,
 					__u32 saddr, __u16 sport, 
 					__u32 daddr, __u16 dport, __u32 txBytes, __u32 rxBytes)
 {
-	struct event_tcp_stats event;
+	struct event_proto_stats_v4 event;
 
 	__builtin_memset(&event, 0, sizeof(event));
 	event.hdr.type = PERF_EVENT_TCP_STATS;
-	event.hdr.len = sizeof(struct event_tcp_stats);
+	event.hdr.len = sizeof(struct event_proto_stats_v4);
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
 	event.pid = bpf_get_current_pid_tgid() >> 32;
 	event.saddr = be32_to_host(saddr);
@@ -59,6 +59,29 @@ static CALI_BPF_INLINE void event_tcp_flow(struct pt_regs *ctx,
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
 		CALI_DEBUG("tcp kprobe: perf_commit_event returns %d\n", err);
+	}
+}
+
+static CALI_BPF_INLINE void event_udp_flow(struct pt_regs *ctx,
+                                        __u32 saddr, __u16 sport,
+                                        __u32 daddr, __u16 dport, __u32 txBytes, __u32 rxBytes)
+{
+	struct event_proto_stats_v4 event;
+	
+	__builtin_memset(&event, 0, sizeof(event));
+	event.hdr.type = PERF_EVENT_UDP_STATS;
+	event.hdr.len = sizeof(struct event_proto_stats_v4);
+	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
+	event.pid = bpf_get_current_pid_tgid() >> 32;
+	event.saddr = be32_to_host(saddr);
+	event.daddr = be32_to_host(daddr);
+	event.sport = be16_to_host(sport);
+	event.dport = be16_to_host(dport);
+	event.txBytes = txBytes;
+	event.rxBytes = rxBytes;
+	int err = perf_commit_event(ctx, &event, sizeof(event));
+	if (err != 0) {
+		CALI_DEBUG("udp kprobe: perf_commit_event returns %d\n", err);
 	}
 }
 

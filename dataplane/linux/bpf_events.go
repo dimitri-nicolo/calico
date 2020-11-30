@@ -34,6 +34,8 @@ func startEventPoller(e events.Events) error {
 			switch event.Type() {
 			case events.TypeTcpv4Events:
 				log.WithField("event", event).Debug("Received TCP v4 event")
+			case events.TypeUdpv4Events:
+				log.WithField("event", event).Debug("Received UDP v4 event")
 			default:
 				log.Warn("Unknown event type")
 				continue

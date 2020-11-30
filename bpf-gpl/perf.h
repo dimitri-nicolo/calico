@@ -29,6 +29,7 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
 };
 
 #define PERF_EVENT_TCP_STATS    1
+#define PERF_EVENT_UDP_STATS    2
 
 struct perf_event_header {
 	__u16 type;

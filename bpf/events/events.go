@@ -22,9 +22,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
-	"github.com/sirupsen/logrus"
 )
 
 // Type defines the type of constants used for determinig the type of an event.
@@ -39,6 +40,7 @@ const (
 	// TypeLostEvents does not carry any other information except thenumber of lost events.
 	TypeLostEvents  Type = iota
 	TypeTcpv4Events Type = 1
+	TypeUdpv4Events Type = 2
 )
 
 // Event represents the common denominator of all events
@@ -182,7 +184,7 @@ type eventHdr struct {
 	Len  uint16
 }
 
-type eventTcpStats struct {
+type eventV4ProtoStats struct {
 	Pid         uint32
 	Saddr       uint32
 	Daddr       uint32
@@ -209,11 +211,17 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 	switch Type(hdr.Type) {
 	case TypeTcpv4Events:
-		var tcpStats eventTcpStats
+		var tcpStats eventV4ProtoStats
 		tcpStatsPtr := (unsafe.Pointer)(&tcpStats)
-		tcpStatsAsBytes := (*[unsafe.Sizeof(eventTcpStats{})]byte)(tcpStatsPtr)
+		tcpStatsAsBytes := (*[unsafe.Sizeof(eventV4ProtoStats{})]byte)(tcpStatsPtr)
 		copy(tcpStatsAsBytes[:], rd.data)
 		return TCPv4Events(tcpStats), nil
+	case TypeUdpv4Events:
+		var udpStats eventV4ProtoStats
+		udpStatsPtr := (unsafe.Pointer)(&udpStats)
+		udpStatsAsBytes := (*[unsafe.Sizeof(eventV4ProtoStats{})]byte)(udpStatsPtr)
+		copy(udpStatsAsBytes[:], rd.data)
+		return UDPv4Events(udpStats), nil
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
@@ -221,7 +229,8 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 // LostEvents is an event that reports how many events were missed.
 type LostEvents int
-type TCPv4Events eventTcpStats
+type TCPv4Events eventV4ProtoStats
+type UDPv4Events eventV4ProtoStats
 
 // Type returns TypeLostEvents
 func (LostEvents) Type() Type {
@@ -230,4 +239,8 @@ func (LostEvents) Type() Type {
 
 func (TCPv4Events) Type() Type {
 	return TypeTcpv4Events
+}
+
+func (UDPv4Events) Type() Type {
+	return TypeUdpv4Events
 }

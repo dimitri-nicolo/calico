@@ -29,9 +29,11 @@ import (
 func TestKprobe(t *testing.T) {
 	RegisterTestingT(t)
 	mc := &bpf.MapContext{}
-	perfEvnt, err := events.New(mc, events.SourcePerfEvents)
+	bpfEvnt, err := events.New(mc, events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
-	err = kprobe.New("debug", perfEvnt, mc)
+	err = kprobe.AttachTCPv4("debug", bpfEvnt, mc)
+	Expect(err).NotTo(HaveOccurred())
+	err = kprobe.AttachUDPv4("debug", bpfEvnt, mc)
 	Expect(err).NotTo(HaveOccurred())
 
 }

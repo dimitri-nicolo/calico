@@ -41,22 +41,30 @@ func progFileName(protocol, logLevel string) string {
 	return fmt.Sprintf("%s_%s_kprobe.o", protocol, logLevel)
 }
 
-func New(logLevel string, evnt events.Events, mc *bpf.MapContext) error {
-	err := bpf.MountDebugfs()
-	if err != nil {
-		log.WithError(err).Panic("Failed to mount debug fs")
-	}
-
-	tcpv4Map := AttachTCPv4(mc)
-	err = tcpv4Map.EnsureExists()
+func AttachTCPv4(logLevel string, evnt events.Events, mc *bpf.MapContext) error {
+	tcpv4Map := MapTCPv4(mc)
+	err := tcpv4Map.EnsureExists()
 	if err != nil {
 		log.WithError(err).Panic("Failed to create kprobe tcp v4 BPF map.")
 	}
-
 	var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
-	err = installKprobe(logLevel, "tcp", tcpFns, tcpv4Map, evnt.Map(), tcpv4Map)
+	err = installKprobe(logLevel, "tcp", tcpFns, tcpv4Map, evnt.Map())
 	if err != nil {
-		return fmt.Errorf("error installing kprobes")
+		return fmt.Errorf("error installing tcp v4 kprobes")
+	}
+	return nil
+}
+
+func AttachUDPv4(logLevel string, evnt events.Events, mc *bpf.MapContext) error {
+	udpv4Map := MapUDPv4(mc)
+	err := udpv4Map.EnsureExists()
+	if err != nil {
+		log.WithError(err).Panic("Failed to create kprobe udp v4 BPF map.")
+	}
+	var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
+	err = installKprobe(logLevel, "udp", udpFns, udpv4Map, evnt.Map())
+	if err != nil {
+		return fmt.Errorf("error installing udp v4 kprobes")
 	}
 	return nil
 }
