@@ -22,5 +22,5 @@ fi
 
 # Append additional output matcher config (for IDS events) when SYSLOG forwarding is turned on
 if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then
-  cat /fluentd/etc/fluent_output_syslog_optional.conf >> /fluentd/etc/fluent.conf
+  cat /fluentd/etc/output_match/ids-events.conf >> /fluentd/etc/fluent.conf
 fi

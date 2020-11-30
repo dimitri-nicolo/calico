@@ -1,12 +1,14 @@
 #!/bin/sh
 set -e
 
-setup_secure_es_conf() {
-  sed -i 's|scheme .*||g' /fluentd/etc/output_${1}/out-es.conf
-  sed -i 's|user .*||g' /fluentd/etc/output_${1}/out-es.conf
-  sed -i 's|password .*||g' /fluentd/etc/output_${1}/out-es.conf
-  sed -i 's|ca_file .*||g' /fluentd/etc/output_${1}/out-es.conf
-  sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${1}/out-es.conf
+remove_secure_es_conf() {
+  if test -f "/fluentd/etc/output_${1}/out-es.conf"; then
+    sed -i 's|scheme .*||g' /fluentd/etc/output_${1}/out-es.conf
+    sed -i 's|user .*||g' /fluentd/etc/output_${1}/out-es.conf
+    sed -i 's|password .*||g' /fluentd/etc/output_${1}/out-es.conf
+    sed -i 's|ca_file .*||g' /fluentd/etc/output_${1}/out-es.conf
+    sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${1}/out-es.conf
+  fi
 }
 
 # fluentd tries to watch Docker logs and write everything to screen
@@ -31,9 +33,11 @@ if [ "${MANAGED_K8S}" == "true" ]; then
   echo >> /fluentd/etc/fluent.conf
 
   # match
-  cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
-  if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-    setup_secure_es_conf kube_audit
+  if [ -z ${DISABLE_ES_AUDIT_KUBE_LOG} ] || [ "${DISABLE_ES_AUDIT_KUBE_LOG}" == "false" ]; then
+    cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
+    if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
+        remove_secure_es_conf kube_audit
+    fi
   fi
   if [ "${S3_STORAGE}" == "true" ]; then
     cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
@@ -90,16 +94,28 @@ fi
 cat /fluentd/etc/fluent_transforms.conf >> /fluentd/etc/fluent.conf
 echo >> /fluentd/etc/fluent.conf
 
-cp /fluentd/etc/outputs/out-es-flows.conf /fluentd/etc/output_flows/out-es.conf
-cp /fluentd/etc/outputs/out-es-dns.conf /fluentd/etc/output_dns/out-es.conf
-cp /fluentd/etc/outputs/out-es-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-es.conf
-cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
-cp /fluentd/etc/outputs/out-es-bgp.conf /fluentd/etc/output_bgp/out-es.conf
-
+# Exclude specific ES outputs based on ENV variable flags. Note, if ES output is disabled here for a log type, depending on whether 
+# another output destination is enabled, we may need to disable the output match directive for the log type completely (see later 
+# on in this script).
+if [ -z ${DISABLE_ES_FLOW_LOG} ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ]; then
+  cp /fluentd/etc/outputs/out-es-flows.conf /fluentd/etc/output_flows/out-es.conf
+fi
+if [ -z ${DISABLE_ES_DNS_LOG} ] || [ "${DISABLE_ES_DNS_LOG}" == "false" ]; then
+  cp /fluentd/etc/outputs/out-es-dns.conf /fluentd/etc/output_dns/out-es.conf
+fi
+if [ -z ${DISABLE_ES_AUDIT_EE_LOG} ] || [ "${DISABLE_ES_AUDIT_EE_LOG}" == "false" ]; then
+  cp /fluentd/etc/outputs/out-es-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-es.conf
+fi
+if [ -z ${DISABLE_ES_AUDIT_KUBE_LOG} ] || [ "${DISABLE_ES_AUDIT_KUBE_LOG}" == "false" ]; then
+  cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
+fi
+if [ -z ${DISABLE_ES_BGP_LOG} ] || [ "${DISABLE_ES_BGP_LOG}" == "false" ]; then
+  cp /fluentd/etc/outputs/out-es-bgp.conf /fluentd/etc/output_bgp/out-es.conf
+fi
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
   for x in flows dns tsee_audit kube_audit bgp; do
-    setup_secure_es_conf $x
+    remove_secure_es_conf $x
   done
 fi
 
@@ -120,11 +136,42 @@ source /bin/splunk-config.sh
 source /bin/sumo-environment.sh
 source /bin/sumo-config.sh
 
-cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
+# Determine which output match directives to include.
 
-# Append additional output config (for Compliance reports) when S3 archiving is turned on
+# Include output destination for flow logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for flows is turned on.
+if [ -z ${DISABLE_ES_FLOW_LOG} ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ] || [ "${SYSLOG_FLOW_LOG}" == "true" ] || [ "${SPLUNK_FLOW_LOG}" == "true" ] || [ "${SUMO_FLOW_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat /fluentd/etc/output_match/flows.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Include output destination for DNS logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for DNS is turned on.
+if [ -z ${DISABLE_ES_DNS_LOG} ] || [ "${DISABLE_ES_DNS_LOG}" == "false" ] || [ "${SYSLOG_DNS_LOG}" == "true" ] || [ "${SPLUNK_DNS_LOG}" == "true" ] || [ "${SUMO_DNS_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat /fluentd/etc/output_match/dns.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Include output destination for EE Audit logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for EE Audit is turned on.
+if [ -z ${DISABLE_ES_AUDIT_EE_LOG} ] || [ "${DISABLE_ES_AUDIT_EE_LOG}" == "false" ] || [ "${SYSLOG_AUDIT_EE_LOG}" == "true" ] || [ "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ] || [ "${SUMO_AUDIT_TSEE_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat /fluentd/etc/output_match/audit-ee.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Include output destination for Kube Audit logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for Kube Audit is turned on.
+if [ -z ${DISABLE_ES_AUDIT_KUBE_LOG} ] || [ "${DISABLE_ES_AUDIT_KUBE_LOG}" == "false" ] || [ "${SYSLOG_AUDIT_KUBE_LOG}" == "true" ] || [ "${SPLUNK_AUDIT_KUBE_LOG}" == "true" ] || [ "${SUMO_AUDIT_KUBE_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat /fluentd/etc/output_match/audit-kube.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Include output destination for BGP logs when forwarding to ES is not disabled. Currently, BGP logs do not get forwarded to any other 
+# destinations other than ES (may change in the future).
+if [ -z ${DISABLE_ES_BGP_LOG} ] || [ "${DISABLE_ES_BGP_LOG}" == "false" ]; then
+  cat /fluentd/etc/output_match/bgp.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+fi
+
+# Append additional output config (for Compliance reports) when S3 archiving is turned on.
 if [ "${S3_STORAGE}" == "true" ]; then
-  cat /fluentd/etc/fluent_output_optional.conf >> /fluentd/etc/fluent.conf
+  cat /fluentd/etc/output_match/compliance.conf >> /fluentd/etc/fluent.conf
 fi
 echo >> /fluentd/etc/fluent.conf
 

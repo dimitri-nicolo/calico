@@ -9,6 +9,11 @@ output=$(curl -s "http://localhost:24220/api/plugins.json")
 retry_count_current=$(echo $output | jq --raw-output '.plugins[] | select(.config.index_name) | select(.config.index_name | test("tigera_secure_ee_flows")) | .retry_count' | awk '{SUM += $0 } END { print SUM }');
 buffer_length_current=$(echo $output | jq --raw-output '.plugins[] | select(.config.index_name) | select(.config.index_name | test("tigera_secure_ee_flows")) | .buffer_total_queued_size' | awk '{SUM += $0 } END { print SUM }');
 
+# Special case: If flow logs has been turned off, then skip the check and return ready 
+if [ -z ${retry_count_current} ]; then
+    echo "Flow logs to ES is disabled, skip the retry/buffer check"
+    exit 0
+fi
 
 # Check if earlier metrics present
 if [ ! -f "$readiness_destfile" ]

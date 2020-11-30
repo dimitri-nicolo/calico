@@ -24,9 +24,7 @@ ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
-COPY fluent_output.conf /fluentd/etc/fluent_output.conf
-COPY fluent_output_optional.conf /fluentd/etc/fluent_output_optional.conf
-COPY fluent_output_syslog_optional.conf /fluentd/etc/fluent_output_syslog_optional.conf
+COPY output_match /fluentd/etc/output_match
 COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
 COPY filters /fluentd/etc/filters

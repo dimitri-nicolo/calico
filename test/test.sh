@@ -137,7 +137,7 @@ $STANDARD_ENV_VARS
 FLUENTD_ES_SECURE=false
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-no-secure.env es-no-secure "ES secure false"
+checkConfiguration $TEST_DIR/tmp/es-no-secure.env es-no-secure "ES unsecure"
 
 # Test with ES secure
 cat > $TEST_DIR/tmp/es-secure.env << EOM
@@ -147,6 +147,58 @@ $ES_SECURE_VARS
 EOM
 
 checkConfiguration $TEST_DIR/tmp/es-secure.env es-secure "ES secure"
+
+# Test with disabled ES secure (all log types)
+cat > $TEST_DIR/tmp/disable-es-secure.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+DISABLE_ES_FLOW_LOG=true
+DISABLE_ES_DNS_LOG=true
+DISABLE_ES_AUDIT_EE_LOG=true
+DISABLE_ES_AUDIT_KUBE_LOG=true
+DISABLE_ES_BGP_LOG=true
+EOM
+
+checkConfiguration $TEST_DIR/tmp/disable-es-secure.env disable-es-secure "Disable ES secure"
+
+# Test with some disabled ES secure
+cat > $TEST_DIR/tmp/disable-some-es-secure.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+DISABLE_ES_AUDIT_EE_LOG=true
+DISABLE_ES_AUDIT_KUBE_LOG=true
+DISABLE_ES_BGP_LOG=true
+EOM
+
+checkConfiguration $TEST_DIR/tmp/disable-some-es-secure.env disable-some-es-secure "Disable some ES secure"
+
+# Test with disabled ES unsecure (all log types)
+cat > $TEST_DIR/tmp/disable-es-unsecure.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=false
+$ES_SECURE_VARS
+DISABLE_ES_FLOW_LOG=true
+DISABLE_ES_DNS_LOG=true
+DISABLE_ES_AUDIT_EE_LOG=true
+DISABLE_ES_AUDIT_KUBE_LOG=true
+DISABLE_ES_BGP_LOG=true
+EOM
+
+checkConfiguration $TEST_DIR/tmp/disable-es-unsecure.env disable-es-unsecure "Disable ES unsecure"
+
+# Test with some disabled ES unsecure
+cat > $TEST_DIR/tmp/disable-some-es-unsecure.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=false
+$ES_SECURE_VARS
+DISABLE_ES_AUDIT_EE_LOG=true
+DISABLE_ES_AUDIT_KUBE_LOG=true
+DISABLE_ES_BGP_LOG=true
+EOM
+
+checkConfiguration $TEST_DIR/tmp/disable-some-es-unsecure.env disable-some-es-unsecure "Disable some ES unsecure"
 
 # Test with S3 and ES secure
 cat > $TEST_DIR/tmp/es-secure-with-s3.env << EOM
@@ -165,7 +217,7 @@ FLUENTD_ES_SECURE=false
 $S3_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-no-secure-with-s3.env es-no-secure-with-s3 "ES secure false with S3"
+checkConfiguration $TEST_DIR/tmp/es-no-secure-with-s3.env es-no-secure-with-s3 "ES unsecure with S3"
 
 # Test with ES not secure and syslog w/no tls
 cat > $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env << EOM
@@ -174,7 +226,7 @@ FLUENTD_ES_SECURE=false
 $SYSLOG_NO_TLS_VARS
 EOM
 
-checkConfiguration $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env es-no-secure-with-syslog-no-tls "ES secure false with syslog without TLS"
+checkConfiguration $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env es-no-secure-with-syslog-no-tls "ES unsecure with syslog without TLS"
 
 # Test with ES secure and syslog with tls
 cat > $TEST_DIR/tmp/es-secure-with-syslog-with-tls.env << EOM
