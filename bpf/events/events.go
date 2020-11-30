@@ -75,6 +75,14 @@ func (r *dataReader) TrimEnd(length int) {
 	r.data = r.data[:length]
 }
 
+func (r *dataReader) TrimHdr() {
+	hdrSize := unsafe.Sizeof(eventHdr{})
+	if len(r.data) < int(hdrSize) {
+		panic("Trimhdr: Data length less than header len")
+	}
+	r.data = r.data[hdrSize:]
+}
+
 func (r *dataReader) Tail() []byte {
 	return r.data[r.i:]
 }
@@ -196,6 +204,7 @@ func parseEvent(raw eventRaw) (Event, error) {
 	}
 
 	rd.TrimEnd(int(hdr.Len))
+	rd.TrimHdr()
 
 	switch Type(hdr.Type) {
 	case TypeTcpv4Events:
