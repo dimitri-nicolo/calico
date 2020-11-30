@@ -22,10 +22,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
+	"github.com/sirupsen/logrus"
 )
 
 // Type defines the type of constants used for determinig the type of an event.
