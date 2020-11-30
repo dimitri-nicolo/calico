@@ -24,6 +24,7 @@ import (
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
+	"github.com/sirupsen/logrus"
 )
 
 // Type defines the type of constants used for determinig the type of an event.
@@ -69,10 +70,18 @@ func (r *dataReader) Read(p []byte) (int, error) {
 
 func (r *dataReader) TrimEnd(length int) {
 	if length > len(r.data) {
-		panic("TrimEnd cannot extend")
+		logrus.Panic("TrimEnd cannot extend")
 	}
 
 	r.data = r.data[:length]
+}
+
+func (r *dataReader) TrimHdr() {
+	hdrSize := unsafe.Sizeof(eventHdr{})
+	if len(r.data) < int(hdrSize) {
+		logrus.Panic("Trimhdr: Data length less than header len")
+	}
+	r.data = r.data[hdrSize:]
 }
 
 func (r *dataReader) Tail() []byte {
@@ -196,6 +205,7 @@ func parseEvent(raw eventRaw) (Event, error) {
 	}
 
 	rd.TrimEnd(int(hdr.Len))
+	rd.TrimHdr()
 
 	switch Type(hdr.Type) {
 	case TypeTcpv4Events:
