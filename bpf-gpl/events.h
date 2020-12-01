@@ -24,10 +24,12 @@
 #include <linux/bpf_perf_event.h>
 
 #define TASK_COMM_LEN 16
+#define BPF_EVENT_PROTO_STATS_V4 1
 
 struct event_proto_stats_v4 {
 	struct perf_event_header hdr;
 	__u32 pid;
+	__u32 proto;
 	__u32 saddr;
 	__u32 daddr;
 	__u16 sport;
@@ -41,24 +43,22 @@ struct event_proto_stats_v4 {
 
 static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 					__u32 saddr, __u16 sport, __u32 daddr,
-					__u16 dport, __u32 txBytes, __u32 rxBytes, int isTcp)
+					__u16 dport, __u32 txBytes, __u32 rxBytes, __u32 proto)
 {
 	struct event_proto_stats_v4 event;
 
 	__builtin_memset(&event, 0, sizeof(event));
 	event.hdr.len = sizeof(struct event_proto_stats_v4);
+	event.hdr.type = BPF_EVENT_PROTO_STATS_V4;
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
 	event.pid = pid;
+	event.proto = proto;
 	event.saddr = be32_to_host(saddr);
 	event.daddr = be32_to_host(daddr);
 	event.sport = be16_to_host(sport);
 	event.dport = be16_to_host(dport);
 	event.txBytes = txBytes;
 	event.rxBytes = rxBytes;
-	event.hdr.type = PERF_EVENT_UDP_STATS;
-	if (isTcp) {
-		event.hdr.type = PERF_EVENT_TCP_STATS;
-	}
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
 		CALI_DEBUG("kprobe: perf_commit_event returns %d\n", err);

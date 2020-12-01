@@ -39,10 +39,8 @@ const (
 	ProcessNameLen = 16
 	// TypeLostEvents does not carry any other information except the number of lost events.
 	TypeLostEvents Type = iota
-	//TypeTCPv4Stats tcp v4 stats
-	TypeTcpv4Stats Type = 1
-	//TypeUDPv4Stats udp v4 stats
-	TypeUdpv4Stats Type = 2
+	//TypeProtoStatsv4 protocol v4 stats
+	TypeProtoStatsv4 Type = 1
 )
 
 // Event represents the common denominator of all events
@@ -195,10 +193,8 @@ func parseEvent(raw eventRaw) (Event, error) {
 	rd.TrimHdr()
 
 	switch Type(hdr.Type) {
-	case TypeTcpv4Stats:
-		return parseProtov4Stats(rd.data, true)
-	case TypeUdpv4Stats:
-		return parseProtov4Stats(rd.data, false)
+	case TypeProtoStatsv4:
+		return parseProtov4Stats(rd.data)
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
@@ -212,8 +208,9 @@ func (LostEvents) Type() Type {
 	return TypeLostEvents
 }
 
-type Protov4Stats struct {
+type ProtoStatsv4 struct {
 	Pid         uint32
+	Proto       uint32
 	Saddr       uint32
 	Daddr       uint32
 	Sport       uint16
@@ -225,24 +222,14 @@ type Protov4Stats struct {
 	ProcessName [ProcessNameLen]byte
 }
 
-type TCPv4Stats Protov4Stats
-type UDPv4Stats Protov4Stats
-
-func (TCPv4Stats) Type() Type {
-	return TypeTcpv4Stats
+func (ProtoStatsv4) Type() Type {
+	return TypeProtoStatsv4
 }
 
-func (UDPv4Stats) Type() Type {
-	return TypeUdpv4Stats
-}
-
-func parseProtov4Stats(raw []byte, isTcp bool) (Event, error) {
-	var e Protov4Stats
+func parseProtov4Stats(raw []byte) (Event, error) {
+	var e ProtoStatsv4
 	eptr := (unsafe.Pointer)(&e)
-	bytes := (*[unsafe.Sizeof(TCPv4Stats{})]byte)(eptr)
+	bytes := (*[unsafe.Sizeof(ProtoStatsv4{})]byte)(eptr)
 	copy(bytes[:], raw)
-	if isTcp {
-		return TCPv4Stats(e), nil
-	}
-	return UDPv4Stats(e), nil
+	return e, nil
 }

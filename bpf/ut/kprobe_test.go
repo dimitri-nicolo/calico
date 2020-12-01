@@ -33,9 +33,12 @@ func TestKprobe(t *testing.T) {
 	mc := &bpf.MapContext{}
 	bpfEvnt, err := events.New(mc, events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
-	err = kprobe.AttachTCPv4("debug", bpfEvnt, mc)
+	protov4Map := kprobe.MapProtov4(mc)
+	err = protov4Map.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
-	err = kprobe.AttachUDPv4("debug", bpfEvnt, mc)
+	err = kprobe.AttachTCPv4("debug", bpfEvnt, protov4Map)
+	Expect(err).NotTo(HaveOccurred())
+	err = kprobe.AttachUDPv4("debug", bpfEvnt, protov4Map)
 	Expect(err).NotTo(HaveOccurred())
 
 }

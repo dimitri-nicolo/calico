@@ -23,28 +23,15 @@ import (
 const protoV4KeySize = 16
 const protoV4ValueSize = 16
 
-var TCPv4MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_tcpkp",
+var Protov4MapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_stats",
 	Type:       "lru_hash",
 	KeySize:    protoV4KeySize,
 	ValueSize:  protoV4ValueSize,
 	MaxEntries: 511000,
-	Name:       "cali_v4_tcpkp",
+	Name:       "cali_v4_stats",
 }
 
-func MapTCPv4(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(TCPv4MapParameters)
-}
-
-var UDPv4MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_udpkp",
-	Type:       "lru_hash",
-	KeySize:    protoV4KeySize,
-	ValueSize:  protoV4ValueSize,
-	MaxEntries: 511000,
-	Name:       "cali_v4_udpkp",
-}
-
-func MapUDPv4(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(UDPv4MapParameters)
+func MapProtov4(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(Protov4MapParameters)
 }

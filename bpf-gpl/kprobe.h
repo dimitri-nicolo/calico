@@ -44,12 +44,7 @@ struct calico_kprobe_proto_v4_value {
 	__u64	timestamp;
 };
 
-CALI_MAP_V1(cali_v4_tcpkp,
-		BPF_MAP_TYPE_LRU_HASH,
-		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
-		511000, 0, MAP_PIN_GLOBAL)
-
-CALI_MAP_V1(cali_v4_udpkp,
+CALI_MAP_V1(cali_v4_stats,
 		BPF_MAP_TYPE_LRU_HASH,
 		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
 		511000, 0, MAP_PIN_GLOBAL)
