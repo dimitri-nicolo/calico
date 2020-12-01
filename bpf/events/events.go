@@ -35,7 +35,7 @@ const (
 	// MaxCPUs is the currenty supported max number of CPUs
 	MaxCPUs = 512
 
-	// // ProcessNameLen max length
+	// ProcessNameLen max process name length
 	ProcessNameLen = 16
 	// TypeLostEvents does not carry any other information except the number of lost events.
 	TypeLostEvents Type = iota
