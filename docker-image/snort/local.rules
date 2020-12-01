@@ -1,4 +1,0 @@
-alert icmp any any -> any any (msg:"ICMP Echo Request"; itype:8; sid:1000000;)
-alert icmp any any -> any any (msg:"ICMP Echo Reply";   itype:0; sid:1000001;)
-alert tcp any any -> any any (msg:"HACKER"; flow:to_server; content:"/hacker"; http_uri; sid:1000002;)
-alert tcp any any -> any any (msg:"HACKER"; flow:to_server; content:"/hacker"; sid:1000003;)
