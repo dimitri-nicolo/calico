@@ -22,9 +22,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
-	"github.com/sirupsen/logrus"
 )
 
 // Type defines the type of constants used for determinig the type of an event.
@@ -34,12 +35,14 @@ const (
 	// MaxCPUs is the currenty supported max number of CPUs
 	MaxCPUs = 512
 
-	// Process Name max length
+	// // ProcessNameLen max length
 	ProcessNameLen = 16
-	// TypeLostEvents does not carry any other information except thenumber of lost events.
-	TypeLostEvents  Type = iota
-	TypeTcpv4Events Type = 1
-	TypeUdpv4Events Type = 2
+	// TypeLostEvents does not carry any other information except the number of lost events.
+	TypeLostEvents Type = iota
+	//TypeTCPv4Stats tcp v4 stats
+	TypeTcpv4Stats Type = 1
+	//TypeUDPv4Stats udp v4 stats
+	TypeUdpv4Stats Type = 2
 )
 
 // Event represents the common denominator of all events
@@ -174,26 +177,9 @@ func (e *perfEventsReader) Map() bpf.Map {
 	return e.bpfMap
 }
 
-func parseTcpStats(tcpStats TCPv4Events) {
-	// Parse TCP stats and send it to flow collector
-}
-
 type eventHdr struct {
 	Type uint16
 	Len  uint16
-}
-
-type eventV4ProtoStats struct {
-	Pid         uint32
-	Saddr       uint32
-	Daddr       uint32
-	Sport       uint16
-	Dport       uint16
-	TxBytes     uint32
-	RxBytes     uint32
-	SndBuf      uint32
-	RcvBuf      uint32
-	ProcessName [ProcessNameLen]byte
 }
 
 func parseEvent(raw eventRaw) (Event, error) {
@@ -209,18 +195,10 @@ func parseEvent(raw eventRaw) (Event, error) {
 	rd.TrimHdr()
 
 	switch Type(hdr.Type) {
-	case TypeTcpv4Events:
-		var tcpStats eventV4ProtoStats
-		tcpStatsPtr := (unsafe.Pointer)(&tcpStats)
-		tcpStatsAsBytes := (*[unsafe.Sizeof(eventV4ProtoStats{})]byte)(tcpStatsPtr)
-		copy(tcpStatsAsBytes[:], rd.data)
-		return TCPv4Events(tcpStats), nil
-	case TypeUdpv4Events:
-		var udpStats eventV4ProtoStats
-		udpStatsPtr := (unsafe.Pointer)(&udpStats)
-		udpStatsAsBytes := (*[unsafe.Sizeof(eventV4ProtoStats{})]byte)(udpStatsPtr)
-		copy(udpStatsAsBytes[:], rd.data)
-		return UDPv4Events(udpStats), nil
+	case TypeTcpv4Stats:
+		return parseProtov4Stats(rd.data, true)
+	case TypeUdpv4Stats:
+		return parseProtov4Stats(rd.data, false)
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
@@ -228,18 +206,43 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 // LostEvents is an event that reports how many events were missed.
 type LostEvents int
-type TCPv4Events eventV4ProtoStats
-type UDPv4Events eventV4ProtoStats
 
 // Type returns TypeLostEvents
 func (LostEvents) Type() Type {
 	return TypeLostEvents
 }
 
-func (TCPv4Events) Type() Type {
-	return TypeTcpv4Events
+type Protov4Stats struct {
+	Pid         uint32
+	Saddr       uint32
+	Daddr       uint32
+	Sport       uint16
+	Dport       uint16
+	TxBytes     uint32
+	RxBytes     uint32
+	SndBuf      uint32
+	RcvBuf      uint32
+	ProcessName [ProcessNameLen]byte
 }
 
-func (UDPv4Events) Type() Type {
-	return TypeUdpv4Events
+type TCPv4Stats Protov4Stats
+type UDPv4Stats Protov4Stats
+
+func (TCPv4Stats) Type() Type {
+	return TypeTcpv4Stats
+}
+
+func (UDPv4Stats) Type() Type {
+	return TypeUdpv4Stats
+}
+
+func parseProtov4Stats(raw []byte, isTcp bool) (Event, error) {
+	var e Protov4Stats
+	eptr := (unsafe.Pointer)(&e)
+	bytes := (*[unsafe.Sizeof(TCPv4Stats{})]byte)(eptr)
+	copy(bytes[:], raw)
+	if isTcp {
+		return TCPv4Stats(e), nil
+	}
+	return UDPv4Stats(e), nil
 }

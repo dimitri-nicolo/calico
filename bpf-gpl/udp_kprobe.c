@@ -40,7 +40,7 @@ static int CALI_BPF_INLINE udp_collect_stats(struct pt_regs *ctx, struct sock_co
 		bpf_probe_read(&daddr, 4, &sk_cmn->skc_daddr);
 		pid = bpf_get_current_pid_tgid() >> 32;
 		ts = bpf_ktime_get_ns();
-		if (family == 2) {
+		if (family == AF_INET) {
 			key.pid = pid;
 			key.saddr = saddr;
 			key.sport = sport;
@@ -54,7 +54,7 @@ static int CALI_BPF_INLINE udp_collect_stats(struct pt_regs *ctx, struct sock_co
 				} else {
 					v4_value.rxBytes = bytes;
 				}
-				event_udp_flow(ctx, saddr, sport, daddr, dport, v4_value.txBytes, v4_value.rxBytes);	
+				event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.txBytes, v4_value.rxBytes, 0);
 				ret = cali_v4_udpkp_update_elem(&key, &v4_value, 0);
 				if (ret < 0) {
 					goto error;
@@ -63,7 +63,7 @@ static int CALI_BPF_INLINE udp_collect_stats(struct pt_regs *ctx, struct sock_co
 				diff = ts - val->timestamp;
 				if (diff >= SEND_DATA_INTERVAL)
 				{
-					event_udp_flow(ctx, saddr, sport, daddr, dport, val->txBytes, val->rxBytes);	
+					event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->txBytes, val->rxBytes, 0);
 					val->timestamp = ts;
 				}
 				if (tx) {
