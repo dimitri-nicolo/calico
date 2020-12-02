@@ -22,8 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
 )
@@ -39,8 +37,8 @@ const (
 	ProcessNameLen = 16
 	// TypeLostEvents does not carry any other information except the number of lost events.
 	TypeLostEvents Type = iota
-	//TypeProtoStatsv4 protocol v4 stats
-	TypeProtoStatsv4 Type = 1
+	//TypeProtoStatsV4 protocol v4 stats
+	TypeProtoStatsV4 Type = 1
 )
 
 // Event represents the common denominator of all events
@@ -70,19 +68,17 @@ func (r *dataReader) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (r *dataReader) TrimEnd(length int) {
+func (r *dataReader) TrimEnd(length int) error {
 	if length > len(r.data) {
-		logrus.Panic("TrimEnd cannot extend")
+		return errors.Errorf("TrimEnd cannot extend")
 	}
 
 	r.data = r.data[:length]
+	return nil
 }
 
 func (r *dataReader) TrimHdr() {
 	hdrSize := unsafe.Sizeof(eventHdr{})
-	if len(r.data) < int(hdrSize) {
-		logrus.Panic("Trimhdr: Data length less than header len")
-	}
 	r.data = r.data[hdrSize:]
 }
 
@@ -189,11 +185,15 @@ func parseEvent(raw eventRaw) (Event, error) {
 		return nil, errors.New("failed to read event header")
 	}
 
-	rd.TrimEnd(int(hdr.Len))
+	err := rd.TrimEnd(int(hdr.Len))
+	if err != nil {
+		return nil, err
+	}
+
 	rd.TrimHdr()
 
 	switch Type(hdr.Type) {
-	case TypeProtoStatsv4:
+	case TypeProtoStatsV4:
 		return parseProtov4Stats(rd.data)
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
@@ -208,7 +208,7 @@ func (LostEvents) Type() Type {
 	return TypeLostEvents
 }
 
-type ProtoStatsv4 struct {
+type ProtoStatsV4 struct {
 	Pid         uint32
 	Proto       uint32
 	Saddr       uint32
@@ -222,14 +222,14 @@ type ProtoStatsv4 struct {
 	ProcessName [ProcessNameLen]byte
 }
 
-func (ProtoStatsv4) Type() Type {
-	return TypeProtoStatsv4
+func (ProtoStatsV4) Type() Type {
+	return TypeProtoStatsV4
 }
 
 func parseProtov4Stats(raw []byte) (Event, error) {
-	var e ProtoStatsv4
+	var e ProtoStatsV4
 	eptr := (unsafe.Pointer)(&e)
-	bytes := (*[unsafe.Sizeof(ProtoStatsv4{})]byte)(eptr)
+	bytes := (*[unsafe.Sizeof(ProtoStatsV4{})]byte)(eptr)
 	copy(bytes[:], raw)
 	return e, nil
 }

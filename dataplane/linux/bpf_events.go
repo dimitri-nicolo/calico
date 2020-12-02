@@ -32,8 +32,8 @@ func startEventPoller(e events.Events) error {
 				continue
 			}
 			switch event.Type() {
-			case events.TypeProtoStatsv4:
-				log.WithField("event", event).Debug("Received Protocol stats event")
+			case events.TypeProtoStatsV4:
+				log.WithField("event", event).Debug("Received Protocol stats")
 			default:
 				log.Warn("Unknown event type")
 				continue
