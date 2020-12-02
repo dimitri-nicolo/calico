@@ -157,7 +157,7 @@ func TestBPFLoaderWithTcpKprobe(t *testing.T) {
 	perfMap := perf.Map(mc, "perf_evnt", events.MaxCPUs)
 	err := perfMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
-	statMap := kprobe.AttachTCPv4(mc)
+	statMap := kprobe.MapProtov4(mc)
 	err = statMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 

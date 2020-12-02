@@ -20,18 +20,18 @@ import (
 	"github.com/projectcalico/felix/bpf"
 )
 
-const tcpV4KeySize = 16
-const tcpV4ValueSize = 16
+const protoV4KeySize = 16
+const protoV4ValueSize = 16
 
-var TCPv4MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_tcpkp",
+var Protov4MapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_stats",
 	Type:       "lru_hash",
-	KeySize:    tcpV4KeySize,
-	ValueSize:  tcpV4ValueSize,
+	KeySize:    protoV4KeySize,
+	ValueSize:  protoV4ValueSize,
 	MaxEntries: 511000,
-	Name:       "cali_v4_tcpkp",
+	Name:       "cali_v4_stats",
 }
 
-func AttachTCPv4(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(TCPv4MapParameters)
+func MapProtov4(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(Protov4MapParameters)
 }

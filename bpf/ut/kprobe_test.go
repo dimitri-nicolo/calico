@@ -28,10 +28,17 @@ import (
 
 func TestKprobe(t *testing.T) {
 	RegisterTestingT(t)
-	mc := &bpf.MapContext{}
-	perfEvnt, err := events.New(mc, events.SourcePerfEvents)
+	err := bpf.MountDebugfs()
 	Expect(err).NotTo(HaveOccurred())
-	err = kprobe.New("debug", perfEvnt, mc)
+	mc := &bpf.MapContext{}
+	bpfEvnt, err := events.New(mc, events.SourcePerfEvents)
+	Expect(err).NotTo(HaveOccurred())
+	protov4Map := kprobe.MapProtov4(mc)
+	err = protov4Map.EnsureExists()
+	Expect(err).NotTo(HaveOccurred())
+	err = kprobe.AttachTCPv4("debug", bpfEvnt, protov4Map)
+	Expect(err).NotTo(HaveOccurred())
+	err = kprobe.AttachUDPv4("debug", bpfEvnt, protov4Map)
 	Expect(err).NotTo(HaveOccurred())
 
 }

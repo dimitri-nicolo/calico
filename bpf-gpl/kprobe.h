@@ -24,12 +24,13 @@
 #include <linux/ip.h>
 #include <linux/if_ether.h>
 #include <linux/udp.h>
+#include <sys/socket.h>
 
 #include "bpf.h"
 #include "tracing.h"
 
 #define SEND_DATA_INTERVAL 2000000000
-struct __attribute__((__packed__)) calico_tcp_kprobe_v4_key {
+struct __attribute__((__packed__)) calico_kprobe_proto_v4_key {
 	__u32 pid;
 	uint32_t saddr;
 	uint16_t sport;
@@ -37,15 +38,15 @@ struct __attribute__((__packed__)) calico_tcp_kprobe_v4_key {
 	uint16_t dport;
 };
 
-struct calico_tcp_kprobe_v4_value {
+struct calico_kprobe_proto_v4_value {
 	uint32_t txBytes;
 	uint32_t rxBytes;
 	__u64	timestamp;
 };
 
-CALI_MAP_V1(cali_v4_tcpkp,
+CALI_MAP_V1(cali_v4_stats,
 		BPF_MAP_TYPE_LRU_HASH,
-		struct calico_tcp_kprobe_v4_key, struct calico_tcp_kprobe_v4_value,
+		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
 		511000, 0, MAP_PIN_GLOBAL)
 
 #endif /* __CALI_KPROBE_H__ */

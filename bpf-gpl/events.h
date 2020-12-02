@@ -24,10 +24,12 @@
 #include <linux/bpf_perf_event.h>
 
 #define TASK_COMM_LEN 16
+#define BPF_EVENT_PROTO_STATS_V4 1
 
-struct event_tcp_stats {
+struct event_proto_stats_v4 {
 	struct perf_event_header hdr;
 	__u32 pid;
+	__u32 proto;
 	__u32 saddr;
 	__u32 daddr;
 	__u16 sport;
@@ -39,17 +41,18 @@ struct event_tcp_stats {
 	char taskName[TASK_COMM_LEN];
 };
 
-static CALI_BPF_INLINE void event_tcp_flow(struct pt_regs *ctx, 
-					__u32 saddr, __u16 sport, 
-					__u32 daddr, __u16 dport, __u32 txBytes, __u32 rxBytes)
+static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
+					__u32 saddr, __u16 sport, __u32 daddr,
+					__u16 dport, __u32 txBytes, __u32 rxBytes, __u32 proto)
 {
-	struct event_tcp_stats event;
+	struct event_proto_stats_v4 event;
 
 	__builtin_memset(&event, 0, sizeof(event));
-	event.hdr.type = PERF_EVENT_TCP_STATS;
-	event.hdr.len = sizeof(struct event_tcp_stats);
+	event.hdr.len = sizeof(struct event_proto_stats_v4);
+	event.hdr.type = BPF_EVENT_PROTO_STATS_V4;
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
-	event.pid = bpf_get_current_pid_tgid() >> 32;
+	event.pid = pid;
+	event.proto = proto;
 	event.saddr = be32_to_host(saddr);
 	event.daddr = be32_to_host(daddr);
 	event.sport = be16_to_host(sport);
@@ -58,7 +61,7 @@ static CALI_BPF_INLINE void event_tcp_flow(struct pt_regs *ctx,
 	event.rxBytes = rxBytes;
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
-		CALI_DEBUG("tcp kprobe: perf_commit_event returns %d\n", err);
+		CALI_DEBUG("kprobe: perf_commit_event returns %d\n", err);
 	}
 }
 

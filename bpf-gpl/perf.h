@@ -28,8 +28,6 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
 	CALI_MAP_TC_EXT_PIN(MAP_PIN_GLOBAL)
 };
 
-#define PERF_EVENT_TCP_STATS    1
-
 struct perf_event_header {
 	__u16 type;
 	__u16 len;

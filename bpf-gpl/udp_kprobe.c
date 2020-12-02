@@ -23,7 +23,7 @@
 #include "kprobe.h"
 #include <linux/bpf_perf_event.h>
 
-static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_common *sk_cmn, int bytes, int tx) {
+static int CALI_BPF_INLINE udp_collect_stats(struct pt_regs *ctx, struct sock_common *sk_cmn, int bytes, int tx) {
 	__u32 saddr = 0, daddr = 0, pid = 0;
 	__u16 family = 0, sport = 0, dport = 0;
 	__u64 ts = 0; __u64 diff = 0;
@@ -54,7 +54,7 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 				} else {
 					v4_value.rxBytes = bytes;
 				}
-				event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.txBytes, v4_value.rxBytes, IPPROTO_TCP);
+				event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.txBytes, v4_value.rxBytes, IPPROTO_UDP);
 				ret = cali_v4_stats_update_elem(&key, &v4_value, 0);
 				if (ret < 0) {
 					goto error;
@@ -62,7 +62,7 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 			} else {
 				diff = ts - val->timestamp;
 				if (diff >= SEND_DATA_INTERVAL) {
-					event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->txBytes, val->rxBytes, IPPROTO_TCP);
+					event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->txBytes, val->rxBytes, IPPROTO_UDP);
 					val->timestamp = ts;
 				}
 				if (tx) {
@@ -82,31 +82,31 @@ error:
 	return -1;
 }
 
-__attribute__((section("kprobe/tcp_cleanup_rbuf")))
-int kprobe__tcp_cleanup_rbuf(struct pt_regs *ctx)
-{
-	int bytes = 0;
-	struct sock_common *sk_cmn = NULL;
-	if (ctx) {
-		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
-		bytes = (int)PT_REGS_PARM2(ctx);
-		if (bytes < 0) {
-			return 0;
-		}
-		return tcp_collect_stats(ctx, sk_cmn, bytes, 0);
-	}
-	return -1;
-}
-
-__attribute__((section("kprobe/tcp_sendmsg")))
-int kprobe__tcp_sendmsg(struct pt_regs *ctx)
+__attribute__((section("kprobe/udp_recvmsg")))
+int kprobe__udp_recvmsg(struct pt_regs *ctx)
 {
 	int bytes = 0;
 	struct sock_common *sk_cmn = NULL;
 	if (ctx) {
 		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
 		bytes = (int)PT_REGS_PARM3(ctx);
-		return tcp_collect_stats(ctx, sk_cmn, bytes, 1);
+		if (bytes < 0) {
+			return 0;
+		}
+		return udp_collect_stats(ctx, sk_cmn, bytes, 0);
+	}
+	return -1;
+}
+
+__attribute__((section("kprobe/udp_sendmsg")))
+int kprobe__udp_sendmsg(struct pt_regs *ctx)
+{
+	int bytes = 0;
+	struct sock_common *sk_cmn = NULL;
+	if (ctx) {
+		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
+		bytes = (int)PT_REGS_PARM3(ctx);
+		return udp_collect_stats(ctx, sk_cmn, bytes, 1);
 	}
 	return -1;
 }

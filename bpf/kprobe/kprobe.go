@@ -22,8 +22,6 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/elf"
 	"github.com/projectcalico/felix/bpf/events"
@@ -41,22 +39,20 @@ func progFileName(protocol, logLevel string) string {
 	return fmt.Sprintf("%s_%s_kprobe.o", protocol, logLevel)
 }
 
-func New(logLevel string, evnt events.Events, mc *bpf.MapContext) error {
-	err := bpf.MountDebugfs()
-	if err != nil {
-		log.WithError(err).Panic("Failed to mount debug fs")
-	}
-
-	tcpv4Map := AttachTCPv4(mc)
-	err = tcpv4Map.EnsureExists()
-	if err != nil {
-		log.WithError(err).Panic("Failed to create kprobe tcp v4 BPF map.")
-	}
-
+func AttachTCPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
 	var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
-	err = installKprobe(logLevel, "tcp", tcpFns, tcpv4Map, evnt.Map(), tcpv4Map)
+	err := installKprobe(logLevel, "tcp", tcpFns, protov4Map, evnt.Map())
 	if err != nil {
-		return fmt.Errorf("error installing kprobes")
+		return fmt.Errorf("error installing tcp v4 kprobes")
+	}
+	return nil
+}
+
+func AttachUDPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
+	var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
+	err := installKprobe(logLevel, "udp", udpFns, protov4Map, evnt.Map())
+	if err != nil {
+		return fmt.Errorf("error installing udp v4 kprobes")
 	}
 	return nil
 }
