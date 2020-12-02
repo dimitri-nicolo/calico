@@ -12,6 +12,27 @@ type MockFlowHelper struct {
 	mock.Mock
 }
 
+// CanListEndpoint provides a mock function with given fields: _a0, _a1
+func (_m *MockFlowHelper) CanListEndpoint(_a0 api.EndpointType, _a1 string) (bool, error) {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(api.EndpointType, string) bool); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(api.EndpointType, string) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CanListGlobalNetworkSets provides a mock function with given fields:
 func (_m *MockFlowHelper) CanListGlobalNetworkSets() (bool, error) {
 	ret := _m.Called()

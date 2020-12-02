@@ -28,6 +28,12 @@ var (
 	tierHelper = resources.GetResourceHelperByTypeMeta(resources.TypeCalicoTiers)
 )
 
+type ErrUnknownEndpointType struct{}
+
+func (err *ErrUnknownEndpointType) Error() string {
+	return "endpoint endpoint type"
+}
+
 // FlowHelper interface provides methods for consumers of Flows to perform RBAC checks on what the user should
 // be able to see.
 type FlowHelper interface {
@@ -38,20 +44,28 @@ type FlowHelper interface {
 	// Whether the global (cluster) scoped should be included as an option for flow requests.
 	IncludeGlobalNamespace() (bool, error)
 
+	// Deprecated: Use CanListEndpoint.
 	// Whether the user can list host endpoints
 	CanListHostEndpoints() (bool, error)
 
+	// Deprecated: Use CanListEndpoint.
 	// Whether the user can list pods
 	CanListPods(namespace string) (bool, error)
 
+	// Deprecated: Use CanListEndpoint.
 	// Whether the user can list global network sets
 	CanListGlobalNetworkSets() (bool, error)
 
-	// Whether the user can list network sets
+	// Deprecated: Use CanListEndpoint.
+	// Whether the user can list network sets.
 	CanListNetworkSets(namespace string) (bool, error)
 
 	// Whether the user can list the policy represented by the PolicyHit.
 	CanListPolicy(p api.PolicyHit) (bool, error)
+
+	// CanListEndpoint checks if the user can list the given endpoint in the given namespace. If the endpoint type is not
+	// namespaced the namespace should be ignored.
+	CanListEndpoint(api.EndpointType, string) (bool, error)
 }
 
 func NewCachedFlowHelper(usr user.Info, authorizer auth.RBACAuthorizer) FlowHelper {
@@ -60,6 +74,13 @@ func NewCachedFlowHelper(usr user.Info, authorizer auth.RBACAuthorizer) FlowHelp
 		authorizer:      authorizer,
 		authorizedCache: make(map[authzv1.ResourceAttributes]bool),
 	}
+}
+
+// flowHelper implements the FlowHelper interface.
+type flowHelper struct {
+	usr             user.Info
+	authorizer      auth.RBACAuthorizer
+	authorizedCache map[authzv1.ResourceAttributes]bool
 }
 
 // Whether the namespace should be included as an option for flow requests.
@@ -104,7 +125,8 @@ func (r flowHelper) IncludeGlobalNamespace() (bool, error) {
 	return false, nil
 }
 
-// CanListHostEndpoints implements the FlowHelper interface.
+// CanListEndpoint checks if the user can list the given endpoint in the given namespace. If the endpoint type is not
+// namespaced the namespace should be ignored.
 func (r flowHelper) CanListHostEndpoints() (bool, error) {
 	return r.authorized(hepHelper, "list", "", "")
 }
@@ -124,11 +146,27 @@ func (r flowHelper) CanListNetworkSets(namespace string) (bool, error) {
 	return r.authorized(nsHelper, "list", namespace, "")
 }
 
-// flowHelper implements the FlowHelper interface.
-type flowHelper struct {
-	usr             user.Info
-	authorizer      auth.RBACAuthorizer
-	authorizedCache map[authzv1.ResourceAttributes]bool
+// CanListEn
+func (r flowHelper) CanListEndpoint(typ api.EndpointType, namespace string) (bool, error) {
+	var err error
+	authorized := false
+
+	switch typ {
+	case api.FlowLogEndpointTypeHEP:
+		authorized, err = r.CanListHostEndpoints()
+	case api.FlowLogEndpointTypeNetworkSet:
+		if len(namespace) == 0 {
+			authorized, err = r.CanListGlobalNetworkSets()
+		} else {
+			authorized, err = r.CanListNetworkSets(namespace)
+		}
+	case api.FlowLogEndpointTypeWEP:
+		authorized, err = r.CanListPods(namespace)
+	default:
+		err = new(ErrUnknownEndpointType)
+	}
+
+	return authorized, err
 }
 
 // CanListPolicy determines if a policy can be listed.

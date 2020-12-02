@@ -40,7 +40,7 @@ var _ = Describe("FlowFilter", func() {
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListPods", "ns1").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, "ns1").Return(true, nil)
 				},
 			},
 		},
@@ -55,8 +55,8 @@ var _ = Describe("FlowFilter", func() {
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListPods", "ns1").Return(false, nil)
-					mockFlowHelper.On("CanListPods", "ns2").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, "ns1").Return(false, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, "ns2").Return(true, nil)
 				},
 			},
 		},
@@ -71,7 +71,7 @@ var _ = Describe("FlowFilter", func() {
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListPods", "ns2").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "").Return(true, nil)
 				},
 			},
 		},
@@ -86,7 +86,7 @@ var _ = Describe("FlowFilter", func() {
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListPods", "ns1").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, "ns1").Return(true, nil)
 				},
 			},
 		},
@@ -96,13 +96,14 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "hep"}, {"source_namespace", "ns1"}, {"source_name", "a"},
+						{"source_type", "hep"}, {"source_namespace", ""}, {"source_name", "a"},
 						{"dest_type", "net"}, {"dest_namespace", "ns2"}, {"dest_name", "b"},
 					},
 				},
 				false,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeHep, "").Return(false, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "ns2").Return(false, nil)
 				},
 			},
 		},
@@ -118,7 +119,7 @@ var _ = Describe("FlowFilter", func() {
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListHostEndpoints").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "").Return(true, nil)
 				},
 			},
 		},
@@ -128,13 +129,13 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "ns"}, {"source_namespace", ""}, {"source_name", "a"},
+						{"source_type", "net"}, {"source_namespace", ""}, {"source_name", "a"},
 						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
 					},
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListGlobalNetworkSets").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "").Return(true, nil)
 				},
 			},
 		},
@@ -144,13 +145,13 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "ns"}, {"source_namespace", ""}, {"source_name", "a"},
+						{"source_type", "net"}, {"source_namespace", ""}, {"source_name", "a"},
 						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
 					},
 				},
 				false,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListGlobalNetworkSets").Return(false, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "").Return(false, nil)
 				},
 			},
 		},
@@ -160,13 +161,13 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "ns"}, {"source_namespace", "ns1"}, {"source_name", "a"},
+						{"source_type", "net"}, {"source_namespace", "ns1"}, {"source_name", "a"},
 						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
 					},
 				},
 				true,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListNetworkSets", "ns1").Return(true, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "ns1").Return(true, nil)
 				},
 			},
 		},
@@ -176,13 +177,14 @@ var _ = Describe("FlowFilter", func() {
 			Parameters: []interface{}{
 				&elastic.CompositeAggregationBucket{
 					CompositeAggregationKey: elastic.CompositeAggregationKey{
-						{"source_type", "ns"}, {"source_namespace", "ns1"}, {"source_name", "a"},
+						{"source_type", "net"}, {"source_namespace", "ns1"}, {"source_name", "a"},
 						{"dest_type", "net"}, {"dest_namespace", ""}, {"dest_name", "b"},
 					},
 				},
 				false,
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListNetworkSets", "ns1").Return(false, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "ns1").Return(false, nil)
+					mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, "").Return(false, nil)
 				},
 			},
 		},
