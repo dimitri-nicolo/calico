@@ -21,7 +21,7 @@ EOF
 
 ### Openshift
 
-While there is no extra setup configuration required by the user to generate a benchmark report for Openshift, the result sets will be different than a report generated for regular Kubernetes clusters. Use the [Openshift Container Platform security guide](https://static.open-scap.org/ssg-guides/ssg-ocp3-guide-default.html){:target="_blank"} to cross-reference the benchmark results.
+While there is no extra setup configuration required by the user to generate a benchmark report for Openshift, the result sets will be different than a report generated for regular Kubernetes clusters. Use the {% include open-new-window.html text='Openshift Container Platform Security Guide' url='https://static.open-scap.org/' %} to cross-reference the benchmark results.
 
 ### Downloadable reports
 
