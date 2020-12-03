@@ -15,8 +15,6 @@
 package events
 
 import (
-	"encoding/binary"
-	"io"
 	"runtime"
 	"unsafe"
 
@@ -53,38 +51,6 @@ const (
 	// SourcePerfEvents consumes events using the perf event ring buffer
 	SourcePerfEvents Source = "perf-events"
 )
-
-type dataReader struct {
-	data []byte
-	i    int
-}
-
-func (r *dataReader) Read(p []byte) (int, error) {
-	n := copy(p, r.data[r.i:])
-	if n == 0 && len(p) > 0 {
-		return 0, io.EOF
-	}
-	r.i += n
-	return n, nil
-}
-
-func (r *dataReader) TrimEnd(length int) error {
-	if length > len(r.data) {
-		return errors.Errorf("TrimEnd cannot extend")
-	}
-
-	r.data = r.data[:length]
-	return nil
-}
-
-func (r *dataReader) TrimHdr() {
-	hdrSize := unsafe.Sizeof(eventHdr{})
-	r.data = r.data[hdrSize:]
-}
-
-func (r *dataReader) Tail() []byte {
-	return r.data[r.i:]
-}
 
 type eventRaw interface {
 	CPU() int
@@ -176,25 +142,20 @@ type eventHdr struct {
 	Len  uint16
 }
 
+type eventTimestampHdr struct {
+	eventHdr
+	TimestampNS uint64
+}
+
 func parseEvent(raw eventRaw) (Event, error) {
 
 	var hdr eventHdr
-
-	rd := &dataReader{data: raw.Data()}
-	if err := binary.Read(rd, binary.LittleEndian, &hdr); err != nil {
-		return nil, errors.New("failed to read event header")
-	}
-
-	err := rd.TrimEnd(int(hdr.Len))
-	if err != nil {
-		return nil, err
-	}
-
-	rd.TrimHdr()
+	hdrBytes := (*[unsafe.Sizeof(eventHdr{})]byte)((unsafe.Pointer)(&hdr))
+	consumed := copy(hdrBytes[:], raw.Data())
 
 	switch Type(hdr.Type) {
 	case TypeProtoStatsV4:
-		return parseProtov4Stats(rd.data)
+		return parseProtov4Stats(raw.Data()[consumed:])
 	default:
 		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
 	}
