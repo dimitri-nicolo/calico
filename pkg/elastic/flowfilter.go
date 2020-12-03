@@ -4,8 +4,6 @@ package elastic
 import (
 	"sort"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/rbac"
 )
@@ -124,22 +122,7 @@ func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket)
 // canListEndpoint determines if an endpoint can be listed.
 func (f *flowFilterUserRBAC) canListEndpoint(k CompositeAggregationKey, epTypeIdx, nsIdx int) (bool, error) {
 	epType := GetFlowEndpointTypeFromCompAggKey(k, epTypeIdx)
-	switch epType {
-	case api.FlowLogEndpointTypeHEP:
-		return f.r.CanListHostEndpoints()
-	case api.FlowLogEndpointTypeNetworkSet:
-		namespace := GetFlowEndpointNamespaceFromCompAggKey(k, nsIdx)
-		if len(namespace) > 0 {
-			return f.r.CanListNetworkSets(namespace)
-		} else {
-			return f.r.CanListGlobalNetworkSets()
-		}
-	case api.FlowLogEndpointTypeWEP:
-		namespace := GetFlowEndpointNamespaceFromCompAggKey(k, nsIdx)
-		return f.r.CanListPods(namespace)
-	}
+	namespace := GetFlowEndpointNamespaceFromCompAggKey(k, nsIdx)
 
-	// Not an RBAC'd endpoint, so return false to ensure the other end of the flow is visible.
-	log.Debugf("Not an RBACd endpoint: %s", epType)
-	return false, nil
+	return f.r.CanListEndpoint(epType, namespace)
 }

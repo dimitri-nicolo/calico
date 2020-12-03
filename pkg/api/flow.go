@@ -37,6 +37,16 @@ const (
 	EndpointTypeNet     EndpointType = "net"
 )
 
+func StringToEndpointType(str string) EndpointType {
+	for _, et := range []EndpointType{EndpointTypeWep, EndpointTypeHep, EndpointTypeNs, EndpointTypeNet} {
+		if str == string(et) {
+			return et
+		}
+	}
+
+	return EndpointTypeInvalid
+}
+
 type ReporterType string
 
 const (
