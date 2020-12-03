@@ -1,4 +1,3 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 package api
 
 import (
@@ -11,127 +10,311 @@ import (
 )
 
 const (
-	ActionInvalid       = ""
-	ActionUnknown       = "unknown"
-	ActionAllow         = "allow"
-	ActionDeny          = "deny"
-	ActionEndOfTierDeny = "eot-deny"
-	ActionNextTier      = "pass"
-	knpString           = "knp.default."
+	knpPrefix = "knp"
+	knsPrefix = "kns"
 )
 
+// PolicyHit represents a policy log in a flow log. This interface is used to make a the implementation read only, as the
+// implementation is a representation of a log that is not changing. Certain Set actions have bee added, however they
+// return a changed copy of the underlying policy hit to maintain the immutable properties.
+type PolicyHit interface {
+	// Action returns the action for this policy hit. See AllActions() for a list of possible values that could be returned.
+	Action() Action
+
+	// Count returns the number of flow logs that this policy hit was applied to.
+	Count() int64
+
+	// FlowLogName returns the name as it would appear in the flow log. This is unique for a specific policy instance.
+	// -  <tier>.<name>
+	// -  <namespace>/<tier>.<name>
+	// -  <namespace>/<tier>.staged:<name>
+	// -  <namespace>/knp.default.<name>
+	// -  <namespace>/staged:knp.default.<name>
+	// -  <namespace>/staged:knp.default.<name>
+	// -  __PROFILE__.kns.<namespace>
+	FlowLogName() string
+
+	// FullName returns the full policy name, which includes the tier prefix for calico policy or the "knp.default" prefix
+	// for Kubernetes policies.
+	FullName() string
+
+	// Index returns the index for this hit.
+	Index() int
+
+	// IsKubernetes returns whether or not this policy is a staged policy.
+	IsKubernetes() bool
+
+	// IsProfile returns whether or not this policy is a profile.
+	IsProfile() bool
+
+	// IsStaged returns whether or not this policy is a staged policy.
+	IsStaged() bool
+
+	// Name returns the raw name of the policy without any tier or knp prefixes.
+	Name() string
+
+	// Namespace returns the policy namespace (if namespaced). An empty string is returned if the policy is not namespaced.
+	Namespace() string
+
+	// SetAction sets the action on a copy of the underlying PolicyHit and returns it.
+	SetAction(Action) PolicyHit
+
+	// SetCount sets the count on a copy of the underlying PolicyHit and returns it.
+	SetCount(int64) PolicyHit
+
+	// SetIndex sets the index on a copy of the underlying PolicyHit and returns it.
+	SetIndex(int) PolicyHit
+
+	// Tier returns the tier name (or __PROFILE__ for profile match)
+	Tier() string
+
+	// ToFlowLogPolicyString returns a flow log policy string. Implementations of this must ensure that the value returned
+	// from ToFlowLogPolicyString matches the input string passed to PolicyHitFromFlowLogPolicyString used to create
+	// the PolicyHit (if it was used) exactly.
+	ToFlowLogPolicyString() string
+}
+
 // PolicyHitKey identifies a policy.
-type PolicyHit struct {
-	// The tier name (or __PROFILE__ for profile match)
-	Tier string
-
-	// The policy name. This will include the tier prefix for calico policy and the "knp.default" prefix for Kubernetes
-	// policies.
-	Name string
-
-	// The policy namespace (if namespaced).
-	Namespace string
-
-	// Whether this is a staged policy.
-	Staged bool
-
-	// The action flag(s) for this policy hit.
-	Action ActionFlag
-
-	// The match index for this hit.
-	MatchIndex int
+type policyHit struct {
+	// The action for this policy hit.
+	action Action
 
 	// The document count.
-	Count int64
+	count int64
+
+	// The index for this hit.
+	index int
+
+	// Whether or not this is a kubernetes policy.
+	isKNP bool
+
+	// Whether or not this is a profile.
+	isProfile bool
+
+	// Whether or not this is a staged policy.
+	isStaged bool
+
+	// The policy name. This is the raw policy name, and will not contain tier or knp prefixes.
+	name string
+
+	// The policy namespace (if namespaced).
+	namespace string
+
+	// The tier name (or __PROFILE__ for profile match)
+	tier string
 }
 
-// ToFlowLogPolicyStrings converts a PolicyHit to a slice of flow log policy strings. This is used to convert a
-// PIP response to multiple possible entries.
-func (p PolicyHit) ToFlowLogPolicyStrings() []string {
-	// Calculate the set of action strings for this policy.
-	actions := p.Action.ToActionStrings()
-
-	// Tweak the action strings to the policy hit string required for the flow log.
-	for i := range actions {
-		actions[i] = fmt.Sprintf("%d|%s|%s|%s", p.MatchIndex, p.Tier, p.FlowLogName(), actions[i])
-	}
-	return actions
+// Action returns the action for this policy hit. See AllActions() for a list of possible values that could be returned.
+func (p policyHit) Action() Action {
+	return p.action
 }
 
-// ToFlowLogPolicyString returns a single flow policy string. This assumes the action flag contains a single valid
-// action. Returns an empty string if not valid.
-func (p PolicyHit) ToFlowLogPolicyString() string {
-	if s := p.ToFlowLogPolicyStrings(); len(s) == 1 {
-		return s[0]
-	}
-	return ""
-}
-
-// IsKubernetes returns true if this is a k8s network policy or staged network policy
-func (p PolicyHit) IsKubernetes() bool {
-	return strings.HasPrefix(p.Name, knpString)
+// Count returns the number of flow logs that this policy hit was applied to.
+func (p policyHit) Count() int64 {
+	return p.count
 }
 
 // FlowLogName returns the name as it would appear in the flow log. This is unique for a specific policy instance.
-// -  <name>
-// -  staged:<name>
-// -  <namespace>/<name>
-// -  <namespace>/staged:<name>
+// -  <tier>.<name>
+// -  <namespace>/<tier>.<name>
+// -  <namespace>/<tier>.staged:<name>
 // -  <namespace>/knp.default.<name>
 // -  <namespace>/staged:knp.default.<name>
-func (p PolicyHit) FlowLogName() string {
-	if len(p.Namespace) == 0 {
-		if p.Staged {
-			return model.PolicyNamePrefixStaged + p.Name
-		} else {
-			return p.Name
+// -  <namespace>/staged:knp.default.<name>
+// -  __PROFILE__.kns.<namespace>
+func (p policyHit) FlowLogName() string {
+	name := p.name
+
+	if p.isProfile {
+		name = fmt.Sprintf("%s.%s.%s", p.tier, knsPrefix, name)
+	} else if p.isKNP {
+		name = fmt.Sprintf("%s.%s.%s", knpPrefix, p.tier, name)
+		if p.isStaged {
+			name = fmt.Sprintf("%s%s", model.PolicyNamePrefixStaged, name)
 		}
+	} else {
+		if p.isStaged {
+			name = fmt.Sprintf("%s%s", model.PolicyNamePrefixStaged, name)
+		}
+		name = fmt.Sprintf("%s.%s", p.tier, name)
 	}
-	if p.Staged {
-		return p.Namespace + "/" + model.PolicyNamePrefixStaged + p.Name
+
+	if len(p.namespace) > 0 {
+		name = fmt.Sprintf("%s/%s", p.namespace, name)
 	}
-	return p.Namespace + "/" + p.Name
+
+	return name
+}
+
+// FullName returns the full policy name, which includes the tier prefix for calico policy or the "knp.default" prefix
+// for Kubernetes policies.
+func (p policyHit) FullName() string {
+	if p.isProfile {
+		return fmt.Sprintf("%s.%s.%s", p.tier, knsPrefix, p.name)
+	} else if p.isKNP {
+		return fmt.Sprintf("%s.%s.%s", knpPrefix, p.tier, p.name)
+	}
+
+	return fmt.Sprintf("%s.%s", p.tier, p.name)
+}
+
+// Index returns the index for this hit.
+func (p policyHit) Index() int {
+	return p.index
+}
+
+// IsKubernetes returns whether or not this policy is a staged policy.
+func (p policyHit) IsKubernetes() bool {
+	return p.isKNP
+}
+
+// IsProfile returns whether or not this policy is a profile.
+func (p policyHit) IsProfile() bool {
+	return p.isProfile
+}
+
+// IsStaged returns whether or not this policy is a staged policy.
+func (p policyHit) IsStaged() bool {
+	return p.isStaged
+}
+
+// Name returns the raw name of the policy without any tier or knp prefixes.
+func (p policyHit) Name() string {
+	return p.name
+}
+
+// Namespace returns the policy namespace (if namespaced). An empty string is returned if the policy is not namespaced.
+func (p policyHit) Namespace() string {
+	return p.namespace
+}
+
+// parseName parses the given full policy name (which includes tier, knp, or kns prefixes and may or may not contain the
+// staged: pre / mid fix) and sets the appropriate policy hit fields (isKNP, isProfile...).
+func (p *policyHit) parseName(name string) {
+	// kubernetes network policies have the staged prefix before the tier name
+	if strings.HasPrefix(name, model.PolicyNamePrefixStaged) {
+		p.isStaged = true
+		name = strings.TrimPrefix(name, model.PolicyNamePrefixStaged)
+	}
+
+	if strings.HasPrefix(name, fmt.Sprintf("%s.", knpPrefix)) {
+		p.isKNP = true
+		name = strings.TrimPrefix(name, fmt.Sprintf("%s.", knpPrefix))
+	}
+
+	if p.tier != "" {
+		name = strings.TrimPrefix(name, fmt.Sprintf("%s.", p.tier))
+	}
+
+	if strings.HasPrefix(name, fmt.Sprintf("%s.", knsPrefix)) {
+		p.isProfile = true
+		name = strings.TrimPrefix(name, fmt.Sprintf("%s.", knsPrefix))
+	}
+
+	// calico network policies have the staged prefix after the tier name
+	if strings.HasPrefix(name, model.PolicyNamePrefixStaged) {
+		p.isStaged = true
+		name = strings.TrimPrefix(name, model.PolicyNamePrefixStaged)
+	}
+
+	p.name = name
+}
+
+// SetAction sets the action on a copy of the underlying PolicyHit and returns it.
+func (p policyHit) SetAction(action Action) PolicyHit {
+	p.action = action
+	return &p
+}
+
+// SetCount sets the count on a copy of the underlying PolicyHit and returns it.
+func (p policyHit) SetCount(count int64) PolicyHit {
+	p.count = count
+	return &p
+}
+
+// SetIndex sets the index on a copy of the underlying PolicyHit and returns it.
+func (p policyHit) SetIndex(index int) PolicyHit {
+	p.index = index
+	return &p
+}
+
+// Tier returns the tier name (or __PROFILE__ for profile match)
+func (p policyHit) Tier() string {
+	return p.tier
+}
+
+// ToFlowLogPolicyString returns a flow log policy string. If PolicyHitFromFlowLogPolicyString was used to create
+// the PolicyHit the return value of ToFlowLogPolicyString will exactly match the string given to
+// PolicyHitFromFlowLogPolicyString.
+func (p policyHit) ToFlowLogPolicyString() string {
+	return fmt.Sprintf("%d|%s|%s|%s", p.index, p.tier, p.FlowLogName(), p.action)
+}
+
+// NewPolicyHit creates and returns a new PolicyHit. This will mainly be used for PIP, where we "generate" policy hit logs
+// for the user to see how their flows change with new policies.
+func NewPolicyHit(action Action, count int64, index int, isStaged bool, name, namespace, tier string) (PolicyHit, error) {
+	if action == ActionInvalid {
+		return nil, fmt.Errorf("a none empty Action must be provided")
+	}
+
+	if index < 0 {
+		return nil, fmt.Errorf("index must be a positive integer")
+	}
+
+	if count < 0 {
+		return nil, fmt.Errorf("count must be a positive integer")
+	}
+
+	p := &policyHit{
+		action:    action,
+		count:     count,
+		index:     index,
+		isStaged:  isStaged,
+		tier:      tier,
+		namespace: namespace,
+	}
+
+	p.parseName(name)
+
+	return p, nil
 }
 
 // PolicyHitFromFlowLogPolicyString creates a PolicyHit from a flow log policy string.
-func PolicyHitFromFlowLogPolicyString(n string, count int64) (PolicyHit, bool) {
-	p := PolicyHit{
-		Count: count,
-	}
-
-	parts := strings.Split(n, "|")
+func PolicyHitFromFlowLogPolicyString(policyString string, count int64) (PolicyHit, error) {
+	parts := strings.Split(policyString, "|")
 	if len(parts) != 4 {
-		return p, false
+		return nil, fmt.Errorf("invalid policy string '%s': pipe count must equal 4", policyString)
 	}
 
-	// Extract match index.
+	p := &policyHit{
+		count: count,
+	}
+
 	var err error
-	p.MatchIndex, err = strconv.Atoi(parts[0])
+	p.index, err = strconv.Atoi(parts[0])
 	if err != nil {
-		return p, false
+		return nil, fmt.Errorf("invalid policy index: %w", err)
 	}
 
-	// Extract tier
-	p.Tier = parts[1]
+	p.tier = parts[1]
 
-	// Extract namespace and name.
-	nameparts := strings.SplitN(parts[2], "/", 2)
-	if len(nameparts) == 2 {
-		p.Namespace = nameparts[0]
-		p.Name = nameparts[1]
+	var name string
+	nameParts := strings.SplitN(parts[2], "/", 2)
+	if len(nameParts) == 2 {
+		p.namespace = nameParts[0]
+		name = nameParts[1]
 	} else {
-		p.Name = nameparts[0]
+		name = nameParts[0]
 	}
 
-	// Remove the staged prefix, if staged.
-	if strings.HasPrefix(p.Name, model.PolicyNamePrefixStaged) {
-		p.Staged = true
-		p.Name = p.Name[len(model.PolicyNamePrefixStaged):]
+	p.parseName(name)
+
+	p.action = ActionFromString(parts[3])
+	if p.action == ActionInvalid {
+		return nil, fmt.Errorf("invalid action '%s'", parts[3])
 	}
 
-	// Extract action.
-	p.Action = ActionFlagFromString(parts[3])
-	return p, p.Action != 0
+	return p, nil
 }
 
 // SortablePolicyHits is a sortable slice of PolicyHits.
@@ -140,19 +323,19 @@ type SortablePolicyHits []PolicyHit
 func (s SortablePolicyHits) Len() int { return len(s) }
 
 func (s SortablePolicyHits) Less(i, j int) bool {
-	if s[i].MatchIndex != s[j].MatchIndex {
-		return s[i].MatchIndex < s[j].MatchIndex
+	if s[i].Index() != s[j].Index() {
+		return s[i].Index() < s[j].Index()
 	}
-	if s[i].Namespace != s[j].Namespace {
-		return s[i].Namespace < s[j].Namespace
+	if s[i].Namespace() != s[j].Namespace() {
+		return s[i].Namespace() < s[j].Namespace()
 	}
-	if s[i].Name != s[j].Name {
-		return s[i].Name < s[j].Name
+	if s[i].FullName() != s[j].FullName() {
+		return s[i].FullName() < s[j].FullName()
 	}
-	if s[i].Action != s[j].Action {
-		return s[i].Action < s[j].Action
+	if s[i].Action() != s[j].Action() {
+		return s[i].Action() < s[j].Action()
 	}
-	return s[i].Staged && !s[j].Staged
+	return s[i].IsStaged() && !s[j].IsStaged()
 }
 
 func (s SortablePolicyHits) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
@@ -161,7 +344,7 @@ func (s SortablePolicyHits) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s SortablePolicyHits) SortAndRenumber() {
 	sort.Sort(s)
 	for i := range s {
-		s[i].MatchIndex = i
+		s[i] = s[i].SetIndex(i)
 	}
 }
 
@@ -181,10 +364,6 @@ func PolicyHitsEqual(p1, p2 []PolicyHit) bool {
 }
 
 // ObfuscatedPolicyString creates the flow log policy string indicating an obfuscated policy.
-func ObfuscatedPolicyString(matchIdx int, flag ActionFlag) string {
-	var action string
-	if actions := flag.ToActionStrings(); len(actions) == 1 {
-		action = actions[0]
-	}
+func ObfuscatedPolicyString(matchIdx int, action Action) string {
 	return fmt.Sprintf("%d|*|*|%s", matchIdx, action)
 }

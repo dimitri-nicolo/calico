@@ -43,12 +43,12 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with global network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|tier1.gnp|allow", 0)
-			Expect(ok).Should(BeTrue())
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|tier1.gnp|allow", 0)
+			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
 			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
-			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+			Expect(rh.CanListPolicy(ph)).To(Equal(expectedCan))
 		},
 		TableEntry{
 			Description: "Returns false without get access to tiers",
@@ -97,12 +97,12 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with staged global network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|staged:tier1.gnp|allow", 0)
-			Expect(ok).Should(BeTrue())
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|staged:tier1.gnp|allow", 0)
+			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
 			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
-			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+			Expect(rh.CanListPolicy(ph)).To(Equal(expectedCan))
 		},
 		TableEntry{
 			Description: "Returns false without get access to tiers",
@@ -151,12 +151,12 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/tier1.np|allow", 0)
-			Expect(ok).Should(BeTrue())
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/tier1.np|allow", 0)
+			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
 			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
-			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+			Expect(rh.CanListPolicy(ph)).To(Equal(expectedCan))
 		},
 		TableEntry{
 			Description: "Returns false without get access to tiers",
@@ -205,12 +205,12 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with kubernetes network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/knp.default.np|allow", 0)
-			Expect(ok).Should(BeTrue())
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/knp.default.np|allow", 0)
+			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
 			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
-			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+			Expect(rh.CanListPolicy(ph)).To(Equal(expectedCan))
 		},
 		TableEntry{
 			Description: "Returns false without get access to tiers",
@@ -239,12 +239,12 @@ var _ = Describe("FlowHelper tests", func() {
 	DescribeTable(
 		"CanListPolicy with staged kubernetes network policies",
 		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
-			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/staged:knp.default.np|allow", 0)
-			Expect(ok).Should(BeTrue())
+			ph, err := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/staged:knp.default.np|allow", 0)
+			Expect(err).ShouldNot(HaveOccurred())
 
 			expectedCalls(mockAuthorizer)
 			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
-			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+			Expect(rh.CanListPolicy(ph)).To(Equal(expectedCan))
 		},
 		TableEntry{
 			Description: "Returns false without get access to tiers",

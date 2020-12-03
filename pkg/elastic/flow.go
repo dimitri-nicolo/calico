@@ -286,9 +286,12 @@ func GetFlowPoliciesFromAggTerm(t *AggregatedTerm) []api.PolicyHit {
 	var p []api.PolicyHit
 	for k, v := range t.Buckets {
 		if s, ok := k.(string); !ok {
+			log.Errorf("aggregated term policy log is not a string: %#v", s)
 			continue
-		} else if h, ok := api.PolicyHitFromFlowLogPolicyString(s, v); ok {
+		} else if h, err := api.PolicyHitFromFlowLogPolicyString(s, v); err == nil {
 			p = append(p, h)
+		} else {
+			log.WithError(err).Errorf("failed to parse policy log '%s' as PolicyHit", s)
 		}
 	}
 	return p

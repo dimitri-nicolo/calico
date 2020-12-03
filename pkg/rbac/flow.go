@@ -51,7 +51,7 @@ type FlowHelper interface {
 	CanListNetworkSets(namespace string) (bool, error)
 
 	// Whether the user can list the policy represented by the PolicyHit.
-	CanListPolicy(p *api.PolicyHit) (bool, error)
+	CanListPolicy(p api.PolicyHit) (bool, error)
 }
 
 func NewCachedFlowHelper(usr user.Info, authorizer auth.RBACAuthorizer) FlowHelper {
@@ -132,9 +132,9 @@ type flowHelper struct {
 }
 
 // CanListPolicy determines if a policy can be listed.
-func (r flowHelper) CanListPolicy(p *api.PolicyHit) (bool, error) {
-	ns := p.Namespace
-	switch p.Staged {
+func (r flowHelper) CanListPolicy(p api.PolicyHit) (bool, error) {
+	ns := p.Namespace()
+	switch p.IsStaged() {
 	case true:
 		switch {
 		case p.IsKubernetes():
@@ -144,15 +144,15 @@ func (r flowHelper) CanListPolicy(p *api.PolicyHit) (bool, error) {
 		case ns == "":
 			// Staged Calico GlobalNetworkPolicy. Ability to list this is based on tier and namespace.
 			log.Debug("Check staged global network policy")
-			return r.canListTieredPolicy(sgnpHelper, p.Tier, "")
+			return r.canListTieredPolicy(sgnpHelper, p.Tier(), "")
 		default:
 			// Staged Calico NetworkPolicy. Ability to list this is based on tier and namespace.
 			log.Debug("Check staged network policy")
-			return r.canListTieredPolicy(snpHelper, p.Tier, ns)
+			return r.canListTieredPolicy(snpHelper, p.Tier(), ns)
 		}
 	case false:
 		switch {
-		case p.Tier == "__PROFILE__":
+		case p.IsProfile():
 			// Profile matches are always included.
 			log.Debug("Profile match is always included")
 			return true, nil
@@ -164,11 +164,11 @@ func (r flowHelper) CanListPolicy(p *api.PolicyHit) (bool, error) {
 			// Calico GlobalNetworkPolicy. Ability to list this is based on tier and namespace. Drop through to the
 			// tiered policy processing.
 			log.Debug("Check global network policy")
-			return r.canListTieredPolicy(gnpHelper, p.Tier, "")
+			return r.canListTieredPolicy(gnpHelper, p.Tier(), "")
 		default:
 			// Calico NetworkPolicy. Ability to list this is based on tier and namespace.
 			log.Debug("Check network policy")
-			return r.canListTieredPolicy(npHelper, p.Tier, ns)
+			return r.canListTieredPolicy(npHelper, p.Tier(), ns)
 		}
 	}
 
