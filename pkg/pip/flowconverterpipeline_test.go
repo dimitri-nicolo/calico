@@ -204,32 +204,18 @@ func (c alwaysAllowCalculator) CalculateSource(flow *api.Flow) (bool, policycalc
 	before := policycalc.EndpointResponse{
 		Include: true,
 		Action:  flow.ActionFlag,
-		Policies: []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "tier1",
-			Name:       "tier1.policy1",
-			Action:     api.ActionFlagNextTier,
-		}, {
-			MatchIndex: 1,
-			Tier:       "default",
-			Name:       "default.policy1",
-			Action:     api.ActionFlagAllow,
-		}},
+		Policies: []api.PolicyHit{
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+		},
 	}
 	after := policycalc.EndpointResponse{
 		Include: true,
 		Action:  api.ActionFlagAllow,
-		Policies: []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "tier1",
-			Name:       "tier1.policy1",
-			Action:     api.ActionFlagNextTier,
-		}, {
-			MatchIndex: 1,
-			Tier:       "default",
-			Name:       "default.policy1",
-			Action:     api.ActionFlagAllow,
-		}},
+		Policies: []api.PolicyHit{
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+		},
 	}
 	return flow.ActionFlag != api.ActionFlagAllow, before, after
 }
@@ -241,17 +227,10 @@ func (_ alwaysAllowCalculator) CalculateDest(
 		before = policycalc.EndpointResponse{
 			Include: true,
 			Action:  flow.ActionFlag,
-			Policies: []api.PolicyHit{{
-				MatchIndex: 0,
-				Tier:       "tier1",
-				Name:       "tier1.policy1",
-				Action:     api.ActionFlagNextTier,
-			}, {
-				MatchIndex: 1,
-				Tier:       "default",
-				Name:       "default.policy1",
-				Action:     api.ActionFlagAllow,
-			}},
+			Policies: []api.PolicyHit{
+				mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+				mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+			},
 		}
 	}
 	if afterSourceAction != api.ActionFlagDeny {
@@ -259,17 +238,10 @@ func (_ alwaysAllowCalculator) CalculateDest(
 			// Add a destination flow if the original src flow was Deny and now we allow.
 			Include: true,
 			Action:  api.ActionFlagAllow,
-			Policies: []api.PolicyHit{{
-				MatchIndex: 0,
-				Tier:       "tier1",
-				Name:       "tier1.policy1",
-				Action:     api.ActionFlagNextTier,
-			}, {
-				MatchIndex: 1,
-				Tier:       "default",
-				Name:       "default.policy1",
-				Action:     api.ActionFlagAllow,
-			}},
+			Policies: []api.PolicyHit{
+				mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+				mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+			},
 		}
 	}
 	return flow.ActionFlag != api.ActionFlagAllow, before, after
@@ -283,32 +255,18 @@ func (c alwaysDenyCalculator) CalculateSource(flow *api.Flow) (bool, policycalc.
 	before := policycalc.EndpointResponse{
 		Include: true,
 		Action:  flow.ActionFlag,
-		Policies: []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "tier1",
-			Name:       "tier1.policy1",
-			Action:     api.ActionFlagNextTier,
-		}, {
-			MatchIndex: 1,
-			Tier:       "default",
-			Name:       "default.policy1",
-			Action:     api.ActionFlagAllow,
-		}},
+		Policies: []api.PolicyHit{
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+		},
 	}
 	after := policycalc.EndpointResponse{
 		Include: true,
 		Action:  api.ActionFlagDeny,
-		Policies: []api.PolicyHit{{
-			MatchIndex: 0,
-			Tier:       "tier1",
-			Name:       "tier1.policy1",
-			Action:     api.ActionFlagNextTier,
-		}, {
-			MatchIndex: 1,
-			Tier:       "default",
-			Name:       "default.policy1",
-			Action:     api.ActionFlagAllow,
-		}},
+		Policies: []api.PolicyHit{
+			mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+			mustCreatePolicyHit("1|default|default.policy1|allow", 1),
+		},
 	}
 	return flow.ActionFlag != api.ActionFlagDeny, before, after
 }
@@ -320,34 +278,20 @@ func (_ alwaysDenyCalculator) CalculateDest(
 		before = policycalc.EndpointResponse{
 			Include: true,
 			Action:  flow.ActionFlag,
-			Policies: []api.PolicyHit{{
-				MatchIndex: 0,
-				Tier:       "tier1",
-				Name:       "tier1.policy1",
-				Action:     api.ActionFlagDeny,
-			}, {
-				MatchIndex: 1,
-				Tier:       "default",
-				Name:       "default.policy1",
-				Action:     api.ActionFlagDeny,
-			}},
+			Policies: []api.PolicyHit{
+				mustCreatePolicyHit("0|tier1|tier1.policy1|deny", 1),
+				mustCreatePolicyHit("1|default|default.policy1|deny", 1),
+			},
 		}
 	}
 	if afterSourceAction != api.ActionFlagDeny {
 		before = policycalc.EndpointResponse{
 			Include: true,
 			Action:  api.ActionFlagDeny,
-			Policies: []api.PolicyHit{{
-				MatchIndex: 0,
-				Tier:       "tier1",
-				Name:       "tier1.policy1",
-				Action:     api.ActionFlagNextTier,
-			}, {
-				MatchIndex: 1,
-				Tier:       "default",
-				Name:       "default.policy1",
-				Action:     api.ActionFlagDeny,
-			}},
+			Policies: []api.PolicyHit{
+				mustCreatePolicyHit("0|tier1|tier1.policy1|pass", 1),
+				mustCreatePolicyHit("1|default|default.policy1|deny", 1),
+			},
 		}
 	}
 	return flow.ActionFlag != api.ActionFlagDeny, before, after
@@ -840,3 +784,10 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 		}))
 	})
 })
+
+func mustCreatePolicyHit(policyStr string, count int) api.PolicyHit {
+	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(count))
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return policyHit
+}

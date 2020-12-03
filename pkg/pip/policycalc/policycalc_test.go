@@ -560,8 +560,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Policies).To(HaveLen(1))
 		Expect(after.Policies).To(HaveLen(1))
-		Expect(before.Policies[0].Name).To(Equal("__PROFILE__.kns.ns2"))
-		Expect(after.Policies[0].Name).To(Equal("tier1.policy1"))
+		Expect(before.Policies[0].FullName()).To(Equal("__PROFILE__.kns.ns2"))
+		Expect(after.Policies[0].FullName()).To(Equal("tier1.policy1"))
 		Expect(modified).To(BeTrue())
 
 		f.Reporter = api.ReporterTypeDestination
@@ -750,178 +750,69 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	It("Compares policy hits between measured (dirty) and calculated [ignores staged, order and duplicates]", func() {
 		By("Checking staged policies ignored in dirty set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				Action:     api.ActionFlagAllow,
-				MatchIndex: 1,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				Action:     api.ActionFlagAllow,
-				MatchIndex: 2,
-			}, {
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				Action:     api.ActionFlagAllow,
-				MatchIndex: 3,
-			}},
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("3|tier|ns1/tier.staged:policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+			}),
 		).To(BeTrue())
 
 		By("Checking duplicate policies ignored in dirty set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 3,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("3|tier|ns1/tier.policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+			}),
 		).To(BeTrue())
 
 		By("Checking staged policies ignored in calculated set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier2.policy",
-				Tier:       "tier2",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+			}),
 		).To(BeTrue())
 
 		By("Checking policy name not matching")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 3,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier2.policy",
-				Tier:       "tier2",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier2.policy",
-				Tier:       "tier2",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("3|tier|ns1/tier.policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier2|ns1/tier2.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier2|ns1/tier2.policy|allow", 1),
+			}),
 		).To(BeFalse())
 
 		By("Checking action not matching")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 3,
-				Action:     api.ActionFlagDeny,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1)},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
+			}),
 		).To(BeFalse())
 
 		By("Checking conflicting actions in dirty set")
 		Expect(policycalc.PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagDeny,
-			}},
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 3,
-				Action:     api.ActionFlagDeny,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("3|tier|ns1/tier.policy|deny", 1),
+			}),
 		).To(BeFalse())
 
 	})
@@ -929,117 +820,54 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 	It("Compares policy hits for before and after [ignores staged]", func() {
 		By("Checking staged policies ignored in before set")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				Action:     api.ActionFlagAllow,
-				MatchIndex: 1,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				Action:     api.ActionFlagAllow,
-				MatchIndex: 2,
-			}, {
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				Action:     api.ActionFlagAllow,
-				MatchIndex: 3,
-			}},
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("3|tier|ns1/tier.staged:policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+			}),
 		).To(BeTrue())
 
 		By("Checking staged policies ignored in after set")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns1",
-				Name:       "tier2.policy",
-				Tier:       "tier2",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier2|ns1/tier2.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+			}),
 		).To(BeTrue())
 
 		By("Checking policies have to be in the same order")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns2",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     true,
-				Namespace:  "ns2",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}, {
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 2,
-				Action:     api.ActionFlagAllow,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns2/tier.policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns2/tier.staged:policy|allow", 1),
+				mustCreatePolicyHit("2|tier|ns1/tier.policy|allow", 1),
+			}),
 		).To(BeFalse())
 
 		By("Checking policy actions have to be the same")
 		Expect(policycalc.PolicyHitsEqualIgnoringStaged(
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagAllow,
-			}},
-			[]api.PolicyHit{{
-				Staged:     false,
-				Namespace:  "ns1",
-				Name:       "tier.policy",
-				Tier:       "tier",
-				MatchIndex: 1,
-				Action:     api.ActionFlagDeny,
-			}}),
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|allow", 1),
+			},
+			[]api.PolicyHit{
+				mustCreatePolicyHit("1|tier|ns1/tier.policy|deny", 1),
+			}),
 		).To(BeFalse())
 	})
 })
+
+func mustCreatePolicyHit(policyStr string, count int) api.PolicyHit {
+	policyHit, err := api.PolicyHitFromFlowLogPolicyString(policyStr, int64(count))
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return policyHit
+}

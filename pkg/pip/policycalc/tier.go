@@ -485,35 +485,44 @@ func addPolicyToResponse(r *EndpointResponse, tier, namespace, name string, flag
 	var matchIndex int
 	if len(r.Policies) > 0 {
 		lastPolicy := r.Policies[len(r.Policies)-1]
-		matchIndex = lastPolicy.MatchIndex
-		if lastPolicy.Tier != tier || lastPolicy.Namespace != namespace || lastPolicy.Name != name || lastPolicy.Staged != staged {
+		matchIndex = lastPolicy.Index()
+		if lastPolicy.Tier() != tier || lastPolicy.Namespace() != namespace || lastPolicy.FullName() != name || lastPolicy.IsStaged() != staged {
 			matchIndex++
 		}
 	}
 
-	r.Policies = append(r.Policies, api.PolicyHit{
-		MatchIndex: matchIndex,
-		Tier:       tier,
-		Name:       name,
-		Namespace:  namespace,
-		Staged:     staged,
-		Action:     flags,
-	})
+	for _, actionStr := range flags.ToActionStrings() {
+		action := api.ActionFromString(actionStr)
+		if action == api.ActionInvalid {
+			log.Errorf("flag converted to invalid action")
+			continue
+		}
+
+		newPolicyHit, err := api.NewPolicyHit(action, 0, matchIndex, staged, name, namespace, tier)
+		if err != nil {
+			log.WithError(err).Errorf("failed to create new policy hit")
+			continue
+		}
+
+		r.Policies = append(r.Policies, newPolicyHit)
+	}
 }
 
 // getFlagsFromFlowLog extracts the policy action flag from the flow log data.
 func getFlagsFromFlowLog(flowLogName string, flow *api.Flow) (api.ActionFlag, bool) {
-	var flagsFromFlowLog api.ActionFlag
+	var policyAction api.Action
 	for _, p := range flow.Policies {
 		// We have a match if the policy name (which will include the staged: for staged policies) is the same.
 		if p.FlowLogName() == flowLogName {
-			thisActionFlag := p.Action
-			log.Debugf("Policy %s in flow log has action flags %d", p.Name, thisActionFlag)
-			if flagsFromFlowLog != 0 && flagsFromFlowLog != thisActionFlag {
+			thisActionFlag := p.Action()
+			log.Debugf("Policy %s in flow log has action flags %s", p.Name(), thisActionFlag)
+			if policyAction != api.ActionInvalid && policyAction != thisActionFlag {
 				return 0, false
 			}
-			flagsFromFlowLog = thisActionFlag
+			policyAction = thisActionFlag
 		}
 	}
-	return flagsFromFlowLog, flagsFromFlowLog != 0
+
+	policyActionFlag := api.ActionFlagFromString(string(policyAction))
+	return policyActionFlag, policyActionFlag != 0
 }

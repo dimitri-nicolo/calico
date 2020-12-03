@@ -9,7 +9,7 @@ replace (
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201116151154-7966ce4c6046
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201116185717-b66b4f63504a
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20201124233520-d4b5ad65a5a6
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20201124222909-8383094e9e76
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20201203175358-0a9869301ab3
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -48,7 +48,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/apiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
 	github.com/tigera/compliance v0.0.0-20201124233520-d4b5ad65a5a6
-	github.com/tigera/lma v0.0.0-20201124222909-8383094e9e76
+	github.com/tigera/lma v0.0.0-20201203175016-2415e2d39219
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.18.12
 	k8s.io/apimachinery v0.18.12
