@@ -3,6 +3,7 @@
 package authorization
 
 import (
+	"context"
 	"time"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
@@ -174,14 +175,16 @@ func (c *authorizationController) initializeRoleMappingSynchronizer(stop chan st
 
 // initializeRolesCache creates and fills the rbaccache.ClusterRoleCache with the available ClusterRoles and ClusterRoleBindings.
 func initializeRolesCache(k8sCLI kubernetes.Interface) (rbaccache.ClusterRoleCache, error) {
+	ctx := context.Background()
+
 	clusterRolesCache := rbaccache.NewClusterRoleCache([]string{rbacv1.UserKind, rbacv1.GroupKind}, []string{"lma.tigera.io"})
 
-	clusterRoleBindings, err := k8sCLI.RbacV1().ClusterRoleBindings().List(metav1.ListOptions{})
+	clusterRoleBindings, err := k8sCLI.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	clusterRoles, err := k8sCLI.RbacV1().ClusterRoles().List(metav1.ListOptions{})
+	clusterRoles, err := k8sCLI.RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

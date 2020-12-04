@@ -85,7 +85,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 		// Wait for the apiserver to be available.
 		Eventually(func() error {
-			_, err := k8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 			return err
 		}, 30*time.Second, 1*time.Second).Should(BeNil())
 
@@ -185,7 +185,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 					Name: kNodeName,
 				},
 			}
-			_, err := k8sClient.CoreV1().Nodes().Create(kn)
+			_, err := k8sClient.CoreV1().Nodes().Create(context.Background(), kn, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			cn := api.NewNode()
 			cn.Name = cNodeName
@@ -201,7 +201,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 			_, err = calicoClient.Nodes().Create(context.Background(), cn, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			err = k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kNodeName, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() *api.Node {
 				node, _ := calicoClient.Nodes().Get(context.Background(), cNodeName, options.GetOptions{})
@@ -215,7 +215,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 					Name: kNodeName,
 				},
 			}
-			_, err := k8sClient.CoreV1().Nodes().Create(kn)
+			_, err := k8sClient.CoreV1().Nodes().Create(context.Background(), kn, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			cn := &api.Node{
@@ -234,7 +234,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 			_, err = calicoClient.Nodes().Create(context.Background(), cn, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			err = k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kNodeName, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Consistently(func() *api.Node {
 				node, _ := calicoClient.Nodes().Get(context.Background(), cNodeName, options.GetOptions{})
@@ -269,7 +269,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 					Name: kNodeName,
 				},
 			}
-			_, err := k8sClient.CoreV1().Nodes().Create(kn)
+			_, err := k8sClient.CoreV1().Nodes().Create(context.Background(), kn, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create the node object in Calico's datastore.
@@ -445,7 +445,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Delete the node. This is expected to trigger removal of all the above resources.
-			err = k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kNodeName, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Check that the node is removed from Calico
@@ -508,7 +508,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 				},
 				Spec: v1.NamespaceSpec{},
 			}
-			_, err := k8sClient.CoreV1().Namespaces().Create(ns)
+			_, err := k8sClient.CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() *api.Profile {
 				profile, _ := calicoClient.Profiles().Get(context.Background(), profName, options.GetOptions{})
@@ -565,7 +565,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 				},
 			}
 			Eventually(func() error {
-				_, err := k8sClient.CoreV1().ServiceAccounts(nsName).Create(sa)
+				_, err := k8sClient.CoreV1().ServiceAccounts(nsName).Create(context.Background(),
+					sa, metav1.CreateOptions{})
 				return err
 			}, time.Second*10, 500*time.Millisecond).ShouldNot(HaveOccurred())
 
@@ -646,7 +647,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 			// Create the NP.
 			Eventually(func() error {
-				_, err := k8sClient.NetworkingV1().NetworkPolicies(policyNamespace).Create(np)
+				_, err := k8sClient.NetworkingV1().NetworkPolicies(policyNamespace).Create(context.Background(),
+					np, metav1.CreateOptions{})
 				return err
 			}, time.Second*5).ShouldNot(HaveOccurred())
 
@@ -692,7 +694,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 		It("should delete policies when they are deleted from the Kubernetes API", func() {
 			By("deleting the policy", func() {
-				err := k8sClient.NetworkingV1().NetworkPolicies(policyNamespace).Delete(policyName, &metav1.DeleteOptions{})
+				err := k8sClient.NetworkingV1().NetworkPolicies(policyNamespace).Delete(context.Background(),
+					policyName, metav1.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -746,7 +749,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 			// Create the NP.
 			Eventually(func() error {
-				_, err := k8sClient.NetworkingV1().NetworkPolicies(policyNamespace).Create(np)
+				_, err := k8sClient.NetworkingV1().NetworkPolicies(policyNamespace).Create(context.Background(),
+					np, metav1.CreateOptions{})
 				return err
 			}, time.Second*5).ShouldNot(HaveOccurred())
 
@@ -813,7 +817,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 			By("creating a Pod in the k8s API", func() {
 				Eventually(func() error {
-					_, err := k8sClient.CoreV1().Pods("default").Create(&pod)
+					_, err := k8sClient.CoreV1().Pods("default").Create(context.Background(),
+						&pod, metav1.CreateOptions{})
 					return err
 				}, "20s", "2s").ShouldNot(HaveOccurred())
 			})
@@ -821,7 +826,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 			By("updating the pod's status to be running", func() {
 				pod.Status.PodIP = "192.168.1.1"
 				pod.Status.Phase = v1.PodRunning
-				_, err := k8sClient.CoreV1().Pods("default").UpdateStatus(&pod)
+				_, err := k8sClient.CoreV1().Pods("default").UpdateStatus(context.Background(),
+					&pod, metav1.UpdateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -860,11 +866,12 @@ var _ = Describe("kube-controllers FV tests", func() {
 			By("updating the pod's labels to trigger a cache update", func() {
 				// Definitively trigger a pod controller cache update by updating the pod's labels
 				// in the Kubernetes API. This ensures the controller has the cached WEP with container-id-1.
-				podNow, err := k8sClient.CoreV1().Pods("default").Get(podName, metav1.GetOptions{})
+				podNow, err := k8sClient.CoreV1().Pods("default").Get(context.Background(), podName, metav1.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				pod = *podNow
 				pod.Labels["foo"] = "label2"
-				_, err = k8sClient.CoreV1().Pods("default").Update(&pod)
+				_, err = k8sClient.CoreV1().Pods("default").Update(context.Background(),
+					&pod, metav1.UpdateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -906,11 +913,13 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 			By("updating the pod's labels a second time to trigger a datastore sync", func() {
 				// Trigger a pod 'update' in the pod controller by updating the pod's labels.
-				podNow, err := k8sClient.CoreV1().Pods("default").Get(podName, metav1.GetOptions{})
+				podNow, err := k8sClient.CoreV1().Pods("default").Get(context.Background(),
+					podName, metav1.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				pod = *podNow
 				pod.Labels["foo"] = "label3"
-				_, err = k8sClient.CoreV1().Pods(podNamespace).Update(&pod)
+				_, err = k8sClient.CoreV1().Pods(podNamespace).Update(context.Background(),
+					&pod, metav1.UpdateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -960,17 +969,18 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 		By("creating a Pod in the k8s API", func() {
 			Eventually(func() error {
-				_, err := k8sClient.CoreV1().Pods("default").Create(&pod)
+				_, err := k8sClient.CoreV1().Pods("default").Create(context.Background(),
+					&pod, metav1.CreateOptions{})
 				return err
 			}, "20s", "2s").ShouldNot(HaveOccurred())
 		})
 
 		By("updating that pod's labels", func() {
-			podNow, err := k8sClient.CoreV1().Pods("default").Get(podName, metav1.GetOptions{})
+			podNow, err := k8sClient.CoreV1().Pods("default").Get(context.Background(), podName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			pod = *podNow
 			pod.Labels["foo"] = "label2"
-			_, err = k8sClient.CoreV1().Pods("default").Update(&pod)
+			_, err = k8sClient.CoreV1().Pods("default").Update(context.Background(), &pod, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 

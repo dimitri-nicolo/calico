@@ -78,7 +78,7 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 
 		// Wait for the apiserver to be available.
 		Eventually(func() error {
-			_, err := k8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 			return err
 		}, 30*time.Second, 1*time.Second).Should(BeNil())
 
@@ -120,7 +120,7 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 
 		// Create a kubernetes node.
 		kn := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: kNodeName}}
-		_, err := k8sClient.CoreV1().Nodes().Create(kn)
+		_, err := k8sClient.CoreV1().Nodes().Create(context.Background(), kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create a Calico node with a reference to it.
@@ -141,9 +141,9 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		// Create and delete an unrelated node. This should trigger the controller
 		// to do a sync.
 		kn2 := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "other-node"}}
-		_, err = k8sClient.CoreV1().Nodes().Create(kn2)
+		_, err = k8sClient.CoreV1().Nodes().Create(context.Background(), kn2, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.CoreV1().Nodes().Delete(kn2.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn2.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// The IPAM allocation should be untouched, since the Kubernetes node which is bound to
@@ -153,7 +153,7 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		}, 5*time.Second, 1*time.Second).ShouldNot(HaveOccurred())
 
 		// Delete the Kubernetes node with the allocation.
-		err = k8sClient.CoreV1().Nodes().Delete(kn.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Now the IP should have been cleaned up.
@@ -171,7 +171,7 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 
 		// Create a kubernetes node.
 		kn := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: commonNodeName}}
-		_, err := k8sClient.CoreV1().Nodes().Create(kn)
+		_, err := k8sClient.CoreV1().Nodes().Create(context.Background(), kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create a Calico node without a node reference. Be extra tricky, by naming the calico node the
@@ -192,9 +192,9 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		// Create and delete an unrelated Kubernetes node. This should trigger the controller
 		// to do a sync.
 		kn2 := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "other-node"}}
-		_, err = k8sClient.CoreV1().Nodes().Create(kn2)
+		_, err = k8sClient.CoreV1().Nodes().Create(context.Background(), kn2, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.CoreV1().Nodes().Delete(kn2.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn2.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// The IPAM allocation should be untouched.
@@ -203,7 +203,7 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		}, 5*time.Second, 1*time.Second).ShouldNot(HaveOccurred())
 
 		// Delete the Kubernetes node with the same name as the Calico node.
-		err = k8sClient.CoreV1().Nodes().Delete(kn.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// The IPAM allocation should still be untouched.
@@ -218,9 +218,9 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		// Create and delete an unrelated Kubernetes node. This should trigger the controller
 		// to do a sync.
 		// TODO: Right now we only trigger the controller off of k8s node events, not Calico node events.
-		_, err = k8sClient.CoreV1().Nodes().Create(kn2)
+		_, err = k8sClient.CoreV1().Nodes().Create(context.Background(), kn2, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.CoreV1().Nodes().Delete(kn2.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn2.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// The IPAM allocation should still be untouched.
@@ -236,7 +236,7 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		// Create a kubernetes node.
 		commonNodeName := "common-node-name"
 		kn := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: commonNodeName}}
-		_, err := k8sClient.CoreV1().Nodes().Create(kn)
+		_, err := k8sClient.CoreV1().Nodes().Create(context.Background(), kn, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Allocate an IP address on a node that doesn't exist.
@@ -250,9 +250,9 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		// Create and delete an unrelated Kubernetes node. This should trigger the controller
 		// to do a sync.
 		kn2 := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "other-node"}}
-		_, err = k8sClient.CoreV1().Nodes().Create(kn2)
+		_, err = k8sClient.CoreV1().Nodes().Create(context.Background(), kn2, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.CoreV1().Nodes().Delete(kn2.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn2.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Now the allocation should be cleaned up.
@@ -277,9 +277,9 @@ var _ = Describe("kube-controllers IPAM FV tests (etcd mode)", func() {
 		// Create and delete an unrelated Kubernetes node. This should trigger the controller
 		// to do a sync.
 		kn2 := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "other-node"}}
-		_, err = k8sClient.CoreV1().Nodes().Create(kn2)
+		_, err = k8sClient.CoreV1().Nodes().Create(context.Background(), kn2, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.CoreV1().Nodes().Delete(kn2.Name, nil)
+		err = k8sClient.CoreV1().Nodes().Delete(context.Background(), kn2.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// The IP should have been cleaned up since it is not attached to any Kubernetes or Calico node.

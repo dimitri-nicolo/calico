@@ -77,7 +77,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 
 		// Wait for the apiserver to be available.
 		Eventually(func() error {
-			_, err := k8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 			return err
 		}, 30*time.Second, 1*time.Second).Should(BeNil())
 
@@ -199,23 +199,29 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			nodeC := "node-c"
 
 			// Create the nodes in the Kubernetes API.
-			_, err := k8sClient.CoreV1().Nodes().Create(&v1.Node{
-				TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
-				ObjectMeta: metav1.ObjectMeta{Name: nodeA},
-				Spec:       v1.NodeSpec{},
-			})
+			_, err := k8sClient.CoreV1().Nodes().Create(context.Background(),
+				&v1.Node{
+					TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: nodeA},
+					Spec:       v1.NodeSpec{},
+				},
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = k8sClient.CoreV1().Nodes().Create(&v1.Node{
-				TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
-				ObjectMeta: metav1.ObjectMeta{Name: nodeB},
-				Spec:       v1.NodeSpec{},
-			})
+			_, err = k8sClient.CoreV1().Nodes().Create(context.Background(),
+				&v1.Node{
+					TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: nodeB},
+					Spec:       v1.NodeSpec{},
+				},
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = k8sClient.CoreV1().Nodes().Create(&v1.Node{
-				TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
-				ObjectMeta: metav1.ObjectMeta{Name: nodeC},
-				Spec:       v1.NodeSpec{},
-			})
+			_, err = k8sClient.CoreV1().Nodes().Create(context.Background(),
+				&v1.Node{
+					TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: nodeC},
+					Spec:       v1.NodeSpec{},
+				},
+				metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Allocate a pod IP address and thus a block and affinity to NodeA.
@@ -293,7 +299,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			// Deleting NodeB should clean up the allocations associated with the node, as well as the
 			// affinity, but should leave the block intact since there are still allocations from another
 			// node.
-			err = k8sClient.CoreV1().Nodes().Delete(nodeB, nil)
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), nodeB, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() error {
 				if err := assertIPsWithHandle(calicoClient.IPAM(), handleA, 1); err != nil {
@@ -317,7 +323,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 
 			// Deleting NodeC should clean up the second and third blocks since both node B and C
 			// are now gone.
-			err = k8sClient.CoreV1().Nodes().Delete(nodeC, nil)
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), nodeC, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() error {
 				if err := assertIPsWithHandle(calicoClient.IPAM(), handleC, 0); err != nil {
@@ -333,7 +339,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			}, time.Second*60, 500*time.Millisecond).Should(BeNil())
 
 			// Deleting NodeA should clean up the final block and the remaining allocations within.
-			err = k8sClient.CoreV1().Nodes().Delete(nodeA, nil)
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), nodeA, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() error {
 				if err := assertIPsWithHandle(calicoClient.IPAM(), handleA, 0); err != nil {
@@ -347,6 +353,82 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 				}
 				return nil
 			}, time.Second*60, 500*time.Millisecond).Should(BeNil())
+
+			Eventually(func() error {
+				// Assert all IPAM data is removed now.
+				kvps, err := bc.List(context.Background(), model.BlockListOptions{}, "")
+				if err != nil {
+					return err
+				} else if len(kvps.KVPairs) != 0 {
+					return fmt.Errorf("Expected no blocks but there are some")
+				}
+				kvps, err = bc.List(context.Background(), model.BlockAffinityListOptions{}, "")
+				if err != nil {
+					return err
+				} else if len(kvps.KVPairs) != 0 {
+					return fmt.Errorf("Expected no affinities but there are some")
+				}
+				kvps, err = bc.List(context.Background(), model.IPAMHandleListOptions{}, "")
+				if err != nil {
+					return err
+				} else if len(kvps.KVPairs) != 0 {
+					return fmt.Errorf("Expected no handles but there are some")
+				}
+				return nil
+			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
+		})
+
+		// This is a test for a specific bug which was fixed by https://github.com/projectcalico/libcalico-go/pull/1345
+		It("should handle improperly formatted handle IDs", func() {
+			nodeA := "node-a"
+
+			// Create the nodes in the Kubernetes API.
+			_, err := k8sClient.CoreV1().Nodes().Create(context.Background(),
+				&v1.Node{
+					TypeMeta:   metav1.TypeMeta{Kind: "Node", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: nodeA},
+					Spec:       v1.NodeSpec{},
+				},
+				metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Allocate a pod IP address and thus a block and affinity to NodeA.
+			handleA := "handleA"
+			attrs := map[string]string{"node": nodeA, "pod": "pod-a", "namespace": "default"}
+			err = calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
+				IP: net.MustParseIP("192.168.0.1"), HandleID: &handleA, Attrs: attrs, Hostname: nodeA,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Expect the correct blocks to exist as a result of the IPAM allocation above.
+			blocks, err := bc.List(context.Background(), model.BlockListOptions{}, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(blocks.KVPairs)).To(Equal(1))
+			affs, err := bc.List(context.Background(), model.BlockAffinityListOptions{Host: nodeA}, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(affs.KVPairs)).To(Equal(1))
+
+			// Now, modify the allocation so that the data is malformed, matching the issue under test.
+			// See https://github.com/projectcalico/libcalico-go/pull/1345
+			kvp := blocks.KVPairs[0]
+			b := kvp.Value.(*model.AllocationBlock)
+			malformedHandle := fmt.Sprintf("%s\r\neth0", *b.Attributes[0].AttrPrimary)
+			blocks.KVPairs[0].Value.(*model.AllocationBlock).Attributes[0].AttrPrimary = &malformedHandle
+			_, err = bc.Update(context.Background(), blocks.KVPairs[0])
+			Expect(err).NotTo(HaveOccurred())
+
+			// Deleting NodeA should clean up all IPAM data.
+			err = k8sClient.CoreV1().Nodes().Delete(context.Background(), nodeA, metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				if err := assertIPsWithHandle(calicoClient.IPAM(), handleA, 0); err != nil {
+					return err
+				}
+				if err := assertNumBlocks(bc, 0); err != nil {
+					return err
+				}
+				return nil
+			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
 
 			Eventually(func() error {
 				// Assert all IPAM data is removed now.

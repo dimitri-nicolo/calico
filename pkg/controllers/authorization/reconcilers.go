@@ -3,6 +3,8 @@
 package authorization
 
 import (
+	"context"
+
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,7 +25,7 @@ func (r *clusterRoleReconciler) Reconcile(namespacedName types.NamespacedName) e
 	typ := resourceUpdated
 	clusterRoleName := namespacedName.Name
 
-	clusterRole, err := r.k8sCLI.RbacV1().ClusterRoles().Get(clusterRoleName, metav1.GetOptions{})
+	clusterRole, err := r.k8sCLI.RbacV1().ClusterRoles().Get(context.Background(), clusterRoleName, metav1.GetOptions{})
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
 			return err
@@ -45,7 +47,7 @@ func (r *clusterRoleBindingReconciler) Reconcile(namespacedName types.Namespaced
 	typ := resourceUpdated
 	clusterRoleBindingName := namespacedName.Name
 
-	clusterRoleBinding, err := r.k8sCLI.RbacV1().ClusterRoleBindings().Get(clusterRoleBindingName, metav1.GetOptions{})
+	clusterRoleBinding, err := r.k8sCLI.RbacV1().ClusterRoleBindings().Get(context.Background(), clusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
 			return err

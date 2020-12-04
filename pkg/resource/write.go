@@ -4,6 +4,7 @@
 package resource
 
 import (
+	"context"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,15 +14,17 @@ import (
 // ConfigMap creates or updates the given corev1.ConfigMap using the given kuberenetes.Clientset depending on whether or
 // not the given ConfigMap exists in the k8s cluster
 func WriteConfigMapToK8s(cli kubernetes.Interface, configMap *corev1.ConfigMap) error {
-	if _, err := cli.CoreV1().ConfigMaps(configMap.Namespace).Get(configMap.Name, metav1.GetOptions{}); err != nil {
+	ctx := context.Background()
+
+	if _, err := cli.CoreV1().ConfigMaps(configMap.Namespace).Get(ctx, configMap.Name, metav1.GetOptions{}); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		if _, err := cli.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap); err != nil {
+		if _, err := cli.CoreV1().ConfigMaps(configMap.Namespace).Create(ctx, configMap, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 	} else {
-		if _, err := cli.CoreV1().ConfigMaps(configMap.Namespace).Update(configMap); err != nil {
+		if _, err := cli.CoreV1().ConfigMaps(configMap.Namespace).Update(ctx, configMap, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
@@ -31,15 +34,17 @@ func WriteConfigMapToK8s(cli kubernetes.Interface, configMap *corev1.ConfigMap) 
 // Secret creates or updates the given corev1.Secret using the given kuberenetes.Clientset depending on whether or
 // not the given Secret exists in the k8s cluster
 func WriteSecretToK8s(cli kubernetes.Interface, secret *corev1.Secret) error {
-	if _, err := cli.CoreV1().Secrets(secret.Namespace).Get(secret.Name, metav1.GetOptions{}); err != nil {
+	ctx := context.Background()
+
+	if _, err := cli.CoreV1().Secrets(secret.Namespace).Get(ctx, secret.Name, metav1.GetOptions{}); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		if _, err := cli.CoreV1().Secrets(secret.Namespace).Create(secret); err != nil {
+		if _, err := cli.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 	} else {
-		if _, err := cli.CoreV1().Secrets(secret.Namespace).Update(secret); err != nil {
+		if _, err := cli.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}

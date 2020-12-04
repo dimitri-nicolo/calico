@@ -3,6 +3,7 @@
 package elasticsearch
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 
@@ -16,11 +17,13 @@ import (
 // ClientCredentialsFromK8sCLI uses the given kubernetes.Clientset to retrieve the username, password, and root certificates
 // needed to authenticate with the elasticsearch cluster.
 func ClientCredentialsFromK8sCLI(k8sCLI kubernetes.Interface) (string, string, *x509.CertPool, error) {
-	esSecret, err := k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(resource.ElasticsearchUserSecret, metav1.GetOptions{})
+	ctx := context.Background()
+
+	esSecret, err := k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(ctx, resource.ElasticsearchUserSecret, metav1.GetOptions{})
 	if err != nil {
 		return "", "", nil, err
 	}
-	esPublicCert, err := k8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	esPublicCert, err := k8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchCertSecret, metav1.GetOptions{})
 	if err != nil {
 		return "", "", nil, err
 	}
