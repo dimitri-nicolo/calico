@@ -637,16 +637,23 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		RepinningEnabled: config.BPFMapRepin,
 	}
 
-	if config.FlowLogsCollectProcessInfo {
-		bpfEvnt, err := events.New(bpfMapContext, events.SourcePerfEvents)
+	var (
+		bpfEvnt        events.Events
+		bpfEventPoller *bpfEventPoller
+	)
+
+	if config.BPFEnabled || config.FlowLogsCollectProcessInfo {
+		var err error
+		bpfEvnt, err = events.New(bpfMapContext, events.SourcePerfEvents)
 		if err != nil {
 			log.WithError(err).Panic("Failed to create perf event")
 		}
-		err = startEventPoller(bpfEvnt)
-		if err != nil {
-			log.WithError(err).Panic("Failed to start the event poller")
-		}
-		err = bpf.MountDebugfs()
+
+		bpfEventPoller = newBpfEventPoller(bpfEvnt)
+	}
+
+	if config.FlowLogsCollectProcessInfo {
+		err := bpf.MountDebugfs()
 		if err != nil {
 			log.WithError(err).Panic("Failed to mount debug fs")
 		}
@@ -664,6 +671,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if err != nil {
 			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
 		}
+
+		bpfEventPoller.Register(events.TypeProtoStatsV4, func(e events.Event) {
+			log.WithField("event", e).Debug("Received Protocol stats")
+		})
 	}
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
@@ -997,6 +1008,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.Collector != nil {
 		log.Debug("Stats collection is required, subscribe to nflogs")
 		config.Collector.SubscribeToNflog()
+	}
+
+	if bpfEventPoller != nil {
+		log.Info("Starting BPF event poller")
+		bpfEventPoller.Start()
 	}
 
 	return dp

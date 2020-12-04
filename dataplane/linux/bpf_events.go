@@ -20,25 +20,52 @@ import (
 	"github.com/projectcalico/felix/bpf/events"
 )
 
-func startEventPoller(e events.Events) error {
-	go func() {
-		for {
-			event, err := e.Next()
-			if err != nil {
-				log.WithError(err).Warn("Failed to get next event")
-				continue
-			}
-			if event == nil {
-				continue
-			}
-			switch event.Type() {
-			case events.TypeProtoStatsV4:
-				log.WithField("event", event).Debug("Received Protocol stats")
-			default:
-				log.Warn("Unknown event type")
-				continue
-			}
+type bpfEventSink func(e events.Event)
+
+type bpfEventPoller struct {
+	events events.Events
+	sinks  map[events.Type][]bpfEventSink
+}
+
+func newBpfEventPoller(e events.Events) *bpfEventPoller {
+	return &bpfEventPoller{
+		events: e,
+		sinks:  make(map[events.Type][]bpfEventSink),
+	}
+}
+
+func (p *bpfEventPoller) Register(t events.Type, sink bpfEventSink) {
+	p.sinks[t] = append(p.sinks[t], sink)
+}
+
+func (p *bpfEventPoller) Start() {
+	if len(p.sinks) > 0 {
+		go p.run()
+	} else {
+		log.Warn("No event sinks registered, exiting")
+		p.events.Close()
+	}
+}
+
+func (p *bpfEventPoller) run() {
+	for {
+		event, err := p.events.Next()
+		if err != nil {
+			log.WithError(err).Warn("Failed to get next event")
+			continue
 		}
-	}()
-	return nil
+		if event == nil {
+			continue
+		}
+
+		sinks := p.sinks[event.Type()]
+		if len(sinks) == 0 {
+			log.Warnf("Event type %d without a sink", event.Type())
+			continue
+		}
+
+		for _, sink := range sinks {
+			sink(event)
+		}
+	}
 }
