@@ -152,7 +152,8 @@ $(BUILD_IMAGE_CONTROLLER): bin/controller-$(ARCH) register
 	rm -rf docker-image/controller/bin
 	mkdir -p docker-image/controller/bin
 	cp bin/controller-$(ARCH) docker-image/controller/bin/
-	docker build --pull -t $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller
+	docker build --pull -t snort:local --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/snort/Dockerfile docker-image/snort
+	docker build --pull -t $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller --pull=false
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(BUILD_IMAGE_CONTROLLER):latest
 endif
