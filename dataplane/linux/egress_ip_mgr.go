@@ -21,6 +21,7 @@ import (
 	"github.com/golang-collections/collections/stack"
 
 	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
@@ -70,7 +71,8 @@ type routeTableGenerator interface {
 		netlinkTimeout time.Duration,
 		deviceRouteSourceAddress net.IP,
 		deviceRouteProtocol int,
-		removeExternalRoutes bool) routeTable
+		removeExternalRoutes bool,
+		opRecorder logutils.OpRecorder) routeTable
 }
 
 type routeTableFactory struct {
@@ -84,7 +86,8 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
-	removeExternalRoutes bool) routeTable {
+	removeExternalRoutes bool,
+	opRecorder logutils.OpRecorder) routeTable {
 
 	f.count += 1
 	return routetable.New(interfacePrefixes,
@@ -94,7 +97,8 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 		deviceRouteSourceAddress,
 		deviceRouteProtocol,
 		true,
-		tableIndex)
+		tableIndex,
+		opRecorder)
 }
 
 type routeRulesGenerator interface {
@@ -104,6 +108,7 @@ type routeRulesGenerator interface {
 		tableIndexSet set.Set,
 		updateFunc, removeFunc routerule.RulesMatchFunc,
 		netlinkTimeout time.Duration,
+		recorder logutils.OpRecorder,
 	) routeRules
 }
 
@@ -117,6 +122,7 @@ func (f *routeRulesFactory) NewRouteRules(
 	tableIndexSet set.Set,
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
+	opRecorder logutils.OpRecorder,
 ) routeRules {
 
 	f.count += 1
@@ -126,7 +132,11 @@ func (f *routeRulesFactory) NewRouteRules(
 		tableIndexSet,
 		updateFunc,
 		removeFunc,
-		netlinkTimeout)
+		netlinkTimeout,
+		func() (routerule.HandleIface, error) {
+			return netlink.NewHandle(syscall.NETLINK_ROUTE)
+		},
+		opRecorder)
 
 	if err != nil {
 		// table index has been checked by config.
@@ -185,11 +195,14 @@ type egressIPManager struct {
 	dpConfig Config
 
 	tableIndexSet set.Set
+
+	opRecorder logutils.OpRecorder
 }
 
 func newEgressIPManager(
 	deviceName string,
 	dpConfig Config,
+	opRecorder logutils.OpRecorder,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -213,7 +226,8 @@ func newEgressIPManager(
 	// Create main route table to manage L2 routing rules.
 	l2Table := routetable.New([]string{"^" + deviceName + "$"},
 		4, true, dpConfig.NetlinkTimeout, nil,
-		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC)
+		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
+		opRecorder)
 
 	return newEgressIPManagerWithShims(
 		l2Table,
@@ -224,6 +238,7 @@ func newEgressIPManager(
 		deviceName,
 		dpConfig,
 		nlHandle,
+		opRecorder,
 	)
 }
 
@@ -236,6 +251,7 @@ func newEgressIPManagerWithShims(
 	deviceName string,
 	dpConfig Config,
 	nlHandle netlinkHandle,
+	opRecorder logutils.OpRecorder,
 ) *egressIPManager {
 
 	return &egressIPManager{
@@ -255,6 +271,7 @@ func newEgressIPManagerWithShims(
 		dirtyEgressIPSet:        set.New(),
 		dpConfig:                dpConfig,
 		nlHandle:                nlHandle,
+		opRecorder:              opRecorder,
 	}
 }
 
@@ -469,7 +486,15 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		// Create routerules to manage routing rules.
 		// We create routerule inside CompleteDeferedWork to make sure datastore is in sync and all WEP/EgressIPSet updates
 		// will be processed before routerule's apply() been called.
-		m.routerules = m.rrGenerator.NewRouteRules(4, m.dpConfig.EgressIPRoutingRulePriority, m.tableIndexSet, routerule.RulesMatchSrcFWMarkTable, routerule.RulesMatchSrcFWMark, m.dpConfig.NetlinkTimeout)
+		m.routerules = m.rrGenerator.NewRouteRules(
+			4,
+			m.dpConfig.EgressIPRoutingRulePriority,
+			m.tableIndexSet,
+			routerule.RulesMatchSrcFWMarkTable,
+			routerule.RulesMatchSrcFWMark,
+			m.dpConfig.NetlinkTimeout,
+			m.opRecorder,
+		)
 	}
 
 	if m.dirtyEgressIPSet.Len() > 0 {
@@ -522,7 +547,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 					// Allocate a routetable if it does not exists.
 					m.tableIndexToRouteTable[index] = m.rtGenerator.NewRouteTable([]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
 						4, index, true, m.dpConfig.NetlinkTimeout, nil,
-						m.dpConfig.DeviceRouteProtocol, true)
+						m.dpConfig.DeviceRouteProtocol, true, m.opRecorder)
 					logCxt.WithField("tableindex", index).Info("EgressIPManager allocate new route table.")
 				}
 				m.egressIPSetToTableIndex[id] = index

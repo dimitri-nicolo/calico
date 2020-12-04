@@ -530,7 +530,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		} else if config.RulesConfig.IPIPEnabled {
 			mtu = config.IPIPMTU - VXLANHeaderSize
 		}
-		egressIpMgr := newEgressIPManager("egress.calico", config)
+		egressIpMgr := newEgressIPManager("egress.calico", config, dp.loopSummarizer)
 		go egressIpMgr.KeepVXLANDeviceInSync(mtu, 10*time.Second)
 		dp.RegisterManager(egressIpMgr)
 	} else {

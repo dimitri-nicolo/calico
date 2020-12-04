@@ -11,6 +11,7 @@ import (
 	"github.com/golang-collections/collections/stack"
 
 	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
@@ -71,6 +72,7 @@ var _ = Describe("EgressIPManager", func() {
 			&mockVXLANDataplane{
 				links: []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "egress.calico"}}},
 			},
+			logutils.NewSummarizer("test loop"),
 		)
 
 		err := manager.CompleteDeferredWork()
@@ -601,7 +603,8 @@ func (f *mockRouteTableFactory) NewRouteTable(interfacePrefixes []string,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
-	removeExternalRoutes bool) routeTable {
+	removeExternalRoutes bool,
+	opRecorder logutils.OpRecorder) routeTable {
 
 	table := &mockRouteTable{
 		index:           tableIndex,
@@ -629,6 +632,7 @@ func (f *mockRouteRulesFactory) NewRouteRules(
 	tableIndexSet set.Set,
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
+	opRecorder logutils.OpRecorder,
 ) routeRules {
 	rr := &mockRouteRules{
 		matchForUpdate: routerule.RulesMatchSrcFWMarkTable,
