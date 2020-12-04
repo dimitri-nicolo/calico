@@ -69,6 +69,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 	)
 	wepPortStr := fmt.Sprintf("%d", wepPort)
 	svcPortStr := fmt.Sprintf("%d", svcPort)
+	clusterIP := "10.101.0.10"
 
 	var (
 		infra                      infrastructure.DatastoreInfra
@@ -265,7 +266,6 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 
 		// Create a service that maps to ep2_1. Rather than checking connectivity to the endpoint we'll go via
 		// the service to test the destination service name handling.
-		clusterIP := "10.101.0.10"
 		svcName := "test-service"
 		k8sClient := infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 		tSvc := k8sService(svcName, clusterIP, ep2_1, svcPort, wepPort, 0, "tcp")
@@ -322,7 +322,9 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 				"-j", "DNAT", "--to-destination",
 				ep2_1.IP+":"+wepPortStr)
 		}
+	})
 
+	It("should get expected flow logs", func() {
 		// Describe the connectivity that we now expect.
 		// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
 		cc = &connectivity.Checker{}
@@ -348,9 +350,6 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		for ii := range felixes {
 			felixes[ii].Exec("conntrack", "-F")
 		}
-	})
-
-	It("should get expected flow logs", func() {
 
 		Eventually(func() error {
 			flowTester := metrics.NewFlowTester(felixes, true, true, wepPort)

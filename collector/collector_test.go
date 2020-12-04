@@ -11,6 +11,10 @@ import (
 	"testing"
 	"time"
 
+	kapiv1 "k8s.io/api/core/v1"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -362,11 +366,55 @@ var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
 }
 var ingressPktDenyTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
-var localPkt = &nfnetlink.NflogPacketAggregate{
+var localPktIngress = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
 			Prefix:  defTierDenyIngressNFLOGPrefix,
 			Len:     22,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: nfnetlink.NflogPacketTuple{
+		Src:   localIp1,
+		Dst:   localIp2,
+		Proto: proto_tcp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+	},
+}
+var localPktIngressWithDNAT = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierDenyIngressNFLOGPrefix,
+			Len:     22,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: nfnetlink.NflogPacketTuple{
+		Src:   localIp1,
+		Dst:   localIp2,
+		Proto: proto_tcp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+	},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        localIp2DNAT,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+	},
+	IsDNAT: true,
+}
+
+var localPktEgress = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierAllowEgressNFLOGPrefix,
+			Len:     20,
 			Bytes:   100,
 			Packets: 1,
 		},
@@ -384,6 +432,7 @@ var _ = Describe("NFLOG Datasource", func() {
 	Describe("NFLOG Incoming Packets", func() {
 		// Inject info nflogChan
 		var c *collector
+		var lm *calc.LookupsCache
 		conf := &Config{
 			StatsDumpFilePath:            "/tmp/qwerty",
 			NfNetlinkBufSize:             65535,
@@ -408,7 +457,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm := newMockLookupsCache(epMap, nflogMap, nil)
+			lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
 			c = newCollector(lm, rm, conf).(*collector)
 			go c.startStatsCollectionAndReporting()
 		})
@@ -422,7 +471,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		Describe("Test local to local", func() {
 			It("should receive a single stat update with deny ruleid trace", func() {
 				t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-				c.nfIngressC <- localPkt
+				c.nfIngressC <- localPktIngress
 				Eventually(c.epStats).Should(HaveKey(*t))
 			})
 		})
@@ -600,6 +649,8 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 
 var _ = Describe("Conntrack Datasource", func() {
 	var c *collector
+	var lm *calc.LookupsCache
+	var epMapDelete map[[16]byte]*calc.EndpointData
 	conf := &Config{
 		StatsDumpFilePath:            "/tmp/qwerty",
 		NfNetlinkBufSize:             65535,
@@ -618,6 +669,11 @@ var _ = Describe("Conntrack Datasource", func() {
 			localIp2:  localEd2,
 			remoteIp1: remoteEd1,
 		}
+		epMapDelete = map[[16]byte]*calc.EndpointData{
+			localIp1:  nil,
+			localIp2:  nil,
+			remoteIp1: nil,
+		}
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
@@ -625,7 +681,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupsCache(epMap, nflogMap, nil)
+		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
 		c = newCollector(lm, rm, conf).(*collector)
 	})
 	Describe("Test local destination", func() {
@@ -639,6 +695,18 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
 			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
 		})
+		It("should handle destination becoming non-local by removing entry on next update", func() {
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+
+			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).ShouldNot(HaveKey(*t))
+		})
 	})
 	Describe("Test local source", func() {
 		It("should create a single entry with outbound direction", func() {
@@ -650,6 +718,18 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Packets)))
 			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Bytes)))
 			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Bytes)))
+		})
+		It("should handle source becoming non-local by removing entry on next update", func() {
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			c.handleCtEntry(outCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+
+			// Flag the data as reported, remove endpoints from mock data and send in CT entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			c.handleCtEntry(outCtEntry)
+			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})
 	Describe("Test local source to local destination", func() {
@@ -782,6 +862,74 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered")
 			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, ingressPktAllow)
+			Expect(c.epStats).ShouldNot(HaveKey(*t))
+		})
+	})
+	Describe("Test pre-DNAT handling", func() {
+		It("handle pre-DNAT info on conntrack", func() {
+			By("handling a conntrack update to start tracking stats for tuple (w/ DNAT)")
+			t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			c.handleCtEntry(localCtEntryWithDNAT)
+			Expect(c.epStats).Should(HaveKey(*t))
+
+			// Flagging as expired will attempt to expire the data when NFLOGs and service info are gathered.
+			By("flagging the data as expired")
+			data := c.epStats[*t]
+			data.expired = true
+			Expect(data.isDNAT).Should(BeTrue())
+
+			By("handling nflog updates for destination matching on policy - all policy info is now gathered, but no service")
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, localPktIngress)
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirEgress, localPktEgress)
+			Expect(c.epStats).Should(HaveKey(*t))
+
+			By("creating a matching service for the pre-DNAT cluster IP and port")
+			lm.SetMockData(nil, nil, nil, map[model.ResourceKey]*kapiv1.Service{
+				{Kind: v3.KindK8sService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
+					Ports: []kapiv1.ServicePort{{
+						Name:     "test",
+						Protocol: kapiv1.ProtocolTCP,
+						Port:     int32(dstPortDNAT),
+					}},
+					ClusterIP: "192.168.0.2",
+				},
+				},
+			})
+
+			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, localPktIngress)
+			Expect(c.epStats).ShouldNot(HaveKey(*t))
+		})
+		It("handle pre-DNAT info on nflog update", func() {
+			By("handling egress nflog updates for destination matching on policy - this contains pre-DNAT info")
+			t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, localPktIngressWithDNAT)
+
+			// Flagging as expired will attempt to expire the data when NFLOGs and service info are gathered.
+			By("flagging the data as expired")
+			data := c.epStats[*t]
+			data.expired = true
+			Expect(data.isDNAT).Should(BeTrue())
+
+			By("handling ingree nflog updates for destination matching on policy - all policy info is now gathered, but no service")
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirEgress, localPktEgress)
+			Expect(c.epStats).Should(HaveKey(*t))
+
+			By("creating a matching service for the pre-DNAT cluster IP and port")
+			lm.SetMockData(nil, nil, nil, map[model.ResourceKey]*kapiv1.Service{
+				{Kind: v3.KindK8sService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
+					Ports: []kapiv1.ServicePort{{
+						Name:     "test",
+						Protocol: kapiv1.ProtocolTCP,
+						Port:     int32(dstPortDNAT),
+					}},
+					ClusterIP: "192.168.0.2",
+				},
+				},
+			})
+
+			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, localPktIngress)
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})
@@ -978,7 +1126,7 @@ var _ = Describe("Reporting Metrics", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupsCache(epMap, nflogMap, nil)
+		lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
 		rm.Start()
 		c = newCollector(lm, rm, conf).(*collector)
 		go c.startStatsCollectionAndReporting()
@@ -1127,7 +1275,7 @@ var _ = Describe("DNS logging", func() {
 			remoteIp1: remoteEd1,
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1})
+		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil)
 		c = newCollector(lm, nil, &Config{
 			AgeTimeout:               time.Duration(10) * time.Second,
 			ConntrackPollingInterval: time.Duration(1) * time.Second,
@@ -1154,9 +1302,10 @@ func newMockLookupsCache(
 	em map[[16]byte]*calc.EndpointData,
 	nm map[[64]byte]*calc.RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
+	svcs map[model.ResourceKey]*kapiv1.Service,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()
-	l.SetMockData(em, nm, ns)
+	l.SetMockData(em, nm, ns, svcs)
 	return l
 }
 
@@ -1184,7 +1333,7 @@ var _ = Describe("L7 logging", func() {
 			remoteIp1: remoteEd1,
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1})
+		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil)
 		c = newCollector(lm, nil, &Config{
 			AgeTimeout:               time.Duration(10) * time.Second,
 			ConntrackPollingInterval: time.Duration(1) * time.Second,
@@ -1336,7 +1485,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupsCache(epMap, nflogMap, nil)
+	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
 	c := newCollector(lm, rm, conf).(*collector)
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -1369,7 +1518,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupsCache(epMap, nflogMap, nil)
+	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
 	c := newCollector(lm, rm, conf).(*collector)
 	var tuples []Tuple
 	MaxSrcPort := 1000
