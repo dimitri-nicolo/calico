@@ -18,29 +18,21 @@
 #ifndef __CALI_KPROBE_H__
 #define __CALI_KPROBE_H__
 
-#include <stddef.h>
-#include <stdbool.h>
-#include <linux/in.h>
-#include <linux/ip.h>
-#include <linux/if_ether.h>
-#include <linux/udp.h>
-#include <sys/socket.h>
-
 #include "bpf.h"
 #include "tracing.h"
 
 #define SEND_DATA_INTERVAL 2000000000
 struct __attribute__((__packed__)) calico_kprobe_proto_v4_key {
 	__u32 pid;
-	uint32_t saddr;
-	uint16_t sport;
-	uint32_t daddr;
-	uint16_t dport;
+	__u32 saddr;
+	__u16 sport;
+	__u32 daddr;
+	__u16 dport;
 };
 
 struct calico_kprobe_proto_v4_value {
-	uint32_t txBytes;
-	uint32_t rxBytes;
+	__u32 txBytes;
+	__u32 rxBytes;
 	__u64	timestamp;
 };
 

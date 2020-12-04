@@ -15,13 +15,13 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+#include <linux/in.h>
+
 #include "bpf.h"
 #include "log.h"
 #include "sock.h"
-#include <linux/if_ether.h>
 #include "events.h"
 #include "kprobe.h"
-#include <linux/bpf_perf_event.h>
 
 static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_common *sk_cmn, int bytes, int tx) {
 	__u32 saddr = 0, daddr = 0, pid = 0;
@@ -40,7 +40,7 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 		bpf_probe_read(&daddr, 4, &sk_cmn->skc_daddr);
 		pid = bpf_get_current_pid_tgid() >> 32;
 		ts = bpf_ktime_get_ns();
-		if (family == AF_INET) {
+		if (family == 2 /* AF_INET */) {
 			key.pid = pid;
 			key.saddr = saddr;
 			key.sport = sport;

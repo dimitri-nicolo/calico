@@ -47,8 +47,8 @@ static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
 			.type = 0xdead,
 			.len = sizeof(struct tuple),
 		},
-		.ip_src = be32_to_host(ip->saddr),
-		.ip_dst = be32_to_host(ip->daddr),
+		.ip_src = bpf_ntohl(ip->saddr),
+		.ip_dst = bpf_ntohl(ip->daddr),
 		.proto = ip->protocol,
 	};
 
@@ -56,15 +56,15 @@ static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
 	case IPPROTO_TCP:
 		{
 			struct tcphdr *tcp = (void*)(ip + 1);
-			tp.port_src = be16_to_host(tcp->source);
-			tp.port_dst = be16_to_host(tcp->dest);
+			tp.port_src = bpf_ntohs(tcp->source);
+			tp.port_dst = bpf_ntohs(tcp->dest);
 		}
 		break;
 	case IPPROTO_UDP:
 		{
 			struct udphdr *udp = (void*)(ip + 1);
-			tp.port_src = be16_to_host(udp->source);
-			tp.port_dst = be16_to_host(udp->dest);
+			tp.port_src = bpf_ntohs(udp->source);
+			tp.port_dst = bpf_ntohs(udp->dest);
 		}
 		break;
 	}
