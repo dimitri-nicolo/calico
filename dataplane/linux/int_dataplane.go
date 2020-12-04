@@ -27,8 +27,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/felix/capture"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -36,8 +34,6 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
-
-	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
@@ -51,6 +47,7 @@ import (
 	"github.com/projectcalico/felix/bpf/state"
 	"github.com/projectcalico/felix/bpf/tc"
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -59,6 +56,7 @@ import (
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/labelindex"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -66,6 +64,7 @@ import (
 	"github.com/projectcalico/felix/wireguard"
 	"github.com/projectcalico/libcalico-go/lib/health"
 	lclogutils "github.com/projectcalico/libcalico-go/lib/logutils"
+	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -338,6 +337,8 @@ type InternalDataplane struct {
 	endpointsSourceV4 endpointsSource
 	ipsetsSourceV4    ipsetsSource
 	callbacks         *callbacks
+
+	loopSummarizer *logutils.Summarizer
 }
 
 const (
@@ -400,6 +401,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		domainInfoChanges: make(chan *domainInfoChanged, 100),
 		config:            config,
 		applyThrottle:     throttle.New(10),
+		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
 		stopChan:          stopChan,
 	}
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -420,6 +422,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		BackendMode:           backendMode,
 		LookPathOverride:      config.LookPathOverride,
 		OnStillAlive:          dp.reportHealth,
+		OpRecorder:            dp.loopSummarizer,
 	}
 
 	if config.BPFEnabled && config.BPFKubeProxyIptablesCleanupEnabled {
@@ -491,7 +494,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		featureDetector,
 		iptablesOptions)
 	ipSetsConfigV4 := config.RulesConfig.IPSetConfigV4
-	ipSetsV4 := ipsets.NewIPSets(ipSetsConfigV4)
+	ipSetsV4 := ipsets.NewIPSets(ipSetsConfigV4, dp.loopSummarizer)
 	dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV4)
 	dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV4)
 	dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV4)
@@ -500,13 +503,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.RulesConfig.VXLANEnabled {
 		routeTableVXLAN := routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC)
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
+			dp.loopSummarizer)
 
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
 			routeTableVXLAN,
 			"vxlan.calico",
 			config,
+			dp.loopSummarizer,
 		)
 		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
 		dp.RegisterManager(vxlanManager)
@@ -781,7 +786,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
-		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
+		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC,
+		dp.loopSummarizer)
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -821,7 +827,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				dp.fromDataplane <- &proto.WireguardStatusUpdate{PublicKey: publicKey.String()}
 			}
 			return nil
-		})
+		},
+		dp.loopSummarizer)
 	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard)
 	dp.RegisterManager(dp.wireguardManager) // IPv4-only
 
@@ -869,7 +876,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		)
 
 		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6)
+		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
 		dp.ipSets = append(dp.ipSets, ipSetsV6)
 		dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV6)
 		dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV6)
@@ -878,7 +885,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		routeTableV6 := routetable.New(
 			interfaceRegexes, 6, false, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
+			unix.RT_TABLE_UNSPEC, dp.loopSummarizer)
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
@@ -1730,7 +1738,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 					log.Info("Dataplane updates no longer throttled")
 					beingThrottled = false
 				}
-				log.Info("Applying dataplane updates")
+				log.Debug("Applying dataplane updates")
 				applyStart := time.Now()
 
 				// Actually apply the changes to the dataplane.
@@ -1744,13 +1752,14 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 					// Dataplane is still dirty, record an error.
 					countDataplaneSyncErrors.Inc()
 				}
-				log.WithField("msecToApply", applyTime.Seconds()*1000.0).Info(
-					"Finished applying updates to dataplane.")
+
+				d.loopSummarizer.EndOfIteration(applyTime)
 
 				if !d.doneFirstApply {
 					log.WithField(
 						"secsSinceStart", time.Since(processStartTime).Seconds(),
 					).Info("Completed first update to dataplane.")
+					d.loopSummarizer.RecordOperation("first-update")
 					d.doneFirstApply = true
 					if d.config.PostInSyncCallback != nil {
 						d.config.PostInSyncCallback()

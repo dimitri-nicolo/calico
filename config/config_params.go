@@ -34,6 +34,7 @@ import (
 
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/typha/pkg/discovery"
 )
 
 var (
@@ -1018,6 +1019,13 @@ func (config *Config) SetLoadClientConfigFromEnvironmentFunction(fnc func() (*ap
 func (config *Config) OverrideParam(name, value string) (bool, error) {
 	config.internalOverrides[name] = value
 	return config.UpdateFrom(config.internalOverrides, InternalOverride)
+}
+
+func (config *Config) TyphaDiscoveryOpts() []discovery.Option {
+	return []discovery.Option{
+		discovery.WithAddrOverride(config.TyphaAddr),
+		discovery.WithKubeService(config.TyphaK8sNamespace, config.TyphaK8sServiceName),
+	}
 }
 
 func New() *Config {
