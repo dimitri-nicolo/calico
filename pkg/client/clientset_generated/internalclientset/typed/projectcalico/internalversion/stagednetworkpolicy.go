@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	"time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -23,14 +24,14 @@ type StagedNetworkPoliciesGetter interface {
 
 // StagedNetworkPolicyInterface has methods to work with StagedNetworkPolicy resources.
 type StagedNetworkPolicyInterface interface {
-	Create(*projectcalico.StagedNetworkPolicy) (*projectcalico.StagedNetworkPolicy, error)
-	Update(*projectcalico.StagedNetworkPolicy) (*projectcalico.StagedNetworkPolicy, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*projectcalico.StagedNetworkPolicy, error)
-	List(opts v1.ListOptions) (*projectcalico.StagedNetworkPolicyList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.StagedNetworkPolicy, err error)
+	Create(ctx context.Context, stagedNetworkPolicy *projectcalico.StagedNetworkPolicy, opts v1.CreateOptions) (*projectcalico.StagedNetworkPolicy, error)
+	Update(ctx context.Context, stagedNetworkPolicy *projectcalico.StagedNetworkPolicy, opts v1.UpdateOptions) (*projectcalico.StagedNetworkPolicy, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalico.StagedNetworkPolicy, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalico.StagedNetworkPolicyList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.StagedNetworkPolicy, err error)
 	StagedNetworkPolicyExpansion
 }
 
@@ -49,20 +50,20 @@ func newStagedNetworkPolicies(c *ProjectcalicoClient, namespace string) *stagedN
 }
 
 // Get takes name of the stagedNetworkPolicy, and returns the corresponding stagedNetworkPolicy object, and an error if there is any.
-func (c *stagedNetworkPolicies) Get(name string, options v1.GetOptions) (result *projectcalico.StagedNetworkPolicy, err error) {
+func (c *stagedNetworkPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.StagedNetworkPolicy, err error) {
 	result = &projectcalico.StagedNetworkPolicy{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("stagednetworkpolicies").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of StagedNetworkPolicies that match those selectors.
-func (c *stagedNetworkPolicies) List(opts v1.ListOptions) (result *projectcalico.StagedNetworkPolicyList, err error) {
+func (c *stagedNetworkPolicies) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.StagedNetworkPolicyList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -73,13 +74,13 @@ func (c *stagedNetworkPolicies) List(opts v1.ListOptions) (result *projectcalico
 		Resource("stagednetworkpolicies").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested stagedNetworkPolicies.
-func (c *stagedNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *stagedNetworkPolicies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -90,71 +91,74 @@ func (c *stagedNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, err
 		Resource("stagednetworkpolicies").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a stagedNetworkPolicy and creates it.  Returns the server's representation of the stagedNetworkPolicy, and an error, if there is any.
-func (c *stagedNetworkPolicies) Create(stagedNetworkPolicy *projectcalico.StagedNetworkPolicy) (result *projectcalico.StagedNetworkPolicy, err error) {
+func (c *stagedNetworkPolicies) Create(ctx context.Context, stagedNetworkPolicy *projectcalico.StagedNetworkPolicy, opts v1.CreateOptions) (result *projectcalico.StagedNetworkPolicy, err error) {
 	result = &projectcalico.StagedNetworkPolicy{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("stagednetworkpolicies").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(stagedNetworkPolicy).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a stagedNetworkPolicy and updates it. Returns the server's representation of the stagedNetworkPolicy, and an error, if there is any.
-func (c *stagedNetworkPolicies) Update(stagedNetworkPolicy *projectcalico.StagedNetworkPolicy) (result *projectcalico.StagedNetworkPolicy, err error) {
+func (c *stagedNetworkPolicies) Update(ctx context.Context, stagedNetworkPolicy *projectcalico.StagedNetworkPolicy, opts v1.UpdateOptions) (result *projectcalico.StagedNetworkPolicy, err error) {
 	result = &projectcalico.StagedNetworkPolicy{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("stagednetworkpolicies").
 		Name(stagedNetworkPolicy.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(stagedNetworkPolicy).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the stagedNetworkPolicy and deletes it. Returns an error if one occurs.
-func (c *stagedNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
+func (c *stagedNetworkPolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("stagednetworkpolicies").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *stagedNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *stagedNetworkPolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("stagednetworkpolicies").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched stagedNetworkPolicy.
-func (c *stagedNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.StagedNetworkPolicy, err error) {
+func (c *stagedNetworkPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.StagedNetworkPolicy, err error) {
 	result = &projectcalico.StagedNetworkPolicy{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("stagednetworkpolicies").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

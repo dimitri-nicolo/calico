@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"context"
 	"time"
 
 	"k8s.io/klog"
@@ -34,7 +35,7 @@ func WaitForGlobalNetworkPoliciesToNotExist(client v3calico.ProjectcalicoV3Inter
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for broker %v to not exist", name)
-			_, err := client.GlobalNetworkPolicies().Get(name, metav1.GetOptions{})
+			_, err := client.GlobalNetworkPolicies().Get(context.Background(), name, metav1.GetOptions{})
 			if nil == err {
 				return false, nil
 			}
@@ -54,7 +55,7 @@ func WaitForGlobalNetworkPoliciesToExist(client v3calico.ProjectcalicoV3Interfac
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for serviceClass %v to exist", name)
-			_, err := client.GlobalNetworkPolicies().Get(name, metav1.GetOptions{})
+			_, err := client.GlobalNetworkPolicies().Get(context.Background(), name, metav1.GetOptions{})
 			if nil == err {
 				return true, nil
 			}
@@ -70,7 +71,7 @@ func WaitForTierToNotExist(client v3calico.ProjectcalicoV3Interface, name string
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for serviceClass %v to not exist", name)
-			_, err := client.Tiers().Get(name, metav1.GetOptions{})
+			_, err := client.Tiers().Get(context.Background(), name, metav1.GetOptions{})
 			if nil == err {
 				return false, nil
 			}
@@ -90,7 +91,7 @@ func WaitForTierToExist(client v3calico.ProjectcalicoV3Interface, name string) e
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for serviceClass %v to exist", name)
-			_, err := client.Tiers().Get(name, metav1.GetOptions{})
+			_, err := client.Tiers().Get(context.Background(), name, metav1.GetOptions{})
 			if nil == err {
 				return true, nil
 			}

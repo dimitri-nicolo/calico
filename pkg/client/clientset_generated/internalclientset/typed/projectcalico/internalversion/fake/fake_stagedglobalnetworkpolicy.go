@@ -5,6 +5,8 @@
 package fake
 
 import (
+	"context"
+
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -24,7 +26,7 @@ var stagedglobalnetworkpoliciesResource = schema.GroupVersionResource{Group: "pr
 var stagedglobalnetworkpoliciesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "StagedGlobalNetworkPolicy"}
 
 // Get takes name of the stagedGlobalNetworkPolicy, and returns the corresponding stagedGlobalNetworkPolicy object, and an error if there is any.
-func (c *FakeStagedGlobalNetworkPolicies) Get(name string, options v1.GetOptions) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
+func (c *FakeStagedGlobalNetworkPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(stagedglobalnetworkpoliciesResource, name), &projectcalico.StagedGlobalNetworkPolicy{})
 	if obj == nil {
@@ -34,7 +36,7 @@ func (c *FakeStagedGlobalNetworkPolicies) Get(name string, options v1.GetOptions
 }
 
 // List takes label and field selectors, and returns the list of StagedGlobalNetworkPolicies that match those selectors.
-func (c *FakeStagedGlobalNetworkPolicies) List(opts v1.ListOptions) (result *projectcalico.StagedGlobalNetworkPolicyList, err error) {
+func (c *FakeStagedGlobalNetworkPolicies) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.StagedGlobalNetworkPolicyList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(stagedglobalnetworkpoliciesResource, stagedglobalnetworkpoliciesKind, opts), &projectcalico.StagedGlobalNetworkPolicyList{})
 	if obj == nil {
@@ -55,13 +57,13 @@ func (c *FakeStagedGlobalNetworkPolicies) List(opts v1.ListOptions) (result *pro
 }
 
 // Watch returns a watch.Interface that watches the requested stagedGlobalNetworkPolicies.
-func (c *FakeStagedGlobalNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeStagedGlobalNetworkPolicies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(stagedglobalnetworkpoliciesResource, opts))
 }
 
 // Create takes the representation of a stagedGlobalNetworkPolicy and creates it.  Returns the server's representation of the stagedGlobalNetworkPolicy, and an error, if there is any.
-func (c *FakeStagedGlobalNetworkPolicies) Create(stagedGlobalNetworkPolicy *projectcalico.StagedGlobalNetworkPolicy) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
+func (c *FakeStagedGlobalNetworkPolicies) Create(ctx context.Context, stagedGlobalNetworkPolicy *projectcalico.StagedGlobalNetworkPolicy, opts v1.CreateOptions) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(stagedglobalnetworkpoliciesResource, stagedGlobalNetworkPolicy), &projectcalico.StagedGlobalNetworkPolicy{})
 	if obj == nil {
@@ -71,7 +73,7 @@ func (c *FakeStagedGlobalNetworkPolicies) Create(stagedGlobalNetworkPolicy *proj
 }
 
 // Update takes the representation of a stagedGlobalNetworkPolicy and updates it. Returns the server's representation of the stagedGlobalNetworkPolicy, and an error, if there is any.
-func (c *FakeStagedGlobalNetworkPolicies) Update(stagedGlobalNetworkPolicy *projectcalico.StagedGlobalNetworkPolicy) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
+func (c *FakeStagedGlobalNetworkPolicies) Update(ctx context.Context, stagedGlobalNetworkPolicy *projectcalico.StagedGlobalNetworkPolicy, opts v1.UpdateOptions) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(stagedglobalnetworkpoliciesResource, stagedGlobalNetworkPolicy), &projectcalico.StagedGlobalNetworkPolicy{})
 	if obj == nil {
@@ -81,22 +83,22 @@ func (c *FakeStagedGlobalNetworkPolicies) Update(stagedGlobalNetworkPolicy *proj
 }
 
 // Delete takes name of the stagedGlobalNetworkPolicy and deletes it. Returns an error if one occurs.
-func (c *FakeStagedGlobalNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeStagedGlobalNetworkPolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(stagedglobalnetworkpoliciesResource, name), &projectcalico.StagedGlobalNetworkPolicy{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeStagedGlobalNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(stagedglobalnetworkpoliciesResource, listOptions)
+func (c *FakeStagedGlobalNetworkPolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(stagedglobalnetworkpoliciesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &projectcalico.StagedGlobalNetworkPolicyList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched stagedGlobalNetworkPolicy.
-func (c *FakeStagedGlobalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
+func (c *FakeStagedGlobalNetworkPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.StagedGlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(stagedglobalnetworkpoliciesResource, name, pt, data, subresources...), &projectcalico.StagedGlobalNetworkPolicy{})
 	if obj == nil {

@@ -29,6 +29,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 )
 
@@ -144,6 +145,7 @@ func (o Options) GetStorage(
 	newListFunc func() runtime.Object,
 	getAttrsFunc storage.AttrFunc,
 	trigger storage.IndexerFuncs,
+	indexers *cache.Indexers,
 ) (registry.DryRunnableStorage, factory.DestroyFunc, error) {
 	if o.storageType == StorageTypeEtcd {
 		etcdRESTOpts := o.EtcdOptions.RESTOptions
@@ -155,6 +157,7 @@ func (o Options) GetStorage(
 			newListFunc,
 			getAttrsFunc,
 			trigger,
+			indexers,
 		)
 		if err != nil {
 			klog.Warning("error (%s)", err)

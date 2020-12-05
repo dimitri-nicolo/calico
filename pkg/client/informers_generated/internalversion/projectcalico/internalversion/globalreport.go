@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredGlobalReportInformer(client internalclientset.Interface, resyncP
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().GlobalReports().List(options)
+				return client.Projectcalico().GlobalReports().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().GlobalReports().Watch(options)
+				return client.Projectcalico().GlobalReports().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.GlobalReport{},

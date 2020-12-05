@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -27,7 +28,7 @@ import (
 
 func updateLegacyStructures(clientset *kubernetes.Clientset) {
 	for {
-		pods, err := clientset.CoreV1().Pods("").List(metav1.ListOptions{})
+		pods, err := clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			panic(err.Error())
 		}

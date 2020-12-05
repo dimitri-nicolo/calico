@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredGlobalThreatFeedInformer(client internalclientset.Interface, res
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().GlobalThreatFeeds().List(options)
+				return client.Projectcalico().GlobalThreatFeeds().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().GlobalThreatFeeds().Watch(options)
+				return client.Projectcalico().GlobalThreatFeeds().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.GlobalThreatFeed{},

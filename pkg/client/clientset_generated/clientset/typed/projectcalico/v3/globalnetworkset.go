@@ -5,6 +5,7 @@
 package v3
 
 import (
+	"context"
 	"time"
 
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
@@ -23,14 +24,14 @@ type GlobalNetworkSetsGetter interface {
 
 // GlobalNetworkSetInterface has methods to work with GlobalNetworkSet resources.
 type GlobalNetworkSetInterface interface {
-	Create(*v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error)
-	Update(*v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v3.GlobalNetworkSet, error)
-	List(opts v1.ListOptions) (*v3.GlobalNetworkSetList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkSet, err error)
+	Create(ctx context.Context, globalNetworkSet *v3.GlobalNetworkSet, opts v1.CreateOptions) (*v3.GlobalNetworkSet, error)
+	Update(ctx context.Context, globalNetworkSet *v3.GlobalNetworkSet, opts v1.UpdateOptions) (*v3.GlobalNetworkSet, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.GlobalNetworkSet, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalNetworkSetList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalNetworkSet, err error)
 	GlobalNetworkSetExpansion
 }
 
@@ -47,19 +48,19 @@ func newGlobalNetworkSets(c *ProjectcalicoV3Client) *globalNetworkSets {
 }
 
 // Get takes name of the globalNetworkSet, and returns the corresponding globalNetworkSet object, and an error if there is any.
-func (c *globalNetworkSets) Get(name string, options v1.GetOptions) (result *v3.GlobalNetworkSet, err error) {
+func (c *globalNetworkSets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.GlobalNetworkSet, err error) {
 	result = &v3.GlobalNetworkSet{}
 	err = c.client.Get().
 		Resource("globalnetworksets").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of GlobalNetworkSets that match those selectors.
-func (c *globalNetworkSets) List(opts v1.ListOptions) (result *v3.GlobalNetworkSetList, err error) {
+func (c *globalNetworkSets) List(ctx context.Context, opts v1.ListOptions) (result *v3.GlobalNetworkSetList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -69,13 +70,13 @@ func (c *globalNetworkSets) List(opts v1.ListOptions) (result *v3.GlobalNetworkS
 		Resource("globalnetworksets").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested globalNetworkSets.
-func (c *globalNetworkSets) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *globalNetworkSets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -85,66 +86,69 @@ func (c *globalNetworkSets) Watch(opts v1.ListOptions) (watch.Interface, error) 
 		Resource("globalnetworksets").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a globalNetworkSet and creates it.  Returns the server's representation of the globalNetworkSet, and an error, if there is any.
-func (c *globalNetworkSets) Create(globalNetworkSet *v3.GlobalNetworkSet) (result *v3.GlobalNetworkSet, err error) {
+func (c *globalNetworkSets) Create(ctx context.Context, globalNetworkSet *v3.GlobalNetworkSet, opts v1.CreateOptions) (result *v3.GlobalNetworkSet, err error) {
 	result = &v3.GlobalNetworkSet{}
 	err = c.client.Post().
 		Resource("globalnetworksets").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(globalNetworkSet).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a globalNetworkSet and updates it. Returns the server's representation of the globalNetworkSet, and an error, if there is any.
-func (c *globalNetworkSets) Update(globalNetworkSet *v3.GlobalNetworkSet) (result *v3.GlobalNetworkSet, err error) {
+func (c *globalNetworkSets) Update(ctx context.Context, globalNetworkSet *v3.GlobalNetworkSet, opts v1.UpdateOptions) (result *v3.GlobalNetworkSet, err error) {
 	result = &v3.GlobalNetworkSet{}
 	err = c.client.Put().
 		Resource("globalnetworksets").
 		Name(globalNetworkSet.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(globalNetworkSet).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the globalNetworkSet and deletes it. Returns an error if one occurs.
-func (c *globalNetworkSets) Delete(name string, options *v1.DeleteOptions) error {
+func (c *globalNetworkSets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("globalnetworksets").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *globalNetworkSets) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *globalNetworkSets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("globalnetworksets").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched globalNetworkSet.
-func (c *globalNetworkSets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
+func (c *globalNetworkSets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
 	result = &v3.GlobalNetworkSet{}
 	err = c.client.Patch(pt).
 		Resource("globalnetworksets").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

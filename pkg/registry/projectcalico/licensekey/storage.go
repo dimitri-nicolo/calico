@@ -91,6 +91,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, e
 		func() runtime.Object { return &calico.LicenseKeyList{} },
 		GetAttrs,
 		nil,
+		nil,
 	)
 	if err != nil {
 		return nil, nil, err

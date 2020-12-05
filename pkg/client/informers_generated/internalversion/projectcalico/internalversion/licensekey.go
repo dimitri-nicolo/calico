@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredLicenseKeyInformer(client internalclientset.Interface, resyncPer
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().LicenseKeys().List(options)
+				return client.Projectcalico().LicenseKeys().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().LicenseKeys().Watch(options)
+				return client.Projectcalico().LicenseKeys().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.LicenseKey{},

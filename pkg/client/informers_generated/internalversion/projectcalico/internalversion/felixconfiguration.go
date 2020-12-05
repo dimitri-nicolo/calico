@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredFelixConfigurationInformer(client internalclientset.Interface, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().FelixConfigurations().List(options)
+				return client.Projectcalico().FelixConfigurations().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().FelixConfigurations().Watch(options)
+				return client.Projectcalico().FelixConfigurations().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.FelixConfiguration{},

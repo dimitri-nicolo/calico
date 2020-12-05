@@ -5,6 +5,8 @@
 package fake
 
 import (
+	"context"
+
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -24,7 +26,7 @@ var authorizationreviewsResource = schema.GroupVersionResource{Group: "projectca
 var authorizationreviewsKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "AuthorizationReview"}
 
 // Get takes name of the authorizationReview, and returns the corresponding authorizationReview object, and an error if there is any.
-func (c *FakeAuthorizationReviews) Get(name string, options v1.GetOptions) (result *projectcalico.AuthorizationReview, err error) {
+func (c *FakeAuthorizationReviews) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.AuthorizationReview, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(authorizationreviewsResource, name), &projectcalico.AuthorizationReview{})
 	if obj == nil {
@@ -34,7 +36,7 @@ func (c *FakeAuthorizationReviews) Get(name string, options v1.GetOptions) (resu
 }
 
 // List takes label and field selectors, and returns the list of AuthorizationReviews that match those selectors.
-func (c *FakeAuthorizationReviews) List(opts v1.ListOptions) (result *projectcalico.AuthorizationReviewList, err error) {
+func (c *FakeAuthorizationReviews) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.AuthorizationReviewList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(authorizationreviewsResource, authorizationreviewsKind, opts), &projectcalico.AuthorizationReviewList{})
 	if obj == nil {
@@ -55,13 +57,13 @@ func (c *FakeAuthorizationReviews) List(opts v1.ListOptions) (result *projectcal
 }
 
 // Watch returns a watch.Interface that watches the requested authorizationReviews.
-func (c *FakeAuthorizationReviews) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeAuthorizationReviews) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(authorizationreviewsResource, opts))
 }
 
 // Create takes the representation of a authorizationReview and creates it.  Returns the server's representation of the authorizationReview, and an error, if there is any.
-func (c *FakeAuthorizationReviews) Create(authorizationReview *projectcalico.AuthorizationReview) (result *projectcalico.AuthorizationReview, err error) {
+func (c *FakeAuthorizationReviews) Create(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.CreateOptions) (result *projectcalico.AuthorizationReview, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(authorizationreviewsResource, authorizationReview), &projectcalico.AuthorizationReview{})
 	if obj == nil {
@@ -71,7 +73,7 @@ func (c *FakeAuthorizationReviews) Create(authorizationReview *projectcalico.Aut
 }
 
 // Update takes the representation of a authorizationReview and updates it. Returns the server's representation of the authorizationReview, and an error, if there is any.
-func (c *FakeAuthorizationReviews) Update(authorizationReview *projectcalico.AuthorizationReview) (result *projectcalico.AuthorizationReview, err error) {
+func (c *FakeAuthorizationReviews) Update(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.UpdateOptions) (result *projectcalico.AuthorizationReview, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(authorizationreviewsResource, authorizationReview), &projectcalico.AuthorizationReview{})
 	if obj == nil {
@@ -82,7 +84,7 @@ func (c *FakeAuthorizationReviews) Update(authorizationReview *projectcalico.Aut
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeAuthorizationReviews) UpdateStatus(authorizationReview *projectcalico.AuthorizationReview) (*projectcalico.AuthorizationReview, error) {
+func (c *FakeAuthorizationReviews) UpdateStatus(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.UpdateOptions) (*projectcalico.AuthorizationReview, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(authorizationreviewsResource, "status", authorizationReview), &projectcalico.AuthorizationReview{})
 	if obj == nil {
@@ -92,22 +94,22 @@ func (c *FakeAuthorizationReviews) UpdateStatus(authorizationReview *projectcali
 }
 
 // Delete takes name of the authorizationReview and deletes it. Returns an error if one occurs.
-func (c *FakeAuthorizationReviews) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeAuthorizationReviews) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(authorizationreviewsResource, name), &projectcalico.AuthorizationReview{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeAuthorizationReviews) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(authorizationreviewsResource, listOptions)
+func (c *FakeAuthorizationReviews) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(authorizationreviewsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &projectcalico.AuthorizationReviewList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched authorizationReview.
-func (c *FakeAuthorizationReviews) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.AuthorizationReview, err error) {
+func (c *FakeAuthorizationReviews) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.AuthorizationReview, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(authorizationreviewsResource, name, pt, data, subresources...), &projectcalico.AuthorizationReview{})
 	if obj == nil {

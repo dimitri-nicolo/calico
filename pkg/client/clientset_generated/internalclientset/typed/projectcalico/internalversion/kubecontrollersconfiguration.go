@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	"time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -23,15 +24,15 @@ type KubeControllersConfigurationsGetter interface {
 
 // KubeControllersConfigurationInterface has methods to work with KubeControllersConfiguration resources.
 type KubeControllersConfigurationInterface interface {
-	Create(*projectcalico.KubeControllersConfiguration) (*projectcalico.KubeControllersConfiguration, error)
-	Update(*projectcalico.KubeControllersConfiguration) (*projectcalico.KubeControllersConfiguration, error)
-	UpdateStatus(*projectcalico.KubeControllersConfiguration) (*projectcalico.KubeControllersConfiguration, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*projectcalico.KubeControllersConfiguration, error)
-	List(opts v1.ListOptions) (*projectcalico.KubeControllersConfigurationList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.KubeControllersConfiguration, err error)
+	Create(ctx context.Context, kubeControllersConfiguration *projectcalico.KubeControllersConfiguration, opts v1.CreateOptions) (*projectcalico.KubeControllersConfiguration, error)
+	Update(ctx context.Context, kubeControllersConfiguration *projectcalico.KubeControllersConfiguration, opts v1.UpdateOptions) (*projectcalico.KubeControllersConfiguration, error)
+	UpdateStatus(ctx context.Context, kubeControllersConfiguration *projectcalico.KubeControllersConfiguration, opts v1.UpdateOptions) (*projectcalico.KubeControllersConfiguration, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalico.KubeControllersConfiguration, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalico.KubeControllersConfigurationList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.KubeControllersConfiguration, err error)
 	KubeControllersConfigurationExpansion
 }
 
@@ -48,19 +49,19 @@ func newKubeControllersConfigurations(c *ProjectcalicoClient) *kubeControllersCo
 }
 
 // Get takes name of the kubeControllersConfiguration, and returns the corresponding kubeControllersConfiguration object, and an error if there is any.
-func (c *kubeControllersConfigurations) Get(name string, options v1.GetOptions) (result *projectcalico.KubeControllersConfiguration, err error) {
+func (c *kubeControllersConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.KubeControllersConfiguration, err error) {
 	result = &projectcalico.KubeControllersConfiguration{}
 	err = c.client.Get().
 		Resource("kubecontrollersconfigurations").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of KubeControllersConfigurations that match those selectors.
-func (c *kubeControllersConfigurations) List(opts v1.ListOptions) (result *projectcalico.KubeControllersConfigurationList, err error) {
+func (c *kubeControllersConfigurations) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.KubeControllersConfigurationList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -70,13 +71,13 @@ func (c *kubeControllersConfigurations) List(opts v1.ListOptions) (result *proje
 		Resource("kubecontrollersconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested kubeControllersConfigurations.
-func (c *kubeControllersConfigurations) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *kubeControllersConfigurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -86,81 +87,84 @@ func (c *kubeControllersConfigurations) Watch(opts v1.ListOptions) (watch.Interf
 		Resource("kubecontrollersconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a kubeControllersConfiguration and creates it.  Returns the server's representation of the kubeControllersConfiguration, and an error, if there is any.
-func (c *kubeControllersConfigurations) Create(kubeControllersConfiguration *projectcalico.KubeControllersConfiguration) (result *projectcalico.KubeControllersConfiguration, err error) {
+func (c *kubeControllersConfigurations) Create(ctx context.Context, kubeControllersConfiguration *projectcalico.KubeControllersConfiguration, opts v1.CreateOptions) (result *projectcalico.KubeControllersConfiguration, err error) {
 	result = &projectcalico.KubeControllersConfiguration{}
 	err = c.client.Post().
 		Resource("kubecontrollersconfigurations").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kubeControllersConfiguration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a kubeControllersConfiguration and updates it. Returns the server's representation of the kubeControllersConfiguration, and an error, if there is any.
-func (c *kubeControllersConfigurations) Update(kubeControllersConfiguration *projectcalico.KubeControllersConfiguration) (result *projectcalico.KubeControllersConfiguration, err error) {
+func (c *kubeControllersConfigurations) Update(ctx context.Context, kubeControllersConfiguration *projectcalico.KubeControllersConfiguration, opts v1.UpdateOptions) (result *projectcalico.KubeControllersConfiguration, err error) {
 	result = &projectcalico.KubeControllersConfiguration{}
 	err = c.client.Put().
 		Resource("kubecontrollersconfigurations").
 		Name(kubeControllersConfiguration.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kubeControllersConfiguration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *kubeControllersConfigurations) UpdateStatus(kubeControllersConfiguration *projectcalico.KubeControllersConfiguration) (result *projectcalico.KubeControllersConfiguration, err error) {
+func (c *kubeControllersConfigurations) UpdateStatus(ctx context.Context, kubeControllersConfiguration *projectcalico.KubeControllersConfiguration, opts v1.UpdateOptions) (result *projectcalico.KubeControllersConfiguration, err error) {
 	result = &projectcalico.KubeControllersConfiguration{}
 	err = c.client.Put().
 		Resource("kubecontrollersconfigurations").
 		Name(kubeControllersConfiguration.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kubeControllersConfiguration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the kubeControllersConfiguration and deletes it. Returns an error if one occurs.
-func (c *kubeControllersConfigurations) Delete(name string, options *v1.DeleteOptions) error {
+func (c *kubeControllersConfigurations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("kubecontrollersconfigurations").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *kubeControllersConfigurations) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *kubeControllersConfigurations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("kubecontrollersconfigurations").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched kubeControllersConfiguration.
-func (c *kubeControllersConfigurations) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.KubeControllersConfiguration, err error) {
+func (c *kubeControllersConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.KubeControllersConfiguration, err error) {
 	result = &projectcalico.KubeControllersConfiguration{}
 	err = c.client.Patch(pt).
 		Resource("kubecontrollersconfigurations").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
