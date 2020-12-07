@@ -278,7 +278,7 @@ type InternalDataplane struct {
 	iptablesNATTables    []*iptables.Table
 	iptablesRawTables    []*iptables.Table
 	iptablesFilterTables []*iptables.Table
-	ipSets               []*ipsets.IPSets
+	ipSets               []ipsetsDataplane
 
 	ipipManager          *ipipManager
 	allHostsIpsetManager *allHostsIpsetManager
@@ -672,14 +672,24 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// metadata name is set whereas TC doesn't set that field.
 		ipSetIDAllocator := idalloc.New()
 		ipSetsMap := bpfipsets.Map(bpfMapContext)
-		dp.RegisterManager(newBPFIPSetManager(ipSetIDAllocator, ipSetsMap))
+		err := ipSetsMap.EnsureExists()
+		if err != nil {
+			log.WithError(err).Panic("Failed to create ipsets BPF map.")
+		}
+		ipSetsV4 := bpfipsets.NewBPFIPSets(
+			ipSetsConfigV4,
+			ipSetIDAllocator,
+			ipSetsMap,
+		)
+		dp.ipSets = append(dp.ipSets, ipSetsV4)
+		dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, callbacks))
 		bpfRTMgr := newBPFRouteManager(config.Hostname, bpfMapContext)
 		dp.RegisterManager(bpfRTMgr)
 
 		// Forwarding into a tunnel seems to fail silently, disable FIB lookup if tunnel is enabled for now.
 		fibLookupEnabled := !config.RulesConfig.IPIPEnabled && !config.RulesConfig.VXLANEnabled
 		stateMap := state.Map(bpfMapContext)
-		err := stateMap.EnsureExists()
+		err = stateMap.EnsureExists()
 		if err != nil {
 			log.WithError(err).Panic("Failed to create state BPF map.")
 		}
@@ -1907,7 +1917,7 @@ func (d *InternalDataplane) apply() {
 	var ipSetsWG sync.WaitGroup
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
-		go func(ipSets *ipsets.IPSets) {
+		go func(ipSets ipsetsDataplane) {
 			ipSets.ApplyUpdates()
 			d.reportHealth()
 			ipSetsWG.Done()
@@ -1972,7 +1982,7 @@ func (d *InternalDataplane) apply() {
 	// Now clean up any left-over IP sets.
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
-		go func(s *ipsets.IPSets) {
+		go func(s ipsetsDataplane) {
 			s.ApplyDeletions()
 			d.reportHealth()
 			ipSetsWG.Done()

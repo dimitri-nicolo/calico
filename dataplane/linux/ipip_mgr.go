@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -256,7 +256,6 @@ func (m *ipipManager) CompleteDeferredWork() error {
 	return nil
 }
 
-// ipsetsDataplane is a shim interface for mocking the IPSets object.
 type ipsetsDataplane interface {
 	AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string)
 	AddMembers(setID string, newMembers []string)
@@ -265,4 +264,7 @@ type ipsetsDataplane interface {
 	GetIPFamily() ipsets.IPFamily
 	GetTypeOf(setID string) (ipsets.IPSetType, error)
 	GetMembers(setID string) (set.Set, error)
+	QueueResync()
+	ApplyUpdates()
+	ApplyDeletions()
 }
