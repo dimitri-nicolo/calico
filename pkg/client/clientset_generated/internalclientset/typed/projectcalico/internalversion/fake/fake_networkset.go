@@ -5,6 +5,8 @@
 package fake
 
 import (
+	"context"
+
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -24,7 +26,7 @@ var networksetsResource = schema.GroupVersionResource{Group: "projectcalico.org"
 var networksetsKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "NetworkSet"}
 
 // Get takes name of the networkSet, and returns the corresponding networkSet object, and an error if there is any.
-func (c *FakeNetworkSets) Get(name string, options v1.GetOptions) (result *projectcalico.NetworkSet, err error) {
+func (c *FakeNetworkSets) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.NetworkSet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(networksetsResource, name), &projectcalico.NetworkSet{})
 	if obj == nil {
@@ -34,7 +36,7 @@ func (c *FakeNetworkSets) Get(name string, options v1.GetOptions) (result *proje
 }
 
 // List takes label and field selectors, and returns the list of NetworkSets that match those selectors.
-func (c *FakeNetworkSets) List(opts v1.ListOptions) (result *projectcalico.NetworkSetList, err error) {
+func (c *FakeNetworkSets) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.NetworkSetList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(networksetsResource, networksetsKind, opts), &projectcalico.NetworkSetList{})
 	if obj == nil {
@@ -55,13 +57,13 @@ func (c *FakeNetworkSets) List(opts v1.ListOptions) (result *projectcalico.Netwo
 }
 
 // Watch returns a watch.Interface that watches the requested networkSets.
-func (c *FakeNetworkSets) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeNetworkSets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(networksetsResource, opts))
 }
 
 // Create takes the representation of a networkSet and creates it.  Returns the server's representation of the networkSet, and an error, if there is any.
-func (c *FakeNetworkSets) Create(networkSet *projectcalico.NetworkSet) (result *projectcalico.NetworkSet, err error) {
+func (c *FakeNetworkSets) Create(ctx context.Context, networkSet *projectcalico.NetworkSet, opts v1.CreateOptions) (result *projectcalico.NetworkSet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(networksetsResource, networkSet), &projectcalico.NetworkSet{})
 	if obj == nil {
@@ -71,7 +73,7 @@ func (c *FakeNetworkSets) Create(networkSet *projectcalico.NetworkSet) (result *
 }
 
 // Update takes the representation of a networkSet and updates it. Returns the server's representation of the networkSet, and an error, if there is any.
-func (c *FakeNetworkSets) Update(networkSet *projectcalico.NetworkSet) (result *projectcalico.NetworkSet, err error) {
+func (c *FakeNetworkSets) Update(ctx context.Context, networkSet *projectcalico.NetworkSet, opts v1.UpdateOptions) (result *projectcalico.NetworkSet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(networksetsResource, networkSet), &projectcalico.NetworkSet{})
 	if obj == nil {
@@ -81,22 +83,22 @@ func (c *FakeNetworkSets) Update(networkSet *projectcalico.NetworkSet) (result *
 }
 
 // Delete takes name of the networkSet and deletes it. Returns an error if one occurs.
-func (c *FakeNetworkSets) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeNetworkSets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(networksetsResource, name), &projectcalico.NetworkSet{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeNetworkSets) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(networksetsResource, listOptions)
+func (c *FakeNetworkSets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(networksetsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &projectcalico.NetworkSetList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched networkSet.
-func (c *FakeNetworkSets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.NetworkSet, err error) {
+func (c *FakeNetworkSets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.NetworkSet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(networksetsResource, name, pt, data, subresources...), &projectcalico.NetworkSet{})
 	if obj == nil {

@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredHostEndpointInformer(client internalclientset.Interface, resyncP
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().HostEndpoints().List(options)
+				return client.Projectcalico().HostEndpoints().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().HostEndpoints().Watch(options)
+				return client.Projectcalico().HostEndpoints().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.HostEndpoint{},

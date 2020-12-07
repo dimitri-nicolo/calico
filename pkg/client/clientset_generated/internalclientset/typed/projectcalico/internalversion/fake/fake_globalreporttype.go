@@ -5,6 +5,8 @@
 package fake
 
 import (
+	"context"
+
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -24,7 +26,7 @@ var globalreporttypesResource = schema.GroupVersionResource{Group: "projectcalic
 var globalreporttypesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "GlobalReportType"}
 
 // Get takes name of the globalReportType, and returns the corresponding globalReportType object, and an error if there is any.
-func (c *FakeGlobalReportTypes) Get(name string, options v1.GetOptions) (result *projectcalico.GlobalReportType, err error) {
+func (c *FakeGlobalReportTypes) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.GlobalReportType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(globalreporttypesResource, name), &projectcalico.GlobalReportType{})
 	if obj == nil {
@@ -34,7 +36,7 @@ func (c *FakeGlobalReportTypes) Get(name string, options v1.GetOptions) (result 
 }
 
 // List takes label and field selectors, and returns the list of GlobalReportTypes that match those selectors.
-func (c *FakeGlobalReportTypes) List(opts v1.ListOptions) (result *projectcalico.GlobalReportTypeList, err error) {
+func (c *FakeGlobalReportTypes) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.GlobalReportTypeList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(globalreporttypesResource, globalreporttypesKind, opts), &projectcalico.GlobalReportTypeList{})
 	if obj == nil {
@@ -55,13 +57,13 @@ func (c *FakeGlobalReportTypes) List(opts v1.ListOptions) (result *projectcalico
 }
 
 // Watch returns a watch.Interface that watches the requested globalReportTypes.
-func (c *FakeGlobalReportTypes) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeGlobalReportTypes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(globalreporttypesResource, opts))
 }
 
 // Create takes the representation of a globalReportType and creates it.  Returns the server's representation of the globalReportType, and an error, if there is any.
-func (c *FakeGlobalReportTypes) Create(globalReportType *projectcalico.GlobalReportType) (result *projectcalico.GlobalReportType, err error) {
+func (c *FakeGlobalReportTypes) Create(ctx context.Context, globalReportType *projectcalico.GlobalReportType, opts v1.CreateOptions) (result *projectcalico.GlobalReportType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(globalreporttypesResource, globalReportType), &projectcalico.GlobalReportType{})
 	if obj == nil {
@@ -71,7 +73,7 @@ func (c *FakeGlobalReportTypes) Create(globalReportType *projectcalico.GlobalRep
 }
 
 // Update takes the representation of a globalReportType and updates it. Returns the server's representation of the globalReportType, and an error, if there is any.
-func (c *FakeGlobalReportTypes) Update(globalReportType *projectcalico.GlobalReportType) (result *projectcalico.GlobalReportType, err error) {
+func (c *FakeGlobalReportTypes) Update(ctx context.Context, globalReportType *projectcalico.GlobalReportType, opts v1.UpdateOptions) (result *projectcalico.GlobalReportType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(globalreporttypesResource, globalReportType), &projectcalico.GlobalReportType{})
 	if obj == nil {
@@ -81,22 +83,22 @@ func (c *FakeGlobalReportTypes) Update(globalReportType *projectcalico.GlobalRep
 }
 
 // Delete takes name of the globalReportType and deletes it. Returns an error if one occurs.
-func (c *FakeGlobalReportTypes) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeGlobalReportTypes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(globalreporttypesResource, name), &projectcalico.GlobalReportType{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeGlobalReportTypes) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(globalreporttypesResource, listOptions)
+func (c *FakeGlobalReportTypes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(globalreporttypesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &projectcalico.GlobalReportTypeList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched globalReportType.
-func (c *FakeGlobalReportTypes) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.GlobalReportType, err error) {
+func (c *FakeGlobalReportTypes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.GlobalReportType, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(globalreporttypesResource, name, pt, data, subresources...), &projectcalico.GlobalReportType{})
 	if obj == nil {

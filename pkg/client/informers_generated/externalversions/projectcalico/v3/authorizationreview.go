@@ -5,6 +5,7 @@
 package v3
 
 import (
+	"context"
 	time "time"
 
 	projectcalicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
@@ -46,13 +47,13 @@ func NewFilteredAuthorizationReviewInformer(client clientset.Interface, resyncPe
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProjectcalicoV3().AuthorizationReviews().List(options)
+				return client.ProjectcalicoV3().AuthorizationReviews().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProjectcalicoV3().AuthorizationReviews().Watch(options)
+				return client.ProjectcalicoV3().AuthorizationReviews().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalicov3.AuthorizationReview{},

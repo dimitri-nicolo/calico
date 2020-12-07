@@ -70,6 +70,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		func() runtime.Object { return &calico.TierList{} },
 		GetAttrs,
 		nil,
+		nil,
 	)
 	if err != nil {
 		return nil, err

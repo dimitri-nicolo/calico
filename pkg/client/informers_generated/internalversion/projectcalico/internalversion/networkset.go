@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredNetworkSetInformer(client internalclientset.Interface, resyncPer
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().NetworkSets().List(options)
+				return client.Projectcalico().NetworkSets().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().NetworkSets().Watch(options)
+				return client.Projectcalico().NetworkSets().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.NetworkSet{},

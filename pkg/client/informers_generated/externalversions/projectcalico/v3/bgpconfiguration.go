@@ -5,6 +5,7 @@
 package v3
 
 import (
+	"context"
 	time "time"
 
 	projectcalicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
@@ -46,13 +47,13 @@ func NewFilteredBGPConfigurationInformer(client clientset.Interface, resyncPerio
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProjectcalicoV3().BGPConfigurations().List(options)
+				return client.ProjectcalicoV3().BGPConfigurations().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProjectcalicoV3().BGPConfigurations().Watch(options)
+				return client.ProjectcalicoV3().BGPConfigurations().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalicov3.BGPConfiguration{},

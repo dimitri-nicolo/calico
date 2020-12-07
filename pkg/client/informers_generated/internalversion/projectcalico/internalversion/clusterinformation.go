@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredClusterInformationInformer(client internalclientset.Interface, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().ClusterInformations().List(options)
+				return client.Projectcalico().ClusterInformations().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().ClusterInformations().Watch(options)
+				return client.Projectcalico().ClusterInformations().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.ClusterInformation{},

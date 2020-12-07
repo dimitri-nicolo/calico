@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredProfileInformer(client internalclientset.Interface, resyncPeriod
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().Profiles().List(options)
+				return client.Projectcalico().Profiles().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().Profiles().Watch(options)
+				return client.Projectcalico().Profiles().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.Profile{},

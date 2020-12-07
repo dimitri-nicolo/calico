@@ -17,6 +17,7 @@ limitations under the License.
 package integration
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -142,7 +143,7 @@ func testNoName(client calicoclient.Interface) error {
 
 	ns := "default"
 
-	if p, e := cClient.NetworkPolicies(ns).Create(&v3.NetworkPolicy{}); nil == e {
+	if p, e := cClient.NetworkPolicies(ns).Create(context.Background(), &v3.NetworkPolicy{}, metav1.CreateOptions{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
 	}
 
@@ -175,9 +176,10 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	defaultTierPolicyName := "default" + "." + name
 	policyClient := client.ProjectcalicoV3().NetworkPolicies(ns)
 	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
+	ctx := context.Background()
 
 	// start from scratch
-	policies, err := policyClient.List(metav1.ListOptions{})
+	policies, err := policyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -188,7 +190,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("policies should not exist on start, had %v policies", len(policies.Items))
 	}
 
-	policyServer, err := policyClient.Create(policy)
+	policyServer, err := policyClient.Create(ctx, policy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
@@ -198,7 +200,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 
 	updatedPolicy := policyServer
 	updatedPolicy.Labels = map[string]string{"foo": "bar"}
-	policyServer, err = policyClient.Update(updatedPolicy)
+	policyServer, err = policyClient.Update(ctx, updatedPolicy, metav1.UpdateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
@@ -212,14 +214,14 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(tier)
+	tierClient.Create(ctx, tier, metav1.CreateOptions{})
 	defer func() {
-		tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
 	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.NetworkPolicySpec{Tier: "net-sec"}}
-	policyServer, err = policyClient.Create(netSecPolicy)
+	policyServer, err = policyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
@@ -228,7 +230,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Should be listing the policy under default tier.
-	policies, err = policyClient.List(metav1.ListOptions{})
+	policies, err = policyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -237,7 +239,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Should be listing the policy under "net-sec" tier
-	policies, err = policyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
+	policies, err = policyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -245,7 +247,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
 	}
 
-	policyServer, err = policyClient.Get(name, metav1.GetOptions{})
+	policyServer, err = policyClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting policy %s (%s)", name, err)
 	}
@@ -266,7 +268,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}*/
 	// Watch Test:
 	opts := v1.ListOptions{Watch: true}
-	wIface, err := policyClient.Watch(opts)
+	wIface, err := policyClient.Watch(ctx, opts)
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
@@ -280,12 +282,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		}
 	}()
 
-	err = policyClient.Delete(name, &metav1.DeleteOptions{})
+	err = policyClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
-	err = policyClient.Delete(netSecPolicyName, &metav1.DeleteOptions{})
+	err = policyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
@@ -320,9 +322,10 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	policyClient := client.ProjectcalicoV3().StagedNetworkPolicies(ns)
 	policy := &v3.StagedNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
 		Spec: calico.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""}}
+	ctx := context.Background()
 
 	// start from scratch
-	policies, err := policyClient.List(metav1.ListOptions{})
+	policies, err := policyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -333,7 +336,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("policies should not exist on start, had %v policies", len(policies.Items))
 	}
 
-	policyServer, err := policyClient.Create(policy)
+	policyServer, err := policyClient.Create(ctx, policy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
@@ -343,7 +346,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 
 	updatedPolicy := policyServer
 	updatedPolicy.Labels = map[string]string{"foo": "bar"}
-	policyServer, err = policyClient.Update(updatedPolicy)
+	policyServer, err = policyClient.Update(ctx, updatedPolicy, metav1.UpdateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
@@ -357,14 +360,14 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(tier)
+	tierClient.Create(ctx, tier, metav1.CreateOptions{})
 	defer func() {
-		tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
 	netSecPolicy := &v3.StagedNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
-	policyServer, err = policyClient.Create(netSecPolicy)
+	policyServer, err = policyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
@@ -373,7 +376,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Should be listing the policy under default tier.
-	policies, err = policyClient.List(metav1.ListOptions{})
+	policies, err = policyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -382,7 +385,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Should be listing the policy under "net-sec" tier
-	policies, err = policyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
+	policies, err = policyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -390,7 +393,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
 	}
 
-	policyServer, err = policyClient.Get(name, metav1.GetOptions{})
+	policyServer, err = policyClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting policy %s (%s)", name, err)
 	}
@@ -401,7 +404,7 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 
 	// Watch Test:
 	opts := v1.ListOptions{Watch: true}
-	wIface, err := policyClient.Watch(opts)
+	wIface, err := policyClient.Watch(ctx, opts)
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
@@ -415,12 +418,12 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		}
 	}()
 
-	err = policyClient.Delete(name, &metav1.DeleteOptions{})
+	err = policyClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
-	err = policyClient.Delete(netSecPolicyName, &metav1.DeleteOptions{})
+	err = policyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
@@ -454,9 +457,10 @@ func testTierClient(client calicoclient.Interface, name string) error {
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	tiers, err := tierClient.List(metav1.ListOptions{})
+	tiers, err := tierClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing tiers (%s)", err)
 	}
@@ -464,7 +468,7 @@ func testTierClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	tierServer, err := tierClient.Create(tier)
+	tierServer, err := tierClient.Create(ctx, tier, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the tier '%v' (%v)", tier, err)
 	}
@@ -472,12 +476,12 @@ func testTierClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same tier back from the server \n%+v\n%+v", tier, tierServer)
 	}
 
-	tiers, err = tierClient.List(metav1.ListOptions{})
+	tiers, err = tierClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing tiers (%s)", err)
 	}
 
-	tierServer, err = tierClient.Get(name, metav1.GetOptions{})
+	tierServer, err = tierClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting tier %s (%s)", name, err)
 	}
@@ -486,7 +490,7 @@ func testTierClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same tier back from the server \n%+v\n%+v", tier, tierServer)
 	}
 
-	err = tierClient.Delete(name, &metav1.DeleteOptions{})
+	err = tierClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("tier should be deleted (%s)", err)
 	}
@@ -519,9 +523,10 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	globalNetworkPolicyClient := client.ProjectcalicoV3().GlobalNetworkPolicies()
 	defaultTierPolicyName := "default" + "." + name
 	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
+	ctx := context.Background()
 
 	// start from scratch
-	globalNetworkPolicies, err := globalNetworkPolicyClient.List(metav1.ListOptions{})
+	globalNetworkPolicies, err := globalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
@@ -529,7 +534,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	globalNetworkPolicyServer, err := globalNetworkPolicyClient.Create(globalNetworkPolicy)
+	globalNetworkPolicyServer, err := globalNetworkPolicyClient.Create(ctx, globalNetworkPolicy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalNetworkPolicy '%v' (%v)", globalNetworkPolicy, err)
 	}
@@ -543,14 +548,14 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(tier)
+	tierClient.Create(ctx, tier, metav1.CreateOptions{})
 	defer func() {
-		tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
 	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.GlobalNetworkPolicySpec{Tier: "net-sec"}}
-	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(netSecPolicy)
+	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
@@ -559,7 +564,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Should be listing the policy under "default" tier
-	globalNetworkPolicies, err = globalNetworkPolicyClient.List(metav1.ListOptions{})
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
@@ -568,7 +573,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Should be listing the policy under "net-sec" tier
-	globalNetworkPolicies, err = globalNetworkPolicyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
@@ -576,7 +581,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
 	}
 
-	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Get(name, metav1.GetOptions{})
+	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalNetworkPolicy %s (%s)", name, err)
 	}
@@ -585,12 +590,12 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
 	}
 
-	err = globalNetworkPolicyClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalNetworkPolicyClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalNetworkPolicy should be deleted (%s)", err)
 	}
 
-	err = globalNetworkPolicyClient.Delete(netSecPolicyName, &metav1.DeleteOptions{})
+	err = globalNetworkPolicyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
@@ -623,9 +628,10 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	defaultTierPolicyName := "default" + "." + name
 	stagedGlobalNetworkPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
 		Spec: calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""}}
+	ctx := context.Background()
 
 	// start from scratch
-	stagedGlobalNetworkPolicies, err := stagedGlobalNetworkPolicyClient.List(metav1.ListOptions{})
+	stagedGlobalNetworkPolicies, err := stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing stagedglobalNetworkPolicies (%s)", err)
 	}
@@ -633,7 +639,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	stagedGlobalNetworkPolicyServer, err := stagedGlobalNetworkPolicyClient.Create(stagedGlobalNetworkPolicy)
+	stagedGlobalNetworkPolicyServer, err := stagedGlobalNetworkPolicyClient.Create(ctx, stagedGlobalNetworkPolicy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the stagedGlobalNetworkPolicy '%v' (%v)", stagedGlobalNetworkPolicy, err)
 	}
@@ -647,14 +653,14 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	tierClient.Create(tier)
+	tierClient.Create(ctx, tier, metav1.CreateOptions{})
 	defer func() {
-		tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+		tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
 	netSecPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
-	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Create(netSecPolicy)
+	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Create(ctx, netSecPolicy, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
 	}
@@ -663,7 +669,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	}
 
 	// Should be listing the policy under "default" tier
-	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(metav1.ListOptions{})
+	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
 	}
@@ -672,7 +678,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	}
 
 	// Should be listing the policy under "net-sec" tier
-	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
+	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
 	if err != nil {
 		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
 	}
@@ -680,7 +686,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
 
-	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Get(name, metav1.GetOptions{})
+	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting stagedGlobalNetworkPolicy %s (%s)", name, err)
 	}
@@ -689,12 +695,12 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		return fmt.Errorf("didn't get the same stagedGlobalNetworkPolicy back from the server \n%+v\n%+v", stagedGlobalNetworkPolicy, stagedGlobalNetworkPolicyServer)
 	}
 
-	err = stagedGlobalNetworkPolicyClient.Delete(name, &metav1.DeleteOptions{})
+	err = stagedGlobalNetworkPolicyClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("stagedGlobalNetworkPolicy should be deleted (%s)", err)
 	}
 
-	err = stagedGlobalNetworkPolicyClient.Delete(netSecPolicyName, &metav1.DeleteOptions{})
+	err = stagedGlobalNetworkPolicyClient.Delete(ctx, netSecPolicyName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
@@ -727,9 +733,10 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 	globalNetworkSet := &v3.GlobalNetworkSet{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	globalNetworkSets, err := globalNetworkSetClient.List(metav1.ListOptions{})
+	globalNetworkSets, err := globalNetworkSetClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkSets (%s)", err)
 	}
@@ -737,7 +744,7 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	globalNetworkSetServer, err := globalNetworkSetClient.Create(globalNetworkSet)
+	globalNetworkSetServer, err := globalNetworkSetClient.Create(ctx, globalNetworkSet, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalNetworkSet '%v' (%v)", globalNetworkSet, err)
 	}
@@ -745,12 +752,12 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("didn't get the same globalNetworkSet back from the server \n%+v\n%+v", globalNetworkSet, globalNetworkSetServer)
 	}
 
-	globalNetworkSets, err = globalNetworkSetClient.List(metav1.ListOptions{})
+	globalNetworkSets, err = globalNetworkSetClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkSets (%s)", err)
 	}
 
-	globalNetworkSetServer, err = globalNetworkSetClient.Get(name, metav1.GetOptions{})
+	globalNetworkSetServer, err = globalNetworkSetClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalNetworkSet %s (%s)", name, err)
 	}
@@ -759,7 +766,7 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("didn't get the same globalNetworkSet back from the server \n%+v\n%+v", globalNetworkSet, globalNetworkSetServer)
 	}
 
-	err = globalNetworkSetClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalNetworkSetClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalNetworkSet should be deleted (%s)", err)
 	}
@@ -791,9 +798,10 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 	ns := "default"
 	networkSetClient := client.ProjectcalicoV3().NetworkSets(ns)
 	networkSet := &v3.NetworkSet{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	ctx := context.Background()
 
 	// start from scratch
-	networkSets, err := networkSetClient.List(metav1.ListOptions{})
+	networkSets, err := networkSetClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing networkSets (%s)", err)
 	}
@@ -804,20 +812,20 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("networkSets should not exist on start, had %v networkSets", len(networkSets.Items))
 	}
 
-	networkSetServer, err := networkSetClient.Create(networkSet)
+	networkSetServer, err := networkSetClient.Create(ctx, networkSet, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the networkSet '%v' (%v)", networkSet, err)
 	}
 
 	updatedNetworkSet := networkSetServer
 	updatedNetworkSet.Labels = map[string]string{"foo": "bar"}
-	networkSetServer, err = networkSetClient.Update(updatedNetworkSet)
+	networkSetServer, err = networkSetClient.Update(ctx, updatedNetworkSet, metav1.UpdateOptions{})
 	if nil != err {
 		return fmt.Errorf("error updating the networkSet '%v' (%v)", networkSet, err)
 	}
 
 	// Should be listing the networkSet.
-	networkSets, err = networkSetClient.List(metav1.ListOptions{})
+	networkSets, err = networkSetClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing networkSets (%s)", err)
 	}
@@ -825,7 +833,7 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("should have exactly one networkSet, had %v networkSets", len(networkSets.Items))
 	}
 
-	networkSetServer, err = networkSetClient.Get(name, metav1.GetOptions{})
+	networkSetServer, err = networkSetClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting networkSet %s (%s)", name, err)
 	}
@@ -836,7 +844,7 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 
 	// Watch Test:
 	opts := v1.ListOptions{Watch: true}
-	wIface, err := networkSetClient.Watch(opts)
+	wIface, err := networkSetClient.Watch(ctx, opts)
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
@@ -850,7 +858,7 @@ func testNetworkSetClient(client calicoclient.Interface, name string) error {
 		}
 	}()
 
-	err = networkSetClient.Delete(name, &metav1.DeleteOptions{})
+	err = networkSetClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("networkSet should be deleted (%s)", err)
 	}
@@ -881,8 +889,9 @@ func TestLicenseKeyClient(t *testing.T) {
 
 func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	licenseKeyClient := client.ProjectcalicoV3().LicenseKeys()
+	ctx := context.Background()
 
-	licenseKeys, err := licenseKeyClient.List(metav1.ListOptions{})
+	licenseKeys, err := licenseKeyClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing licenseKeys (%s)", err)
 	}
@@ -893,14 +902,14 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	// Validate that a license not encrypted with production key is rejected
 	corruptLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
-	_, err = licenseKeyClient.Create(corruptLicenseKey)
+	_, err = licenseKeyClient.Create(ctx, corruptLicenseKey, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("expected creating the emptyLicenseKey")
 	}
 
 	// Confirm that valid, but expired licenses, are rejected
 	expiredLicenseKey := getExpiredLicenseKey(name)
-	_, err = licenseKeyClient.Create(expiredLicenseKey)
+	_, err = licenseKeyClient.Create(ctx, expiredLicenseKey, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("expected creating the expiredLicenseKey")
 	} else if err.Error() != "LicenseKey.projectcalico.org \"default\" is invalid: LicenseKeySpec.token: Internal error: the license you're trying to create expired on 2019-02-08 07:59:59 +0000 UTC" {
@@ -908,7 +917,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 	//Valid License with Maximum supported Nodes 100
 	validLicenseKey := getValidLicenseKey(name)
-	lic, err := licenseKeyClient.Create(validLicenseKey)
+	lic, err := licenseKeyClient.Create(ctx, validLicenseKey, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Check for License Expiry date %v\n", err)
 		return err
@@ -1060,9 +1069,10 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	globalAlerts, err := globalAlertClient.List(metav1.ListOptions{})
+	globalAlerts, err := globalAlertClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalAlerts (%s)", err)
 	}
@@ -1070,7 +1080,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	globalAlertServer, err := globalAlertClient.Create(globalAlert)
+	globalAlertServer, err := globalAlertClient.Create(ctx, globalAlert, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalAlert '%v' (%v)", globalAlert, err)
 	}
@@ -1081,7 +1091,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("status was set on create to %#v", globalAlertServer.Status)
 	}
 
-	globalAlerts, err = globalAlertClient.List(metav1.ListOptions{})
+	globalAlerts, err = globalAlertClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalAlerts (%s)", err)
 	}
@@ -1089,7 +1099,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("expected 1 globalAlert got %d", len(globalAlerts.Items))
 	}
 
-	globalAlertServer, err = globalAlertClient.Get(name, metav1.GetOptions{})
+	globalAlertServer, err = globalAlertClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalAlert %s (%s)", name, err)
 	}
@@ -1101,7 +1111,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	globalAlertUpdate := globalAlertServer.DeepCopy()
 	globalAlertUpdate.Spec.Description += "-updated"
 	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
-	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
+	globalAlertServer, err = globalAlertClient.Update(ctx, globalAlertUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
 	}
@@ -1117,7 +1127,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	globalAlertUpdate.Labels = map[string]string{"foo": "bar"}
 	statusDescription := "status"
 	globalAlertUpdate.Spec.Description = statusDescription
-	globalAlertServer, err = globalAlertClient.UpdateStatus(globalAlertUpdate)
+	globalAlertServer, err = globalAlertClient.UpdateStatus(ctx, globalAlertUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
 	}
@@ -1131,13 +1141,13 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("updatestatus updated spec")
 	}
 
-	err = globalAlertClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalAlertClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalAlert should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().GlobalAlerts().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalAlerts().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalAlerts (%s)", err)
 	}
@@ -1171,7 +1181,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 				DataSet:     "dns",
 			},
 		}
-		_, err = globalAlertClient.Create(ga)
+		_, err = globalAlertClient.Create(ctx, ga, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating the globalAlert '%v' (%v)", ga, err)
 		}
@@ -1218,9 +1228,10 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 			Severity:    100,
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	globalAlerts, err := globalAlertClient.List(metav1.ListOptions{})
+	globalAlerts, err := globalAlertClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalAlertTemplates (%s)", err)
 	}
@@ -1228,7 +1239,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	globalAlertServer, err := globalAlertClient.Create(globalAlert)
+	globalAlertServer, err := globalAlertClient.Create(ctx, globalAlert, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalAlertTemplate '%v' (%v)", globalAlert, err)
 	}
@@ -1236,7 +1247,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("didn't get the same globalAlertTemplate back from the server \n%+v\n%+v", globalAlert, globalAlertServer)
 	}
 
-	globalAlerts, err = globalAlertClient.List(metav1.ListOptions{})
+	globalAlerts, err = globalAlertClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalAlertTemplates (%s)", err)
 	}
@@ -1244,7 +1255,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("expected 1 globalAlertTemplate got %d", len(globalAlerts.Items))
 	}
 
-	globalAlertServer, err = globalAlertClient.Get(name, metav1.GetOptions{})
+	globalAlertServer, err = globalAlertClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalAlertTemplate %s (%s)", name, err)
 	}
@@ -1255,7 +1266,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 
 	globalAlertUpdate := globalAlertServer.DeepCopy()
 	globalAlertUpdate.Spec.Description += "-update"
-	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
+	globalAlertServer, err = globalAlertClient.Update(ctx, globalAlertUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalAlertTemplate %s (%s)", name, err)
 	}
@@ -1263,13 +1274,13 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 		return errors.New("didn't update spec.content")
 	}
 
-	err = globalAlertClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalAlertClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalAlertTemplate should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().GlobalAlertTemplates().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalAlertTemplates().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalAlertTemplates (%s)", err)
 	}
@@ -1304,7 +1315,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 				DataSet:     "dns",
 			},
 		}
-		_, err = globalAlertClient.Create(ga)
+		_, err = globalAlertClient.Create(ctx, ga, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating the globalAlertTemplate '%v' (%v)", ga, err)
 		}
@@ -1355,9 +1366,10 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	globalThreatFeeds, err := globalThreatFeedClient.List(metav1.ListOptions{})
+	globalThreatFeeds, err := globalThreatFeedClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalThreatFeeds (%s)", err)
 	}
@@ -1365,7 +1377,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	globalThreatFeedServer, err := globalThreatFeedClient.Create(globalThreatFeed)
+	globalThreatFeedServer, err := globalThreatFeedClient.Create(ctx, globalThreatFeed, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalThreatFeed '%v' (%v)", globalThreatFeed, err)
 	}
@@ -1376,7 +1388,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("status was set on create to %#v", globalThreatFeedServer.Status)
 	}
 
-	globalThreatFeeds, err = globalThreatFeedClient.List(metav1.ListOptions{})
+	globalThreatFeeds, err = globalThreatFeedClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalThreatFeeds (%s)", err)
 	}
@@ -1384,7 +1396,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("expected 1 globalThreatFeed got %d", len(globalThreatFeeds.Items))
 	}
 
-	globalThreatFeedServer, err = globalThreatFeedClient.Get(name, metav1.GetOptions{})
+	globalThreatFeedServer, err = globalThreatFeedClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalThreatFeed %s (%s)", name, err)
 	}
@@ -1396,7 +1408,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	globalThreatFeedUpdate := globalThreatFeedServer.DeepCopy()
 	globalThreatFeedUpdate.Spec.Content = "IPSet"
 	globalThreatFeedUpdate.Status.LastSuccessfulSync = v1.Time{Time: time.Now()}
-	globalThreatFeedServer, err = globalThreatFeedClient.Update(globalThreatFeedUpdate)
+	globalThreatFeedServer, err = globalThreatFeedClient.Update(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
 	}
@@ -1411,7 +1423,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	globalThreatFeedUpdate.Status.LastSuccessfulSync = v1.Time{Time: time.Now()}
 	globalThreatFeedUpdate.Labels = map[string]string{"foo": "bar"}
 	globalThreatFeedUpdate.Spec.Content = ""
-	globalThreatFeedServer, err = globalThreatFeedClient.UpdateStatus(globalThreatFeedUpdate)
+	globalThreatFeedServer, err = globalThreatFeedClient.UpdateStatus(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
 	}
@@ -1425,13 +1437,13 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("updatestatus updated spec")
 	}
 
-	err = globalThreatFeedClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalThreatFeedClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalThreatFeed should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().GlobalThreatFeeds().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalThreatFeeds().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalThreatFeeds (%s)", err)
 	}
@@ -1460,7 +1472,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 		gtf := &v3.GlobalThreatFeed{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gtf%d", i)},
 		}
-		_, err = globalThreatFeedClient.Create(gtf)
+		_, err = globalThreatFeedClient.Create(ctx, gtf, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating the globalThreatFeed '%v' (%v)", gtf, err)
 		}
@@ -1510,9 +1522,10 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	hostEndpointClient := client.ProjectcalicoV3().HostEndpoints()
 
 	hostEndpoint := createTestHostEndpoint(name, "192.168.0.1", "test-node")
+	ctx := context.Background()
 
 	// start from scratch
-	hostEndpoints, err := hostEndpointClient.List(metav1.ListOptions{})
+	hostEndpoints, err := hostEndpointClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing hostEndpoints (%s)", err)
 	}
@@ -1520,7 +1533,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	hostEndpointServer, err := hostEndpointClient.Create(hostEndpoint)
+	hostEndpointServer, err := hostEndpointClient.Create(ctx, hostEndpoint, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the hostEndpoint '%v' (%v)", hostEndpoint, err)
 	}
@@ -1528,7 +1541,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same hostEndpoint back from the server \n%+v\n%+v", hostEndpoint, hostEndpointServer)
 	}
 
-	hostEndpoints, err = hostEndpointClient.List(metav1.ListOptions{})
+	hostEndpoints, err = hostEndpointClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing hostEndpoints (%s)", err)
 	}
@@ -1536,7 +1549,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("expected 1 hostEndpoint entry, got %d", len(hostEndpoints.Items))
 	}
 
-	hostEndpointServer, err = hostEndpointClient.Get(name, metav1.GetOptions{})
+	hostEndpointServer, err = hostEndpointClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting hostEndpoint %s (%s)", name, err)
 	}
@@ -1545,13 +1558,13 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same hostEndpoint back from the server \n%+v\n%+v", hostEndpoint, hostEndpointServer)
 	}
 
-	err = hostEndpointClient.Delete(name, &metav1.DeleteOptions{})
+	err = hostEndpointClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("hostEndpoint should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().HostEndpoints().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().HostEndpoints().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching HostEndpoints (%s)", err)
 	}
@@ -1578,7 +1591,7 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 	// Create two HostEndpoints
 	for i := 0; i < 2; i++ {
 		hep := createTestHostEndpoint(fmt.Sprintf("hep%d", i), "192.168.0.1", "test-node")
-		_, err = hostEndpointClient.Create(hep)
+		_, err = hostEndpointClient.Create(ctx, hep, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating hostEndpoint '%v' (%v)", hep, err)
 		}
@@ -1674,9 +1687,10 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// Make sure there is no GlobalReport configured.
-	globalReports, err := globalReportClient.List(metav1.ListOptions{})
+	globalReports, err := globalReportClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalReports (%s)", err)
 	}
@@ -1697,12 +1711,12 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 			},
 		},
 	}
-	_, err = globalReportTypeClient.Create(globalReportType)
+	_, err = globalReportTypeClient.Create(ctx, globalReportType, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the pre-requisite globalReportType '%v' (%v)", globalReportType, err)
 	}
 
-	globalReportServer, err := globalReportClient.Create(globalReport)
+	globalReportServer, err := globalReportClient.Create(ctx, globalReport, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalReport '%v' (%v)", globalReport, err)
 	}
@@ -1713,7 +1727,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("status was set on create to %#v", globalReportServer.Status)
 	}
 
-	globalReports, err = globalReportClient.List(metav1.ListOptions{})
+	globalReports, err = globalReportClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalReports (%s)", err)
 	}
@@ -1721,7 +1735,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("expected 1 globalReport entry, got %d", len(globalReports.Items))
 	}
 
-	globalReportServer, err = globalReportClient.Get(name, metav1.GetOptions{})
+	globalReportServer, err = globalReportClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalReport %s (%s)", name, err)
 	}
@@ -1737,7 +1751,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.CompletedReportJob{
 		{JobCompletionTime: &v1.Time{Time: time.Now()}},
 	}
-	globalReportServer, err = globalReportClient.Update(globalReportUpdate)
+	globalReportServer, err = globalReportClient.Update(ctx, globalReportUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
@@ -1755,7 +1769,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		{JobCompletionTime: &v1.Time{Time: time.Now()}},
 	}
 	globalReportUpdate.Labels = map[string]string{"foo": "bar"}
-	globalReportServer, err = globalReportClient.UpdateStatus(globalReportUpdate)
+	globalReportServer, err = globalReportClient.UpdateStatus(ctx, globalReportUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
@@ -1768,13 +1782,13 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("updatestatus updated labels")
 	}
 
-	err = globalReportClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalReportClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalReport should be deleted (%s)", err)
 	}
 
 	// Check list-ing GlobalReport resource works with watch option.
-	w, err := client.ProjectcalicoV3().GlobalReports().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalReports().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalReports (%s)", err)
 	}
@@ -1804,7 +1818,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gr%d", i)},
 			Spec:       calico.ReportSpec{ReportType: "inventory"},
 		}
-		_, err = globalReportClient.Create(gr)
+		_, err = globalReportClient.Create(ctx, gr, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating globalReport '%v' (%v)", gr, err)
 		}
@@ -1819,7 +1833,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Undo pre-requisite creating GlobalReportType.
-	err = globalReportTypeClient.Delete(globalReportTypeName, &metav1.DeleteOptions{})
+	err = globalReportTypeClient.Delete(ctx, globalReportTypeName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("error deleting the pre-requisite globalReportType '%v' (%v)", globalReportType, err)
 	}
@@ -1858,9 +1872,10 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// Make sure there is no GlobalReportType configured.
-	globalReportTypes, err := globalReportTypeClient.List(metav1.ListOptions{})
+	globalReportTypes, err := globalReportTypeClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalReportTypes (%s)", err)
 	}
@@ -1869,7 +1884,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	}
 
 	// Create/List/Get/Delete tests.
-	globalReportTypeServer, err := globalReportTypeClient.Create(globalReportType)
+	globalReportTypeServer, err := globalReportTypeClient.Create(ctx, globalReportType, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the globalReportType '%v' (%v)", globalReportType, err)
 	}
@@ -1877,7 +1892,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("didn't get the same globalReportType back from the server \n%+v\n%+v", globalReportType, globalReportTypeServer)
 	}
 
-	globalReportTypes, err = globalReportTypeClient.List(metav1.ListOptions{})
+	globalReportTypes, err = globalReportTypeClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalReportTypes (%s)", err)
 	}
@@ -1885,7 +1900,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("expected 1 globalReportType entry, got %d", len(globalReportTypes.Items))
 	}
 
-	globalReportTypeServer, err = globalReportTypeClient.Get(name, metav1.GetOptions{})
+	globalReportTypeServer, err = globalReportTypeClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting globalReportType %s (%s)", name, err)
 	}
@@ -1894,13 +1909,13 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("didn't get the same globalReportType back from the server \n%+v\n%+v", globalReportType, globalReportTypeServer)
 	}
 
-	err = globalReportTypeClient.Delete(name, &metav1.DeleteOptions{})
+	err = globalReportTypeClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalReportType should be deleted (%s)", err)
 	}
 
 	// Check list-ing GlobalReportType resource works with watch option.
-	w, err := client.ProjectcalicoV3().GlobalReportTypes().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().GlobalReportTypes().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalReportTypes (%s)", err)
 	}
@@ -1935,7 +1950,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 				},
 			},
 		}
-		_, err = globalReportTypeClient.Create(grt)
+		_, err = globalReportTypeClient.Create(ctx, grt, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating globalReportType '%v' (%v)", grt, err)
 		}
@@ -1980,9 +1995,10 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 			CIDR: "192.168.0.0/16",
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	ippools, err := ippoolClient.List(metav1.ListOptions{})
+	ippools, err := ippoolClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ippools (%s)", err)
 	}
@@ -1990,7 +2006,7 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	ippoolServer, err := ippoolClient.Create(ippool)
+	ippoolServer, err := ippoolClient.Create(ctx, ippool, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the ippool '%v' (%v)", ippool, err)
 	}
@@ -1998,12 +2014,12 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same ippool back from the server \n%+v\n%+v", ippool, ippoolServer)
 	}
 
-	ippools, err = ippoolClient.List(metav1.ListOptions{})
+	ippools, err = ippoolClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ippools (%s)", err)
 	}
 
-	ippoolServer, err = ippoolClient.Get(name, metav1.GetOptions{})
+	ippoolServer, err = ippoolClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting ippool %s (%s)", name, err)
 	}
@@ -2012,7 +2028,7 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same ippool back from the server \n%+v\n%+v", ippool, ippoolServer)
 	}
 
-	err = ippoolClient.Delete(name, &metav1.DeleteOptions{})
+	err = ippoolClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("ippool should be deleted (%s)", err)
 	}
@@ -2049,9 +2065,10 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 			LogSeverityScreen: "Info",
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	bgpConfigList, err := bgpConfigClient.List(metav1.ListOptions{})
+	bgpConfigList, err := bgpConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing bgpConfiguration (%s)", err)
 	}
@@ -2059,7 +2076,7 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	bgpRes, err := bgpConfigClient.Create(bgpConfig)
+	bgpRes, err := bgpConfigClient.Create(ctx, bgpConfig, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the bgpConfiguration '%v' (%v)", bgpConfig, err)
 	}
@@ -2067,12 +2084,12 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("didn't get the same bgpConfig back from server\n%+v\n%+v", bgpConfig, bgpRes)
 	}
 
-	bgpRes, err = bgpConfigClient.Get(resName, metav1.GetOptions{})
+	bgpRes, err = bgpConfigClient.Get(ctx, resName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting bgpConfiguration %s (%s)", resName, err)
 	}
 
-	err = bgpConfigClient.Delete(resName, &metav1.DeleteOptions{})
+	err = bgpConfigClient.Delete(ctx, resName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("BGPConfiguration should be deleted (%s)", err)
 	}
@@ -2111,9 +2128,10 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 			ASNumber: numorstring.ASNumber(6512),
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	bgpPeerList, err := bgpPeerClient.List(metav1.ListOptions{})
+	bgpPeerList, err := bgpPeerClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing bgpPeer (%s)", err)
 	}
@@ -2121,7 +2139,7 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	bgpRes, err := bgpPeerClient.Create(bgpPeer)
+	bgpRes, err := bgpPeerClient.Create(ctx, bgpPeer, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the bgpPeer '%v' (%v)", bgpPeer, err)
 	}
@@ -2129,12 +2147,12 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same bgpPeer back from server\n%+v\n%+v", bgpPeer, bgpRes)
 	}
 
-	bgpRes, err = bgpPeerClient.Get(resName, metav1.GetOptions{})
+	bgpRes, err = bgpPeerClient.Get(ctx, resName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting bgpPeer %s (%s)", resName, err)
 	}
 
-	err = bgpPeerClient.Delete(resName, &metav1.DeleteOptions{})
+	err = bgpPeerClient.Delete(ctx, resName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("BGPPeer should be deleted (%s)", err)
 	}
@@ -2174,9 +2192,10 @@ func testProfileClient(client calicoclient.Interface, name string) error {
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	profileList, err := profileClient.List(metav1.ListOptions{})
+	profileList, err := profileClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing profile (%s)", err)
 	}
@@ -2185,12 +2204,12 @@ func testProfileClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Profile creation is not supported.
-	_, err = profileClient.Create(profile)
+	_, err = profileClient.Create(ctx, profile, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("profile should not be allowed to be created'%v' (%v)", profile, err)
 	}
 
-	profileRes, err := profileClient.Get(name, metav1.GetOptions{})
+	profileRes, err := profileClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting profile %s (%s)", name, err)
 	}
@@ -2200,7 +2219,7 @@ func testProfileClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Profile deletion is not supported.
-	err = profileClient.Delete(name, &metav1.DeleteOptions{})
+	err = profileClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err == nil {
 		return fmt.Errorf("Profile cannot be deleted (%s)", err)
 	}
@@ -2243,9 +2262,10 @@ func testRemoteClusterConfigurationClient(client calicoclient.Interface, name st
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	rccList, err := rccClient.List(metav1.ListOptions{})
+	rccList, err := rccClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing remoteClusterConfiguration (%s)", err)
 	}
@@ -2253,7 +2273,7 @@ func testRemoteClusterConfigurationClient(client calicoclient.Interface, name st
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	rccRes, err := rccClient.Create(rcc)
+	rccRes, err := rccClient.Create(ctx, rcc, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the remoteClusterConfiguration '%v' (%v)", rcc, err)
 	}
@@ -2261,12 +2281,12 @@ func testRemoteClusterConfigurationClient(client calicoclient.Interface, name st
 		return fmt.Errorf("didn't get the same remoteClusterConfiguration back from server\n%+v\n%+v", rcc, rccRes)
 	}
 
-	rccRes, err = rccClient.Get(resName, metav1.GetOptions{})
+	rccRes, err = rccClient.Get(ctx, resName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting remoteClusterConfiguration %s (%s)", resName, err)
 	}
 
-	err = rccClient.Delete(resName, &metav1.DeleteOptions{})
+	err = rccClient.Delete(ctx, resName, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("RemoteClusterConfiguration should be deleted (%s)", err)
 	}
@@ -2306,9 +2326,10 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 			MetadataPort:               &ptrInt,
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	felixConfigs, err := felixConfigClient.List(metav1.ListOptions{})
+	felixConfigs, err := felixConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing felixConfigs (%s)", err)
 	}
@@ -2316,7 +2337,7 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	felixConfigServer, err := felixConfigClient.Create(felixConfig)
+	felixConfigServer, err := felixConfigClient.Create(ctx, felixConfig, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the felixConfig '%v' (%v)", felixConfig, err)
 	}
@@ -2324,12 +2345,12 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 		return fmt.Errorf("didn't get the same felixConfig back from the server \n%+v\n%+v", felixConfig, felixConfigServer)
 	}
 
-	felixConfigs, err = felixConfigClient.List(metav1.ListOptions{})
+	felixConfigs, err = felixConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing felixConfigs (%s)", err)
 	}
 
-	felixConfigServer, err = felixConfigClient.Get(name, metav1.GetOptions{})
+	felixConfigServer, err = felixConfigClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting felixConfig %s (%s)", name, err)
 	}
@@ -2338,7 +2359,7 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 		return fmt.Errorf("didn't get the same felixConfig back from the server \n%+v\n%+v", felixConfig, felixConfigServer)
 	}
 
-	err = felixConfigClient.Delete(name, &metav1.DeleteOptions{})
+	err = felixConfigClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("felixConfig should be deleted (%s)", err)
 	}
@@ -2380,9 +2401,10 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	kubeControllersConfigs, err := kubeControllersConfigClient.List(metav1.ListOptions{})
+	kubeControllersConfigs, err := kubeControllersConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing kubeControllersConfigs (%s)", err)
 	}
@@ -2390,7 +2412,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	kubeControllersConfigServer, err := kubeControllersConfigClient.Create(kubeControllersConfig)
+	kubeControllersConfigServer, err := kubeControllersConfigClient.Create(ctx, kubeControllersConfig, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the kubeControllersConfig '%v' (%v)", kubeControllersConfig, err)
 	}
@@ -2401,7 +2423,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 		return fmt.Errorf("status was set on create to %#v", kubeControllersConfigServer.Status)
 	}
 
-	kubeControllersConfigs, err = kubeControllersConfigClient.List(metav1.ListOptions{})
+	kubeControllersConfigs, err = kubeControllersConfigClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing kubeControllersConfigs (%s)", err)
 	}
@@ -2409,7 +2431,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 		return fmt.Errorf("expected 1 kubeControllersConfig got %d", len(kubeControllersConfigs.Items))
 	}
 
-	kubeControllersConfigServer, err = kubeControllersConfigClient.Get("default", metav1.GetOptions{})
+	kubeControllersConfigServer, err = kubeControllersConfigClient.Get(ctx, "default", metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting kubeControllersConfig default (%s)", err)
 	}
@@ -2421,7 +2443,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	kubeControllersConfigUpdate := kubeControllersConfigServer.DeepCopy()
 	kubeControllersConfigUpdate.Spec.HealthChecks = calico.Enabled
 	kubeControllersConfigUpdate.Status.EnvironmentVars = map[string]string{"FOO": "bar"}
-	kubeControllersConfigServer, err = kubeControllersConfigClient.Update(kubeControllersConfigUpdate)
+	kubeControllersConfigServer, err = kubeControllersConfigClient.Update(ctx, kubeControllersConfigUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating kubeControllersConfig default (%s)", err)
 	}
@@ -2436,7 +2458,7 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	kubeControllersConfigUpdate.Status.EnvironmentVars = map[string]string{"FIZZ": "buzz"}
 	kubeControllersConfigUpdate.Labels = map[string]string{"foo": "bar"}
 	kubeControllersConfigUpdate.Spec.HealthChecks = ""
-	kubeControllersConfigServer, err = kubeControllersConfigClient.UpdateStatus(kubeControllersConfigUpdate)
+	kubeControllersConfigServer, err = kubeControllersConfigClient.UpdateStatus(ctx, kubeControllersConfigUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating kubeControllersConfig default (%s)", err)
 	}
@@ -2450,13 +2472,13 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 		return fmt.Errorf("updatestatus updated spec")
 	}
 
-	err = kubeControllersConfigClient.Delete("default", &metav1.DeleteOptions{})
+	err = kubeControllersConfigClient.Delete(ctx, "default", metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("kubeControllersConfig should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().KubeControllersConfigurations().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().KubeControllersConfigurations().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching KubeControllersConfigurations (%s)", err)
 	}
@@ -2481,11 +2503,11 @@ func testKubeControllersConfigurationClient(client calicoclient.Interface) error
 	}()
 
 	// Create, then delete KubeControllersConfigurations
-	kubeControllersConfigServer, err = kubeControllersConfigClient.Create(kubeControllersConfig)
+	kubeControllersConfigServer, err = kubeControllersConfigClient.Create(ctx, kubeControllersConfig, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the kubeControllersConfig '%v' (%v)", kubeControllersConfig, err)
 	}
-	err = kubeControllersConfigClient.Delete("default", &metav1.DeleteOptions{})
+	err = kubeControllersConfigClient.Delete(ctx, "default", metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("kubeControllersConfig should be deleted (%s)", err)
 	}
@@ -2524,6 +2546,7 @@ func TestManagedClusterClient(t *testing.T) {
 			}
 		}
 	}
+	ctx := context.Background()
 
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-managedcluster test failed")
@@ -2548,7 +2571,7 @@ func TestManagedClusterClient(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: name},
 			Spec:       calico.ManagedClusterSpec{},
 		}
-		_, err := managedClusterClient.Create(managedCluster)
+		_, err := managedClusterClient.Create(ctx, managedCluster, metav1.CreateOptions{})
 
 		if err == nil {
 			t.Fatal("Expected API to be disabled")
@@ -2574,9 +2597,10 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 			},
 		},
 	}
+	ctx := context.Background()
 
 	// start from scratch
-	managedClusters, err := managedClusterClient.List(metav1.ListOptions{})
+	managedClusters, err := managedClusterClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing managedClusters (%s)", err)
 	}
@@ -2585,7 +2609,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 
 	// ------------------------------------------------------------------------------------------
-	managedClusterServer, err := managedClusterClient.Create(managedCluster)
+	managedClusterServer, err := managedClusterClient.Create(ctx, managedCluster, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the managedCluster '%v' (%v)", managedCluster, err)
 	}
@@ -2629,7 +2653,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 
 	// ------------------------------------------------------------------------------------------
-	managedClusters, err = managedClusterClient.List(metav1.ListOptions{})
+	managedClusters, err = managedClusterClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing managedClusters (%s)", err)
 	}
@@ -2638,7 +2662,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 
 	// ------------------------------------------------------------------------------------------
-	managedClusterServer, err = managedClusterClient.Get(name, metav1.GetOptions{})
+	managedClusterServer, err = managedClusterClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting managedCluster %s (%s)", name, err)
 	}
@@ -2662,7 +2686,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 			Type:    calico.ManagedClusterStatusTypeConnected,
 		},
 	}
-	managedClusterServer, err = managedClusterClient.Update(managedClusterUpdate)
+	managedClusterServer, err = managedClusterClient.Update(ctx, managedClusterUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating managedCluster %s (%s)", name, err)
 	}
@@ -2670,13 +2694,13 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("didn't update status %#v", managedClusterServer.Status)
 	}
 	// ------------------------------------------------------------------------------------------
-	err = managedClusterClient.Delete(name, &metav1.DeleteOptions{})
+	err = managedClusterClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("managedCluster should be deleted (%s)", err)
 	}
 
 	// Test watch
-	w, err := client.ProjectcalicoV3().ManagedClusters().Watch(v1.ListOptions{})
+	w, err := client.ProjectcalicoV3().ManagedClusters().Watch(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching ManagedClusters (%s)", err)
 	}
@@ -2705,7 +2729,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 		mc := &v3.ManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("mc%d", i)},
 		}
-		_, err = managedClusterClient.Create(mc)
+		_, err = managedClusterClient.Create(ctx, mc, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating the managedCluster '%v' (%v)", mc, err)
 		}
@@ -2743,8 +2767,9 @@ func TestClusterInformationClient(t *testing.T) {
 
 func testClusterInformationClient(client calicoclient.Interface, name string) error {
 	clusterInformationClient := client.ProjectcalicoV3().ClusterInformations()
+	ctx := context.Background()
 
-	ci, err := clusterInformationClient.List(metav1.ListOptions{})
+	ci, err := clusterInformationClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ClusterInformation (%s)", err)
 	}
@@ -2755,7 +2780,7 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 	// Confirm it's not possible to create a clusterInformation obj with name other than "default"
 	invalidClusterInfo := &v3.ClusterInformation{ObjectMeta: metav1.ObjectMeta{Name: "test-clusterinformation"}}
 
-	_, err = clusterInformationClient.Create(invalidClusterInfo)
+	_, err = clusterInformationClient.Create(ctx, invalidClusterInfo, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("expected error creating invalidClusterInfo with name other than \"default\"")
 	}
@@ -2785,7 +2810,7 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 
 	ar := v3.AuthenticationReview{}
-	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(&ar)
+	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
 
 	if err != nil {
 		return err
@@ -2843,7 +2868,7 @@ func TestAuthorizationReviewsClient(t *testing.T) {
 func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client calicoclient.Interface) error {
 	// Check we are able to create the authorization review.
 	ar := v3.AuthorizationReview{}
-	_, err := client.ProjectcalicoV3().AuthorizationReviews().Create(&ar)
+	_, err := client.ProjectcalicoV3().AuthorizationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -2874,12 +2899,12 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
-	_, err = tierClient.Create(tier)
+	_, err = tierClient.Create(ctx, tier, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create tier: %v", err)
 	}
 	defer func() {
-		_ = tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+		_ = tierClient.Delete(ctx, "net-sec", metav1.DeleteOptions{})
 	}()
 
 	// Get the users permissions.
@@ -2964,12 +2989,13 @@ func TestPacketCaptureClient(t *testing.T) {
 }
 
 func testPacketCapturesClient(client calicoclient.Interface, name string) error {
+	ctx := context.Background()
 	ns := "default"
 	packetCaptureClient := client.ProjectcalicoV3().PacketCaptures(ns)
 	packetCapture := &v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
 	// start from scratch
-	packetCaptures, err := packetCaptureClient.List(metav1.ListOptions{})
+	packetCaptures, err := packetCaptureClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing packetCaptures (%s)", err)
 	}
@@ -2980,20 +3006,20 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("packetCaptures should not exist on start, had %v packetCaptures", len(packetCaptures.Items))
 	}
 
-	packetCaptureServer, err := packetCaptureClient.Create(packetCapture)
+	packetCaptureServer, err := packetCaptureClient.Create(ctx, packetCapture, metav1.CreateOptions{})
 	if nil != err {
 		return fmt.Errorf("error creating the packetCapture '%v' (%v)", packetCapture, err)
 	}
 
 	updatedPacketCapture := packetCaptureServer
 	updatedPacketCapture.Labels = map[string]string{"foo": "bar"}
-	packetCaptureServer, err = packetCaptureClient.Update(updatedPacketCapture)
+	packetCaptureServer, err = packetCaptureClient.Update(ctx, updatedPacketCapture, metav1.UpdateOptions{})
 	if nil != err {
 		return fmt.Errorf("error updating the packetCapture '%v' (%v)", packetCapture, err)
 	}
 
 	// Should be listing the packetCapture.
-	packetCaptures, err = packetCaptureClient.List(metav1.ListOptions{})
+	packetCaptures, err = packetCaptureClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing networkSets (%s)", err)
 	}
@@ -3001,7 +3027,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("should have exactly one networkSet, had %v networkSets", len(packetCaptures.Items))
 	}
 
-	packetCaptureServer, err = packetCaptureClient.Get(name, metav1.GetOptions{})
+	packetCaptureServer, err = packetCaptureClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting packetCapture %s (%s)", name, err)
 	}
@@ -3012,7 +3038,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 
 	// Watch Test:
 	opts := v1.ListOptions{Watch: true}
-	wIface, err := packetCaptureClient.Watch(opts)
+	wIface, err := packetCaptureClient.Watch(ctx, opts)
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
@@ -3026,7 +3052,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		}
 	}()
 
-	err = packetCaptureClient.Delete(name, &metav1.DeleteOptions{})
+	err = packetCaptureClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("packetCapture should be deleted (%s)", err)
 	}

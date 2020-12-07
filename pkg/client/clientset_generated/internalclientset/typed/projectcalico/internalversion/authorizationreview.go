@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	"time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -23,15 +24,15 @@ type AuthorizationReviewsGetter interface {
 
 // AuthorizationReviewInterface has methods to work with AuthorizationReview resources.
 type AuthorizationReviewInterface interface {
-	Create(*projectcalico.AuthorizationReview) (*projectcalico.AuthorizationReview, error)
-	Update(*projectcalico.AuthorizationReview) (*projectcalico.AuthorizationReview, error)
-	UpdateStatus(*projectcalico.AuthorizationReview) (*projectcalico.AuthorizationReview, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*projectcalico.AuthorizationReview, error)
-	List(opts v1.ListOptions) (*projectcalico.AuthorizationReviewList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.AuthorizationReview, err error)
+	Create(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.CreateOptions) (*projectcalico.AuthorizationReview, error)
+	Update(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.UpdateOptions) (*projectcalico.AuthorizationReview, error)
+	UpdateStatus(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.UpdateOptions) (*projectcalico.AuthorizationReview, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*projectcalico.AuthorizationReview, error)
+	List(ctx context.Context, opts v1.ListOptions) (*projectcalico.AuthorizationReviewList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.AuthorizationReview, err error)
 	AuthorizationReviewExpansion
 }
 
@@ -48,19 +49,19 @@ func newAuthorizationReviews(c *ProjectcalicoClient) *authorizationReviews {
 }
 
 // Get takes name of the authorizationReview, and returns the corresponding authorizationReview object, and an error if there is any.
-func (c *authorizationReviews) Get(name string, options v1.GetOptions) (result *projectcalico.AuthorizationReview, err error) {
+func (c *authorizationReviews) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.AuthorizationReview, err error) {
 	result = &projectcalico.AuthorizationReview{}
 	err = c.client.Get().
 		Resource("authorizationreviews").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of AuthorizationReviews that match those selectors.
-func (c *authorizationReviews) List(opts v1.ListOptions) (result *projectcalico.AuthorizationReviewList, err error) {
+func (c *authorizationReviews) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.AuthorizationReviewList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -70,13 +71,13 @@ func (c *authorizationReviews) List(opts v1.ListOptions) (result *projectcalico.
 		Resource("authorizationreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested authorizationReviews.
-func (c *authorizationReviews) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *authorizationReviews) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -86,81 +87,84 @@ func (c *authorizationReviews) Watch(opts v1.ListOptions) (watch.Interface, erro
 		Resource("authorizationreviews").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a authorizationReview and creates it.  Returns the server's representation of the authorizationReview, and an error, if there is any.
-func (c *authorizationReviews) Create(authorizationReview *projectcalico.AuthorizationReview) (result *projectcalico.AuthorizationReview, err error) {
+func (c *authorizationReviews) Create(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.CreateOptions) (result *projectcalico.AuthorizationReview, err error) {
 	result = &projectcalico.AuthorizationReview{}
 	err = c.client.Post().
 		Resource("authorizationreviews").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(authorizationReview).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a authorizationReview and updates it. Returns the server's representation of the authorizationReview, and an error, if there is any.
-func (c *authorizationReviews) Update(authorizationReview *projectcalico.AuthorizationReview) (result *projectcalico.AuthorizationReview, err error) {
+func (c *authorizationReviews) Update(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.UpdateOptions) (result *projectcalico.AuthorizationReview, err error) {
 	result = &projectcalico.AuthorizationReview{}
 	err = c.client.Put().
 		Resource("authorizationreviews").
 		Name(authorizationReview.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(authorizationReview).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *authorizationReviews) UpdateStatus(authorizationReview *projectcalico.AuthorizationReview) (result *projectcalico.AuthorizationReview, err error) {
+func (c *authorizationReviews) UpdateStatus(ctx context.Context, authorizationReview *projectcalico.AuthorizationReview, opts v1.UpdateOptions) (result *projectcalico.AuthorizationReview, err error) {
 	result = &projectcalico.AuthorizationReview{}
 	err = c.client.Put().
 		Resource("authorizationreviews").
 		Name(authorizationReview.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(authorizationReview).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the authorizationReview and deletes it. Returns an error if one occurs.
-func (c *authorizationReviews) Delete(name string, options *v1.DeleteOptions) error {
+func (c *authorizationReviews) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("authorizationreviews").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *authorizationReviews) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *authorizationReviews) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("authorizationreviews").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched authorizationReview.
-func (c *authorizationReviews) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.AuthorizationReview, err error) {
+func (c *authorizationReviews) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.AuthorizationReview, err error) {
 	result = &projectcalico.AuthorizationReview{}
 	err = c.client.Patch(pt).
 		Resource("authorizationreviews").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

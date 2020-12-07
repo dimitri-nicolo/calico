@@ -5,6 +5,7 @@
 package v3
 
 import (
+	"context"
 	time "time"
 
 	projectcalicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
@@ -46,13 +47,13 @@ func NewFilteredTierInformer(client clientset.Interface, resyncPeriod time.Durat
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProjectcalicoV3().Tiers().List(options)
+				return client.ProjectcalicoV3().Tiers().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ProjectcalicoV3().Tiers().Watch(options)
+				return client.ProjectcalicoV3().Tiers().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalicov3.Tier{},

@@ -5,6 +5,7 @@
 package v3
 
 import (
+	"context"
 	"time"
 
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
@@ -23,14 +24,14 @@ type RemoteClusterConfigurationsGetter interface {
 
 // RemoteClusterConfigurationInterface has methods to work with RemoteClusterConfiguration resources.
 type RemoteClusterConfigurationInterface interface {
-	Create(*v3.RemoteClusterConfiguration) (*v3.RemoteClusterConfiguration, error)
-	Update(*v3.RemoteClusterConfiguration) (*v3.RemoteClusterConfiguration, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v3.RemoteClusterConfiguration, error)
-	List(opts v1.ListOptions) (*v3.RemoteClusterConfigurationList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.RemoteClusterConfiguration, err error)
+	Create(ctx context.Context, remoteClusterConfiguration *v3.RemoteClusterConfiguration, opts v1.CreateOptions) (*v3.RemoteClusterConfiguration, error)
+	Update(ctx context.Context, remoteClusterConfiguration *v3.RemoteClusterConfiguration, opts v1.UpdateOptions) (*v3.RemoteClusterConfiguration, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.RemoteClusterConfiguration, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v3.RemoteClusterConfigurationList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.RemoteClusterConfiguration, err error)
 	RemoteClusterConfigurationExpansion
 }
 
@@ -47,19 +48,19 @@ func newRemoteClusterConfigurations(c *ProjectcalicoV3Client) *remoteClusterConf
 }
 
 // Get takes name of the remoteClusterConfiguration, and returns the corresponding remoteClusterConfiguration object, and an error if there is any.
-func (c *remoteClusterConfigurations) Get(name string, options v1.GetOptions) (result *v3.RemoteClusterConfiguration, err error) {
+func (c *remoteClusterConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.RemoteClusterConfiguration, err error) {
 	result = &v3.RemoteClusterConfiguration{}
 	err = c.client.Get().
 		Resource("remoteclusterconfigurations").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of RemoteClusterConfigurations that match those selectors.
-func (c *remoteClusterConfigurations) List(opts v1.ListOptions) (result *v3.RemoteClusterConfigurationList, err error) {
+func (c *remoteClusterConfigurations) List(ctx context.Context, opts v1.ListOptions) (result *v3.RemoteClusterConfigurationList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -69,13 +70,13 @@ func (c *remoteClusterConfigurations) List(opts v1.ListOptions) (result *v3.Remo
 		Resource("remoteclusterconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested remoteClusterConfigurations.
-func (c *remoteClusterConfigurations) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *remoteClusterConfigurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -85,66 +86,69 @@ func (c *remoteClusterConfigurations) Watch(opts v1.ListOptions) (watch.Interfac
 		Resource("remoteclusterconfigurations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a remoteClusterConfiguration and creates it.  Returns the server's representation of the remoteClusterConfiguration, and an error, if there is any.
-func (c *remoteClusterConfigurations) Create(remoteClusterConfiguration *v3.RemoteClusterConfiguration) (result *v3.RemoteClusterConfiguration, err error) {
+func (c *remoteClusterConfigurations) Create(ctx context.Context, remoteClusterConfiguration *v3.RemoteClusterConfiguration, opts v1.CreateOptions) (result *v3.RemoteClusterConfiguration, err error) {
 	result = &v3.RemoteClusterConfiguration{}
 	err = c.client.Post().
 		Resource("remoteclusterconfigurations").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(remoteClusterConfiguration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a remoteClusterConfiguration and updates it. Returns the server's representation of the remoteClusterConfiguration, and an error, if there is any.
-func (c *remoteClusterConfigurations) Update(remoteClusterConfiguration *v3.RemoteClusterConfiguration) (result *v3.RemoteClusterConfiguration, err error) {
+func (c *remoteClusterConfigurations) Update(ctx context.Context, remoteClusterConfiguration *v3.RemoteClusterConfiguration, opts v1.UpdateOptions) (result *v3.RemoteClusterConfiguration, err error) {
 	result = &v3.RemoteClusterConfiguration{}
 	err = c.client.Put().
 		Resource("remoteclusterconfigurations").
 		Name(remoteClusterConfiguration.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(remoteClusterConfiguration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the remoteClusterConfiguration and deletes it. Returns an error if one occurs.
-func (c *remoteClusterConfigurations) Delete(name string, options *v1.DeleteOptions) error {
+func (c *remoteClusterConfigurations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("remoteclusterconfigurations").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *remoteClusterConfigurations) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *remoteClusterConfigurations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("remoteclusterconfigurations").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched remoteClusterConfiguration.
-func (c *remoteClusterConfigurations) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.RemoteClusterConfiguration, err error) {
+func (c *remoteClusterConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.RemoteClusterConfiguration, err error) {
 	result = &v3.RemoteClusterConfiguration{}
 	err = c.client.Patch(pt).
 		Resource("remoteclusterconfigurations").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

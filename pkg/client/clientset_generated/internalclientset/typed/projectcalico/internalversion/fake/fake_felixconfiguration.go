@@ -5,6 +5,8 @@
 package fake
 
 import (
+	"context"
+
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -24,7 +26,7 @@ var felixconfigurationsResource = schema.GroupVersionResource{Group: "projectcal
 var felixconfigurationsKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "FelixConfiguration"}
 
 // Get takes name of the felixConfiguration, and returns the corresponding felixConfiguration object, and an error if there is any.
-func (c *FakeFelixConfigurations) Get(name string, options v1.GetOptions) (result *projectcalico.FelixConfiguration, err error) {
+func (c *FakeFelixConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *projectcalico.FelixConfiguration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(felixconfigurationsResource, name), &projectcalico.FelixConfiguration{})
 	if obj == nil {
@@ -34,7 +36,7 @@ func (c *FakeFelixConfigurations) Get(name string, options v1.GetOptions) (resul
 }
 
 // List takes label and field selectors, and returns the list of FelixConfigurations that match those selectors.
-func (c *FakeFelixConfigurations) List(opts v1.ListOptions) (result *projectcalico.FelixConfigurationList, err error) {
+func (c *FakeFelixConfigurations) List(ctx context.Context, opts v1.ListOptions) (result *projectcalico.FelixConfigurationList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(felixconfigurationsResource, felixconfigurationsKind, opts), &projectcalico.FelixConfigurationList{})
 	if obj == nil {
@@ -55,13 +57,13 @@ func (c *FakeFelixConfigurations) List(opts v1.ListOptions) (result *projectcali
 }
 
 // Watch returns a watch.Interface that watches the requested felixConfigurations.
-func (c *FakeFelixConfigurations) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeFelixConfigurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(felixconfigurationsResource, opts))
 }
 
 // Create takes the representation of a felixConfiguration and creates it.  Returns the server's representation of the felixConfiguration, and an error, if there is any.
-func (c *FakeFelixConfigurations) Create(felixConfiguration *projectcalico.FelixConfiguration) (result *projectcalico.FelixConfiguration, err error) {
+func (c *FakeFelixConfigurations) Create(ctx context.Context, felixConfiguration *projectcalico.FelixConfiguration, opts v1.CreateOptions) (result *projectcalico.FelixConfiguration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(felixconfigurationsResource, felixConfiguration), &projectcalico.FelixConfiguration{})
 	if obj == nil {
@@ -71,7 +73,7 @@ func (c *FakeFelixConfigurations) Create(felixConfiguration *projectcalico.Felix
 }
 
 // Update takes the representation of a felixConfiguration and updates it. Returns the server's representation of the felixConfiguration, and an error, if there is any.
-func (c *FakeFelixConfigurations) Update(felixConfiguration *projectcalico.FelixConfiguration) (result *projectcalico.FelixConfiguration, err error) {
+func (c *FakeFelixConfigurations) Update(ctx context.Context, felixConfiguration *projectcalico.FelixConfiguration, opts v1.UpdateOptions) (result *projectcalico.FelixConfiguration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(felixconfigurationsResource, felixConfiguration), &projectcalico.FelixConfiguration{})
 	if obj == nil {
@@ -81,22 +83,22 @@ func (c *FakeFelixConfigurations) Update(felixConfiguration *projectcalico.Felix
 }
 
 // Delete takes name of the felixConfiguration and deletes it. Returns an error if one occurs.
-func (c *FakeFelixConfigurations) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeFelixConfigurations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(felixconfigurationsResource, name), &projectcalico.FelixConfiguration{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeFelixConfigurations) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(felixconfigurationsResource, listOptions)
+func (c *FakeFelixConfigurations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(felixconfigurationsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &projectcalico.FelixConfigurationList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched felixConfiguration.
-func (c *FakeFelixConfigurations) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.FelixConfiguration, err error) {
+func (c *FakeFelixConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *projectcalico.FelixConfiguration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(felixconfigurationsResource, name, pt, data, subresources...), &projectcalico.FelixConfiguration{})
 	if obj == nil {

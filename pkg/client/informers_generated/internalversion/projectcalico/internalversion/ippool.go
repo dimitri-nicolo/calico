@@ -5,6 +5,7 @@
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
@@ -46,13 +47,13 @@ func NewFilteredIPPoolInformer(client internalclientset.Interface, resyncPeriod 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().IPPools().List(options)
+				return client.Projectcalico().IPPools().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Projectcalico().IPPools().Watch(options)
+				return client.Projectcalico().IPPools().Watch(context.TODO(), options)
 			},
 		},
 		&projectcalico.IPPool{},
