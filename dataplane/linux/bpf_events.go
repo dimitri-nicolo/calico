@@ -54,9 +54,6 @@ func (p *bpfEventPoller) run() {
 			log.WithError(err).Warn("Failed to get next event")
 			continue
 		}
-		if event == nil {
-			continue
-		}
 
 		sinks := p.sinks[event.Type()]
 		if len(sinks) == 0 {
