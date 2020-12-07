@@ -3,8 +3,8 @@ module github.com/tigera/intrusion-detection/controller
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201111100612-a01af2526458
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201116185717-b66b4f63504a
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201207165832-90c5d87932ba
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.17.2
@@ -34,7 +34,6 @@ replace (
 )
 
 require (
-	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
 	github.com/avast/retry-go v2.2.0+incompatible
 	github.com/docker/docker v1.13.1
@@ -52,8 +51,8 @@ require (
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	k8s.io/api v0.17.3
-	k8s.io/apimachinery v0.17.3
-	k8s.io/client-go v0.17.3
+	k8s.io/api v0.18.12
+	k8s.io/apimachinery v0.18.12
+	k8s.io/client-go v0.18.12
 	k8s.io/klog/v2 v2.0.0-20200127113903-12be8a0d907a
 )
