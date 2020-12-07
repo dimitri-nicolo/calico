@@ -99,7 +99,7 @@ git clone https://github.com/kmods-via-containers/kmods-via-containers
 cd kmods-via-containers
 make install DESTDIR=${TEMPROOT}/usr/local CONFDIR=${TEMPROOT}/etc/
 cd ..
-git clone https://github.com/realgaurav/kvc-wireguard-kmod
+git clone https://github.com/tigera/kvc-wireguard-kmod
 cd kvc-wireguard-kmod
 make install DESTDIR=${TEMPROOT}/usr/local CONFDIR=${TEMPROOT}/etc/
 cd ..
