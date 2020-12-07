@@ -42,7 +42,7 @@ The main advantage of using an overlay network is that it reduces dependencies o
 
 The main disadvantages of using an overlay network are:
 - A slight performance impact. The process of encapsulating packets takes a small amount of CPU, and the extra bytes required in the packet to encode the encapsulation (VXLAN or IP-in-IP headers) reduces the maximum size of inner packet that can be sent, which in turn can mean needing to send more packets for the same amount of total data.
-- The pod IP addresses are not routable outside of the cluster.  More on this below! 
+- The pod IP addresses are not routable outside of the cluster.  More on this below!
 
 #### Cross-subnet overlays
 In addition to standard VXLAN or IP-in-IP overlays, {{site.prodname}} also supports “cross-subnet” modes for VXLAN and IP-in-IP.  In this mode, within each subnet, the underlying network acts as an L2 network. Packets sent within a single subnet are not encapsulated, so you get the performance of a non-overlay network.  Packets sent across subnets are encapsulated, like a normal overlay network, reducing dependencies on the underlying network (without the need to integrate with or make any changes to the underlying network).
@@ -125,13 +125,6 @@ The Google cloud provider integration uses host-local IPAM CNI plugin to allocat
 
 The host local CNI IPAM plugin is a commonly used IP address management CNI plugin, which allocates a fixed size IP address range (CIDR) to each node, and then allocates pod IP addresses from within that range.  The default address range size is 256 IP addresses (a /24), though two of those IP addresses are reserved for special purposes and not assigned to pods. The simplicity of host local CNI IPAM plugin makes it easy to understand, but results in less efficient IP address space usage compared to {{site.prodname}} CNI IPAM plugin.
 
-**Flannel**
-
-Flannel routes pod traffic using static per-node CIDRs obtained from the host-local IPAM CNI plugin. Flannel provides a number of networking backends, but is predominantly used with its VXLAN overlay backend. {{site.prodname}} CNI and {{site.prodname}} network policy can be combined with flannel and the host-local IPAM plugin to provide a VXLAN network with policy enforcement.  This combination is sometimes referred to as “Canal”.  
-
->**Note**: {{site.prodname}} now has built in support for VXLAN, which we generally recommend for simplicity in preference to using the Calico+Flannel combination.
-{: .alert .alert-info}
-
 ### Networking Options
 
 #### On-prem
@@ -169,13 +162,6 @@ If you would like pod IP addresses to be routable outside of the cluster then yo
 
 {% include geek-details.html details='Policy:Calico,IPAM:Azure,CNI:Azure,Overlay:No,Routing:VPC Native' %}
 
-If you want to use AKS but allocating pod IPs from the underlying VNET is problematic due to IP address range exhaustion challenges, you can use {{site.prodname}} in conjunction with the Azure cloud provider integration. This uses host-local IPAM to allocate /24 per node, and programs routes within the cluster’s underlying VNET subnet for those /24.  Pod IPs are not routable outside of the cluster / VNET subnet, so the same pod IP address range (CIDR) can be used across multiple clusters if desired. 
-
->**Note**: This is referred to as kubenet + Calico in some AKS docs, but it is actually Calico CNI with Azure cloud provider, and does not use the kubenet plugin.
-{: .alert .alert-info}
-
-{% include geek-details.html details='Policy:Calico,IPAM:Host Local,CNI:Calico,Overlay:No,Routing:VPC Native' %}
-
 If you aren’t using AKS, and prefer to avoid dependencies on a specific cloud provider or allocating pod IPs from the underlying VNET is problematic due to IP address range exhaustion challenges, we recommend using {{site.prodname}} networking in cross-subnet overlay mode. Pod IPs will not be routable outside of the cluster, but you can scale the cluster up to the limits of Kubernetes with no dependencies on the underlying cloud network.
 
 {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Cross-subnet:VXLAN,Routing:Calico' %}
@@ -200,7 +186,7 @@ If you prefer to avoid dependencies on a specific cloud provider, or allocating 
 You can learn more about Kubernetes Networking on Google cloud, including how each of the above options works under the covers, in this short video: {% include open-new-window.html text='Everything you need to know about Kubernetes networking on Google cloud' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-google-cloud/' %}.
 
 #### IBM Cloud
-If you are using IBM Cloud then we recommend using {% include open-new-window.html text='IKS' url='https://www.ibm.com/cloud/container-service/' %}, which has Calico built in to provide cross-subnet IP-in-IP overlay.  In addition to providing network policy for pods, IKS also uses Calico network policies to {% include open-new-window.html text='secure the hosts nodes' url='https://cloud.ibm.com/docs/containers?topic=containers-network_policies#default_policy' %} within the cluster. 
+If you are using IBM Cloud then we recommend using {% include open-new-window.html text='IKS' url='https://www.ibm.com/cloud/container-service/' %}, which has Calico built in to provide cross-subnet IP-in-IP overlay.  In addition to providing network policy for pods, IKS also uses Calico network policies to {% include open-new-window.html text='secure the hosts nodes' url='https://cloud.ibm.com/docs/containers?topic=containers-network_policies#default_policy' %} within the cluster.
 
 {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Cross-subnet:IPIP,Routing:BGP' %}
 
