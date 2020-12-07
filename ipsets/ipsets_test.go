@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/felix/ip"
 	. "github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/labelindex"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -220,6 +221,7 @@ var _ = Describe("IP sets dataplane", func() {
 		dataplane = newMockDataplane()
 		ipsets = NewIPSetsWithShims(
 			v4VersionConf,
+			logutils.NewSummarizer("test loop"),
 			dataplane.newCmd,
 			dataplane.sleep,
 		)

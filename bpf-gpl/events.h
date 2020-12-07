@@ -53,10 +53,10 @@ static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
 	event.pid = pid;
 	event.proto = proto;
-	event.saddr = be32_to_host(saddr);
-	event.daddr = be32_to_host(daddr);
-	event.sport = be16_to_host(sport);
-	event.dport = be16_to_host(dport);
+	event.saddr = bpf_ntohl(saddr);
+	event.daddr = bpf_ntohl(daddr);
+	event.sport = bpf_ntohs(sport);
+	event.dport = bpf_ntohs(dport);
 	event.txBytes = txBytes;
 	event.rxBytes = rxBytes;
 	int err = perf_commit_event(ctx, &event, sizeof(event));

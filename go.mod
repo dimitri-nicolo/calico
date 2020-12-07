@@ -67,7 +67,7 @@ replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201124003750-14706c95922b
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201204152549-c0e8bd28970a
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

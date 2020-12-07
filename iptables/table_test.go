@@ -24,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/projectcalico/felix/iptables"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -56,6 +57,7 @@ var _ = Describe("Table with an empty dataplane (legacy)", func() {
 				NowOverride:           dataplane.now,
 				BackendMode:           "legacy",
 				LookPathOverride:      lookPathAll,
+				OpRecorder:            logutils.NewSummarizer("test loop"),
 			},
 		)
 
@@ -95,6 +97,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 				NowOverride:           dataplane.now,
 				BackendMode:           dataplaneMode,
 				LookPathOverride:      lookPathNoLegacy,
+				OpRecorder:            logutils.NewSummarizer("test loop"),
 			},
 		)
 	})
@@ -181,6 +184,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 					InsertMode:            "unknown",
 					BackendMode:           dataplaneMode,
 					LookPathOverride:      lookPathAll,
+					OpRecorder:            logutils.NewSummarizer("test loop"),
 				},
 			)
 		}).To(Panic())
@@ -955,6 +959,7 @@ func describePostUpdateCheckTests(enableRefresh bool, dataplaneMode string) {
 			NowOverride:           dataplane.now,
 			BackendMode:           dataplaneMode,
 			LookPathOverride:      lookPathNoLegacy,
+			OpRecorder:            logutils.NewSummarizer("test loop"),
 		}
 		if enableRefresh {
 			options.RefreshInterval = 30 * time.Second
@@ -1179,6 +1184,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 				InsertMode:               insertMode,
 				BackendMode:              dataplaneMode,
 				LookPathOverride:         lookPathNoLegacy,
+				OpRecorder:               logutils.NewSummarizer("test loop"),
 			},
 		)
 	})
@@ -1600,6 +1606,7 @@ func describeInsertAndNonCalicoChainTests(dataplaneMode string) {
 				NowOverride:           dataplane.now,
 				BackendMode:           dataplaneMode,
 				LookPathOverride:      lookPathNoLegacy,
+				OpRecorder:            logutils.NewSummarizer("test loop"),
 			},
 		)
 		table.InsertOrAppendRules("FORWARD", []Rule{
