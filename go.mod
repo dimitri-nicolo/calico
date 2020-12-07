@@ -38,11 +38,11 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
-	github.com/tigera/apiserver v0.0.0-20201116185717-b66b4f63504a
+	github.com/tigera/apiserver v0.0.0-20201207165832-90c5d87932ba
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	k8s.io/api v0.18.12
 	k8s.io/apimachinery v0.18.12
 	k8s.io/apiserver v0.18.12
 	k8s.io/client-go v0.18.12
-	k8s.io/kubernetes v1.17.3
+	k8s.io/kubernetes v1.18.12
 )
