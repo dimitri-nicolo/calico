@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,4 +85,16 @@ func (s *mockIPSets) GetMembers(setID string) (set.Set, error) {
 
 func (s *mockIPSets) GetTypeOf(setID string) (ipsets.IPSetType, error) {
 	return s.Metadata[setID].Type, nil
+}
+
+func (s *mockIPSets) QueueResync() {
+	// Not implemented for UT.
+}
+
+func (s *mockIPSets) ApplyUpdates() {
+	// Not implemented for UT.
+}
+
+func (s *mockIPSets) ApplyDeletions() {
+	// Not implemented for UT.
 }
