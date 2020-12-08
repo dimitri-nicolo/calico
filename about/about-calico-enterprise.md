@@ -158,7 +158,7 @@ In addition to cloud microsegmentation and zero trust network security, {{site.p
 - [Alerts]({{site.baseurl}}/visibility/alerts)
 - [Anomaly detection]({{site.baseurl}}/threat/anomaly-detection/)
 - [Threat intelligence feeds]({{site.baseurl}}/threat/suspicious-ips)
-
+- [Honeypods]({{site.baseurl}}/threat/honeypod/)
 
 ### Zero trust network security
 
