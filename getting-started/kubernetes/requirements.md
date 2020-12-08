@@ -35,8 +35,7 @@ Other versions may work, but we do not actively test {{site.prodname}}
 
 We test {{site.prodname}} {{page.version}} against the following Docker Enterprise versions.
 
-- Docker Enterprise v19.03.8
-- Docker Universal Control Plane (UCP) v3.3.0
+{% include content/docker-ee.md %}
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
