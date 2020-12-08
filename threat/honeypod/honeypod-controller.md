@@ -71,6 +71,75 @@ Add the honeypod controller to each cluster configured for honeypods using the f
 kubectl apply -f {{ "/manifests/threatdef/honeypod/controller.yaml" | absolute_url }} 
 ```
 
+For Openshift deployments, the controller will require privileged access. A separate manifest is provided:
+
+```bash
+kubectl apply -f {{ "/manifests/threatdef/honeypod/controller_os.yaml" | absolute_url }} 
+```
+
+#### Adding custom signatures into Snort
+
+By default Snort's community rule is used. Users can add their own custom signatures into the controller via ConfigMap.
+
+The following manifest provides the method to add individual custom signatures:
+
+```bash
+kubectl create -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: localrule
+  namespace: tigera-intrusion-detection
+data:
+  rules: |
+    alert icmp any any -> any any (msg:"ICMP Echo Request"; itype:8; sid:1000000;)
+    alert icmp any any -> any any (msg:"ICMP Echo Reply"; itype:0; sid:1000001;)
+EOF
+```
+
+Users can also add a Snort compatible signature pack:
+
+```bash
+kubectl create cm localrule -n tigera-intrusion-detection --from-file=rules=<SIGNATURE_PACK_LOCATION>
+```
+
+> **Note**: ConfigMaps has a size limit of 1 MiB. If more space is required, use an alternate volume mount method. 
+
+The controller deployment manifest will need to be updated to include the ConfigMap. 
+
+Refer to the patch file below:
+
+```bash
+cat <<EOF > patch.yaml
+spec:
+  template:
+    spec: 
+      containers:
+      - name: controller
+        volumeMounts:
+        - mountPath: /etc/snort/rules/custom.rules
+          subPath: custom.rules
+          name: custom-rules
+          readOnly: true
+      volumes:
+      - name: custom-rules
+        configMap:
+          name: localrule
+          items:
+          - key: "rules"
+            path: "custom.rules"
+EOF
+```
+
+> **Note**: The mountPath `/etc/snort/rules/custom.rules` is required and should not be changed.
+
+Apply the patch to the `honeypod-controller` DaemonSet:
+
+```bash
+kubectl patch daemonset honeypod-controller -n tigera-intrusion-detection --patch "$(cat patch.yaml)"
+```
+
+
 #### Verify honeypod controller
 
 To verify the installation, ensure that honeypod controller is running within the `tigera-intrusion-detection` namespace:
