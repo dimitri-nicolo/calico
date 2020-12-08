@@ -11,6 +11,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	k8s "k8s.io/client-go/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type contextKey int
@@ -70,7 +71,7 @@ func (auth *rbacAuthorizer) createSubjectAccessReview(user user.Info, resource *
 		sar.Spec.Extra[k] = v
 	}
 
-	res, err := auth.k8sCli.AuthorizationV1().SubjectAccessReviews().Create(&sar)
+	res, err := auth.k8sCli.AuthorizationV1().SubjectAccessReviews().Create(context.Background(), &sar, metav1.CreateOptions{})
 	if res != nil {
 		log.Debugf("Response to access review: %#v", res.Status)
 	}

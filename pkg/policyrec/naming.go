@@ -2,6 +2,7 @@
 package policyrec
 
 import (
+	"context"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,52 +40,53 @@ func GeneratePolicyName(k k8s.Interface, params *PolicyRecommendationParams) str
 }
 
 func GetObjectMeta(k k8s.Interface, kind, name, namespace string) metav1.ObjectMetaAccessor {
+	ctx := context.Background()
 	// Query each of the valid Kinds until something matches
 	switch kind {
 	case "DaemonSet":
-		obj, err := k.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting daemonset %s/%s", namespace, name)
 			return nil
 		}
 		return obj
 	case "Deployment":
-		obj, err := k.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting deployment %s/%s", namespace, name)
 			return nil
 		}
 		return obj
 	case "ReplicaSet":
-		obj, err := k.AppsV1().ReplicaSets(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.AppsV1().ReplicaSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting replicaset %s/%s", namespace, name)
 			return nil
 		}
 		return obj
 	case "StatefulSet":
-		obj, err := k.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting statefulset %s/%s", namespace, name)
 			return nil
 		}
 		return obj
 	case "Job":
-		obj, err := k.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting job %s/%s", namespace, name)
 			return nil
 		}
 		return obj
 	case "Pod":
-		obj, err := k.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting pod %s/%s", namespace, name)
 			return nil
 		}
 		return obj
 	case "CronJob":
-		obj, err := k.BatchV1beta1().CronJobs(namespace).Get(name, metav1.GetOptions{})
+		obj, err := k.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Infof("Error getting cronjob %s/%s", namespace, name)
 			return nil
@@ -94,43 +96,43 @@ func GetObjectMeta(k k8s.Interface, kind, name, namespace string) metav1.ObjectM
 		// We do not know the kind and need to search each type separately.
 	}
 
-	if obj, err := k.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
 		log.WithError(err).Debugf("Could not get daemonset %s/%s", namespace, name)
 	}
-	if obj, err := k.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
 		log.WithError(err).Debugf("Could not get deployment %s/%s", namespace, name)
 	}
-	if obj, err := k.AppsV1().ReplicaSets(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.AppsV1().ReplicaSets(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
 		log.WithError(err).Debugf("Could not get replicaset %s/%s", namespace, name)
 	}
-	if obj, err := k.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
 		log.WithError(err).Debugf("Could not get statefulset %s/%s", namespace, name)
 	}
-	if obj, err := k.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
 		log.WithError(err).Debugf("Could not get job %s/%s", namespace, name)
 	}
-	if obj, err := k.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
 		log.WithError(err).Debugf("Could not get pod %s/%s", namespace, name)
 	}
-	if obj, err := k.BatchV1beta1().CronJobs(namespace).Get(name, metav1.GetOptions{}); obj != nil {
+	if obj, err := k.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{}); obj != nil {
 		if err == nil {
 			return obj
 		}
