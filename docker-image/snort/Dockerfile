@@ -18,6 +18,7 @@ RUN set -xe \
     && touch /etc/snort/rules/local.rules \
              /etc/snort/rules/black_list.rules \
              /etc/snort/rules/white_list.rules \
+             /etc/snort/rules/custom.rules \
     && mkdir -p /etc/snort/so_rules \
                 /etc/snort/preproc_rules \
                 /usr/local/lib/snort_dynamicrules \
