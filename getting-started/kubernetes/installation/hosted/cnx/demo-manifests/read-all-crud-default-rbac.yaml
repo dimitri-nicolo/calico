@@ -53,7 +53,7 @@ rules:
 # Access to flow logs, audit logs, and statistics
 - apiGroups: ["lma.tigera.io"]
   resources: ["cluster"]
-  resourceNames: ["flows", "audit*", "events", "dns"]
+  resourceNames: ["flows", "audit*", "events", "dns", "l7"]
   verbs: ["get"]
 
 ---

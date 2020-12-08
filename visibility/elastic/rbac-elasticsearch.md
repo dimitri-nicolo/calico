@@ -33,6 +33,7 @@ Elasticsearch resources are associated with the **Kubernetes API group**, `lma.t
 | tigera_secure_ee_events     | events                        | Access to indices with data for {{site.prodname}} intrusion detection events.                |
 | kibana_login                | kibana_login                  | Allows an OIDC user to log in to Kibana and have read permissions for discover, visualize and dashboard.            |
 | superuser                   | elasticsearch_superuser       | Grants superuser access for all Elastic related actions, which include Kibana user and license management.         |
+| tigera_secure_ee_l7         | l7                            | Access to indices with data for L7 logs
 
 > **Note**: Because the `lma.tigera.io` API group is used only for RBAC, and is not backed by an actual API, it does not provide access to any other Kubernetes resources. 
 {: .alert .alert-info}
