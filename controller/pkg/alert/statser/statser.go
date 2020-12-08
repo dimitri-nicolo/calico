@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera Inc. All rights reserved.
 
 package statser
 
@@ -70,7 +70,7 @@ func (s *statser) Run(ctx context.Context) {
 		s.enqueue = enqueue
 
 		go run(ctx, func(ctx context.Context, i interface{}) {
-			s.updateStatus(i.(libcalicov3.GlobalAlertStatus))
+			s.updateStatus(ctx, i.(libcalicov3.GlobalAlertStatus))
 		})
 
 		go runloop.RunLoop(ctx, func() {
@@ -158,15 +158,15 @@ func (s *statser) ClearError(t string) {
 	s.enqueue(s.status())
 }
 
-func (s *statser) updateStatus(status libcalicov3.GlobalAlertStatus) {
+func (s *statser) updateStatus(ctx context.Context, status libcalicov3.GlobalAlertStatus) {
 	log.WithField("name", s.name).Debug("Updating status")
-	alert, err := s.globalAlertClient.Get(s.name, v1.GetOptions{})
+	alert, err := s.globalAlertClient.Get(ctx, s.name, v1.GetOptions{})
 	if err != nil {
 		log.WithError(err).WithField("name", s.name).Error("Could not get global alert")
 		return
 	}
 	alert.Status = status
-	_, err = s.globalAlertClient.UpdateStatus(alert)
+	_, err = s.globalAlertClient.UpdateStatus(ctx, alert, v1.UpdateOptions{})
 	if err != nil {
 		log.WithError(err).WithField("name", s.name).Error("Could not update global alert status")
 		return

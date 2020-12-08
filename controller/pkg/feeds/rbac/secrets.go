@@ -3,6 +3,7 @@
 package rbac
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -54,38 +55,38 @@ func (r RestrictedSecretsClient) isPermitted(name string) bool {
 	return true
 }
 
-func (r RestrictedSecretsClient) Get(name string, options metav1.GetOptions) (*v1.Secret, error) {
+func (r RestrictedSecretsClient) Get(ctx context.Context, name string, options metav1.GetOptions) (*v1.Secret, error) {
 	if !r.isPermitted(name) {
 		return nil, secretAccessDenied(name)
 	}
-	return r.Client.Get(name, options)
+	return r.Client.Get(ctx, name, options)
 }
 
-func (r RestrictedSecretsClient) List(opts metav1.ListOptions) (*v1.SecretList, error) {
+func (r RestrictedSecretsClient) List(ctx context.Context, opts metav1.ListOptions) (*v1.SecretList, error) {
 	return nil, UnsupportedOperation
 }
 
-func (r RestrictedSecretsClient) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (r RestrictedSecretsClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return nil, UnsupportedOperation
 }
 
-func (r RestrictedSecretsClient) Create(secret *v1.Secret) (*v1.Secret, error) {
+func (r RestrictedSecretsClient) Create(ctx context.Context, secret *v1.Secret, options metav1.CreateOptions) (*v1.Secret, error) {
 	return nil, UnsupportedOperation
 }
 
-func (r RestrictedSecretsClient) Update(secret *v1.Secret) (*v1.Secret, error) {
+func (r RestrictedSecretsClient) Update(ctx context.Context, secret *v1.Secret, options metav1.UpdateOptions) (*v1.Secret, error) {
 	return nil, UnsupportedOperation
 }
 
-func (r RestrictedSecretsClient) Delete(name string, options *metav1.DeleteOptions) error {
+func (r RestrictedSecretsClient) Delete(ctx context.Context, name string, options metav1.DeleteOptions) error {
 	return UnsupportedOperation
 }
 
-func (r RestrictedSecretsClient) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (r RestrictedSecretsClient) DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return UnsupportedOperation
 }
 
-func (r RestrictedSecretsClient) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Secret, err error) {
+func (r RestrictedSecretsClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (result *v1.Secret, err error) {
 	return nil, UnsupportedOperation
 }
 

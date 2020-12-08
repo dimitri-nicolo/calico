@@ -1,8 +1,9 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package calico
 
 import (
+	"context"
 	"sync"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -27,7 +28,7 @@ type MockGlobalNetworkSetInterface struct {
 	calls []db.Call
 }
 
-func (m *MockGlobalNetworkSetInterface) Create(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
+func (m *MockGlobalNetworkSetInterface) Create(ctx context.Context, gns *v3.GlobalNetworkSet, options v1.CreateOptions) (*v3.GlobalNetworkSet, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
 	m.calls = append(m.calls, db.Call{Method: "Create", GNS: gns.DeepCopy()})
@@ -43,7 +44,7 @@ func (m *MockGlobalNetworkSetInterface) Create(gns *v3.GlobalNetworkSet) (*v3.Gl
 	return gns, m.Error
 }
 
-func (m *MockGlobalNetworkSetInterface) Update(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
+func (m *MockGlobalNetworkSetInterface) Update(ctx context.Context, gns *v3.GlobalNetworkSet, options v1.UpdateOptions) (*v3.GlobalNetworkSet, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
 	m.calls = append(m.calls, db.Call{Method: "Update", GNS: gns.DeepCopy()})
@@ -54,25 +55,25 @@ func (m *MockGlobalNetworkSetInterface) Update(gns *v3.GlobalNetworkSet) (*v3.Gl
 	return gns, m.Error
 }
 
-func (m *MockGlobalNetworkSetInterface) Delete(name string, options *v1.DeleteOptions) error {
+func (m *MockGlobalNetworkSetInterface) Delete(ctx context.Context, name string, options v1.DeleteOptions) error {
 	m.m.Lock()
 	defer m.m.Unlock()
 	m.calls = append(m.calls, db.Call{Method: "Delete", Name: name})
 	return m.DeleteError
 }
 
-func (m *MockGlobalNetworkSetInterface) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (m *MockGlobalNetworkSetInterface) DeleteCollection(ctx context.Context, options v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return m.Error
 }
 
-func (m *MockGlobalNetworkSetInterface) Get(name string, options v1.GetOptions) (*v3.GlobalNetworkSet, error) {
+func (m *MockGlobalNetworkSetInterface) Get(ctx context.Context, name string, options v1.GetOptions) (*v3.GlobalNetworkSet, error) {
 	if m.GetError != nil {
 		return nil, m.GetError
 	}
 	return m.GlobalNetworkSet, m.Error
 }
 
-func (m *MockGlobalNetworkSetInterface) List(opts v1.ListOptions) (*v3.GlobalNetworkSetList, error) {
+func (m *MockGlobalNetworkSetInterface) List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalNetworkSetList, error) {
 	out := &v3.GlobalNetworkSetList{}
 	if m.GlobalNetworkSet != nil {
 		out.Items = append(out.Items, *m.GlobalNetworkSet)
@@ -80,7 +81,7 @@ func (m *MockGlobalNetworkSetInterface) List(opts v1.ListOptions) (*v3.GlobalNet
 	return out, m.Error
 }
 
-func (m *MockGlobalNetworkSetInterface) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (m *MockGlobalNetworkSetInterface) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	if m.WatchError == nil {
 		if m.W == nil {
 			m.W = &MockWatch{make(chan watch.Event)}
@@ -91,7 +92,7 @@ func (m *MockGlobalNetworkSetInterface) Watch(opts v1.ListOptions) (watch.Interf
 	}
 }
 
-func (m *MockGlobalNetworkSetInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
+func (m *MockGlobalNetworkSetInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options v1.PatchOptions, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
 	return nil, m.Error
 }
 

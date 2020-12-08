@@ -1,8 +1,10 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package calico
 
 import (
+	"context"
+
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,36 +19,36 @@ type MockGlobalThreatFeedInterface struct {
 	W                    *MockWatch
 }
 
-func (m *MockGlobalThreatFeedInterface) UpdateStatus(gtf *v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error) {
+func (m *MockGlobalThreatFeedInterface) UpdateStatus(ctx context.Context, gtf *v3.GlobalThreatFeed, options v1.UpdateOptions) (*v3.GlobalThreatFeed, error) {
 	m.GlobalThreatFeed = gtf
 	return gtf, m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) Create(gtf *v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error) {
+func (m *MockGlobalThreatFeedInterface) Create(ctx context.Context, gtf *v3.GlobalThreatFeed, options v1.CreateOptions) (*v3.GlobalThreatFeed, error) {
 	return gtf, m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) Update(gtf *v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error) {
+func (m *MockGlobalThreatFeedInterface) Update(ctx context.Context, gtf *v3.GlobalThreatFeed, options v1.UpdateOptions) (*v3.GlobalThreatFeed, error) {
 	return gtf, m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) Delete(name string, options *v1.DeleteOptions) error {
+func (m *MockGlobalThreatFeedInterface) Delete(ctx context.Context, name string, options v1.DeleteOptions) error {
 	return m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (m *MockGlobalThreatFeedInterface) DeleteCollection(ctx context.Context, options v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) Get(name string, options v1.GetOptions) (*v3.GlobalThreatFeed, error) {
+func (m *MockGlobalThreatFeedInterface) Get(ctx context.Context, name string, options v1.GetOptions) (*v3.GlobalThreatFeed, error) {
 	return m.GlobalThreatFeed, m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) List(opts v1.ListOptions) (*v3.GlobalThreatFeedList, error) {
+func (m *MockGlobalThreatFeedInterface) List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalThreatFeedList, error) {
 	return m.GlobalThreatFeedList, m.Error
 }
 
-func (m *MockGlobalThreatFeedInterface) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (m *MockGlobalThreatFeedInterface) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	if m.WatchError == nil {
 		if m.W == nil {
 			m.W = &MockWatch{make(chan watch.Event)}
@@ -57,6 +59,6 @@ func (m *MockGlobalThreatFeedInterface) Watch(opts v1.ListOptions) (watch.Interf
 	}
 }
 
-func (m *MockGlobalThreatFeedInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalThreatFeed, err error) {
+func (m *MockGlobalThreatFeedInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options v1.PatchOptions, subresources ...string) (result *v3.GlobalThreatFeed, err error) {
 	return nil, m.Error
 }

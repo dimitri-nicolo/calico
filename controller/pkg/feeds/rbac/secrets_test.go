@@ -3,6 +3,7 @@
 package rbac
 
 import (
+	"context"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -77,30 +78,30 @@ func TestRestrictedSecretsClient(t *testing.T) {
 	}
 
 	g := NewWithT(t)
-	_, err := r.Get("tigera-pull-secret", metav1.GetOptions{})
+	_, err := r.Get(context.Background(), "tigera-pull-secret", metav1.GetOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	_, err = r.Get("ok", metav1.GetOptions{})
+	_, err = r.Get(context.Background(), "ok", metav1.GetOptions{})
 	g.Expect(err).ShouldNot(HaveOccurred())
 
-	_, err = r.List(metav1.ListOptions{})
+	_, err = r.List(context.Background(), metav1.ListOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	_, err = r.Watch(metav1.ListOptions{})
+	_, err = r.Watch(context.Background(), metav1.ListOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	_, err = r.Create(nil)
+	_, err = r.Create(context.Background(), nil, metav1.CreateOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	_, err = r.Update(nil)
+	_, err = r.Update(context.Background(), nil, metav1.UpdateOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	err = r.Delete("foo", nil)
+	err = r.Delete(context.Background(), "foo", metav1.DeleteOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	err = r.DeleteCollection(nil, metav1.ListOptions{})
+	err = r.DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{})
 	g.Expect(err).Should(HaveOccurred())
 
-	_, err = r.Patch("foo", types.JSONPatchType, nil)
+	_, err = r.Patch(context.Background(), "foo", types.JSONPatchType, nil, metav1.PatchOptions{})
 	g.Expect(err).Should(HaveOccurred())
 }

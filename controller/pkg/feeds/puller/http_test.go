@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package puller
 
@@ -402,7 +402,7 @@ func TestSetFeedURIAndHeader(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(&testGlobalThreatFeed)
+	err := puller.setFeedURIAndHeader(context.Background(), &testGlobalThreatFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(puller.needsUpdate).Should(BeFalse(), "Update is no longer needed")
 	g.Expect(puller.url.String()).Should(Equal(testGlobalThreatFeed.Spec.Pull.HTTP.URL))
@@ -423,7 +423,7 @@ func TestSetFeedURIAndHeaderWithNilPull(t *testing.T) {
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull = nil
-	g.Expect(func() { _ = puller.setFeedURIAndHeader(f) }).Should(Panic())
+	g.Expect(func() { _ = puller.setFeedURIAndHeader(context.Background(), f) }).Should(Panic())
 }
 
 func TestSetFeedURIAndHeaderWithNilPullHTTP(t *testing.T) {
@@ -436,7 +436,7 @@ func TestSetFeedURIAndHeaderWithNilPullHTTP(t *testing.T) {
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull.HTTP = nil
-	g.Expect(func() { _ = puller.setFeedURIAndHeader(f) }).Should(Panic())
+	g.Expect(func() { _ = puller.setFeedURIAndHeader(context.Background(), f) }).Should(Panic())
 }
 
 func TestSetFeedURIAndHeaderWithInvalidURL(t *testing.T) {
@@ -449,7 +449,7 @@ func TestSetFeedURIAndHeaderWithInvalidURL(t *testing.T) {
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull.HTTP.URL = ":/"
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Update is needed")
 }
@@ -461,7 +461,7 @@ func TestSetFeedURIAndHeaderWithConfigMapError(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData, Error: errors.New("error")}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(puller.feed)
+	err := puller.setFeedURIAndHeader(context.Background(), puller.feed)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Update is needed")
 }
@@ -485,7 +485,7 @@ func TestSetFeedURIAndHeaderWithConfigMapOptional(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(puller.header).ShouldNot(HaveKey(f.Spec.Pull.HTTP.Headers[0].Name))
 	g.Expect(puller.needsUpdate).Should(BeFalse(), "Update is not needed")
@@ -510,7 +510,7 @@ func TestSetFeedURIAndHeaderWithConfigMapNotOptional(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Update is needed")
 }
@@ -533,7 +533,7 @@ func TestSetFeedURIAndHeaderWithConfigMapOptionalNotSpecified(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Update is needed")
 }
@@ -545,7 +545,7 @@ func TestSetFeedURIAndHeaderWithSecretsError(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData, Error: errors.New("error")}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(puller.feed)
+	err := puller.setFeedURIAndHeader(context.Background(), puller.feed)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Update is needed")
 }
@@ -569,7 +569,7 @@ func TestSetFeedURIAndHeaderWithSecretOptional(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(puller.header).ShouldNot(HaveKey(f.Spec.Pull.HTTP.Headers[0].Name))
 }
@@ -593,7 +593,7 @@ func TestSetFeedURIAndHeaderWithSecretNotOptional(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.header).ShouldNot(HaveKey(f.Spec.Pull.HTTP.Headers[0].Name))
 }
@@ -616,7 +616,7 @@ func TestSetFeedURIAndHeaderWithSecretOptionalNotSpecified(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(puller.header).ShouldNot(HaveKey(f.Spec.Pull.HTTP.Headers[0].Name))
 }
@@ -631,7 +631,7 @@ func TestSetFeedURIAndHeaderWithMissingRefs(t *testing.T) {
 	puller := NewIPSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull.HTTP.Headers[2].ValueFrom.ConfigMapKeyRef = nil
-	err := puller.setFeedURIAndHeader(f)
+	err := puller.setFeedURIAndHeader(context.Background(), f)
 	g.Expect(err).Should(HaveOccurred())
 }
 

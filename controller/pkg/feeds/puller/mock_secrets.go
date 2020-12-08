@@ -1,8 +1,10 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package puller
 
 import (
+	"context"
+
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,36 +16,36 @@ type MockSecrets struct {
 	Error       error
 }
 
-func (*MockSecrets) Create(*v1.Secret) (*v1.Secret, error) {
+func (*MockSecrets) Create(context.Context, *v1.Secret, v12.CreateOptions) (*v1.Secret, error) {
 	panic("implement me")
 }
 
-func (*MockSecrets) Update(*v1.Secret) (*v1.Secret, error) {
+func (*MockSecrets) Update(context.Context, *v1.Secret, v12.UpdateOptions) (*v1.Secret, error) {
 	panic("implement me")
 }
 
-func (*MockSecrets) Delete(name string, options *v12.DeleteOptions) error {
+func (*MockSecrets) Delete(ctx context.Context, name string, options v12.DeleteOptions) error {
 	panic("implement me")
 }
 
-func (*MockSecrets) DeleteCollection(options *v12.DeleteOptions, listOptions v12.ListOptions) error {
+func (*MockSecrets) DeleteCollection(ctx context.Context, options v12.DeleteOptions, listOptions v12.ListOptions) error {
 	panic("implement me")
 }
 
-func (m *MockSecrets) Get(name string, options v12.GetOptions) (*v1.Secret, error) {
+func (m *MockSecrets) Get(ctx context.Context, name string, options v12.GetOptions) (*v1.Secret, error) {
 	return &v1.Secret{
 		Data: m.SecretsData,
 	}, m.Error
 }
 
-func (*MockSecrets) List(opts v12.ListOptions) (*v1.SecretList, error) {
+func (*MockSecrets) List(ctx context.Context, opts v12.ListOptions) (*v1.SecretList, error) {
 	panic("implement me")
 }
 
-func (*MockSecrets) Watch(opts v12.ListOptions) (watch.Interface, error) {
+func (*MockSecrets) Watch(ctx context.Context, opts v12.ListOptions) (watch.Interface, error) {
 	panic("implement me")
 }
 
-func (*MockSecrets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Secret, err error) {
+func (*MockSecrets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options v12.PatchOptions, subresources ...string) (result *v1.Secret, err error) {
 	panic("implement me")
 }
