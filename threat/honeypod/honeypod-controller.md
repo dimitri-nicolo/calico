@@ -111,6 +111,7 @@ kubectl create cm localrule -n tigera-intrusion-detection --from-file=rules=<SNO
 
 Update the controller deployment to include the ConfigMap. **Important!** The mountPath `/etc/snort/rules/custom.rules` is required and the path cannot be changed.
 
+
 ```bash
 cat <<EOF > patch.yaml
 spec:
