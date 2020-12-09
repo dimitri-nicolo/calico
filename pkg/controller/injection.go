@@ -18,6 +18,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -54,7 +55,7 @@ type realReportControl struct {
 var _ reportControlInterface = &realReportControl{}
 
 func (c *realReportControl) UpdateStatus(report *v3.GlobalReport) (*v3.GlobalReport, error) {
-	return c.clientSet.GlobalReports().UpdateStatus(report)
+	return c.clientSet.GlobalReports().UpdateStatus(context.Background(), report, metav1.UpdateOptions{})
 }
 
 // fakeReportControl is the default implementation of reportControlInterface.
@@ -94,20 +95,20 @@ type realJobControl struct {
 var _ jobControlInterface = &realJobControl{}
 
 func (r *realJobControl) GetJob(namespace, name string) (*batchv1.Job, error) {
-	return r.clientSet.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
+	return r.clientSet.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 }
 
 func (r *realJobControl) UpdateJob(namespace string, job *batchv1.Job) (*batchv1.Job, error) {
-	return r.clientSet.BatchV1().Jobs(namespace).Update(job)
+	return r.clientSet.BatchV1().Jobs(namespace).Update(context.Background(), job, metav1.UpdateOptions{})
 }
 
 func (r *realJobControl) CreateJob(namespace string, job *batchv1.Job) (*batchv1.Job, error) {
-	return r.clientSet.BatchV1().Jobs(namespace).Create(job)
+	return r.clientSet.BatchV1().Jobs(namespace).Create(context.Background(), job, metav1.CreateOptions{})
 }
 
 func (r *realJobControl) DeleteJob(namespace string, name string) error {
 	background := metav1.DeletePropagationBackground
-	return r.clientSet.BatchV1().Jobs(namespace).Delete(name, &metav1.DeleteOptions{PropagationPolicy: &background})
+	return r.clientSet.BatchV1().Jobs(namespace).Delete(context.Background(), name, metav1.DeleteOptions{PropagationPolicy: &background})
 }
 
 type fakeJobControl struct {
@@ -191,11 +192,11 @@ type realPodControl struct {
 var _ podControlInterface = &realPodControl{}
 
 func (r realPodControl) ListPods(namespace string, opts metav1.ListOptions) (*v1.PodList, error) {
-	return r.clientSet.CoreV1().Pods(namespace).List(opts)
+	return r.clientSet.CoreV1().Pods(namespace).List(context.Background(), opts)
 }
 
 func (r realPodControl) DeletePod(namespace string, name string) error {
-	return r.clientSet.CoreV1().Pods(namespace).Delete(name, nil)
+	return r.clientSet.CoreV1().Pods(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 }
 
 type fakePodControl struct {
@@ -264,10 +265,10 @@ func (c *realPodTemplateQuery) GetPodTemplate(namespace, name string) (*v1.PodTe
 	// Get the rep template. Preferentially look for one called: "tigera.io.rep.<reportname>" and fallback to
 	// "tigera.io.rep" if that does not exist.
 	podTemplateName := reportPodTemplatePrefix + name
-	pt, err := c.clientSet.CoreV1().PodTemplates(namespace).Get(podTemplateName, metav1.GetOptions{})
+	pt, err := c.clientSet.CoreV1().PodTemplates(namespace).Get(context.Background(), podTemplateName, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		podTemplateName = reportPodTemplate
-		pt, err = c.clientSet.CoreV1().PodTemplates(namespace).Get(podTemplateName, metav1.GetOptions{})
+		pt, err = c.clientSet.CoreV1().PodTemplates(namespace).Get(context.Background(), podTemplateName, metav1.GetOptions{})
 	}
 	if err != nil {
 		return nil, err

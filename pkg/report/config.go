@@ -1,7 +1,9 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 package report
 
 import (
+	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
@@ -27,12 +29,12 @@ func MustLoadReportConfig(cfg *config.Config) *Config {
 	// Get the calico client and pull the named report and corresponding report type.
 	client := datastore.MustGetClientSet()
 
-	reportCfg.Report, err = client.GlobalReports().Get(reportCfg.ReportName, metav1.GetOptions{})
+	reportCfg.Report, err = client.GlobalReports().Get(context.Background(), reportCfg.ReportName, metav1.GetOptions{})
 	if err != nil {
 		log.WithError(err).Panicf("Global report %s not found.", reportCfg.ReportName)
 	}
 
-	reportCfg.ReportType, err = client.GlobalReportTypes().Get(reportCfg.Report.Spec.ReportType, metav1.GetOptions{})
+	reportCfg.ReportType, err = client.GlobalReportTypes().Get(context.Background(), reportCfg.Report.Spec.ReportType, metav1.GetOptions{})
 	if err != nil {
 		log.Panicf("Global report-type %s not found.", reportCfg.Report.Spec.ReportType)
 	}

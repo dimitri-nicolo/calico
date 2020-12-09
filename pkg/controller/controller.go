@@ -166,9 +166,9 @@ func (cc *ComplianceController) syncAll(ctx context.Context) {
 	// we must also see that the parent job has non-nil DeletionTimestamp (see #42639).
 	// Note that this only works because we are NOT using any caches here.
 	jobListFunc := func(opts metav1.ListOptions) (runtime.Object, error) {
-		return cc.clientSet.BatchV1().Jobs(cc.cfg.Namespace).List(opts)
+		return cc.clientSet.BatchV1().Jobs(cc.cfg.Namespace).List(ctx, opts)
 	}
-	jlTmp, err := pager.New(pager.SimplePageFunc(jobListFunc)).List(ctx, metav1.ListOptions{})
+	jlTmp, _, err := pager.New(pager.SimplePageFunc(jobListFunc)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("can't list Jobs: %v", err))
 		return
@@ -185,9 +185,9 @@ func (cc *ComplianceController) syncAll(ctx context.Context) {
 	cc.healthy()
 
 	reportListFunc := func(opts metav1.ListOptions) (runtime.Object, error) {
-		return cc.clientSet.GlobalReports().List(opts)
+		return cc.clientSet.GlobalReports().List(ctx, opts)
 	}
-	reportlTmp, err := pager.New(pager.SimplePageFunc(reportListFunc)).List(ctx, metav1.ListOptions{})
+	reportlTmp, _, err := pager.New(pager.SimplePageFunc(reportListFunc)).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("can't list Reports: %v", err))
 		return

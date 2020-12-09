@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,7 @@ func (s *server) getReportTypes(clusterID string) (map[string]*v3.ReportTypeSpec
 	}
 
 	// Get the latest set of report types.
-	grt, err := cs.GlobalReportTypes().List(v1.ListOptions{})
+	grt, err := cs.GlobalReportTypes().List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
