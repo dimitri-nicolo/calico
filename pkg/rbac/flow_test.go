@@ -269,4 +269,24 @@ var _ = Describe("FlowHelper tests", func() {
 			},
 		},
 	)
+
+	DescribeTable(
+		"CanListEndpoint",
+		func(endpointType api.EndpointType, namespace string, expectResourceAttrs *authzv1.ResourceAttributes) {
+			mockAuthorizer.On("Authorize", mock.Anything, expectResourceAttrs, mock.Anything).Return(true, nil)
+
+			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
+			_, _ = rh.CanListEndpoint(endpointType, namespace)
+		},
+		Entry(
+			"requests authorization to list a GlobalNetworkSets",
+			api.EndpointTypeNs, api.GlobalEndpointType,
+			&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "globalnetworksets"},
+		),
+		Entry(
+			"requests authorization to list NetworkSets in all namespaces",
+			api.EndpointTypeNs, "",
+			&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "networksets"},
+		),
+	)
 })

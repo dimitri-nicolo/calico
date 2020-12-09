@@ -297,6 +297,11 @@ func GetFlowPoliciesFromAggTerm(t *AggregatedTerm) []api.PolicyHit {
 	return p
 }
 
+// Deprecated This function strips the signal that says if an endpoint type is a global endpoint type. The replacement for
+// this will either a) assume anything getting a namespace from a flow knows the "-" means it's a global endpoint type
+// and will know how to handle it or b) create a structure around a flow to keep the information that the flow is for
+// a global resource type and users of that structure will understand how to use that information.
+//
 // GetFlowEndpointNamespace extracts the flow endpoint namespace from the composite aggregation key.
 func GetFlowEndpointNamespaceFromCompAggKey(k CompositeAggregationKey, idx int) string {
 	if ns := k[idx].String(); ns != FlowNamespaceNone {
