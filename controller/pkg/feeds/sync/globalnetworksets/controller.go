@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package globalnetworksets
 
@@ -81,11 +81,11 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			// We only care about GlobalNetworkSets created by this controller
 			options.LabelSelector = LabelKey + " = " + LabelValue
-			return client.List(options)
+			return client.List(context.Background(), options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 			options.LabelSelector = LabelKey + " = " + LabelValue
-			return client.Watch(options)
+			return client.Watch(context.Background(), options)
 		},
 	}
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -217,12 +217,12 @@ func (c *controller) run(ctx context.Context) {
 			log.Info("Stopping GlobalNetworkSet controller")
 			return
 		default:
-			c.processNextItem()
+			c.processNextItem(ctx)
 		}
 	}
 }
 
-func (c *controller) processNextItem() {
+func (c *controller) processNextItem(ctx context.Context) {
 	item, shutdown := c.queue.Get()
 	if shutdown {
 		log.Info("GlobalNetworkSet workqueue shut down")
@@ -255,20 +255,20 @@ func (c *controller) processNextItem() {
 			return
 		} else {
 			logCtx.Debug("updating GNS")
-			c.update(sl, sr)
+			c.update(ctx, sl, sr)
 		}
 	case okl && !okr:
 		// Local exists, but remote does not.
 		sl := il.(*v3.GlobalNetworkSet)
 		logCtx.Debug("local GNS exists")
-		c.create(sl)
+		c.create(ctx, sl)
 	case !okl && okr:
 		// Local does not exist, but remote does.
 		logCtx.Debug("remote GNS exists")
 		if c.okToGC(key) {
 			sr := ir.(*v3.GlobalNetworkSet)
 			logCtx.Debug("garbage collect GNS")
-			c.delete(sr)
+			c.delete(ctx, sr)
 		} else {
 			logCtx.Debug("skip GC of GNS")
 		}
@@ -339,25 +339,25 @@ func (c *controller) okToGC(key string) bool {
 	return !ok
 }
 
-func (c *controller) update(new, old *v3.GlobalNetworkSet) {
+func (c *controller) update(ctx context.Context, new, old *v3.GlobalNetworkSet) {
 	newMeta := old.ObjectMeta.DeepCopy()
 	newMeta.Labels = new.Labels
 	newMeta.DeepCopyInto(&new.ObjectMeta)
-	_, err := c.client.Update(new)
+	_, err := c.client.Update(ctx, new, metav1.UpdateOptions{})
 	if err != nil {
 		panic(clientsetError{err, opUpdate})
 	}
 }
 
-func (c *controller) create(s *v3.GlobalNetworkSet) {
-	_, err := c.client.Create(s)
+func (c *controller) create(ctx context.Context, s *v3.GlobalNetworkSet) {
+	_, err := c.client.Create(ctx, s, metav1.CreateOptions{})
 	if err != nil {
 		panic(clientsetError{err, opCreate})
 	}
 }
 
-func (c *controller) delete(s *v3.GlobalNetworkSet) {
-	err := c.client.Delete(s.Name, &metav1.DeleteOptions{})
+func (c *controller) delete(ctx context.Context, s *v3.GlobalNetworkSet) {
+	err := c.client.Delete(ctx, s.Name, metav1.DeleteOptions{})
 	if err != nil {
 		panic(clientsetError{err, opDelete})
 	}

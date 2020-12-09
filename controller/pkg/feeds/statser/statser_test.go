@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package statser
 
@@ -208,7 +208,7 @@ func TestStatser_updateStatus(t *testing.T) {
 	st.lastSuccessfulSearch = time.Now()
 	st.errorConditions.Add(ElasticSyncFailed, errors.New("test error"))
 
-	st.updateStatus(st.status())
+	st.updateStatus(context.Background(), st.status())
 
 	g.Expect(gtf.GlobalThreatFeed.Status.LastSuccessfulSync.Time).Should(BeTemporally("==", st.lastSuccessfulSync))
 	g.Expect(gtf.GlobalThreatFeed.Status.LastSuccessfulSearch.Time).Should(BeTemporally("==", st.lastSuccessfulSearch))

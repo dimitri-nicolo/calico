@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package statser
 
@@ -67,7 +67,7 @@ func (s *statser) Run(ctx context.Context) {
 		s.enqueue = enqueue
 
 		go run(ctx, func(ctx context.Context, i interface{}) {
-			s.updateStatus(i.(v3.GlobalThreatFeedStatus))
+			s.updateStatus(ctx, i.(v3.GlobalThreatFeedStatus))
 		})
 	})
 }
@@ -121,15 +121,15 @@ func (s *statser) ClearError(t string) {
 	s.enqueue(s.status())
 }
 
-func (s *statser) updateStatus(status v3.GlobalThreatFeedStatus) {
+func (s *statser) updateStatus(ctx context.Context, status v3.GlobalThreatFeedStatus) {
 	log.WithField("name", s.name).Debug("Updating status")
-	gtf, err := s.globalThreatFeedClient.Get(s.name, v1.GetOptions{})
+	gtf, err := s.globalThreatFeedClient.Get(ctx, s.name, v1.GetOptions{})
 	if err != nil {
 		log.WithError(err).WithField("name", s.name).Error("Could not get global threat feed")
 		return
 	}
 	gtf.Status = status
-	_, err = s.globalThreatFeedClient.UpdateStatus(gtf)
+	_, err = s.globalThreatFeedClient.UpdateStatus(ctx, gtf, v1.UpdateOptions{})
 	if err != nil {
 		log.WithError(err).WithField("name", s.name).Error("Could not update global threat feed status")
 		return

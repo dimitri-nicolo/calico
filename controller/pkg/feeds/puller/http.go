@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package puller
 
@@ -122,7 +122,7 @@ func (h *httpPuller) Close() {
 	h.cancel()
 }
 
-func (h *httpPuller) setFeedURIAndHeader(f *calico.GlobalThreatFeed) error {
+func (h *httpPuller) setFeedURIAndHeader(ctx context.Context, f *calico.GlobalThreatFeed) error {
 	u, err := url.Parse(f.Spec.Pull.HTTP.URL)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (h *httpPuller) setFeedURIAndHeader(f *calico.GlobalThreatFeed) error {
 			ok = false
 			switch {
 			case header.ValueFrom.ConfigMapKeyRef != nil:
-				configMap, err := h.configMapClient.Get(header.ValueFrom.ConfigMapKeyRef.Name, meta.GetOptions{})
+				configMap, err := h.configMapClient.Get(ctx, header.ValueFrom.ConfigMapKeyRef.Name, meta.GetOptions{})
 				if err != nil {
 					if header.ValueFrom.ConfigMapKeyRef.Optional != nil && *header.ValueFrom.ConfigMapKeyRef.Optional {
 						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("Skipping header")
@@ -154,7 +154,7 @@ func (h *httpPuller) setFeedURIAndHeader(f *calico.GlobalThreatFeed) error {
 					return FatalError("configMap %s key %s not found", header.ValueFrom.ConfigMapKeyRef.Name, header.ValueFrom.ConfigMapKeyRef.Key)
 				}
 			case header.ValueFrom.SecretKeyRef != nil:
-				secret, err := h.secretsClient.Get(header.ValueFrom.SecretKeyRef.Name, meta.GetOptions{})
+				secret, err := h.secretsClient.Get(ctx, header.ValueFrom.SecretKeyRef.Name, meta.GetOptions{})
 				if err != nil {
 					if header.ValueFrom.SecretKeyRef.Optional != nil && *header.ValueFrom.SecretKeyRef.Optional {
 						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("Skipping header")
@@ -201,7 +201,7 @@ func (h *httpPuller) getStartupDelay(ctx context.Context) time.Duration {
 }
 
 // queryInfo gets the information required for a query in a threadsafe way
-func (h *httpPuller) queryInfo(s statser.Statser) (name string, u *url.URL, header http.Header, err error) {
+func (h *httpPuller) queryInfo(ctx context.Context, s statser.Statser) (name string, u *url.URL, header http.Header, err error) {
 	h.lock.RLock()
 
 	if h.needsUpdate {
@@ -209,7 +209,7 @@ func (h *httpPuller) queryInfo(s statser.Statser) (name string, u *url.URL, head
 		h.lock.Lock()
 
 		if h.needsUpdate {
-			err = h.setFeedURIAndHeader(h.feed)
+			err = h.setFeedURIAndHeader(ctx, h.feed)
 			if err != nil {
 				h.lock.Unlock()
 				return
@@ -230,7 +230,7 @@ func (h *httpPuller) queryInfo(s statser.Statser) (name string, u *url.URL, head
 }
 
 func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uint, delay time.Duration) error {
-	name, u, header, err := h.queryInfo(st)
+	name, u, header, err := h.queryInfo(ctx, st)
 	if err != nil {
 		log.WithError(err).Error("failed to query")
 		st.Error(statser.PullFailed, err)

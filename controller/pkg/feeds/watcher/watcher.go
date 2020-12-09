@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package watcher
 
@@ -97,10 +97,10 @@ func NewWatcher(
 
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-			return globalThreatFeedInterface.List(options)
+			return globalThreatFeedInterface.List(context.Background(), options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			return globalThreatFeedInterface.Watch(options)
+			return globalThreatFeedInterface.Watch(context.Background(), options)
 		},
 	}
 	w := &watcher{

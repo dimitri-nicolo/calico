@@ -1,8 +1,9 @@
-// Copyright (c) 2019 Tigera Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera Inc. All rights reserved.
 
 package statser
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -53,7 +54,7 @@ func TestStatser_updateStatus(t *testing.T) {
 
 	st.errorConditions.Add(ElasticSyncFailed, errors.New("test error"))
 
-	st.updateStatus(st.status())
+	st.updateStatus(context.Background(), st.status())
 
 	g.Expect(ga.GlobalAlert.Status.ErrorConditions).Should(ConsistOf(st.errorConditions.TypedErrors(ElasticSyncFailed)))
 }

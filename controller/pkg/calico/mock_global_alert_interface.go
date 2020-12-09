@@ -1,8 +1,10 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2020 Tigera Inc. All rights reserved.
 
 package calico
 
 import (
+	"context"
+
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,36 +19,36 @@ type MockGlobalAlertInterface struct {
 	W               *MockWatch
 }
 
-func (m *MockGlobalAlertInterface) UpdateStatus(gtf *v3.GlobalAlert) (*v3.GlobalAlert, error) {
+func (m *MockGlobalAlertInterface) UpdateStatus(ctx context.Context, gtf *v3.GlobalAlert, options v1.UpdateOptions) (*v3.GlobalAlert, error) {
 	m.GlobalAlert = gtf
 	return gtf, m.Error
 }
 
-func (m *MockGlobalAlertInterface) Create(gtf *v3.GlobalAlert) (*v3.GlobalAlert, error) {
+func (m *MockGlobalAlertInterface) Create(ctx context.Context, gtf *v3.GlobalAlert, options v1.CreateOptions) (*v3.GlobalAlert, error) {
 	return gtf, m.Error
 }
 
-func (m *MockGlobalAlertInterface) Update(gtf *v3.GlobalAlert) (*v3.GlobalAlert, error) {
+func (m *MockGlobalAlertInterface) Update(ctx context.Context, gtf *v3.GlobalAlert, options v1.UpdateOptions) (*v3.GlobalAlert, error) {
 	return gtf, m.Error
 }
 
-func (m *MockGlobalAlertInterface) Delete(name string, options *v1.DeleteOptions) error {
+func (m *MockGlobalAlertInterface) Delete(ctx context.Context, name string, options v1.DeleteOptions) error {
 	return m.Error
 }
 
-func (m *MockGlobalAlertInterface) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (m *MockGlobalAlertInterface) DeleteCollection(ctx context.Context, options v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return m.Error
 }
 
-func (m *MockGlobalAlertInterface) Get(name string, options v1.GetOptions) (*v3.GlobalAlert, error) {
+func (m *MockGlobalAlertInterface) Get(ctx context.Context, name string, options v1.GetOptions) (*v3.GlobalAlert, error) {
 	return m.GlobalAlert, m.Error
 }
 
-func (m *MockGlobalAlertInterface) List(opts v1.ListOptions) (*v3.GlobalAlertList, error) {
+func (m *MockGlobalAlertInterface) List(ctx context.Context, opts v1.ListOptions) (*v3.GlobalAlertList, error) {
 	return m.GlobalAlertList, m.Error
 }
 
-func (m *MockGlobalAlertInterface) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (m *MockGlobalAlertInterface) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	if m.WatchError == nil {
 		if m.W == nil {
 			m.W = &MockWatch{make(chan watch.Event)}
@@ -57,6 +59,6 @@ func (m *MockGlobalAlertInterface) Watch(opts v1.ListOptions) (watch.Interface, 
 	}
 }
 
-func (m *MockGlobalAlertInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalAlert, err error) {
+func (m *MockGlobalAlertInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options v1.PatchOptions, subresources ...string) (result *v3.GlobalAlert, err error) {
 	return nil, m.Error
 }
