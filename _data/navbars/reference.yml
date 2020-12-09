@@ -86,7 +86,9 @@ section:
     - title: Policy
       path: /reference/calicoq/policy
     - title: Version
-      path: /reference/calicoq/version    
+      path: /reference/calicoq/version
+- title: Calico Enterprise API
+  path: /reference/apidocs/
 - title: Networking and policy resource definitions
   path: /reference/resources/
   section:
@@ -174,8 +176,6 @@ section:
     path: /reference/cni-plugin/configuration
   - title: Calico Enterprise Kubernetes controllers
     path: /reference/kube-controllers/configuration
-    # - title: REST API Reference
-    #   path: /reference/cnx/apidocs
   - title: Calico Enterprise node (cnx-node)
     path: /reference/node/
     section: 
