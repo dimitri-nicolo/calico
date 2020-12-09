@@ -10,6 +10,7 @@ require (
 	github.com/containernetworking/plugins v0.8.5
 	github.com/emicklei/go-restful v2.11.1+incompatible // indirect
 	github.com/go-openapi/spec v0.19.4 // indirect
+	github.com/gofrs/flock v0.8.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/howeyc/fsnotify v0.9.0
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
