@@ -125,8 +125,7 @@ func (r flowHelper) IncludeGlobalNamespace() (bool, error) {
 	return false, nil
 }
 
-// CanListEndpoint checks if the user can list the given endpoint in the given namespace. If the endpoint type is not
-// namespaced the namespace should be ignored.
+// CanListHostEndpoints implements the FlowHelper interface.
 func (r flowHelper) CanListHostEndpoints() (bool, error) {
 	return r.authorized(hepHelper, "list", "", "")
 }
@@ -146,22 +145,28 @@ func (r flowHelper) CanListNetworkSets(namespace string) (bool, error) {
 	return r.authorized(nsHelper, "list", namespace, "")
 }
 
-// CanListEn
+// CanListEndpoint checks if the user set in the flow helper can list the given endpoint type in the given namespace. If
+// the endpoint type is not namespaced the namespace is ignored. If the namespace is equal to the constant api.GlobalEndpointType
+// and the endpoint type has a global counterpart (like NetworkSets) then the authorization is done against the non namespaced
+// global endpoint type.
 func (r flowHelper) CanListEndpoint(typ api.EndpointType, namespace string) (bool, error) {
 	var err error
-	authorized := false
+	var authorized bool
 
 	switch typ {
 	case api.FlowLogEndpointTypeHEP:
 		authorized, err = r.CanListHostEndpoints()
 	case api.FlowLogEndpointTypeNetworkSet:
-		if len(namespace) == 0 {
+		if namespace == api.GlobalEndpointType {
 			authorized, err = r.CanListGlobalNetworkSets()
 		} else {
 			authorized, err = r.CanListNetworkSets(namespace)
 		}
 	case api.FlowLogEndpointTypeWEP:
 		authorized, err = r.CanListPods(namespace)
+	case api.FlowLogEndpointTypeNetwork:
+		// Net endpoint types are not RBAC checked
+		authorized = false
 	default:
 		err = new(ErrUnknownEndpointType)
 	}

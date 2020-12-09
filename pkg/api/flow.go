@@ -30,6 +30,8 @@ type FlowLogResult struct {
 type EndpointType string
 
 const (
+	GlobalEndpointType = "-"
+
 	EndpointTypeInvalid EndpointType = ""
 	EndpointTypeWep     EndpointType = "wep"
 	EndpointTypeHep     EndpointType = "hep"

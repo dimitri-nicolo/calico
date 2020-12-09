@@ -122,7 +122,7 @@ func (f *flowFilterUserRBAC) obfuscatePolicies(flow *CompositeAggregationBucket)
 // canListEndpoint determines if an endpoint can be listed.
 func (f *flowFilterUserRBAC) canListEndpoint(k CompositeAggregationKey, epTypeIdx, nsIdx int) (bool, error) {
 	epType := GetFlowEndpointTypeFromCompAggKey(k, epTypeIdx)
-	namespace := GetFlowEndpointNamespaceFromCompAggKey(k, nsIdx)
+	namespace := k[nsIdx].String()
 
 	return f.r.CanListEndpoint(epType, namespace)
 }
