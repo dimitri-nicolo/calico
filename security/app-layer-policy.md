@@ -44,13 +44,12 @@ See this [issue](https://github.com/projectcalico/calico/issues/2943){:target="_
 **Istio support**
 
 Following Istio versions have been verified to work with application layer policies:
-- Istio v1.7.3
-- Istio v1.6.12
-- Istio v1.4.2
+- Istio v1.6.14
+- Istio v1.7.5
 
 Istio v1.5.x is **not** supported.
 
-Although we expect future minor versions to work with the corresponding manifest below (for example, v1.6.13 or v1.7.4), manifest compatibility depends entirely on the upstream changes in the respective Istio release.
+Although we expect future minor versions to work with the corresponding manifest below (for example, v1.6.14 or v1.7.5), manifest compatibility depends entirely on the upstream changes in the respective Istio release.
 
 ### How to
 
@@ -74,10 +73,10 @@ kubectl patch felixconfiguration.p default --type='merge' -p \
 #### Install Istio
 
 1. Verify [application layer policy requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#application-layer-policy-requirements).
-1. Install Istio using {% include open-new-window.html text='installation guide in the project documentation' url='https://istio.io/v1.6/docs/setup/install/' %}.
+1. Install Istio using {% include open-new-window.html text='installation guide in the project documentation' url='https://istio.io/v1.7/docs/setup/install/' %}.
 
 ```bash
-curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.7.3 sh -
+curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.7.5 sh -
 cd $(ls -d istio-* --color=never)
 ```
 
@@ -85,9 +84,6 @@ Istio can be installed in both strict mode or permissive mode. Application layer
 
 Strict mode is strongly suggested when creating a new cluster. For example, to install Istio in strict mode:
 
-{% tabs %}
-<label:Istio v1.7.x or v1.6.x,active:true>
-<%
 ```bash
 ./bin/istioctl install --set values.global.controlPlaneSecurityEnabled=true
 ```
@@ -108,14 +104,6 @@ spec:
     mode: STRICT
 EOF
 ```
-%>
-<label:Istio v1.4.x or earlier>
-<%
-```bash
-./bin/istioctl manifest apply --set values.global.mtls.enabled=true --set values.global.controlPlaneSecurityEnabled=true
-```
-%>
-{% endtabs %}
 
 #### Update Istio sidecar injector
 
@@ -128,27 +116,18 @@ The sidecar injector automatically modifies pods as they are created to work wit
 <label:Istio v1.7.x,active:true>
 <%
 ```bash
-curl {{ "/manifests/alp/istio-inject-configmap-1.7.3.yaml" | absolute_url }} -o istio-inject-configmap.yaml
+curl {{ "/manifests/alp/istio-inject-configmap-1.7.yaml" | absolute_url }} -o istio-inject-configmap.yaml
 kubectl patch configmap -n istio-system istio-sidecar-injector --patch "$(cat istio-inject-configmap.yaml)"
 ```
 
-[View sample manifest]({{ "/manifests/alp/istio-inject-configmap-1.7.3.yaml" | absolute_url }}){:target="_blank"}
+[View sample manifest]({{ "/manifests/alp/istio-inject-configmap-1.7.yaml" | absolute_url }}){:target="_blank"}
 %>
 <label:Istio v1.6.x>
 <%
 ```bash
-curl {{ "/manifests/alp/istio-inject-configmap-1.6.12.yaml" | absolute_url }} -o istio-inject-configmap.yaml
+curl {{ "/manifests/alp/istio-inject-configmap-1.6.yaml" | absolute_url }} -o istio-inject-configmap.yaml
 kubectl patch configmap -n istio-system istio-sidecar-injector --patch "$(cat istio-inject-configmap.yaml)"
 ```
-%>
-<label:Istio v1.4.x or earlier>
-<%
-```bash
-curl {{ "/manifests/alp/istio-inject-configmap-1.4.2.yaml" | absolute_url }} -o istio-inject-configmap.yaml
-kubectl patch configmap -n istio-system istio-sidecar-injector --patch "$(cat istio-inject-configmap.yaml)"
-```
-
-If you installed a different version of Istio, substitute 1.4.2 in the above URL for your Istio version. We have predefined `ConfigMaps` for Istio versions 1.1.0 through 1.1.17, 1.2.0 through 1.2.9, 1.3.0 through 1.3.5, and 1.4.0 through 1.4.2.
 %>
 {% endtabs %}
 
@@ -160,20 +139,14 @@ Apply the following manifest to configure Istio to query {{site.prodname}} for a
 <label:Istio v1.7.x,active:true>
 <%
 ```bash
-kubectl apply -f {{ "/manifests/alp/istio-app-layer-policy-v1.7.3.yaml" | absolute_url }}
+kubectl apply -f {{ "/manifests/alp/istio-app-layer-policy-v1.7.yaml" | absolute_url }}
 ```
-[View sample manifest]({{ "/manifests/alp/istio-app-layer-policy-v1.7.3.yaml" | absolute_url }}){:target="_blank"}
+[View sample manifest]({{ "/manifests/alp/istio-app-layer-policy-v1.7.yaml" | absolute_url }}){:target="_blank"}
 %>
 <label:Istio v1.6.x>
 <%
 ```bash
-kubectl apply -f {{ "/manifests/alp/istio-app-layer-policy-v1.6.12.yaml" | absolute_url }}
-```
-%>
-<label:Istio v1.4.x or earlier>
-<%
-```bash
-kubectl apply -f {{ "/manifests/alp/istio-app-layer-policy.yaml" | absolute_url }}
+kubectl apply -f {{ "/manifests/alp/istio-app-layer-policy-v1.6.yaml" | absolute_url }}
 ```
 %>
 {% endtabs %}

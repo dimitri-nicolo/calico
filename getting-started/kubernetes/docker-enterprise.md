@@ -12,7 +12,7 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 **Docker requirements**
 
-- Docker EE 3.1 with UCP 3.3.1 install with:
+- {% include content/docker-ee.md %} install with:
 
    - A minimum of three nodes for non-production deployments
    - CNI flag set to unmanaged, `--unmanaged-cni` so UCP does not install the default Calico networking plugin
