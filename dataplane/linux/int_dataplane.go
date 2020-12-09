@@ -672,9 +672,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
 		}
 
-		bpfEventPoller.Register(events.TypeProtoStatsV4, func(e events.Event) {
-			log.WithField("event", e).Debug("Received Protocol stats")
-		})
+		bpfEventPoller.Register(events.TypeProtoStatsV4, eventProtoStatsV4Sink)
 	}
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
