@@ -1,11 +1,21 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/tigera/envoy-collector/pkg/config"
+)
+
+const (
+	ProtocolTCP string = "tcp"
+)
+
+const (
+	LogTypeTCP string = "tcp"
+	LogTypeTLS string = "tls"
 )
 
 type EnvoyCollector interface {
@@ -18,63 +28,99 @@ func NewEnvoyCollector(cfg *config.Config) EnvoyCollector {
 	// Currently it will only return a log file collector but
 	// this should inspect the config to return other collectors
 	// once they need to be implemented.
-	return NewNginxCollector(cfg)
+	return EnvoyCollectorNew(cfg)
 }
 
 type EnvoyInfo struct {
-	Logs        []EnvoyLog
+	Logs        map[string]EnvoyLog
 	Connections map[TupleKey]int
 }
 
 type EnvoyLog struct {
-	SrcIp    string `json:"source_ip"`
-	DstIp    string `json:"destination_ip"`
-	SrcPort  int32  `json:"source_port"`
-	DstPort  int32  `json:"destination_port"`
-	Protocol string `json:"protocol"`
+	// some of the fields are relevant for collector only and are not sent to felix Ex. RequestId, StartTime etc
+	// for the information that is sent to felix check HttpData proto
+	Reporter      string `json:"reporter"`
+	StartTime     string `json:"start_time"`
+	Duration      int32  `json:"duration"`
+	ResponseCode  int32  `json:"response_code"`
+	BytesSent     int32  `json:"bytes_sent"`
+	BytesReceived int32  `json:"bytes_received"`
+	UserAgent     string `json:"user_agent"`
+	RequestPath   string `json:"request_path"`
+	RequestMethod string `json:"request_method"`
+	RequestId     string `json:"request_id"`
+	Type          string `json:"type"`
+	Domain        string `json:"domain"`
 
-	// HTTP Headers
-	XForwardedFor string `json:"x-forwarded-for"`
-	XRealIp       string `json:"x-real-ip"`
+	// these are the addresses we extract 5 tuple information from
+	DSRemoteAddress string `json:"downstream_remote_address"`
+	DSLocalAddress  string `json:"downstream_local_address"`
+
+	Protocol    string `json:"protocol"`
+	SrcIp       string
+	DstIp       string
+	SrcPort     int32
+	DstPort     int32
+	Count       int32
+	DurationMax int32
 }
 
 // TupleKey is an object just for holding the
-// Envoy log's 5 tuple information.
+// Envoy log's 5 tuple information. Since the protocol is always tcp its replaced by type
 type TupleKey struct {
-	SrcIp    string
-	DstIp    string
-	SrcPort  int32
-	DstPort  int32
-	Protocol string
+	SrcIp   string
+	DstIp   string
+	SrcPort int32
+	DstPort int32
+	Type    string
 }
 
-// BatchEnvoyLog represents a "batch" of logs
-// that we will use to collect HTTP request level info.
-// This is used to limit the amount of request level
-// data we send to Felix.
 type BatchEnvoyLog struct {
 	logs map[string]EnvoyLog
 	size int
 }
 
 func NewBatchEnvoyLog(size int) *BatchEnvoyLog {
-	if size < 0 {
-		return &BatchEnvoyLog{
-			logs: make(map[string]EnvoyLog),
-			size: size,
-		}
-	}
 	return &BatchEnvoyLog{
-		logs: make(map[string]EnvoyLog, size),
+		logs: make(map[string]EnvoyLog),
 		size: size,
 	}
 }
 
 func (b BatchEnvoyLog) Insert(log EnvoyLog) {
+	// http logs will have one log for each unique request id
 	logKey := EnvoyLogKey(log)
-	if !b.Full() {
-		b.logs[logKey] = log
+	// for tcp and tls types we don't get much information so we treat this as a single connection and
+	// add the duration, bytes_sent, bytes_received. (same for rare cases when multiple http log comes with same request_id)
+	// this happens even when the batch is full
+	if val, ok := b.logs[logKey]; ok {
+		// set max duration per request level
+		if log.Duration > val.DurationMax {
+			val.DurationMax = log.Duration
+		}
+
+		val.Duration = val.Duration + log.Duration
+		val.BytesReceived = val.BytesReceived + log.BytesReceived
+		val.BytesSent = val.BytesSent + log.BytesSent
+		val.Count++
+		b.logs[logKey] = val
+	} else {
+		// add unique logs ony to the batch, if there is space otherwise we drop it
+		if !b.Full() {
+			log.Count = 1
+			log.DurationMax = log.Duration
+			b.logs[logKey] = log
+		}
 	}
+}
+
+func EnvoyLogKey(log EnvoyLog) string {
+	// RequestId is unique for each http request. Where as for tcp type logs RequestId would be null
+	// so here we create a key using the 5 tuple information and use that as a key
+	if log.Type == LogTypeTCP || log.Type == LogTypeTLS {
+		return fmt.Sprintf("%v-%v-%v-%v-%v", log.SrcIp, log.SrcPort, log.DstIp, log.DstPort, log.Type)
+	}
+	return log.RequestId
 }
 
 func (b BatchEnvoyLog) Full() bool {
@@ -84,36 +130,13 @@ func (b BatchEnvoyLog) Full() bool {
 	return len(b.logs) == b.size
 }
 
-func (b BatchEnvoyLog) Clear() {
-	if b.size < 0 {
-		b.logs = make(map[string]EnvoyLog)
-	}
-	b.logs = make(map[string]EnvoyLog, b.size)
-}
-
-func (b BatchEnvoyLog) Logs() []EnvoyLog {
-	logs := []EnvoyLog{}
-	for _, val := range b.logs {
-		logs = append(logs, val)
-	}
-	return logs
-}
-
-func EnvoyLogKey(log EnvoyLog) string {
-	// Only use 1 IP as the key
-	if log.XRealIp != "" && log.XRealIp != "-" {
-		return log.XRealIp
-	}
-	return log.XForwardedFor
-}
-
 func TupleKeyFromEnvoyLog(log EnvoyLog) TupleKey {
 	return TupleKey{
-		SrcIp:    log.SrcIp,
-		DstIp:    log.DstIp,
-		SrcPort:  log.SrcPort,
-		DstPort:  log.DstPort,
-		Protocol: log.Protocol,
+		SrcIp:   log.SrcIp,
+		DstIp:   log.DstIp,
+		SrcPort: log.SrcPort,
+		DstPort: log.DstPort,
+		Type:    log.Type,
 	}
 }
 
@@ -123,6 +146,7 @@ func EnvoyLogFromTupleKey(key TupleKey) EnvoyLog {
 		DstIp:    key.DstIp,
 		SrcPort:  key.SrcPort,
 		DstPort:  key.DstPort,
-		Protocol: key.Protocol,
+		Type:     key.Type,
+		Protocol: ProtocolTCP,
 	}
 }

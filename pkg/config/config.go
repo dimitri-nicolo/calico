@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package config
 
@@ -15,14 +15,14 @@ type Config struct {
 
 	// Socket to dial
 	DialTarget string `envconfig:"FELIX_DIAL_TARGET"`
-	// Location of the ingress log files to read from
-	IngressLogPath string `envconfig:"INGRESS_LOG_PATH"`
+	// Location of the envoy log files to read from
+	EnvoyLogPath string `envconfig:"ENVOY_LOG_PATH"`
 	// How long the collector will wait in seconds to collect
 	// logs before sending them as a batch.
-	IngressLogIntervalSecs int `envconfig:"INGRESS_LOG_INTERVAL_SECONDS"`
+	EnvoyLogIntervalSecs int `envconfig:"ENVOY_LOG_INTERVAL_SECONDS"`
 	// Number requests sent in the batch of logs from the collector.
 	// A negative number will return as many requests as possible.
-	IngressRequestsPerInterval int `envconfig:"INGRESS_LOG_REQUESTS_PER_INTERVAL"`
+	EnvoyRequestsPerInterval int `envconfig:"ENVOY_LOG_REQUESTS_PER_INTERVAL"`
 
 	// Configuration for tests
 	// Sets where the log file should be read from.
@@ -52,22 +52,22 @@ func LoadConfig() (*Config, error) {
 	// Parse log level.
 	config.ParsedLogLevel = logutils.SafeParseLogLevel(config.LogLevel)
 
-	// Default the IngressLogPath to /var/log/calico/ingress/ingress.log
-	if config.IngressLogPath == "" {
-		config.IngressLogPath = "/tmp/envoy.log"
+	// Default the EnvoyLogPath to /tmp/envoy.log
+	if config.EnvoyLogPath == "" {
+		config.EnvoyLogPath = "/tmp/envoy.log"
 	}
 
-	// Default the IngressLogInterval to 5 seconds
-	if config.IngressLogIntervalSecs == 0 {
-		config.IngressLogIntervalSecs = 5
+	// Default the EnvoyLogInterval to 5 seconds
+	if config.EnvoyLogIntervalSecs == 0 {
+		config.EnvoyLogIntervalSecs = 5
 	}
 
-	// Default the INgressLogBatchSize to 10
-	if config.IngressRequestsPerInterval == 0 {
-		config.IngressRequestsPerInterval = 10
+	// Default the EnvoyLogBatchSize to negative. This will make the batch size unlimited
+	if config.EnvoyRequestsPerInterval == 0 {
+		config.EnvoyRequestsPerInterval = -1
 	}
 
-	// Make sure that the tail reads from the end of the ingress log.
+	// Make sure that the tail reads from the end of the envoy log.
 	config.TailWhence = 2
 
 	return config, nil
