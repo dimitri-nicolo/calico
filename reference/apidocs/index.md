@@ -1,6 +1,6 @@
 ---
-title: API Docs
-description: API Docs
+title: Calico Enterprise API reference
+description: Calico Enterprise API reference
 canonical_url: "/reference/apidocs/index"
 show_read_time: false
 show_toc: false
