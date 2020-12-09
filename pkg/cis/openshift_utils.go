@@ -1,6 +1,7 @@
 package cis
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -50,7 +51,7 @@ func determineOpenshiftArgs(nodename string) ([]string, error) {
 	}
 
 	// Get node.
-	node, err := k8sClient.CoreV1().Nodes().Get(nodename, metav1.GetOptions{})
+	node, err := k8sClient.CoreV1().Nodes().Get(context.Background(), nodename, metav1.GetOptions{})
 	if err != nil {
 		log.WithField("node", nodename).WithError(err).Error("Failed to get node")
 		return nil, err
@@ -68,7 +69,7 @@ func determineOpenshiftArgs(nodename string) ([]string, error) {
 func isRunningOpenshift(podClient corev1Client.PodInterface) (string, error) {
 	// List pods that contain an Openshift specific label.
 	listOpts := metav1.ListOptions{LabelSelector: openshiftLabel}
-	pods, err := podClient.List(listOpts)
+	pods, err := podClient.List(context.Background(), listOpts)
 	if err != nil {
 		log.WithError(err).Error("Failed to list for Openshift pods")
 		return "", err
