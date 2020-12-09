@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/tigera/lma/pkg/api"
+
 	"github.com/stretchr/testify/mock"
 
 	"github.com/tigera/lma/pkg/list"
@@ -488,10 +490,11 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			mockFlowHelper := new(rbac.MockFlowHelper)
 
-			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
-			mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
-			mockFlowHelper.On("CanListPods", mock.Anything).Return(true, nil)
+			// Allow all except HEP and GNPs.  The first result will be excluded.  The second result will have the GNP obfuscated.
 			mockFlowHelper.On("CanListPolicy", mock.Anything).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeHep, api.GlobalEndpointType).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, api.GlobalEndpointType).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
 			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
 
 			searchResults, stat, err := getFlowLogsFromElastic(flowFilter, params, esClient)
@@ -531,10 +534,11 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			mockFlowHelper := new(rbac.MockFlowHelper)
 
-			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
-			mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
-			mockFlowHelper.On("CanListPods", mock.Anything).Return(true, nil)
+			// Allow all except HEP and GNPs.  The first result will be excluded.  The second result will have the GNP obfuscated.
 			mockFlowHelper.On("CanListPolicy", mock.Anything).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeHep, api.GlobalEndpointType).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeNet, api.GlobalEndpointType).Return(false, nil)
+			mockFlowHelper.On("CanListEndpoint", api.EndpointTypeWep, mock.Anything).Return(true, nil)
 
 			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
 			searchResults, stat, err := getPIPFlowLogsFromElastic(flowFilter, params, pipClient, rbacHelper)

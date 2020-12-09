@@ -227,7 +227,9 @@ signpost:
 # Static checks
 ###############################################################################
 # See .golangci.yml for golangci-lint config
-LINT_ARGS +=
+# SA1019 are deprecation checks, we don't want to fail on those because it means a library update that deprecates something
+# requires immediate removing of the deprecated functions.
+LINT_ARGS += --exclude SA1019
 
 ###############################################################################
 # CI/CD
