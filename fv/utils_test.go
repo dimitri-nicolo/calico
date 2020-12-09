@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -22,7 +22,7 @@ import (
 )
 
 const ListenerSocket = "policysync.sock"
-const IngressLogFile = "ingress.log"
+const EnvoyLogFile = "envoy.log"
 
 // CollectorTestHandler keeps track of all of the separate components
 // needed for running collector FV tests.
@@ -46,7 +46,7 @@ func NewCollectorTestHandler() *CollectorTestHandler {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Create the tmp log file to collect from
-	f, _ := os.Create(cfg.IngressLogPath)
+	f, _ := os.Create(cfg.EnvoyLogPath)
 	defer f.Close()
 
 	statsChan := make(chan *proto.DataplaneStats, 20)
@@ -99,15 +99,15 @@ func createTestConfig() *config.Config {
 	cfg := config.MustLoadConfig()
 	tmpDir := makeTmpListenerDir()
 	socketPath := path.Join(tmpDir, ListenerSocket)
-	ingressLogFilePath := path.Join(tmpDir, IngressLogFile)
+	envoyLogFilePath := path.Join(tmpDir, EnvoyLogFile)
 	cfg.DialTarget = socketPath
-	cfg.IngressLogPath = ingressLogFilePath
+	cfg.EnvoyLogPath = envoyLogFilePath
 	// Set the log level to debug
 	cfg.LogLevel = "debug"
 	// Set the interval between collecting logs to 5 seconds
-	cfg.IngressLogIntervalSecs = 5
+	cfg.EnvoyLogIntervalSecs = 5
 	// Set the max batch size to 5 for the tests
-	cfg.IngressRequestsPerInterval = 5
+	cfg.EnvoyRequestsPerInterval = 5
 	cfg.ParsedLogLevel = logutils.SafeParseLogLevel(cfg.LogLevel)
 	// Set the tail to read from the beginning of the fake log file
 	// to prevent waiting for the collector to start.
@@ -125,7 +125,7 @@ func makeTmpListenerDir() string {
 }
 
 func (cth *CollectorTestHandler) WriteToLog(logline string) {
-	f, err := os.OpenFile(cth.config.IngressLogPath, os.O_APPEND|os.O_WRONLY, 0777)
+	f, err := os.OpenFile(cth.config.EnvoyLogPath, os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -157,11 +157,11 @@ func (cth *CollectorTestHandler) StartPolicySyncServer() {
 }
 
 func (cth *CollectorTestHandler) Timeout() string {
-	return fmt.Sprintf("%vs", cth.config.IngressLogIntervalSecs*24)
+	return fmt.Sprintf("%vs", cth.config.EnvoyLogIntervalSecs*24)
 }
 
 func (cth *CollectorTestHandler) Interval() string {
-	return fmt.Sprintf("%vs", cth.config.IngressLogIntervalSecs)
+	return fmt.Sprintf("%vs", cth.config.EnvoyLogIntervalSecs)
 }
 
 type testPolicySyncServer struct {
@@ -194,6 +194,5 @@ func DeepCopyDpsWithoutHttpData(src *proto.DataplaneStats) *proto.DataplaneStats
 		SrcPort:  src.SrcPort,
 		DstPort:  src.DstPort,
 		Protocol: src.Protocol,
-		Stats:    src.Stats,
 	}
 }
