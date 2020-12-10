@@ -32,13 +32,13 @@ PROTOC_VER ?= v0.1
 PROTOC_CONTAINER ?= calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
 # Get version from git - used for releases.
-ENVOY_COLLECTOR_GIT_VERSION ?= $(shell git describe --tags --dirty --always)
+ENVOY_COLLECTOR_GIT_VERSION ?= $(shell git describe --tags --dirty --always --abbrev=12)
 ENVOY_COLLECTOR_BUILD_DATE ?= $(shell date -u +'%FT%T%z')
 ENVOY_COLLECTOR_GIT_REVISION ?= $(shell git rev-parse --short HEAD)
-ENVOY_COLLECTOR_GIT_DESCRIPTION ?= $(shell git describe --tags)
+ENVOY_COLLECTOR_GIT_DESCRIPTION ?= $(shell git describe --tags --abbrev=12 || echo '<unknown>')
 
 ifeq ($(LOCAL_BUILD),true)
-ENVOY_COLLECTOR_GIT_VERSION = $(shell git describe --tags --dirty --always)-dev-build
+ENVOY_COLLECTOR_GIT_VERSION = $(shell git describe --tags --dirty --always --abbrev=12)-dev-build
 endif
 
 VERSION_FLAGS=-X main.VERSION=$(ENVOY_COLLECTOR_GIT_VERSION) \
@@ -331,12 +331,12 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
 ###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=12)
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs
