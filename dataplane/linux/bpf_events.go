@@ -37,10 +37,6 @@ func (p *bpfEventPoller) Start() error {
 	return nil
 }
 
-func (p *bpfEventPoller) Stop() {
-	p.events.Close()
-}
-
 func (p *bpfEventPoller) run() {
 	for {
 		event, err := p.events.Next()

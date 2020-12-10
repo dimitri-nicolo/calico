@@ -152,15 +152,13 @@ func parseEvent(raw eventRaw) (Event, error) {
 	data := raw.Data()
 	consumed := copy(hdrBytes[:], data)
 	l := len(data)
-	if int(hdr.Len) <= l {
-		l = int(hdr.Len)
-	} else {
+	if int(hdr.Len) > l {
 		return Event{}, errors.Errorf("mismatched lenght %d vs data length %d", hdr.Len, l)
 	}
 
 	return Event{
 		typ:  Type(hdr.Type),
-		data: data[consumed:l],
+		data: data[consumed:hdr.Len],
 	}, nil
 }
 
@@ -168,5 +166,5 @@ func parseEvent(raw eventRaw) (Event, error) {
 type ErrLostEvents int
 
 func (e ErrLostEvents) Error() string {
-	return fmt.Sprintf("%d lost events")
+	return fmt.Sprintf("%d lost events", e)
 }
