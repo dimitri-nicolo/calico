@@ -39,7 +39,8 @@ The controller leverages the following:
 
   - [Enable packet capture on honeypods](#enable-packet-capture-on-honeypods)
   - [Add honeypod controller to cluster](#add-honeypod-controller-to-cluster)
-  - [Verify honeypod controller](#verify-honeypod-controller)
+  - [Add custom Snort rules](#add-custom-snort-rules)
+  - [Verify the honeypod controller](#verify-the-honeypod-controller)
 
 #### Enable packet capture on honeypods
 
@@ -63,7 +64,8 @@ In order for the honeypod controller to find the packet captures, the name `capt
 
 #### Add honeypod controller to cluster
 
-> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/visibility/packetcapture) manifest to target your honeypods. Honeypod controller requires the name to be `capture-honey` at this release.
+> **Note**: If you’ve customized or created your own honeypods, be sure to modify the included `capture-honey` [PacketCapture]({{site.baseurl}}/visibility/packetcapture) manifest to target your honeypods.
+{: .alert .alert-info} 
 
 Add the honeypod controller to each cluster configured for honeypods using the following command:
 
@@ -71,15 +73,15 @@ Add the honeypod controller to each cluster configured for honeypods using the f
 kubectl apply -f {{ "/manifests/threatdef/honeypod/controller.yaml" | absolute_url }} 
 ```
 
-For Openshift deployments, the controller will require privileged access. A separate manifest is provided:
+For OpenShift deployments, the controller requires privileged access:
 
 ```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/controller_os.yaml" | absolute_url }} 
 ```
 
-#### Adding custom signatures into Snort
+#### Add custom Snort rules
 
-By default Snort's community rule is used. Users can add their own custom signatures into the controller via ConfigMap.
+You can add custom Snort rules to the controller using a ConfigMap. By default, {{site.prodname}} uses the {% include open-new-window.html text='Snort Community Ruleset' url='https://www.snort.org/downloads/#rule-downloads' %}.
 
 The following manifest provides the method to add individual custom signatures:
 
@@ -97,17 +99,16 @@ data:
 EOF
 ```
 
-Users can also add a Snort compatible signature pack:
+To add a Snort-compatible ruleset file:
 
 ```bash
-kubectl create cm localrule -n tigera-intrusion-detection --from-file=rules=<SIGNATURE_PACK_LOCATION>
+kubectl create cm localrule -n tigera-intrusion-detection --from-file=rules=<SNORT-RULESET-LOCATION>
 ```
 
-> **Note**: ConfigMaps has a size limit of 1 MiB. If more space is required, use an alternate volume mount method. 
+> **Note**: The size limit for ConfigMaps is 1 MiB. If more space is required, use an alternative method to mount the volume.
+{: .alert .alert-info} 
 
-The controller deployment manifest will need to be updated to include the ConfigMap. 
-
-Refer to the patch file below:
+Update the controller deployment to include the ConfigMap. **Important!** The mountPath `/etc/snort/rules/custom.rules` is required and the path cannot be changed.
 
 ```bash
 cat <<EOF > patch.yaml
@@ -131,16 +132,13 @@ spec:
 EOF
 ```
 
-> **Note**: The mountPath `/etc/snort/rules/custom.rules` is required and should not be changed.
-
 Apply the patch to the `honeypod-controller` DaemonSet:
 
 ```bash
 kubectl patch daemonset honeypod-controller -n tigera-intrusion-detection --patch "$(cat patch.yaml)"
 ```
 
-
-#### Verify honeypod controller
+#### Verify the honeypod controller
 
 To verify the installation, ensure that honeypod controller is running within the `tigera-intrusion-detection` namespace:
 

@@ -57,16 +57,17 @@ kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<
 Use one of the following sample honeypods manifests or customize them for your implementation. All images include a minimal container that runs or mimics a running application. The images provided have been hardened with built-in protections to reduce the risk of them being compromised.
 
 > **Note**: When modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes. Ensure the alert name has the prefix `honeypod`, for example `honeypod.new.alert`.
+{: .alert .alert-info} 
 
 - **IP Enumeration** 
 
-  Expose a empty pod that can only be reached via PodIP, we can see when the attacker is probing the pod network:
+  Expose an empty pod that can only be reached via PodIP, allowing you to see when the attacker is probing the pod network:
 
 ```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/ip-enum.yaml" | absolute_url }} 
 ```
 
-- **Exposed service (nginx)**
+- **Expose an nginx service**
 
   Expose a nginx service that serves a generic page. The pod can be discovered via ClusterIP or DNS lookup. An unreachable service `tigera-dashboard-internal-service` is created to entice the attacker to find and reach, `tigera-dashboard-internal-debug`:
 
