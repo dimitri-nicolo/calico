@@ -3,6 +3,7 @@
 package elasticsearchconfiguration
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -83,7 +84,7 @@ func (c *reconciler) reconcileRoles() error {
 // reconcileConfigMap copies the tigera-secure-elasticsearch ConfigMap in the management cluster to the managed cluster,
 // changing the clusterName data value to the cluster name this ConfigMap is being copied to
 func (c *reconciler) reconcileConfigMap() error {
-	configMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	configMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(context.Background(), resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (c *reconciler) reconcileConfigMap() error {
 // the management cluster to the managed cluster
 func (c *reconciler) reconcileCASecrets() error {
 	for _, secretName := range []string{resource.ElasticsearchCertSecret, resource.KibanaCertSecret} {
-		secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(secretName, metav1.GetOptions{})
+		secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -178,7 +179,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 // hashes (indicating that elasticsearch changed in a way that requires user credential recreation)
 func (c *reconciler) missingOrStaleUsers(esHash string) (map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
 	esUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
-	secretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
+	secretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
 	if err != nil {
 		return nil, err
 	}

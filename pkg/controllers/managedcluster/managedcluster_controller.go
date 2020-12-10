@@ -3,6 +3,7 @@
 package managedcluster
 
 import (
+	"context"
 	"fmt"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,7 +76,7 @@ func (c *managedClusterController) initEsClient() (elasticsearch.Client, error) 
 // fetchRegisteredManagedClustersNames returns the name for the managed cluster as set or an error
 // if the requests to k8s API failed
 func (c *managedClusterController) fetchRegisteredManagedClustersNames() (map[string]bool, error) {
-	managedClusters, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(metav1.ListOptions{})
+	managedClusters, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

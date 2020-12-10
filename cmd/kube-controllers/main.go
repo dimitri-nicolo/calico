@@ -101,10 +101,12 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 // VERSION is filled out during the build process (using git describe output)
 var VERSION string
 var version bool
+var statusFile string
 
 func init() {
 	// Add a flag to check the version.
 	flag.BoolVar(&version, "version", false, "Display version")
+	flag.StringVar(&statusFile, "status-file", status.DefaultStatusFile, "File to write status information to")
 
 	// Tell klog to log into STDERR. Otherwise, we risk
 	// certain kinds of API errors getting logged into a directory not
@@ -212,7 +214,7 @@ func main() {
 	}
 
 	// Create the status file. We will only update it if we have healthchecks enabled.
-	s := status.New(status.DefaultStatusFile)
+	s := status.New(statusFile)
 
 	if cfg.DatastoreType == "etcdv3" {
 		// If configured to do so, start an etcdv3 compaction.
@@ -289,7 +291,7 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 				)
 			}
 		}(k8sCheckDone)
-		k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do().StatusCode(&healthStatus)
+		k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do(ctx).StatusCode(&healthStatus)
 		k8sCheckDone <- nil
 		if healthStatus != http.StatusOK {
 			log.WithError(err).Errorf("Failed to reach apiserver")

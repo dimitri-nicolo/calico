@@ -4,6 +4,8 @@
 package elasticsearch
 
 import (
+	"context"
+
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,7 +48,7 @@ func NewRESTClient(config *rest.Config) (RESTClient, error) {
 // cluster has changed
 func (r *restClient) CalculateTigeraElasticsearchHash() (string, error) {
 	es := &esv1.Elasticsearch{}
-	err := r.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do().Into(es)
+	err := r.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(context.Background()).Into(es)
 	if err != nil {
 		return "", err
 	}

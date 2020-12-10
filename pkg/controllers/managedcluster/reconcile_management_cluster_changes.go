@@ -3,6 +3,7 @@
 package managedcluster
 
 import (
+	"context"
 	"sync"
 
 	"github.com/projectcalico/kube-controllers/pkg/resource"
@@ -77,12 +78,12 @@ func (c *managementClusterChangeReconciler) calculateChangeHash(reqLogger *log.E
 		return "", err
 	}
 
-	esConfigMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	esConfigMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(context.Background(), resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	certSecret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	certSecret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.ElasticsearchCertSecret, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}

@@ -3,6 +3,7 @@
 package managedcluster
 
 import (
+	"context"
 	"fmt"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
@@ -47,7 +48,7 @@ func (c *managedClusterESControllerReconciler) Reconcile(name types.NamespacedNa
 	reqLogger := log.WithField("request", name)
 	reqLogger.Info("Reconciling ManagedClusters")
 
-	mc, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(name.Name, metav1.GetOptions{})
+	mc, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), name.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("ManagedCluster not found")
@@ -129,7 +130,7 @@ func (c *managedClusterESControllerReconciler) listenForRebootNotify() chan bool
 	go func() {
 		for range listener {
 			log.Info("Notified of management cluster changes, recreated managed cluster elasticsearch controllers")
-			managedClusterList, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(metav1.ListOptions{})
+			managedClusterList, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(context.Background(), metav1.ListOptions{})
 			if err != nil {
 				log.WithError(err).Error("failed to list the managed clusters, skipping requeue of ManagedCluster watches")
 				continue

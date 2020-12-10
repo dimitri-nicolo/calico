@@ -3,6 +3,7 @@
 package elasticsearchconfiguration_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -96,6 +97,8 @@ kdjulhPG079HRWabxrqxv49z9Hb1w71iD6Yd/oDVzeXyvj/pfBaAit6qq9yEAyTT
 var _ = Describe("Reconcile", func() {
 	Context("Configuration successfully created", func() {
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {
+			ctx := context.Background()
+
 			esCertSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resource.ElasticsearchCertSecret,
@@ -151,7 +154,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			es := &esv1.Elasticsearch{}
-			err = esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do().Into(es)
+			err = esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +170,8 @@ var _ = Describe("Reconcile", func() {
 			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
 		})
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
+			ctx := context.Background()
+
 			esCertSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resource.ElasticsearchCertSecret,
@@ -231,16 +236,16 @@ var _ = Describe("Reconcile", func() {
 
 			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
 
-			fluentdSecret, err := managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(fmt.Sprintf("%s-elasticsearch-access", esusers.ElasticsearchUserNameFluentd), metav1.GetOptions{})
+			fluentdSecret, err := managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, fmt.Sprintf("%s-elasticsearch-access", esusers.ElasticsearchUserNameFluentd), metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			fluentdSecret.Labels[elasticsearchconfiguration.UserChangeHashLabel] = "differentlabel"
-			_, err = managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Update(fluentdSecret)
+			_, err = managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Update(ctx, fluentdSecret, metav1.UpdateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			newFluentdSecret, err := managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(fmt.Sprintf("%s-elasticsearch-access", esusers.ElasticsearchUserNameFluentd), metav1.GetOptions{})
+			newFluentdSecret, err := managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, fmt.Sprintf("%s-elasticsearch-access", esusers.ElasticsearchUserNameFluentd), metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(newFluentdSecret.Labels[elasticsearchconfiguration.UserChangeHashLabel]).ShouldNot(Equal(fluentdSecret.Labels[elasticsearchconfiguration.UserChangeHashLabel]))
@@ -250,7 +255,9 @@ var _ = Describe("Reconcile", func() {
 })
 
 func assertManagedConfiguration(k8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedKBCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
-	userSecrets, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
+	ctx := context.Background()
+
+	userSecrets, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
 	Expect(err).ShouldNot(HaveOccurred())
 
 	//Test user secrets are created
@@ -266,15 +273,15 @@ func assertManagedConfiguration(k8sCli kubernetes.Interface, expectedESCertSecre
 	}
 	Expect(userMap).Should(BeEmpty())
 
-	esCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	esCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchCertSecret, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(esCertSecret.Data).Should(Equal(expectedESCertSecret.Data))
 
-	kbCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.KibanaCertSecret, metav1.GetOptions{})
+	kbCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.KibanaCertSecret, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(kbCertSecret.Data).Should(Equal(expectedKBCertSecret.Data))
 
-	managedESConfigMap, err := k8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	managedESConfigMap, err := k8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(managedESConfigMap.Data).Should(Equal(map[string]string{
 		"clusterName": "managed-1",

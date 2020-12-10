@@ -130,7 +130,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 		filteredEndpoint := make(map[string]interface{})
 
 		// Get all endpoints objects from Kubernetes datastore.
-		endpointsList, err := k8sClientset.CoreV1().Endpoints("").List(metav1.ListOptions{})
+		endpointsList, err := k8sClientset.CoreV1().Endpoints("").List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -236,12 +236,13 @@ func (c *federatedServicesController) processNextItem() bool {
 // exists in the cache, then the value should be written to the datastore. If it does not exist
 // in the cache, then it should be deleted from the datastore.
 func (c *federatedServicesController) syncToDatastore(key string) error {
+	ctx := context.Background()
 	clog := log.WithField("key", key)
 
 	// Start by looking up the existing entry if it already exists. Double check that the annotation indicates
 	// this resource is owned by the federation controller.
 	namespace, name := nameNamespaceFromCacheKey(key)
-	currentEP, err := c.k8sClientset.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+	currentEP, err := c.k8sClientset.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		clog.WithError(err).Debug("Error querying endpoints")
 		if !kerrors.IsNotFound(err) {
@@ -263,7 +264,7 @@ func (c *federatedServicesController) syncToDatastore(key string) error {
 	if !exists {
 		// The object does not exist in the cache (and therefore is not required) - delete from the datastore.
 		clog.Info("Deleting Endpoints from Kubernetes datastore")
-		err := c.k8sClientset.CoreV1().Endpoints(namespace).Delete(name, &metav1.DeleteOptions{})
+		err := c.k8sClientset.CoreV1().Endpoints(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			// We hit an error other than "not found".
 			return err
@@ -277,7 +278,7 @@ func (c *federatedServicesController) syncToDatastore(key string) error {
 	var newEP *v1.Endpoints
 	if currentEP == nil {
 		clog.Info("Creating Endpoints in Kubernetes datastore")
-		if newEP, err = c.k8sClientset.CoreV1().Endpoints(namespace).Create(&requiredEP); err != nil {
+		if newEP, err = c.k8sClientset.CoreV1().Endpoints(namespace).Create(ctx, &requiredEP, metav1.CreateOptions{}); err != nil {
 			clog.WithError(err).Infof("Error creating Endpoints in Kubernetes datastore: %#v", requiredEP)
 			return err
 		}
@@ -291,7 +292,7 @@ func (c *federatedServicesController) syncToDatastore(key string) error {
 			currentEP.Annotations[k] = v
 		}
 
-		if newEP, err = c.k8sClientset.CoreV1().Endpoints(namespace).Update(currentEP); err != nil {
+		if newEP, err = c.k8sClientset.CoreV1().Endpoints(namespace).Update(ctx, currentEP, metav1.UpdateOptions{}); err != nil {
 			clog.WithError(err).Infof("Error updating Endpoints in Kubernetes datastore: %#v", currentEP)
 			return err
 		}

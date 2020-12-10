@@ -235,7 +235,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 	)
 
 	getSubsets := func(namespace, name string) []v1.EndpointSubset {
-		eps, err := localK8sClient.CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+		eps, err := localK8sClient.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
 			return nil
 		}
@@ -293,11 +293,11 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		// Wait for the api servers to be available.
 		Eventually(func() error {
-			_, err := localK8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+			_, err := localK8sClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			return err
 		}, eventuallyTimeout, eventuallyPoll).Should(BeNil())
 		Eventually(func() error {
-			_, err := remoteK8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+			_, err := remoteK8sClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			return err
 		}, eventuallyTimeout, eventuallyPoll).Should(BeNil())
 
@@ -329,9 +329,9 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			},
 			Spec: v1.NamespaceSpec{},
 		}
-		_, err = localK8sClient.CoreV1().Namespaces().Create(ns)
+		_, err = localK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		_, err = remoteK8sClient.CoreV1().Namespaces().Create(ns)
+		_, err = remoteK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		ns = &v1.Namespace{
@@ -340,9 +340,9 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			},
 			Spec: v1.NamespaceSpec{},
 		}
-		_, err = localK8sClient.CoreV1().Namespaces().Create(ns)
+		_, err = localK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		_, err = remoteK8sClient.CoreV1().Namespaces().Create(ns)
+		_, err = remoteK8sClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	}
 
@@ -383,27 +383,27 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		setup(isCalicoEtcdDatastore)
 
 		By("Creating two identical backing services and endpoints")
-		svcBacking1, err := localK8sClient.CoreV1().Services(ns1Name).Create(makeService(svc1, "backing1", nil))
+		svcBacking1, err := localK8sClient.CoreV1().Services(ns1Name).Create(ctx, makeService(svc1, "backing1", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Create(makeEndpoints(eps1, "backing1", nil))
+		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Create(ctx, makeEndpoints(eps1, "backing1", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = localK8sClient.CoreV1().Services(ns1Name).Create(makeService(svc1, "backing2", nil))
+		_, err = localK8sClient.CoreV1().Services(ns1Name).Create(ctx, makeService(svc1, "backing2", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		epsBacking2, err := localK8sClient.CoreV1().Endpoints(ns1Name).Create(makeEndpoints(eps1, "backing2", nil))
+		epsBacking2, err := localK8sClient.CoreV1().Endpoints(ns1Name).Create(ctx, makeEndpoints(eps1, "backing2", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating a service with endpoints in a different namespace but the correct labels")
-		_, err = localK8sClient.CoreV1().Services(ns2Name).Create(makeService(svc2, "wrongns", nil))
+		_, err = localK8sClient.CoreV1().Services(ns2Name).Create(ctx, makeService(svc2, "wrongns", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = localK8sClient.CoreV1().Endpoints(ns2Name).Create(makeEndpoints(eps2, "wrongns", nil))
+		_, err = localK8sClient.CoreV1().Endpoints(ns2Name).Create(ctx, makeEndpoints(eps2, "wrongns", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating a federated service which matches the two indentical backing services")
-		fedCfg, err := localK8sClient.CoreV1().Services(ns1Name).Create(&v1.Service{
+		fedCfg, err := localK8sClient.CoreV1().Services(ns1Name).Create(ctx, &v1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "federated",
 				Namespace: ns1Name,
@@ -425,7 +425,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 					},
 				},
 			},
-		})
+		}, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints have not been created without a license applied")
@@ -498,7 +498,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		Eventually(watchChan, 10*time.Second).Should(BeClosed())
 
 		By("Updating back2 to have a different set of endpoints while the controller should be stopped")
-		epsBacking2, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(makeEndpoints(eps2, "backing2", epsBacking2))
+		epsBacking2, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(ctx, makeEndpoints(eps2, "backing2", epsBacking2), metav1.UpdateOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking the federated endpoints remain unchanged")
@@ -508,7 +508,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		infrastructure.ApplyValidLicense(localCalicoClient)
 
 		By("Updating backing2 to have a different set of endpoints")
-		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(makeEndpoints(eps2, "backing2", epsBacking2))
+		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(ctx, makeEndpoints(eps2, "backing2", epsBacking2), metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [2]")
@@ -601,7 +601,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		By("Updating backing1 to have no labels")
 		svcBacking1.Labels = nil
-		_, err = localK8sClient.CoreV1().Services(ns1Name).Update(svcBacking1)
+		_, err = localK8sClient.CoreV1().Services(ns1Name).Update(ctx, svcBacking1, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [3]")
@@ -647,7 +647,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		By("Removing the federation annotation")
 		fedCfg.Annotations = nil
-		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(fedCfg)
+		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(ctx, fedCfg, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints has been deleted")
@@ -657,24 +657,24 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		fedCfg.Annotations = map[string]string{
 			"federation.tigera.io/serviceSelector": "federate == 'yes'",
 		}
-		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(fedCfg)
+		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(ctx, fedCfg, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [4]")
 		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal(es))
 
 		By("Removing the federation selector from the federated endpoints to disable controller updates")
-		eps, err := localK8sClient.CoreV1().Endpoints(ns1Name).Get("federated", metav1.GetOptions{})
+		eps, err := localK8sClient.CoreV1().Endpoints(ns1Name).Get(ctx, "federated", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		eps.Annotations = nil
-		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(eps)
+		_, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(ctx, eps, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Modifying the federation annotation to be a no match")
 		fedCfg.Annotations = map[string]string{
 			"federation.tigera.io/serviceSelector": "federate == 'idontthinkso'",
 		}
-		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(fedCfg)
+		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(ctx, fedCfg, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints remains unchanged")
@@ -682,14 +682,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		Expect(getSubsets(ns1Name, "federated")).ToNot(BeNil())
 
 		By("Removing the federated endpoints completely")
-		err = localK8sClient.CoreV1().Endpoints(ns1Name).Delete("federated", &metav1.DeleteOptions{})
+		err = localK8sClient.CoreV1().Endpoints(ns1Name).Delete(ctx, "federated", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Modifying the federation annotation again - but still is a no match")
 		fedCfg.Annotations = map[string]string{
 			"federation.tigera.io/serviceSelector": "foo == 'bar'",
 		}
-		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(fedCfg)
+		fedCfg, err = localK8sClient.CoreV1().Services(ns1Name).Update(ctx, fedCfg, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints is recreated but contains no subsets")
@@ -700,17 +700,17 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		fedCfg.Annotations = map[string]string{
 			"federation.tigera.io/serviceSelector": "federate == 'yes'",
 		}
-		_, err = localK8sClient.CoreV1().Services(ns1Name).Update(fedCfg)
+		_, err = localK8sClient.CoreV1().Services(ns1Name).Update(ctx, fedCfg, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [5]")
 		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal(es))
 
 		By("Adding backing service to the remote cluster")
-		_, err = remoteK8sClient.CoreV1().Services(ns1Name).Create(makeService(svc1, "backing1", nil))
+		_, err = remoteK8sClient.CoreV1().Services(ns1Name).Create(ctx, makeService(svc1, "backing1", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = remoteK8sClient.CoreV1().Endpoints(ns1Name).Create(makeEndpoints(eps1, "backing1", nil))
+		_, err = remoteK8sClient.CoreV1().Endpoints(ns1Name).Create(ctx, makeEndpoints(eps1, "backing1", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Adding remote cluster config")
@@ -817,11 +817,11 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		}))
 
 		By("Deleting the local services")
-		err = localK8sClient.CoreV1().Services(ns1Name).Delete("backing1", &metav1.DeleteOptions{})
+		err = localK8sClient.CoreV1().Services(ns1Name).Delete(ctx, "backing1", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = localK8sClient.CoreV1().Services(ns1Name).Delete("backing2", &metav1.DeleteOptions{})
+		err = localK8sClient.CoreV1().Services(ns1Name).Delete(ctx, "backing2", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = localK8sClient.CoreV1().Services(ns2Name).Delete("wrongns", &metav1.DeleteOptions{})
+		err = localK8sClient.CoreV1().Services(ns2Name).Delete(ctx, "wrongns", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Checking the federated endpoints contain the expected set ips/ports [7]")
