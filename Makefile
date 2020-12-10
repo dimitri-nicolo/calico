@@ -35,4 +35,4 @@ ci: eks-log-forwarder-startup test image
 ## push fluentd image to GCR_REPO
 cd:
 	$(MAKE) push VERSION=$(IMAGETAG)
-	$(MAKE) push VERSION=$(shell git describe --tags --dirty --always --long)
+	$(MAKE) push VERSION=$(shell git describe --tags --dirty --always --long --abbrev=12)
