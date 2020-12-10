@@ -3,6 +3,7 @@
 package resource_test
 
 import (
+	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
@@ -21,7 +22,7 @@ var _ = Describe("ConfigMap", func() {
 			},
 		})).ShouldNot(HaveOccurred())
 
-		_, err := cli.CoreV1().ConfigMaps("TestNamespace").Get("TestName", metav1.GetOptions{})
+		_, err := cli.CoreV1().ConfigMaps("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -37,7 +38,7 @@ var _ = Describe("ConfigMap", func() {
 			},
 		})).ShouldNot(HaveOccurred())
 
-		cm, err := cli.CoreV1().ConfigMaps("TestNamespace").Get("TestName", metav1.GetOptions{})
+		cm, err := cli.CoreV1().ConfigMaps("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cm.Data["key"]).Should(Equal("value"))
 
@@ -51,7 +52,7 @@ var _ = Describe("ConfigMap", func() {
 			},
 		})).ShouldNot(HaveOccurred())
 
-		cm, err = cli.CoreV1().ConfigMaps("TestNamespace").Get("TestName", metav1.GetOptions{})
+		cm, err = cli.CoreV1().ConfigMaps("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cm.Data["key"]).Should(Equal("newvalue"))
 	})
@@ -67,7 +68,7 @@ var _ = Describe("Secret", func() {
 			},
 		})).ShouldNot(HaveOccurred())
 
-		_, err := cli.CoreV1().Secrets("TestNamespace").Get("TestName", metav1.GetOptions{})
+		_, err := cli.CoreV1().Secrets("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -83,7 +84,7 @@ var _ = Describe("Secret", func() {
 			},
 		})).ShouldNot(HaveOccurred())
 
-		s, err := cli.CoreV1().Secrets("TestNamespace").Get("TestName", metav1.GetOptions{})
+		s, err := cli.CoreV1().Secrets("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(s.Data["key"]).Should(Equal([]byte("value")))
 
@@ -97,7 +98,7 @@ var _ = Describe("Secret", func() {
 			},
 		})).ShouldNot(HaveOccurred())
 
-		s, err = cli.CoreV1().Secrets("TestNamespace").Get("TestName", metav1.GetOptions{})
+		s, err = cli.CoreV1().Secrets("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(s.Data["key"]).Should(Equal([]byte("newvalue")))
 	})
