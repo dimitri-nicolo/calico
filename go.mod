@@ -20,7 +20,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
+	github.com/tigera/api v0.0.0-20201210003641-f72711afec9e
 	github.com/tigera/licensing v1.0.1-0.20201125013734-cdefa3febb57
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200401174654-e694b7bb0875
 	golang.org/x/mod v0.3.0 // indirect
@@ -35,10 +35,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20201125193948-71173161e969
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201203163828-34a0441aadfa
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20201209225044-bd8f96a9ce31
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201209235411-d6b6daf29ea2
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201123051039-5ab4527d2f50
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201124003750-14706c95922b
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201209230326-43748bd428bb
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
@@ -48,10 +48,9 @@ replace (
 	k8s.io/api => k8s.io/api v0.18.12
 
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.12
-	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.17.2
-	//k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340
+	// Using tigera/apimachinery-private cloned off k8s apimachinery kubernetes v1.18.12
+	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20201204234441-e565126b30e8
 
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.12
 	k8s.io/apiserver => k8s.io/apiserver v0.18.12
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.12
 	k8s.io/client-go => k8s.io/client-go v0.18.12
