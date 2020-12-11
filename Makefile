@@ -70,7 +70,7 @@ BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/nul
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
-GIT_VERSION_LONG       = $(shell git describe --tags --dirty --always --long)
+GIT_VERSION_LONG       = $(shell git describe --tags --dirty --always --long --abbrev=12)
 
 # Flags for building the binaries.
 #
