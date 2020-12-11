@@ -1,6 +1,6 @@
 .PHONY: ci cd image
 
-GIT_VERSION?=$(shell git describe --tags --dirty --always --long)
+GIT_VERSION?=$(shell git describe --tags --dirty --always --long --abbrev=12)
 
 KIBANA_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/kibana
 
