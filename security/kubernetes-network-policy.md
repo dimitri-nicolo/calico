@@ -181,4 +181,4 @@ spec:
 
 ### Above and beyond
 
-- [Kubernetes Network Policy API documentation](https://v1-16.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#networkpolicyspec-v1-networking-k8s-io){:target="_blank"}
+- [Kubernetes Network Policy API documentation](https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#networkpolicyspec-v1-networking-k8s-io){:target="_blank"}
