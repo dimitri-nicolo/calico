@@ -97,7 +97,7 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS= -run $(UNIT_TESTS) -v
 endif
 
-CONTROLLER_VERSION?=$(shell git describe --tags --dirty --always)
+CONTROLLER_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 CONTROLLER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 CONTROLLER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 CONTROLLER_GIT_DESCRIPTION?=$(shell git describe --tags)
@@ -267,13 +267,13 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ##############################################################################
 # Release
 ##############################################################################
 PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-GIT_VERSION?=$(shell git describe --tags --dirty)
+GIT_VERSION?=$(shell git describe --tags --dirty --abbrev=12)
 ifndef VERSION
 	BUILD_VERSION = $(GIT_VERSION)
 else
