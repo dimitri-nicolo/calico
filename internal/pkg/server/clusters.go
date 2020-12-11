@@ -271,7 +271,7 @@ func (cs *clusters) get(id string) *cluster {
 }
 
 func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
-	watcher, err := cs.k8sCLI.ManagedClusters().Watch(metav1.ListOptions{
+	watcher, err := cs.k8sCLI.ManagedClusters().Watch(context.Background(), metav1.ListOptions{
 		ResourceVersion: last,
 	})
 	if err != nil {
@@ -326,7 +326,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 }
 
 func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string, error) {
-	list, err := cs.k8sCLI.ManagedClusters().List(metav1.ListOptions{})
+	list, err := cs.k8sCLI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return "", errors.Errorf("failed to get k8s list: %s", err)
 	}
@@ -501,7 +501,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 
 // setConnectedStatus updates the MangedClusterConnected condition of this cluster's ManagedCluster CR.
 func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) error {
-	mc, err := c.k8sCLI.ManagedClusters().Get(c.ID, metav1.GetOptions{})
+	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -526,7 +526,7 @@ func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) 
 
 	mc.Status.Conditions = updatedConditions
 
-	_, err = c.k8sCLI.ManagedClusters().Update(mc)
+	_, err = c.k8sCLI.ManagedClusters().Update(context.Background(), mc, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}

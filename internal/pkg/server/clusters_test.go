@@ -126,7 +126,7 @@ var _ = Describe("Clusters", func() {
 			}()
 
 			Eventually(func() calicov3.ManagedClusterStatusValue {
-				c, _ := k8sAPI.ManagedClusters().Get(clusterName, metav1.GetOptions{})
+				c, _ := k8sAPI.ManagedClusters().Get(context.Background(), clusterName, metav1.GetOptions{})
 				return c.Status.Conditions[0].Status
 			}, 10*time.Second, 1*time.Second).Should(Equal(calicov3.ManagedClusterStatusValueFalse))
 			Expect(len(clusters.List())).To(Equal(3))
