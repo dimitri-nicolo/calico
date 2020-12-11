@@ -73,6 +73,10 @@ sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_DNS_IN
 # Set the number of replicas for index tigera_secure_ee_audit
 sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_AUDIT_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_audits.template
 
+# Set the number of shards and replicas for index tigera_secure_ee_bgp
+sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_BGP_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_bgp.template
+sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_BGP_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_bgp.template
+
 # Build the fluentd configuration file bit by bit, because order is important.
 # Add the sources.
 cat /fluentd/etc/fluent_sources.conf >> /fluentd/etc/fluent.conf
