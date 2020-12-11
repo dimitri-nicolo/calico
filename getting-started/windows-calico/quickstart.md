@@ -17,6 +17,10 @@ Install {{site.prodnameWindows}} on your Kubernetes cluster in approximately 5 m
 
 ### Before you begin
 
+**Installation archive**
+
+Get the {{site.prodnameWindows}} installation zip archive from your support representative.
+
 **Datastore requirements**
 
 Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Windows node/Kubernetes cluster must be the same as the datastore for the Linux control node. (You cannot mix datastores in a {{site.prodnameWindows}} implementation.)
@@ -25,7 +29,7 @@ Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Window
 - Kubernetes clusters with versions 1.18, 1.17, or 1.16
 
 **Windows node requirements**
-- Versions:  
+- Versions:
   - Windows Server 1809 (build Build 17763.1432 or greater)
   - Windows Server 1903 (AKA 19H1 build 18362.1049 or greater)
   - Windows Server 1909 (AKA 19H2 build 18362.1049 or greater), with Docker service enabled
@@ -61,7 +65,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
 - **Kubernetes**
 
-  The quickstart steps use VXLAN for networking. 
+  The quickstart steps use VXLAN for networking.
 
   The geeky details of what you get by default:
   {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:VXLAN,Routing:BGP,Datastore:Kubernetes' %}
@@ -89,6 +93,8 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    ```
 
 1. Copy the Kubernetes kubeconfig file from the master node (default, Location $HOME/.kube/config), to **c:\k\config**.
+
+1. Copy the installation zip file  to **c:\tigera-calico-windows.zip**.
 
 1. Download the powershell script, **install-calico-windows.ps1**.
 

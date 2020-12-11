@@ -18,6 +18,7 @@ url: https://docs.tigera.io
 prodname: Calico Enterprise
 prodnamedash: calico-enterprise
 prodnameWindows: Calico Enterprise for Windows
+rootDirWindows: C:\TigeraCalico
 tseeprodname: Tigera Secure EE
 tseeprodnamedash: tigera-secure-ee
 nodecontainer: cnx-node

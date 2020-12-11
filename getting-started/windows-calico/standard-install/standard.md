@@ -49,7 +49,7 @@ Extend your Kubernetes deployment to Windows environments.
 Because the Kubernetes and {{site.prodname}} control components do not run on Windows yet, a hybrid Linux/Windows cluster is required. First you create a Linux cluster for {{site.prodname}} components, then you join Windows nodes to the Linux cluster.
 
 The geeky details of what you get by default:
-{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:VXLAN,Routing:BGP,Datastore:Kubernetes' %}     
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:VXLAN,Routing:BGP,Datastore:Kubernetes' %}
 
 **Kubernetes**
 1. [Create a Linux cluster](#create-a-linux-cluster)
@@ -90,8 +90,8 @@ To get around this for `kube-proxy`:
 
    ```bash
    kubectl apply -f kube-proxy.yaml
-   ``` 
-   
+   ```
+
 A similar change may be needed for other Kubernetes services (such as `kube-dns` or `core-dns`).
 
 #### Prepare Windows nodes to join the Linux cluster
@@ -127,7 +127,7 @@ The following kubelet settings are also important:
 
 In addition, it's important that `kubelet` is started after the vSwitch has been created, which happens when {{site.prodname}}initializes the dataplane. Otherwise, `kubelet` can be disconnected for the API server when the vSwitch is created.
 
-**AWS users**: If using the AWS cloud provider, you should add the following argument to the `kubelet`: 
+**AWS users**: Add the following argument to `kubelet`:
 
 --hostname-override=<aws instance private DNS name> (and set the {{site.prodname}} nodename variable to match). In addition, you should add KubernetesCluster=<cluster-name> as a tag when creating your Windows instance.
 
@@ -166,7 +166,7 @@ adjust other kube-proxy parameters.
 
 #### Install {{site.prodname}} on Linux control and worker nodes
 
-**If using {{site.prodname}} BGP networking** 
+**If using {{site.prodname}} BGP networking**
 
 1. [Install Calico Enterprise for networking and policy]({{site.baseurl}}/getting-started/kubernetes/) for kdd.
 1. Disable the default {{site.prodname}} IP-in-IP networking (which is not compatible with Windows), by modifying the {{site.prodname}} manifest, and setting the `CALICO_IPV4POOL_IPIP` environment variable to "Never" before applying the manifest.
@@ -180,7 +180,7 @@ adjust other kube-proxy parameters.
    kubectl apply -f ippool.yaml
    ```
 
-**If using {{site.prodname}} VXLAN networking** 
+**If using {{site.prodname}} VXLAN networking**
 
 1. Modify VXLAN as described in [Overlay Networking]({{site.baseurl}}/networking/vxlan-ipip#how-to) guide. Note the following:
    - Windows can support only a single type of IP pool so it is important that you use only a single VXLAN IP pool in this mode.
@@ -232,7 +232,7 @@ Sometimes the remote access service fails to start automatically after install. 
 ```powershell
 PS C:\> Start-Service RemoteAccess
 ```
-1. If using a non-{{site.prodname}} network plugin for networking, install and verify it now. 
+1. If using a non-{{site.prodname}} network plugin for networking, install and verify it now.
 2. Edit the install configuration file, `config.ps1` as follows:
 
    | **Set this variable...** | To...                   |
