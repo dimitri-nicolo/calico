@@ -80,7 +80,7 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-ES_PROXY_VERSION?=$(shell git describe --tags --dirty --always)
+ES_PROXY_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 ES_PROXY_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 ES_PROXY_GIT_COMMIT?=$(shell git rev-parse --short HEAD)
 ES_PROXY_GIT_TAG?=$(shell git describe --tags)
@@ -266,7 +266,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${GIT_VERSION} EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
