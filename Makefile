@@ -203,8 +203,10 @@ signpost:
 ###############################################################################
 # Static checks
 ###############################################################################
-#TODO: Enable these linters
-LINT_ARGS = --disable govet,gosimple,staticcheck,varcheck,errcheck,deadcode,ineffassign,unused
+
+###############################################################################
+# See .golangci.yml for golangci-lint config
+LINT_ARGS +=
 
 ###############################################################################
 # CI/CD

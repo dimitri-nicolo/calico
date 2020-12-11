@@ -135,14 +135,13 @@ func (lr *LicenseReporter) startReporter() {
 		gaugeNumNodes.Set(float64(len(nodeList.Items)))
 		gaugeNumDays.Set(float64(daysToExpire))
 		gaugeMaxNodes.Set(float64(maxNodes))
-		if isValid == true {
+		if isValid {
 			gaugeValidLicense.Set(float64(Valid))
 		} else {
 			gaugeValidLicense.Set(float64(InValid))
 		}
 		time.Sleep(lr.pollInterval)
 	}
-	wg.Done()
 }
 
 //Decode License, get expiry date, maximum allowed nodes
@@ -162,7 +161,7 @@ func (lr *LicenseReporter) LicenseHandler(lic api.LicenseKey) (isValid bool, day
 	}
 
 	//Find number of days license valid, Maximum nodes
-	durationInHours := int(claims.Claims.Expiry.Time().Sub(time.Now()).Hours())
+	durationInHours := int(claims.Claims.Expiry.Time().Sub(time.Now()).Hours()) //nolint:golint,gosimple
 	maxNodes = *claims.Nodes
 	return true, durationInHours / 24, maxNodes
 }

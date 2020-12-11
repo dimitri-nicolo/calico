@@ -12,6 +12,8 @@ bin
 vendor
 .go-pkg-cache
 go.mod.png
+.idea/
+report/
 
 # common makefile
 Makefile.common*
