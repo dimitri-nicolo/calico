@@ -33,6 +33,6 @@ clean: clean-eks-log-forwarder-startup
 ci: eks-log-forwarder-startup test image
 
 ## push fluentd image to GCR_REPO
-cd: image
+cd: eks-log-forwarder-startup image
 	$(MAKE) push VERSION=$(IMAGETAG)
 	$(MAKE) push VERSION=$(shell git describe --tags --dirty --always --long --abbrev=12)
