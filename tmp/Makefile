@@ -69,7 +69,7 @@ tigera/compliance-server:
 # Release
 ###############################################################################
 PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-GIT_VERSION?=$(shell git describe --tags --dirty)
+GIT_VERSION?=$(shell git describe --tags --dirty --abbrev=12)
 ifndef VERSION
 	BUILD_VERSION = $(GIT_VERSION)
 else

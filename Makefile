@@ -94,7 +94,7 @@ PUSH_NONMANIFEST_IMAGE_PREFIXES=$(filter-out $(PUSH_MANIFEST_IMAGE_PREFIXES),$(P
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
-PKG_VERSION?=$(shell git describe --tags --dirty --always || echo '<unknown>')
+PKG_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12 || echo '<unknown>')
 PKG_VERSION_BUILD_DATE?=$(shell date -u +'%FT%T%z' || echo '<unknown>')
 PKG_VERSION_GIT_DESCRIPTION?=$(shell git describe --tags 2>/dev/null || echo '<unknown>')
 PKG_VERSION_GIT_REVISION?=$(shell git rev-parse --short HEAD || echo '<unknown>')
@@ -632,13 +632,13 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
 ###############################################################################
 PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0 )
-GIT_VERSION?=$(shell git describe --tags --dirty  2>/dev/null  )
+GIT_VERSION?=$(shell git describe --tags --dirty --abbrev=12 2>/dev/null  )
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs
