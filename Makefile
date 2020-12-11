@@ -296,7 +296,7 @@ stop-etcd:
 	@-docker rm -f calico-etcd
 
 ## Run a local kubernetes master with API via hyperkube
-run-kubernetes-master: stop-kubernetes-master
+run-kubernetes-master: stop-kubernetes-master remote-deps
 	# Run a Kubernetes apiserver using Docker.
 	docker run \
 		--net=host --name st-apiserver \
@@ -332,6 +332,15 @@ run-kubernetes-master: stop-kubernetes-master
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} kubectl \
 		--server=http://127.0.0.1:8080 \
 		apply -f /manifests/tests/st/manifests/mock-node.yaml
+
+	# Apply Calico CRDs for tests that use KDD mode.
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR):/manifests \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} kubectl \
+		--server=http://127.0.0.1:8080 \
+		apply -f /manifests/config/crd/
 	
 ## Stop the local kubernetes master
 stop-kubernetes-master:

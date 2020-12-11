@@ -42,6 +42,7 @@ func CalicoctlMayFail(kdd bool, args ...string) (string, error) {
 			cmd.Env = []string{"K8S_API_ENDPOINT=http://localhost:8080", "DATASTORE_TYPE=kubernetes"}
 		}
 	}
+	log.Infof("Running command with env: %+v", cmd.Env)
 	out, err := cmd.CombinedOutput()
 	log.Infof("Run: calicoctl %v", strings.Join(args, " "))
 	log.Infof("Output:\n%v", string(out))
