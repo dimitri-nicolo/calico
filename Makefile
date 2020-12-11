@@ -69,7 +69,7 @@ ifdef UNIT_TESTS
 UNIT_TEST_FLAGS = -run $(UNIT_TESTS) -v
 endif
 
-APISERVER_VERSION?=$(shell git describe --tags --dirty --always)
+APISERVER_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 APISERVER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 APISERVER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 APISERVER_GIT_DESCRIPTION?=$(shell git describe --tags)
@@ -250,7 +250,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
-	$(MAKE) push-image IMAGETAG=$(shell git describe --tags --dirty --always --long)
+	$(MAKE) push-image IMAGETAG=${GIT_VERSION}
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
