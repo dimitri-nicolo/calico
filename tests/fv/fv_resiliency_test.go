@@ -76,9 +76,9 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make the kubeconfig readable by the container.
-		Expect(kconfigfile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
+		Expect(kfConfigFile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
 
-		k8sClient, err = testutils.GetK8sClient(kconfigfile.Name())
+		k8sClient, err = testutils.GetK8sClient(kfConfigFile.Name())
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the apiserver to be available and for the default namespace to exist.
