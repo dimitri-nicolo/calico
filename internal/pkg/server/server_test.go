@@ -234,14 +234,14 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should be able to register multiple clusters", func() {
-				_, err := k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterA},
-				})
+				}, metav1.CreateOptions{})
 
 				Expect(err).ShouldNot(HaveOccurred())
-				_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				})
+				}, metav1.CreateOptions{})
 
 				Expect(err).ShouldNot(HaveOccurred())
 				var list []clusters.ManagedCluster
@@ -260,14 +260,14 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 			It("should be able to list the remaining clusters after deleting one", func() {
 				By("adding two cluster")
-				_, err := k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterA},
-				})
+				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				})
+				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 
 				var list []clusters.ManagedCluster
@@ -283,7 +283,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				}))
 
 				By("removing one cluster")
-				Expect(k8sAPI.ManagedClusters().Delete(clusterB, nil)).ShouldNot(HaveOccurred())
+				Expect(k8sAPI.ManagedClusters().Delete(context.Background(), clusterB, metav1.DeleteOptions{})).ShouldNot(HaveOccurred())
 				Eventually(func() int {
 					list, code = listClusters(httpsAddr)
 					return len(list)
@@ -296,19 +296,19 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should be able to register clusterB after it's been deleted again", func() {
-				_, err := k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				})
+				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(k8sAPI.ManagedClusters().Delete(clusterB, nil)).ShouldNot(HaveOccurred())
+				Expect(k8sAPI.ManagedClusters().Delete(context.Background(), clusterB, metav1.DeleteOptions{})).ShouldNot(HaveOccurred())
 				Eventually(func() int {
 					list, _ := listClusters(httpsAddr)
 					return len(list)
 				}).Should(Equal(0))
 
-				_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
-				})
+				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 				Eventually(func() int {
 					list, _ := listClusters(httpsAddr)
@@ -350,7 +350,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should not be able to proxy to a cluster without a tunnel", func() {
-				_, err := k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       calicov3.KindManagedCluster,
 						APIVersion: calicov3.GroupVersionCurrent,
@@ -359,7 +359,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						Name: clusterA,
 						//Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(leafCert)},
 					},
-				})
+				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 				clientHelloReq(httpsAddr, clusterA, 400)
 			})
@@ -450,12 +450,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					payload, _ := base64.RawURLEncoding.DecodeString(strings.Split(jennyToken, ".")[1])
 					keyset.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(jennyToken, "Bearer "))).Return(payload, nil)
 
-					_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+					_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        clusterA,
 							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterACert)},
 						},
-					})
+					}, metav1.CreateOptions{})
 					Expect(err).ShouldNot(HaveOccurred())
 
 					clusterATLSCert, err = tls.X509KeyPair(test.CertToPemBytes(clusterACert), test.KeyToPemBytes(clusterAPrivKey))
@@ -534,12 +534,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 
 						Expect(err).NotTo(HaveOccurred())
-						_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+						_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
 								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterBCert)},
 							},
-						})
+						}, metav1.CreateOptions{})
 						Expect(err).ShouldNot(HaveOccurred())
 
 						clusterBTLSCert, err = tls.X509KeyPair(test.CertToPemBytes(clusterBCert), test.KeyToPemBytes(clusterBPrivKey))
@@ -695,12 +695,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			By("adding ClusterA")
-			_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+			_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        clusterA,
 					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(cert)},
 				},
-			})
+			}, metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Eventually(func() int {
 				list, _ := listClusters(httpsAddr)
@@ -767,14 +767,14 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				key, cert, err := test.CreateCertPair(tmpl, voltronTunnelCert, voltronTunnelPrivKey)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(&apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: clusterA,
 						Annotations: map[string]string{
 							server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(cert),
 						},
 					},
-				})
+				}, metav1.CreateOptions{})
 
 				Expect(err).ShouldNot(HaveOccurred())
 				Eventually(func() int {
@@ -1065,7 +1065,7 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authe
 
 func WaitForClusterToConnect(k8sAPI bootstrap.K8sClient, clusterName string) {
 	Eventually(func() calicov3.ManagedClusterStatus {
-		managedCluster, err := k8sAPI.ManagedClusters().Get(clusterName, metav1.GetOptions{})
+		managedCluster, err := k8sAPI.ManagedClusters().Get(context.Background(),clusterName, metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		return managedCluster.Status
 	}, 5*time.Second, 100*time.Millisecond).Should(Equal(calicov3.ManagedClusterStatus{
