@@ -69,6 +69,9 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 		err = kconfigFile.Chmod(os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
 
+		// Make the kubeconfig readable by the container.
+		Expect(kconfigFile.Chmod(os.ModePerm)).NotTo(HaveOccurred())
+
 		k8sClient, err = testutils.GetK8sClient(kconfigFile.Name())
 		Expect(err).NotTo(HaveOccurred())
 
