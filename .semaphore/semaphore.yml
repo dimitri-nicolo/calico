@@ -37,6 +37,7 @@ blocks:
       jobs:
         - name: Run UT
           commands:
+            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
             - make ci
 
   - name: 'Push Images (non-PR builds only)'
@@ -59,4 +60,5 @@ blocks:
         - name: Run CD
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi

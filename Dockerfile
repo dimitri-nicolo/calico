@@ -15,7 +15,7 @@ RUN apk add --update --virtual .build-deps \
  && apk del .build-deps \
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/2.3.0/cache/*.gem
-RUN apk add --no-cache curl=7.64.0-r4 jq=1.6-r0
+RUN apk add --no-cache curl=7.64.0-r5 jq=1.6-r0
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
