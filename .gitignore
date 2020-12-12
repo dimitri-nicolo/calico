@@ -7,7 +7,9 @@
 *.dylib
 *.test
 *.out
+Makefile.common*
 *.coverprofile
 /bin/
 /vendor/
 /Godeps/
+report/capture_suite.xml
