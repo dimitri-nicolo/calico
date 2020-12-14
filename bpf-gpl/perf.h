@@ -28,9 +28,12 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
 	CALI_MAP_TC_EXT_PIN(MAP_PIN_GLOBAL)
 };
 
+/* We need the header to be 64bit of size so that any 64bit fields in the
+ * message structures that embed this header are also aligned.
+ */
 struct perf_event_header {
-	__u16 type;
-	__u16 len;
+	__u32 type;
+	__u32 len;
 };
 
 /* perf_commit_event commits an event with the provided data */

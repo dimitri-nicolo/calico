@@ -136,8 +136,8 @@ func (e *perfEventsReader) Map() bpf.Map {
 }
 
 type eventHdr struct {
-	Type uint16
-	Len  uint16
+	Type uint32
+	Len  uint32
 }
 
 type eventTimestampHdr struct {

@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	eventSize uint16 = 4 + 4 + 4 + 2 + 2 + 1 + 3
+	eventSize uint32 = 8 + 4 + 4 + 2 + 2 + 1 + 3
 	ringSize  int    = 4 << 10
 )
 
@@ -63,7 +63,7 @@ func TestPerfBasic(t *testing.T) {
 	Expect(eventRaw.LostEvents()).To(Equal(0))
 
 	eventHdr := eventHdrFromBytes(eventRaw.Data()[0:4])
-	Expect(eventHdr.typ).To(Equal(uint16(0xdead)))
+	Expect(eventHdr.typ).To(Equal(uint32(0xdead)))
 	Expect(eventHdr.size).To(Equal(eventSize))
 
 	event := eventFromBytes(eventRaw.Data())
@@ -85,8 +85,8 @@ func TestPerfBasic(t *testing.T) {
 	eventRaw, err = perfEvents.Next()
 	Expect(err).NotTo(HaveOccurred())
 	eventHdr = eventHdrFromBytes(eventRaw.Data()[0:4])
-	Expect(eventHdr.typ).To(Equal(uint16(0xdead + 1)))
-	Expect(eventHdr.size).To(Equal(eventSize + uint16(len(icmpUNreachable))))
+	Expect(eventHdr.typ).To(Equal(uint32(0xdead + 1)))
+	Expect(eventHdr.size).To(Equal(eventSize + uint32(len(icmpUNreachable))))
 
 	event = eventFromBytes(eventRaw.Data())
 	Expect(event.pkt).NotTo(BeNil())
@@ -181,14 +181,14 @@ func TestPerfFillup(t *testing.T) {
 }
 
 type eventHdr struct {
-	typ  uint16
-	size uint16
+	typ  uint32
+	size uint32
 }
 
 func eventHdrFromBytes(bytes []byte) eventHdr {
 	return eventHdr{
-		typ:  binary.LittleEndian.Uint16(bytes[0:2]),
-		size: binary.LittleEndian.Uint16(bytes[2:4]),
+		typ:  binary.LittleEndian.Uint32(bytes[0:4]),
+		size: binary.LittleEndian.Uint32(bytes[4:8]),
 	}
 }
 
@@ -207,11 +207,11 @@ func eventFromBytes(bytes []byte) event {
 
 	event := event{
 		eventHdr: hdr,
-		srcIP:    net.IP(bytes[4:8]),
-		dstIP:    net.IP(bytes[8:12]),
-		srcPort:  binary.LittleEndian.Uint16(bytes[12:14]),
-		dstPort:  binary.LittleEndian.Uint16(bytes[14:16]),
-		proto:    bytes[16],
+		srcIP:    net.IP(bytes[8:12]),
+		dstIP:    net.IP(bytes[12:16]),
+		srcPort:  binary.LittleEndian.Uint16(bytes[16:18]),
+		dstPort:  binary.LittleEndian.Uint16(bytes[18:20]),
+		proto:    bytes[20],
 	}
 
 	if hdr.size > eventSize {
