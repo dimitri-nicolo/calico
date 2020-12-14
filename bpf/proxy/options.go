@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/felix/bpf/conntrack"
 )
 
 // Option defines Proxy options
@@ -67,14 +65,6 @@ func WithEndpointsSlices() Option {
 	return makeOption(func(p *proxy) error {
 		p.endpointSlicesEnabled = true
 		log.Infof("proxy.WithEndpointsSlices()")
-		return nil
-	})
-}
-
-// WithConntrackTimeouts overrides the default timeouts for connection entries
-func WithConntrackTimeouts(timeouts conntrack.Timeouts) Option {
-	return makeKubeProxyOption(func(kp *KubeProxy) error {
-		kp.conntrackTimeouts = timeouts
 		return nil
 	})
 }
