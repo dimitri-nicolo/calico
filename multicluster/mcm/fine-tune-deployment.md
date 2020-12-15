@@ -82,6 +82,7 @@ To restrict to a specific cluster or subset of clusters use, resources. To restr
 - “audit_kube”
 - “events”
 - “dns”
+- "l7"
 
 Let’s look at some examples for defining RBAC rules within a role or cluster role to restrict access to log data by log type and cluster name.
 
