@@ -24,6 +24,7 @@ const (
 	CloudWatchLogsDispatcherName = "cloudwatch"
 	FlowLogsFileDispatcherName   = "file"
 	DNSLogsFileDispatcherName    = "dnsfile"
+	L7LogsFileDispatcherName     = "l7file"
 
 	//TODO: Move these into felix config
 	DefaultAgeTimeout               = time.Duration(10) * time.Second
@@ -148,6 +149,29 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 			[]string{DNSLogsFileDispatcherName},
 		)
 		statsCollector.SetDNSLogReporter(dnsLogReporter)
+	}
+
+	if configParams.L7LogsFileEnabled {
+		// Create the reporter, aggregator and dispatcher for L7 logging.
+		l7LogReporter := NewL7LogReporter(
+			map[string]LogDispatcher{
+				L7LogsFileDispatcherName: NewFileDispatcher(
+					configParams.L7LogsFileDirectory,
+					L7LogFilename,
+					configParams.L7LogsFileMaxFileSizeMB,
+					configParams.L7LogsFileMaxFiles,
+				),
+			},
+			configParams.L7LogsFlushInterval,
+			healthAggregator,
+		)
+		l7LogReporter.AddAggregator(
+			NewL7LogAggregator().
+				// TODO: Figure out the aggregation levels
+				AggregateOver(L7SvcAggregationKind(configParams.L7LogsFileAggregationKind), L7URLAggregationKind(configParams.L7LogsFileAggregationKind), L7ErrAggregationKind(configParams.L7LogsFileAggregationKind)),
+			[]string{L7LogsFileDispatcherName},
+		)
+		statsCollector.SetL7LogReporter(l7LogReporter)
 	}
 
 	statsCollector.Start()

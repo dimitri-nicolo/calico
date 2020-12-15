@@ -1160,6 +1160,79 @@ func newMockLookupsCache(
 	return l
 }
 
+type mockL7Reporter struct {
+	updates []L7Update
+}
+
+func (c *mockL7Reporter) Start() {}
+
+func (c *mockL7Reporter) Log(update L7Update) error {
+	c.updates = append(c.updates, update)
+	return nil
+}
+
+var _ = Describe("L7 logging", func() {
+	var c *collector
+	var r *mockL7Reporter
+	var hd *proto.HTTPData
+	var d *Data
+	var t Tuple
+	BeforeEach(func() {
+		epMap := map[[16]byte]*calc.EndpointData{
+			localIp1:  localEd1,
+			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
+		}
+		nflogMap := map[[64]byte]*calc.RuleID{}
+		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1})
+		c = newCollector(lm, nil, &Config{
+			AgeTimeout:               time.Duration(10) * time.Second,
+			ConntrackPollingInterval: time.Duration(1) * time.Second,
+			InitialReportingDelay:    time.Duration(5) * time.Second,
+			ExportingInterval:        time.Duration(1) * time.Second,
+		}).(*collector)
+		r = &mockL7Reporter{}
+		c.SetL7LogReporter(r)
+		hd = &proto.HTTPData{
+			Duration:      int32(10),
+			ResponseCode:  int32(200),
+			BytesSent:     int32(40),
+			BytesReceived: int32(60),
+			UserAgent:     "firefox",
+			RequestPath:   "/test/path",
+			RequestMethod: "GET",
+			Type:          "html/1.1",
+			Count:         int32(1),
+			Domain:        "www.test.com",
+			DurationMax:   int32(12),
+		}
+
+		t = *NewTuple(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
+		d = NewData(t, remoteEd1, remoteEd2, 0)
+	})
+	It("should get client and server endpoint data", func() {
+		c.LogL7(hd, d, t, 1)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Tuple).To(Equal(t))
+		Expect(update.SrcEp).NotTo(BeNil())
+		Expect(update.SrcEp).To(Equal(remoteEd1))
+		Expect(update.DstEp).NotTo(BeNil())
+		Expect(update.DstEp).To(Equal(remoteEd2))
+		Expect(update.Duration).To(Equal(10))
+		Expect(update.DurationMax).To(Equal(12))
+		Expect(update.BytesReceived).To(Equal(60))
+		Expect(update.BytesSent).To(Equal(40))
+		Expect(update.ResponseCode).To(Equal(200))
+		Expect(update.Method).To(Equal("GET"))
+		Expect(update.Path).To(Equal("/test/path"))
+		Expect(update.UserAgent).To(Equal("firefox"))
+		Expect(update.Type).To(Equal("html/1.1"))
+		Expect(update.Count).To(Equal(1))
+		Expect(update.Domain).To(Equal("www.test.com"))
+	})
+})
+
 // Define a separate metric type that doesn't include the actual stats.  We use this
 // for simpler comparisons.
 type testMetricUpdate struct {

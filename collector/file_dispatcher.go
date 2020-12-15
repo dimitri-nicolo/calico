@@ -16,6 +16,7 @@ import (
 const (
 	FlowLogFilename = "flows.log"
 	DNSLogFilename  = "dns.log"
+	L7LogFilename   = "l7.log"
 )
 
 // fileDispatcher is a LogDispatcher that writes logs to a local,
