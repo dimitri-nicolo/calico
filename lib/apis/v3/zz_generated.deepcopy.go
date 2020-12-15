@@ -1959,6 +1959,41 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.L7LogsFlushInterval != nil {
+		in, out := &in.L7LogsFlushInterval, &out.L7LogsFlushInterval
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.L7LogsFileEnabled != nil {
+		in, out := &in.L7LogsFileEnabled, &out.L7LogsFileEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.L7LogsFileMaxFiles != nil {
+		in, out := &in.L7LogsFileMaxFiles, &out.L7LogsFileMaxFiles
+		*out = new(int)
+		**out = **in
+	}
+	if in.L7LogsFileMaxFileSizeMB != nil {
+		in, out := &in.L7LogsFileMaxFileSizeMB, &out.L7LogsFileMaxFileSizeMB
+		*out = new(int)
+		**out = **in
+	}
+	if in.L7LogsFileDirectory != nil {
+		in, out := &in.L7LogsFileDirectory, &out.L7LogsFileDirectory
+		*out = new(string)
+		**out = **in
+	}
+	if in.L7LogsFileAggregationKind != nil {
+		in, out := &in.L7LogsFileAggregationKind, &out.L7LogsFileAggregationKind
+		*out = new(int)
+		**out = **in
+	}
+	if in.L7LogsFilePerNodeLimit != nil {
+		in, out := &in.L7LogsFilePerNodeLimit, &out.L7LogsFilePerNodeLimit
+		*out = new(int)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)
