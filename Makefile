@@ -31,10 +31,15 @@ Makefile.common.$(MAKE_BRANCH):
 MOCKERY_FILE_PATHS= \
 	pkg/api/EventFetcher \
 	pkg/api/ListDestination \
-	pkg/elastic/Client \
 	pkg/elastic/ClusterContextClientFactory \
+	pkg/elastic/FlowFilter \
 	pkg/auth/RBACAuthorizer \
 	pkg/rbac/FlowHelper
+
+# Note that mockery doesn't add the correct elasticsearch dependency, so if you uncomment this to regenerate the client
+# be sure to check that the elasticsearch dependency for the generated mock is correct
+#MOCKERY_FILE_PATHS+= \
+#	pkg/elastic/Client
 
 ifdef LMA_PATH
 EXTRA_DOCKER_ARGS += -v $(LMA_PATH):/go/src/github.com/tigera/lma:ro

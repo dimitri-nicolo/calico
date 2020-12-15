@@ -30,6 +30,7 @@ replace (
 
 require (
 	github.com/coreos/go-oidc v2.1.0+incompatible
+	github.com/google/go-cmp v0.5.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.14.1

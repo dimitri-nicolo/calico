@@ -91,7 +91,6 @@ func GetCompositeAggrFlows(
 		DocumentIndex:           docIndex,
 		Query:                   query,
 		AggCompositeSourceInfos: FlowCompositeSources,
-		AggNestedTermInfos:      FlowAggregatedTerms,
 		AggSumInfos:             FlowAggregationSums,
 	}
 
@@ -180,14 +179,6 @@ func SearchAndFilterCompositeAggrFlows(
 				// The filter indicates that the flow should not be included.
 				log.Debug("Flow should not be included")
 				continue
-			}
-
-			// The flow should be included, the filter may need to modify the flow.
-			if err := filter.ModifyFlow(bucket); err != nil {
-				// Unable to modify flow.
-				log.WithError(err).Info("Error modifying flow for api")
-				errs <- err
-				return
 			}
 
 			// Send the flow, or exit if done.
