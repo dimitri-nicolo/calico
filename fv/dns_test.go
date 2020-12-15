@@ -52,6 +52,7 @@ var _ = Describe("DNS Policy", func() {
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
 		client client.Interface
+		infra  infrastructure.DatastoreInfra
 		w      [1]*workload.Workload
 		dnsDir string
 
@@ -283,7 +284,7 @@ var _ = Describe("DNS Policy", func() {
 		// This file tests that Felix writes out its DNS mappings file on shutdown, so we
 		// need to stop Felix gracefully.
 		opts.FelixStopGraceful = true
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
@@ -322,6 +323,7 @@ var _ = Describe("DNS Policy", func() {
 			etcd.Exec("etcdctl", "ls", "--recursive", "/")
 		}
 		etcd.Stop()
+		infra.Stop()
 	})
 
 	It("can wget microsoft.com", func() {

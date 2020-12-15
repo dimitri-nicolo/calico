@@ -401,6 +401,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		etcd    *containers.Container
 		felix   *infrastructure.Felix
 		client  client.Interface
+		infra   infrastructure.DatastoreInfra
 		w       [3]*workload.Workload
 		options infrastructure.TopologyOptions
 		cc      *connectivity.Checker
@@ -410,7 +411,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		options = infrastructure.DefaultTopologyOptions()
 		options.WithTypha = true
 		options.WithPrometheusPortTLS = true
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(options)
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
@@ -439,6 +440,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 			etcd.Exec("etcdctl", "ls", "--recursive", "/")
 		}
 		etcd.Stop()
+		infra.Stop()
 	})
 
 	It("full connectivity to and from workload 0", func() {

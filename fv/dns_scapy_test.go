@@ -104,6 +104,7 @@ var _ = Describe("DNS Policy", func() {
 		etcd         *containers.Container
 		felix        *infrastructure.Felix
 		client       client.Interface
+		infra        infrastructure.DatastoreInfra
 		w            [1]*workload.Workload
 	)
 
@@ -124,7 +125,7 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
@@ -153,6 +154,7 @@ var _ = Describe("DNS Policy", func() {
 			etcd.Exec("etcdctl", "ls", "--recursive", "/")
 		}
 		etcd.Stop()
+		infra.Stop()
 	})
 
 	dnsServerSetup := func(scapy *containers.Container) {
@@ -613,6 +615,7 @@ var _ = Describe("DNS Policy with server on host", func() {
 		etcd         *containers.Container
 		felix        *infrastructure.Felix
 		client       client.Interface
+		infra        infrastructure.DatastoreInfra
 		w            [1]*workload.Workload
 	)
 
@@ -627,7 +630,7 @@ var _ = Describe("DNS Policy with server on host", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
@@ -673,6 +676,7 @@ var _ = Describe("DNS Policy with server on host", func() {
 			etcd.Exec("etcdctl", "ls", "--recursive", "/")
 		}
 		etcd.Stop()
+		infra.Stop()
 	})
 
 	dnsServerSetup := func(scapy *containers.Container) {
