@@ -199,7 +199,7 @@ type CompiledTier []*CompiledPolicy
 // ActionBefore returns the calculated action for the tier for the supplied flow on the initial set of config.
 //
 // In this "before" processing, calculated flow hits are cross referenced against the flow log policy hits to provide
-// additional certainty, and in the cases where the the calculation was not possible to infer the result from the
+// additional certainty, and in the cases where the calculation was not possible to infer the result from the
 // measured data.
 func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache *flowCache) api.ActionFlag {
 	// In the before branch we track unverifiedNoMatches no-matches. We process these after getting additional confirmation

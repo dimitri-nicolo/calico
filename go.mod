@@ -37,6 +37,7 @@ replace (
 
 require (
 	github.com/go-playground/universal-translator v0.16.0 // indirect
+	github.com/google/go-cmp v0.4.0
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
