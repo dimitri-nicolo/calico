@@ -403,7 +403,7 @@ configRetry:
 		lookupsCache = calc.NewLookupsCache()
 
 		// Start the stats collector which also depends on the lookups cache.
-		dpStatsCollector = collector.StartDataplaneStatsCollector(configParams, lookupsCache, healthAggregator)
+		dpStatsCollector = collector.New(configParams, lookupsCache, healthAggregator)
 	} else {
 		// For windows OS, make lookupsCache nil and rest of all lookupCache
 		// should handle the nil pointer
@@ -437,6 +437,7 @@ configRetry:
 		configChangedRestartCallback,
 		childExitedRestartCallback,
 		k8sClientSet,
+		lookupsCache,
 	)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
@@ -477,6 +478,9 @@ configRetry:
 		policySyncServer.RegisterGrpc(policySyncAPIBinder.Server())
 		calcGraphClientChannels = append(calcGraphClientChannels, toPolicySync)
 	}
+
+	// Everybody who wanted to tweak the dpStatsCollector had a go, we can start it now!
+	dpStatsCollector.Start()
 
 	// Now create the calculation graph, which receives updates from the
 	// datastore and outputs dataplane updates for the dataplane driver.

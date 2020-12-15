@@ -33,9 +33,14 @@ const (
 	DefaultConntrackPollingInterval = time.Duration(5) * time.Second
 )
 
-// StartDataplaneStatsCollector creates the required dataplane stats collector, reporters and aggregators and starts
-// collecting and reporting stats. Returns a collector that statistics should be reported to.
-func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *calc.LookupsCache, healthAggregator *health.HealthAggregator) Collector {
+// New creates the required dataplane stats collector, reporters and aggregators.
+// Returns a collector that statistics should be reported to.
+func New(
+	configParams *config.Config,
+	lookupsCache *calc.LookupsCache,
+	healthAggregator *health.HealthAggregator,
+) Collector {
+
 	rm := NewReporterManager()
 	if configParams.PrometheusReporterEnabled {
 		pr := NewPrometheusReporter(configParams.PrometheusReporterPort,
@@ -114,13 +119,9 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		rm,
 		&Config{
 			StatsDumpFilePath:            configParams.StatsDumpFilePath,
-			NfNetlinkBufSize:             configParams.NfNetlinkBufSize,
-			IngressGroup:                 1,
-			EgressGroup:                  2,
 			AgeTimeout:                   DefaultAgeTimeout,
 			InitialReportingDelay:        DefaultInitialReportingDelay,
 			ExportingInterval:            DefaultExportingInterval,
-			ConntrackPollingInterval:     DefaultConntrackPollingInterval,
 			EnableServices:               configParams.FlowLogsFileIncludeService,
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
@@ -174,7 +175,6 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		statsCollector.SetL7LogReporter(l7LogReporter)
 	}
 
-	statsCollector.Start()
 	return statsCollector
 }
 

@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/tc"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	extdataplane "github.com/projectcalico/felix/dataplane/external"
@@ -53,7 +54,8 @@ func StartDataplaneDriver(configParams *config.Config,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
 	childExitedRestartCallback func(),
-	k8sClientSet *kubernetes.Clientset) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+	k8sClientSet *kubernetes.Clientset,
+	lc *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 
 	if !configParams.IsLeader() {
 		// Return an inactive dataplane, since we're not the leader.
@@ -371,6 +373,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			RouteTableManager:                  routeTableIndexAllocator,
 			MTUIfacePattern:                    configParams.MTUIfacePattern,
 			FlowLogsCollectProcessInfo:         configParams.FlowLogsCollectProcessInfo,
+			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
+			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 
 			KubeClientSet: k8sClientSet,
 
@@ -389,6 +393,8 @@ func StartDataplaneDriver(configParams *config.Config,
 				RotationSeconds: configParams.CaptureRotationSeconds,
 				MaxFiles:        configParams.CaptureMaxFiles,
 			},
+
+			LookupsCache: lc,
 		}
 
 		if configParams.BPFExternalServiceMode == "dsr" {
