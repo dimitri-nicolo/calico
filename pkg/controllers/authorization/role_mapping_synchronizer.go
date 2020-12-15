@@ -31,6 +31,7 @@ var resourceNameToElasticsearchRole = map[string]string{
 	"audit_kube": esusers.ElasticsearchRoleNameAuditKubeViewer,
 	"events":     esusers.ElasticsearchRoleNameEventsViewer,
 	"dns":        esusers.ElasticsearchRoleNameDNSViewer,
+	"l7":         esusers.ElasticsearchRoleNameL7Viewer,
 }
 
 var resourceNameToGlobalElasticsearchRoles = map[string]string{
@@ -234,6 +235,7 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 				esusers.ElasticsearchRoleNameAuditViewer,
 				esusers.ElasticsearchRoleNameEventsViewer,
 				esusers.ElasticsearchRoleNameDNSViewer,
+				esusers.ElasticsearchRoleNameL7Viewer,
 			}
 		}
 

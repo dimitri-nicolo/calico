@@ -15,7 +15,7 @@ var _ = Describe("ClusterRoleCache", func() {
 		It("Adds the ClusterRole to the cache", func() {
 			rule := rbacv1.PolicyRule{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns"},
+				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7"},
 				Resources:     []string{"*"},
 			}
 
@@ -32,7 +32,7 @@ var _ = Describe("ClusterRoleCache", func() {
 		It("Doesn't cache rules that aren't in the accept API groups list", func() {
 			rule1 := rbacv1.PolicyRule{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns"},
+				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7"},
 				Resources:     []string{"*"},
 			}
 
@@ -55,7 +55,7 @@ var _ = Describe("ClusterRoleCache", func() {
 		It("Doesn't cache ClusterRoles that don't have any rules in the accepted API groups", func() {
 			rule1 := rbacv1.PolicyRule{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns"},
+				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7"},
 				Resources:     []string{"*"},
 			}
 
@@ -174,7 +174,7 @@ var _ = Describe("ClusterRoleCache", func() {
 		It("Removes the ClusterRole from the cache", func() {
 			rule := rbacv1.PolicyRule{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns"},
+				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7"},
 				Resources:     []string{"*"},
 			}
 
@@ -240,7 +240,7 @@ var _ = Describe("ClusterRoleCache", func() {
 
 			rule := rbacv1.PolicyRule{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns"},
+				ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7"},
 				Resources:     []string{"*"},
 			}
 
