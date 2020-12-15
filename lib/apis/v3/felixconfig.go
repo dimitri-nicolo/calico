@@ -534,6 +534,34 @@ type FelixConfigurationSpec struct {
 	// [Default: true]
 	DNSLogsLatency *bool `json:"dnsLogsLatency,omitempty"`
 
+	// L7LogsFlushInterval configures the interval at which Felix exports L7 logs.
+	// [Default: 300s]
+	L7LogsFlushInterval *metav1.Duration `json:"l7LogsFlushInterval,omitempty" configv1timescale:"seconds"`
+	// L7LogsFileEnabled controls logging L7 logs to a file. If false no L7 logging to file will occur.
+	// [Default: false]
+	L7LogsFileEnabled *bool `json:"l7LogsFileEnabled,omitempty"`
+	// L7LogsFileMaxFiles sets the number of L7 log files to keep.
+	// [Default: 5]
+	L7LogsFileMaxFiles *int `json:"l7LogsFileMaxFiles,omitempty"`
+	// L7LogsFileMaxFileSizeMB sets the max size in MB of L7 log files before rotation.
+	// [Default: 100]
+	L7LogsFileMaxFileSizeMB *int `json:"l7LogsFileMaxFileSizeMB,omitempty"`
+	// L7LogsFileDirectory sets the directory where L7 log files are stored.
+	// [Default: /var/log/calico/l7logs]
+	L7LogsFileDirectory *string `json:"l7LogsFileDirectory,omitempty"`
+	// TODO: This will be changed during the aggregation work.
+	// L7LogsFileAggregationKind is used to choose the type of aggregation for L7 log entries.
+	// [Default: 1 - client name prefix aggregation].
+	// Accepted values are 0 and 1.
+	// 0 - No aggregation
+	// 1 - Aggregate over clients with the same name prefix
+	L7LogsFileAggregationKind *int `json:"l7LogsFileAggregationKind,omitempty" validate:"omitempty"`
+	// Limit on the number of L7 logs that can be emitted within each flush interval.  When
+	// this limit has been reached, Felix counts the number of unloggable L7 responses within
+	// the flush interval, and emits a WARNING log with that count at the same time as it
+	// flushes the buffered L7 logs.  [Default: 0, meaning no limit]
+	L7LogsFilePerNodeLimit *int `json:"l7LogsFilePerNodeLimit,omitempty"`
+
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.
 	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`

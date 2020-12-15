@@ -5698,6 +5698,54 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"l7LogsFlushInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "L7LogsFlushInterval configures the interval at which Felix exports L7 logs. [Default: 300s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"l7LogsFileEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "L7LogsFileEnabled controls logging L7 logs to a file. If false no L7 logging to file will occur. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"l7LogsFileMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "L7LogsFileMaxFiles sets the number of L7 log files to keep. [Default: 5]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"l7LogsFileMaxFileSizeMB": {
+						SchemaProps: spec.SchemaProps{
+							Description: "L7LogsFileMaxFileSizeMB sets the max size in MB of L7 log files before rotation. [Default: 100]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"l7LogsFileDirectory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "L7LogsFileDirectory sets the directory where L7 log files are stored. [Default: /var/log/calico/l7logs]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"l7LogsFileAggregationKind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "L7LogsFileAggregationKind is used to choose the type of aggregation for L7 log entries. [Default: 1 - client name prefix aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over clients with the same name prefix",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"l7LogsFilePerNodeLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limit on the number of L7 logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs.  [Default: 0, meaning no limit]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
