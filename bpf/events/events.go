@@ -1,20 +1,9 @@
 // Copyright (c) 2020 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package events
 
 import (
+	"fmt"
 	"runtime"
 	"unsafe"
 
@@ -31,8 +20,6 @@ const (
 	// MaxCPUs is the currenty supported max number of CPUs
 	MaxCPUs = 512
 
-	// ProcessNameLen max process name length
-	ProcessNameLen = 16
 	// TypeLostEvents does not carry any other information except the number of lost events.
 	TypeLostEvents Type = iota
 	//TypeProtoStatsV4 protocol v4 stats
@@ -40,8 +27,19 @@ const (
 )
 
 // Event represents the common denominator of all events
-type Event interface {
-	Type() Type
+type Event struct {
+	typ  Type
+	data []byte
+}
+
+// Type returns the event type
+func (e Event) Type() Type {
+	return e.typ
+}
+
+// Data returns the data of the event as an unparsed byte string
+func (e Event) Data() []byte {
+	return e.data
 }
 
 // Source is where do we read the event from
@@ -105,7 +103,7 @@ func newPerfEvents(mc *bpf.MapContext) (Events, error) {
 	rd.next = func() (Event, error) {
 		e, err := rd.events.Next()
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed to get next event")
+			return Event{}, errors.WithMessage(err, "failed to get next event")
 		}
 
 		if e.LostEvents() != 0 {
@@ -116,7 +114,7 @@ func newPerfEvents(mc *bpf.MapContext) (Events, error) {
 				lost++
 			}
 
-			return LostEvents(lost), nil
+			return Event{}, ErrLostEvents(lost)
 		}
 
 		return parseEvent(e)
@@ -138,8 +136,8 @@ func (e *perfEventsReader) Map() bpf.Map {
 }
 
 type eventHdr struct {
-	Type uint16
-	Len  uint16
+	Type uint32
+	Len  uint32
 }
 
 type eventTimestampHdr struct {
@@ -151,46 +149,22 @@ func parseEvent(raw eventRaw) (Event, error) {
 
 	var hdr eventHdr
 	hdrBytes := (*[unsafe.Sizeof(eventHdr{})]byte)((unsafe.Pointer)(&hdr))
-	consumed := copy(hdrBytes[:], raw.Data())
-
-	switch Type(hdr.Type) {
-	case TypeProtoStatsV4:
-		return parseProtov4Stats(raw.Data()[consumed:])
-	default:
-		return nil, errors.Errorf("unknown event type: %d", hdr.Type)
+	data := raw.Data()
+	consumed := copy(hdrBytes[:], data)
+	l := len(data)
+	if int(hdr.Len) > l {
+		return Event{}, errors.Errorf("mismatched lenght %d vs data length %d", hdr.Len, l)
 	}
+
+	return Event{
+		typ:  Type(hdr.Type),
+		data: data[consumed:hdr.Len],
+	}, nil
 }
 
-// LostEvents is an event that reports how many events were missed.
-type LostEvents int
+// ErrLostEvents reports how many events were lost
+type ErrLostEvents int
 
-// Type returns TypeLostEvents
-func (LostEvents) Type() Type {
-	return TypeLostEvents
-}
-
-type ProtoStatsV4 struct {
-	Pid         uint32
-	Proto       uint32
-	Saddr       uint32
-	Daddr       uint32
-	Sport       uint16
-	Dport       uint16
-	TxBytes     uint32
-	RxBytes     uint32
-	SndBuf      uint32
-	RcvBuf      uint32
-	ProcessName [ProcessNameLen]byte
-}
-
-func (ProtoStatsV4) Type() Type {
-	return TypeProtoStatsV4
-}
-
-func parseProtov4Stats(raw []byte) (Event, error) {
-	var e ProtoStatsV4
-	eptr := (unsafe.Pointer)(&e)
-	bytes := (*[unsafe.Sizeof(ProtoStatsV4{})]byte)(eptr)
-	copy(bytes[:], raw)
-	return e, nil
+func (e ErrLostEvents) Error() string {
+	return fmt.Sprintf("%d lost events", e)
 }

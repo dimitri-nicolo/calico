@@ -1,44 +1,58 @@
 // Copyright (c) 2020 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package intdataplane
 
 import (
+	"errors"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf/events"
 )
 
-func startEventPoller(e events.Events) error {
-	go func() {
-		for {
-			event, err := e.Next()
-			if err != nil {
-				log.WithError(err).Warn("Failed to get next event")
-				continue
-			}
-			if event == nil {
-				continue
-			}
-			switch event.Type() {
-			case events.TypeProtoStatsV4:
-				log.WithField("event", event).Debug("Received Protocol stats")
-			default:
-				log.Warn("Unknown event type")
-				continue
-			}
-		}
-	}()
+type bpfEventSink func(e events.Event)
+
+type bpfEventPoller struct {
+	events events.Events
+	sinks  map[events.Type][]bpfEventSink
+}
+
+func newBpfEventPoller(e events.Events) *bpfEventPoller {
+	return &bpfEventPoller{
+		events: e,
+		sinks:  make(map[events.Type][]bpfEventSink),
+	}
+}
+
+func (p *bpfEventPoller) Register(t events.Type, sink bpfEventSink) {
+	p.sinks[t] = append(p.sinks[t], sink)
+}
+
+func (p *bpfEventPoller) Start() error {
+	if len(p.sinks) == 0 {
+		return errors.New("no event sinks registered")
+	}
+
+	go p.run()
 	return nil
+}
+
+func (p *bpfEventPoller) run() {
+	for {
+		event, err := p.events.Next()
+		if err != nil {
+			log.WithError(err).Warn("Failed to get next event")
+			continue
+		}
+
+		sinks := p.sinks[event.Type()]
+		if len(sinks) == 0 {
+			log.Warnf("Event type %d without a sink", event.Type())
+			continue
+		}
+
+		for _, sink := range sinks {
+			sink(event)
+		}
+	}
 }
