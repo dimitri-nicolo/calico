@@ -19,6 +19,9 @@ fi
 if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_ids_events/out-syslog.conf
 fi
+if [ "${SYSLOG_L7_LOG}" == "true" ]; then
+  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_l7/out-syslog.conf
+fi
 
 # Append additional output matcher config (for IDS events) when SYSLOG forwarding is turned on
 if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then
