@@ -6,7 +6,7 @@ ifndef BRANCH_NAME
 endif
 	docker build --pull -t gcr.io/unique-caldron-775/cnx/tigera/elasticsearch:$(BRANCH_NAME) ./
 
-GIT_VERSION?=$(shell git describe --tags --dirty --always --long)
+GIT_VERSION?=$(shell git describe --tags --dirty --always --long  --abbrev=12)
 
 # The image name for GCR
 PUSH_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/elasticsearch
