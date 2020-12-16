@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/gavv/monotime"
-
 	"github.com/google/gopacket/layers"
 	"github.com/mipearson/rfw"
 	log "github.com/sirupsen/logrus"
@@ -180,47 +179,19 @@ func (c *collector) setupStatsDumping() {
 //
 // This method also updates the endpoint data from the cache, so beware - it is not as lightweight as a
 // simple map lookup.
-func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, expectedLocal byte) *Data {
-	var dstEp, srcEp *calc.EndpointData
-	var ok bool
-	var dstLocal, srcLocal bool
-
+func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 	data, okData := c.epStats[tuple]
-
 	if expired {
 		// If the connection has expired then return the data as is. If there is no entry, that's fine too.
 		return data
 	}
-
-	// Get the endpoint data for this entry, preferentially using a real endpoint over a NetworkSet. If a Calico
-	// endpoint determine if local to this node.
-	if dstEp, ok = c.luc.GetEndpoint(tuple.dst); ok {
-		dstLocal = dstEp.IsLocal
-	} else if c.config.EnableNetworkSets {
-		dstEp, _ = c.luc.GetNetworkset(tuple.dst)
-	}
-	if srcEp, ok = c.luc.GetEndpoint(tuple.src); ok {
-		srcLocal = srcEp.IsLocal
-	} else if c.config.EnableNetworkSets {
-		srcEp, _ = c.luc.GetNetworkset(tuple.src)
-	}
-
-	switch expectedLocal {
-	case expectedLocalSource:
-		if !srcLocal {
-			return nil
-		}
-	case expectedLocalDestination:
-		if !dstLocal {
-			return nil
-		}
-	default:
-		if !srcLocal && !dstLocal {
-			return nil
-		}
-	}
-
+	srcEp, dstEp := c.lookupEndpoint(tuple.src), c.lookupEndpoint(tuple.dst)
 	if !okData {
+		// For new entries, check that at least one of the endpoints is local.
+		if (srcEp == nil || !srcEp.IsLocal) && (dstEp == nil || !dstEp.IsLocal) {
+			return nil
+		}
+
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
 		data = NewData(tuple, srcEp, dstEp, c.config.MaxOriginalSourceIPsIncluded)
 		c.epStats[tuple] = data
@@ -229,12 +200,42 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, expecte
 		return data
 	}
 
-	// Update endpoint info in data.
-	// TODO(rlb): If key has changed, should expire/report the metrics first.
-	data.dstEp = dstEp
-	data.srcEp = srcEp
+	if data.reported && (endpointChanged(data.srcEp, srcEp) || endpointChanged(data.dstEp, dstEp)) {
+		// The endpoint information has now changed. Handle the endpoint changes.
+		c.handleDataEndpointOrRulesChanged(data)
 
+		// For updated entries, check that at least one of the endpoints is still local. If not delete the entry.
+		if (srcEp == nil || !srcEp.IsLocal) && (dstEp == nil || !dstEp.IsLocal) {
+			c.deleteData(data)
+			return nil
+		}
+	}
+
+	// Update endpoint info in data.
+	data.srcEp, data.dstEp = srcEp, dstEp
 	return data
+}
+
+// endpointChanged determines if the endpoint has changed.
+func endpointChanged(ep1, ep2 *calc.EndpointData) bool {
+	if ep1 == ep2 {
+		return false
+	}
+	if ep1 == nil || ep2 == nil {
+		return true
+	}
+	return ep1.Key != ep2.Key
+}
+
+func (c *collector) lookupEndpoint(ip [16]byte) *calc.EndpointData {
+	// Get the endpoint data for this entry, preferentially using a real endpoint over a NetworkSet.
+	if ep, ok := c.luc.GetEndpoint(ip); ok {
+		return ep
+	} else if c.config.EnableNetworkSets {
+		ep, _ = c.luc.GetNetworkset(ip)
+		return ep
+	}
+	return nil
 }
 
 // applyConntrackStatUpdate applies a stats update from a conn track poll.
@@ -252,20 +253,14 @@ func (c *collector) applyConntrackStatUpdate(
 		data.SetConntrackCountersReverse(reversePackets, reverseBytes)
 
 		if entryExpired {
-			if !data.VerdictFound() {
-				// We have not yet found the verdict trace index, so expiring this flow will contain incomplete
-				// NFLOG data. Mark as expire and dirty and let this be picked up by a subsequent sweep either from
-				// timer or NFLOG update.
-				data.SetExpired()
-			} else {
-				// Try to report metrics first before trying to expire the data.
-				// This needs to be done in this order because if this is the
-				// first time we are seeing this connection then we'll have
-				// to report an update followed by expiring it signaling
-				// the completion.
-				c.reportMetrics(data)
+			// The connection has expired. if the metrics can be reported then report and expire them now.
+			// Otherwise, flag as expired and allow the export timer to process the connection - this allows additional
+			// time for asynchronous meta data to be gathered (such as service info and process info).
+			if c.reportMetrics(data, false) {
 				c.expireMetrics(data)
 				c.deleteData(data)
+			} else {
+				data.SetExpired()
 			}
 		}
 	}
@@ -273,59 +268,47 @@ func (c *collector) applyConntrackStatUpdate(
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
 func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
-	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
 	if ru := data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
-		// When a RuleTrace RuleID is replaced, we have to do some housekeeping
-		// before we can replace it, the first of which is to remove references
-		// from the reporter, which is done by calling expireMetrics, followed
-		// by resetting counters.
-		if data.DurationSinceLastRuleUpdate() > c.config.InitialReportingDelay {
-			// We only need to expire metric entries that've probably been reported
-			// in the first place.
-			c.expireMetrics(data)
-		}
+		c.handleDataEndpointOrRulesChanged(data)
+		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
+	}
+
+	// The rule has just been set, update the last rule update time. This provides a window during which we can
+	// gather any remaining rule hits.
+	data.ruleUpdatedAt = monotime.Now()
+}
+
+func (c *collector) handleDataEndpointOrRulesChanged(data *Data) {
+	// The endpoints or rule matched have changed. If reported then expire the metrics and update the
+	// endpoint data.
+	if c.reportMetrics(data, false) {
+		// We only need to expire metric entries that've probably been reported
+		// in the first place.
+		c.expireMetrics(data)
 
 		// Reset counters and replace the rule.
 		data.ResetConntrackCounters()
 		data.ResetApplicationCounters()
-		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
 
-		// The rule has just been set, update the last rule update time. This provides a window during which we can
-		// gather any remaining rule hits.
-		data.ruleUpdatedAt = monotime.Now()
-	} else if ru == RuleMatchSet {
-		// The rule has just been set, update the last rule update time. This provides a window during which we can
-		// gather any remaining rule hits.
-		data.ruleUpdatedAt = monotime.Now()
-
-		// If the connection is marked as expired and we now have complete policy set, then expire the flow and delete
-		// it.
-		if data.IsExpired() && data.VerdictFound() {
-			c.reportMetrics(data)
-			c.expireMetrics(data)
-			c.deleteData(data)
-		} else {
-			// The rule has just been set, update the last rule update time. This provides a window during which we can
-			// gather any remaining rule hits.
-			data.ruleUpdatedAt = monotime.Now()
-		}
+		// Sett reported to false so the data can be updated without further reports.
+		data.reported = false
 	}
 }
 
 func (c *collector) checkEpStats() {
 	// We report stats at initial reporting delay after the last rule update. This aims to ensure we have the full set
-	// of rules before we report the stats. As a minor finesse, calculate the latest update time to consider reporting.
+	// of data before we report the stats. As a minor finesse, pre-calculate the latest update time to consider reporting.
 	minLastRuleUpdatedAt := monotime.Now() - c.config.InitialReportingDelay
 	minExpirationAt := monotime.Now() - c.config.AgeTimeout
 
 	// For each entry
-	// - report metrics
+	// - report metrics.  Metrics reported through the ticker processing will wait for the initial reporting delay
+	//   before reporting.  Note that this may be short-circuited by conntrack events or nflog events that inidicate
+	//   the flow is terminated or has changed.
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
-		if data.IsDirty() && data.RuleUpdatedAt() < minLastRuleUpdatedAt {
-			// We report Metrics only after an initial delay to allow any Policy/rule
-			// changes to show up as part of data.
-			c.reportMetrics(data)
+		if data.IsDirty() && (data.reported || data.RuleUpdatedAt() < minLastRuleUpdatedAt) {
+			c.reportMetrics(data, true)
 		}
 		if data.UpdatedAt() < minExpirationAt {
 			c.expireMetrics(data)
@@ -334,16 +317,106 @@ func (c *collector) checkEpStats() {
 	}
 }
 
-func (c *collector) reportMetrics(data *Data) {
-	data.Report(c.reporterMgr.ReportChan, false)
+// reportMetrics reports the metrics if all required data is present, or returns false if not reported.
+// Set the force flag to true if the data should be reported before all asynchronous data is collected.
+func (c *collector) reportMetrics(data *Data, force bool) bool {
+	foundService := true
+	if !data.reported {
+		// Check if the destination was accessed via a service. Once reported, this will not be updated again.
+		if data.dstSvc.Name == "" {
+			if data.isDNAT {
+				// Destination is NATed, look up service from the pre-DNAT record.
+				data.dstSvc, foundService = c.luc.GetServiceFromPreDNATDest(data.preDNATAddr, data.preDNATPort, data.Tuple.proto)
+			} else if _, ok := c.luc.GetNode(data.Tuple.dst); ok {
+				// Destination is a node, so could be a node port service.
+				data.dstSvc, foundService = c.luc.GetNodePortService(data.Tuple.l4Dst, data.Tuple.proto)
+			}
+		}
+	}
+
+	if !force {
+		// If not forcing then return if:
+		// - There may be a service to report
+		// - The verdict rules have not been found for the local endpoints.
+		// In this case data will be reported later during ticker processing.
+		if !foundService || !data.VerdictFound() {
+			log.Infof("Service not found")
+			return false
+		}
+	}
+
+	// Send the metrics.
+	c.sendMetrics(data, false)
+	data.reported = true
+	return true
 }
 
 func (c *collector) expireMetrics(data *Data) {
-	data.Report(c.reporterMgr.ReportChan, true)
+	if data.reported {
+		c.sendMetrics(data, true)
+	}
 }
 
 func (c *collector) deleteData(data *Data) {
 	delete(c.epStats, data.Tuple)
+}
+
+func (c *collector) sendMetrics(data *Data, expired bool) {
+	ut := UpdateTypeReport
+	if expired {
+		ut = UpdateTypeExpire
+	}
+	// For connections and non-connections, we only send ingress and egress updates if:
+	// -  There is something to report, i.e.
+	//    -  flow is expired, or
+	//    -  associated stats are dirty
+	// -  The policy verdict rule has been determined. Note that for connections the policy verdict may be "Deny" due
+	//    to DropActionOverride setting (e.g. if set to ALLOW, then we'll get connection stats, but the metrics will
+	//    indicate Denied).
+	// Only clear the associated stats and dirty flag once the metrics are reported.
+	if data.isConnection {
+		// Report connection stats.
+		if expired || data.IsDirty() {
+			// Track if we need to send a separate expire metric update. This is required when we are only
+			// reporting Original IP metric updates and want to send a corresponding expiration metric update.
+			// When they are correlated with regular metric updates and connection metrics, we don't need to
+			// send this.
+			sendOrigSourceIPsExpire := true
+			if data.EgressRuleTrace.FoundVerdict() {
+				c.reporterMgr.ReportChan <- data.metricUpdateEgressConn(ut)
+			}
+			if data.IngressRuleTrace.FoundVerdict() {
+				sendOrigSourceIPsExpire = false
+				c.reporterMgr.ReportChan <- data.metricUpdateIngressConn(ut)
+			}
+
+			// We may receive HTTP Request data after we've flushed the connection counters.
+			if (expired && data.origSourceIPsActive && sendOrigSourceIPsExpire) || data.NumUniqueOriginalSourceIPs() != 0 {
+				data.origSourceIPsActive = !expired
+				c.reporterMgr.ReportChan <- data.metricUpdateOrigSourceIPs(ut)
+			}
+
+			// Clear the connection dirty flag once the stats have been reported. Note that we also clear the
+			// rule trace stats here too since any data stored in them has been superceded by the connection
+			// stats.
+			data.clearConnDirtyFlag()
+			data.EgressRuleTrace.ClearDirtyFlag()
+			data.IngressRuleTrace.ClearDirtyFlag()
+		}
+	} else {
+		// Report rule trace stats.
+		if (expired || data.EgressRuleTrace.IsDirty()) && data.EgressRuleTrace.FoundVerdict() {
+			c.reporterMgr.ReportChan <- data.metricUpdateEgressNoConn(ut)
+			data.EgressRuleTrace.ClearDirtyFlag()
+		}
+		if (expired || data.IngressRuleTrace.IsDirty()) && data.IngressRuleTrace.FoundVerdict() {
+			c.reporterMgr.ReportChan <- data.metricUpdateIngressNoConn(ut)
+			data.IngressRuleTrace.ClearDirtyFlag()
+		}
+
+		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
+		// from a connection to non-connection state.
+	}
 }
 
 // handleCtEntry handles a conntrack entry
@@ -375,7 +448,7 @@ func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	if ctEntry.IsDNAT() {
 		ctTuple, err = ctEntry.OriginalTuplePostDNAT()
 		if err != nil {
-			log.Error("Error when extracting tuple without DNAT:", err)
+			log.Error("Error when extracting tuple post DNAT:", err)
 			return
 		}
 	}
@@ -392,16 +465,12 @@ func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// Get or create a data entry and update the counters. If no entry is returned then neither source nor dest are
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
-	if data := c.getDataAndUpdateEndpoints(tuple, entryExpired, expectedLocalEither); data != nil {
-		if data.dstSvc.Name == "" {
-			if ctEntry.IsDNAT() {
-				// Destination is NATed, look up service from the pre-DNAT record.
-				origTuple := extractTupleFromCtEntryTuple(ctEntry.OriginalTuple)
-				data.dstSvc, _ = c.luc.GetServiceFromPreDNATDest(origTuple.dst, origTuple.l4Dst, tuple.proto)
-			} else if _, ok := c.luc.GetNode(tuple.dst); ok {
-				// Destination is a node, so could be a node port service.
-				data.dstSvc, _ = c.luc.GetNodePortService(tuple.l4Dst, tuple.proto)
-			}
+	if data := c.getDataAndUpdateEndpoints(tuple, entryExpired); data != nil {
+		if !data.isDNAT && ctEntry.IsDNAT() {
+			originalTuple := extractTupleFromCtEntryTuple(ctEntry.OriginalTuple)
+			data.isDNAT = true
+			data.preDNATAddr = originalTuple.dst
+			data.preDNATPort = originalTuple.l4Dst
 		}
 
 		c.applyConntrackStatUpdate(data,
@@ -420,44 +489,37 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 
 	// Extract the tuple used for lookup for this set of packet prefixes.
 	tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
+	if data = c.getDataAndUpdateEndpoints(tuple, false); data == nil {
+		// Data is nil, so the destination endpoint cannot be managed by local Calico.
+		return
+	}
+	if !data.isDNAT && nPktAggr.IsDNAT {
+		originalTuple := extractTupleFromCtEntryTuple(nPktAggr.OriginalTuple)
+		data.isDNAT = true
+		data.preDNATAddr = originalTuple.dst
+		data.preDNATPort = originalTuple.l4Dst
+	}
 
 	// Determine the local endpoint for this update.
 	switch dir {
 	case rules.RuleDirIngress:
-		if data = c.getDataAndUpdateEndpoints(tuple, false, expectedLocalDestination); data == nil {
-			// Data is nil, so the destination endpoint cannot be managed by local Calico.
+		// The local destination should be local.
+		if localEp = data.dstEp; localEp == nil || !localEp.IsLocal {
 			return
 		}
-		// The cache will return nil for ingress if the destination endpoint is not local.
-		localEp = data.dstEp
 		localMatchData = localEp.Ingress
 	case rules.RuleDirEgress:
-		if data = c.getDataAndUpdateEndpoints(tuple, false, expectedLocalSource); data == nil {
-			// Data is nil, so the source endpoint cannot be managed by local Calico.
+		// The cache will return nil for egress if the source endpoint is not local.
+		if localEp = data.srcEp; localEp == nil || !localEp.IsLocal {
 			return
 		}
-		// The cache will return nil for egress if the source endpoint is not local.
-		localEp = data.srcEp
 		localMatchData = localEp.Egress
 	default:
 		return
 	}
 
-	// If no service name has been determined, check if the destination corresponds to a service.
-	if data.dstSvc.Name == "" {
-		log.Debug("No service name configured")
-		if nPktAggr.IsDNAT {
-			// Destination is NATed, look up service from the pre-DNAT record.
-			origTuple := extractTupleFromCtEntryTuple(nPktAggr.OriginalTuple)
-			data.dstSvc, _ = c.luc.GetServiceFromPreDNATDest(origTuple.dst, origTuple.l4Dst, tuple.proto)
-		} else if _, ok := c.luc.GetNode(tuple.dst); ok {
-			// Destination is a node, so could be a node port service.
-			data.dstSvc, _ = c.luc.GetNodePortService(tuple.l4Dst, tuple.proto)
-		}
-	}
-
 	for _, prefix := range nPktAggr.Prefixes {
-		// Lookup the ruleID from the prefix.
+		// Lookup the ruleID from the prefix. If not known then treat as a modified path
 		ruleID := c.luc.GetRuleIDFromNFLOGPrefix(prefix.Prefix)
 		if ruleID == nil {
 			continue
@@ -511,6 +573,13 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 
 		c.applyNflogStatUpdate(data, ruleID, policyIdx, prefix.Packets, prefix.Bytes)
 	}
+
+	if data.IsExpired() && c.reportMetrics(data, false) {
+		// If the data is expired then attempt to report it now so that we can remove the connection entry. If reported
+		// the data can be expired and deleted immediately, otherwise it will get exported during ticker processing.
+		c.expireMetrics(data)
+		c.deleteData(data)
+	}
 }
 
 // convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current
@@ -526,7 +595,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// from the dataplane before nflogs or conntrack).
-	data := c.getDataAndUpdateEndpoints(t, false, expectedLocalDestination)
+	data := c.getDataAndUpdateEndpoints(t, false)
 
 	var httpDataCount int
 	for _, s := range d.Stats {

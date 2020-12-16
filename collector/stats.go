@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gavv/monotime"
-
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/felix/calc"
@@ -75,6 +74,10 @@ type RuleTrace struct {
 
 	// Stores the Index of the RuleID that has a RuleAction Allow or Deny.
 	verdictIdx int
+
+	// Stores the last index updated in this rule trace. It is assumed the policy hit logs arrive in order
+	// for a particular traffic direction and connection.
+	lastMatchIdx int
 
 	// Optimization Note: When initializing a RuleTrace object, the pathArray
 	// array is used as the backing array that has been pre-allocated. This avoids
@@ -161,7 +164,7 @@ func (t *RuleTrace) Path() []*calc.RuleID {
 	return t.rulesToReport
 }
 
-func (t *RuleTrace) ToString() string {
+func (t *RuleTrace) ToVerdictString() string {
 	ruleID := t.VerdictRuleID()
 	if ruleID == nil {
 		return ""
@@ -219,10 +222,19 @@ func (t *RuleTrace) addRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes int)
 
 	ru := RuleMatchUnchanged
 
+	// Matches should arrive in order, so if a previous match occurred that has not been repeated then
+	// the match has changed.
+	for i := t.lastMatchIdx + 1; i < matchIdx; i++ {
+		if t.path[i] != nil {
+			return RuleMatchIsDifferent
+		}
+	}
+
 	if existingRuleID := t.path[matchIdx]; existingRuleID == nil {
-		// Position is empty, insert and be done. Start revision at 1 to match the expected initial revisions of any
-		// staged policy matches (which will be zero value + 1 i.e. 1)
+		// Position is empty, insert and be done. Reset the rules to report just incase we are adding a new staged
+		// policy hit.
 		t.path[matchIdx] = rid
+		t.rulesToReport = nil
 		ru = RuleMatchSet
 	} else if !existingRuleID.Equals(rid) {
 		// Position is not empty, and does not match the new value.
@@ -237,14 +249,25 @@ func (t *RuleTrace) addRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes int)
 		t.pktsCtr.Increase(numPkts)
 		t.bytesCtr.Increase(numBytes)
 		t.verdictIdx = matchIdx
+		t.lastMatchIdx = 0
 	}
+
+	// Set the last match index.
+	t.lastMatchIdx = matchIdx
 
 	return ru
 }
 
 func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes int) {
+	// Matches should arrive in order, so if a previous match occurred that has not been repeated then
+	// the match has changed.
+	for i := t.lastMatchIdx + 1; i < matchIdx; i++ {
+		t.path[i] = nil
+	}
+
 	// Set the match rule and increment the match revision number for this tier.
 	t.path[matchIdx] = rid
+	t.lastMatchIdx = matchIdx
 	t.dirty = true
 
 	// Reset the reporting path so that we recalculate it next report.
@@ -255,6 +278,7 @@ func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes 
 		t.pktsCtr.ResetAndSet(numPkts)
 		t.bytesCtr.ResetAndSet(numBytes)
 		t.verdictIdx = matchIdx
+		t.lastMatchIdx = 0
 	}
 }
 
@@ -336,7 +360,13 @@ type Data struct {
 	srcEp *calc.EndpointData
 	dstEp *calc.EndpointData
 
-	// The source and destination service if uniquely attributable.
+	// Pre-DNAT information used to lookup the service information.
+	isDNAT      bool
+	preDNATAddr [16]byte
+	preDNATPort int
+
+	// The source and destination service if uniquely attributable. Once reported this should not change unless
+	// first expired.
 	dstSvc proxy.ServicePortName
 
 	// Indicates if this is a connection
@@ -357,8 +387,9 @@ type Data struct {
 	updatedAt     time.Duration
 	ruleUpdatedAt time.Duration
 
-	dirty   bool
-	expired bool
+	reported bool
+	dirty    bool
+	expired  bool
 }
 
 func NewData(tuple Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize int) *Data {
@@ -581,7 +612,7 @@ func (d *Data) AddRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) R
 		ru = d.EgressRuleTrace.addRuleID(ruleID, matchIdx, numPkts, numBytes)
 	}
 
-	if ru != RuleMatchUnchanged {
+	if ru == RuleMatchSet {
 		d.touch()
 		d.setDirtyFlag()
 	}
@@ -599,7 +630,6 @@ func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes in
 	d.touch()
 	d.setDirtyFlag()
 }
-
 func (d *Data) AddOriginalSourceIPs(bs *boundedSet) {
 	d.origSourceIPs.Combine(bs)
 	d.origSourceIPsActive = true
@@ -621,64 +651,6 @@ func (d *Data) IncreaseNumUniqueOriginalSourceIPs(deltaNum int) {
 
 func (d *Data) NumUniqueOriginalSourceIPs() int {
 	return d.origSourceIPs.TotalCount()
-}
-
-func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
-	ut := UpdateTypeReport
-	if expired {
-		ut = UpdateTypeExpire
-	}
-	// For connections and non-connections, we only send ingress and egress updates if:
-	// -  There is something to report, i.e.
-	//    -  flow is expired, or
-	//    -  associated stats are dirty
-	// -  The policy verdict rule has been determined. Note that for connections the policy verdict may be "Deny" due
-	//    to DropActionOverride setting (e.g. if set to ALLOW, then we'll get connection stats, but the metrics will
-	//    indicate Denied).
-	// Only clear the associated stats and dirty flag once the metrics are reported.
-	if d.isConnection {
-		// Report connection stats.
-		if expired || d.IsDirty() {
-			// Track if we need to send a separate expire metric update. This is required when we are only
-			// reporting Original IP metric updates and want to send a corresponding expiration metric update.
-			// When they are correlated with regular metric updates and connection metrics, we don't need to
-			// send this.
-			sendOrigSourceIPsExpire := true
-			if d.EgressRuleTrace.FoundVerdict() {
-				c <- d.metricUpdateEgressConn(ut)
-			}
-			if d.IngressRuleTrace.FoundVerdict() {
-				sendOrigSourceIPsExpire = false
-				c <- d.metricUpdateIngressConn(ut)
-			}
-
-			// We may receive HTTP Request data after we've flushed the connection counters.
-			if (expired && d.origSourceIPsActive && sendOrigSourceIPsExpire) || d.NumUniqueOriginalSourceIPs() != 0 {
-				d.origSourceIPsActive = !expired
-				c <- d.metricUpdateOrigSourceIPs(ut)
-			}
-
-			// Clear the connection dirty flag once the stats have been reported. Note that we also clear the
-			// rule trace stats here too since any data stored in them has been superceded by the connection
-			// stats.
-			d.clearConnDirtyFlag()
-			d.EgressRuleTrace.ClearDirtyFlag()
-			d.IngressRuleTrace.ClearDirtyFlag()
-		}
-	} else {
-		// Report rule trace stats.
-		if (expired || d.EgressRuleTrace.IsDirty()) && d.EgressRuleTrace.FoundVerdict() {
-			c <- d.metricUpdateEgressNoConn(ut)
-			d.EgressRuleTrace.ClearDirtyFlag()
-		}
-		if (expired || d.IngressRuleTrace.IsDirty()) && d.IngressRuleTrace.FoundVerdict() {
-			c <- d.metricUpdateIngressNoConn(ut)
-			d.IngressRuleTrace.ClearDirtyFlag()
-		}
-
-		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
-		// from a connection to non-connection state.
-	}
 }
 
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
