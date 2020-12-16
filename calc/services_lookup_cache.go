@@ -299,6 +299,11 @@ func (ec *ServiceLookupsCache) removeNodePortMap(key portProtoKey, svc proxy.Ser
 	}
 }
 
+func (ec *ServiceLookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
+	spec, found := ec.services[key]
+	return spec, found
+}
+
 // uniqueService converts a slice of services into a single service by marking multiple valued fields with a "*".
 func uniqueService(svcs []proxy.ServicePortName) proxy.ServicePortName {
 	if len(svcs) == 0 {

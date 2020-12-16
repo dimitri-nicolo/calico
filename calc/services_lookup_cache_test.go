@@ -21,6 +21,8 @@ import (
 var _ = Describe("ServiceLookupsCache tests", func() {
 	var sc *ServiceLookupsCache
 	var updates []api.Update
+	var key1 model.ResourceKey
+	var spec1 kapiv1.ServiceSpec
 	clusterIPStr := "10.0.0.0"
 	clusterIP, _ := IPStringToArray(clusterIPStr)
 	sv1Port := int32(123)
@@ -44,23 +46,25 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		sc = NewServiceLookupsCache()
 
 		By("adding a node and a service")
+		key1 = model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"}
+		spec1 = kapiv1.ServiceSpec{
+			ClusterIP: clusterIPStr,
+			ExternalIPs: []string{
+				extIP1Str,
+				extIP2Str,
+			},
+			Ports: []kapiv1.ServicePort{{
+				Port:     sv1Port,
+				NodePort: sv1NodePort,
+				Protocol: kapiv1.ProtocolTCP,
+				Name:     "namedport",
+			}},
+		}
 		updates = []api.Update{{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+				Key: key1,
 				Value: &kapiv1.Service{
-					Spec: kapiv1.ServiceSpec{
-						ClusterIP: clusterIPStr,
-						ExternalIPs: []string{
-							extIP1Str,
-							extIP2Str,
-						},
-						Ports: []kapiv1.ServicePort{{
-							Port:     sv1Port,
-							NodePort: sv1NodePort,
-							Protocol: kapiv1.ProtocolTCP,
-							Name:     "namedport",
-						}},
-					},
+					Spec: spec1,
 				},
 			},
 			UpdateType: api.UpdateTypeKVNew,
@@ -89,6 +93,11 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		svc, ok = sc.GetNodePortService(int(sv1NodePort), 6)
 		Expect(ok).To(BeTrue())
 		Expect(svc).To(Equal(svc1))
+
+		By("checking name and namespace (ResourceKey)")
+		spec, ok := sc.GetServiceSpecFromResourceKey(key1)
+		Expect(ok).To(BeTrue())
+		Expect(spec).To(Equal(spec1))
 	})
 
 	It("Should handle multiple matching service ports", func() {

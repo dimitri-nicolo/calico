@@ -78,6 +78,10 @@ func (lc *LookupsCache) GetNodePortService(port int, proto int) (proxy.ServicePo
 	return lc.svcCache.GetNodePortService(port, proto)
 }
 
+func (lc *LookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
+	return lc.svcCache.GetServiceSpecFromResourceKey(key)
+}
+
 // SetMockData fills in some of the data structures for use in the test code. This should not
 // be called from any mainline code.
 func (lc *LookupsCache) SetMockData(
