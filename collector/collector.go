@@ -92,13 +92,17 @@ func (c *collector) Start() error {
 		return fmt.Errorf("missing PacketInfoReader")
 	}
 
-	c.packetInfoReader.Start()
+	if err := c.packetInfoReader.Start(); err != nil {
+		return fmt.Errorf("PacketInfoReader failed to start: %w", err)
+	}
 
 	if c.conntrackInfoReader == nil {
 		return fmt.Errorf("missing ConntrackInfoReader")
 	}
 
-	c.conntrackInfoReader.Start()
+	if err := c.conntrackInfoReader.Start(); err != nil {
+		return fmt.Errorf("ConntrackInfoReader failed to start: %w", err)
+	}
 
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
@@ -122,8 +126,8 @@ func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
-	pktInfoC := c.packetInfoReader.Chan()
-	ctInfoC := c.conntrackInfoReader.Chan()
+	pktInfoC := c.packetInfoReader.PacketInfoChan()
+	ctInfoC := c.conntrackInfoReader.ConntrackInfoChan()
 
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).

@@ -47,12 +47,14 @@ func NewNFLogReader(lookupsCache *calc.LookupsCache) *NFLogReader {
 	}
 }
 
-func (r *NFLogReader) Start() {
+func (r *NFLogReader) Start() error {
 	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
 		r.run()
 	}()
+
+	return nil
 }
 
 func (r *NFLogReader) Stop() {
@@ -62,7 +64,7 @@ func (r *NFLogReader) Stop() {
 }
 
 // Chan returns the channel with converted data structures
-func (r *NFLogReader) Chan() <-chan PacketInfo {
+func (r *NFLogReader) PacketInfoChan() <-chan PacketInfo {
 	return r.packetInfoC
 }
 
@@ -197,12 +199,14 @@ func NewNetLinkConntrackReader(period time.Duration) *NetLinkConntrackReader {
 	}
 }
 
-func (r *NetLinkConntrackReader) Start() {
+func (r *NetLinkConntrackReader) Start() error {
 	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
 		r.run()
 	}()
+
+	return nil
 }
 
 func (r *NetLinkConntrackReader) Stop() {
@@ -236,6 +240,6 @@ func (r *NetLinkConntrackReader) processCtEntry(ctEntry nfnetlink.CtEntry) {
 	}
 }
 
-func (r *NetLinkConntrackReader) Chan() <-chan ConntrackInfo {
+func (r *NetLinkConntrackReader) ConntrackInfoChan() <-chan ConntrackInfo {
 	return r.outC
 }

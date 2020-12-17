@@ -27,8 +27,8 @@ type PacketInfo struct {
 // PacketInfoReader is an interface for a reader that consumes information
 // from dataplane and converts it to the format needed by colelctor
 type PacketInfoReader interface {
-	Start()
-	Chan() <-chan PacketInfo
+	Start() error
+	PacketInfoChan() <-chan PacketInfo
 }
 
 // ConntrackCounters counters for ConntrackInfo
@@ -49,6 +49,6 @@ type ConntrackInfo struct {
 
 // ConntrackInfoReader is an interafce that provides information from conntrack.
 type ConntrackInfoReader interface {
-	Start()
-	Chan() <-chan ConntrackInfo
+	Start() error
+	ConntrackInfoChan() <-chan ConntrackInfo
 }
