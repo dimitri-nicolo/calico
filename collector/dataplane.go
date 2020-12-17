@@ -7,7 +7,7 @@ import (
 	"github.com/projectcalico/felix/rules"
 )
 
-// RuleHit records how many times a rule was hit and how many bytes passe
+// RuleHit records how many times a rule was hit and how many bytes passed
 // through.
 type RuleHit struct {
 	RuleID *calc.RuleID

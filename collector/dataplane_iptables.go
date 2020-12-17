@@ -61,7 +61,7 @@ func (r *NFLogReader) Stop() {
 	})
 }
 
-// Chan returns the channela with converted data structures
+// Chan returns the channel with converted data structures
 func (r *NFLogReader) Chan() <-chan PacketInfo {
 	return r.packetInfoC
 }
@@ -188,7 +188,7 @@ type NetLinkConntrackReader struct {
 	outC   chan ConntrackInfo
 }
 
-// NewNetLinkConntrackReader return a new NewNetLinkConntrackReader
+// NewNetLinkConntrackReader returns a new NetLinkConntrackReader
 func NewNetLinkConntrackReader(period time.Duration) *NetLinkConntrackReader {
 	return &NetLinkConntrackReader{
 		stopC:  make(chan struct{}),
