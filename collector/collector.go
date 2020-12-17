@@ -87,21 +87,30 @@ func (c *collector) ReportingChannel() chan<- *proto.DataplaneStats {
 	return c.ds
 }
 
-func (c *collector) Start() {
-	if c.packetInfoReader != nil {
-		c.packetInfoReader.Start()
+func (c *collector) Start() error {
+	if c.packetInfoReader == nil {
+		return fmt.Errorf("missing PacketInfoReader")
 	}
-	if c.conntrackInfoReader != nil {
-		c.conntrackInfoReader.Start()
+
+	c.packetInfoReader.Start()
+
+	if c.conntrackInfoReader == nil {
+		return fmt.Errorf("missing ConntrackInfoReader")
 	}
+
+	c.conntrackInfoReader.Start()
+
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
 	if c.dnsLogReporter != nil {
 		c.dnsLogReporter.Start()
 	}
+
 	if c.l7LogReporter != nil {
 		c.l7LogReporter.Start()
 	}
+
+	return nil
 }
 
 func (c *collector) SetPacketInfoReader(pir PacketInfoReader) {
@@ -113,18 +122,8 @@ func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
-	var (
-		pktInfoC <-chan PacketInfo
-		ctInfoC  <-chan ConntrackInfo
-	)
-
-	if c.packetInfoReader != nil {
-		pktInfoC = c.packetInfoReader.Chan()
-	}
-
-	if c.conntrackInfoReader != nil {
-		ctInfoC = c.conntrackInfoReader.Chan()
-	}
+	pktInfoC := c.packetInfoReader.Chan()
+	ctInfoC := c.conntrackInfoReader.Chan()
 
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).

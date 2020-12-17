@@ -480,7 +480,10 @@ configRetry:
 	}
 
 	// Everybody who wanted to tweak the dpStatsCollector had a go, we can start it now!
-	dpStatsCollector.Start()
+	if err := dpStatsCollector.Start(); err != nil {
+		// XXX we should panic once all dataplanes expect the collector to run.
+		log.WithError(err).Error("Stats collector did not start.")
+	}
 
 	// Now create the calculation graph, which receives updates from the
 	// datastore and outputs dataplane updates for the dataplane driver.

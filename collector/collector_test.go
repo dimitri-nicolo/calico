@@ -459,6 +459,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			nflogReader.Start()
 			c = newCollector(lm, rm, conf).(*collector)
 			c.SetPacketInfoReader(nflogReader)
+			c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 			go c.startStatsCollectionAndReporting()
 		})
 		AfterEach(func() {
@@ -690,6 +691,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		nflogReader = NewNFLogReader(lm)
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
+		c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 	})
 	Describe("Test local destination", func() {
 		It("should create a single entry in inbound direction", func() {
@@ -1143,6 +1145,7 @@ var _ = Describe("Reporting Metrics", func() {
 		nflogReader.Start()
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
+		c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 		go c.startStatsCollectionAndReporting()
 	})
 	AfterEach(func() {
@@ -1301,6 +1304,7 @@ var _ = Describe("DNS logging", func() {
 			ExportingInterval:     time.Duration(1) * time.Second,
 		}).(*collector)
 		c.SetPacketInfoReader(nflogReader)
+		c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 		r = &mockDNSReporter{}
 		c.SetDNSLogReporter(r)
 	})
@@ -1503,6 +1507,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	nflogReader := NewNFLogReader(lm)
 	c := newCollector(lm, rm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
+	c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
@@ -1535,6 +1540,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	nflogReader := NewNFLogReader(lm)
 	c := newCollector(lm, rm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
+	c.SetConntrackInfoReader(dummyConntrackInfoReader{})
 	var tuples []Tuple
 	MaxSrcPort := 1000
 	MaxDstPort := 1000
@@ -1559,3 +1565,8 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		}
 	}
 }
+
+type dummyConntrackInfoReader struct{}
+
+func (dummyConntrackInfoReader) Start() error                            { return nil }
+func (dummyConntrackInfoReader) ConntrackInfoChan() <-chan ConntrackInfo { return nil }

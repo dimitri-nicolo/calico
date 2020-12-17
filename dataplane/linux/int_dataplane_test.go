@@ -39,7 +39,7 @@ type mockCollector struct{}
 
 func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return nil }
 
-func (_ *mockCollector) Start() {}
+func (_ *mockCollector) Start() error { return nil }
 
 func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {}
 

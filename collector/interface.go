@@ -12,7 +12,7 @@ import (
 )
 
 type Collector interface {
-	Start()
+	Start() error
 	ReportingChannel() chan<- *proto.DataplaneStats
 	SetDNSLogReporter(reporter DNSLogReporterInterface)
 	LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration)
