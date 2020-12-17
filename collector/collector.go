@@ -622,8 +622,8 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 	ips := make([]net.IP, 0, len(d.HttpData))
 	for _, hd := range d.HttpData {
-		if hd.Type != "" {
-			// If the HttpData has a type, then this is an L7 log.
+		if hd.ResponseCode != int32(0) {
+			// If the HttpData has a response code, then this is an L7 log.
 			c.LogL7(hd, data, t, httpDataCount)
 		} else {
 			var origSrcIP string
