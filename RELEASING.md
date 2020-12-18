@@ -169,8 +169,19 @@ at the same time that subcomponent release branches are cut, often well before t
        sitemap: true
    ```
 
-1. In [netlify.toml](netlify.toml) 
+1. In [netlify.toml](netlify.toml)
     1. set the `RELEASE_VERSION` environment variable to `vX.Y`.
+    1. add the below redirect at the top of redirects.
+    ```
+       # unforced generic redirect of /vX.Y to /
+       [[redirects]]
+         from = "/vX.Y/*"
+         to = "/:splat"
+         status = 301
+    ```
+
+1. In [netlify/_redirects](_redirects) add a new for the new release following the other examples (Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
+This makes sure that requests coming to `/archive/vX.Y` (without a slash) don't fail with 404.
 
 1. In [netlify/_redirects](netlify/_redirects) add a line for the new release following the other examples
 (Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
@@ -192,7 +203,7 @@ This makes sure that requests coming to `/vX.Y` (without a slash) don't fail wit
 
 ### Publishing the candidate release branch
 
-1. Check out the candidate release branch that is created as per the instructions [here](#creating-a-candidate-release-branch). 
+1. Check out to the candidate release branch that is created as per the instructions [here](#creating-a-candidate-release-branch).
 
    ```
    git checkout release-calient-vX.Y
@@ -202,11 +213,16 @@ This makes sure that requests coming to `/vX.Y` (without a slash) don't fail wit
 
 1. Rename the randomly generated site name to follow the same naming convention as other releases (use `tigera-vX-Y`).
 
-1. Ensure that the site is generated properly by visiting site URL (Ex. https://tigera-vX-Y.netlify.app/vX.Y/).  
+1. Ensure that the site is generated properly by visiting site URL (Ex. https://calico-vX-Y.netlify.app/archive/vX.Y/).
 
 1. Next, create a PR off of the `release-calient-vX.Y` branch and add the below proxy rule for the release candidate site at the top of `redirects` rules to [netlify.toml](netlify.toml). This ensures that Netlify will redirect to the correct site, when the user enters any URL prefixed by `/vX.Y`.
 
    ```toml
+    [[redirects]]
+      from = "/archive/vX.Y/*"
+      to = "https://calico-vX-Y.netlify.app/archive/vX.Y/:splat"
+      status = 200
+
     [[redirects]]
       from = "/vX.Y/*"
       to = "https://tigera-vX-Y.netlify.app/vX.Y/:splat"
@@ -232,6 +248,8 @@ as described in the section above.
    git checkout release-calient-vX.Y
    ```
 
+1. Add the previous release to `_data/archives.yaml`. Make this change in master as well.
+
 1. Add the new version to the correct release section in `_data/versions.yml`.
 
 1. Follow the steps in [writing release notes](#release-notes) to generate or update candidate release notes.
@@ -241,7 +259,7 @@ as described in the section above.
    ```
    git add _data/release-notes/<VERSION>-release-notes.md
    ```
-            
+
 1. Commit your changes. For example:
 
    ```
@@ -250,7 +268,7 @@ as described in the section above.
    
 1. Push your branch and open a pull request to the upstream release-calient-vX.Y branch. Get it reviewed and wait for it to pass CI.
 
-1. Merge the PR. 
+1. Merge the PR.
 
 1. On netlify locate `docs.tigera.io` site and the update `Production branch` in `Settings -> Build & deploy -> Deploy contexts` to `release-calient-vX.Y` in  site settings and trigger the deployment. 
 (Note: This site contains `LATEST_RELEASE` environment variable in netlify UI, using which `netlify.toml` picks up the correct build for latest release.)

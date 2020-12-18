@@ -33,6 +33,7 @@ The full list of parameters which can be set is as follows.
 
 | Configuration parameter           | Environment variable                    | Description  | Schema |
 | --------------------------------- | --------------------------------------- | -------------| ------ |
+| `AwsSrcDstCheck`                  | `FELIX_AWSSRCDSTCHECK`                  | Set the {% include open-new-window.html text='source-destination-check' url='https://docs.aws.amazon.com/vpc/latest/userguide/VPC_NAT_Instance.html#EIP_Disable_SrcDestCheck' %} when using AWS EC2 instances. Check [IAM role and profile configuration]({{ site.baseurl }}/reference/resources/felixconfig#aws-iam-rolepolicy-for-source-destination-check-configuration) for setting the necessary permission for this setting to work. [Default: `DoNothing`] | `DoNothing`, `Disable`, `Enable` |
 | `DatastoreType`                   | `FELIX_DATASTORETYPE`                   | The datastore that Felix should read endpoints and policy information from. [Default: `etcdv3`] | `etcdv3`, `kubernetes`|
 | `DeviceRouteSourceAddress`        | `FELIX_DEVICEROUTESOURCEADDRESS`        | IPv4 address to use as the source hint on device routes programmed by Felix [Default: No source hint is set on programmed routes and for local traffic from host to workload the source address will be chosen by the kernel.] | `<IPv4-address>` |
 | `DeviceRouteProtocol`             | `FELIX_DEVICEROUTEPROTOCOL`             | This defines the route protocol added to programmed device routes. [Default: `RTPROT_BOOT`] | int |
@@ -48,7 +49,7 @@ The full list of parameters which can be set is as follows.
 | `HealthHost`                      | `FELIX_HEALTHHOST`                      | The address on which Felix will respond to health requests. [Default: `localhost`] | string |
 | `HealthPort`                      | `FELIX_HEALTHPORT`                      | The port on which Felix will respond to health requests. [Default: `9099`] | int |
 | `IpInIpEnabled`                   | `FELIX_IPINIPENABLED`                   | Whether Felix should configure an IPinIP interface on the host. Set automatically to `true` by `{{site.nodecontainer}}` or `calicoctl` when you create an IPIP-enabled pool. [Default: `false`] | boolean |
-| `IpInIpMtu`                       | `FELIX_IPINIPMTU`                       | The MTU to set on the IPIP tunnel device. See [Configuring MTU]({{site.baseurl}}/networking/mtu) [Default: `1440`] | int |
+| `IpInIpMtu`                       | `FELIX_IPINIPMTU`                       | The MTU to set on the IPIP tunnel device. Zero value means auto-detect. See [Configuring MTU]({{ site.baseurl }}/networking/mtu) [Default: `0`] | int |
 | `IPv4VXLANTunnelAddr`             |                                         | IPv4 address of the VXLAN tunnel. This is system configured and should not be updated manually. | string |
 | `LogFilePath`                     | `FELIX_LOGFILEPATH`                     | The full path to the Felix log. Set to `none` to disable file logging. [Default: `/var/log/calico/felix.log`] | string |
 | `LogSeverityFile`                 | `FELIX_LOGSEVERITYFILE`                 | The log severity above which logs are sent to the log file. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
@@ -69,12 +70,12 @@ The full list of parameters which can be set is as follows.
 | `UsageReportingInitialDelaySecs`  | `FELIX_USAGEREPORTINGINITIALDELAYSECS`  | Minimum delay before first usage report, in seconds. [Default: `300`] | int |
 | `UsageReportingIntervalSecs`      | `FELIX_USAGEREPORTINGINTERVALSECS`      | Interval at which to make usage reports, in seconds. [Default: `86400`] | int |
 | `VXLANEnabled`                    | `FELIX_VXLANENABLED`                    | Automatically set when needed, you shouldn't need to change this setting: whether Felix should create the VXLAN tunnel device for VXLAN networking. [Default: `false`] | boolean |
-| `VXLANMTU`                        | `FELIX_VXLANMTU`                        | The MTU to set on the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. Also Controls MTU for egress VXLAN traffic when egress gateways are enabled. See [Configuring MTU]({{ site.baseurl }}/networking/mtu) [Default: `1410`] | int |
+| `VXLANMTU`                        | `FELIX_VXLANMTU`                        | The MTU to set on the VXLAN tunnel device. Zero value means auto-detect. Also controls NodePort MTU when eBPF enabled. See [Configuring MTU]({{ site.baseurl }}/networking/mtu) [Default: `0`] | int |
 | `VXLANPort`                       | `FELIX_VXLANPORT`                       | The UDP port to use for VXLAN. [Default: `4789`] | int |
 | `VXLANTunnelMACAddr`              |                                         | MAC address of the VXLAN tunnel. This is system configured and should not be updated manually. | string |
 | `VXLANVNI`                        | `FELIX_VXLANVNI`                        | The virtual network ID to use for VXLAN. [Default: `4096`] | int |
-| `AllowVXLANPacketsFromWorkload`   | `FELIX_ALLOWVXLANPACKETSFROMWORKLOAD`   | Set to `true` to allow VXLAN encapsulated traffic from workloads. [Default: `false`] | boolean |
-| `AllowIPIPPacketsFromWorkload`    | `FELIX_ALLOWIPIPPACKETSFROMWORKLOAD`    | Set to `true` to allow IPIP encapsulated traffic from workloads. [Default: `false`] | boolean |
+| `AllowVXLANPacketsFromWorkloads`  | `FELIX_ALLOWVXLANPACKETSFROMWORKLOADS`  | Set to `true` to allow VXLAN encapsulated traffic from workloads. [Default: `false`] | boolean |
+| `AllowIPIPPacketsFromWorkloads`   | `FELIX_ALLOWIPIPPACKETSFROMWORKLOADS`   | Set to `true` to allow IPIP encapsulated traffic from workloads. [Default: `false`] | boolean |
 | `XDPRefreshInterval`              | `FELIX_XDPREFRESHINTERVAL`              | Period, in seconds, at which Felix re-checks the XDP state in the dataplane to ensure that no other process has accidentally broken {{site.prodname}}'s rules. Set to 0 to disable XDP refresh. [Default: `90`] | int |
 | `XDPEnabled`                      | `FELIX_XDPENABLED`                      | Enable XDP acceleration for host endpoint policies. [Default: `true`] | boolean |
 | `TyphaAddr`                       | `FELIX_TYPHAADDR`                       | IPv4 address at which Felix should connect to Typha. [Default: none] | string |

@@ -276,7 +276,7 @@ helm-tests: vendor bin/helm values.yaml
 		--net=host \
 		-v $$(pwd):/go/src/$(PACKAGE_NAME):rw \
 		-v $$(pwd)/.go-pkg-cache:/go/pkg:rw \
-		-v $$(pwd)/bin/helm:/usr/local/bin/helm \
+		-v $$(pwd)/bin/helm3:/usr/local/bin/helm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-ee $(GINKGO_ARGS)
@@ -487,8 +487,8 @@ HELM_RELEASE=helm-v2.16.3-linux-amd64.tar.gz
 bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
-	wget -q https://storage.googleapis.com/kubernetes-helm/$(HELM_RELEASE) -O $(TMP)/$(HELM_RELEASE)
-	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
+	wget -q https://storage.googleapis.com/kubernetes-helm/helm-v2.16.3-linux-amd64.tar.gz -O $(TMP)/helm.tar.gz
+	tar -zxvf $(TMP)/helm.tar.gz -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
 ###############################################################################

@@ -74,13 +74,13 @@ you want to install the binary.
 
 1. Set the file to be executable.
 
-   ```
+   ```bash
    chmod +x kubectl-calico
    ```
 
    > **Note**: If the location of `kubectl-calico` is not already in your `PATH`, move the file
    > to one that is or add its location to your `PATH`. This is required in order for
-   > kubectl to detect the plugin and allow you to use it. 
+   > kubectl to detect the plugin and allow you to use it.
    {: .alert .alert-info}
 
 1. Verify the plugin works.

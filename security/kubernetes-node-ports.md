@@ -1,6 +1,11 @@
 ---
+<<<<<<< HEAD
 title: Apply Calico Enterprise policy to Kubernetes node ports
 description: Restrict access to Kubernetes node ports using Calico Enterprise global network policy. Follow the steps to secure the host, the node ports, and the cluster. 
+=======
+title: Apply Calico policy to Kubernetes node ports
+description: Restrict access to Kubernetes node ports using Calico global network policy. Follow the steps to secure the host, the node ports, and the cluster.
+>>>>>>> os/master
 ---
 
 ### Big picture
@@ -98,7 +103,11 @@ metadata:
 spec:
   interfaceName: eth0
   node: node1
+  expectedIPs:
+  - INSERT_IP_HERE
 ```
+
+When creating each host endpoint, replace `INSERT_IP_HERE` with the IP address on eth0. The `expectedIPs` field is required so that any selectors within ingress or egress rules can properly match the host endpoint.
 
 #### Allow ingress traffic to specific node ports
 
