@@ -124,6 +124,9 @@ func (c *collector) Start() {
 	if c.dnsLogReporter != nil {
 		c.dnsLogReporter.Start()
 	}
+	if c.l7LogReporter != nil {
+		c.l7LogReporter.Start()
+	}
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
