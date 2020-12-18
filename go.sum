@@ -550,13 +550,13 @@ github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2/go.mod h1:hkRG
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/apiserver v0.0.0-20201214213325-8be4490ef775 h1:pAEOmu17wyROnDu6IXDMt4Wlcl183Kz14/5gs07HbKg=
-github.com/tigera/apiserver v0.0.0-20201214213325-8be4490ef775/go.mod h1:shY4yViE3kKRie9jW7l4zzWOF67Fuev34XCOkiu/UpA=
+github.com/tigera/apiserver v0.0.0-20201218034220-dc96863a7f2b h1:CLaDNiy4rZ1gvY91gArU57ym3CTbAIdlb1XNytGZcrY=
+github.com/tigera/apiserver v0.0.0-20201218034220-dc96863a7f2b/go.mod h1:PVSegF3Z6CcA4JQtajhw1U+ucgLZ8DtfdP+3b1Vk84o=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201215061722-3d90f1306e73 h1:1+rJOQvqeQTY8Hh91xcyYJza8bR21hQHUUsc+T1GqPc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201215061722-3d90f1306e73/go.mod h1:oTA2hqn5a9rGIbzvCjpp2Frcahtfp3C07ctf/crKRyY=
 github.com/tigera/licensing v1.0.1-0.20201214212430-6b73730a6daf/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
-github.com/tigera/lma v0.0.0-20201215062417-164600e1301e h1:0g0E5+f+vTsnmr8D82QJUL9SUElNvP259jeHHB5pD70=
-github.com/tigera/lma v0.0.0-20201215062417-164600e1301e/go.mod h1:2/8jJZq+xvaXwN0ph8eayuAaAuUCBKSe+a/yDnoobCI=
+github.com/tigera/lma v0.0.0-20201218034944-78d0a6c85553 h1:Xk5K2+WTxAHtGEm8bNpcQQEtt0Lwkuv6mJ5JELKF9KI=
+github.com/tigera/lma v0.0.0-20201218034944-78d0a6c85553/go.mod h1:Nd06/xT4q/ZcyLF9PLQuFzFnTib5/Xksm/dNWJrSGVw=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
