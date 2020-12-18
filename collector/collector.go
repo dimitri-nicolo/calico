@@ -124,6 +124,9 @@ func (c *collector) Start() {
 	if c.dnsLogReporter != nil {
 		c.dnsLogReporter.Start()
 	}
+	if c.l7LogReporter != nil {
+		c.l7LogReporter.Start()
+	}
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
@@ -622,8 +625,9 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 	ips := make([]net.IP, 0, len(d.HttpData))
 	for _, hd := range d.HttpData {
-		if hd.ResponseCode != int32(0) {
-			// If the HttpData has a response code, then this is an L7 log.
+		if c.l7LogReporter != nil && hd.Type != "" {
+			// If the l7LogReporter has been set, then L7 logs are configured to be run.
+			// If the HttpData has a type, then this is an L7 log.
 			c.LogL7(hd, data, t, httpDataCount)
 		} else {
 			var origSrcIP string
