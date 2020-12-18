@@ -1,13 +1,7 @@
 ---
-<<<<<<< HEAD:getting-started/windows-calico/standard-install/standard.md
 title: Install Calico Enterprise for Windows
 description: Install Calico Enterprise for Windows to enable a workload-to-workload Zero Trust model.
 canonical_url: '/getting-started/windows-calico/standard-install/standard'
-=======
-title: Install Calico for Windows 
-description: Install Calico for Windows to enable a workload-to-workload Zero Trust model that protects modern business and legacy applications.
-canonical_url: '/getting-started/windows-calico/kubernetes/standard'
->>>>>>> os/master:getting-started/windows-calico/kubernetes/standard.md
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
@@ -25,17 +19,11 @@ Extend your Kubernetes deployment to Windows environments.
 
 **Required**
 
-<<<<<<< HEAD:getting-started/windows-calico/standard-install/standard.md
 - Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/requirements)
 - You will need the {{site.prodnameWindows}} zip archive provided to you by your support representative.
 - If using {{site.prodname}} networking:
    - Copy the kubeconfig file (used by kubelet) to each Windows node to the file, `c:\k\config`.
    - Install and configure [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
-=======
-- Install and configure [calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/)
-- Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/kubernetes/requirements)
-- If using {{site.prodname}} networking, copy the kubeconfig file (used by kubelet) to each Windows node to the file, `c:\k\config`.
->>>>>>> os/master:getting-started/windows-calico/kubernetes/standard.md
 - Download {{site.prodnameWindows}} and Kubernetes binaries to each Windows nodes to prepare for install:
 
 - On each of your Windows nodes, prepare the Windows node for {{site.prodnameWindows}} installation:
@@ -258,7 +246,6 @@ Start-Service RemoteAccess
    | $env:ETCD_ parameters | etcd3 datastore parameters. **Note**: Because of a limitation of the Windows dataplane, a Kubernetes service ClusterIP cannot    be used for the etcd endpoint (the host compartment cannot reach Kubernetes services). |
    | $env:NODENAME | Hostname used by kubelet. The default uses the node's hostname. **Note**: If you are using the sample kubelet start-up script from the {{site.prodname}} package, kubelet is started with a hostname override that forces it to use this value. |
    |  | For AWS to work properly, kubelet should use the node's internal domain name for the AWS integration. |
-<<<<<<< HEAD:getting-started/windows-calico/standard-install/standard.md
    | | If using {{site.prodname}} BGP networking, the install script will generate a CNI NetConf file from the file cni.conf.template. Certain advanced  configuration can be accessed by modifying the template before install. **Note**: Prior to Kubernetes v1.13, Kubernetes lacked support for setting the correct  DNS configuration on each pod. To work around that limitation, the CNI configuration includes DNS settings that are applied to pods whenever the kubelet fails to pass DNS configuration to the CNI plugin. For v1.13 and above, the DNS configuration of the template is ignored in favour of correct per-pod values  learned from the kubelet. |
 
 1. Run the installer.
@@ -270,20 +257,6 @@ Start-Service RemoteAccess
      ```
 
    - Run the install script:
-=======
-
-3. Run the installer.
-
-   - Change directory to the location that you unpacked the archive. For example:
-  ```powershell
-  cd {{site.rootDirWindows}}
-  ```
-
-   - Run the install script:
-  ```
-  .\install-calico.ps1
-  ```
->>>>>>> os/master:getting-started/windows-calico/kubernetes/standard.md
 
      ```powershell
      PS C:\... > .\install-calico.ps1
