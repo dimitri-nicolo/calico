@@ -455,7 +455,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			}
 
 			lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
-			nflogReader = NewNFLogReader(lm)
+			nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 			nflogReader.Start()
 			c = newCollector(lm, rm, conf).(*collector)
 			c.SetPacketInfoReader(nflogReader)
@@ -688,7 +688,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		}
 
 		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
-		nflogReader = NewNFLogReader(lm)
+		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
 		c.SetConntrackInfoReader(dummyConntrackInfoReader{})
@@ -1141,7 +1141,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
 		rm.Start()
-		nflogReader = NewNFLogReader(lm)
+		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		nflogReader.Start()
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
@@ -1297,7 +1297,7 @@ var _ = Describe("DNS logging", func() {
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
 		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil)
-		nflogReader = NewNFLogReader(lm)
+		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		c = newCollector(lm, nil, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -1504,7 +1504,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
-	nflogReader := NewNFLogReader(lm)
+	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, rm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
 	c.SetConntrackInfoReader(dummyConntrackInfoReader{})
@@ -1537,7 +1537,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
-	nflogReader := NewNFLogReader(lm)
+	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, rm, conf).(*collector)
 	c.SetPacketInfoReader(nflogReader)
 	c.SetConntrackInfoReader(dummyConntrackInfoReader{})

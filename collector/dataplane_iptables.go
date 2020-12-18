@@ -32,9 +32,14 @@ type NFLogReader struct {
 	nfEgressDoneC  chan struct{}
 
 	packetInfoC chan PacketInfo
+
+	netlinkIngressGroup int
+	netlinkEgressGroup  int
+	bufSize             int
+	servicesEnabled     bool
 }
 
-func NewNFLogReader(lookupsCache *calc.LookupsCache) *NFLogReader {
+func NewNFLogReader(lookupsCache *calc.LookupsCache, inGrp, eGrp, bufSize int, services bool) *NFLogReader {
 	return &NFLogReader{
 		stopC:          make(chan struct{}),
 		luc:            lookupsCache,
@@ -44,10 +49,19 @@ func NewNFLogReader(lookupsCache *calc.LookupsCache) *NFLogReader {
 		nfEgressDoneC:  make(chan struct{}),
 
 		packetInfoC: make(chan PacketInfo, 1000),
+
+		netlinkIngressGroup: inGrp,
+		netlinkEgressGroup:  eGrp,
+		bufSize:             bufSize,
+		servicesEnabled:     services,
 	}
 }
 
 func (r *NFLogReader) Start() error {
+	if err := r.subscribe(); err != nil {
+		return nil
+	}
+
 	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
@@ -72,14 +86,13 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan, enableServices)
 }
 
-// Subscribe subscribes the reader to the nflog stream
-func (r *NFLogReader) Subscribe(inGrp, eGrp, bufSize int, services bool) error {
-	err := subscribeToNflog(inGrp, bufSize, r.nfIngressC, r.nfIngressDoneC, services)
+func (r *NFLogReader) subscribe() error {
+	err := subscribeToNflog(r.netlinkIngressGroup, r.bufSize, r.nfIngressC, r.nfIngressDoneC, r.servicesEnabled)
 	if err != nil {
 		return fmt.Errorf("Error when subscribing to NFLOG (ingress): %w", err)
 	}
 
-	err = subscribeToNflog(eGrp, bufSize, r.nfEgressC, r.nfEgressDoneC, services)
+	err = subscribeToNflog(r.netlinkEgressGroup, r.bufSize, r.nfEgressC, r.nfEgressDoneC, r.servicesEnabled)
 	if err != nil {
 		return fmt.Errorf("Error when subscribing to NFLOG (egress): %w", err)
 	}

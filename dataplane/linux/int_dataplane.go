@@ -1013,8 +1013,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.Collector != nil {
 		if !config.BPFEnabled {
 			log.Debug("Stats collection is required, create nflog reader")
-			nflogrd := collector.NewNFLogReader(config.LookupsCache)
-			nflogrd.Subscribe(1, 2, config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
+			nflogrd := collector.NewNFLogReader(config.LookupsCache, 1, 2,
+				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
 			ctrd := collector.NewNetLinkConntrackReader(collector.DefaultConntrackPollingInterval)
