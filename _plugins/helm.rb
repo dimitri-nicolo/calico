@@ -84,12 +84,7 @@ module Jekyll
 
       # Execute helm.
       # Set the default etcd endpoint placeholder for rendering in the docs.
-      if @chart == "tigera-operator" then
-        cmd = """bin/helm3 template --include-crds _includes/charts/#{@chart} \
-          -f #{tv.path} \
-          -f #{t.path}"""
-      else
-        cmd = """bin/helm template _includes/charts/#{@chart} \
+      cmd = """helm template _includes/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path} \
         --set node.resources.requests.cpu='250m' \
@@ -102,7 +97,6 @@ module Jekyll
         --set kibana.service.type=NodePort \
         --set kibana.service.nodePort=30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
-      end
 
       if @chart == "calico" or @chart == "tigera-secure-ee"
         # static rendered manifests for the 'tigera-secure-ee-core' (calico) and
