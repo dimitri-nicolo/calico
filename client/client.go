@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"time"
 
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -8,9 +9,10 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client/features"
 	cryptolicensing "github.com/tigera/licensing/crypto"
+
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // Tigera entitlements root CA cert.
@@ -103,7 +105,10 @@ type LicenseClaims struct {
 	Version string `json:"version"`
 
 	// Features field is for future use.
-	// We will default this with `[ “cnx”, “all”]` for v2.1
+	// We will default this with `[ “cnx”, “all”]` for v2.1 and Enterprise package
+	// Cloud licenses will have one of the following values: ["cloud", "community"],
+	// ["cloud", "starter"] or [ "cloud", "pro" ]. Individual features are mapped to the license
+	// packages.
 	Features []string `json:"features"`
 
 	// GracePeriod is how many days the cluster will keep working even after
@@ -245,12 +250,32 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 		return false
 	}
 
-	for _, f := range c.Features {
-		if f == features.All {
-			return true
-		}
-		if f == feature {
-			return true
+	if c.Features == nil || len(c.Features) == 0 {
+		return false
+	}
+
+	var licensePackage = strings.Join(c.Features, "|")
+
+	switch licensePackage {
+	case features.Enterprise:
+		return true
+	case features.CloudCommunity:
+		return features.CloudCommunityFeatures[feature]
+	case features.CloudStarter:
+		return features.CloudStarterFeatures[feature]
+	case features.CloudPro:
+		return features.CloudProFeatures[feature]
+	default:
+		// This is maintain backwards compatibility in case
+		// a license was issued with a single feature instead of cnx|all
+		// prior to 3.5
+		for _, f := range c.Features {
+			if f == features.All {
+				return true
+			}
+			if f == feature {
+				return true
+			}
 		}
 	}
 

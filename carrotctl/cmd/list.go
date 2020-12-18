@@ -37,7 +37,7 @@ var ListLicensesCmd = &cobra.Command{
 		}
 
 		if customerListFlag.Changed("customer") && len(customerListName) < 3 {
-				log.Fatal("[ERROR] Customer name must be at least 3 characters long")
+			log.Fatal("[ERROR] Customer name must be at least 3 characters long")
 		}
 
 		// Connect to the license database.
@@ -87,7 +87,7 @@ var ListLicensesCmd = &cobra.Command{
 				if lic.Nodes != nil {
 					nodes = fmt.Sprintf("%9d", *lic.Nodes)
 				}
-				fmt.Printf("%-23s    %-40s   %-12s   %s   %s\n",comp.Name, lic.UUID, nodes, lic.Expiry, lic.Features)
+				fmt.Printf("%-23s    %-40s   %-12s   %s   %s\n", comp.Name, lic.UUID, nodes, lic.Expiry, lic.Features)
 			}
 		}
 	},

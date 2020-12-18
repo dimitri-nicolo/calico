@@ -5,14 +5,16 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/gomega"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"os"
+
 	"github.com/davecgh/go-spew/spew"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	. "github.com/onsi/gomega"
+	uuid "github.com/satori/go.uuid"
 	"github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
-	"github.com/satori/go.uuid"
-	"os"
+	"gopkg.in/square/go-jose.v2/jwt"
+
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 var (
@@ -70,7 +72,7 @@ TxA0EwUL8NOBHWeVY3sraVHUusOFgMiBr/pdChToD4AJ0jX5a4DzsCRSyMRVz6Dq
 pdDGllpqsFfAEMF4hv4A5jhQLPk5Oz5azkoCJ0vcFCtj3nnh
 -----END CERTIFICATE-----
 `
-testPrivateKeyExpired = `-----BEGIN RSA PRIVATE KEY-----
+	testPrivateKeyExpired = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAoofNrVmif8crv+DIvaTvqUqYbGyAlnAURwKPKVVqmqgs813T
 pZXHVrAnLuIFWwttti+BRNn8Jjk+YVv8VpfAc2TU4woR3SHD5VRpVK5oF5AFJ4af
 Sj3Lou0c+hGJ5gqg03i2l68ba9Xy8qT+n4a+C9t8DdxEXsD4KIeA63qIBOwKCe3B
@@ -98,7 +100,7 @@ bI4Uuuod/DMnalWPXoNT6LOQm9F8Sf53hY8wmk2To2HE8Ruy4GS7+LETWukSIYkL
 1cvkAD6A5Pmjyxhx8N0mkczU3XFaGc5zSCpHwwO5c1tsoxXL66TZ
 -----END RSA PRIVATE KEY-----`
 
-testCertExpired = `-----BEGIN CERTIFICATE-----
+	testCertExpired = `-----BEGIN CERTIFICATE-----
 MIID7DCCAtSgAwIBAgIRAJaqj1rVxZWMvOQ7EjJlHSAwDQYJKoZIhvcNAQELBQAw
 dTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
 biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSBJbmMuMSMwIQYDVQQDExpUaWdl
@@ -433,6 +435,70 @@ func TestFeatureFlags(t *testing.T) {
 		claims.Features = []string{features.AWSCloudwatchMetrics}
 		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
 	})
+
+	t.Run("a license with 'cnx|all' features states that each feature is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cnx", features.All}
+
+		Expect(claims.ValidateFeature(features.DropActionOverride)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.PrometheusMetrics)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.AWSCloudwatchMetrics)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.AWSCloudwatchFlowLogs)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.AWSSecurityGroups)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.FederatedServices)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.FileOutputFlowLogs)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.ManagementPortal)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.PolicyRecommendation)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.PolicyPreview)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.PolicyManagement)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.Tiers)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.EgressAccessControl)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.ExportLogs)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.AlertManagement)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.ApplicationTelementry)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.TopologicalGraph)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.KibanaDashboard)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.DualNIC)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.ComplianceReports)).To(BeTrue())
+		Expect(claims.ValidateFeature(features.ThreatDefense)).To(BeTrue())
+	})
+
+	t.Run("a license with 'cloud|community' package states any cloud community feature is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "community"}
+
+		for f := range features.CloudCommunityFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		}
+	})
+
+	t.Run("a license with 'cloud|starter' package states any cloud starter feature is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "starter"}
+
+		for f := range features.CloudStarterFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		}
+	})
+
+	t.Run("a license with 'cloud|pro' package states any cloud pro feature is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "pro"}
+
+		for f := range features.CloudProFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		}
+	})
+
 }
 
 func TestLicenseStatus(t *testing.T) {
@@ -488,7 +554,7 @@ func TestLicenseStatus(t *testing.T) {
 		claims := client.LicenseClaims{
 			GracePeriod: 1,
 			Claims: jwt.Claims{
-				Expiry: jwt.NumericDate(time.Now().Add(-48*time.Hour).UTC().Unix()),
+				Expiry: jwt.NumericDate(time.Now().Add(-48 * time.Hour).UTC().Unix()),
 			},
 		}
 

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -18,13 +18,14 @@ import (
 	"path/filepath"
 
 	"github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/datastore"
 )
 
 var (
 	claims client.LicenseClaims
 
-	customerFlag, expFlag, nodeFlag, graceFlag, debugFlag, privKeyPathFlag, certPathFlag *pflag.FlagSet
+	customerFlag, expFlag, nodeFlag, graceFlag, debugFlag, privKeyPathFlag, certPathFlag, packageFlags *pflag.FlagSet
 
 	// Tigera private key location.
 	// Defaults to "./tigera.io_private_key.pem"
@@ -34,10 +35,7 @@ var (
 	// Defaults to "./tigera.io_certificate.pem"
 	certPath string
 
-	// allFeaturesV21 is to indicate all the features available in CNX v2.1.
-	// We don't license individual features in v2.1 so this is not checked on the client side.
-	allFeaturesV21 = []string{"cnx", "all"}
-
+	licensePackage              string
 	absPrivKeyPath, absCertPath string
 
 	debug = false
@@ -68,6 +66,9 @@ func init() {
 
 	certPathFlag = GenerateLicenseCmd.PersistentFlags()
 	certPathFlag.StringVar(&certPath, "certificate", "./tigera.io_certificate.pem", "Licensing intermediate certificate path")
+
+	packageFlags = GenerateLicenseCmd.PersistentFlags()
+	packageFlags.StringVarP(&licensePackage, "package", "p", features.Enterprise, "License Package and feature selection to be assigned to a license")
 
 	GenerateLicenseCmd.MarkPersistentFlagRequired("customer")
 	GenerateLicenseCmd.MarkPersistentFlagRequired("expiry")
@@ -100,8 +101,11 @@ var GenerateLicenseCmd = &cobra.Command{
 		// License claims version 1.
 		claims.Version = "1"
 
-		// This might be configurable in future. Right now we just license all the features.
-		claims.Features = allFeaturesV21
+		// License all the features in accordance to a license package.
+		if !features.IsValidPackageName(licensePackage) {
+			log.Fatalf("[ERROR] License Package must match one of %#v", features.PackageNames)
+		}
+		claims.Features = strings.Split(licensePackage, "|")
 
 		// This might be used in future. Or it could be used for debugging.
 		claims.IssuedAt = jwt.NewNumericDate(time.Now().UTC())
@@ -132,7 +136,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		fmt.Printf("Customer name:                  %s\n", claims.Customer)
 		fmt.Printf("Number of nodes:                %s\n", nodeCountStr)
 		fmt.Printf("License term expiration date:   %v\n", claims.Claims.Expiry.Time())
-		fmt.Printf("Features:                       %s\n", claims.Features)
+		fmt.Printf("Features (License Package):     %s\n", claims.Features)
 		fmt.Printf("Checkin interval:               %s\n", checkinIntervalStr)
 		fmt.Printf("Grace period (days):            %d\n", claims.GracePeriod)
 		fmt.Printf("License ID (auto-generated):    %s\n", claims.LicenseID)
