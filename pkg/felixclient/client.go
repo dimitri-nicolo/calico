@@ -158,10 +158,10 @@ func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *prot
 			UserAgent:     logData.UserAgent,
 			RequestPath:   logData.RequestPath,
 			RequestMethod: logData.RequestMethod,
-			Type:          logData.Type,
 			Count:         logData.Count,
 			Domain:        logData.Domain,
 			DurationMax:   logData.DurationMax,
+			Type:          logData.Type,
 		},
 	}
 
