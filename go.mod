@@ -41,7 +41,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/licensing v1.0.1-0.20201125013734-cdefa3febb57
+	github.com/tigera/licensing v1.0.1-0.20201218173202-d766f2323fee
 	github.com/tigera/nfnetlink v0.0.0-20201111230626-bbfcd8d4b9bd
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
