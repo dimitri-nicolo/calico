@@ -320,6 +320,10 @@ func (p *Builder) writeRule(rule *proto.Rule, passLabel string) {
 		p.writeIPSetMatch(true, legSource, rule.NotSrcIpSetIds)
 	}
 
+	if len(rule.DstDomainIpSetIds) > 0 {
+		log.WithField("ipSetIDs", rule.DstDomainIpSetIds).Infof("DstDomainIpSetIds match")
+		p.writeIPSetMatch(false, legDest, rule.DstDomainIpSetIds)
+	}
 	if len(rule.DstIpSetIds) > 0 {
 		log.WithField("ipSetIDs", rule.DstIpSetIds).Debugf("DstIpSetIds match")
 		p.writeIPSetMatch(false, legDest, rule.DstIpSetIds)
