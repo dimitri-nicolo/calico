@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -40,6 +41,8 @@ func Execute() {
 	}
 }
 
+var debug bool
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -53,6 +56,13 @@ func init() {
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.SetOut(os.Stdout)
+
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "")
+	cobra.OnInitialize(func() {
+		if debug {
+			log.SetLevel(log.DebugLevel)
+		}
+	})
 }
 
 // initConfig reads in config file and ENV variables if set.
