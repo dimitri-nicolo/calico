@@ -13,7 +13,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
-	github.com/tigera/licensing v1.0.1-0.20201214212430-6b73730a6daf
+	github.com/tigera/licensing v1.0.1-0.20201218173202-d766f2323fee
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	k8s.io/api v0.18.12
 	k8s.io/apimachinery v0.18.12
