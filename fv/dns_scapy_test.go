@@ -7,9 +7,11 @@ package fv_test
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -22,10 +24,12 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	"github.com/projectcalico/felix/timeshim"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -97,7 +101,50 @@ func fileHasMapping(lname, rname string) func() bool {
 	return fileHasMappings([]mapping{{lhs: lname, rhs: rname}})
 }
 
-var _ = Describe("DNS Policy", func() {
+func makeBPFConntrackEntry(aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
+	a2bLeg := conntrack.Leg{Opener: true}
+	b2aLeg := conntrack.Leg{Opener: false}
+
+	// BPF conntrack map convention is for the first IP to be the smaller one.
+	aBytes := []byte(aIP.To4())
+	bBytes := []byte(bIP.To4())
+	aLessThanB := false
+	if aBytes[3] == bBytes[3] {
+		if aBytes[2] == bBytes[2] {
+			if aBytes[1] == bBytes[1] {
+				aLessThanB = aBytes[0] < bBytes[0]
+			} else {
+				aLessThanB = aBytes[1] < bBytes[1]
+			}
+		} else {
+			aLessThanB = aBytes[2] < bBytes[2]
+		}
+	} else {
+		aLessThanB = aBytes[3] < bBytes[3]
+	}
+	if !aLessThanB {
+		aIP, bIP = bIP, aIP
+		a2bLeg, b2aLeg = b2aLeg, a2bLeg
+	}
+
+	now := time.Duration(timeshim.RealTime().KTimeNanos())
+
+	// In the BPF dataplane, the decision whether a DNS connection is trusted - i.e. comparison
+	// of the destination IP/port against DNSTrustedServers - is made at the time of seeing the
+	// DNS request, with the result being stored as a flag (16) in the conntrack entry for the
+	// connection.  For the FV tests in this file, we don't actually send any DNS request, but
+	// instead simulate the conntrack state that the request would create.  That means creating
+	// a conntrack with the 16 flag, if the DNS server is trusted, and without that flag if the
+	// DNS server is not trusted.
+	flags := uint8(0)
+	if trusted {
+		flags = 16
+	}
+
+	return conntrack.NewKey(17 /* UDP */, aIP, 53, bIP, 53), conntrack.NewValueNormal(now, now, flags, a2bLeg, b2aLeg)
+}
+
+var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	var (
 		scapyTrusted *containers.Container
@@ -139,6 +186,7 @@ var _ = Describe("DNS Policy", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("calico-bpf", "ipsets", "dump")
 			felix.Exec("ipset", "list")
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -157,10 +205,17 @@ var _ = Describe("DNS Policy", func() {
 		infra.Stop()
 	})
 
-	dnsServerSetup := func(scapy *containers.Container) {
+	dnsServerSetup := func(scapy *containers.Container, trusted bool) {
 		// Establish conntrack state, in Felix, as though the workload just sent a DNS
 		// request to the specified scapy.
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+
+		// Same thing with calico-bpf.
+		key, val := makeBPFConntrackEntry(net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
+		felix.Exec("calico-bpf", "conntrack", "write",
+			base64.StdEncoding.EncodeToString(key[:]),
+			base64.StdEncoding.EncodeToString(val[:]))
+
 		// Wait a second here to allow time for the conntrack state to be established.
 		time.Sleep(time.Second)
 
@@ -179,7 +234,7 @@ var _ = Describe("DNS Policy", func() {
 
 	DescribeTable("DNS response processing",
 		func(dnsSpecs []string, check func() bool) {
-			dnsServerSetup(scapyTrusted)
+			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
 			Eventually(check, "10s", "2s").Should(BeTrue())
@@ -261,7 +316,7 @@ var _ = Describe("DNS Policy", func() {
 		// Various responses that we don't expect Felix to extract any information from, but
 		// that should not cause any problem.
 		func(dnsSpec string) {
-			dnsServerSetup(scapyTrusted)
+			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, []string{
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='A'),an=(DNSRR(rrname='bankofsteve.com',type='A',ttl=36000,rdata='192.168.56.1')))",
 				dnsSpec,
@@ -316,8 +371,8 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("s DNS information should be ignored", func() {
-			dnsServerSetup(scapyTrusted)
-			dnsServerSetup(scapyUntrusted)
+			dnsServerSetup(scapyTrusted, true)
+			dnsServerSetup(scapyUntrusted, false)
 			sendDNSResponses(scapyTrusted, []string{
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='alice.com',qtype='A'),an=(DNSRR(rrname='alice.com',type='A',ttl=36000,rdata='10.10.10.1')))",
 			})
@@ -406,7 +461,7 @@ var _ = Describe("DNS Policy", func() {
 			etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 			// Create a chain of DNS info that maps xyz.com to that IP.
-			dnsServerSetup(scapyTrusted)
+			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, []string{
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
@@ -424,6 +479,12 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	Context("with host endpoint and ApplyOnForward policy", func() {
+
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			// Skip because BPF mode does not yet support HostEndpoints.
+			return
+		}
+
 		BeforeEach(func() {
 			hep := api.NewHostEndpoint()
 			hep.Name = "felix-eth0"
@@ -457,7 +518,7 @@ var _ = Describe("DNS Policy", func() {
 			etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 			// Create a chain of DNS info that maps xyz.com to that IP.
-			dnsServerSetup(scapyTrusted)
+			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, []string{
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
@@ -481,7 +542,7 @@ var _ = Describe("DNS Policy", func() {
 			etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 			// Create a chain of DNS info that maps xyz.com to that IP.
-			dnsServerSetup(scapyTrusted)
+			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, []string{
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
@@ -608,7 +669,7 @@ var _ = Describe("DNS Policy", func() {
 	})
 })
 
-var _ = Describe("DNS Policy with server on host", func() {
+var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 
 	var (
 		scapyTrusted *containers.Container
@@ -661,6 +722,7 @@ var _ = Describe("DNS Policy with server on host", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("calico-bpf", "ipsets", "dump")
 			felix.Exec("ipset", "list")
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -684,6 +746,13 @@ var _ = Describe("DNS Policy with server on host", func() {
 		// request to the specified scapy.  Note that for this group of tests, scapy shares
 		// Felix's namespace and so has the same IP as Felix.
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+
+		// Same thing with calico-bpf.
+		key, val := makeBPFConntrackEntry(net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
+		felix.Exec("calico-bpf", "conntrack", "write",
+			base64.StdEncoding.EncodeToString(key[:]),
+			base64.StdEncoding.EncodeToString(val[:]))
+
 		// Wait a second here to allow time for the conntrack state to be established.
 		time.Sleep(time.Second)
 	}

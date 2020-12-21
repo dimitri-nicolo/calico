@@ -1,12 +1,13 @@
 // +build fvtests
 
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -22,7 +23,7 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
-var _ = Describe("DNS Policy", func() {
+var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	var (
 		etcd   *containers.Container
@@ -69,6 +70,11 @@ var _ = Describe("DNS Policy", func() {
 	}
 
 	Describe("file with 1000 entries", func() {
+
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			// Skip because the following test relies on reading and counting ipsets.
+			return
+		}
 
 		It("should read and program those entries", func() {
 			fileContent := "1\n"

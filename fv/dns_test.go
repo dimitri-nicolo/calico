@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strconv"
@@ -46,7 +47,7 @@ func GetLocalNameservers() (nameservers []string) {
 	return localNameservers
 }
 
-var _ = Describe("DNS Policy", func() {
+var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	var (
 		etcd   *containers.Container
@@ -162,6 +163,12 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		Context("with a preceding DNS request that went unresponded", func() {
+
+			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+				// Skip because the following test relies on a HostEndpoint.
+				return
+			}
+
 			JustBeforeEach(func() {
 				hep := api.NewHostEndpoint()
 				hep.Name = "felix-eth0"
@@ -238,6 +245,12 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	Context("after host wget microsoft.com", func() {
+
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			// Skip because don't yet capture DNS from host.
+			return
+		}
+
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			hostCanWgetMicrosoft()
@@ -306,6 +319,7 @@ var _ = Describe("DNS Policy", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("calico-bpf", "ipsets", "dump", "--debug")
 			felix.Exec("ipset", "list")
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -331,6 +345,10 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	It("host can wget microsoft.com", func() {
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			Skip("don't yet snoop DNS from host in BPF mode")
+		}
+
 		hostCanWgetMicrosoft()
 	})
 
@@ -352,6 +370,10 @@ var _ = Describe("DNS Policy", func() {
 
 		// There's no HostEndpoint yet, so the policy doesn't affect the host.
 		It("host can wget microsoft.com", func() {
+			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+				Skip("don't yet snoop DNS from host in BPF mode")
+			}
+
 			hostCanWgetMicrosoft()
 		})
 
@@ -380,6 +402,12 @@ var _ = Describe("DNS Policy", func() {
 		}
 
 		Context("with HostEndpoint", func() {
+
+			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+				// Skip because the following test relies on a HostEndpoint.
+				return
+			}
+
 			JustBeforeEach(func() {
 				hep := api.NewHostEndpoint()
 				hep.Name = "hep-1"
