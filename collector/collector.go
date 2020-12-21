@@ -24,6 +24,8 @@ import (
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	"github.com/tigera/nfnetlink"
 )
@@ -772,6 +774,50 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		Type:          hd.Type,
 		Count:         int(hd.Count),
 		Domain:        hd.Domain,
+	}
+
+	// Grab the destination metadata to use the namespace to validate the service name
+	dstMeta, err := getFlowLogEndpointMetadata(data.dstEp, tuple.dst)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to extract metadata for destination %v", update.DstEp)
+	}
+
+	// Split out the service port if available
+	addr, port := getAddressAndPort(hd.Domain)
+
+	var validService bool
+	svcName := addr
+	svcNamespace := dstMeta.Namespace
+	if ip := net.ParseIP(addr); ip != nil {
+		// Address is an IP. Attempt to look up a service name by cluster IP
+		svcPortName, found := c.luc.GetServiceFromPreDNATDest(ipStrTo16Byte(addr), port, tuple.proto)
+		if found {
+			svcName = svcPortName.NamespacedName.Name
+			svcNamespace = svcPortName.NamespacedName.Namespace
+			validService = true
+		}
+	} else {
+		// Check if the address is a Kubernetes service name
+		k8sSvcName, k8sSvcNamespace := extractK8sServiceNameAndNamespace(addr)
+		if k8sSvcName != "" {
+			svcName = k8sSvcName
+			svcNamespace = k8sSvcNamespace
+		}
+
+		// Verify that the service name and namespace are valid
+		_, validService = c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
+			Kind:      v3.KindK8sService,
+			Name:      svcName,
+			Namespace: svcNamespace,
+		})
+	}
+
+	// Add the service name and port if they are available
+	// The port may not have been specified. This will result in port being 0.
+	if validService {
+		update.ServiceName = svcName
+		update.ServiceNamespace = svcNamespace
+		update.ServicePort = port
 	}
 
 	// Send the update to the reporter

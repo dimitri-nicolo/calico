@@ -12,8 +12,11 @@ import (
 	"time"
 
 	kapiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/net"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,11 +24,10 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -265,6 +267,26 @@ var (
 	netSet1 = model.NetworkSet{
 		Nets:   []net.IPNet{mustParseNet(netSetIp1Str + "/32")},
 		Labels: map[string]string{"public": "true"},
+	}
+
+	svcKey1 = model.ResourceKey{
+		Name:      "test-svc",
+		Namespace: "test-namespace",
+		Kind:      v3.KindK8sService,
+	}
+	svc1 = kapiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-svc", Namespace: "test-namespace"},
+		Spec: kapiv1.ServiceSpec{
+			ClusterIP: "10.10.10.10",
+			Ports: []kapiv1.ServicePort{
+				{
+					Name:       "nginx",
+					Port:       80,
+					TargetPort: intstr.IntOrString{Type: intstr.String, StrVal: "nginx"},
+					Protocol:   kapiv1.ProtocolTCP,
+				},
+			},
+		},
 	}
 )
 
@@ -1349,6 +1371,8 @@ var _ = Describe("L7 logging", func() {
 	var hd *proto.HTTPData
 	var d *Data
 	var t Tuple
+	var hdsvc *proto.HTTPData
+	var hdsvcip *proto.HTTPData
 	BeforeEach(func() {
 		epMap := map[[16]byte]*calc.EndpointData{
 			localIp1:  localEd1,
@@ -1356,7 +1380,9 @@ var _ = Describe("L7 logging", func() {
 			remoteIp1: remoteEd1,
 		}
 		nflogMap := map[[64]byte]*calc.RuleID{}
-		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}, nil)
+		nsMap := map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1}
+		svcMap := map[model.ResourceKey]*kapiv1.Service{svcKey1: &svc1}
+		lm := newMockLookupsCache(epMap, nflogMap, nsMap, svcMap)
 		c = newCollector(lm, nil, &Config{
 			AgeTimeout:            time.Duration(10) * time.Second,
 			InitialReportingDelay: time.Duration(5) * time.Second,
@@ -1378,9 +1404,37 @@ var _ = Describe("L7 logging", func() {
 			DurationMax:   int32(12),
 		}
 
+		hdsvc = &proto.HTTPData{
+			Duration:      int32(10),
+			ResponseCode:  int32(200),
+			BytesSent:     int32(40),
+			BytesReceived: int32(60),
+			UserAgent:     "firefox",
+			RequestPath:   "/test/path",
+			RequestMethod: "GET",
+			Type:          "html/1.1",
+			Count:         int32(1),
+			Domain:        "test-svc.test-namespace.svc.cluster.local:80",
+			DurationMax:   int32(12),
+		}
+		hdsvcip = &proto.HTTPData{
+			Duration:      int32(10),
+			ResponseCode:  int32(200),
+			BytesSent:     int32(40),
+			BytesReceived: int32(60),
+			UserAgent:     "firefox",
+			RequestPath:   "/test/path",
+			RequestMethod: "GET",
+			Type:          "html/1.1",
+			Count:         int32(1),
+			Domain:        "10.10.10.10:80",
+			DurationMax:   int32(12),
+		}
+
 		t = *NewTuple(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
 		d = NewData(t, remoteEd1, remoteEd2, 0)
 	})
+
 	It("should get client and server endpoint data", func() {
 		c.LogL7(hd, d, t, 1)
 		Expect(r.updates).To(HaveLen(1))
@@ -1401,6 +1455,60 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Type).To(Equal("html/1.1"))
 		Expect(update.Count).To(Equal(1))
 		Expect(update.Domain).To(Equal("www.test.com"))
+		Expect(update.ServiceName).To(Equal(""))
+		Expect(update.ServiceNamespace).To(Equal(""))
+		Expect(update.ServicePort).To(Equal(0))
+	})
+
+	It("should properly return kubernetes service names", func() {
+		c.LogL7(hdsvc, d, t, 1)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Tuple).To(Equal(t))
+		Expect(update.SrcEp).NotTo(BeNil())
+		Expect(update.SrcEp).To(Equal(remoteEd1))
+		Expect(update.DstEp).NotTo(BeNil())
+		Expect(update.DstEp).To(Equal(remoteEd2))
+		Expect(update.Duration).To(Equal(10))
+		Expect(update.DurationMax).To(Equal(12))
+		Expect(update.BytesReceived).To(Equal(60))
+		Expect(update.BytesSent).To(Equal(40))
+		Expect(update.ResponseCode).To(Equal(200))
+		Expect(update.Method).To(Equal("GET"))
+		Expect(update.Path).To(Equal("/test/path"))
+		Expect(update.UserAgent).To(Equal("firefox"))
+		Expect(update.Type).To(Equal("html/1.1"))
+		Expect(update.Count).To(Equal(1))
+		Expect(update.Domain).To(Equal("test-svc.test-namespace.svc.cluster.local:80"))
+		Expect(update.ServiceName).To(Equal("test-svc"))
+		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
+		Expect(update.ServicePort).To(Equal(80))
+	})
+
+	It("should properly look up service names by cluster IP", func() {
+		c.LogL7(hdsvcip, d, t, 1)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Tuple).To(Equal(t))
+		Expect(update.SrcEp).NotTo(BeNil())
+		Expect(update.SrcEp).To(Equal(remoteEd1))
+		Expect(update.DstEp).NotTo(BeNil())
+		Expect(update.DstEp).To(Equal(remoteEd2))
+		Expect(update.Duration).To(Equal(10))
+		Expect(update.DurationMax).To(Equal(12))
+		Expect(update.BytesReceived).To(Equal(60))
+		Expect(update.BytesSent).To(Equal(40))
+		Expect(update.ResponseCode).To(Equal(200))
+		Expect(update.Method).To(Equal("GET"))
+		Expect(update.Path).To(Equal("/test/path"))
+		Expect(update.UserAgent).To(Equal("firefox"))
+		Expect(update.Type).To(Equal("html/1.1"))
+		Expect(update.Count).To(Equal(1))
+		Expect(update.Domain).To(Equal("10.10.10.10:80"))
+		Expect(update.ServiceName).To(Equal("test-svc"))
+		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
+		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
+		Expect(update.ServicePort).To(Equal(80))
 	})
 })
 
