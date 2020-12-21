@@ -26,7 +26,6 @@ import (
 	"github.com/projectcalico/felix/rules"
 
 	"github.com/tigera/nfnetlink"
-	"github.com/tigera/nfnetlink/nfnl"
 )
 
 const (
@@ -37,12 +36,6 @@ const (
 
 type Config struct {
 	StatsDumpFilePath string
-
-	NfNetlinkBufSize int
-	IngressGroup     int
-	EgressGroup      int
-
-	ConntrackPollingInterval time.Duration
 
 	AgeTimeout            time.Duration
 	InitialReportingDelay time.Duration
@@ -60,40 +53,32 @@ type Config struct {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	luc            *calc.LookupsCache
-	nfIngressC     chan *nfnetlink.NflogPacketAggregate
-	nfEgressC      chan *nfnetlink.NflogPacketAggregate
-	nfIngressDoneC chan struct{}
-	nfEgressDoneC  chan struct{}
-	epStats        map[Tuple]*Data
-	poller         jitter.JitterTicker
-	ticker         jitter.JitterTicker
-	sigChan        chan os.Signal
-	config         *Config
-	dumpLog        *log.Logger
-	reporterMgr    *ReporterManager
-	ds             chan *proto.DataplaneStats
-	dnsLogReporter DNSLogReporterInterface
-	l7LogReporter  L7LogReporterInterface
+	packetInfoReader    PacketInfoReader
+	conntrackInfoReader ConntrackInfoReader
+	luc                 *calc.LookupsCache
+	epStats             map[Tuple]*Data
+	ticker              jitter.JitterTicker
+	sigChan             chan os.Signal
+	config              *Config
+	dumpLog             *log.Logger
+	reporterMgr         *ReporterManager
+	ds                  chan *proto.DataplaneStats
+	dnsLogReporter      DNSLogReporterInterface
+	l7LogReporter       L7LogReporterInterface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
 // function for collector instantiation.
 func newCollector(lc *calc.LookupsCache, rm *ReporterManager, cfg *Config) Collector {
 	return &collector{
-		luc:            lc,
-		nfIngressC:     make(chan *nfnetlink.NflogPacketAggregate, 1000),
-		nfEgressC:      make(chan *nfnetlink.NflogPacketAggregate, 1000),
-		nfIngressDoneC: make(chan struct{}),
-		nfEgressDoneC:  make(chan struct{}),
-		epStats:        make(map[Tuple]*Data),
-		poller:         jitter.NewTicker(cfg.ConntrackPollingInterval, cfg.ConntrackPollingInterval/10),
-		ticker:         jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
-		sigChan:        make(chan os.Signal, 1),
-		config:         cfg,
-		dumpLog:        log.New(),
-		reporterMgr:    rm,
-		ds:             make(chan *proto.DataplaneStats, 1000),
+		luc:         lc,
+		epStats:     make(map[Tuple]*Data),
+		ticker:      jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
+		sigChan:     make(chan os.Signal, 1),
+		config:      cfg,
+		dumpLog:     log.New(),
+		reporterMgr: rm,
+		ds:          make(chan *proto.DataplaneStats, 1000),
 	}
 }
 
@@ -102,46 +87,58 @@ func (c *collector) ReportingChannel() chan<- *proto.DataplaneStats {
 	return c.ds
 }
 
-// SubscribeToNflog should only be called by the internal dataplane driver to subscribe this collector
-// to NFLog stats.
-// TODO: This will be removed when NFLOG and Conntrack handling is moved to the int_dataplane.
-func (c *collector) SubscribeToNflog() {
-	err := subscribeToNflog(c.config.IngressGroup, c.config.NfNetlinkBufSize, c.nfIngressC, c.nfIngressDoneC, c.config.EnableServices)
-	if err != nil {
-		log.Errorf("Error when subscribing to NFLOG: %v", err)
-		return
+func (c *collector) Start() error {
+	if c.packetInfoReader == nil {
+		return fmt.Errorf("missing PacketInfoReader")
 	}
-	err = subscribeToNflog(c.config.EgressGroup, c.config.NfNetlinkBufSize, c.nfEgressC, c.nfEgressDoneC, c.config.EnableServices)
-	if err != nil {
-		log.Errorf("Error when subscribing to NFLOG: %v", err)
-		return
-	}
-}
 
-func (c *collector) Start() {
+	if err := c.packetInfoReader.Start(); err != nil {
+		return fmt.Errorf("PacketInfoReader failed to start: %w", err)
+	}
+
+	if c.conntrackInfoReader == nil {
+		return fmt.Errorf("missing ConntrackInfoReader")
+	}
+
+	if err := c.conntrackInfoReader.Start(); err != nil {
+		return fmt.Errorf("ConntrackInfoReader failed to start: %w", err)
+	}
+
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
 	if c.dnsLogReporter != nil {
 		c.dnsLogReporter.Start()
 	}
+
 	if c.l7LogReporter != nil {
 		c.l7LogReporter.Start()
 	}
+
+	return nil
+}
+
+func (c *collector) SetPacketInfoReader(pir PacketInfoReader) {
+	c.packetInfoReader = pir
+}
+
+func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
+	c.conntrackInfoReader = cir
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
+	pktInfoC := c.packetInfoReader.PacketInfoChan()
+	ctInfoC := c.conntrackInfoReader.ConntrackInfoChan()
+
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).
 	// 2. A signal handler that will dump logs on receiving SIGUSR2.
 	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
-		case <-c.poller.Channel():
-			_ = nfnetlink.ConntrackList(c.handleCtEntry)
-		case nflogPacketAggr := <-c.nfIngressC:
-			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, nflogPacketAggr)
-		case nflogPacketAggr := <-c.nfEgressC:
-			c.convertNflogPktAndApplyUpdate(rules.RuleDirEgress, nflogPacketAggr)
+		case ctInfo := <-ctInfoC:
+			c.handleCtInfo(ctInfo)
+		case pktInfo := <-pktInfoC:
+			c.ApplyPacketInfo(pktInfo)
 		case <-c.ticker.Channel():
 			c.checkEpStats()
 		case <-c.sigChan:
@@ -422,7 +419,7 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 	}
 }
 
-// handleCtEntry handles a conntrack entry
+// handleCtInfo handles an update from conntrack
 // We expect and process connections (conntrack entries) of 3 different flavors.
 //
 // - Connections that *neither* begin *nor* terminate locally.
@@ -435,76 +432,49 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 // This is important for services where the connection will have the cluster IP as the
 // pre-DNAT-ed destination, but we want the post-DNAT workload IP and port.
 // The pre-DNAT entry will also be used to lookup service related information.
-func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
-	var (
-		ctTuple nfnetlink.CtTuple
-		err     error
-	)
-
-	ctTuple = ctEntry.OriginalTuple
-
-	// A conntrack entry that has the destination NAT (DNAT) flag set
-	// will have its destination ip-address set to the NAT-ed IP rather
-	// than the actual workload/host endpoint. To continue processing
-	// this conntrack entry, we need the actual IP address that corresponds
-	// to a Workload/Host Endpoint.
-	if ctEntry.IsDNAT() {
-		ctTuple, err = ctEntry.OriginalTuplePostDNAT()
-		if err != nil {
-			log.Error("Error when extracting tuple post DNAT:", err)
-			return
-		}
-	}
-
-	// At this point either the source or destination IP address from the conntrack entry
-	// belongs to an endpoint i.e., the connection either begins or terminates locally.
-	tuple := extractTupleFromCtEntryTuple(ctTuple)
-
-	// In the case of TCP, check if we can expire the entry early. We try to expire
-	// entries early so that we don't send any spurious MetricUpdates for an expiring
-	// conntrack entry.
-	entryExpired := (ctTuple.ProtoNum == nfnl.TCP_PROTO && ctEntry.ProtoInfo.State >= nfnl.TCP_CONNTRACK_TIME_WAIT)
-
+func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 	// Get or create a data entry and update the counters. If no entry is returned then neither source nor dest are
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
-	if data := c.getDataAndUpdateEndpoints(tuple, entryExpired); data != nil {
-		if !data.isDNAT && ctEntry.IsDNAT() {
-			originalTuple := extractTupleFromCtEntryTuple(ctEntry.OriginalTuple)
+	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, ctInfo.Expired); data != nil {
+
+		if !data.isDNAT && ctInfo.IsDNAT {
+			originalTuple := ctInfo.PreDNATTuple
 			data.isDNAT = true
 			data.preDNATAddr = originalTuple.dst
 			data.preDNATPort = originalTuple.l4Dst
 		}
 
 		c.applyConntrackStatUpdate(data,
-			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-			entryExpired)
+			ctInfo.Counters.Packets, ctInfo.Counters.Bytes,
+			ctInfo.ReplyCounters.Packets, ctInfo.ReplyCounters.Bytes,
+			ctInfo.Expired)
 	}
 }
 
-func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) {
+func (c *collector) ApplyPacketInfo(pktInfo PacketInfo) {
 	var (
 		localEp        *calc.EndpointData
 		localMatchData *calc.MatchData
 		data           *Data
 	)
 
-	// Extract the tuple used for lookup for this set of packet prefixes.
-	tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
+	tuple := pktInfo.Tuple
+
 	if data = c.getDataAndUpdateEndpoints(tuple, false); data == nil {
 		// Data is nil, so the destination endpoint cannot be managed by local Calico.
 		return
 	}
-	if !data.isDNAT && nPktAggr.IsDNAT {
-		originalTuple := extractTupleFromCtEntryTuple(nPktAggr.OriginalTuple)
+
+	if !data.isDNAT && pktInfo.IsDNAT {
+		originalTuple := pktInfo.PreDNATTuple
 		data.isDNAT = true
 		data.preDNATAddr = originalTuple.dst
 		data.preDNATPort = originalTuple.l4Dst
 	}
 
 	// Determine the local endpoint for this update.
-	switch dir {
+	switch pktInfo.Direction {
 	case rules.RuleDirIngress:
 		// The local destination should be local.
 		if localEp = data.dstEp; localEp == nil || !localEp.IsLocal {
@@ -521,17 +491,13 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 		return
 	}
 
-	for _, prefix := range nPktAggr.Prefixes {
-		// Lookup the ruleID from the prefix. If not known then treat as a modified path
-		ruleID := c.luc.GetRuleIDFromNFLOGPrefix(prefix.Prefix)
-		if ruleID == nil {
-			continue
-		}
+	for _, rule := range pktInfo.RuleHits {
+		ruleID := rule.RuleID
 
 		if ruleID.IsProfile() {
 			// This is a profile verdict. Apply the rule unchanged, but at the profile match index (which is at the
 			// very end of the match slice).
-			c.applyNflogStatUpdate(data, ruleID, localMatchData.ProfileMatchIndex, prefix.Packets, prefix.Bytes)
+			c.applyNflogStatUpdate(data, ruleID, localMatchData.ProfileMatchIndex, rule.Hits, rule.Bytes)
 			continue
 		}
 
@@ -550,12 +516,12 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 			case rules.RuleActionDeny:
 				c.applyNflogStatUpdate(
 					data, tier.ImplicitDropRuleID, tier.EndOfTierMatchIndex,
-					prefix.Packets, prefix.Bytes,
+					rule.Hits, rule.Bytes,
 				)
 			case rules.RuleActionPass:
 				c.applyNflogStatUpdate(
 					data, ruleID, tier.EndOfTierMatchIndex,
-					prefix.Packets, prefix.Bytes,
+					rule.Hits, rule.Bytes,
 				)
 			}
 			continue
@@ -574,7 +540,7 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 			continue
 		}
 
-		c.applyNflogStatUpdate(data, ruleID, policyIdx, prefix.Packets, prefix.Bytes)
+		c.applyNflogStatUpdate(data, ruleID, policyIdx, rule.Hits, rule.Bytes)
 	}
 
 	if data.IsExpired() && c.reportMetrics(data, false) {
@@ -657,10 +623,6 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 }
 
-func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}, enableServices bool) error {
-	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan, enableServices)
-}
-
 func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
@@ -670,7 +632,7 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
 		l4Src = nflogTuple.L4Src.Port
 		l4Dst = nflogTuple.L4Dst.Port
 	}
-	return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
+	return MakeTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
 }
 
 func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {
@@ -682,7 +644,7 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	return *NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+	return MakeTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 }
 
 func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
@@ -718,7 +680,7 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// before nflogs or conntrack).
-	return *NewTuple(srcArray, dstArray, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
+	return MakeTuple(srcArray, dstArray, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

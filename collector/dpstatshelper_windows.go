@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 package collector
 
 import (
@@ -8,6 +8,6 @@ import (
 )
 
 // Temporary stub for windows.
-func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *calc.LookupsCache, healthAggregator *health.HealthAggregator) Collector {
+func New(configParams *config.Config, lookupsCache *calc.LookupsCache, healthAggregator *health.HealthAggregator) Collector {
 	return nil
 }

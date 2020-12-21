@@ -306,14 +306,18 @@ type Tuple struct {
 }
 
 func NewTuple(src [16]byte, dst [16]byte, proto int, l4Src int, l4Dst int) *Tuple {
-	t := &Tuple{
+	t := MakeTuple(src, dst, proto, l4Src, l4Dst)
+	return &t
+}
+
+func MakeTuple(src [16]byte, dst [16]byte, proto int, l4Src int, l4Dst int) Tuple {
+	return Tuple{
 		src:   src,
 		dst:   dst,
 		proto: proto,
 		l4Src: l4Src,
 		l4Dst: l4Dst,
 	}
-	return t
 }
 
 func (t *Tuple) String() string {
