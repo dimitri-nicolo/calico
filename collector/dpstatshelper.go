@@ -166,10 +166,11 @@ func New(
 			configParams.L7LogsFlushInterval,
 			healthAggregator,
 		)
+		// Create the aggregation kind
+		aggKind := getL7AggregationKindFromConfigParams(configParams)
 		l7LogReporter.AddAggregator(
 			NewL7LogAggregator().
-				// TODO: Figure out the aggregation levels
-				AggregateOver(L7SvcAggregationKind(configParams.L7LogsFileAggregationKind), L7URLAggregationKind(configParams.L7LogsFileAggregationKind), L7ErrAggregationKind(configParams.L7LogsFileAggregationKind)),
+				AggregateOver(aggKind),
 			[]string{L7LogsFileDispatcherName},
 		)
 		statsCollector.SetL7LogReporter(l7LogReporter)

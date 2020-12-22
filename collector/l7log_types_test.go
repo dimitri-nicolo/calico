@@ -49,7 +49,7 @@ var _ = Describe("L7 log type tests", func() {
 			ServiceName:      "svc1",
 			ServiceNamespace: "namespace1",
 			ServicePort:      80,
-			ResponseCode:     200,
+			ResponseCode:     "200",
 			Method:           "POST",
 			Domain:           "www.server.com",
 			Path:             "/test/path",
@@ -70,8 +70,8 @@ var _ = Describe("L7 log type tests", func() {
 			end := now.Add(3 * time.Second)
 			log := data.ToL7Log(now, end)
 
-			Expect(log.StartTime).To(Equal(now))
-			Expect(log.EndTime).To(Equal(end))
+			Expect(log.StartTime).To(Equal(now.Unix()))
+			Expect(log.EndTime).To(Equal(end.Unix()))
 			Expect(log.SrcNameAggr).To(Equal(meta.SrcNameAggr))
 			Expect(log.SrcNamespace).To(Equal(meta.SrcNamespace))
 			Expect(log.SrcType).To(Equal(meta.SrcType))
