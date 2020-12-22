@@ -154,12 +154,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	Context("after wget microsoft.com", func() {
 
-		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-			// Skip because the collector function (which is in the path for DNS logs)
-			// is currently suppressed as a whole in BPF mode.
-			return
-		}
-
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()

@@ -90,19 +90,16 @@ func (c *collector) ReportingChannel() chan<- *proto.DataplaneStats {
 }
 
 func (c *collector) Start() error {
+	// The packet and conntrack info readers are essential for flow logs, but it still makes
+	// sense for the collector to start without them, in order to handle DNS logs.
 	if c.packetInfoReader == nil {
-		return fmt.Errorf("missing PacketInfoReader")
-	}
-
-	if err := c.packetInfoReader.Start(); err != nil {
+		log.Warning("missing PacketInfoReader")
+	} else if err := c.packetInfoReader.Start(); err != nil {
 		return fmt.Errorf("PacketInfoReader failed to start: %w", err)
 	}
-
 	if c.conntrackInfoReader == nil {
-		return fmt.Errorf("missing ConntrackInfoReader")
-	}
-
-	if err := c.conntrackInfoReader.Start(); err != nil {
+		log.Warning("missing ConntrackInfoReader")
+	} else if err := c.conntrackInfoReader.Start(); err != nil {
 		return fmt.Errorf("ConntrackInfoReader failed to start: %w", err)
 	}
 
@@ -128,8 +125,15 @@ func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
-	pktInfoC := c.packetInfoReader.PacketInfoChan()
-	ctInfoC := c.conntrackInfoReader.ConntrackInfoChan()
+	var pktInfoC <-chan PacketInfo
+	var ctInfoC <-chan ConntrackInfo
+
+	if c.packetInfoReader != nil {
+		pktInfoC = c.packetInfoReader.PacketInfoChan()
+	}
+	if c.conntrackInfoReader != nil {
+		ctInfoC = c.conntrackInfoReader.ConntrackInfoChan()
+	}
 
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).
