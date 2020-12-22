@@ -312,7 +312,7 @@ Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
 Write-Host "Unzip {{installName}} release..."
 Expand-Archive $CalicoZip c:\
 
-Write-Host "Setup Calico for Windows..."
+Write-Host "Setup {{installName}}..."
 SetConfigParameters -OldString '<your datastore type>' -NewString $Datastore
 SetConfigParameters -OldString '<your etcd endpoints>' -NewString "$EtcdEndpoints"
 
@@ -327,7 +327,7 @@ SetConfigParameters -OldString '<your service cidr>' -NewString $ServiceCidr
 SetConfigParameters -OldString '<your dns server ips>' -NewString $DNSServerIPs
 
 if ($platform -EQ "aks") {
-    Write-Host "Setup Calico for Windows for AKS..."
+    Write-Host "Setup {{installName}} for AKS..."
     $Backend="none"
     SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="none"'
     SetConfigParameters -OldString 'KUBE_NETWORK = "Calico.*"' -NewString 'KUBE_NETWORK = "azure.*"'
@@ -337,7 +337,7 @@ if ($platform -EQ "aks") {
 }
 if ($platform -EQ "eks") {
     $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    Write-Host "Setup Calico for Windows for EKS, node name $awsNodeName ..."
+    Write-Host "Setup {{installName}} for EKS, node name $awsNodeName ..."
     $Backend = "none"
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
@@ -349,7 +349,7 @@ if ($platform -EQ "eks") {
 }
 if ($platform -EQ "ec2") {
     $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    Write-Host "Setup Calico for Windows for AWS, node name $awsNodeName ..."
+    Write-Host "Setup {{installName}} for AWS, node name $awsNodeName ..."
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
 
@@ -364,7 +364,7 @@ if ($platform -EQ "ec2") {
 }
 if ($platform -EQ "gce") {
     $gceNodeName = Invoke-RestMethod -UseBasicParsing -Headers @{"Metadata-Flavor"="Google"} "http://metadata.google.internal/computeMetadata/v1/instance/hostname" -ErrorAction Ignore
-    Write-Host "Setup Calico for Windows for GCE, node name $gceNodeName ..."
+    Write-Host "Setup {{installName}} for GCE, node name $gceNodeName ..."
     $gceNodeNameQuote = """$gceNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$gceNodeNameQuote"
 
@@ -389,7 +389,7 @@ if ($platform -EQ "bare-metal") {
 }
 
 if ($DownloadOnly -EQ "yes") {
-    Write-Host "Dowloaded Calico for Windows. Update c:\CalicoWindows\config.ps1 and run c:\CalicoWindows\install-calico.ps1"
+    Write-Host "Downloaded {{installName}}. Update c:\{{rootDir}}\config.ps1 and run c:\CalicoWindows\install-calico.ps1"
     Exit
 }
 
