@@ -34,8 +34,6 @@ Because `config.ps1` is imported by the various component startup scripts, addit
 
 The `nssm` command supports changing a number of configuration options for the {{site.prodname}} services. For example, to adjust the maximum size of the Felix log file before it is rotated:
 
-```
-PS C:\... > nssm set TigeraFelix AppRotateBytes 1048576
 ```powershell
 nssm set CalicoFelix AppRotateBytes 1048576
 ```

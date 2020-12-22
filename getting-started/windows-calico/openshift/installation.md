@@ -205,7 +205,7 @@ aws ec2 get-password-data --instance-id <instance id> --priv-launch-key <aws pri
 1. Install and start kube-proxy service. Execute following powershell script/commands.
 
    ```powershell
-   C:\CalicoWindows\kubernetes\install-kube-services.ps1 -service kube-proxy
+   {{ site.rootDirWindows }}\kubernetes\install-kube-services.ps1 -service kube-proxy
    Start-Service -Name kube-proxy
    ```
 
