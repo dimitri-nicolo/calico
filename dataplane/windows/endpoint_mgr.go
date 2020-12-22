@@ -30,6 +30,8 @@ import (
 
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/proto"
+
+	"github.com/tigera/windows-networking/pkg/vfpctrl"
 )
 
 const (
@@ -75,6 +77,9 @@ type endpointManager struct {
 	pendingHostAddrs []string
 	// hostAddrs contains the list of IPs detected on the host.
 	hostAddrs []string
+
+	// Channel for sending down endpoint events to VFP
+	vfpEventChan chan<- interface{}
 }
 
 type hnsInterface interface {
@@ -83,7 +88,7 @@ type hnsInterface interface {
 	GetAttachedContainerIDs(endpoint *hns.HNSEndpoint) ([]string, error)
 }
 
-func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDataplane) *endpointManager {
+func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDataplane, vfpEventChan chan<- interface{}) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -115,11 +120,26 @@ func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDatapl
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		hostAddrs:           hostIPv4s,
+		vfpEventChan:        vfpEventChan,
 	}
 }
 
 func (m *endpointManager) OnHostAddrsUpdate(hostAddrs []string) {
 	m.pendingHostAddrs = hostAddrs
+}
+
+func (m *endpointManager) PropagateEndpointsUpdate() {
+	ids := []string{}
+	for _, id := range m.addressToEndpointId {
+		ids = append(ids, id)
+	}
+	log.WithField("event", ids).Debug("Refresh endpoints")
+	m.vfpEventChan <- vfpctrl.DPEventEndpointsUpdated(ids)
+}
+
+func (m *endpointManager) PropagatePolicyUpdate(id string) {
+	log.WithField("event", id).Debug("Policy Update")
+	m.vfpEventChan <- vfpctrl.DPEventPolicyUpdated(id)
 }
 
 // OnUpdate is called by the main dataplane driver loop during the first phase. It processes
@@ -316,6 +336,15 @@ func (m *endpointManager) CompleteDeferredWork() error {
 		// WEP updates. This is because an IP address can be recycled and assigned to a
 		// different endpoint since last time HnsEndpointCache been updated.
 		_ = m.RefreshHnsEndpointCache(true)
+
+		// Inform collector for any endpoint updates.
+		// It is possible that a WEP has been removed before a hns endpoint deleted by kubelet.
+		// In that case, endpoint manager still sends down hns endpoint id of the deleted WEP.
+		// This is fine since we don't have the precise event when a hns endpoint been deleted.
+		// This stale endpoint will be deleted next time when we get a WEP update.
+		if m.vfpEventChan != nil {
+			m.PropagateEndpointsUpdate()
+		}
 	}
 
 	// Loop through each pending update
@@ -395,6 +424,11 @@ func (m *endpointManager) CompleteDeferredWork() error {
 				// Failed to apply, this will be rescheduled and retried
 				log.WithError(err).Error("Failed to apply rules update")
 				return err
+			}
+
+			// Inform collector for any policy updates.
+			if m.vfpEventChan != nil {
+				m.PropagatePolicyUpdate(endpointId)
 			}
 
 			m.activeWlEndpoints[id] = workload

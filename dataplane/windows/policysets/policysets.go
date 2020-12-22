@@ -16,11 +16,13 @@ package policysets
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/iputils"
+	"github.com/projectcalico/felix/rules"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/felix/proto"
@@ -248,8 +250,8 @@ func (s *PolicySets) convertPolicyToRules(policyId string, inboundRules []*proto
 func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.Rule, isInbound bool) (rules []*hns.ACLPolicy) {
 	log.WithField("policyId", policyId).Debug("protoRulesToHnsRules")
 	const ipPortsPerRule = 4000
-	for _, protoRule := range protoRules {
-		hnsRules, err := s.protoRuleToHnsRules(policyId, protoRule, isInbound, ipPortsPerRule)
+	for ii, protoRule := range protoRules {
+		hnsRules, err := s.protoRuleToHnsRules(policyId, protoRule, ii, isInbound, ipPortsPerRule)
 		if err != nil {
 			switch err {
 			case ErrNotSupported:
@@ -269,13 +271,52 @@ func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.R
 	return
 }
 
+// getRulePrefixStr calculates a prefix string for HNS rule ID.
+func getRulePrefixStr(policyId string, idx int, isInbound bool, action rules.RuleAction) string {
+	// Break policyId into prefix and policy name.
+	var compRegEx = regexp.MustCompile(`^(?P<prefix>\w+-)(?P<name>.+)`)
+	match := compRegEx.FindStringSubmatch(policyId)
+
+	vMap := make(map[string]string)
+	for i, name := range compRegEx.SubexpNames() {
+		if i > 0 && i <= len(match) {
+			vMap[name] = match[i]
+		}
+	}
+
+	var owner rules.RuleOwnerType
+	switch vMap["prefix"] {
+	case PolicyNamePrefix:
+		owner = rules.RuleOwnerTypePolicy
+	case ProfileNamePrefix:
+		owner = rules.RuleOwnerTypeProfile
+	default:
+		log.WithField("policyId", policyId).Panic("Unknown policy id")
+	}
+
+	policyName := vMap["name"]
+	if len(policyName) == 0 {
+		log.WithField("policyId", policyId).Panic("Invalid policy name")
+	}
+
+	var dir rules.RuleDir
+	if isInbound {
+		dir = rules.RuleDirIngress
+	} else {
+		dir = rules.RuleDirEgress
+	}
+
+	prefixStr := rules.CalculateNFLOGPrefixStr(action, owner, dir, idx, policyName)
+	return prefixStr
+}
+
 // protoRuleToHnsRules converts a proto rule into equivalent hns rules (one or more resultant rules). For Windows RS3,
 // there are a few limitations to be aware of:
 //
 // The following types of rules are not supported in this release and will be logged+skipped:
 // Rules with: Negative match criteria, Actions other than 'allow' or 'deny'and ICMP type/codes.
 //
-func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
+func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx int, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
 	log.WithField("policyId", policyId).Debug("protoRuleToHnsRules")
 
 	// Check IpVersion
@@ -341,16 +382,22 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	//
 	// Action
 	//
+	var action rules.RuleAction
 	switch strings.ToLower(ruleCopy.Action) {
 	case "", "allow":
 		aclPolicy.Action = hns.Allow
+		action = rules.RuleActionAllow
 	case "deny":
 		aclPolicy.Action = hns.Block
+		action = rules.RuleActionDeny
 	case "next-tier", "pass":
 		aclPolicy.Action = ActionPass
+		action = rules.RuleActionPass
 	default:
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
+
+	prefixStr := getRulePrefixStr(policyId, idx, isInbound, action)
 
 	// Protocol
 	//
@@ -476,7 +523,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 					newPolicy := *aclPolicy
 					// Give each sub-rule a unique ID.
 					if s.supportedFeatures.Acl.AclRuleId {
-						newPolicy.Id = fmt.Sprintf("%s-%s-%d", policyId, ruleCopy.RuleId, i)
+						newPolicy.Id = fmt.Sprintf("%s---%d", prefixStr, i)
 						i++
 					}
 					//assign ports chunks in aclpolicy
@@ -627,11 +674,14 @@ func protocolNameToNumber(protocolName string) uint16 {
 // NewRule returns a new HNS switch rule object instantiated with default values.
 func (s *PolicySets) NewRule(isInbound bool, priority uint16) *hns.ACLPolicy {
 	direction := hns.Out
+	dir := rules.RuleDirEgress
 	if isInbound {
 		direction = hns.In
+		dir = rules.RuleDirIngress
 	}
 
 	return &hns.ACLPolicy{
+		Id:        rules.CalculateNoMatchProfileNFLOGPrefixStr(dir),
 		Type:      hns.ACL,
 		RuleType:  hns.Switch,
 		Action:    hns.Block,

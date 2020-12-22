@@ -338,6 +338,10 @@ type Config struct {
 	L7LogsFileAggregationNumURLPath      int           `config:"int;5"`
 	L7LogsFilePerNodeLimit               int           `config:"int;0"`
 
+	WindowsFlowLogsFileDirectory    string `config:"string;c:\\TigeraCalico\\flowlogs"`
+	WindowsFlowLogsPositionFilePath string `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
+	WindowsStatsDumpFilePath        string `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`
+
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
 	NATOutgoingAddress net.IP             `config:"ipv4;"`

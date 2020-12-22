@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 package collector
@@ -9,16 +7,11 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
-	"path"
-	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gavv/monotime"
 	"github.com/google/gopacket/layers"
-	"github.com/mipearson/rfw"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/calc"
@@ -27,8 +20,6 @@ import (
 	"github.com/projectcalico/felix/rules"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-
-	"github.com/tigera/nfnetlink"
 )
 
 const (
@@ -105,7 +96,8 @@ func (c *collector) Start() error {
 	}
 
 	go c.startStatsCollectionAndReporting()
-	c.setupStatsDumping()
+	setupStatsDumping(c.sigChan, c.config.StatsDumpFilePath, c.dumpLog)
+
 	if c.dnsLogReporter != nil {
 		c.dnsLogReporter.Start()
 	}
@@ -154,29 +146,6 @@ func (c *collector) startStatsCollectionAndReporting() {
 			c.convertDataplaneStatsAndApplyUpdate(ds)
 		}
 	}
-}
-
-func (c *collector) setupStatsDumping() {
-	// TODO (doublek): This may not be the best place to put this. Consider
-	// moving the signal handler and logging to file logic out of the collector
-	// and simply out to appropriate sink on different messages.
-	signal.Notify(c.sigChan, syscall.SIGUSR2)
-
-	err := os.MkdirAll(path.Dir(c.config.StatsDumpFilePath), 0755)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create log dir")
-	}
-
-	rotAwareFile, err := rfw.Open(c.config.StatsDumpFilePath, 0644)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to open log file")
-	}
-
-	// Attributes have to be directly set for instantiated logger as opposed
-	// to the module level log object.
-	c.dumpLog.Formatter = &MessageOnlyFormatter{}
-	c.dumpLog.Level = log.InfoLevel
-	c.dumpLog.Out = rotAwareFile
 }
 
 // getDataAndUpdateEndpoints returns a pointer to the data structure keyed off the supplied tuple.  If there
@@ -628,30 +597,6 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	} else if httpDataCount != 0 {
 		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
 	}
-}
-
-func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
-	var l4Src, l4Dst int
-	if nflogTuple.Proto == 1 {
-		l4Src = nflogTuple.L4Src.Id
-		l4Dst = int(uint16(nflogTuple.L4Dst.Type)<<8 | uint16(nflogTuple.L4Dst.Code))
-	} else {
-		l4Src = nflogTuple.L4Src.Port
-		l4Dst = nflogTuple.L4Dst.Port
-	}
-	return MakeTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
-}
-
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {
-	var l4Src, l4Dst int
-	if ctTuple.ProtoNum == 1 {
-		l4Src = ctTuple.L4Src.Id
-		l4Dst = int(uint16(ctTuple.L4Dst.Type)<<8 | uint16(ctTuple.L4Dst.Code))
-	} else {
-		l4Src = ctTuple.L4Src.Port
-		l4Dst = ctTuple.L4Dst.Port
-	}
-	return MakeTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 }
 
 func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {

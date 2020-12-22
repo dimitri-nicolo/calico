@@ -36,7 +36,7 @@ func StartDataplaneDriver(configParams *config.Config,
 	configChangedRestartCallback func(),
 	childExitedRestartCallback func(),
 	k8sClientSet *kubernetes.Clientset,
-	_ *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+	lookupsCache *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	log.Info("Using Windows dataplane driver.")
 
 	dpConfig := windataplane.Config{
@@ -47,6 +47,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		VXLANEnabled: configParams.VXLANEnabled,
 		VXLANID:      configParams.VXLANVNI,
 		VXLANPort:    configParams.VXLANPort,
+
+		Collector:    collector,
+		LookupsCache: lookupsCache,
 	}
 
 	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)
