@@ -90,6 +90,7 @@ var (
 
 	bpfCalicoSubdir = "calico"
 	ifaceRegexp     = regexp.MustCompile(`(?m)^[0-9]+:\s+(?P<name>.+):`)
+	v4Dot4Dot0      = versionparse.MustParseVersion("4.4.0")
 	// v4Dot16Dot0 is the first kernel version that has all the
 	// required features we use for XDP filtering
 	v4Dot16Dot0 = versionparse.MustParseVersion("4.16.0")
@@ -2213,6 +2214,13 @@ func SupportsSockmap() error {
 		return fmt.Errorf("this bpf library only supports little endian architectures")
 	}
 
+	return nil
+}
+
+func SupportsKprobe() error {
+	if err := isAtLeastKernel(v4Dot4Dot0); err != nil {
+		return err
+	}
 	return nil
 }
 

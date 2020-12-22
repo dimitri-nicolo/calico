@@ -31,6 +31,9 @@ const (
 	kprobeEventsFileName = "/sys/kernel/debug/tracing/kprobe_events"
 )
 
+var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
+var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
+
 func progFileName(protocol, logLevel string) string {
 	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
@@ -40,7 +43,6 @@ func progFileName(protocol, logLevel string) string {
 }
 
 func AttachTCPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
-	var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
 	err := installKprobe(logLevel, "tcp", tcpFns, protov4Map, evnt.Map())
 	if err != nil {
 		return fmt.Errorf("error installing tcp v4 kprobes")
@@ -49,7 +51,6 @@ func AttachTCPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error 
 }
 
 func AttachUDPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
-	var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
 	err := installKprobe(logLevel, "udp", udpFns, protov4Map, evnt.Map())
 	if err != nil {
 		return fmt.Errorf("error installing udp v4 kprobes")
@@ -115,6 +116,39 @@ func attachKprobe(progFd bpf.ProgFD, fn string) error {
 	_, err = bpf.PerfEventOpenTracepoint(kprobeId, int(progFd))
 	if err != nil {
 		return fmt.Errorf("failed to attach kprobe to %s", fn)
+	}
+	return nil
+}
+
+func disableKprobe(fn string) error {
+	f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		return fmt.Errorf("cannot open kprobe_events: %v", err)
+	}
+	defer f.Close()
+	cmd := fmt.Sprintf("-:%s\n", fn)
+	if _, err = f.WriteString(cmd); err != nil {
+		return fmt.Errorf("cannot write %q to kprobe_events: %v", cmd, err)
+	}
+	return nil
+}
+
+func DetachTCPv4() error {
+	for _, fn := range tcpFns {
+		err := disableKprobe("p" + fn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DetachUDPv4() error {
+	for _, fn := range udpFns {
+		err := disableKprobe("p" + fn)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

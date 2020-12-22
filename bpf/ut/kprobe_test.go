@@ -27,7 +27,6 @@ import (
 )
 
 func TestKprobe(t *testing.T) {
-	t.Skip("XXX flaky")
 	RegisterTestingT(t)
 	err := bpf.MountDebugfs()
 	Expect(err).NotTo(HaveOccurred())
@@ -41,5 +40,8 @@ func TestKprobe(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	err = kprobe.AttachUDPv4("debug", bpfEvnt, protov4Map)
 	Expect(err).NotTo(HaveOccurred())
-
+	err = kprobe.DetachTCPv4()
+	Expect(err).NotTo(HaveOccurred())
+	err = kprobe.DetachUDPv4()
+	Expect(err).NotTo(HaveOccurred())
 }
