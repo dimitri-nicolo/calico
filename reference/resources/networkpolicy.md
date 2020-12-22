@@ -76,7 +76,7 @@ spec:
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order    | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first. |                 | float                 |         |
 | tier     | Name of the [tier]({{site.baseurl}}/reference/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
-| selector | Selects the endpoints to which this policy applies.                                                 |                 | [selector](#selector) | all()   |
+| selector | Selects the endpoints to which this policy applies.                                                 |                 | [selector](#selectors) | all()   |
 | types    | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress` | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress  | Ordered list of ingress rules applied by policy.                                                    |                 | List of [Rule](#rule) |         |
 | egress   | Ordered list of egress rules applied by this policy.                                                |                 | List of [Rule](#rule) |         |

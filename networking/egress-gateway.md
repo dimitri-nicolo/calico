@@ -300,7 +300,7 @@ kubectl annotate ns <namespace> egress.projectcalico.org/namespaceSelector='proj
 ```
 
 Egress gateway annotations have the same [syntax and range of
-expressions]({{site.baseurl}}/reference/resources/networkpolicy#selector) as the selector fields in
+expressions]({{site.baseurl}}/reference/resources/networkpolicy#selectors) as the selector fields in
 {{site.prodname}} [network policy]({{site.baseurl}}/reference/resources/networkpolicy#entityrule).
 
 To configure a specific Kubernetes Pod to use egress gateways, specify the same annotations when
