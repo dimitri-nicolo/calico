@@ -320,13 +320,11 @@ func (p *Builder) writeRule(rule *proto.Rule, passLabel string) {
 		p.writeIPSetMatch(true, legSource, rule.NotSrcIpSetIds)
 	}
 
-	if len(rule.DstDomainIpSetIds) > 0 {
-		log.WithField("ipSetIDs", rule.DstDomainIpSetIds).Infof("DstDomainIpSetIds match")
-		p.writeIPSetMatch(false, legDest, rule.DstDomainIpSetIds)
-	}
-	if len(rule.DstIpSetIds) > 0 {
+	dstIPSetIDs := append(rule.DstDomainIpSetIds, rule.DstIpSetIds...)
+	if len(dstIPSetIDs) > 0 {
+		log.WithField("ipSetIDs", rule.DstDomainIpSetIds).Debugf("DstDomainIpSetIds match")
 		log.WithField("ipSetIDs", rule.DstIpSetIds).Debugf("DstIpSetIds match")
-		p.writeIPSetMatch(false, legDest, rule.DstIpSetIds)
+		p.writeIPSetOrMatch(legDest, dstIPSetIDs)
 	}
 	if len(rule.NotDstIpSetIds) > 0 {
 		log.WithField("ipSetIDs", rule.NotDstIpSetIds).Debugf("NotDstIpSetIds match")
@@ -481,11 +479,47 @@ func (p *Builder) writeIPSetMatch(negate bool, leg matchLeg, ipSets []string) {
 			// (Otherwise we fall through to the next match criteria.)
 			p.b.JumpNEImm64(R0, 0, p.endOfRuleLabel())
 		} else {
-			// Non-negated; if we got a miss (non-0) then the rule can't match.
+			// Non-negated; if we got a miss (0) then the rule can't match.
 			// (Otherwise we fall through to the next match criteria.)
 			p.b.JumpEqImm64(R0, 0, p.endOfRuleLabel())
 		}
 	}
+}
+
+// Match if packet matches ANY of the given IP sets.
+func (p *Builder) writeIPSetOrMatch(leg matchLeg, ipSets []string) {
+
+	onMatchLabel := p.freshPerRuleLabel()
+
+	for _, ipSetID := range ipSets {
+		id := p.ipSetIDProvider.GetNoAlloc(ipSetID)
+		if id == 0 {
+			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
+		}
+
+		var keyOffset int16
+		if leg == legSource {
+			p.setUpSrcIPSetKey(id)
+			keyOffset = offSrcIPSetKey
+		} else {
+			p.setUpDstIPSetKey(id)
+			keyOffset = offDstIPSetKey
+		}
+
+		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
+		p.b.Mov64(R2, R10)
+		p.b.AddImm64(R2, int32(keyOffset))
+		p.b.Call(HelperMapLookupElem)
+
+		// If we got a hit (non-0) then packet matches one of the IP sets.
+		// (Otherwise we fall through to try the next IP set.)
+		p.b.JumpNEImm64(R0, 0, onMatchLabel)
+	}
+
+	// If packet reaches here, it hasn't matched any of the IP sets.
+	p.b.Jump(p.endOfRuleLabel())
+	// Label the next match so we can skip to it on success.
+	p.b.LabelNextInsn(onMatchLabel)
 }
 
 func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.PortRange, namedPorts []string) {

@@ -90,7 +90,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		// initial TCP connection packet at T=0s and the first retry packet at T=1s.  Then
 		// it seems microsoft.com can take a little time to send a response, so allow 2s
 		// more.
-		out, err := w[0].ExecCombinedOutput("wget", "--max-redirect=0", "--dns-timeout=1", "-U", "firefox", "-T", "4", "microsoft.com")
+		out, err := w[0].ExecCombinedOutput("wget", "--max-redirect=0", "--dns-timeout=1", "-U", "firefox", "-T", "4", "-t", "1", "microsoft.com")
 		return logAndReport(out, err)
 	}
 
@@ -153,6 +153,13 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	Context("after wget microsoft.com", func() {
+
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			// Skip because the collector function (which is in the path for DNS logs)
+			// is currently suppressed as a whole in BPF mode.
+			return
+		}
+
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()
