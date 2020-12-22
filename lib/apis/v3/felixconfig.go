@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -549,13 +549,55 @@ type FelixConfigurationSpec struct {
 	// L7LogsFileDirectory sets the directory where L7 log files are stored.
 	// [Default: /var/log/calico/l7logs]
 	L7LogsFileDirectory *string `json:"l7LogsFileDirectory,omitempty"`
-	// TODO: This will be changed during the aggregation work.
-	// L7LogsFileAggregationKind is used to choose the type of aggregation for L7 log entries.
-	// [Default: 1 - client name prefix aggregation].
+	// L7LogsFileAggregationHTTPHeaderInfo is used to choose the type of aggregation for HTTP header data on L7 log entries.
+	// [Default: ExcludeL7HTTPHeaderInfo - http header info removal].
+	// Accepted values are IncludeL7HTTPHeaderInfo and ExcludeL7HTTPHeaderInfo.
+	// IncludeL7HTTPHeaderInfo - Include HTTP header data in the logs.
+	// ExcludeL7HTTPHeaderInfo - Aggregate over all other fields ignoring the user agent and log type.
+	L7LogsFileAggregationHTTPHeaderInfo *string `json:"l7LogsFileAggregationHTTPHeaderInfo,omitempty" validate:"omitempty,l7HTTPHeaderAggregation"`
+	// L7LogsFileAggregationHTTPMethod is used to choose the type of aggregation for the HTTP request method on L7 log entries.
+	// [Default: IncludeL7HTTPMethod - include the HTTP method].
+	// Accepted values are IncludeL7HTTPMethod and ExcludeL7HTTPMethod.
+	// IncludeL7HTTPMethod - Include HTTP method in the logs.
+	// ExcludeL7HTTPMethod - Aggregate over all other fields ignoring the HTTP method.
+	L7LogsFileAggregationHTTPMethod *string `json:"l7LogsFileAggregationHTTPMethod,omitempty" validate:"omitempty,l7HTTPMethodAggregation"`
+	// L7LogsFileAggregationServiceInfo is used to choose the type of aggregation for the service data on L7 log entries.
+	// [Default: IncludeL7ServiceInfo - include service data].
+	// Accepted values are IncludeL7ServiceInfo and ExcludeL7ServiceInfo.
+	// IncludeL7ServiceInfo - Include service data in the logs.
+	// ExcludeL7ServiceInfo - Aggregate over all other fields ignoring the service name, namespace, and port.
+	L7LogsFileAggregationServiceInfo *string `json:"l7LogsFileAggregationServiceInfo,omitempty" validate:"omitempty,l7ServiceAggregation"`
+	// L7LogsFileAggregationDestinationInfo is used to choose the type of aggregation for the destination metadata on L7 log entries.
+	// [Default: IncludeL7DestinationInfo - include destination metadata].
+	// Accepted values are IncludeL7DestinationInfo and ExcludeL7DestinationInfo.
+	// IncludeL7DestinationInfo - Include destination metadata in the logs.
+	// ExcludeL7DestinationInfo - Aggregate over all other fields ignoring the destination aggregated name, namespace, and type.
+	L7LogsFileAggregationDestinationInfo *string `json:"l7LogsFileAggregationDestinationInfo,omitempty" validate:"omitempty,l7DestinationAggregation"`
+	// L7LogsFileAggregationExcludeSourceInfo is used to choose the type of aggregation for the source metadata on L7 log entries.
+	// [Default: IncludeL7SourceInfo - include source metadata].
+	// Accepted values are IncludeL7SourceInfo and ExcludeL7SourceInfo.
+	// IncludeL7SourceInfo - Include source metadata in the logs.
+	// ExcludeL7SourceInfo - Aggregate over all other fields ignoring the source aggregated name, namespace, and type.
+	L7LogsFileAggregationSourceInfo *string `json:"l7LogsFileAggregationSourceInfo,omitempty" validate:"omitempty,l7SourceAggregation"`
+	// L7LogsFileAggregationResponseCode is used to choose the type of aggregation for the response code on L7 log entries.
+	// [Default: IncludeL7ResponseCode - include the response code].
+	// Accepted values are IncludeL7ResponseCode and ExcludeL7ResponseCode.
+	// IncludeL7ResponseCode - Include the response code in the logs.
+	// ExcludeL7ResponseCode - Aggregate over all other fields ignoring the response code.
+	L7LogsFileAggregationResponseCode *string `json:"l7LogsFileAggregationResponseCode,omitempty" validate:"omitempty,l7ResponseCodeAggregation"`
+	// L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries.
+	// [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileNumURLPathAggregation].
 	// Accepted values are 0 and 1.
-	// 0 - No aggregation
-	// 1 - Aggregate over clients with the same name prefix
-	L7LogsFileAggregationKind *int `json:"l7LogsFileAggregationKind,omitempty" validate:"omitempty"`
+	// IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileNumURLPathAggregation.
+	// TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL.
+	// TrimURLQueryAndPath - Aggregate over all other fields and the base URL only.
+	// ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.
+	L7LogsFileAggregationTrimURL *string `json:"l7LogsFileAggregationTrimURL,omitempty" validate:"omitempty,l7URLAggregation"`
+	// L7LogsFileNumURLPathAggregation is used to choose the number of components in the url path to display.
+	// This allows for the url to be truncated in case parts of the path provide no value. Setting this value
+	// to negative will allow all parts of the path to be displayed.
+	// [Default: 5].
+	L7LogsFileNumURLPathAggregation *int `json:"l7LogsFileNumURLPathAggregation,omitempty"`
 	// Limit on the number of L7 logs that can be emitted within each flush interval.  When
 	// this limit has been reached, Felix counts the number of unloggable L7 responses within
 	// the flush interval, and emits a WARNING log with that count at the same time as it

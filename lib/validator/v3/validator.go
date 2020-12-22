@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -140,6 +140,14 @@ var (
 	minDNSAggregationKindValue = 0
 	maxDNSAggregationKindValue = 1
 
+	L7HTTPHeaderInfoAggregationRegex = regexp.MustCompile("^(IncludeL7HTTPHeaderInfo|ExcludeL7HTTPHeaderInfo)$")
+	L7HTTPMethodAggregationRegex     = regexp.MustCompile("^(IncludeL7HTTPMethod|ExcludeL7HTTPMethod)$")
+	L7ServiceAggregationRegex        = regexp.MustCompile("^(IncludeL7ServiceInfo|ExcludeL7ServiceInfo)$")
+	L7DestinationAggregationRegex    = regexp.MustCompile("^(IncludeL7DestinationInfo|ExcludeL7DestinationInfo)$")
+	L7SourceAggregationRegex         = regexp.MustCompile("^(IncludeL7SourceInfo|ExcludeL7SourceInfo)$")
+	L7ResponseCodeAggregationRegex   = regexp.MustCompile("^(IncludeL7ResponseCode|ExcludeL7ResponseCode)$")
+	L7URLAggregationRegex            = regexp.MustCompile("^(IncludeL7FullURL|TrimURLQuery|TrimURLQueryAndPath|ExcludeL7URL)$")
+
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
 		Mask: net.CIDRMask(16, 32),
@@ -209,6 +217,13 @@ func init() {
 	registerFieldValidator("mustBeFalse", validateMustBeFalse)
 	registerFieldValidator("ifaceFilter", validateIfaceFilter)
 	registerFieldValidator("dnsAggregationKind", validateDNSAggregationKind)
+	registerFieldValidator("l7HTTPHeaderAggregation", validateL7HTTPHeaderAggregation)
+	registerFieldValidator("l7HTTPMethodAggregation", validateL7HTTPMethodAggregation)
+	registerFieldValidator("l7ServiceAggregation", validateL7ServiceAggregation)
+	registerFieldValidator("l7DestinationAggregation", validateL7DestinationAggregation)
+	registerFieldValidator("l7SourceAggregation", validateL7SourceAggregation)
+	registerFieldValidator("l7ResponseCodeAggregation", validateL7ResponseCodeAggregation)
+	registerFieldValidator("l7URLAggregation", validateL7URLAggregation)
 	registerFieldValidator("cloudWatchAggregationKind", validateCloudWatchAggregationKind)
 	registerFieldValidator("cloudWatchRetentionDays", validateCloudWatchRetentionDays)
 	registerFieldValidator("mac", validateMAC)
@@ -591,6 +606,48 @@ func validateDNSAggregationKind(fl validator.FieldLevel) bool {
 	kind := int(fl.Field().Int())
 	log.Debugf("Validate DNS logs aggregation kind: %d", kind)
 	return kind >= minDNSAggregationKindValue && kind <= maxDNSAggregationKindValue
+}
+
+func validateL7HTTPHeaderAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs HTTP Header aggregation: %s", s)
+	return L7HTTPHeaderInfoAggregationRegex.MatchString(s)
+}
+
+func validateL7HTTPMethodAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs HTTP Method aggregation: %s", s)
+	return L7HTTPMethodAggregationRegex.MatchString(s)
+}
+
+func validateL7ServiceAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs service aggregation: %s", s)
+	return L7ServiceAggregationRegex.MatchString(s)
+}
+
+func validateL7DestinationAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs destination aggregation: %s", s)
+	return L7DestinationAggregationRegex.MatchString(s)
+}
+
+func validateL7SourceAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs source aggregation: %s", s)
+	return L7SourceAggregationRegex.MatchString(s)
+}
+
+func validateL7ResponseCodeAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs response code aggregation: %s", s)
+	return L7ResponseCodeAggregationRegex.MatchString(s)
+}
+
+func validateL7URLAggregation(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate L7 logs URL aggregation: %s", s)
+	return L7URLAggregationRegex.MatchString(s)
 }
 
 func validateCloudWatchAggregationKind(fl validator.FieldLevel) bool {
