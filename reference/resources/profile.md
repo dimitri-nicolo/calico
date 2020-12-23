@@ -70,7 +70,7 @@ spec:
 
 {% include content/entityrule.md %}
 
-#### Selectors
+#### Selector
 
 {% include content/selectors.md %}
 {% include content/selector-scopes.md %}

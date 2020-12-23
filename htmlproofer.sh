@@ -5,7 +5,7 @@
 HP_VERSION=v0.2
 
 # Local directories to ignore when checking external links
-HP_IGNORE_LOCAL_DIRS="/v2.0/,/v2.1/,/v2.2/,/v2.3/,/v2.4/,/v2.5/"
+HP_IGNORE_LOCAL_DIRS="/_includes/"
 
 # URLs to ignore when checking external links.
 HP_IGNORE_URLS="/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/,/v2.6/,/eksctl.io/,/stackpoint.io/"
@@ -17,7 +17,7 @@ JEKYLL_UID=${JEKYLL_UID:=`id -u`}
 # If it doesn't pass once in 10 tries, we count it as a failed check.
 echo "Running a hard URL check against recent releases"
 echo > allstderr.out
-for i in `seq 1 10`; do
+for i in `seq 1 1`; do
 	echo "htmlproofer attempt #${i}"
 
 	# This docker run command MUST NOT USE -ti, or the stderr redirect will fail and the script will ignore all errors.

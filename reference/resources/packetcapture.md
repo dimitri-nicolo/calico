@@ -44,7 +44,7 @@ spec:
 
 | Field    | Description                                                                                         | Accepted Values | Schema                | Default |
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
-| selector | Selects the endpoints to which this packet capture applies.                                          |                 | [selector](#selectors) |         |
+| selector | Selects the endpoints to which this packet capture applies.                                          |                 | [selector](#selector) |         |
 
 
 #### Selector
