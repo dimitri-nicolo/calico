@@ -81,4 +81,4 @@ calicoctl ipam configure --strictaffinity=true
 
 ### Next steps
 
-[Install {{site.prodnameWindows}}]({{site.baseurl}}/getting-started/windows-calico/standard-install/standard)
+[Install {{site.prodnameWindows}}]({{site.baseurl}}/getting-started/windows-calico/kubernetes/standard)
