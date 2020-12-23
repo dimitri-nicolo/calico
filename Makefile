@@ -480,7 +480,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 ###############################################################################
 # Utilities
 ###############################################################################
-HELM_RELEASE=helm-v2.16.3-linux-amd64.tar.gz
+HELM_RELEASE=helm-v2.17.0-linux-amd64.tar.gz
 # note: the tigera-secure-ee-core.tgz chart isn't a dependency of bin/helm, but
 # netlify calls 'make bin/helm' so we package it as part of that dependency here.
 bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
