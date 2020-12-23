@@ -65,7 +65,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -139,7 +139,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -308,7 +308,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -342,80 +342,20 @@ string
 <p>ManagerDomain is the domain name of the Manager</p>
 </td>
 </tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.BGPOption">BGPOption
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec</a>)
-</p>
-<h3 id="operator.tigera.io/v1.CNIPluginType">CNIPluginType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.CNISpec">CNISpec</a>)
-</p>
-<p>CNIPluginType describe the type of CNI plugin used.</p>
-<h3 id="operator.tigera.io/v1.CNISpec">CNISpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
-</p>
-<p>CNISpec contains configuration for the CNI plugin.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<p>Specifies the CNI plugin that will be used in the Calico or Calico Enterprise installation.
-* For KubernetesProvider GKE, this field defaults to GKE.
-* For KubernetesProvider AKS, this field defaults to AzureVNET.
-* For KubernetesProvider EKS, this field defaults to AmazonVPC.
-* If aws-node daemonset exists in kube-system when the Installation resource is created, this field defaults to AmazonVPC.
-* For all other cases this field defaults to Calico.</p>
-<p>For the value Calico, the CNI plugin binaries and CNI config will be installed as part of deployment,
-for all other values the CNI plugin binaries and CNI config is a dependency that is expected
-to be installed separately.</p>
-<p>Default: Calico</p>
-</td>
-</tr>
 <tr>
 <td>
-<code>ipam</code><br>
+<code>usernamePrefix</code><br>
 <em>
-<a href="#operator.tigera.io/v1.IPAMSpec">
-IPAMSpec
-</a>
+string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPAM specifies the pod IP address management that will be used in the Calico or
-Calico Enterprise installation.</p>
+<p>If specified, UsernamePrefix is prepended to each user obtained from the identity provider. Note that
+Kibana does not support a user prefix, so this prefix is removed from Kubernetes User when translating log access
+ClusterRoleBindings into Elastic.</p>
 </td>
 </tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
-</p>
-<p>CalicoNetworkSpec specifies configuration options for Calico provided pod networking.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
 <tr>
 <td>
 <code>groupsPrefix</code><br>
@@ -456,8 +396,6 @@ AuthenticationOpenshift
 <td>
 <em>(Optional)</em>
 <p>Openshift contains the configuration needed to setup Openshift OAuth authentication.</p>
-<p>MTU specifies the maximum transmission unit to use on the pod network.
-If not specified, Calico will perform MTU auto-detection based on the cluster network.</p>
 </td>
 </tr>
 </table>
@@ -510,7 +448,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -553,80 +491,6 @@ ComplianceStatus
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.Installation">Installation
-<h3 id="operator.tigera.io/v1.ConditionStatus">ConditionStatus
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.TigeraStatusCondition">TigeraStatusCondition</a>)
-</p>
-<p>ConditionStatus represents the status of a particular condition. A condition may be one of: True, False, Unknown.</p>
-<h3 id="operator.tigera.io/v1.ContainerIPForwardingType">ContainerIPForwardingType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec</a>)
-</p>
-<p>ContainerIPForwardingType specifies whether the CNI config for container ip forwarding is enabled.</p>
-<h3 id="operator.tigera.io/v1.EncapsulationType">EncapsulationType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.IPPool">IPPool</a>)
-</p>
-<p>EncapsulationType is the type of encapsulation to use on an IP pool. Valid
-options are: IPIP, VXLAN, IPIPCrossSubnet, VXLANCrossSubnet, None.</p>
-<h3 id="operator.tigera.io/v1.HostPortsType">HostPortsType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec</a>)
-</p>
-<p>HostPortsType specifies if the HostPorts plugin enabled status.</p>
-<h3 id="operator.tigera.io/v1.IPAMPluginType">IPAMPluginType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.IPAMSpec">IPAMSpec</a>)
-</p>
-<h3 id="operator.tigera.io/v1.IPAMSpec">IPAMSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.CNISpec">CNISpec</a>)
-</p>
-<p>IPAMSpec contains configuration for pod IP address management.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>type</code><br>
-<em>
-<a href="#operator.tigera.io/v1.IPAMPluginType">
-IPAMPluginType
-</a>
-</em>
-</td>
-<td>
-<p>Specifies the IPAM plugin that will be used in the Calico or Calico Enterprise installation.
-* For CNI Plugin Calico, this field defaults to Calico.
-* For CNI Plugin GKE, this field defaults to HostLocal.
-* For CNI Plugin AzureVNET, this field defaults to AzureVNET.
-* For CNI Plugin AmazonVPC, this field defaults to AmazonVPC.</p>
-<p>The IPAM plugin is installed and configured only if the CNI plugin is set to Calico,
-for all other values of the CNI plugin the plugin binaries and CNI config is a dependency
-that is expected to be installed separately.</p>
-<p>Default: Calico</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.IPPool">IPPool
 </h3>
 <p>Installation configures an installation of Calico or Calico Enterprise. At most one instance
 of this resource is supported. It must be named &ldquo;default&rdquo;. The Installation API installs core networking
@@ -660,7 +524,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -683,22 +547,6 @@ InstallationSpec
 <p>Specification of the desired state for the Calico or Calico Enterprise installation.</p>
 <br/>
 <br/>
-<em>(Optional)</em>
-<p>BlockSize specifies the CIDR prefex length to use when allocating per-node IP blocks from
-the main IP pool CIDR.
-Default: 26 (IPv4), 122 (IPv6)</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.InstallationSpec">InstallationSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.Installation">Installation</a>, 
-<a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
-</p>
-<p>InstallationSpec defines configuration for a Calico or Calico Enterprise installation.</p>
 <table>
 <tr>
 <td>
@@ -753,7 +601,7 @@ or empty, the default for each image will be used.</p>
 <td>
 <code>imagePullSecrets</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#localobjectreference-v1-core">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#localobjectreference-v1-core">
 []Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -854,7 +702,7 @@ kubernetesProvider.</p>
 <td>
 <code>nodeUpdateStrategy</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#daemonsetupdatestrategy-v1-apps">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#daemonsetupdatestrategy-v1-apps">
 Kubernetes apps/v1.DaemonSetUpdateStrategy
 </a>
 </em>
@@ -895,32 +743,6 @@ InstallationStatus
 <p>Most recently observed state for the Calico or Calico Enterprise installation.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>mtu</code><br>
-<em>
-int32
-</em>
-</td>
-<td>
-<p>MTU is the most recently observed value for pod network MTU. This may be an explicitly
-configured value, or based on Calico&rsquo;s native auto-detetion.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>computed</code><br>
-<em>
-<a href="#operator.tigera.io/v1.InstallationSpec">
-InstallationSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Computed is the final installation including overlaid resources.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.IntrusionDetection">IntrusionDetection
@@ -956,7 +778,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1032,7 +854,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1136,7 +958,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1282,7 +1104,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1357,7 +1179,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1431,7 +1253,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1519,7 +1341,7 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1829,7 +1651,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -2018,7 +1840,7 @@ string
 </em>
 </td>
 <td>
-<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: <a href="https://api.my-ocp-domain.com:6443" data-proofer-ignore>https://api.my-ocp-domain.com:6443</a></p>
+<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: <a href="https://api.my-ocp-domain.com:6443">https://api.my-ocp-domain.com:6443</a></p>
 </td>
 </tr>
 </tbody>
@@ -2256,7 +2078,7 @@ int32
 <td>
 <em>(Optional)</em>
 <p>MTU specifies the maximum transmission unit to use on the pod network.
-Default: 1410</p>
+If not specified, Calico will perform MTU auto-detection based on the cluster network.</p>
 </td>
 </tr>
 <tr>
@@ -2411,7 +2233,7 @@ ComponentName
 <td>
 <code>resourceRequirements</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core">
 Kubernetes core/v1.ResourceRequirements
 </a>
 </em>
@@ -2749,7 +2571,7 @@ or empty, the default for each image will be used.</p>
 <td>
 <code>imagePullSecrets</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#localobjectreference-v1-core">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#localobjectreference-v1-core">
 []Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -2850,7 +2672,7 @@ kubernetesProvider.</p>
 <td>
 <code>nodeUpdateStrategy</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#daemonsetupdatestrategy-v1-apps">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#daemonsetupdatestrategy-v1-apps">
 Kubernetes apps/v1.DaemonSetUpdateStrategy
 </a>
 </em>
@@ -2903,6 +2725,18 @@ ProductVariant
 </td>
 <td>
 <p>Variant is the most recently observed installed variant - one of Calico or TigeraSecureEnterprise</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>mtu</code><br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>MTU is the most recently observed value for pod network MTU. This may be an explicitly
+configured value, or based on Calico&rsquo;s native auto-detetion.</p>
 </td>
 </tr>
 <tr>
@@ -3530,7 +3364,7 @@ int64
 <td>
 <code>resourceRequirements</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core">
 Kubernetes core/v1.ResourceRequirements
 </a>
 </em>
@@ -3538,18 +3372,6 @@ Kubernetes core/v1.ResourceRequirements
 <td>
 <em>(Optional)</em>
 <p>ResourceRequirements defines the resource limits and requirements for the Elasticsearch cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>cidrs</code><br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<p>CIDRS enables IP auto-detection based on which addresses on the nodes are within
-one of the provided CIDRs.</p>
 </td>
 </tr>
 </tbody>
@@ -3847,7 +3669,7 @@ ConditionStatus
 <td>
 <code>lastTransitionTime</code><br>
 <em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#time-v1-meta">
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>

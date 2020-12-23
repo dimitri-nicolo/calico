@@ -1,3 +1,5 @@
+.go-pkg-cache/
+builder/
 _drafts/
 *.pyc
 _site
