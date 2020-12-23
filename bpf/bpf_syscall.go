@@ -486,14 +486,9 @@ func PerfEventOpenTracepoint(id int, progFd int) (int, error) {
 	return int(efd), nil
 }
 
-func PerfEventDisableTracepoint(id int) error {
-	efd, err := C.perf_event_open_tracepoint(C.int(id), -1 /* pid */, 0 /* cpu */, -1 /* group_fd */, C.PERF_FLAG_FD_CLOEXEC)
-	if efd < 0 {
-		return fmt.Errorf("perf_event_open error: %v", err)
-	}
-	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(efd), C.PERF_EVENT_IOC_DISABLE, 0); err != 0 {
-		syscall.Close(int(efd))
+func PerfEventDisableTracepoint(fd int) error {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), C.PERF_EVENT_IOC_DISABLE, 0); err != 0 {
 		return fmt.Errorf("error disabling perf event: %v", err)
 	}
-	return nil
+	return syscall.Close(fd)
 }

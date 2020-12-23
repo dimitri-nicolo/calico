@@ -34,6 +34,21 @@ const (
 var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
 var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
 
+type fds struct {
+	progFD       bpf.ProgFD
+	tracePointFD int
+}
+
+var fdMap map[string]fds
+
+func GetFDMap() map[string]fds {
+	return fdMap
+}
+
+func InitFDMap() {
+	fdMap = make(map[string]fds)
+}
+
 func progFileName(protocol, logLevel string) string {
 	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
@@ -78,7 +93,7 @@ func installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) err
 		if err != nil {
 			return err
 		}
-		err = attachKprobe(progFd, fn)
+		err = attachKprobe(progFd, fn, fdMap)
 		if err != nil {
 			return fmt.Errorf("error attaching kprobe to fn %s :%w", fn, err)
 		}
@@ -86,7 +101,8 @@ func installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) err
 	return nil
 }
 
-func attachKprobe(progFd bpf.ProgFD, fn string) error {
+func attachKprobe(progFd bpf.ProgFD, fn string, fdMap map[string]fds) error {
+	var fd fds
 	kprobeIdFile := fmt.Sprintf("/sys/kernel/debug/tracing/events/kprobes/p%s/id", fn)
 	kbytes, err := ioutil.ReadFile(kprobeIdFile)
 	if err != nil {
@@ -113,20 +129,29 @@ func attachKprobe(progFd bpf.ProgFD, fn string) error {
 	if err != nil {
 		return fmt.Errorf("not a proper kprobe id :%w", err)
 	}
-	_, err = bpf.PerfEventOpenTracepoint(kprobeId, int(progFd))
+	tfd, err := bpf.PerfEventOpenTracepoint(kprobeId, int(progFd))
 	if err != nil {
 		return fmt.Errorf("failed to attach kprobe to %s", fn)
 	}
+	fd.progFD = progFd
+	fd.tracePointFD = tfd
+	fdMap[fn] = fd
 	return nil
 }
 
 func disableKprobe(fn string) error {
-	f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0666)
+	fMap := GetFDMap()
+	err := bpf.PerfEventDisableTracepoint(fMap[fn].tracePointFD)
+	if err != nil {
+		return fmt.Errorf("Error disabling perf event")
+	}
+	syscall.Close(int(fMap[fn].progFD))
+	f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("cannot open kprobe_events: %v", err)
 	}
 	defer f.Close()
-	cmd := fmt.Sprintf("-:%s\n", fn)
+	cmd := fmt.Sprintf("-:p%s\n", fn)
 	if _, err = f.WriteString(cmd); err != nil {
 		return fmt.Errorf("cannot write %q to kprobe_events: %v", cmd, err)
 	}
@@ -135,7 +160,7 @@ func disableKprobe(fn string) error {
 
 func DetachTCPv4() error {
 	for _, fn := range tcpFns {
-		err := disableKprobe("p" + fn)
+		err := disableKprobe(fn)
 		if err != nil {
 			return err
 		}
@@ -145,7 +170,7 @@ func DetachTCPv4() error {
 
 func DetachUDPv4() error {
 	for _, fn := range udpFns {
-		err := disableKprobe("p" + fn)
+		err := disableKprobe(fn)
 		if err != nil {
 			return err
 		}
