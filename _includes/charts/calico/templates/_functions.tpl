@@ -23,7 +23,7 @@ calico-typha
 {{- end -}}
 
 {{- define "calico_node_role_name" -}}
-{{- if (.Values.osType) and eq .Values.osType "windows" -}}
+{{- if and (.Values.osType) (eq .Values.osType "windows") -}}
 calico-windows
 {{- else -}}
 calico-node
