@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -344,6 +344,13 @@ func (t *Tuple) DestNet() net.IP {
 	return net.IP(t.dst[:16])
 }
 
+// GetReverseTuple reverses the tuple by swapping the source and destination fields.
+// This is *not* equivalent to the reply tuple and is intented as a convenience
+// method only.
+func (t *Tuple) GetReverseTuple() Tuple {
+	return MakeTuple(t.dst, t.src, t.proto, t.l4Dst, t.l4Src)
+}
+
 // Data contains metadata and statistics such as rule counters and age of a
 // connection(Tuple). Each Data object contains:
 // - 2 RuleTrace's - Ingress and Egress - each providing information on the
@@ -383,6 +390,10 @@ type Data struct {
 	conntrackBytesCtrReverse Counter
 	httpReqAllowedCtr        Counter
 	httpReqDeniedCtr         Counter
+
+	// Process information
+	sourceProcessData ProcessData
+	destProcessData   ProcessData
 
 	// These contain the aggregated counts per tuple per rule.
 	IngressRuleTrace RuleTrace
@@ -441,10 +452,12 @@ func (d *Data) String() string {
 	return fmt.Sprintf(
 		"tuple={%v}, srcEp={%v} dstEp={%v}, dstSvc={%v}, connTrackCtr={packets=%v bytes=%v}, "+
 			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
-			"origSourceIPs={ips=%v totalCount=%v}",
+			"origSourceIPs={ips=%v totalCount=%v}, "+
+			"sourceProcessInfo{name=%s, pid=%d}, destProcessInfo{name=%s, pid=%d}",
 		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
-		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc)
+		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc,
+		d.SourceProcessData().Name, d.SourceProcessData().Pid, d.DestProcessData().Name, d.DestProcessData().Pid)
 }
 
 func (d *Data) touch() {
@@ -657,6 +670,55 @@ func (d *Data) NumUniqueOriginalSourceIPs() int {
 	return d.origSourceIPs.TotalCount()
 }
 
+func (d *Data) SourceProcessData() ProcessData {
+	return d.sourceProcessData
+}
+
+// SetSourceProcessData sets the process name and PID for the connection tuple.
+// Returns false if a process name or PID is already related to the connection tuple
+// and returns true otherwise.
+func (d *Data) SetSourceProcessData(name string, pid int) bool {
+	if len(d.sourceProcessData.Name) != 0 && d.sourceProcessData.Name != name &&
+		d.sourceProcessData.Pid != 0 && d.sourceProcessData.Pid != pid {
+		return false
+	}
+	d.sourceProcessData = ProcessData{
+		Name: name,
+		Pid:  pid,
+	}
+	d.setDirtyFlag()
+	d.touch()
+	return true
+}
+
+func (d *Data) DestProcessData() ProcessData {
+	return d.destProcessData
+}
+
+// SetDestProcessData sets the process name and PID for the connection tuple.
+// Returns false if a process name or PID is already related to the connection tuple
+// and returns true otherwise.
+func (d *Data) SetDestProcessData(name string, pid int) bool {
+	if len(d.destProcessData.Name) != 0 && d.destProcessData.Name != name &&
+		d.destProcessData.Pid != 0 && d.destProcessData.Pid != pid {
+		return false
+	}
+	d.destProcessData = ProcessData{
+		Name: name,
+		Pid:  pid,
+	}
+	d.setDirtyFlag()
+	d.touch()
+	return true
+}
+
+func (d *Data) PreDNATTuple() Tuple {
+	if !d.isDNAT {
+		return d.Tuple
+	}
+	return MakeTuple(d.Tuple.src, d.preDNATAddr, d.Tuple.proto, d.Tuple.l4Src, d.preDNATPort)
+}
+
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
 func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
@@ -677,6 +739,8 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
 			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
 		},
+		processName: d.DestProcessData().Name,
+		processID:   d.DestProcessData().Pid,
 	}
 }
 
@@ -698,6 +762,8 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 			deltaPackets: d.conntrackPktsCtr.Delta(),
 			deltaBytes:   d.conntrackBytesCtr.Delta(),
 		},
+		processName: d.SourceProcessData().Name,
+		processID:   d.SourceProcessData().Pid,
 	}
 }
 
@@ -715,6 +781,8 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
 		},
+		processName: d.DestProcessData().Name,
+		processID:   d.DestProcessData().Pid,
 	}
 }
 
@@ -732,6 +800,8 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
 		},
+		processName: d.SourceProcessData().Name,
+		processID:   d.SourceProcessData().Pid,
 	}
 }
 
@@ -755,6 +825,8 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 		ruleIDs:       d.IngressRuleTrace.Path(),
 		unknownRuleID: unknownRuleID,
 		isConnection:  d.isConnection,
+		processName:   d.DestProcessData().Name,
+		processID:     d.DestProcessData().Pid,
 	}
 	d.origSourceIPs.Reset()
 	return mu

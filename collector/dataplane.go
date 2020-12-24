@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -67,4 +67,29 @@ func (ct ConntrackInfo) String() string {
 type ConntrackInfoReader interface {
 	Start() error
 	ConntrackInfoChan() <-chan ConntrackInfo
+}
+
+// ProcessData contains information about a process which includes its name and PID.
+type ProcessData struct {
+	Name string
+	Pid  int
+}
+
+// TODO(doublek): Is this the right level of abstraction or should this be something for
+// also pulling in things like socket stats? So a KprobeEventReader? But might not make
+// sense for Windows?
+// ProcessInfo is process information about a packet we received from BPF kprobes.
+type ProcessInfo struct {
+	Tuple        Tuple
+	PreDNATTuple Tuple
+	IsDNAT       bool
+
+	ProcessData
+}
+
+// ProcessInfoCache is an interface that provides process information.
+type ProcessInfoCache interface {
+	Start() error
+	Stop()
+	Lookup(Tuple, TrafficDirection) (ProcessInfo, bool)
 }

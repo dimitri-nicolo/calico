@@ -1,4 +1,4 @@
-// Copyright (c) 2019,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -385,6 +385,34 @@ var (
 		},
 	}
 
+	muWithEndpointMetaExpire = MetricUpdate{
+		updateType: UpdateTypeExpire,
+		tuple:      tuple1,
+
+		srcEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-01",
+				OrchestratorID: "k8s",
+				WorkloadID:     "kube-system/iperf-4235-5623461",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
+		},
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+	}
+
 	muWithEndpointMetaWithService = MetricUpdate{
 		updateType: UpdateTypeReport,
 		tuple:      tuple1,
@@ -636,5 +664,290 @@ var (
 			deltaPackets: 1,
 			deltaBytes:   20,
 		},
+	}
+
+	muWithProcessName = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple1,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process",
+		processID:   1234,
+	}
+
+	muWithProcessNameDifferentIDSameTuple = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple1,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process",
+		processID:   4321,
+	}
+
+	muWithProcessNameExpire = MetricUpdate{
+		updateType: UpdateTypeExpire,
+		tuple:      tuple1,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+
+		processName: "test-process",
+		processID:   1234,
+	}
+
+	muWithSameProcessNameDifferentID = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple2,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process",
+		processID:   4321,
+	}
+
+	muWithSameProcessNameDifferentIDExpire = MetricUpdate{
+		updateType: UpdateTypeExpire,
+		tuple:      tuple2,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+
+		processName: "test-process",
+		processID:   4321,
+	}
+
+	muWithDifferentProcessNameDifferentID = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple3,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process-2",
+		processID:   23456,
+	}
+
+	muWithDifferentProcessNameDifferentIDExpire = MetricUpdate{
+		updateType: UpdateTypeExpire,
+		tuple:      tuple3,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+
+		processName: "test-process-2",
+		processID:   23456,
+	}
+
+	muWithProcessName2 = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple3,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process-2",
+		processID:   9876,
+	}
+
+	muWithProcessName3 = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple4,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process-3",
+		processID:   5678,
+	}
+
+	muWithProcessName4 = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple5,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process-4",
+		processID:   34567,
+	}
+
+	muWithProcessName5 = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple6,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+
+		processName: "test-process-5",
+		processID:   7654,
 	}
 )

@@ -94,6 +94,10 @@ type MetricUpdate struct {
 	// Inbound/Outbound packet/byte counts.
 	inMetric  MetricValue
 	outMetric MetricValue
+
+	// Optional process info
+	processName string
+	processID   int
 }
 
 func (mu MetricUpdate) String() string {
@@ -119,8 +123,8 @@ func (mu MetricUpdate) String() string {
 		numOrigIPs = 0
 		origIPs = []net.IP{}
 	}
-	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d}",
-		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs)
+	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d}",
+		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID)
 }
 
 func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {

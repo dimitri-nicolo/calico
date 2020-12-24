@@ -656,9 +656,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		bpfEvnt            events.Events
 		bpfEventPoller     *bpfEventPoller
 		bpfEndpointManager *bpfEndpointManager
+		eventProtoStatsV4Sink *events.EventProtoStatsV4Sink
 
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
+		processInfoCache             collector.ProcessInfoCache
 	)
 
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo {
@@ -693,8 +695,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
 		}
 
-		bpfEventPoller.Register(events.TypeProtoStatsV4, eventProtoStatsV4Sink)
 		log.Info("BPF: Registered events sink for TypeProtoStatsV4")
+		eventProtoStatsV4Sink = events.NewEventProtoStatsV4Sink()
+		bpfEventPoller.Register(events.TypeProtoStatsV4, eventProtoStatsV4Sink.HandleEvent)
 	}
 
 	if config.BPFEnabled {
@@ -1092,10 +1095,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			collectorConntrackInfoReader = ctrd
 		}
 
+		if config.FlowLogsCollectProcessInfo {
+			log.Debug("Process stats collection is required, create process info cache")
+			gcInterval := time.Second * 1
+			entryTTL := time.Second * 10
+			prd := events.NewBPFProcessInfoCache(eventProtoStatsV4Sink.EventProtoStatsV4Chan(), gcInterval, entryTTL)
+			processInfoCache = prd
+		}
+
 		config.Collector.SetPacketInfoReader(collectorPacketInfoReader)
 		log.Info("PacketInfoReader added to collector")
 		config.Collector.SetConntrackInfoReader(collectorConntrackInfoReader)
 		log.Info("ConntrackInfoReader added to collector")
+		config.Collector.SetProcessInfoCache(processInfoCache)
+		log.Info("ProcessInfoCache added to collector")
 	}
 
 	if bpfEventPoller != nil {
@@ -1104,6 +1117,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Info("Stopping bpf event poller")
 			bpfEvnt.Close()
 		}
+
 	}
 
 	return dp

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -47,13 +47,15 @@ type flowLogAggregator struct {
 	includeLabels        bool
 	includePolicies      bool
 	includeService       bool
+	includeProcess       bool
 	maxOriginalIPsSize   int
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
+	perFlowProcessLimit  int
 }
 
 type flowEntry struct {
-	spec         FlowSpec
+	spec         *FlowSpec
 	aggregation  FlowAggregationKind
 	shouldExport bool
 }
@@ -120,6 +122,11 @@ func (c *flowLogAggregator) IncludeService(b bool) FlowLogAggregator {
 	return c
 }
 
+func (c *flowLogAggregator) IncludeProcess(b bool) FlowLogAggregator {
+	c.includeProcess = b
+	return c
+}
+
 func (c *flowLogAggregator) MaxOriginalIPsSize(s int) FlowLogAggregator {
 	c.maxOriginalIPsSize = s
 	return c
@@ -127,6 +134,11 @@ func (c *flowLogAggregator) MaxOriginalIPsSize(s int) FlowLogAggregator {
 
 func (c *flowLogAggregator) ForAction(ra rules.RuleAction) FlowLogAggregator {
 	c.handledAction = ra
+	return c
+}
+
+func (c *flowLogAggregator) PerFlowProcessLimit(n int) FlowLogAggregator {
+	c.perFlowProcessLimit = n
 	return c
 }
 
@@ -150,23 +162,33 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 	}
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
+
 	fl, ok := c.flowStore[flowMeta]
 	if !ok {
-		fl = flowEntry{spec: NewFlowSpec(mu, c.maxOriginalIPsSize), aggregation: c.current, shouldExport: true}
+		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, mu)
+		spec := NewFlowSpec(mu, c.maxOriginalIPsSize, c.includeProcess, c.perFlowProcessLimit)
+
+		fl = flowEntry{
+			spec:         spec,
+			aggregation:  c.current,
+			shouldExport: true,
+		}
 		if c.HasAggregationLevelChanged() {
 			for flowMeta, flowEntry := range c.flowStore {
 				//TODO: Instead of iterating through all the entries, we should store the reverse mappings
-				if !flowEntry.shouldExport && flowEntry.spec.flowsRefsActive.Contains(mu.tuple) {
-					fl.spec.mergeWith(flowEntry.spec)
+				if !flowEntry.shouldExport && flowEntry.spec.ContainsActiveRefs(mu) {
+					fl.spec.MergeWith(mu, flowEntry.spec)
 					delete(c.flowStore, flowMeta)
 				}
 			}
 		}
+		c.flowStore[flowMeta] = fl
 	} else {
-		fl.spec.aggregateMetricUpdate(mu)
+		log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, mu)
+		fl.spec.AggregateMetricUpdate(mu)
 		fl.shouldExport = true
+		c.flowStore[flowMeta] = fl
 	}
-	c.flowStore[flowMeta] = fl
 
 	return nil
 }
@@ -188,10 +210,11 @@ func (c *flowLogAggregator) GetAndCalibrate(newLevel FlowAggregationKind) []*Flo
 
 	c.AdjustLevel(newLevel)
 
-	for flowMeta, flowSpecs := range c.flowStore {
-		if flowSpecs.shouldExport {
-			flowLog := FlowData{flowMeta, flowSpecs.spec}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.includePolicies)
-			resp = append(resp, &flowLog)
+	for flowMeta, flowEntry := range c.flowStore {
+		if flowEntry.shouldExport {
+			log.Debug("Converting to flowlogs")
+			flowLogs := flowEntry.spec.ToFlowLogs(flowMeta, c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.includePolicies)
+			resp = append(resp, flowLogs...)
 		}
 		c.calibrateFlowStore(flowMeta, c.current)
 	}
@@ -201,26 +224,38 @@ func (c *flowLogAggregator) GetAndCalibrate(newLevel FlowAggregationKind) []*Flo
 }
 
 func (c *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel FlowAggregationKind) {
+	entry, ok := c.flowStore[flowMeta]
+	if !ok {
+		// This should never happen as calibrateFlowStore is called right after we
+		// generate flow logs using the entry.
+		log.Warnf("Missing entry for flowMeta %+v", flowMeta)
+		return
+	}
+
+	// Some specs might contain process names with no active flows. We garbage collect
+	// them here so that if there are no other processes tracked, the flow meta can
+	// be removed.
+	remainingActiveFlowsCount := entry.spec.GarbageCollect()
+
 	// discontinue tracking the stats associated with the
 	// flow meta if no more associated 5-tuples exist.
-	if c.flowStore[flowMeta].spec.getActiveFlowsCount() == 0 {
+	if remainingActiveFlowsCount == 0 {
 		log.Debugf("Deleting %v", flowMeta)
 		delete(c.flowStore, flowMeta)
 		return
 	}
 
-	exp := c.flowStore[flowMeta]
-
-	if exp.shouldExport == false {
+	if entry.shouldExport == false {
 		return
 	}
 
-	if exp.aggregation != newLevel {
+	if entry.aggregation != newLevel {
 		log.Debugf("Marking entry as not exportable")
-		exp.shouldExport = false
+		entry.shouldExport = false
 	}
 
 	log.Debugf("Resetting %v", flowMeta)
 	// reset flow stats for the next interval
-	c.flowStore[flowMeta] = flowEntry{exp.spec.reset(), exp.aggregation, exp.shouldExport}
+	entry.spec.Reset()
+	c.flowStore[flowMeta] = flowEntry{entry.spec, entry.aggregation, entry.shouldExport}
 }

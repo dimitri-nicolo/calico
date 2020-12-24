@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -59,6 +59,11 @@ type FlowLogJSONOutput struct {
 	PacketsOut            int64 `json:"packets_out"`
 	HTTPRequestsAllowedIn int64 `json:"http_requests_allowed_in"`
 	HTTPRequestsDeniedIn  int64 `json:"http_requests_denied_in"`
+
+	ProcessName     string `json:"process_name"`
+	NumProcessNames int64  `json:"num_process_names"`
+	ProcessID       string `json:"process_id"`
+	NumProcessIDs   int64  `json:"num_process_ids"`
 
 	OrigSourceIPs    []net.IP `json:"original_source_ips"`
 	NumOrigSourceIPs int64    `json:"num_original_source_ips"`
@@ -165,6 +170,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.NumFlowsStarted = int64(l.NumFlowsStarted)
 	out.HTTPRequestsAllowedIn = int64(l.HTTPRequestsAllowedIn)
 	out.HTTPRequestsDeniedIn = int64(l.HTTPRequestsDeniedIn)
+
+	out.ProcessName = l.ProcessName
+	out.NumProcessNames = int64(l.NumProcessNames)
+	out.ProcessID = l.ProcessID
+	out.NumProcessIDs = int64(l.NumProcessIDs)
 	return out
 }
 
@@ -269,6 +279,10 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.NumFlows = int(o.NumFlows)
 	fl.NumFlowsStarted = int(o.NumFlowsStarted)
 	fl.NumFlowsCompleted = int(o.NumFlowsCompleted)
+	fl.ProcessName = o.ProcessName
+	fl.NumProcessNames = int(o.NumProcessNames)
+	fl.ProcessID = o.ProcessID
+	fl.NumProcessIDs = int(o.NumProcessIDs)
 
 	if o.Policies == nil {
 		fl.FlowPolicies = nil

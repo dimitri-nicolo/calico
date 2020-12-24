@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,6 +53,8 @@ func (_ *mockCollector) SetL7LogReporter(reporter collector.L7LogReporterInterfa
 func (_ *mockCollector) SetPacketInfoReader(collector.PacketInfoReader) {}
 
 func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
+
+func (_ *mockCollector) SetProcessInfoCache(collector.ProcessInfoCache) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
