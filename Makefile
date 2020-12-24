@@ -532,7 +532,7 @@ chart/%: _includes/charts/%/values.yaml
 
 # the non-operator to operator helm chart packages the v2.8 non-operator chart as a dependency.
 # here we grab the public chart at build time.
-NON_OPERATOR_CHART_VERSION=v2.8.3-1
+NON_OPERATOR_CHART_VERSION=v2.8.3-2
 _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz:
 	mkdir -p $(@D)
 	wget -O $@ https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-$(NON_OPERATOR_CHART_VERSION).tgz
