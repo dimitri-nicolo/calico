@@ -1,0 +1,98 @@
+# This is the upstream 1903 tag - no other upstream images exist for other
+# Windows platforms.
+# TODO: need to update for 1909 and, in the future, 2004
+FROM fluent/fluentd:v1.11.1-windows-1.0
+MAINTAINER laurence@tigera.io
+
+USER ContainerAdministrator
+
+# The ROOT_DIR is set for Windows only.
+ENV ROOT_DIR=c:
+
+# Install required gems and other packages.
+RUN gem install \
+        fluent-plugin-elasticsearch:4.2.2 fluent-plugin-s3:1.3.0 \
+        fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
+        fluent-plugin-cloudwatch-logs:0.8.0 \
+        elasticsearch-xpack:7.6.0 \
+ && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
+ && gem sources --clear-all \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\plugins" \
+ && c:\ruby26\msys64\usr\bin\bash.exe -lc "curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe"
+
+# On Windows, the destination format for ADD and COPY must use forward slashes.
+ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
+ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
+ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
+ADD elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
+COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
+COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
+COPY output_match /fluentd/etc/output_match
+COPY outputs /fluentd/etc/outputs
+COPY inputs /fluentd/etc/inputs
+COPY filters /fluentd/etc/filters
+
+# Compliance reports logs needs a regex pattern because there will be
+# multiple logs (one per report type), e.g. compliance.network-access.reports.log
+ENV COMPLIANCE_LOG_FILE=${ROOT_DIR}/var/log/calico/compliance/compliance.*.reports.log
+ENV FLOW_LOG_FILE=${ROOT_DIR}/var/log/calico/flowlogs/flows.log
+ENV DNS_LOG_FILE=${ROOT_DIR}/var/log/calico/dnslogs/dns.log
+ENV BIRD_LOG_FILE=${ROOT_DIR}/var/log/calico/bird/current
+ENV BIRD6_LOG_FILE=${ROOT_DIR}/var/log/calico/bird6/current
+ENV IDS_EVENT_LOG_FILE=${ROOT_DIR}/var/log/calico/ids/events.log
+ENV L7_LOG_FILE=${ROOT_DIR}/var/log/calico/l7logs/l7.log
+ENV EE_AUDIT_LOG_FILE=${ROOT_DIR}/var/log/calico/audit/tsee-audit.log
+
+ENV POS_DIR=${ROOT_DIR}/var/log/calico
+
+ENV ELASTIC_HOST=elasticsearch
+ENV ELASTIC_PORT=9200
+ENV ELASTIC_FLUSH_INTERVAL=5s
+
+ENV KUBE_AUDIT_LOG=${ROOT_DIR}/var/log/calico/audit/kube-audit.log
+ENV KUBE_AUDIT_POS=${POS_DIR}/kube-audit.log.pos
+
+ENV ELASTIC_INDEX_SUFFIX=cluster
+
+ENV S3_FLUSH_INTERVAL=5s
+ENV S3_STORAGE=false
+
+ENV ELASTIC_FLOWS_INDEX_SHARDS=1
+ENV ELASTIC_FLOWS_INDEX_REPLICAS=0
+ENV ELASTIC_DNS_INDEX_SHARDS=1
+ENV ELASTIC_DNS_INDEX_REPLICAS=0
+ENV ELASTIC_AUDIT_INDEX_REPLICAS=0
+ENV ELASTIC_L7_INDEX_SHARDS=1
+ENV ELASTIC_L7_INDEX_REPLICAS=0
+ENV ELASTIC_TEMPLATE_OVERWRITE=true
+ENV ELASTIC_BGP_INDEX_SHARDS=1
+ENV ELASTIC_BGP_INDEX_REPLICAS=0
+
+ENV SYSLOG_PACKET_SIZE=1024
+
+COPY readiness.sh /bin/
+COPY liveness.sh /bin/
+COPY syslog-environment.sh /bin/
+COPY syslog-config.sh /bin/
+COPY splunk-environment.sh /bin/
+COPY splunk-config.sh /bin/
+COPY sumo-environment.sh /bin/
+COPY sumo-config.sh /bin/
+COPY ee_entrypoint.sh /bin/
+COPY eks/bin/eks-log-forwarder-startup /bin/
+
+RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_dns" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_tsee_audit" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_kube_audit" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_compliance_reports" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_bgp" \
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_ids_events"
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_l7"
+
+EXPOSE 24284
+
+ENTRYPOINT []
+CMD c:\ruby26\msys64\usr\bin\bash.exe -lc "c:/bin/ee_entrypoint.sh c:/ruby26/bin/fluentd -c c:/fluentd/etc/fluent.conf"

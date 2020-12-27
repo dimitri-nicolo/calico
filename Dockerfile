@@ -40,6 +40,7 @@ ENV BIRD_LOG_FILE=/var/log/calico/bird/current
 ENV BIRD6_LOG_FILE=/var/log/calico/bird6/current
 ENV IDS_EVENT_LOG_FILE=/var/log/calico/ids/events.log
 ENV L7_LOG_FILE=/var/log/calico/l7logs/l7.log
+ENV EE_AUDIT_LOG_FILE=/var/log/calico/audit/tsee-audit.log
 
 ENV POS_DIR=/var/log/calico
 
