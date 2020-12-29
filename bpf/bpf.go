@@ -2217,13 +2217,6 @@ func SupportsSockmap() error {
 	return nil
 }
 
-func SupportsKprobe() error {
-	if err := isAtLeastKernel(v4Dot4Dot0); err != nil {
-		return err
-	}
-	return nil
-}
-
 func GetMinKernelVersionForDistro(distName string) *versionparse.Version {
 	return distToVersionMap[distName]
 }

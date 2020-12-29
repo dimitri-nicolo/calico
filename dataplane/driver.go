@@ -431,7 +431,3 @@ func StartDataplaneDriver(configParams *config.Config,
 func SupportsBPF() error {
 	return bpf.SupportsBPFDataplane()
 }
-
-func SupportsKprobe() error {
-	return bpf.SupportsKprobe()
-}
