@@ -56,7 +56,3 @@ func StartDataplaneDriver(configParams *config.Config,
 func SupportsBPF() error {
 	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }
-
-func SupportsKprobe() error {
-	return fmt.Errorf("BPF Kprobe is not supported on Windows")
-}
