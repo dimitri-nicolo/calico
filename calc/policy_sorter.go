@@ -71,6 +71,7 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 			// Deletion.
 			if tierInfo != nil {
 				tierInfo.Valid = false
+				tierInfo.Order = nil
 				if len(tierInfo.Policies) == 0 {
 					delete(poc.tiers, tierName)
 				}
@@ -99,8 +100,11 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 			}
 			tierInfo.Policies[key] = newPolicy
 		} else {
-			if oldPolicy != nil {
+			if tierInfo != nil && oldPolicy != nil {
 				delete(tierInfo.Policies, key)
+				if len(tierInfo.Policies) == 0 && !tierInfo.Valid {
+					delete(poc.tiers, key.Tier)
+				}
 				dirty = true
 			}
 		}
@@ -137,17 +141,17 @@ type TierByOrder []*tierInfo
 func (a TierByOrder) Len() int      { return len(a) }
 func (a TierByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a TierByOrder) Less(i, j int) bool {
-	if !a[i].Valid {
+	if !a[i].Valid && a[j].Valid {
 		return false
-	} else if !a[j].Valid {
+	} else if a[i].Valid && !a[j].Valid {
 		return true
 	}
-	if a[i].Order == nil {
+	if a[i].Order == nil && a[j].Order != nil {
 		return false
-	} else if a[j].Order == nil {
+	} else if a[i].Order != nil && a[j].Order == nil {
 		return true
 	}
-	if *a[i].Order == *a[j].Order {
+	if a[i].Order == a[j].Order || *a[i].Order == *a[j].Order {
 		return a[i].Name < a[j].Name
 	}
 	return *a[i].Order < *a[j].Order

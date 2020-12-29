@@ -3,6 +3,7 @@
 package calc
 
 import (
+	kapiv1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -77,19 +78,37 @@ func (lc *LookupsCache) GetNodePortService(port int, proto int) (proxy.ServicePo
 	return lc.svcCache.GetNodePortService(port, proto)
 }
 
+func (lc *LookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
+	return lc.svcCache.GetServiceSpecFromResourceKey(key)
+}
+
 // SetMockData fills in some of the data structures for use in the test code. This should not
 // be called from any mainline code.
 func (lc *LookupsCache) SetMockData(
 	em map[[16]byte]*EndpointData,
 	nm map[[64]byte]*RuleID,
 	ns map[model.NetworkSetKey]*model.NetworkSet,
+	svcs map[model.ResourceKey]*kapiv1.Service,
 ) {
-	lc.polCache.nflogPrefixHash = nm
 	for ip, ed := range em {
-		lc.epCache.ipToEndpoints[ip] = []*EndpointData{ed}
+		if ed == nil {
+			delete(lc.epCache.ipToEndpoints, ip)
+		} else {
+			lc.epCache.ipToEndpoints[ip] = []*EndpointData{ed}
+		}
+	}
+	for id, rid := range nm {
+		if rid == nil {
+			delete(lc.polCache.nflogPrefixHash, id)
+		} else {
+			lc.polCache.nflogPrefixHash[id] = rid
+		}
 	}
 	for k, v := range ns {
 		lc.nsCache.OnUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
+	}
+	for k, v := range svcs {
+		lc.svcCache.OnResourceUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
 }
 

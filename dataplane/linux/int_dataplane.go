@@ -196,6 +196,8 @@ type Config struct {
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
+	FlowLogsFileIncludeService         bool
+	NfNetlinkBufSize                   int
 
 	SidecarAccelerationEnabled bool
 
@@ -239,6 +241,8 @@ type Config struct {
 	// Populated with the smallest host MTU based on auto-detection.
 	hostMTU         int
 	MTUIfacePattern *regexp.Regexp
+
+	LookupsCache *calc.LookupsCache
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -640,6 +644,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var (
 		bpfEvnt        events.Events
 		bpfEventPoller *bpfEventPoller
+
+		collectorPacketInfoReader    collector.PacketInfoReader
+		collectorConntrackInfoReader collector.ConntrackInfoReader
 	)
 
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo {
@@ -1005,8 +1012,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	// If required, subscribe to NFLog collection.
 	if config.Collector != nil {
-		log.Debug("Stats collection is required, subscribe to nflogs")
-		config.Collector.SubscribeToNflog()
+		if !config.BPFEnabled {
+			log.Debug("Stats collection is required, create nflog reader")
+			nflogrd := collector.NewNFLogReader(config.LookupsCache, 1, 2,
+				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
+			collectorPacketInfoReader = nflogrd
+			log.Debug("Stats collection is required, create conntrack reader")
+			ctrd := collector.NewNetLinkConntrackReader(collector.DefaultConntrackPollingInterval)
+			collectorConntrackInfoReader = ctrd
+		}
+
+		config.Collector.SetPacketInfoReader(collectorPacketInfoReader)
+		config.Collector.SetConntrackInfoReader(collectorConntrackInfoReader)
 	}
 
 	if bpfEventPoller != nil {

@@ -709,6 +709,19 @@ message RuleTrace {
 message HTTPData {
   string x_forwarded_for = 1;
   string x_real_ip = 2;
+
+  // Fields for L7 logs
+  int32 duration = 3;
+  int32 response_code = 4;
+  int32 bytes_sent = 5;
+  int32 bytes_received = 6;
+  string user_agent = 7;
+  string request_path = 8;
+  string request_method = 9;
+  int32 count = 10;
+  string domain = 11;
+  int32 duration_max=12;
+  string type = 13;
 }
 
 message WireguardEndpointUpdate {
