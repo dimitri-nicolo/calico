@@ -1,7 +1,7 @@
-import yaml
-import requests
 import os
+import requests
 import sys
+import yaml
 
 DEFAULT_CLUSTER = "cluster"
 
@@ -37,6 +37,15 @@ class RESTClient:
             print(method, path, "- 404 Skipping")
         elif (path.endswith("_stop") or path.endswith("_close")) and response.status_code == 404:
             print(method, path, "- 404 Skipping")
+        elif  response.status_code == 403:
+            try:
+                for cause in response.json()["error"]["root_cause"]:
+                    if cause["type"] == "security_exception" and "current license is non-compliant" in cause["reason"]:
+                        print(method, path, cause["reason"], "- 403 Skipping")
+                    else:
+                        raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
+            except (KeyError, ValueError, TypeError):
+                pass
         else:
             # Check if the resource already exists
             resource_exists = False
