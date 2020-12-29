@@ -663,12 +663,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if err != nil {
 			log.WithError(err).Panic("Failed to create v4 protocol stats map")
 		}
-		kprobe.InitFDMap()
-		err = kprobe.AttachTCPv4(config.BPFLogLevel, bpfEvnt, protov4Map)
+		kp := kprobe.New()
+		err = kp.AttachTCPv4(config.BPFLogLevel, bpfEvnt, protov4Map)
 		if err != nil {
 			log.WithError(err).Panic("Failed to install TCP v4 kprobes")
 		}
-		err = kprobe.AttachUDPv4(config.BPFLogLevel, bpfEvnt, protov4Map)
+		err = kp.AttachUDPv4(config.BPFLogLevel, bpfEvnt, protov4Map)
 		if err != nil {
 			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
 		}
