@@ -40,12 +40,23 @@ type kprobeFDs struct {
 }
 
 type bpfKprobe struct {
-	fdMap map[string]kprobeFDs
+	logLevel   string
+	protov4Map bpf.Map
+	evnt       events.Events
+	fdMap      map[string]kprobeFDs
 }
 
-func New() *bpfKprobe {
+func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
+	v4Map := MapProtov4(mc)
+	err := v4Map.EnsureExists()
+	if err != nil {
+		return nil
+	}
 	return &bpfKprobe{
-		fdMap: make(map[string]kprobeFDs),
+		logLevel:   logLevel,
+		evnt:       evnt,
+		protov4Map: v4Map,
+		fdMap:      make(map[string]kprobeFDs),
 	}
 }
 
@@ -57,25 +68,25 @@ func progFileName(protocol, logLevel string) string {
 	return fmt.Sprintf("%s_%s_kprobe.o", protocol, logLevel)
 }
 
-func (k *bpfKprobe) AttachTCPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
-	err := k.installKprobe(logLevel, "tcp", tcpFns, protov4Map, evnt.Map())
+func (k *bpfKprobe) AttachTCPv4() error {
+	err := k.installKprobe("tcp", tcpFns)
 	if err != nil {
 		return fmt.Errorf("error installing tcp v4 kprobes")
 	}
 	return nil
 }
 
-func (k *bpfKprobe) AttachUDPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
-	err := k.installKprobe(logLevel, "udp", udpFns, protov4Map, evnt.Map())
+func (k *bpfKprobe) AttachUDPv4() error {
+	err := k.installKprobe("udp", udpFns)
 	if err != nil {
 		return fmt.Errorf("error installing udp v4 kprobes")
 	}
 	return nil
 }
 
-func (k *bpfKprobe) installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) error {
-	filename := path.Join(bpf.ObjectDir, progFileName(protocol, logLevel))
-	loader, err := elf.NewLoaderFromFile(filename, maps...)
+func (k *bpfKprobe) installKprobe(protocol string, fns []string) error {
+	filename := path.Join(bpf.ObjectDir, progFileName(protocol, k.logLevel))
+	loader, err := elf.NewLoaderFromFile(filename, k.evnt.Map(), k.protov4Map)
 	if err != nil {
 		fmt.Errorf("error reading elf file")
 	}
