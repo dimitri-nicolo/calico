@@ -142,10 +142,14 @@ func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind, includeService bool)
 }
 
 type FlowSpec struct {
-	FlowLabels
-	FlowPolicies
 	FlowStats
 	flowExtrasRef
+	FlowLabels
+	FlowPolicies
+
+	// Reset aggregated data on the next metric update to ensure we clear out obsolete labels and policies for
+	// connections that are not actively part of the flow during the export interval.
+	resetAggrData bool
 }
 
 func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int) FlowSpec {
@@ -158,6 +162,14 @@ func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int) FlowSpec {
 }
 
 func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
+	if f.resetAggrData {
+		// Reset the aggregated data from this metric update.
+		f.FlowPolicies = make(FlowPolicies)
+		f.FlowLabels.SrcLabels = nil
+		f.FlowLabels.DstLabels = nil
+		f.resetAggrData = false
+	}
+
 	f.aggregateFlowLabels(mu)
 	f.aggregateFlowPolicies(mu)
 	f.aggregateFlowStats(mu)
@@ -180,6 +192,9 @@ func (f *FlowSpec) mergeWith(other FlowSpec) {
 // {FlowMeta->FlowStats} is published so as to account
 // for correct no. of started flows in a given aggregation
 // interval.
+//
+// This also resets policy and label data which will be re-populated from metric updates for the still active
+// flows.
 func (f FlowSpec) reset() FlowSpec {
 	f.flowsStartedRefs = NewTupleSet()
 	f.flowsCompletedRefs = NewTupleSet()
@@ -188,6 +203,10 @@ func (f FlowSpec) reset() FlowSpec {
 		NumFlows: f.flowsRefs.Len(),
 	}
 	f.flowExtrasRef.reset()
+
+	// Set the reset flag. We'll reset the aggregated data on the next metric update - that way we don't completely
+	// zero out the labels and policies if there is no traffic for an export interval.
+	f.resetAggrData = true
 	return f
 }
 
@@ -222,8 +241,18 @@ func (f *FlowLabels) aggregateFlowLabels(mu MetricUpdate) {
 	srcLabels := getFlowLogEndpointLabels(mu.srcEp)
 	dstLabels := getFlowLogEndpointLabels(mu.dstEp)
 
-	f.SrcLabels = intersectLabels(srcLabels, f.SrcLabels)
-	f.DstLabels = intersectLabels(dstLabels, f.DstLabels)
+	// The flow labels are reset on calibration, so either copy the labels or intersect them.
+	if f.SrcLabels == nil {
+		f.SrcLabels = srcLabels
+	} else {
+		f.SrcLabels = intersectLabels(srcLabels, f.SrcLabels)
+	}
+
+	if f.DstLabels == nil {
+		f.DstLabels = dstLabels
+	} else {
+		f.DstLabels = intersectLabels(dstLabels, f.DstLabels)
+	}
 }
 
 type FlowPolicies map[string]empty

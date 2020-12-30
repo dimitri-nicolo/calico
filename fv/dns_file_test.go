@@ -29,6 +29,7 @@ var _ = Describe("DNS Policy", func() {
 		felix  *infrastructure.Felix
 		w      *workload.Workload
 		client client.Interface
+		infra  infrastructure.DatastoreInfra
 		dnsDir string
 	)
 
@@ -50,6 +51,7 @@ var _ = Describe("DNS Policy", func() {
 		}
 		if etcd != nil {
 			etcd.Stop()
+			infra.Stop()
 		}
 	})
 
@@ -63,7 +65,7 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 	}
 
 	Describe("file with 1000 entries", func() {

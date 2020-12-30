@@ -52,6 +52,7 @@ import (
 
 type K8sDatastoreInfra struct {
 	etcdContainer        *containers.Container
+	bpfLog               *containers.Container
 	k8sApiContainer      *containers.Container
 	k8sControllerManager *containers.Container
 
@@ -135,17 +136,27 @@ func GetK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 			ginkgo.Fail(fmt.Sprintf("Previous test didn't clean up the infra: %s", K8sInfra.runningTest))
 		}
 		K8sInfra.EnsureReady()
-		K8sInfra.runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
+		K8sInfra.PerTestSetup()
 		return K8sInfra, nil
 	}
 
 	var err error
 	K8sInfra, err = setupK8sDatastoreInfra()
 	if err == nil {
-		K8sInfra.runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
+		K8sInfra.PerTestSetup()
 	}
 
 	return K8sInfra, err
+}
+
+func (kds *K8sDatastoreInfra) PerTestSetup() {
+	kds.runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
+
+	// In BPF mode, start BPF logging.
+	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+		kds.bpfLog = containers.Run("bpf-log", containers.RunOpts{AutoRemove: true}, "--privileged",
+			"calico/bpftool:v5.3-amd64", "/bpftool", "prog", "tracelog")
+	}
 }
 
 func runK8sApiserver(etcdIp string) *containers.Container {
@@ -436,11 +447,14 @@ func (kds *K8sDatastoreInfra) EnsureReady() {
 }
 
 func (kds *K8sDatastoreInfra) Stop() {
-	// We don't actually stop the infra between tests because it's too expensive.
-	// Instead, mark all our resources for cleanup, but defer the cleanup until the
-	// start of the next test (this allows us to skip the cleanup if we happen to
-	// be the last test to run, which is a big win when manually running a single
-	// test for debugging.)
+	kds.bpfLog.Stop()
+
+	// We don't tear down and recreate the Kubernetes infra between tests because it's
+	// too expensive.  We don't even, immediately, clean up any resources that may
+	// have been left behind by the test that has just finished.  Instead, mark all
+	// our resources for cleanup, but defer the cleanup until the start of the next
+	// test (this allows us to skip the cleanup if we happen to be the last test to
+	// run, which is a big win when manually running a single test for debugging.)
 	log.Info("K8sDatastoreInfra told to stop, deferring cleanup...")
 	kds.needsCleanup = true
 	kds.runningTest = ""

@@ -39,13 +39,20 @@ type mockCollector struct{}
 
 func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return nil }
 
-func (_ *mockCollector) SubscribeToNflog() {}
-
-func (_ *mockCollector) Start() {}
+func (_ *mockCollector) Start() error { return nil }
 
 func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {}
 
 func (_ *mockCollector) SetDNSLogReporter(reporter collector.DNSLogReporterInterface) {}
+
+func (_ *mockCollector) LogL7(hd *proto.HTTPData, data *collector.Data, tuple collector.Tuple, httpDataCount int) {
+}
+
+func (_ *mockCollector) SetL7LogReporter(reporter collector.L7LogReporterInterface) {}
+
+func (_ *mockCollector) SetPacketInfoReader(collector.PacketInfoReader) {}
+
+func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

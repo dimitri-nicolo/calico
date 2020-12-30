@@ -221,8 +221,15 @@ func (c V6CIDR) AsBinary() string {
 	}
 	return ipInBinary[0 : c.prefix+4]
 }
+
 func FromString(s string) Addr {
 	return FromNetIP(net.ParseIP(s))
+}
+
+// Parses an IP or CIDR string and returns the IP.
+func FromIPOrCIDRString(s string) Addr {
+	parts := strings.Split(s, "/")
+	return FromNetIP(net.ParseIP(parts[0]))
 }
 
 func FromNetIP(netIP net.IP) Addr {

@@ -22,6 +22,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	windataplane "github.com/projectcalico/felix/dataplane/windows"
@@ -34,7 +35,8 @@ func StartDataplaneDriver(configParams *config.Config,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
 	childExitedRestartCallback func(),
-	k8sClientSet *kubernetes.Clientset) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+	k8sClientSet *kubernetes.Clientset,
+	_ *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	log.Info("Using Windows dataplane driver.")
 
 	dpConfig := windataplane.Config{
