@@ -485,3 +485,10 @@ func PerfEventOpenTracepoint(id int, progFd int) (int, error) {
 	}
 	return int(efd), nil
 }
+
+func PerfEventDisableTracepoint(fd int) error {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), C.PERF_EVENT_IOC_DISABLE, 0); err != 0 {
+		return fmt.Errorf("error disabling perf event: %v", err)
+	}
+	return syscall.Close(fd)
+}

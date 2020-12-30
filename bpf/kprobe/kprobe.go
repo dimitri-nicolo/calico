@@ -31,6 +31,35 @@ const (
 	kprobeEventsFileName = "/sys/kernel/debug/tracing/kprobe_events"
 )
 
+var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
+var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
+
+type kprobeFDs struct {
+	progFD       bpf.ProgFD
+	tracePointFD int
+}
+
+type bpfKprobe struct {
+	logLevel   string
+	protov4Map bpf.Map
+	evnt       events.Events
+	fdMap      map[string]kprobeFDs
+}
+
+func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
+	v4Map := MapProtov4(mc)
+	err := v4Map.EnsureExists()
+	if err != nil {
+		return nil
+	}
+	return &bpfKprobe{
+		logLevel:   logLevel,
+		evnt:       evnt,
+		protov4Map: v4Map,
+		fdMap:      make(map[string]kprobeFDs),
+	}
+}
+
 func progFileName(protocol, logLevel string) string {
 	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
@@ -39,27 +68,25 @@ func progFileName(protocol, logLevel string) string {
 	return fmt.Sprintf("%s_%s_kprobe.o", protocol, logLevel)
 }
 
-func AttachTCPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
-	var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
-	err := installKprobe(logLevel, "tcp", tcpFns, protov4Map, evnt.Map())
+func (k *bpfKprobe) AttachTCPv4() error {
+	err := k.installKprobe("tcp", tcpFns)
 	if err != nil {
 		return fmt.Errorf("error installing tcp v4 kprobes")
 	}
 	return nil
 }
 
-func AttachUDPv4(logLevel string, evnt events.Events, protov4Map bpf.Map) error {
-	var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
-	err := installKprobe(logLevel, "udp", udpFns, protov4Map, evnt.Map())
+func (k *bpfKprobe) AttachUDPv4() error {
+	err := k.installKprobe("udp", udpFns)
 	if err != nil {
 		return fmt.Errorf("error installing udp v4 kprobes")
 	}
 	return nil
 }
 
-func installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) error {
-	filename := path.Join(bpf.ObjectDir, progFileName(protocol, logLevel))
-	loader, err := elf.NewLoaderFromFile(filename, maps...)
+func (k *bpfKprobe) installKprobe(protocol string, fns []string) error {
+	filename := path.Join(bpf.ObjectDir, progFileName(protocol, k.logLevel))
+	loader, err := elf.NewLoaderFromFile(filename, k.evnt.Map(), k.protov4Map)
 	if err != nil {
 		fmt.Errorf("error reading elf file")
 	}
@@ -77,7 +104,7 @@ func installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) err
 		if err != nil {
 			return err
 		}
-		err = attachKprobe(progFd, fn)
+		err = k.attachKprobe(progFd, fn)
 		if err != nil {
 			return fmt.Errorf("error attaching kprobe to fn %s :%w", fn, err)
 		}
@@ -85,7 +112,8 @@ func installKprobe(logLevel, protocol string, fns []string, maps ...bpf.Map) err
 	return nil
 }
 
-func attachKprobe(progFd bpf.ProgFD, fn string) error {
+func (k *bpfKprobe) attachKprobe(progFd bpf.ProgFD, fn string) error {
+	var fd kprobeFDs
 	kprobeIdFile := fmt.Sprintf("/sys/kernel/debug/tracing/events/kprobes/p%s/id", fn)
 	kbytes, err := ioutil.ReadFile(kprobeIdFile)
 	if err != nil {
@@ -112,9 +140,50 @@ func attachKprobe(progFd bpf.ProgFD, fn string) error {
 	if err != nil {
 		return fmt.Errorf("not a proper kprobe id :%w", err)
 	}
-	_, err = bpf.PerfEventOpenTracepoint(kprobeId, int(progFd))
+	tfd, err := bpf.PerfEventOpenTracepoint(kprobeId, int(progFd))
 	if err != nil {
 		return fmt.Errorf("failed to attach kprobe to %s", fn)
+	}
+	fd.progFD = progFd
+	fd.tracePointFD = tfd
+	k.fdMap[fn] = fd
+	return nil
+}
+
+func (k *bpfKprobe) disableKprobe(fn string) error {
+	err := bpf.PerfEventDisableTracepoint(k.fdMap[fn].tracePointFD)
+	if err != nil {
+		return fmt.Errorf("Error disabling perf event")
+	}
+	syscall.Close(int(k.fdMap[fn].progFD))
+	f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		return fmt.Errorf("cannot open kprobe_events: %v", err)
+	}
+	defer f.Close()
+	cmd := fmt.Sprintf("-:p%s\n", fn)
+	if _, err = f.WriteString(cmd); err != nil {
+		return fmt.Errorf("cannot write %q to kprobe_events: %v", cmd, err)
+	}
+	return nil
+}
+
+func (k *bpfKprobe) DetachTCPv4() error {
+	for _, fn := range tcpFns {
+		err := k.disableKprobe(fn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (k *bpfKprobe) DetachUDPv4() error {
+	for _, fn := range udpFns {
+		err := k.disableKprobe(fn)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
