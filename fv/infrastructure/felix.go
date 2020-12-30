@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -34,6 +35,8 @@ import (
 	"github.com/projectcalico/felix/fv/tcpdump"
 	"github.com/projectcalico/felix/fv/utils"
 )
+
+var atomicCounter uint32
 
 var cwLogDir = os.Getenv("FV_CWLOGDIR")
 
@@ -269,7 +272,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	// AWS API.  Whether logs are actually generated, at all, still depends on
 	// FELIX_CLOUDWATCHLOGSREPORTERENABLED; tests that want that should call
 	// EnableCloudWatchLogs().
-	uniqueName := fmt.Sprintf("%d-%d", os.Getpid(), containers.NextContainerIndex())
+	uniqueName := fmt.Sprintf("%d-%d-%d", id, os.Getpid(), int(atomic.AddUint32(&atomicCounter, 1)))
 	cwlFile := "cwl-" + uniqueName + "-felixfv.txt"
 	args = append(args,
 		"-e", "FELIX_DEBUGCLOUDWATCHLOGSFILE=/cwlogs/"+cwlFile,
