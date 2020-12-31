@@ -741,8 +741,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 
 	})
 
-	Context("CloudWatch and File flow logs", func() {
-
+	cloudAndFile := func(flowLogsOutput string) {
 		BeforeEach(func() {
 			opts.EnableCloudWatchLogs()
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
@@ -766,8 +765,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -780,8 +778,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -794,8 +791,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -808,8 +804,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -822,8 +817,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -836,8 +830,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -850,8 +843,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
@@ -864,11 +856,15 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 
 			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-				checkFlowLogs("file")
+				checkFlowLogs(flowLogsOutput)
 			})
 		})
 
+	}
+
+	Context("CloudWatch and File flow logs", func() {
+		Context("CloudWatch output", func() { cloudAndFile("cloudwatch") })
+		Context("File output", func() { cloudAndFile("file") })
 	})
 
 	Context("File flow logs only", func() {
