@@ -478,7 +478,7 @@ configRetry:
 		// Everybody who wanted to tweak the dpStatsCollector had a go, we can start it now!
 		if err := dpStatsCollector.Start(); err != nil {
 			// XXX we should panic once all dataplanes expect the collector to run.
-			log.WithError(err).Error("Stats collector did not start.")
+			log.WithError(err).Panic("Stats collector did not start.")
 		}
 	}
 

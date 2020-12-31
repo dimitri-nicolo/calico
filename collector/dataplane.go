@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"fmt"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 )
@@ -24,6 +26,11 @@ type PacketInfo struct {
 	RuleHits     []RuleHit
 }
 
+func (pkt PacketInfo) String() string {
+	return fmt.Sprintf("Tuple: {%s}, PreDNATTuple: {%s}, IsDNAT: %t, Direction: %s, RuleHits: %+v",
+		&pkt.Tuple, &pkt.PreDNATTuple, pkt.IsDNAT, pkt.Direction, pkt.RuleHits)
+}
+
 // PacketInfoReader is an interface for a reader that consumes information
 // from dataplane and converts it to the format needed by colelctor
 type PacketInfoReader interface {
@@ -37,6 +44,10 @@ type ConntrackCounters struct {
 	Bytes   int
 }
 
+func (c ConntrackCounters) String() string {
+	return fmt.Sprintf("Packets: %d, Bytes :%d", c.Packets, c.Bytes)
+}
+
 // ConntrackInfo is information about a connection from the dataplane.
 type ConntrackInfo struct {
 	Tuple         Tuple
@@ -45,6 +56,11 @@ type ConntrackInfo struct {
 	Expired       bool
 	Counters      ConntrackCounters
 	ReplyCounters ConntrackCounters
+}
+
+func (ct ConntrackInfo) String() string {
+	return fmt.Sprintf("Tuple: {%s}, PreDNATTuple: {%s}, IsDNAT: %t, Expired: %t, Counters: {%s}, ReplyCounters {%s}",
+		&ct.Tuple, &ct.PreDNATTuple, ct.IsDNAT, ct.Expired, ct.Counters, ct.ReplyCounters)
 }
 
 // ConntrackInfoReader is an interafce that provides information from conntrack.

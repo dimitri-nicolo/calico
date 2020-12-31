@@ -819,7 +819,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			bpfRTMgr.setHostIPUpdatesCallBack(kp.OnHostIPsUpdate)
 			bpfRTMgr.setRoutesCallBacks(kp.OnRouteUpdate, kp.OnRouteDelete)
 			conntrackScanner.AddUnlocked(conntrack.NewStaleNATScanner(kp))
-			conntrackScanner.Start()
 		} else {
 			log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 		}
@@ -837,6 +836,26 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				log.WithError(err).Warn("Failed to detach connect-time load balancer. Ignoring.")
 			}
 		}
+
+		if config.Collector != nil {
+			policyEventListener := events.NewCollectorPolicyListener(config.LookupsCache)
+			bpfEventPoller.Register(events.TypePolicyVerdict, policyEventListener.EventHandler)
+
+			collectorPacketInfoReader = policyEventListener
+
+			conntrackInfoReader := conntrack.NewInfoReader(
+				config.BPFConntrackTimeouts,
+				config.BPFNodePortDSREnabled,
+				nil,
+			)
+			// We must add the collectorConntrackInfoReader before
+			// conntrack.LivenessScanner as we want to see expired connections and the
+			// liveness scanner would remove them for us.
+			conntrackScanner.AddFirstUnlocked(conntrackInfoReader)
+			collectorConntrackInfoReader = conntrackInfoReader
+		}
+
+		conntrackScanner.Start()
 	}
 
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,

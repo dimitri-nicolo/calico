@@ -179,7 +179,7 @@ func NewValueNormal(created, lastSeen time.Duration, flags uint8, legA, legB Leg
 	initValue(&v, created, lastSeen, TypeNormal, flags)
 
 	copy(v[24:36], legA.AsBytes())
-	copy(v[36:48], legA.AsBytes())
+	copy(v[36:48], legB.AsBytes())
 
 	return v
 }
@@ -205,7 +205,7 @@ func NewValueNATReverse(created, lastSeen time.Duration, flags uint8, legA, legB
 	initValue(&v, created, lastSeen, TypeNATReverse, flags)
 
 	copy(v[24:36], legA.AsBytes())
-	copy(v[36:48], legA.AsBytes())
+	copy(v[36:48], legB.AsBytes())
 
 	copy(v[48:52], origIP.To4())
 	binary.LittleEndian.PutUint16(v[52:54], origPort)

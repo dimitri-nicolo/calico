@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
@@ -93,7 +94,9 @@ var (
 // Flow logs have little to do with the backend, and these tests are relatively slow, so
 // better to run with one backend only.  etcdv3 is easier because we create a fresh
 // datastore for every test and so don't need to worry about cleaning resources up.
-var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+
+	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 
 	var (
 		infra             infrastructure.DatastoreInfra
@@ -236,14 +239,18 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		_, err = client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		// Wait for felix to see and program that host endpoint.
-		hostEndpointProgrammed := func() bool {
-			out, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
-			Expect(err).NotTo(HaveOccurred())
-			return (strings.Count(out, "cali-thfw-eth0") > 0)
+		if !bpfEnabled {
+			// Wait for felix to see and program that host endpoint.
+			hostEndpointProgrammed := func() bool {
+				out, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				return (strings.Count(out, "cali-thfw-eth0") > 0)
+			}
+			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected HostEndpoint iptables rules to appear")
+		} else {
+			time.Sleep(3 * time.Second)
 		}
-		Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
-			"Expected HostEndpoint iptables rules to appear")
 
 		// Describe the connectivity that we now expect.
 		cc = &connectivity.Checker{}
@@ -263,9 +270,14 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		cc.CheckConnectivity()
 		cc.CheckConnectivity()
 
-		// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
-		// 10% leeway over the polling jitter of 10%)
-		time.Sleep(6 * time.Second)
+		if bpfEnabled {
+			// Make sure that conntrack scanning ticks at least once
+			time.Sleep(3 * conntrack.ScanPeriod)
+		} else {
+			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// 10% leeway over the polling jitter of 10%)
+			time.Sleep(6 * time.Second)
+		}
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
@@ -475,17 +487,33 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; source %s; flow 2: %v", source.Name, err))
 					}
 				}
-				err = flowTester.CheckFlow(
-					"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
-					"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
-					metrics.NoService, 3, 1,
-					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
-						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; flow hep: %v", err))
+
+				if !bpfEnabled {
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
+						"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
+						metrics.NoService, 3, 1,
+						[]metrics.ExpectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
+						})
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; flow hep: %v", err))
+					}
+				} else {
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
+						"net - - pvt", felixes[1].IP,
+						metrics.NoService, 3, 1,
+						[]metrics.ExpectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{},
+						})
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; flow net pvt: %v", err))
+					}
 				}
+
 				if networkSetIPsSupported {
 					err = flowTester.CheckFlow(
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
@@ -533,17 +561,33 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; source %s; flow 2: %v", source.Name, err))
 					}
 				}
-				err = flowTester.CheckFlow(
-					"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
-					"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
-					metrics.NoService, 1, 3,
-					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
-						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; hep: %v", err))
+
+				if !bpfEnabled {
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
+						"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
+						metrics.NoService, 1, 3,
+						[]metrics.ExpectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
+						})
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; hep: %v", err))
+					}
+				} else {
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
+						"net - - pvt", felixes[1].IP,
+						metrics.NoService, 1, 3,
+						[]metrics.ExpectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{}, // ""
+						})
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; net pvt: %v", err))
+					}
 				}
+
 				if networkSetIPsSupported {
 					err = flowTester.CheckFlow(
 						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
@@ -589,17 +633,39 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
 				}
-				err = flowTester.CheckFlow(
-					"wep default - wl-host1-*", "",
-					"hep - - "+felixes[1].Hostname, "",
-					metrics.NoService, 1, 3,
-					[]metrics.ExpectedPolicy{
+
+				var policies []metrics.ExpectedPolicy
+
+				if bpfEnabled {
+					policies = []metrics.ExpectedPolicy{
+						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						{},
+					}
+				} else {
+					policies = []metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
-					})
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; hep: %v", err))
+					}
 				}
+
+				if !bpfEnabled {
+					err = flowTester.CheckFlow(
+						"wep default - wl-host1-*", "",
+						"hep - - "+felixes[1].Hostname, "",
+						metrics.NoService, 1, 3, policies)
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; hep: %v", err))
+					}
+				} else {
+					err = flowTester.CheckFlow(
+						"wep default - wl-host1-*", "",
+						"net - - pvt", "",
+						metrics.NoService, 1, 3, policies)
+					if err != nil {
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; net pvt: %v", err))
+					}
+				}
+
 				if networkSetIPsSupported {
 					err = flowTester.CheckFlow(
 						"wep default - wl-host2-*", "",
@@ -686,7 +752,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		BeforeEach(func() {
 			opts.EnableCloudWatchLogs()
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			if !bpfEnabled {
+				opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			}
 
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
@@ -745,7 +813,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		BeforeEach(func() {
 			opts.EnableCloudWatchLogs()
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			if !bpfEnabled {
+				opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			}
 
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
@@ -878,7 +948,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			opts.EnableFlowLogsFile()
 
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			if !bpfEnabled {
+				opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			}
 		})
 
 		It("should get expected flow logs", func() {
