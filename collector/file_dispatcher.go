@@ -112,6 +112,21 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 				return err
 			}
 		}
+	case []*L7Log:
+		log.Debug("Dispatching L7 logs to file")
+		for _, l := range fl {
+			b, err := json.Marshal(l)
+			if err != nil {
+				// This indicates a bug, not a runtime error since we should always
+				// be able to serialize.
+				log.WithError(err).
+					WithField("L7Log", l).
+					Panic("unable to serialize L7 log to JSON")
+			}
+			if err = writeLog(b); err != nil {
+				return err
+			}
+		}
 	default:
 		log.Panic("Unexpected kind of log in file dispatcher")
 	}
