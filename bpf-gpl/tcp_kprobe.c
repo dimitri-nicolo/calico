@@ -70,7 +70,10 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 				} else {
 					val->rxBytes += bytes;
 				}
-				ret = cali_v4_stats_update_elem(&key, val, BPF_F_LOCK);
+				v4_value.timestamp = ts;
+				v4_value.txBytes = val->txBytes;
+				v4_value.rxBytes = val->rxBytes;
+				ret = cali_v4_stats_update_elem(&key, &v4_value, 0);
 				if (ret < 0) {
 					goto error;
 				}

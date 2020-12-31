@@ -81,14 +81,9 @@ int get_kernel_version_from_uname() {
 }
 
 int get_kernel_version(int attempt) {
-	static int vdso_version = -1;
 	switch(attempt) {
 	case 0:
-		if (vdso_version > -1) {
-			return vdso_version;
-		}
-		vdso_version = get_version_from_vdso();
-		return vdso_version;
+		return get_version_from_vdso();
 	case 1:
 		return get_kernel_version_from_uname();
 	default:
