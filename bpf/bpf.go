@@ -2247,3 +2247,16 @@ func KTimeNanos() int64 {
 	}
 	return ts.Nano()
 }
+
+func getKernelVersionFromHdr() int {
+	bytes, err := ioutil.ReadFile("/usr/include/linux/version.h")
+	if err != nil {
+		return 0
+	}
+	str := strings.Split(string(bytes), "\n")
+	version, err := strconv.Atoi(strings.Split(strings.TrimSuffix(str[0], " "), " ")[2])
+	if err != nil {
+		return 0
+	}
+	return version
+}

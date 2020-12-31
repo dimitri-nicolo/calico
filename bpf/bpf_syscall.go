@@ -128,14 +128,31 @@ func tryLoadBPFProgramFromInsns(insns asm.Insns, license string, logSize uint, p
 
 	var logBuf unsafe.Pointer
 	var logLevel uint
+	var fd uintptr
+	var errno syscall.Errno
+	kernVersion := 0
 	if logSize > 0 {
 		logLevel = 1
 		logBuf = C.malloc((C.size_t)(logSize))
 		defer C.free(logBuf)
 	}
-
-	C.bpf_attr_setup_load_prog(bpfAttr, (C.uint)(progType), C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf)
-	fd, _, errno := unix.Syscall(unix.SYS_BPF, unix.BPF_PROG_LOAD, uintptr(unsafe.Pointer(bpfAttr)), C.sizeof_union_bpf_attr)
+	if progType == unix.BPF_PROG_TYPE_KPROBE {
+		for retries := 0; retries < 3; retries++ {
+			if retries == 2 {
+				kernVersion = getKernelVersionFromHdr()
+			} else {
+				kernVersion = int(C.get_kernel_version(C.int(retries)))
+			}
+			C.bpf_attr_setup_load_prog(bpfAttr, (C.uint)(progType), C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf, (C.uint)(kernVersion))
+			fd, _, errno = unix.Syscall(unix.SYS_BPF, unix.BPF_PROG_LOAD, uintptr(unsafe.Pointer(bpfAttr)), C.sizeof_union_bpf_attr)
+			if errno == 0 {
+				break
+			}
+		}
+	} else {
+		C.bpf_attr_setup_load_prog(bpfAttr, (C.uint)(progType), C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf, (C.uint)(kernVersion))
+		fd, _, errno = unix.Syscall(unix.SYS_BPF, unix.BPF_PROG_LOAD, uintptr(unsafe.Pointer(bpfAttr)), C.sizeof_union_bpf_attr)
+	}
 
 	if errno != 0 && errno != unix.ENOSPC /* log buffer too small */ {
 		goLog := strings.TrimSpace(C.GoString((*C.char)(logBuf)))

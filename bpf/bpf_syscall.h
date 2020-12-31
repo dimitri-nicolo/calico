@@ -20,6 +20,82 @@
 #include <sys/syscall.h>
 #include <linux/perf_event.h>
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include <limits.h>
+#include <elf.h>
+#include <sys/auxv.h>
+#include <sys/utsname.h>
+#include <stdio.h>
+
+#ifndef ELF_BITS
+# if ULONG_MAX > 0xffffffffUL
+#  define ELF_BITS 64
+# else
+#  define ELF_BITS 32
+# endif
+#endif
+
+#define ELF_BITS_XFORM2(bits, x) Elf##bits##_##x
+#define ELF_BITS_XFORM(bits, x) ELF_BITS_XFORM2(bits, x)
+#define ELF(x) ELF_BITS_XFORM(ELF_BITS, x)
+
+int get_version_from_vdso() {
+	__u64 base = getauxval(AT_SYSINFO_EHDR);
+	ELF(Ehdr) *hdr = (ELF(Ehdr)*)base;
+	for (int i = 0; i < hdr->e_shnum; i++) {
+		ELF(Shdr) *shdr = (ELF(Shdr)*)(base + hdr->e_shoff + (i*hdr->e_shentsize));
+		if (shdr->sh_type == SHT_NOTE) {
+			char *ptr = (char *)(base + shdr->sh_offset);
+			char *end = ptr + shdr->sh_size;
+			while (ptr < end) {
+				ELF(Nhdr) *nhdr = (ELF(Nhdr)*)ptr;
+				ptr += sizeof (*nhdr);
+
+				char *name = ptr;
+				ptr += (nhdr->n_namesz + sizeof(ELF(Word)) - 1) & -(sizeof(ELF(Word)));
+
+				char *desc = ptr;
+				ptr += (nhdr->n_descsz + sizeof(ELF(Word)) - 1) & -(sizeof(ELF(Word)));
+
+				if ((nhdr->n_namesz > 5 && !memcmp(name, "Linux", 5)) &&
+					nhdr->n_descsz == 4 && !nhdr->n_type) {
+					return *(int*)desc;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+int get_kernel_version_from_uname() {
+	int version, subversion, patchlevel;
+	struct utsname utsn;
+	if (uname(&utsn))
+		return 0;
+	if (sscanf(utsn.release, "%d.%d.%d",
+		&version, &subversion, &patchlevel) != 3)
+		return 0;
+	return (version << 16) + (subversion << 8) + patchlevel;
+}
+
+int get_kernel_version(int attempt) {
+	static int vdso_version = -1;
+	switch(attempt) {
+	case 0:
+		if (vdso_version > -1) {
+			return vdso_version;
+		}
+		vdso_version = get_version_from_vdso();
+		return vdso_version;
+	case 1:
+		return get_kernel_version_from_uname();
+	default:
+		return 0;
+	}
+}
+
 union bpf_attr *bpf_attr_alloc() {
    union bpf_attr *attr = malloc(sizeof(union bpf_attr));
    memset(attr, 0, sizeof(union bpf_attr));
@@ -75,7 +151,7 @@ void bpf_attr_setup_map_elem_for_delete(union bpf_attr *attr, __u32 map_fd, void
 
 // bpf_attr_setup_load_prog sets up the bpf_attr union for use with BPF_PROG_LOAD.
 // A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_count, void *insns, char *license, __u32 log_level, __u32 log_size, void *log_buf) {
+void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_count, void *insns, char *license, __u32 log_level, __u32 log_size, void *log_buf, __u32 kern_version) {
    attr->prog_type = prog_type;
    attr->insn_cnt = insn_count;
    attr->insns = (__u64)(unsigned long)insns;
@@ -83,7 +159,7 @@ void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_
    attr->log_level = log_level;
    attr->log_size = log_size;
    attr->log_buf = (__u64)(unsigned long)log_buf;
-   attr->kern_version = 0;
+   attr->kern_version = kern_version;
    if (log_size > 0) ((char *)log_buf)[0] = 0;
 }
 
