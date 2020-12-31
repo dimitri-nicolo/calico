@@ -68,6 +68,22 @@ func (lc *LookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID {
 	return lc.polCache.GetRuleIDFromNFLOGPrefix(prefix)
 }
 
+// GetRuleIDFromID64 returns the RuleID associated with the supplied 64bit ID.
+func (lc *LookupsCache) GetRuleIDFromID64(id uint64) *RuleID {
+	return lc.polCache.GetRuleIDFromID64(id)
+}
+
+// GetID64FromNFLOGPrefix returns the 64 bit ID associated with the supplied NFLOG prefix.
+func (lc *LookupsCache) GetID64FromNFLOGPrefix(prefix [64]byte) uint64 {
+	return lc.polCache.GetID64FromNFLOGPrefix(prefix)
+}
+
+// EnableID64 make the PolicyLookupsCache to also generate 64bit IDs for each
+// NFLOGPrefix. Once turned on, cannot be turned off.
+func (lc *LookupsCache) EnableID64() {
+	lc.polCache.SetUseIDs()
+}
+
 // GetServiceFromPreNATDest looks up a service by cluster/external IP.
 func (lc *LookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNAT int, proto int) (proxy.ServicePortName, bool) {
 	return lc.svcCache.GetServiceFromPreDNATDest(ipPreDNAT, portPreDNAT, proto)
@@ -101,7 +117,7 @@ func (lc *LookupsCache) SetMockData(
 		if rid == nil {
 			delete(lc.polCache.nflogPrefixHash, id)
 		} else {
-			lc.polCache.nflogPrefixHash[id] = rid
+			lc.polCache.nflogPrefixHash[id] = pcRuleID{ruleID: rid}
 		}
 	}
 	for k, v := range ns {

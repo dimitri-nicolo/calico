@@ -689,6 +689,8 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 			result.nat_port = v->orig_port;
 		} else {
 			CALI_CT_DEBUG("Hit! NAT REV entry but not connection opener: ESTABLISHED.\n");
+			result.nat_ip = v->orig_ip;
+			result.nat_port = v->orig_port;
 			result.rc =	CALI_CT_ESTABLISHED;
 		}
 		break;

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -10,19 +10,30 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+type pcRuleID struct {
+	ruleID *RuleID
+	id64   uint64
+}
+
 // PolicyLookupsCache provides an API to lookup policy to NFLOG prefix mapping.
 // To do this, the PolicyLookupsCache hooks into the calculation graph
 // by handling callbacks for policy and profile updates.
 type PolicyLookupsCache struct {
+	lock sync.RWMutex
+
 	nflogPrefixesPolicy  map[model.PolicyKey]set.Set
 	nflogPrefixesProfile map[model.ProfileRulesKey]set.Set
-	nflogPrefixHash      map[[64]byte]*RuleID
-	nflogMutex           sync.RWMutex
+	nflogPrefixHash      map[[64]byte]pcRuleID
+
+	useIDs         bool
+	ids            *idalloc.IDAllocator
+	id2nflogPrefix map[uint64]*RuleID
 
 	tierRefs map[string]int
 }
@@ -31,9 +42,10 @@ func NewPolicyLookupsCache() *PolicyLookupsCache {
 	pc := &PolicyLookupsCache{
 		nflogPrefixesPolicy:  map[model.PolicyKey]set.Set{},
 		nflogPrefixesProfile: map[model.ProfileRulesKey]set.Set{},
-		nflogPrefixHash:      map[[64]byte]*RuleID{},
-		nflogMutex:           sync.RWMutex{},
+		nflogPrefixHash:      map[[64]byte]pcRuleID{},
 		tierRefs:             map[string]int{},
+		ids:                  idalloc.New(),
+		id2nflogPrefix:       make(map[uint64]*RuleID),
 	}
 	// Add NFLog mappings for the no-profile match.
 	pc.addNFLogPrefixEntry(
@@ -46,6 +58,15 @@ func NewPolicyLookupsCache() *PolicyLookupsCache {
 		NewRuleID("", "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny),
 	)
 	return pc
+}
+
+// SetUseIDs enables generating unique uint64 IDs for each inserted prefix after
+// the cache is created. This allows a user that is created later to flip the
+// behavior. Once it is turned on, it cannot be turned off.
+func (pc *PolicyLookupsCache) SetUseIDs() {
+	pc.lock.Lock()
+	defer pc.lock.Unlock()
+	pc.useIDs = true
 }
 
 func (pc *PolicyLookupsCache) OnPolicyActive(key model.PolicyKey, policy *model.Policy) {
@@ -68,17 +89,32 @@ func (pc *PolicyLookupsCache) OnProfileInactive(key model.ProfileRulesKey) {
 func (pc *PolicyLookupsCache) addNFLogPrefixEntry(prefix string, ruleID *RuleID) {
 	var bph [64]byte
 	copy(bph[:], []byte(prefix[:]))
-	pc.nflogMutex.Lock()
-	defer pc.nflogMutex.Unlock()
-	pc.nflogPrefixHash[bph] = ruleID
+	pc.lock.Lock()
+	defer pc.lock.Unlock()
+
+	id := pcRuleID{
+		ruleID: ruleID,
+	}
+
+	if pc.useIDs {
+		id.id64 = pc.ids.GetOrAlloc(prefix)
+		pc.id2nflogPrefix[id.id64] = ruleID
+	}
+
+	pc.nflogPrefixHash[bph] = id
 }
 
 // deleteNFLogPrefixEntry deletes a single NFLOG prefix entry to our internal cache.
 func (pc *PolicyLookupsCache) deleteNFLogPrefixEntry(prefix string) {
 	var bph [64]byte
 	copy(bph[:], []byte(prefix[:]))
-	pc.nflogMutex.Lock()
-	defer pc.nflogMutex.Unlock()
+	pc.lock.Lock()
+	defer pc.lock.Unlock()
+	if pc.useIDs {
+		id64 := pc.nflogPrefixHash[bph].id64
+		pc.ids.ReleaseUintID(id64)
+		delete(pc.id2nflogPrefix, id64)
+	}
 	delete(pc.nflogPrefixHash, bph)
 }
 
@@ -257,9 +293,24 @@ func (pc *PolicyLookupsCache) deleteRulesNFLOGPrefixes(prefixes set.Set) {
 
 // GetRuleIDFromNFLOGPrefix returns the RuleID associated with the supplied NFLOG prefix.
 func (pc *PolicyLookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID {
-	pc.nflogMutex.RLock()
-	defer pc.nflogMutex.RUnlock()
-	return pc.nflogPrefixHash[prefix]
+	pc.lock.RLock()
+	defer pc.lock.RUnlock()
+	return pc.nflogPrefixHash[prefix].ruleID
+}
+
+// GetRuleIDFromID64 returns the RuleID associated with the supplied 64bit ID.
+func (pc *PolicyLookupsCache) GetRuleIDFromID64(id uint64) *RuleID {
+	pc.lock.RLock()
+	defer pc.lock.RUnlock()
+	return pc.id2nflogPrefix[id]
+}
+
+// GetID64FromNFLOGPrefix returns the 64 bit ID associated with the supplied NFLOG prefix.
+func (pc *PolicyLookupsCache) GetID64FromNFLOGPrefix(prefix [64]byte) uint64 {
+	pc.lock.RLock()
+	defer pc.lock.RUnlock()
+
+	return pc.nflogPrefixHash[prefix].id64
 }
 
 const (
@@ -537,11 +588,11 @@ func deconstructPolicyName(name string) (string, string, string, error) {
 // Dump returns the contents of important structures in the LookupManager used for
 // logging purposes in the test code. This should not be used in any mainline code.
 func (pc *PolicyLookupsCache) Dump() string {
-	pc.nflogMutex.RLock()
-	defer pc.nflogMutex.RUnlock()
+	pc.lock.RLock()
+	defer pc.lock.RUnlock()
 	lines := []string{}
 	for p, r := range pc.nflogPrefixHash {
-		lines = append(lines, string(p[:])+": "+r.String())
+		lines = append(lines, string(p[:])+": "+r.ruleID.String())
 	}
 	return strings.Join(lines, "\n")
 }

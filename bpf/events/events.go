@@ -3,7 +3,9 @@
 package events
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
 	"runtime"
 	"unsafe"
 
@@ -11,6 +13,7 @@ import (
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/perf"
+	"github.com/projectcalico/felix/bpf/state"
 )
 
 // Type defines the type of constants used for determining the type of an event.
@@ -21,10 +24,13 @@ const (
 	MaxCPUs = 512
 
 	// TypeLostEvents does not carry any other information except the number of lost events.
-	TypeLostEvents Type = iota
+	TypeLostEvents Type = 0
 	//TypeProtoStatsV4 protocol v4 stats
 	TypeProtoStatsV4 Type = 1
-	TypeDNSEvent     Type = 2
+	// TypeDNSEvent reports information on DNS packets
+	TypeDNSEvent Type = 2
+	// TypePolicyVerdict is emitted when a policy program reachs a verdict
+	TypePolicyVerdict Type = 3
 )
 
 // Event represents the common denominator of all events
@@ -168,4 +174,54 @@ type ErrLostEvents int
 
 func (e ErrLostEvents) Error() string {
 	return fmt.Sprintf("%d lost events", e)
+}
+
+// ParsePolicyVerdict converts a bpf event data and converts to go structure
+func ParsePolicyVerdict(data []byte) PolicyVerdict {
+	fl := PolicyVerdict{
+		SrcAddr:        net.IP(data[0:4]),
+		DstAddr:        net.IP(data[4:8]),
+		PostNATDstAddr: net.IP(data[8:12]),
+		NATTunSrcAddr:  net.IP(data[12:16]),
+		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[16:20])),
+		SrcPort:        binary.LittleEndian.Uint16(data[20:22]),
+		DstPort:        binary.LittleEndian.Uint16(data[22:24]),
+		PostNATDstPort: binary.LittleEndian.Uint16(data[24:26]),
+		IPProto:        uint8(data[26]),
+		RulesHit:       binary.LittleEndian.Uint32(data[28:32]),
+	}
+
+	if fl.RulesHit > state.MaxRuleIDs {
+		fl.RulesHit = state.MaxRuleIDs
+	}
+
+	off := 32
+	for i := 0; i < int(fl.RulesHit); i++ {
+		fl.RuleIDs[i] = binary.LittleEndian.Uint64(data[off : off+8])
+		off += 8
+	}
+
+	return fl
+}
+
+// PolicyVerdict describes the policy verdict event and must match the initial part of
+// bpf/state.State after the space reserved for the event header.
+type PolicyVerdict struct {
+	SrcAddr        net.IP
+	DstAddr        net.IP
+	PostNATDstAddr net.IP
+	NATTunSrcAddr  net.IP
+	PolicyRC       state.PolicyResult
+	SrcPort        uint16
+	DstPort        uint16
+	PostNATDstPort uint16
+	IPProto        uint8
+	pad8           uint8
+	RulesHit       uint32
+	RuleIDs        [state.MaxRuleIDs]uint64
+}
+
+// Type return TypePolicyVerdict
+func (PolicyVerdict) Type() Type {
+	return TypePolicyVerdict
 }

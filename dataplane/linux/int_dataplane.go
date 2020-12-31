@@ -732,6 +732,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Panic("Failed to create ARP BPF map.")
 		}
 
+		config.LookupsCache.EnableID64()
+
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		dp.RegisterManager(newBPFEndpointManager(
 			config.BPFLogLevel,
@@ -748,6 +750,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ruleRenderer,
 			filterTableV4,
 			dp.reportHealth,
+			config.LookupsCache,
 		))
 
 		// Pre-create the NAT maps so that later operations can assume access.
