@@ -21,7 +21,7 @@ endif
 image: imagetag $(BUILD_IMAGE)
 
 $(BUILD_IMAGE):
-	docker build --pull -t $(BUILD_IMAGE):$(IMAGETAG) .
+	docker build --pull -f $(DOCKERFILE) -t $(BUILD_IMAGE):$(IMAGETAG) .
 
 push: imagetag confirm
 	docker tag $(BUILD_IMAGE):$(IMAGETAG) $(PUSH_IMAGE):$(VERSION)

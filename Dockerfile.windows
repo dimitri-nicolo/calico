@@ -81,7 +81,7 @@ COPY splunk-config.sh /bin/
 COPY sumo-environment.sh /bin/
 COPY sumo-config.sh /bin/
 COPY ee_entrypoint.sh /bin/
-COPY eks/bin/eks-log-forwarder-startup /bin/
+COPY eks/bin/eks-log-forwarder-startup.exe /bin/
 
 RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_dns" \

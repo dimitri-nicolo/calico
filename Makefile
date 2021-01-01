@@ -1,5 +1,6 @@
 # Set repo config.
 BUILD_IMAGE?=tigera/fluentd
+DOCKERFILE?=Dockerfile
 SRC_DIR?=$(PWD)
 # Overwrite configuration, e.g. GCR_REPO:=gcr.io/tigera-dev/experimental/gaurav
 
@@ -7,8 +8,8 @@ default: ci
 
 -include makefile.tigera
 
-# Setup custom target
-.PHONY: ci cd
+# Setup custom targets
+.PHONY: ci cd windows
 ## build cloudwatch plugin initializer
 eks-log-forwarder-startup: eks/bin/eks-log-forwarder-startup
 eks/bin/eks-log-forwarder-startup:
@@ -36,3 +37,6 @@ ci: eks-log-forwarder-startup test image
 cd: eks-log-forwarder-startup image
 	$(MAKE) push VERSION=$(IMAGETAG)
 	$(MAKE) push VERSION=$(shell git describe --tags --dirty --always --long --abbrev=12)
+
+windows: eks-log-forwarder-startup
+	$(MAKE) image BUILD_IMAGE=$(BUILD_IMAGE)-windows DOCKERFILE=Dockerfile.windows IMAGETAG=$(IMAGETAG)
