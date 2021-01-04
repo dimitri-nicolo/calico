@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -930,10 +930,9 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 		if len(directionalPols) > 0 {
 
 			polTier := polprog.Tier{
-				Name:       tier.Name,
-				DropRuleID: m.endOfTierDropID(dir, tier.Name),
-				PassRuleID: m.endOfTierPassID(dir, tier.Name),
-				Policies:   make([]polprog.Policy, len(directionalPols)),
+				Name:      tier.Name,
+				EndRuleID: m.endOfTierDropID(dir, tier.Name),
+				Policies:  make([]polprog.Policy, len(directionalPols)),
 			}
 
 			for i, polName := range directionalPols {

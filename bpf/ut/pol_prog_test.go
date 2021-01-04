@@ -1193,8 +1193,8 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 					NoProfileMatchID: 0xdead,
 					Tiers: []polprog.Tier{
 						{
-							Name:       "first",
-							DropRuleID: 0xbeef,
+							Name:      "first",
+							EndRuleID: 0xbeef,
 							Policies: []polprog.Policy{
 								{
 									Name: "TCP pass",
@@ -1224,8 +1224,8 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 							},
 						},
 						{
-							Name:       "tcp",
-							DropRuleID: 0xdeadbeef,
+							Name:      "tcp",
+							EndRuleID: 0xdeadbeef,
 							Policies: []polprog.Policy{
 								{
 									Name: "TCP ports",
@@ -1262,8 +1262,8 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 							},
 						},
 						{
-							Name:       "http",
-							DropRuleID: 0xbad,
+							Name:      "http",
+							EndRuleID: 0xbad,
 							Policies: []polprog.Policy{
 								{
 									Name: "TCP ports",

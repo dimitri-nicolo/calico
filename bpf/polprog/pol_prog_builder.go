@@ -122,10 +122,9 @@ type Policy struct {
 }
 
 type Tier struct {
-	Name       string
-	DropRuleID RuleMatchID
-	PassRuleID RuleMatchID
-	Policies   []Policy
+	Name      string
+	EndRuleID RuleMatchID
+	Policies  []Policy
 }
 
 type Rules struct {
@@ -290,7 +289,7 @@ func (p *Builder) writeRules(rules Rules) {
 
 		p.writeRule(Rule{
 			Rule:    &proto.Rule{Action: "deny"},
-			MatchID: tier.DropRuleID, // XXX may be pass
+			MatchID: tier.EndRuleID,
 		}, endOfTierLabel)
 		p.b.LabelNextInsn(endOfTierLabel)
 	}

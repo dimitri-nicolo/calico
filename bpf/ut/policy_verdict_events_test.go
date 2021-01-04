@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,8 +53,8 @@ func TestPolicyVerdictEvents(t *testing.T) {
 			accept: true,
 			policy: polprog.Rules{
 				Tiers: []polprog.Tier{{
-					Name:       "base tier",
-					DropRuleID: 0xdead0000beef0000,
+					Name:      "base tier",
+					EndRuleID: 0xdead0000beef0000,
 					Policies: []polprog.Policy{{
 						Name:  "allow all",
 						Rules: []polprog.Rule{{Rule: &proto.Rule{Action: "Allow"}, MatchID: 0x1234}},
@@ -70,8 +70,8 @@ func TestPolicyVerdictEvents(t *testing.T) {
 			policy: polprog.Rules{
 				Tiers: []polprog.Tier{
 					{
-						Name:       "base tier",
-						DropRuleID: 0xdead0000beef0000,
+						Name:      "base tier",
+						EndRuleID: 0xdead0000beef0000,
 						Policies: []polprog.Policy{
 							{
 								Name: "pass udp",
@@ -92,8 +92,8 @@ func TestPolicyVerdictEvents(t *testing.T) {
 						},
 					},
 					{
-						Name:       "allow udp",
-						DropRuleID: 0xdeadbeef,
+						Name:      "allow udp",
+						EndRuleID: 0xdeadbeef,
 						Policies: []polprog.Policy{
 							{
 								Name: "allow udp",
