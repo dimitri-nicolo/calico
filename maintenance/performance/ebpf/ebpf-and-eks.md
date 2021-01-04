@@ -53,17 +53,11 @@ eBPF mode.  Below, we give a couple of options for how to get the cluster runnin
 <label:Bottlerocket,active:true>
 <%
 
-<<<<<<< HEAD:maintenance/performance/ebpf/ebpf-and-eks.md
 #### Option 1: Bottlerocket
 
-The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's
-[Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a
-container-optimised OS with an emphasis on security; it has a recent enough kernel to use eBPF mode.
-=======
 The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's 
 [Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a 
 container-optimised OS with an emphasis on security; it has a version of the kernel which is compatible with eBPF mode.
->>>>>>> os/master:maintenance/ebpf/ebpf-and-eks.md
 
 * To create a 2-node test cluster with a Bottlerocket node group, run the command below.  It is important to use the config-file
   approach to creating a cluster in order to set the additional IAM permissions for Bottlerocket.
