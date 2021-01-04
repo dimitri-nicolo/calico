@@ -203,6 +203,9 @@ func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
 	timestampBytes := (*[unsafe.Sizeof(timestampNS)]byte)((unsafe.Pointer)(&timestampNS))
 	consumed := copy(timestampBytes[:], e.Data())
 	s.msgChannel <- nfnetlink.DataWithTimestamp{
+		// We currently only capture DNS packets on workload interfaces, and the packet data
+		// on those interfaces always begins with an Ethernet header that we don't want.
+		// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
 		Data:      e.Data()[consumed+14:],
 		Timestamp: &timestampNS,
 	}
@@ -794,7 +797,7 @@ func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp *uint64) 
 	// Check for any request timestamps that are now more than 10 seconds old, and discard those
 	// so that our map occupancy does not increase over time.
 	for id, requestTime := range s.requestTimestamp {
-		if (*timestamp)-requestTime > 10*1000*1000*1000 {
+		if time.Duration((*timestamp)-requestTime) > 10*time.Second {
 			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
 			delete(s.requestTimestamp, id)
 		}

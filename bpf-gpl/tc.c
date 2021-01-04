@@ -690,8 +690,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		CALI_DEBUG("Now have dst IP 0x%x port %d\n", bpf_ntohl(dst_ip), bpf_ntohs(dst_port));
 
 		// Compare dst IP and port against 'ipset' for trusted DNS servers.
-		union ip4_set_lpm_key sip;
-		__builtin_memset(&sip, 0, sizeof(sip));
+		union ip4_set_lpm_key sip = {};
 		sip.ip.mask = 32 /* IP prefix length */ + 64 /* Match ID */ + 16 /* Match port */ + 8 /* Match protocol */;
 		sip.ip.set_id = bpf_cpu_to_be64(TRUSTED_DNS_SERVERS_ID);
 		sip.ip.addr = dst_ip;
@@ -729,7 +728,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			CALI_DEBUG("Dst IP/port are trusted for DNS\n");
 			// Store 'trusted DNS connection' status in conntrack entry.
 			state->ct_result.flags |= CALI_CT_FLAG_TRUST_DNS;
-			// Emit perf event to pass (presumed) DNS request up to Felix
+			// Emit event to pass (presumed) DNS request up to Felix
 			// userspace.
 			CALI_DEBUG("report probable DNS request\n");
 			calico_report_dns(skb);

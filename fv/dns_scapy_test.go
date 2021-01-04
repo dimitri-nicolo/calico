@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -105,24 +106,11 @@ func makeBPFConntrackEntry(aIP, bIP net.IP, trusted bool) (conntrack.Key, conntr
 	a2bLeg := conntrack.Leg{Opener: true}
 	b2aLeg := conntrack.Leg{Opener: false}
 
-	// BPF conntrack map convention is for the first IP to be the smaller one.
+	// BPF conntrack map convention is for the first IP to be the smaller one.  Bizarrely, the
+	// "smaller" comparison here is with little endian byte ordering.
 	aBytes := []byte(aIP.To4())
 	bBytes := []byte(bIP.To4())
-	aLessThanB := false
-	if aBytes[3] == bBytes[3] {
-		if aBytes[2] == bBytes[2] {
-			if aBytes[1] == bBytes[1] {
-				aLessThanB = aBytes[0] < bBytes[0]
-			} else {
-				aLessThanB = aBytes[1] < bBytes[1]
-			}
-		} else {
-			aLessThanB = aBytes[2] < bBytes[2]
-		}
-	} else {
-		aLessThanB = aBytes[3] < bBytes[3]
-	}
-	if !aLessThanB {
+	if binary.LittleEndian.Uint32(aBytes) > binary.LittleEndian.Uint32(bBytes) {
 		aIP, bIP = bIP, aIP
 		a2bLeg, b2aLeg = b2aLeg, a2bLeg
 	}
@@ -138,7 +126,7 @@ func makeBPFConntrackEntry(aIP, bIP net.IP, trusted bool) (conntrack.Key, conntr
 	// DNS server is not trusted.
 	flags := uint8(0)
 	if trusted {
-		flags = 16
+		flags = conntrack.FlagTrustDNS
 	}
 
 	return conntrack.NewKey(17 /* UDP */, aIP, 53, bIP, 53), conntrack.NewValueNormal(now, now, flags, a2bLeg, b2aLeg)

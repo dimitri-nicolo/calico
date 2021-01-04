@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -143,9 +143,12 @@ const (
 	TypeNATForward
 	TypeNATReverse
 
+	// Must match CALI_CT_FLAG... definitions in conntrack.h.
 	FlagNATOut    uint8 = (1 << 0)
 	FlagNATFwdDsr uint8 = (1 << 1)
 	FlagNATNPFwd  uint8 = (1 << 2)
+	FlagSkipFIB   uint8 = (1 << 3)
+	FlagTrustDNS  uint8 = (1 << 4)
 )
 
 func (e Value) ReverseNATKey() Key {
