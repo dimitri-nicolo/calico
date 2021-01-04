@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -148,4 +148,20 @@ func GetDistributionName() string {
 	s := string(kernVersion)
 
 	return GetDistFromString(s)
+}
+
+func GetKernelVersionCode() int {
+	reader, err := GetKernelVersionReader()
+	if err != nil {
+		log.WithError(err).Warn("Failed to get kernel version reader")
+		return 0
+	}
+	version, err := GetKernelVersion(reader)
+	if err != nil {
+		log.WithError(err).Warn("Failed to get kernel version from reader")
+		return 0
+	}
+	versionSlice := version.versionSlice
+	return ((versionSlice[0] << 16) + (versionSlice[1] << 8) + versionSlice[2])
+
 }

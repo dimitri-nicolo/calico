@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -70,13 +70,6 @@ static int CALI_BPF_INLINE udp_collect_stats(struct pt_regs *ctx, struct sock_co
 				} else {
 					val->rxBytes += bytes;
 				}
-				v4_value.timestamp = ts;
-				v4_value.txBytes = val->txBytes;
-				v4_value.rxBytes = val->rxBytes;
-				ret = cali_v4_stats_update_elem(&key, &v4_value, 0);
-				if (ret < 0) {
-					goto error;
-				}
 			}
 			return 0;
 		}
@@ -85,6 +78,9 @@ error:
 	return -1;
 }
 
+/* The kernel functions udp_sendmsg and udp_recvmsg are serialized.
+ * Hence we should not be running into any race condition.
+ */
 __attribute__((section("kprobe/udp_recvmsg")))
 int kprobe__udp_recvmsg(struct pt_regs *ctx)
 {

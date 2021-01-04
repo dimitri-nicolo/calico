@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2256,17 +2256,4 @@ func KTimeNanos() int64 {
 		log.WithError(err).Panic("Failed to read system clock")
 	}
 	return ts.Nano()
-}
-
-func getKernelVersionFromHdr() int {
-	bytes, err := ioutil.ReadFile("/usr/include/linux/version.h")
-	if err != nil {
-		return 0
-	}
-	str := strings.Split(string(bytes), "\n")
-	version, err := strconv.Atoi(strings.Split(strings.TrimSuffix(str[0], " "), " ")[2])
-	if err != nil {
-		return 0
-	}
-	return version
 }
