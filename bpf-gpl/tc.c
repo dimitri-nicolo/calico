@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -374,7 +374,7 @@ deny:
 
 static CALI_BPF_INLINE void calico_report_dns(struct __sk_buff *skb)
 {
-	int plen = skb->data_end - skb->data;
+	int plen = skb->len;
 	struct perf_event_timestamp_header hdr;
 	__builtin_memset(&hdr, 0, sizeof(hdr));
 	hdr.h.type = BPF_EVENT_DNS;
