@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@ static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 	event.proto = proto;
 	event.saddr = bpf_ntohl(saddr);
 	event.daddr = bpf_ntohl(daddr);
-	event.sport = bpf_ntohs(sport);
+	event.sport = sport;
 	event.dport = bpf_ntohs(dport);
 	event.txBytes = txBytes;
 	event.rxBytes = rxBytes;
