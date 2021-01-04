@@ -80,6 +80,7 @@ if __name__ == '__main__':
     password = os.getenv("PASSWORD", None)
     es_ca_cert = os.getenv("ES_CA_CERT", None)
     kb_ca_cert = os.getenv("KB_CA_CERT", es_ca_cert) # Fall back on default behavior where kb and es use the same cert.
+    elastic_license_type = os.getenv("ELASTIC_LICENSE_TYPE", None)
     os.environ["CLUSTER_NAME"] = os.getenv("CLUSTER_NAME", DEFAULT_CLUSTER) # set default cluster name if needed
 
     elastic = RESTClient(elastic_url, username=user, password=password, ca_cert=es_ca_cert, verify=verify)
@@ -95,8 +96,9 @@ if __name__ == '__main__':
     with open("./config.yaml") as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
     try:
-        for l in cfg["elasticsearch"]:
-            elastic.exec(l[0], os.path.expandvars(l[1]), l[2])
+        if elastic_license_type != 'basic':
+            for l in cfg["elasticsearch"]:
+                elastic.exec(l[0], os.path.expandvars(l[1]), l[2])
         for l in cfg["kibana"]:
             kibana.exec(l[0], os.path.expandvars(l[1]), l[2])
     except RESTError as e:
