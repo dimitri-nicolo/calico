@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/windows-networking/pkg/etw"
 	"github.com/tigera/windows-networking/pkg/vfpctrl"
 
 	"github.com/projectcalico/felix/calc"
@@ -29,11 +30,11 @@ type VFPInfoReader struct {
 
 	luc *calc.LookupsCache
 
-	eventAggrC chan *vfpctrl.EventAggregate
+	eventAggrC chan *etw.EventAggregate
 	eventDoneC chan struct{}
 
-	etw *vfpctrl.EtwOperations
-	vfp *vfpctrl.VfpOperations
+	etwOps *etw.EtwOperations
+	vfpOps *vfpctrl.VfpOperations
 
 	packetInfoC chan PacketInfo
 
@@ -42,19 +43,19 @@ type VFPInfoReader struct {
 }
 
 func NewVFPInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *VFPInfoReader {
-	etw, err := vfpctrl.NewEtwOperations([]int{vfpctrl.VFP_EVENT_ID_ENDPOINT_ACL}, windowsCollectorETWSession)
+	etwOps, err := etw.NewEtwOperations([]int{etw.VFP_EVENT_ID_ENDPOINT_ACL}, windowsCollectorETWSession)
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to create ETW operations")
 	}
 
-	vfp := vfpctrl.NewVfpOperations()
+	vfpOps := vfpctrl.NewVfpOperations()
 
 	return &VFPInfoReader{
 		stopC:          make(chan struct{}),
 		luc:            lookupsCache,
-		etw:            etw,
-		vfp:            vfp,
-		eventAggrC:     make(chan *vfpctrl.EventAggregate, 1000),
+		etwOps:         etwOps,
+		vfpOps:         vfpOps,
+		eventAggrC:     make(chan *etw.EventAggregate, 1000),
 		eventDoneC:     make(chan struct{}, 1),
 		packetInfoC:    make(chan PacketInfo, 1000),
 		ticker:         jitter.NewTicker(period, period/10),
@@ -98,12 +99,12 @@ func (r *VFPInfoReader) ConntrackInfoChan() <-chan ConntrackInfo {
 
 // VfpEventChan returns the channel to send down events consumed by VFP.
 func (r *VFPInfoReader) VfpEventChan() chan<- interface{} {
-	return r.vfp.EventChan()
+	return r.vfpOps.EventChan()
 }
 
 // Subscribe subscribes the reader to the ETW event stream.
 func (r *VFPInfoReader) subscribe() error {
-	return r.etw.Subscribe(r.eventAggrC, r.eventDoneC)
+	return r.etwOps.Subscribe(r.eventAggrC, r.eventDoneC)
 }
 
 func (r *VFPInfoReader) run() {
@@ -117,15 +118,18 @@ func (r *VFPInfoReader) run() {
 				r.packetInfoC <- *infoPointer
 			}
 		case <-r.ticker.Channel():
-			r.vfp.ListFlows(r.handleFlowEntry)
-		case endpointEvent := <-r.vfp.EventChan():
-			r.vfp.HandleEndpointEvent(endpointEvent)
+			r.vfpOps.ListFlows(r.handleFlowEntry)
+		case endpointEvent := <-r.vfpOps.EventChan():
+			r.vfpOps.HandleEndpointEvent(endpointEvent)
 		}
 	}
 }
 
-func (r *VFPInfoReader) convertEventAggrPkt(ea *vfpctrl.EventAggregate) (*PacketInfo, error) {
+func (r *VFPInfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*PacketInfo, error) {
 	var dir rules.RuleDir
+
+	log.Infof("Collector: Handle EventAggr tuple %s rule <%s> count <%d> %#v",
+		ea.Event.TupleString(), ea.Count, ea.Event)
 
 	tuple, err := extractTupleFromEventAggr(ea)
 	if err != nil {
@@ -140,9 +144,9 @@ func (r *VFPInfoReader) convertEventAggrPkt(ea *vfpctrl.EventAggregate) (*Packet
 	}
 
 	// Event could happen on an endpoint before we get a notification from Felix endpoint manager.
-	r.vfp.MayAddNewEndpoint(ea.Event.EndpointID())
+	r.vfpOps.MayAddNewEndpoint(ea.Event.EndpointID())
 
-	ruleName, err := r.vfp.GetRuleFriendlyNameForEvent(ea.Event)
+	ruleName, err := r.vfpOps.GetRuleFriendlyNameForEvent(ea.Event.EndpointID(), ea.Event.RuleID(), ea.Event.IsIngress())
 	if err != nil {
 		log.WithError(err).Warnf("failed to get rule name from ETW event")
 		return nil, err
@@ -219,6 +223,9 @@ func (r *VFPInfoReader) handleFlowEntry(fe *vfpctrl.FlowEntry) {
 		return
 	}
 
+	log.Infof("Collector: Handle FlowEntry tuple %s, IN<%d,%d> OUT <%d,%d> Flow %#v",
+		fe.TupleID, fe.PktsIn, fe.BytesIn, fe.PktsOut, fe.BytesOut, fe)
+
 	select {
 	case r.conntrackInfoC <- *ctInfoPointer:
 	case <-r.stopC:
@@ -229,14 +236,14 @@ func extractPrefixStrFromRuleName(name string) string {
 	// Windows dataplane programs hns rules with two types of format for rule name.
 	// prefix---sequence number   This is used for policy rules.
 	// prefix                     This is used for default deny rules.
-	strs := strings.Split(name, "---")
+	strs := strings.Split(name, rules.WindowsHnsRuleNameDelimeter)
 	if len(strs) != 2 {
 		return name
 	}
 	return strs[0]
 }
 
-func extractTupleFromEventAggr(ea *vfpctrl.EventAggregate) (*Tuple, error) {
+func extractTupleFromEventAggr(ea *etw.EventAggregate) (*Tuple, error) {
 	tuple, err := ea.Event.Tuple()
 	if err != nil {
 		return nil, err

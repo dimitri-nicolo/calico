@@ -523,7 +523,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 					newPolicy := *aclPolicy
 					// Give each sub-rule a unique ID.
 					if s.supportedFeatures.Acl.AclRuleId {
-						newPolicy.Id = fmt.Sprintf("%s---%d", prefixStr, i)
+						newPolicy.Id = fmt.Sprintf("%s%s%d", prefixStr, rules.WindowsHnsRuleNameDelimeter, i)
 						i++
 					}
 					//assign ports chunks in aclpolicy
