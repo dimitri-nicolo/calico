@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -198,7 +198,7 @@ func (s *domainInfoStore) Start() {
 }
 
 func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
-	log.Info("DNS packet from BPF")
+	log.Infof("DNS packet from BPF: %v", e)
 	var timestampNS uint64
 	timestampBytes := (*[unsafe.Sizeof(timestampNS)]byte)((unsafe.Pointer)(&timestampNS))
 	consumed := copy(timestampBytes[:], e.Data())
