@@ -107,6 +107,7 @@ spec:
 #### Selector
 
 {% include content/selectors.md %}
+{% include content/selector-scopes.md %}
 
 #### Ports
 

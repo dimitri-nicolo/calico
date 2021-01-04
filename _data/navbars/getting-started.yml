@@ -67,13 +67,15 @@ section:
     path: /getting-started/windows-calico/quickstart
   - title: Basic policy demo
     path: /getting-started/windows-calico/demo
-  - title: Standard install
-    path: /getting-started/windows-calico/standard-install/
+  - title: Kubernetes
+    path: /getting-started/windows-calico/kubernetes/
     section:
     - title: Requirements
-      path: /getting-started/windows-calico/requirements
+      path: /getting-started/windows-calico/kubernetes/requirements
     - title: Install Calico Enterprise for Windows
-      path: /getting-started/windows-calico/standard-install/standard
+      path: /getting-started/windows-calico/kubernetes/standard
+    - title: Install Calico Enterprise for Windows on Rancher RKE
+      path: /getting-started/windows-calico/kubernetes/rancher
   - title: Create kubeconfig for Windows nodes
     path: /getting-started/windows-calico/kubeconfig
   - title: Start and stop Calico Enterprise for Windows services

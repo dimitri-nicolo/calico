@@ -1,15 +1,23 @@
+Entity rules specify the attributes of the source or destination of a packet that must match for the rule as a whole 
+to match.  Packets are matched on their IPs and ports.  If the rule contains multiple match criteria (for example, an 
+IP and a port) then all match criteria must match for the rule as a whole to match.
+
+[Selectors](#selector) offer a powerful way to select the source or destination to match based on labels.  
+Selectors can match [workload endpoints]({{ site.baseurl }}/reference/resources/workloadendpoint), host endpoint and 
+([namespaced]({{ site.baseurl }}/reference/resources/networkset) or
+[global]({{ site.baseurl }}/reference/resources/globalnetworkset)) network sets.  
+
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
-| nets                  | Match packets with IP in any of the listed CIDRs. | List of valid IPv4 CIDRs or list of valid IPv6 CIDRs  | list of cidrs |
-| notNets               | Negative match on CIDRs. Match packets with IP not in any of the listed CIDRs. | List of valid IPv4 CIDRs or list of valid IPv6 CIDRs  | list of cidrs |
+| nets                  | Match packets with IP in any of the listed CIDRs. | List of valid IPv4 CIDRs or list of valid IPv6 CIDRs (IPv4 and IPv6 CIDRs shouldn't be mixed in one rule)  | list of cidrs |
+| notNets               | Negative match on CIDRs. Match packets with IP not in any of the listed CIDRs. | List of valid IPv4 CIDRs or list of valid IPv6 CIDRs (IPv4 and IPv6 CIDRs shouldn't be mixed in one rule) | list of cidrs |
 | selector    | Positive match on selected endpoints. If a `namespaceSelector` is also defined, the set of endpoints this applies to is limited to the endpoints in the selected namespaces. | Valid selector | [selector](#selector) | |
 | notSelector | Negative match on selected endpoints. If a `namespaceSelector` is also defined, the set of endpoints this applies to is limited to the endpoints in the selected namespaces. | Valid selector | [selector](#selector) | |
-| namespaceSelector | Positive match on selected namespaces. If specified, only workload endpoints in the selected Kubernetes namespaces are matched. Matches namespaces based on the labels that have been applied to the namespaces. Defines the context that selectors will apply to, if not defined then selectors apply to the NetworkPolicy's namespace. Match a specific namespace by name using the `projectcalico.org/name` label. Select the non-namespaced resources like GlobalNetworkSet(s), host endpoints to which this policy applies by using `global()` selector. | Valid selector | [selector](#selector) | |
+| namespaceSelector | Positive match on selected namespaces. If specified, only workload endpoints in the selected Kubernetes namespaces are matched. Matches namespaces based on the labels that have been applied to the namespaces. Defines the scope that selectors will apply to, if not defined then selectors apply to the NetworkPolicy's namespace. Match a specific namespace by name using the `projectcalico.org/name` label. Select the non-namespaced resources like GlobalNetworkSet(s), host endpoints to which this policy applies by using `global()` selector. | Valid selector | [selector](#selector) | |
 | ports | Positive match on the specified ports | | list of [ports](#ports) | |
 | domains | Positive match on [domain names](#exact-and-wildcard-domain-names). | List of [exact or wildcard domain names](#exact-and-wildcard-domain-names) | list of strings |
 | notPorts | Negative match on the specified ports | | list of [ports](#ports) | |
 | serviceAccounts | Match endpoints running under service accounts. If a `namespaceSelector` is also defined, the set of service accounts this applies to is limited to the service accounts in the selected namespaces. | | [ServiceAccountMatch](#serviceaccountmatch) | |
-
 
 > **NOTE**: You cannot mix IPv4 and IPv6 CIDRs in a single rule using `nets` or `notNets`. If you need to match both, create 2 rules.
 

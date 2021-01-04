@@ -1,9 +1,6 @@
 ---
 layout: null
 ---
-{% helm --execute templates/kdd-crds.yaml %}
-datastore: kubernetes
-network: calico
-typha:
-  enabled: true
+{% helm tigera-operator --execute templates/crds/calico/calico-crds.yaml %}
+# todo: fix bug where empty helm chart doesn't render
 {% endhelm %}

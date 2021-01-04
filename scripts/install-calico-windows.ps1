@@ -107,7 +107,7 @@ function GetPlatformType()
     # AKS
     $hnsNetwork = Get-HnsNetwork | ? Name -EQ azure
     if ($hnsNetwork.name -EQ "azure") {
-        return ("azure")
+        return ("aks")
     }
 
     # EKS
@@ -117,9 +117,25 @@ function GetPlatformType()
     }
 
     # EC2
-    $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    if (-Not [string]::IsNullOrEmpty($awsNodeName)) {
+    $restError = $null
+    Try {
+        $awsNodeName=Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
+    } Catch {
+        $restError = $_
+    }
+    if ($restError -eq $null) {
         return ("ec2")
+    }
+
+    # GCE
+    $restError = $null
+    Try {
+        $gceNodeName = Invoke-RestMethod -UseBasicParsing -Headers @{"Metadata-Flavor"="Google"} "http://metadata.google.internal/computeMetadata/v1/instance/hostname" -ErrorAction Ignore
+    } Catch {
+        $restError = $_
+    }
+    if ($restError -eq $null) {
+        return ("gce")
     }
 
     return ("bare-metal")
@@ -296,7 +312,7 @@ Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
 Write-Host "Unzip {{installName}} release..."
 Expand-Archive $CalicoZip c:\
 
-Write-Host "Setup Calico for Windows..."
+Write-Host "Setup {{installName}}..."
 SetConfigParameters -OldString '<your datastore type>' -NewString $Datastore
 SetConfigParameters -OldString '<your etcd endpoints>' -NewString "$EtcdEndpoints"
 
@@ -311,7 +327,7 @@ SetConfigParameters -OldString '<your service cidr>' -NewString $ServiceCidr
 SetConfigParameters -OldString '<your dns server ips>' -NewString $DNSServerIPs
 
 if ($platform -EQ "aks") {
-    Write-Host "Setup Calico for Windows for AKS..."
+    Write-Host "Setup {{installName}} for AKS..."
     $Backend="none"
     SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="none"'
     SetConfigParameters -OldString 'KUBE_NETWORK = "Calico.*"' -NewString 'KUBE_NETWORK = "azure.*"'
@@ -321,7 +337,7 @@ if ($platform -EQ "aks") {
 }
 if ($platform -EQ "eks") {
     $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    Write-Host "Setup Calico for Windows for EKS, node name $awsNodeName ..."
+    Write-Host "Setup {{installName}} for EKS, node name $awsNodeName ..."
     $Backend = "none"
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
@@ -333,9 +349,24 @@ if ($platform -EQ "eks") {
 }
 if ($platform -EQ "ec2") {
     $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    Write-Host "Setup Calico for Windows for AWS, node name $awsNodeName ..."
+    Write-Host "Setup {{installName}} for AWS, node name $awsNodeName ..."
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
+
+    $calicoNs = GetCalicoNamespace
+    GetCalicoKubeConfig -CalicoNamespace $calicoNs
+    $Backend = GetBackendType -CalicoNamespace $calicoNs
+
+    Write-Host "Backend networking is $Backend"
+    if ($Backend -EQ "bgp") {
+        SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="windows-bgp"'
+    }
+}
+if ($platform -EQ "gce") {
+    $gceNodeName = Invoke-RestMethod -UseBasicParsing -Headers @{"Metadata-Flavor"="Google"} "http://metadata.google.internal/computeMetadata/v1/instance/hostname" -ErrorAction Ignore
+    Write-Host "Setup {{installName}} for GCE, node name $gceNodeName ..."
+    $gceNodeNameQuote = """$gceNodeName"""
+    SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$gceNodeNameQuote"
 
     $calicoNs = GetCalicoNamespace
     GetCalicoKubeConfig -CalicoNamespace $calicoNs
@@ -358,7 +389,7 @@ if ($platform -EQ "bare-metal") {
 }
 
 if ($DownloadOnly -EQ "yes") {
-    Write-Host "Dowloaded Calico for Windows. Update c:\CalicoWindows\config.ps1 and run c:\CalicoWindows\install-calico.ps1"
+    Write-Host "Downloaded {{installName}}. Update c:\{{rootDir}}\config.ps1 and run c:\CalicoWindows\install-calico.ps1"
     Exit
 }
 

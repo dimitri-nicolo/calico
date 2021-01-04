@@ -106,9 +106,9 @@ One example is the VXLAN VNI setting. To change such parameters:
 - Drain the node of all pods
 - Delete the {{site.prodname}} HNS network:
 
-   ```
-   PS C:\> Import-Module {{site.rootDirWindows}}\libs\hns\hns.psm1
-   PS C:\> Get-HNSNetwork | ? Name -EQ "{{site.prodname}}" | Remove-HNSNetwork
+   ```powershell
+   Import-Module {{site.rootDirWindows}}\libs\hns\hns.psm1
+   Get-HNSNetwork | ? Name -EQ "{{site.prodname}}" | Remove-HNSNetwork
    ```
 - Update the configuration in `config.ps1`, run `uninstall-calico.ps1` and then `install-calico.ps1` to regenerate the CNI configuration.
 
@@ -185,4 +185,4 @@ Because of the way the Windows dataplane handles rules, the following limitation
 ### Next steps
 
 - [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
-- [Standard install]({{site.baseurl}}/getting-started/windows-calico/standard-install/standard)
+- [Standard install]({{site.baseurl}}/getting-started/windows-calico/kubernetes/standard)

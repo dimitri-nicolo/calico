@@ -95,7 +95,7 @@ sitemap: false
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>Multi-cluster management with multi-cloud federation</td>
+      <td>Multi cluster, multi-cloud & hybrid cloud networking</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>

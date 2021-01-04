@@ -121,6 +121,7 @@ for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host e
 #### Selector
 
 {% include content/selectors.md %}
+{% include content/selector-scopes.md %}
 
 #### Ports
 

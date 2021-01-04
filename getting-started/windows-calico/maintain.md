@@ -34,8 +34,8 @@ Because `config.ps1` is imported by the various component startup scripts, addit
 
 The `nssm` command supports changing a number of configuration options for the {{site.prodname}} services. For example, to adjust the maximum size of the Felix log file before it is rotated:
 
-```
-PS C:\... > nssm set TigeraFelix AppRotateBytes 1048576
+```powershell
+nssm set CalicoFelix AppRotateBytes 1048576
 ```
 
 #### Uninstall {{site.prodnameWindows}} from Windows nodes
@@ -45,8 +45,8 @@ The following steps removes {{site.prodnameWindows}} (for example to change conf
 1. Remove all pods from the Windows nodes.
 1. On each Windows node, run the uninstall script:
 
-   ```
-   PS {{site.rootDirWindows}} > .\uninstall-calico.ps1
+   ```powershell
+   {{site.rootDirWindows}}\uninstall-calico.ps1
    ```
    >**Note**: If you are uninstalling to change configuration, make sure that you run the uninstall script with the old configuration file.
    {: .alert .alert-info}
@@ -58,7 +58,7 @@ The following steps uninstall kubelet/kube-proxy services if they were installed
 1. Remove all pods from the Windows nodes.
 1. On each Windows node, run the uninstall script:
    ```
-   PS {{site.rootDirWindows}}\kubernetes > .\uninstall-kube-services.ps1
+   {{site.rootDirWindows}}\kubernetes\uninstall-kube-services.ps1
    ```
 
 1. If desired, delete the `{{site.rootDirWindows}}` directory.

@@ -1,5 +1,4 @@
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
-GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 IMAGES_FILE=
 JEKYLL_VERSION=4.0.0
@@ -481,7 +480,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 ###############################################################################
 # Utilities
 ###############################################################################
-HELM_RELEASE=helm-v2.16.3-linux-amd64.tar.gz
+HELM_RELEASE=helm-v2.17.0-linux-amd64.tar.gz
 # note: the tigera-secure-ee-core.tgz chart isn't a dependency of bin/helm, but
 # netlify calls 'make bin/helm' so we package it as part of that dependency here.
 bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
@@ -533,7 +532,7 @@ chart/%: _includes/charts/%/values.yaml
 
 # the non-operator to operator helm chart packages the v2.8 non-operator chart as a dependency.
 # here we grab the public chart at build time.
-NON_OPERATOR_CHART_VERSION=v2.8.3-1
+NON_OPERATOR_CHART_VERSION=v2.8.3-2
 _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz:
 	mkdir -p $(@D)
 	wget -O $@ https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-$(NON_OPERATOR_CHART_VERSION).tgz

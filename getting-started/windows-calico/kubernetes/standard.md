@@ -1,7 +1,7 @@
 ---
 title: Install Calico Enterprise for Windows
 description: Install Calico Enterprise for Windows to enable a workload-to-workload Zero Trust model.
-canonical_url: '/getting-started/windows-calico/standard-install/standard'
+canonical_url: '/getting-started/windows-calico/kubernetes/standard'
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
@@ -9,7 +9,7 @@ canonical_url: '/getting-started/windows-calico/standard-install/standard'
 
 ### Big picture
 
-Install {{site.prodnameWindows}} on Kubernetes clusters.
+Install {{site.prodnameWindows}} on Kubernetes clusters. The standard installation for {{site.prodnameWindows}} requires more time and expertise to configure. If you need to get started quickly, we recommend the [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
 
 ### Value
 
@@ -19,7 +19,7 @@ Extend your Kubernetes deployment to Windows environments.
 
 **Required**
 
-- Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/requirements)
+- Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/kubernetes/requirements)
 - You will need the {{site.prodnameWindows}} zip archive provided to you by your support representative.
 - If using {{site.prodname}} networking:
    - Copy the kubeconfig file (used by kubelet) to each Windows node to the file, `c:\k\config`.
@@ -96,7 +96,7 @@ A similar change may be needed for other Kubernetes services (such as `kube-dns`
 
 #### Prepare Windows nodes to join the Linux cluster
 
-On each Windows node, follow these step to prepare the Windows nodes to your the Kubernetes cluster. {% include open-new-window.html text='Microsoft guide' url='https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/adding-windows-nodes/' %}.
+On each Windows node, follow the steps below to configure `kubelet` and `kube-proxy` service.
 
 **Step 1: Configure kubelet**
 
@@ -129,12 +129,12 @@ In addition, it's important that `kubelet` is started after the vSwitch has been
 
 **AWS users**: Add the following argument to `kubelet`:
 
---hostname-override=<aws instance private DNS name> (and set the {{site.prodname}} nodename variable to match). In addition, you should add KubernetesCluster=<cluster-name> as a tag when creating your Windows instance.
+`--hostname-override=<aws instance private DNS name>` (and set the {{site.prodname}} nodename variable to match). In addition, you should add `KubernetesCluster=<cluster-name>` as a tag when creating your Windows instance.
 
 **As a quickstart**, the {{site.prodname}} package includes a sample script at `{{site.rootDirWindows}}\kubernetes\kubelet-service.ps1` that:
 
 - Waits for {{site.prodname}} to initialise the vSwitch
-- Atarts `kubelet` with
+- Starts `kubelet` with
   - CNI enabled
   - --hostname-override set to match {{site.prodname}}'s nodename
   - --node-ip set to the IP of the default vEthernet device
@@ -211,26 +211,26 @@ Follow the steps below on each Windows node to install Kubernetes and {{site.pro
 Install the RemoteAccess service using the following Powershell commands:
 
 ```powershell
-PS C:\> Install-WindowsFeature RemoteAccess
-PS C:\> Install-WindowsFeature RSAT-RemoteAccess-PowerShell
-PS C:\> Install-WindowsFeature Routing
+Install-WindowsFeature RemoteAccess
+Install-WindowsFeature RSAT-RemoteAccess-PowerShell
+Install-WindowsFeature Routing
 ```
 
 Then restart the computer:
 
 ```powershell
-PS C:\> Restart-Computer -Force
+Restart-Computer -Force
 ```
 
 before running:
 
 ```powershell
-PS C:\> Install-RemoteAccess -VpnType RoutingOnly
+Install-RemoteAccess -VpnType RoutingOnly
 ```
 Sometimes the remote access service fails to start automatically after install. To make sure it is running, execute the following command:
 
 ```powershell
-PS C:\> Start-Service RemoteAccess
+Start-Service RemoteAccess
 ```
 1. If using a non-{{site.prodname}} network plugin for networking, install and verify it now.
 2. Edit the install configuration file, `config.ps1` as follows:
@@ -274,18 +274,8 @@ PS C:\> Start-Service RemoteAccess
 1. Verify that the {{site.prodname}} services are running.
 
    ```powershell
-   PS C:\> Get-Service -Name CalicoNode
-
-   Status   Name               DisplayName
-   ------   ----               -----------
-   Running  CalicoNode         Calico Windows Startup
-
-
-   PS C:\> Get-Service -Name CalicoFelix
-
-   Status   Name               DisplayName
-   ------   ----               -----------
-   Running  CalicoFelix        Calico Windows Agent
+   Get-Service -Name CalicoNode
+   Get-Service -Name CalicoFelix
    ```
 
 ### Next steps

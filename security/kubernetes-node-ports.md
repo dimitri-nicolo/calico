@@ -98,7 +98,11 @@ metadata:
 spec:
   interfaceName: eth0
   node: node1
+  expectedIPs:
+  - INSERT_IP_HERE
 ```
+
+When creating each host endpoint, replace `INSERT_IP_HERE` with the IP address on eth0. The `expectedIPs` field is required so that any selectors within ingress or egress rules can properly match the host endpoint.
 
 #### Allow ingress traffic to specific node ports
 

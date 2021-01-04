@@ -1651,7 +1651,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -1840,7 +1840,7 @@ string
 </em>
 </td>
 <td>
-<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: <a href="https://api.my-ocp-domain.com:6443" data-proofer-ignore>https://api.my-ocp-domain.com:6443</a></p>
+<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: https://api.my-ocp-domain.com:6443</p>
 </td>
 </tr>
 </tbody>
@@ -2078,7 +2078,7 @@ int32
 <td>
 <em>(Optional)</em>
 <p>MTU specifies the maximum transmission unit to use on the pod network.
-Default: 1410</p>
+If not specified, Calico will perform MTU auto-detection based on the cluster network.</p>
 </td>
 </tr>
 <tr>
@@ -2725,6 +2725,18 @@ ProductVariant
 </td>
 <td>
 <p>Variant is the most recently observed installed variant - one of Calico or TigeraSecureEnterprise</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>mtu</code><br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>MTU is the most recently observed value for pod network MTU. This may be an explicitly
+configured value, or based on Calico&rsquo;s native auto-detetion.</p>
 </td>
 </tr>
 <tr>

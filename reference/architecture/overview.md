@@ -171,17 +171,6 @@ url='https://github.com/containernetworking/cni/blob/master/SPEC.md#network-conf
 
 ### kube-controllers
 
-**Main task**: Monitors the Kubernetes API and performs actions based on cluster state. [kube-controllers]({{site.baseurl}}/reference/kube-controllers/configuration).
-
-The `tigera/kube-controllers` container includes the following controllers:
-
-- Policy controller
-- Namespace controller
-- Serviceaccount controller
-- Workloadendpoint controller
-- Node controller
-- Federation controller
-
 
 ### Typha
 
@@ -192,7 +181,6 @@ Typha maintains a single datastore connection on behalf of all of its clients li
 ### calicoctl and calicoq
 
 **Main task**: Command line interface to create, read, update, and delete {{site.prodname}} objects. `calicoctl` command line is available on any host with network access to the {{site.prodname}} datastore as either a binary or a container. Requires separate installation. [calicoctl]({{site.baseurl}}/reference/calicoctl/), and [calicoq]({{site.baseurl}}/reference/calicoq/).
-
 
 ### Plugins for cloud orchestrators
 
