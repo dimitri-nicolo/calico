@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -785,6 +785,23 @@ var polProgramTests = []polProgramTest{
 			udpPkt("10.0.0.1:31245", "10.0.0.2:80")},
 		IPSets: map[string][]string{
 			"setA": {"11.0.0.0/8", "123.0.0.1/32"},
+		},
+	},
+	{
+		PolicyName: "allow to domain-derived or non-domain-derived IP set",
+		Policy: makeRulesSingleTier([]*proto.Rule{{
+			Action:            "Allow",
+			DstIpSetIds:       []string{"setA"},
+			DstDomainIpSetIds: []string{"setB"},
+		}}),
+		AllowedPackets: []packet{
+			udpPkt("10.0.0.2:12345", "123.0.0.1:1024"),
+			udpPkt("10.0.0.2:31245", "10.0.0.1:80")},
+		DroppedPackets: []packet{
+			tcpPkt("11.0.0.1:12345", "10.0.0.2:8080")},
+		IPSets: map[string][]string{
+			"setA": {"11.0.0.0/8", "123.0.0.1/32"},
+			"setB": {"10.0.0.1/32"},
 		},
 	},
 	{
