@@ -794,7 +794,7 @@ func TestVersionParse(t *testing.T) {
 		Expect(ver1.Compare(ver2)).To(Equal(test.expected))
 	}
 	ver := versionparse.MustParseVersion("4.15.1")
-	expectedVersionCode := (4 << 16) + (15 << 8) + 1
+	expectedVersionCode := 265985
 	versionCode := versionparse.ConvertKernelVersionToCode(ver)
 	Expect(versionCode).To(Equal(expectedVersionCode))
 }
