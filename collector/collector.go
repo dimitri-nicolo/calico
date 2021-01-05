@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -96,7 +97,7 @@ func (c *collector) Start() error {
 	}
 
 	go c.startStatsCollectionAndReporting()
-	setupStatsDumping(c.sigChan, c.config.StatsDumpFilePath, c.dumpLog)
+	c.setupStatsDumping()
 
 	if c.dnsLogReporter != nil {
 		c.dnsLogReporter.Start()

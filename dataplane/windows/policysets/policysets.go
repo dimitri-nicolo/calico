@@ -16,7 +16,6 @@ package policysets
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -274,27 +273,16 @@ func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.R
 // getRulePrefixStr calculates a prefix string for HNS rule ID.
 func getRulePrefixStr(policyId string, idx int, isInbound bool, action rules.RuleAction) string {
 	// Break policyId into prefix and policy name.
-	var compRegEx = regexp.MustCompile(`^(?P<prefix>\w+-)(?P<name>.+)`)
-	match := compRegEx.FindStringSubmatch(policyId)
-
-	vMap := make(map[string]string)
-	for i, name := range compRegEx.SubexpNames() {
-		if i > 0 && i <= len(match) {
-			vMap[name] = match[i]
+	owner := rules.RuleOwnerTypePolicy
+	policyName := strings.TrimPrefix(policyId, PolicyNamePrefix)
+	if policyId == policyName {
+		// Prefix is not a policy prefix
+		owner = rules.RuleOwnerTypeProfile
+		policyName = strings.TrimPrefix(policyId, ProfileNamePrefix)
+		if policyId == policyName {
+			log.WithField("policyId", policyId).Panic("Policy id with unknown prefix")
 		}
 	}
-
-	var owner rules.RuleOwnerType
-	switch vMap["prefix"] {
-	case PolicyNamePrefix:
-		owner = rules.RuleOwnerTypePolicy
-	case ProfileNamePrefix:
-		owner = rules.RuleOwnerTypeProfile
-	default:
-		log.WithField("policyId", policyId).Panic("Unknown policy id")
-	}
-
-	policyName := vMap["name"]
 	if len(policyName) == 0 {
 		log.WithField("policyId", policyId).Panic("Invalid policy name")
 	}
@@ -308,6 +296,14 @@ func getRulePrefixStr(policyId string, idx int, isInbound bool, action rules.Rul
 
 	prefixStr := rules.CalculateNFLOGPrefixStr(action, owner, dir, idx, policyName)
 	return prefixStr
+}
+
+// getHnsRuleID formats an ID used as HNS rule id which consists of prefix, ruleName and index.
+func getHnsRuleID(prefix string, ruleName string, idx int) string {
+	if len(ruleName) == 0 {
+		return fmt.Sprintf("%s%s%d", prefix, rules.WindowsHnsRuleNameDelimeter, idx)
+	}
+	return fmt.Sprintf("%s%s%s%s%d", prefix, rules.WindowsHnsRuleNameDelimeter, ruleName, rules.WindowsHnsRuleNameDelimeter, idx)
 }
 
 // protoRuleToHnsRules converts a proto rule into equivalent hns rules (one or more resultant rules). For Windows RS3,
@@ -523,7 +519,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 					newPolicy := *aclPolicy
 					// Give each sub-rule a unique ID.
 					if s.supportedFeatures.Acl.AclRuleId {
-						newPolicy.Id = fmt.Sprintf("%s%s%d", prefixStr, rules.WindowsHnsRuleNameDelimeter, i)
+						newPolicy.Id = getHnsRuleID(prefixStr, ruleCopy.RuleId, i)
 						i++
 					}
 					//assign ports chunks in aclpolicy

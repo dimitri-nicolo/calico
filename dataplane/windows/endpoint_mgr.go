@@ -30,8 +30,6 @@ import (
 
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/proto"
-
-	"github.com/tigera/windows-networking/pkg/vfpctrl"
 )
 
 const (
@@ -78,8 +76,8 @@ type endpointManager struct {
 	// hostAddrs contains the list of IPs detected on the host.
 	hostAddrs []string
 
-	// Channel for sending down endpoint events to VFP
-	vfpEventChan chan<- interface{}
+	// List of endpoint event listener.
+	eventListeners []endPointEventListener
 }
 
 type hnsInterface interface {
@@ -88,7 +86,9 @@ type hnsInterface interface {
 	GetAttachedContainerIDs(endpoint *hns.HNSEndpoint) ([]string, error)
 }
 
-func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDataplane, vfpEventChan chan<- interface{}) *endpointManager {
+func newEndpointManager(hns hnsInterface,
+	policysets policysets.PolicySetsDataplane,
+	eventListeners []endPointEventListener) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -120,12 +120,17 @@ func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDatapl
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		hostAddrs:           hostIPv4s,
-		vfpEventChan:        vfpEventChan,
+		eventListeners:      eventListeners,
 	}
 }
 
 func (m *endpointManager) OnHostAddrsUpdate(hostAddrs []string) {
 	m.pendingHostAddrs = hostAddrs
+}
+
+type endPointEventListener interface {
+	HandleEndpointsUpdate(ids []string)
+	HandlePolicyUpdate(id string)
 }
 
 func (m *endpointManager) PropagateEndpointsUpdate() {
@@ -134,12 +139,17 @@ func (m *endpointManager) PropagateEndpointsUpdate() {
 		ids = append(ids, id)
 	}
 	log.WithField("event", ids).Debug("Refresh endpoints")
-	m.vfpEventChan <- vfpctrl.DPEventEndpointsUpdated(ids)
+
+	for _, listener := range m.eventListeners {
+		listener.HandleEndpointsUpdate(ids)
+	}
 }
 
 func (m *endpointManager) PropagatePolicyUpdate(id string) {
 	log.WithField("event", id).Debug("Policy Update")
-	m.vfpEventChan <- vfpctrl.DPEventPolicyUpdated(id)
+	for _, listener := range m.eventListeners {
+		listener.HandlePolicyUpdate(id)
+	}
 }
 
 // OnUpdate is called by the main dataplane driver loop during the first phase. It processes
@@ -338,11 +348,10 @@ func (m *endpointManager) CompleteDeferredWork() error {
 		_ = m.RefreshHnsEndpointCache(true)
 
 		// Inform collector for any endpoint updates.
-		// It is possible that a WEP has been removed before a hns endpoint deleted by kubelet.
+		// It is possible that a WEP has been removed before a HNS endpoint is deleted by kubelet.
 		// In that case, endpoint manager still sends down hns endpoint id of the deleted WEP.
-		// This is fine since we don't have the precise event when a hns endpoint been deleted.
-		// This stale endpoint will be deleted next time when we get a WEP update.
-		if m.vfpEventChan != nil {
+		// This is fine since the stale endpoint will be deleted next time when we get a WEP update.
+		if len(m.eventListeners) != 0 {
 			m.PropagateEndpointsUpdate()
 		}
 	}
@@ -427,7 +436,7 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			}
 
 			// Inform collector for any policy updates.
-			if m.vfpEventChan != nil {
+			if len(m.eventListeners) != 0 {
 				m.PropagatePolicyUpdate(endpointId)
 			}
 

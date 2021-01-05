@@ -24,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/felix/dataplane/windows/vfp"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/dataplane/windows/ipsets"
@@ -183,20 +184,20 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	dp.policySets = policysets.NewPolicySets(hns, ipsc)
 
 	// If required, create vfpInfoReader
-	var vfpEventChan chan<- interface{}
+	var epEventListeners []endPointEventListener
 	if config.Collector != nil {
 		log.Debug("Stats collection is required, create VFP info reader")
-		vfpInfoReader := collector.NewVFPInfoReader(config.LookupsCache, collector.DefaultConntrackPollingInterval)
+		vfpInfoReader := vfp.NewInfoReader(config.LookupsCache, collector.DefaultConntrackPollingInterval)
 
 		config.Collector.SetPacketInfoReader(vfpInfoReader)
 		config.Collector.SetConntrackInfoReader(vfpInfoReader)
 
-		vfpEventChan = vfpInfoReader.VfpEventChan()
+		epEventListeners = append(epEventListeners, vfpInfoReader.EndpointEventHandler())
 	}
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
-	dp.endpointMgr = newEndpointManager(hns, dp.policySets, vfpEventChan)
+	dp.endpointMgr = newEndpointManager(hns, dp.policySets, epEventListeners)
 	dp.RegisterManager(dp.endpointMgr)
 	if config.VXLANEnabled {
 		log.Info("VXLAN enabled, starting the VXLAN manager")

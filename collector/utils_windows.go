@@ -14,12 +14,12 @@ import (
 )
 
 // We need to use another package for Windows rotate logs.
-func setupStatsDumping(sigChan chan os.Signal, filePath string, dumpLog *log.Logger) {
+func (c *collector) setupStatsDumping() {
 	// TODO (doublek): This may not be the best place to put this. Consider
 	// moving the signal handler and logging to file logic out of the collector
 	// and simply out to appropriate sink on different messages.
 	signal.Notify(
-		sigChan,
+		c.sigChan,
 		syscall.SIGTERM,
 		syscall.SIGINT,
 		syscall.SIGQUIT,
@@ -27,14 +27,15 @@ func setupStatsDumping(sigChan chan os.Signal, filePath string, dumpLog *log.Log
 
 	// path.Dir is used for slash-separated paths only.
 	// filepath.Dir is os-specific.
-	err := os.MkdirAll(filepath.Dir(filePath), 0755)
+	path := c.config.StatsDumpFilePath
+	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create log dir")
 	}
 
 	rotAwareFile, err := rotatelogs.New(
-		filePath+"collector_log.%Y%m%d%H%M",
-		rotatelogs.WithLinkName(filePath+"collector_log"),
+		path+"collector_log.%Y%m%d%H%M",
+		rotatelogs.WithLinkName(path+"collector_log"),
 		rotatelogs.WithMaxAge(24*time.Hour),
 		rotatelogs.WithRotationTime(time.Hour),
 	)
@@ -44,7 +45,7 @@ func setupStatsDumping(sigChan chan os.Signal, filePath string, dumpLog *log.Log
 
 	// Attributes have to be directly set for instantiated logger as opposed
 	// to the module level log object.
-	dumpLog.Formatter = &MessageOnlyFormatter{}
-	dumpLog.Level = log.InfoLevel
-	dumpLog.Out = rotAwareFile
+	c.dumpLog.Formatter = &MessageOnlyFormatter{}
+	c.dumpLog.Level = log.InfoLevel
+	c.dumpLog.Out = rotAwareFile
 }
