@@ -125,8 +125,7 @@ spec:
             cpu: 100m
             memory: 200Mi
         securityContext:
-            privileged: false
-            allowPrivilegeEscalation: false
+            privileged: true
       volumes:
       - name: elastic-ca-cert-volume
         secret:

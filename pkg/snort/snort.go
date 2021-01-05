@@ -99,7 +99,6 @@ func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, stor
 		//If found, we iterate each entry, parse it and filter the ones that we already sent to elasticsearch
 		path := fmt.Sprintf("%s/alert", match)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			log.WithError(err).Error("Error file missing: ", path)
 			continue
 		}
 		content, err := ioutil.ReadFile(path)
