@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,6 +90,9 @@ var (
 
 	bpfCalicoSubdir = "calico"
 	ifaceRegexp     = regexp.MustCompile(`(?m)^[0-9]+:\s+(?P<name>.+):`)
+	// v4Dot4Dot0 is the first kernel version that has all the
+	// required features we use for kprobes
+	v4Dot4Dot0 = versionparse.MustParseVersion("4.4.0")
 	// v4Dot16Dot0 is the first kernel version that has all the
 	// required features we use for XDP filtering
 	v4Dot16Dot0 = versionparse.MustParseVersion("4.16.0")
@@ -2235,6 +2238,13 @@ func SupportsBPFDataplane() error {
 		return errors.New("BPF syscall support is not available on this platform")
 	}
 
+	return nil
+}
+
+func SupportsBPFKprobe() error {
+	if err := isAtLeastKernel(v4Dot4Dot0); err != nil {
+		return err
+	}
 	return nil
 }
 

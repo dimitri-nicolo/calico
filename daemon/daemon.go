@@ -373,7 +373,7 @@ configRetry:
 	}
 
 	if configParams.FlowLogsCollectProcessInfo {
-		if err := dp.SupportsBPF(); err != nil {
+		if err := dp.SupportsBPFKprobe(); err != nil {
 			log.Error("FlowLogsCollectProcessInfo enabled but BPF not supported by the kernel. Disabling FlowLogsCollectProcessInfo.")
 			_, err := configParams.OverrideParam("FlowLogsCollectProcessInfo", "false")
 			if err != nil {

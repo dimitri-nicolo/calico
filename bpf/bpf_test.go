@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -793,4 +793,15 @@ func TestVersionParse(t *testing.T) {
 		ver2 := versionparse.MustParseVersion(test.b)
 		Expect(ver1.Compare(ver2)).To(Equal(test.expected))
 	}
+	ver := versionparse.MustParseVersion("4.15.1")
+	expectedVersionCode := 265985
+	versionCode := versionparse.ConvertKernelVersionToCode(ver)
+	Expect(versionCode).To(Equal(expectedVersionCode))
+}
+
+func TestVersionFromVdso(t *testing.T) {
+	RegisterTestingT(t)
+	t.Log("Test kernel version code from vdso")
+	versionCode := getKernelVersionFromVdso()
+	Expect(versionCode).NotTo(Equal(0))
 }

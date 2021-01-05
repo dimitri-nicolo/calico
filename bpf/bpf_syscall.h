@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ void bpf_attr_setup_map_elem_for_delete(union bpf_attr *attr, __u32 map_fd, void
 
 // bpf_attr_setup_load_prog sets up the bpf_attr union for use with BPF_PROG_LOAD.
 // A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_count, void *insns, char *license, __u32 log_level, __u32 log_size, void *log_buf) {
+void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_count, void *insns, char *license, __u32 log_level, __u32 log_size, void *log_buf, __u32 kern_version) {
    attr->prog_type = prog_type;
    attr->insn_cnt = insn_count;
    attr->insns = (__u64)(unsigned long)insns;
@@ -83,7 +83,7 @@ void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_
    attr->log_level = log_level;
    attr->log_size = log_size;
    attr->log_buf = (__u64)(unsigned long)log_buf;
-   attr->kern_version = 0;
+   attr->kern_version = kern_version;
    if (log_size > 0) ((char *)log_buf)[0] = 0;
 }
 

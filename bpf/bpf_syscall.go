@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,11 +29,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf/asm"
+	"github.com/projectcalico/felix/versionparse"
 
 	"golang.org/x/sys/unix"
 )
 
 // #include "bpf_syscall.h"
+// #include "bpf_vdso.h"
 import "C"
 
 func SyscallSupport() bool {
@@ -128,14 +130,26 @@ func tryLoadBPFProgramFromInsns(insns asm.Insns, license string, logSize uint, p
 
 	var logBuf unsafe.Pointer
 	var logLevel uint
+	var fd uintptr
+	var errno syscall.Errno
 	if logSize > 0 {
 		logLevel = 1
 		logBuf = C.malloc((C.size_t)(logSize))
 		defer C.free(logBuf)
 	}
 
-	C.bpf_attr_setup_load_prog(bpfAttr, (C.uint)(progType), C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf)
-	fd, _, errno := unix.Syscall(unix.SYS_BPF, unix.BPF_PROG_LOAD, uintptr(unsafe.Pointer(bpfAttr)), C.sizeof_union_bpf_attr)
+	// For kprobes to work with older kernel kernel versions, kernel version code needs to be
+	// passed while loading the BPF program. We try to load with kernel version code from vdso.
+	// If it doesn't succeed, we read the version code from uname. If loading still fails,
+	// we return an error
+	for _, kernVerSrc := range getKernelVersionSources(progType) {
+		kernVersion := kernVerSrc()
+		C.bpf_attr_setup_load_prog(bpfAttr, (C.uint)(progType), C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf, (C.uint)(kernVersion))
+		fd, _, errno = unix.Syscall(unix.SYS_BPF, unix.BPF_PROG_LOAD, uintptr(unsafe.Pointer(bpfAttr)), C.sizeof_union_bpf_attr)
+		if errno == 0 {
+			break
+		}
+	}
 
 	if errno != 0 && errno != unix.ENOSPC /* log buffer too small */ {
 		goLog := strings.TrimSpace(C.GoString((*C.char)(logBuf)))
@@ -491,4 +505,15 @@ func PerfEventDisableTracepoint(fd int) error {
 		return fmt.Errorf("error disabling perf event: %v", err)
 	}
 	return syscall.Close(fd)
+}
+
+func getKernelVersionFromVdso() int {
+	return int(C.get_version_from_vdso())
+}
+
+func getKernelVersionSources(progType uint32) []func() int {
+	if progType == unix.BPF_PROG_TYPE_KPROBE {
+		return []func() int{getKernelVersionFromVdso, versionparse.GetKernelVersionCode}
+	}
+	return []func() int{func() int { return 0 }}
 }
