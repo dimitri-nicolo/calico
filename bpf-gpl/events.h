@@ -24,7 +24,6 @@
 #include <linux/bpf_perf_event.h>
 
 #define TASK_COMM_LEN 16
-#define BPF_EVENT_PROTO_STATS_V4 1
 
 struct event_proto_stats_v4 {
 	struct perf_event_header hdr;

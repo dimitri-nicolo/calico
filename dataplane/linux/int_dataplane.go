@@ -352,7 +352,9 @@ const (
 
 func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
 
-	if config.DNSLogsLatency {
+	if config.DNSLogsLatency && !config.BPFEnabled {
+		// With non-BPF dataplane, set SO_TIMESTAMP so we get timestamps on packets passed
+		// up via NFLOG.
 		if err := EnableTimestamping(); err != nil {
 			log.WithError(err).Warning("Couldn't enable timestamping, so DNS latency will not be measured")
 		} else {
@@ -657,6 +659,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		bpfEventPoller = newBpfEventPoller(bpfEvnt)
+
+		// Register BPF event handling for DNS events.
+		bpfEventPoller.Register(events.TypeDNSEvent, dp.domainInfoStore.DNSPacketFromBPF)
 	}
 
 	if config.FlowLogsCollectProcessInfo {
@@ -679,12 +684,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		bpfEventPoller.Register(events.TypeProtoStatsV4, eventProtoStatsV4Sink)
 	}
+
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 		// Register map managers first since they create the maps that will be used by the endpoint manager.
 		// Important that we create the maps before we load a BPF program with TC since we make sure the map
 		// metadata name is set whereas TC doesn't set that field.
 		ipSetIDAllocator := idalloc.New()
+		ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 		ipSetsMap := bpfipsets.Map(bpfMapContext)
 		err := ipSetsMap.EnsureExists()
 		if err != nil {
@@ -699,6 +706,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
 		bpfRTMgr := newBPFRouteManager(config.Hostname, bpfMapContext)
 		dp.RegisterManager(bpfRTMgr)
+
+		// Create an 'ipset' to represent trusted DNS servers.
+		trustedDNSServers := []string{}
+		for _, serverPort := range config.RulesConfig.DNSTrustedServers {
+			trustedDNSServers = append(trustedDNSServers,
+				fmt.Sprintf("%v,udp:%v", serverPort.IP, serverPort.Port))
+		}
+		ipSetsV4.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
+			trustedDNSServers,
+		)
 
 		// Forwarding into a tunnel seems to fail silently, disable FIB lookup if tunnel is enabled for now.
 		fibLookupEnabled := !config.RulesConfig.IPIPEnabled && !config.RulesConfig.VXLANEnabled

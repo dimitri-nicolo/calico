@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ package intdataplane
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -31,8 +30,8 @@ import (
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
-	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/felix/bpf/events"
 	"github.com/projectcalico/felix/collector"
 	fc "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
@@ -59,17 +58,6 @@ type nameData struct {
 	// Other names that we should notify a "change of information" for, and whose cached IP list
 	// should be invalidated, when the info for _this_ name changes.
 	namesToNotify set.Set
-}
-
-func TimestampToTime(ts []uint8) time.Time {
-	log.Debugf("DNS-LATENCY: ts=%v", ts)
-	var tv unix.Timeval
-	err := binary.Read(bytes.NewReader(ts), binary.BigEndian, &tv)
-	if err != nil {
-		log.WithError(err).Panic("binary.Read failed")
-	}
-	log.Debugf("DNS-LATENCY: tv=%v", tv)
-	return time.Unix(tv.Sec, tv.Usec*1000)
 }
 
 type domainInfoStore struct {
@@ -117,7 +105,7 @@ type domainInfoStore struct {
 	// Handling of DNS request/response timestamps, so that we can measure and report DNS
 	// latency.
 	measureLatency   bool
-	requestTimestamp map[uint16]time.Time
+	requestTimestamp map[uint16]uint64
 
 	// Handling additional DNS mapping lifetime.
 	epoch    int
@@ -169,7 +157,7 @@ func newDomainInfoStoreWithShims(
 		gcInterval:           13 * time.Second,
 		collector:            config.Collector,
 		measureLatency:       config.DNSLogsLatency,
-		requestTimestamp:     make(map[uint16]time.Time),
+		requestTimestamp:     make(map[uint16]uint64),
 		epoch:                config.DNSCacheEpoch,
 		extraTTL:             config.DNSExtraTTL,
 		// Capacity 1 here is to allow UT to test the use of this channel without
@@ -207,6 +195,23 @@ func (s *domainInfoStore) Start() {
 	gcTimerC := time.NewTicker(s.gcInterval).C
 
 	go s.loop(saveTimerC, gcTimerC)
+}
+
+func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
+	log.Infof("DNS packet from BPF: %v", e)
+
+	// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
+	// packet data begins after that.
+	timestampNS := binary.LittleEndian.Uint64(e.Data())
+	consumed := 8
+
+	s.msgChannel <- nfnetlink.DataWithTimestamp{
+		// We currently only capture DNS packets on workload interfaces, and the packet data
+		// on those interfaces always begins with an Ethernet header that we don't want.
+		// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
+		Data:      e.Data()[consumed+14:],
+		Timestamp: timestampNS,
+	}
 }
 
 // Dynamically handle changes to DNSCacheEpoch and DNSExtraTTL.
@@ -753,41 +758,49 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 	return
 }
 
-func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp []uint8) (latencyIfKnown *time.Duration) {
+func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
 	if !s.measureLatency {
 		return
 	}
-	if len(timestamp) == 0 {
+
+	if timestamp == 0 {
 		// No timestamp on this packet.
 		msgType := "request"
 		if dns.QR {
 			msgType = "response"
 		}
 		log.Warnf("DNS-LATENCY: Missing timestamp on DNS %v with ID %v", msgType, dns.ID)
-	} else if dns.QR == false {
+		return
+	}
+
+	// From here on we know we have a timestamp for the packet in hand.  It's a number of
+	// nanoseconds, measured from some arbitrary point in the past.  (Possibly not from the same
+	// base point as time.Time, so don't assume that.)
+	if dns.QR == false {
 		// It's a request.
 		if _, exists := s.requestTimestamp[dns.ID]; exists {
 			log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", dns.ID)
 		} else {
 			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", dns.ID)
-			s.requestTimestamp[dns.ID] = TimestampToTime(timestamp)
+			s.requestTimestamp[dns.ID] = timestamp
 		}
 	} else {
 		// It's a response.
 		if requestTime, exists := s.requestTimestamp[dns.ID]; exists {
-			latency := TimestampToTime(timestamp).Sub(requestTime)
-			log.Debugf("DNS-LATENCY: %v for ID %v", latency, dns.ID)
+			latency := timestamp - requestTime
+			log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, dns.ID)
 			delete(s.requestTimestamp, dns.ID)
-			latencyIfKnown = &latency
+			latencyAsDuration := time.Duration(latency)
+			latencyIfKnown = &latencyAsDuration
 		} else {
 			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", dns.ID)
 		}
 	}
 
-	// Check for any request timestamps that are now unfeasibly old, and discard those so that
-	// our map occupancy does not increase over time.
+	// Check for any request timestamps that are now more than 10 seconds old, and discard those
+	// so that our map occupancy does not increase over time.
 	for id, requestTime := range s.requestTimestamp {
-		if time.Since(requestTime) > 10*time.Second {
+		if time.Duration(timestamp-requestTime) > 10*time.Second {
 			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
 			delete(s.requestTimestamp, id)
 		}

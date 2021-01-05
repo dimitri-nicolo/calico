@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -41,6 +41,9 @@
 #include "reasons.h"
 #include "icmp.h"
 #include "arp.h"
+#include "perf.h"
+#include "sendrecv.h"
+#include "dns.h"
 
 #ifndef CALI_FIB_LOOKUP_ENABLED
 #define CALI_FIB_LOOKUP_ENABLED true
@@ -398,7 +401,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	state->tun_ip = 0;
 
 #ifdef CALI_SET_SKB_MARK
-	/* workaround for test since bpftool run cannot set it in context, wont
+	/* workaround for test since bpftool run cannot set it in context, won't
 	 * be necessary if fixed in kernel
 	 */
 	skb->mark = CALI_SET_SKB_MARK;
@@ -631,6 +634,20 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	/* Do conntrack lookup before anything else */
 	state->ct_result = calico_ct_v4_lookup(&ct_lookup_ctx);
+	CALI_DEBUG("conntrack entry flags 0x%x\n", state->ct_result.flags);
+
+	if (CALI_F_FROM_WEP && (ct_result_rc(state->ct_result.rc) == CALI_CT_NEW)) {
+		// From Workload => potential DNS request.
+		calico_check_for_dns(skb, state, ip_header, udp_header);
+	}
+
+	/* If this is on a trusted DNS connection, pass up to Felix for DNS response
+	 * processing.
+	 */
+	if (CALI_F_TO_WEP && (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS)) {
+		CALI_DEBUG("report probable DNS response\n");
+		calico_report_dns(skb);
+	}
 
 	/* check if someone is trying to spoof a tunnel packet */
 	if (CALI_F_FROM_HEP && ct_result_tun_src_changed(state->ct_result.rc)) {
@@ -1002,6 +1019,8 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 		if (CALI_F_FROM_WEP && state->flags & CALI_ST_SKIP_FIB) {
 			ct_nat_ctx.flags |= CALI_CT_FLAG_SKIP_FIB;
 		}
+		/* Propagate the trusted DNS flag when updating conntrack entry. */
+		ct_nat_ctx.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
 
 		if (state->ip_proto == IPPROTO_TCP) {
 			if (!skb_has_data_after(skb, ip_header, sizeof(struct tcphdr))) {

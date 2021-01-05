@@ -138,8 +138,8 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup2(__be32 ip_s
 {
 	struct calico_nat_v4_key nat_key = {
 		.prefixlen = NAT_PREFIX_LEN_WITH_SRC_MATCH_IN_BITS,
-		.addr = ip_dst,
-		.port = dport,
+		.addr = ip_dst,	/* NBO */
+		.port = dport,	/* HBO */
 		.protocol = ip_proto,
 		.saddr = ip_src,
 	};

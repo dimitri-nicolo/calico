@@ -34,6 +34,18 @@ var (
 	})
 )
 
+const (
+	// Base of range for reserved IP set IDs for Calico Enterprise.
+	ReservedIPSetBase uint64 = 1 << 32
+
+	// IP set name for trusted DNS servers.  Normal IP sets have names beginning with a single
+	// letter and a colon, so this cannot clash with this.
+	TrustedDNSServersName = "trusted-dns-servers"
+
+	// IP set ID for trusted DNS servers.  Must match the ID defined in policy.h.
+	TrustedDNSServersID uint64 = ReservedIPSetBase + 1
+)
+
 func init() {
 	prometheus.MustRegister(bpfIPSetsGauge)
 }

@@ -1,12 +1,13 @@
 // +build fvtests
 
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -22,7 +23,7 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
-var _ = Describe("DNS Policy", func() {
+var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	var (
 		etcd   *containers.Container
@@ -97,14 +98,39 @@ var _ = Describe("DNS Policy", func() {
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() int {
-				for name, count := range getIPSetCounts(felix.Container) {
-					if strings.HasPrefix(name, "cali40d:") {
-						return count
+			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+				Eventually(func() error {
+					ipsetsOutput, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
+					if err != nil {
+						return err
 					}
-				}
-				return 0
-			}, "5s", "1s").Should(Equal(1000))
+					numMembers := 0
+					for _, line := range strings.Split(ipsetsOutput, "\n") {
+						if strings.HasPrefix(line, "IP set ") {
+							// New IP set.
+							numMembers = 0
+						} else if strings.TrimSpace(line) != "" {
+							// Member in current set.
+							numMembers++
+						} else {
+							// Empty line => end of IP set.
+							if numMembers == 1000 {
+								return nil
+							}
+						}
+					}
+					return fmt.Errorf("No IP set with 1000 members in:\n[%v]", ipsetsOutput)
+				}, "5s", "1s").Should(Succeed())
+			} else {
+				Eventually(func() int {
+					for name, count := range getIPSetCounts(felix.Container) {
+						if strings.HasPrefix(name, "cali40d:") {
+							return count
+						}
+					}
+					return 0
+				}, "5s", "1s").Should(Equal(1000))
+			}
 		})
 	})
 

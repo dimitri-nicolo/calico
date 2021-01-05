@@ -285,7 +285,7 @@ func initMapsOnce() {
 		jumpMap = jump.MapForTest(mc)
 		affinityMap = nat.AffinityMap(mc)
 		arpMap = arp.Map(mc)
-		perfMap = perf.Map(mc, "perf_evnt", 128)
+		perfMap = perf.Map(mc, "perf_evnt", 512)
 
 		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap}
 		for _, m := range allMaps {
