@@ -312,7 +312,7 @@ var polProgramTests = []polProgramTest{
 						Name: "pass through",
 						Rules: []polprog.Rule{
 							{Rule: &proto.Rule{Action: "Pass"}},
-							{Rule: &proto.Rule{Action: "Deny"}},
+							{Rule: &proto.Rule{Action: "Allow"}},
 						},
 					}},
 				},
