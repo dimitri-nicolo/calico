@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -320,6 +320,12 @@ func (p *Builder) writeRule(rule *proto.Rule, passLabel string) {
 		p.writeIPSetMatch(true, legSource, rule.NotSrcIpSetIds)
 	}
 
+	if len(rule.DstIpSetIds) > 1 {
+		log.WithField("rule", rule).Panic("proto.Rule has more than one DstIpSetIds")
+	}
+	if len(rule.DstDomainIpSetIds) > 1 {
+		log.WithField("rule", rule).Panic("proto.Rule has more than one DstDomainIpSetIds")
+	}
 	dstIPSetIDs := append(rule.DstDomainIpSetIds, rule.DstIpSetIds...)
 	if len(dstIPSetIDs) > 0 {
 		log.WithField("ipSetIDs", rule.DstDomainIpSetIds).Debugf("DstDomainIpSetIds match")

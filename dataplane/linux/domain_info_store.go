@@ -16,6 +16,7 @@ package intdataplane
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,7 +25,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -199,9 +199,12 @@ func (s *domainInfoStore) Start() {
 
 func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
 	log.Infof("DNS packet from BPF: %v", e)
-	var timestampNS uint64
-	timestampBytes := (*[unsafe.Sizeof(timestampNS)]byte)((unsafe.Pointer)(&timestampNS))
-	consumed := copy(timestampBytes[:], e.Data())
+
+	// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
+	// packet data begins after that.
+	timestampNS := binary.LittleEndian.Uint64(e.Data())
+	consumed := 8
+
 	s.msgChannel <- nfnetlink.DataWithTimestamp{
 		// We currently only capture DNS packets on workload interfaces, and the packet data
 		// on those interfaces always begins with an Ethernet header that we don't want.
