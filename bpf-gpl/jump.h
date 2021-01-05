@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -48,9 +48,6 @@ struct cali_tc_state {
 	__u8 ip_proto;
 	__u8 flags;
 
-	/* XXX we could name it in a more generic way perhaps, size (in u64) and
-	 * data to allow arbitrary comunication between programs
-	 */
 	__u32 rules_hit;
 	__u64 rule_ids[MAX_RULE_IDS];
 

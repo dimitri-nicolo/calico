@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package events
 
@@ -29,7 +29,7 @@ const (
 	TypeProtoStatsV4 Type = 1
 	// TypeDNSEvent reports information on DNS packets
 	TypeDNSEvent Type = 2
-	// TypePolicyVerdict is emitted when a policy program reachs a verdict
+	// TypePolicyVerdict is emitted when a policy program reaches a verdict
 	TypePolicyVerdict Type = 3
 )
 
