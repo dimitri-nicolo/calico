@@ -150,6 +150,11 @@ func GetDistributionName() string {
 	return GetDistFromString(s)
 }
 
+func ConvertKernelVersionToCode(v *Version) int {
+	versionSlice := v.versionSlice
+	return ((versionSlice[0] << 16) + (versionSlice[1] << 8) + versionSlice[2])
+}
+
 func GetKernelVersionCode() int {
 	reader, err := GetKernelVersionReader()
 	if err != nil {
@@ -161,7 +166,5 @@ func GetKernelVersionCode() int {
 		log.WithError(err).Warn("Failed to get kernel version from reader")
 		return 0
 	}
-	versionSlice := version.versionSlice
-	return ((versionSlice[0] << 16) + (versionSlice[1] << 8) + versionSlice[2])
-
+	return ConvertKernelVersionToCode(version)
 }
