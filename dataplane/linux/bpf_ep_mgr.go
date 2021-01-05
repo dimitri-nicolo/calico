@@ -944,9 +944,8 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 					prules = pol.OutboundRules
 				}
 				policy := polprog.Policy{
-					Name:      polName,
-					Rules:     make([]polprog.Rule, len(prules)),
-					NoMatchID: m.policyNoMatchID(dir, polName),
+					Name:  polName,
+					Rules: make([]polprog.Rule, len(prules)),
 				}
 
 				for ri, r := range prules {

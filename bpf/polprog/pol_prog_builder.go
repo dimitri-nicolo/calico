@@ -116,9 +116,8 @@ type Rule struct {
 }
 
 type Policy struct {
-	Name      string
-	Rules     []Rule
-	NoMatchID RuleMatchID
+	Name  string
+	Rules []Rule
 }
 
 type Tier struct {
