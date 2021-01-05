@@ -303,6 +303,8 @@ func getNflogPacketData(m []byte) (packetData []byte, timestamp uint64, err erro
 		case nfnl.NFULA_TIMESTAMP:
 			log.Debugf("DNS-LATENCY: NFULA_TIMESTAMP: %T %v", attr.Value, attr.Value)
 			var tv unix.Timeval
+			// NFLOG attributes are big-endian; see for example
+			// https://github.com/the-tcpdump-group/libpcap/blob/master/pcap/nflog.h
 			err := binary.Read(bytes.NewReader(attr.Value), binary.BigEndian, &tv)
 			if err != nil {
 				log.WithError(err).Panic("binary.Read failed")
