@@ -31,8 +31,10 @@ const (
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
 type DataWithTimestamp struct {
-	Data      []byte
-	Timestamp *uint64
+	Data []byte
+	// We use 0 here to mean "invalid" or "unknown", as a 0 value would mean 1970,
+	// which will not occur in practice during Calico's active lifetime.
+	Timestamp uint64
 }
 
 func SubscribeDNS(groupNum int, bufSize int, ch chan<- DataWithTimestamp, done <-chan struct{}) error {
@@ -288,7 +290,7 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 	}()
 }
 
-func getNflogPacketData(m []byte) (packetData []byte, timestamp *uint64, err error) {
+func getNflogPacketData(m []byte) (packetData []byte, timestamp uint64, err error) {
 	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
 	n, err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
@@ -306,8 +308,7 @@ func getNflogPacketData(m []byte) (packetData []byte, timestamp *uint64, err err
 				log.WithError(err).Panic("binary.Read failed")
 			}
 			log.Debugf("DNS-LATENCY: tv=%v", tv)
-			timestampNS := uint64(tv.Usec*1000 + tv.Sec*1000000000)
-			timestamp = &timestampNS
+			timestamp = uint64(tv.Usec*1000 + tv.Sec*1000000000)
 		case nfnl.NFULA_PAYLOAD:
 			packetData = attr.Value
 		}
