@@ -210,7 +210,7 @@ func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
 		// on those interfaces always begins with an Ethernet header that we don't want.
 		// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
 		Data:      e.Data()[consumed+14:],
-		Timestamp: &timestampNS,
+		Timestamp: timestampNS,
 	}
 }
 
@@ -758,12 +758,12 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 	return
 }
 
-func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp *uint64) (latencyIfKnown *time.Duration) {
+func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
 	if !s.measureLatency {
 		return
 	}
 
-	if timestamp == nil {
+	if timestamp == 0 {
 		// No timestamp on this packet.
 		msgType := "request"
 		if dns.QR {
@@ -782,12 +782,12 @@ func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp *uint64) 
 			log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", dns.ID)
 		} else {
 			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", dns.ID)
-			s.requestTimestamp[dns.ID] = *timestamp
+			s.requestTimestamp[dns.ID] = timestamp
 		}
 	} else {
 		// It's a response.
 		if requestTime, exists := s.requestTimestamp[dns.ID]; exists {
-			latency := *timestamp - requestTime
+			latency := timestamp - requestTime
 			log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, dns.ID)
 			delete(s.requestTimestamp, dns.ID)
 			latencyAsDuration := time.Duration(latency)
@@ -800,7 +800,7 @@ func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp *uint64) 
 	// Check for any request timestamps that are now more than 10 seconds old, and discard those
 	// so that our map occupancy does not increase over time.
 	for id, requestTime := range s.requestTimestamp {
-		if time.Duration((*timestamp)-requestTime) > 10*time.Second {
+		if time.Duration(timestamp-requestTime) > 10*time.Second {
 			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
 			delete(s.requestTimestamp, id)
 		}

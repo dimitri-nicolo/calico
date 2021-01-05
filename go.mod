@@ -42,7 +42,7 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
 	github.com/tigera/licensing v1.0.1-0.20201218173202-d766f2323fee
-	github.com/tigera/nfnetlink v0.0.0-20201123130445-0bde124f0efd
+	github.com/tigera/nfnetlink v0.0.0-20210105181106-4ac282dc9ec8
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
