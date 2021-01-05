@@ -499,6 +499,81 @@ func TestFeatureFlags(t *testing.T) {
 		}
 	})
 
+	t.Run("a license with 'cnx|all' features states that all APIs are available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cnx", features.All}
+
+		for k, _ := range features.EnterpriseAPIs {
+			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
+		}
+	})
+
+	t.Run("a license with 'cloud|community' features states that all mapped APIs are available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "community"}
+
+		for k, _ := range features.CloudCommunityAPIs {
+			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
+		}
+	})
+
+	t.Run("a license with 'cloud|starter' features states that all mapped APIs are available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "starter"}
+
+		for k, _ := range features.CloudStarterAPIs {
+			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
+		}
+	})
+
+	t.Run("a license with 'cloud|pro' features states that all mapped APIs are available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "pro"}
+
+		for k, _ := range features.CloudProAPIs {
+			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
+		}
+	})
+
+	t.Run("a license with 'cnx|all' features states that an APIs that is not declared is not available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cnx", features.All}
+
+		Expect(claims.ValidateAPIUsage("missingAPI")).To(BeFalse())
+	})
+
+	t.Run("a license with 'cloud|community' features states that all mapped APIs for cloud|starter are not available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "community"}
+
+		for k, _ := range features.CloudStarterAPIs {
+			Expect(claims.ValidateAPIUsage(k)).To(BeFalse())
+		}
+	})
+
+	t.Run("a license with 'cloud|starter' features states that all mapped APIs for cloud|pro are not available.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{"cloud", "starter"}
+
+		for k, _ := range features.CloudProAPIs {
+			Expect(claims.ValidateAPIUsage(k)).To(BeFalse())
+		}
+	})
+
 }
 
 func TestLicenseStatus(t *testing.T) {

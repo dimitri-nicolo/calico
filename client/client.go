@@ -281,3 +281,43 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 
 	return false
 }
+
+// ValidateAPIUsage returns true if the API is enabled based on the licensing package currently, false if it is not.
+// False is returned if the license is invalid in any of the following ways:
+// - there isn't a license
+// - the license has expired and is no longer in its grace period.
+// The API is defined by group, version and kind for a kubernetes resource
+func (c *LicenseClaims) ValidateAPIUsage(resourceGroupVersionKind string) bool {
+	return c.ValidateAPIUsageAtTime(time.Now(), resourceGroupVersionKind)
+}
+
+// ValidateAPIUsage returns true if the API is enabled based on the licensing package at time t, false if it is not.
+// False is returned if the license is invalid in any of the following ways:
+// - there isn't a license
+// - the license has expired and is no longer in its grace period.
+// The API is defined by group, version and kind for a kubernetes resource
+func (c *LicenseClaims) ValidateAPIUsageAtTime(t time.Time, resourceGroupVersionKind string) bool {
+	switch c.ValidateAtTime(t) {
+	case NoLicenseLoaded, Expired:
+		return false
+	}
+
+	if len(c.Features) == 0 {
+		return false
+	}
+
+	var licensePackage = strings.Join(c.Features, "|")
+
+	switch licensePackage {
+	case features.Enterprise:
+		return features.EnterpriseAPIs[resourceGroupVersionKind]
+	case features.CloudCommunity:
+		return features.CloudCommunityAPIs[resourceGroupVersionKind]
+	case features.CloudStarter:
+		return features.CloudStarterAPIs[resourceGroupVersionKind]
+	case features.CloudPro:
+		return features.CloudProAPIs[resourceGroupVersionKind]
+	default:
+		return false
+	}
+}
