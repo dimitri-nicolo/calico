@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
@@ -61,7 +63,7 @@ var (
 
 // These tests include tests of Kubernetes policies as well as other policy types. To ensure we have the correct
 // behavior, run using the Kubernetes infrastructure only.
-var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 	const (
 		wepPort = 8055
@@ -79,6 +81,8 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
 		cc                         *connectivity.Checker
 	)
+
+	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 
 	BeforeEach(func() {
 		infra = getInfra()
@@ -299,28 +303,34 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		}
 		Eventually(epCorrectFn, "10s").ShouldNot(HaveOccurred())
 
-		// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
-		rulesProgrammed := func() bool {
-			out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
-			Expect(err).NotTo(HaveOccurred())
-			out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
-			Expect(err).NotTo(HaveOccurred())
-			return strings.Count(out0, "APE0|default.ep1-1-allow-all") > 0 &&
-				strings.Count(out1, "APE0|default.ep1-1-allow-all") == 0 &&
-				strings.Count(out0, "DPI|default/staged:default.np3-4") == 0 &&
-				strings.Count(out1, "DPI|default/staged:default.np3-4") > 0
+		if !bpfEnabled {
+			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
+			rulesProgrammed := func() bool {
+				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				return strings.Count(out0, "APE0|default.ep1-1-allow-all") > 0 &&
+					strings.Count(out1, "APE0|default.ep1-1-allow-all") == 0 &&
+					strings.Count(out0, "DPI|default/staged:default.np3-4") == 0 &&
+					strings.Count(out1, "DPI|default/staged:default.np3-4") > 0
+			}
+			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected iptables rules to appear on the correct felix instances")
+		} else {
+			time.Sleep(5 * time.Second)
 		}
-		Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
-			"Expected iptables rules to appear on the correct felix instances")
 
-		// Mimic the kube-proxy service iptable clusterIP rule.
-		for _, f := range felixes {
-			f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-				"-p", "tcp",
-				"-d", clusterIP,
-				"-m", "tcp", "--dport", svcPortStr,
-				"-j", "DNAT", "--to-destination",
-				ep2_1.IP+":"+wepPortStr)
+		if !bpfEnabled {
+			// Mimic the kube-proxy service iptable clusterIP rule.
+			for _, f := range felixes {
+				f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+					"-p", "tcp",
+					"-d", clusterIP,
+					"-m", "tcp", "--dport", svcPortStr,
+					"-j", "DNAT", "--to-destination",
+					ep2_1.IP+":"+wepPortStr)
+			}
 		}
 	})
 
@@ -341,9 +351,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		cc.CheckConnectivity()
 		cc.CheckConnectivity()
 
-		// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
-		// 10% leeway over the polling jitter of 10%)
-		time.Sleep(6 * time.Second)
+		if bpfEnabled {
+			// Make sure that conntrack scanning ticks at least once
+			time.Sleep(3 * conntrack.ScanPeriod)
+		} else {
+			// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+			// 10% leeway over the polling jitter of 10%)
+			time.Sleep(6 * time.Second)
+		}
 
 		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
 		// to expire quickly.
@@ -371,14 +386,27 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 			// 1-1 -> 2-1 Allow
 			// This was via the service cluster IP and therefore should contain the service name on the source side
 			// where the DNAT occurs.
-			err = flowTester.CheckFlow(
-				"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
-				"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
-				"default test-service port-"+wepPortStr, 3, 1,
-				[]metrics.ExpectedPolicy{
-					{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
-					{},
-				})
+			if !bpfEnabled {
+				err = flowTester.CheckFlow(
+					"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
+					"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
+					"default test-service port-"+wepPortStr, 3, 1,
+					[]metrics.ExpectedPolicy{
+						{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
+						{},
+					})
+			} else {
+				// Due to connect-time LB, we are not going to see the clusterIP
+				// in the logs and thus we cannot determine the service.
+				err = flowTester.CheckFlow(
+					"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
+					"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
+					metrics.NoService, 3, 1,
+					[]metrics.ExpectedPolicy{
+						{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
+						{},
+					})
+			}
 			if err != nil {
 				errs = append(errs, "Ingress 1-1->2-1: "+err.Error())
 			}

@@ -48,6 +48,7 @@ import (
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/ratelimited"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 const jumpMapCleanupInterval = 10 * time.Second
@@ -929,13 +930,20 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 
 		if len(directionalPols) > 0 {
 
+			stagedOnly := true
+
 			polTier := polprog.Tier{
-				Name:      tier.Name,
-				EndRuleID: m.endOfTierDropID(dir, tier.Name),
-				Policies:  make([]polprog.Policy, len(directionalPols)),
+				Name:     tier.Name,
+				Policies: make([]polprog.Policy, len(directionalPols)),
 			}
 
 			for i, polName := range directionalPols {
+				staged := model.PolicyIsStaged(polName)
+
+				if !staged {
+					stagedOnly = false
+				}
+
 				pol := m.policies[proto.PolicyID{Tier: tier.Name, Name: polName}]
 				var prules []*proto.Rule
 				if direction == PolDirnIngress {
@@ -944,8 +952,13 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 					prules = pol.OutboundRules
 				}
 				policy := polprog.Policy{
-					Name:  polName,
-					Rules: make([]polprog.Rule, len(prules)),
+					Name:   polName,
+					Rules:  make([]polprog.Rule, len(prules)),
+					Staged: staged,
+				}
+
+				if staged {
+					policy.NoMatchID = m.policyNoMatchID(dir, polName)
 				}
 
 				for ri, r := range prules {
@@ -956,6 +969,14 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 				}
 
 				polTier.Policies[i] = policy
+			}
+
+			if !stagedOnly {
+				polTier.EndRuleID = m.endOfTierDropID(dir, tier.Name)
+				polTier.EndAction = polprog.TierEndDrop
+			} else {
+				polTier.EndRuleID = m.endOfTierPassID(dir, tier.Name)
+				polTier.EndAction = polprog.TierEndPass
 			}
 
 			r.Tiers = append(r.Tiers, polTier)
