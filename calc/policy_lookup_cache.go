@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -31,9 +31,8 @@ type PolicyLookupsCache struct {
 	nflogPrefixesProfile map[model.ProfileRulesKey]set.Set
 	nflogPrefixHash      map[[64]byte]pcRuleID
 
-	useIDs         bool
-	ids            *idalloc.IDAllocator
-	id2nflogPrefix map[uint64]*RuleID
+	useIDs bool
+	ids    *idalloc.IDAllocator
 
 	tierRefs map[string]int
 }
@@ -45,7 +44,6 @@ func NewPolicyLookupsCache() *PolicyLookupsCache {
 		nflogPrefixHash:      map[[64]byte]pcRuleID{},
 		tierRefs:             map[string]int{},
 		ids:                  idalloc.New(),
-		id2nflogPrefix:       make(map[uint64]*RuleID),
 	}
 	// Add NFLog mappings for the no-profile match.
 	pc.addNFLogPrefixEntry(
@@ -98,7 +96,6 @@ func (pc *PolicyLookupsCache) addNFLogPrefixEntry(prefix string, ruleID *RuleID)
 
 	if pc.useIDs {
 		id.id64 = pc.ids.GetOrAlloc(prefix)
-		pc.id2nflogPrefix[id.id64] = ruleID
 	}
 
 	pc.nflogPrefixHash[bph] = id
@@ -113,7 +110,6 @@ func (pc *PolicyLookupsCache) deleteNFLogPrefixEntry(prefix string) {
 	if pc.useIDs {
 		id64 := pc.nflogPrefixHash[bph].id64
 		pc.ids.ReleaseUintID(id64)
-		delete(pc.id2nflogPrefix, id64)
 	}
 	delete(pc.nflogPrefixHash, bph)
 }
@@ -302,7 +298,16 @@ func (pc *PolicyLookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID 
 func (pc *PolicyLookupsCache) GetRuleIDFromID64(id uint64) *RuleID {
 	pc.lock.RLock()
 	defer pc.lock.RUnlock()
-	return pc.id2nflogPrefix[id]
+
+	pfx, ok := pc.ids.GetReverse(id)
+	if !ok {
+		return nil
+	}
+
+	var pfx64 [64]byte
+	copy(pfx64[:], []byte(pfx[:]))
+
+	return pc.nflogPrefixHash[pfx64].ruleID
 }
 
 // GetID64FromNFLOGPrefix returns the 64 bit ID associated with the supplied NFLOG prefix.
