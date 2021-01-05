@@ -2,14 +2,19 @@ version: v1.0
 name: Kibana Docker Image
 
 execution_time_limit:
-  minutes: 30
+  minutes: 90
 
 agent:
   machine:
-    type: e1-standard-2
+    type: e1-standard-8
     os_image: ubuntu1804
 
 global_job_config:
+  env_vars:
+    - name: KIBANA_IMAGE_NAME
+      value: docker.elastic.co/kibana/kibana
+    - name: KIBANA_IMAGE_TAR_PATH
+      value: /tmp/kibana-image.tar
   secrets:
     - name: docker-hub
     # Mount the github SSH secret for pulling private repositories.
@@ -26,29 +31,24 @@ global_job_config:
       # Login to docker in order to pull images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
       - checkout
-      # Semaphore is doing shallow clone on a commit without tags.
-      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-      #- git fetch --unshallow
+      - git submodule init
+      - git submodule update
+      - export KIBANA_VERSION=$(jq -r '.version' kibana/package.json)
+      - export KIBANA_IMAGE_CACHE_KEY=kibana-image-${SEMAPHORE_GIT_SHA}
 
 blocks:
-  - name: 'CI'
+  - name: 'Build Image'
     dependencies: []
     task:
       jobs:
-        - name: Run CI
+        - name: Build
           commands:
-            - make ci
-        - name: Run CI (Tesla)
-          commands:
-            - make ci
-          env_vars:
-            - name: IMAGE_PREFIX
-              value: tesla
-            - name: GTM_INTEGRATION
-              value: enable
+            - make kibana-image
+            - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
+            - cache store ${KIBANA_IMAGE_CACHE_KEY} ${KIBANA_IMAGE_TAR_PATH}
 
   - name: 'Push Images (non-PR builds only)'
-    dependencies: ["CI"]
+    dependencies: ["Build Image"]
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -63,6 +63,9 @@ blocks:
           - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          # Restore the kibana image created from the build block
+          - cache restore ${KIBANA_IMAGE_CACHE_KEY}
+          - docker load -i ${KIBANA_IMAGE_TAR_PATH}
       jobs:
         - name: Run CD
           commands:

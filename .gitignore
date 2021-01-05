@@ -1,0 +1,4 @@
+.idea
+Makefile.*
+# This dockerfile is generated from the docker/Dockerfile template which is why it's ignored.
+docker/Dockerfile
