@@ -295,6 +295,7 @@ func (pc *PolicyLookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID 
 }
 
 // GetRuleIDFromID64 returns the RuleID associated with the supplied 64bit ID.
+// Returns nil if the id does not exist.
 func (pc *PolicyLookupsCache) GetRuleIDFromID64(id uint64) *RuleID {
 	pc.lock.RLock()
 	defer pc.lock.RUnlock()
@@ -310,7 +311,9 @@ func (pc *PolicyLookupsCache) GetRuleIDFromID64(id uint64) *RuleID {
 	return pc.nflogPrefixHash[pfx64].ruleID
 }
 
-// GetID64FromNFLOGPrefix returns the 64 bit ID associated with the supplied NFLOG prefix.
+// GetID64FromNFLOGPrefix returns the 64 bit ID associated with the supplied
+// NFLOG prefix. Returns 0 (an invalid 64bit ID) if the prefix does not exist or
+// the 64bit IDs were not enabled.
 func (pc *PolicyLookupsCache) GetID64FromNFLOGPrefix(prefix [64]byte) uint64 {
 	pc.lock.RLock()
 	defer pc.lock.RUnlock()

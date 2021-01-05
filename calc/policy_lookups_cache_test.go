@@ -360,6 +360,7 @@ var _ = Describe("PolicyLookupsCache 64bit id test", func() {
 			pc.OnPolicyInactive(gnp1_t1_4i2e_key)
 			Expect(pc.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(BeNil())
 			Expect(pc.GetRuleIDFromID64(id64)).To(BeNil())
+			Expect(pc.GetID64FromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(Equal(uint64(0)))
 		})
 	})
 })
