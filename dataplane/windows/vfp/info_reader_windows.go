@@ -39,7 +39,7 @@ type EndpointEventHandler struct {
 
 	inSync bool
 
-	mutex sync.RWMutex
+	mutex sync.Mutex
 }
 
 // Cache endpoint updates.
@@ -60,8 +60,8 @@ func (h *EndpointEventHandler) HandlePolicyUpdate(id string) {
 
 // Process updates.
 func (h *EndpointEventHandler) processUpdates(vfpOps *vfpctrl.VfpOperations) {
-	h.mutex.RLock()
-	defer h.mutex.RUnlock()
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	if h.inSync {
 		return
 	}
@@ -175,17 +175,23 @@ func (r *InfoReader) subscribe() error {
 
 func (r *InfoReader) run() {
 
-	var packetInfoC chan collector.PacketInfo
-	var conntrackInfoC chan collector.ConntrackInfo
+	var (
+		packetInfoC    chan collector.PacketInfo
+		conntrackInfoC chan collector.ConntrackInfo
+		nextPktToSend  collector.PacketInfo
+		nextCTToSend   collector.ConntrackInfo
+	)
 
 	for {
 		select {
 		case <-r.stopC:
 			return
-		case packetInfoC <- *r.bufferedEvents[0]:
+		case packetInfoC <- nextPktToSend:
 			r.bufferedEvents = r.bufferedEvents[1:]
 			if len(r.bufferedEvents) == 0 {
 				packetInfoC = nil // Disable this case until we have events to send.
+			} else {
+				nextPktToSend = *r.bufferedEvents[0] // Make sure value is updated.
 			}
 		case eventAggr := <-r.eventAggrC:
 			infoPointer, err := r.convertEventAggrPkt(eventAggr)
@@ -195,17 +201,21 @@ func (r *InfoReader) run() {
 				} else {
 					r.bufferedEvents = append(r.bufferedEvents, infoPointer)
 				}
-				packetInfoC = r.packetInfoC // Make sure the packetInfoC case is enabled.
+				nextPktToSend = *r.bufferedEvents[0] // Make sure value is updated.
+				packetInfoC = r.packetInfoC          // Make sure the packetInfoC case is enabled.
 			}
-		case conntrackInfoC <- *r.bufferedConntracks[0]:
+		case conntrackInfoC <- nextCTToSend:
 			r.bufferedConntracks = r.bufferedConntracks[1:]
 			if len(r.bufferedConntracks) == 0 {
 				conntrackInfoC = nil // Disable this case until we have conntrack info to send.
+			} else {
+				nextCTToSend = *r.bufferedConntracks[0] // Make sure value is updated.
 			}
 		case <-r.ticker.Channel():
 			r.vfpOps.ListFlows(r.handleFlowEntry)
 			if len(r.bufferedConntracks) > 0 {
-				conntrackInfoC = r.conntrackInfoC
+				nextCTToSend = *r.bufferedConntracks[0] // Make sure value is updated.
+				conntrackInfoC = r.conntrackInfoC       // Make sure the conntrackInfoC is enabled.
 			}
 		}
 
