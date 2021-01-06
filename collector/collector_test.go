@@ -1373,6 +1373,7 @@ var _ = Describe("L7 logging", func() {
 	var t Tuple
 	var hdsvc *proto.HTTPData
 	var hdsvcip *proto.HTTPData
+	var hdsvcnoport *proto.HTTPData
 	BeforeEach(func() {
 		epMap := map[[16]byte]*calc.EndpointData{
 			localIp1:  localEd1,
@@ -1398,7 +1399,7 @@ var _ = Describe("L7 logging", func() {
 			UserAgent:     "firefox",
 			RequestPath:   "/test/path",
 			RequestMethod: "GET",
-			Type:          "html/1.1",
+			Type:          "http/1.1",
 			Count:         int32(1),
 			Domain:        "www.test.com",
 			DurationMax:   int32(12),
@@ -1412,11 +1413,12 @@ var _ = Describe("L7 logging", func() {
 			UserAgent:     "firefox",
 			RequestPath:   "/test/path",
 			RequestMethod: "GET",
-			Type:          "html/1.1",
+			Type:          "http/1.1",
 			Count:         int32(1),
 			Domain:        "test-svc.test-namespace.svc.cluster.local:80",
 			DurationMax:   int32(12),
 		}
+
 		hdsvcip = &proto.HTTPData{
 			Duration:      int32(10),
 			ResponseCode:  int32(200),
@@ -1425,9 +1427,23 @@ var _ = Describe("L7 logging", func() {
 			UserAgent:     "firefox",
 			RequestPath:   "/test/path",
 			RequestMethod: "GET",
-			Type:          "html/1.1",
+			Type:          "http/1.1",
 			Count:         int32(1),
 			Domain:        "10.10.10.10:80",
+			DurationMax:   int32(12),
+		}
+
+		hdsvcnoport = &proto.HTTPData{
+			Duration:      int32(10),
+			ResponseCode:  int32(200),
+			BytesSent:     int32(40),
+			BytesReceived: int32(60),
+			UserAgent:     "firefox",
+			RequestPath:   "/test/path",
+			RequestMethod: "GET",
+			Type:          "http/1.1",
+			Count:         int32(1),
+			Domain:        "test-svc.test-namespace.svc.cluster.local",
 			DurationMax:   int32(12),
 		}
 
@@ -1452,7 +1468,7 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Method).To(Equal("GET"))
 		Expect(update.Path).To(Equal("/test/path"))
 		Expect(update.UserAgent).To(Equal("firefox"))
-		Expect(update.Type).To(Equal("html/1.1"))
+		Expect(update.Type).To(Equal("http/1.1"))
 		Expect(update.Count).To(Equal(1))
 		Expect(update.Domain).To(Equal("www.test.com"))
 		Expect(update.ServiceName).To(Equal(""))
@@ -1477,7 +1493,7 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Method).To(Equal("GET"))
 		Expect(update.Path).To(Equal("/test/path"))
 		Expect(update.UserAgent).To(Equal("firefox"))
-		Expect(update.Type).To(Equal("html/1.1"))
+		Expect(update.Type).To(Equal("http/1.1"))
 		Expect(update.Count).To(Equal(1))
 		Expect(update.Domain).To(Equal("test-svc.test-namespace.svc.cluster.local:80"))
 		Expect(update.ServiceName).To(Equal("test-svc"))
@@ -1502,11 +1518,36 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Method).To(Equal("GET"))
 		Expect(update.Path).To(Equal("/test/path"))
 		Expect(update.UserAgent).To(Equal("firefox"))
-		Expect(update.Type).To(Equal("html/1.1"))
+		Expect(update.Type).To(Equal("http/1.1"))
 		Expect(update.Count).To(Equal(1))
 		Expect(update.Domain).To(Equal("10.10.10.10:80"))
 		Expect(update.ServiceName).To(Equal("test-svc"))
 		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
+		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
+		Expect(update.ServicePort).To(Equal(80))
+	})
+
+	It("should properly return kubernetes service names and fill out the protocol default port when not specified", func() {
+		c.LogL7(hdsvcnoport, d, t, 1)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Tuple).To(Equal(t))
+		Expect(update.SrcEp).NotTo(BeNil())
+		Expect(update.SrcEp).To(Equal(remoteEd1))
+		Expect(update.DstEp).NotTo(BeNil())
+		Expect(update.DstEp).To(Equal(remoteEd2))
+		Expect(update.Duration).To(Equal(10))
+		Expect(update.DurationMax).To(Equal(12))
+		Expect(update.BytesReceived).To(Equal(60))
+		Expect(update.BytesSent).To(Equal(40))
+		Expect(update.ResponseCode).To(Equal("200"))
+		Expect(update.Method).To(Equal("GET"))
+		Expect(update.Path).To(Equal("/test/path"))
+		Expect(update.UserAgent).To(Equal("firefox"))
+		Expect(update.Type).To(Equal("http/1.1"))
+		Expect(update.Count).To(Equal(1))
+		Expect(update.Domain).To(Equal("test-svc.test-namespace.svc.cluster.local"))
+		Expect(update.ServiceName).To(Equal("test-svc"))
 		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
 		Expect(update.ServicePort).To(Equal(80))
 	})
