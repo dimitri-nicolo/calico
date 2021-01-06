@@ -5776,14 +5776,14 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"l7LogsFileAggregationTrimURL": {
 						SchemaProps: spec.SchemaProps{
-							Description: "L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileNumURLPathAggregation]. Accepted values are 0 and 1. IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileNumURLPathAggregation. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
+							Description: "L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath]. Accepted values are 0 and 1. IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"l7LogsFileNumURLPathAggregation": {
+					"l7LogsFileAggregationNumURLPath": {
 						SchemaProps: spec.SchemaProps{
-							Description: "L7LogsFileNumURLPathAggregation is used to choose the number of components in the url path to display. This allows for the url to be truncated in case parts of the path provide no value. Setting this value to negative will allow all parts of the path to be displayed. [Default: 5].",
+							Description: "L7LogsFileAggregationNumURLPath is used to choose the number of components in the url path to display. This allows for the url to be truncated in case parts of the path provide no value. Setting this value to negative will allow all parts of the path to be displayed. [Default: 5].",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
