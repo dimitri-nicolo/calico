@@ -5598,21 +5598,21 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"windowsFlowLogsFileDirectory": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows node. [Default: \"c:\\TigeraCalico\\flowlogs\"].",
+							Description: "WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: \"c:\\TigeraCalico\\flowlogs\"].",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"windowsFlowLogsPositionFilePath": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WindowsFlowLogsPositionFilePath is used specify the position of the external pipeline that reads flow logs on Windows node. [Default: \"c:\\TigeraCalico\\flowlogs\\flows.log.pos\"]. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
+							Description: "WindowsFlowLogsPositionFilePath is used to specify the position of the external pipeline that reads flow logs on Windows nodes. [Default: \"c:\\TigeraCalico\\flowlogs\\flows.log.pos\"]. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"windowsStatsDumpFilePath": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WindowsStatsDumpFilePath is used specify the position of stats dump file on Windows node. [Default: \"c:\\TigeraCalico\\stats\\dump\"]",
+							Description: "WindowsStatsDumpFilePath is used to specify the path of the stats dump file on Windows nodes. [Default: \"c:\\TigeraCalico\\stats\\dump\"]",
 							Type:        []string{"string"},
 							Format:      "",
 						},

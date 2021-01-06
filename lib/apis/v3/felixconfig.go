@@ -481,13 +481,13 @@ type FelixConfigurationSpec struct {
 	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
 	FlowLogsAggregationThresholdBytes *int `json:"flowLogsAggregationThresholdBytes,omitempty"`
 
-	// WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows node. [Default: "c:\\TigeraCalico\\flowlogs"].
+	// WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: "c:\\TigeraCalico\\flowlogs"].
 	WindowsFlowLogsFileDirectory string `json:"windowsFlowLogsFileDirectory,omitempty"`
-	// WindowsFlowLogsPositionFilePath is used specify the position of the external pipeline that reads flow logs on Windows node.
+	// WindowsFlowLogsPositionFilePath is used to specify the position of the external pipeline that reads flow logs on Windows nodes.
 	// [Default: "c:\\TigeraCalico\\flowlogs\\flows.log.pos"].
 	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
 	WindowsFlowLogsPositionFilePath string `json:"windowsFlowLogsPositionFilePath,omitempty"`
-	// WindowsStatsDumpFilePath is used specify the position of stats dump file on Windows node. [Default: "c:\\TigeraCalico\\stats\\dump"]
+	// WindowsStatsDumpFilePath is used to specify the path of the stats dump file on Windows nodes. [Default: "c:\\TigeraCalico\\stats\\dump"]
 	WindowsStatsDumpFilePath string `json:"windowsStatsDumpFilePath,omitempty"`
 
 	// The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an
