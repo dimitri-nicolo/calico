@@ -1,7 +1,4 @@
-# This is the upstream 1903 tag - no other upstream images exist for other
-# Windows platforms.
-# TODO: need to update for 1909 and, in the future, 2004
-FROM fluent/fluentd:v1.11.1-windows-1.0
+FROM quay.io/tigera/fluentd-base:v1.11.1-windows
 MAINTAINER laurence@tigera.io
 
 USER ContainerAdministrator
