@@ -586,18 +586,18 @@ type FelixConfigurationSpec struct {
 	// ExcludeL7ResponseCode - Aggregate over all other fields ignoring the response code.
 	L7LogsFileAggregationResponseCode *string `json:"l7LogsFileAggregationResponseCode,omitempty" validate:"omitempty,l7ResponseCodeAggregation"`
 	// L7LogsFileAggregationTrimURL is used to choose the type of aggregation for the url on L7 log entries.
-	// [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileNumURLPathAggregation].
+	// [Default: IncludeL7FullURL - include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath].
 	// Accepted values are 0 and 1.
-	// IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileNumURLPathAggregation.
+	// IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath.
 	// TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL.
 	// TrimURLQueryAndPath - Aggregate over all other fields and the base URL only.
 	// ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.
 	L7LogsFileAggregationTrimURL *string `json:"l7LogsFileAggregationTrimURL,omitempty" validate:"omitempty,l7URLAggregation"`
-	// L7LogsFileNumURLPathAggregation is used to choose the number of components in the url path to display.
+	// L7LogsFileAggregationNumURLPath is used to choose the number of components in the url path to display.
 	// This allows for the url to be truncated in case parts of the path provide no value. Setting this value
 	// to negative will allow all parts of the path to be displayed.
 	// [Default: 5].
-	L7LogsFileNumURLPathAggregation *int `json:"l7LogsFileNumURLPathAggregation,omitempty"`
+	L7LogsFileAggregationNumURLPath *int `json:"l7LogsFileAggregationNumURLPath,omitempty"`
 	// Limit on the number of L7 logs that can be emitted within each flush interval.  When
 	// this limit has been reached, Felix counts the number of unloggable L7 responses within
 	// the flush interval, and emits a WARNING log with that count at the same time as it

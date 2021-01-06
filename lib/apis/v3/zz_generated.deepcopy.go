@@ -2019,8 +2019,8 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.L7LogsFileNumURLPathAggregation != nil {
-		in, out := &in.L7LogsFileNumURLPathAggregation, &out.L7LogsFileNumURLPathAggregation
+	if in.L7LogsFileAggregationNumURLPath != nil {
+		in, out := &in.L7LogsFileAggregationNumURLPath, &out.L7LogsFileAggregationNumURLPath
 		*out = new(int)
 		**out = **in
 	}
