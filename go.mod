@@ -6,7 +6,7 @@ replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210105213015-67f5b2ef7b80
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210106003228-1dadd938e2cb
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201215063524-3bdb6673de46
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210106004446-076b985d2491
 
 	k8s.io/api => k8s.io/api v0.18.12
 
