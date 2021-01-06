@@ -652,13 +652,70 @@ spec:
                   pattern: ^.*
                   x-kubernetes-int-or-string: true
                 type: array
-              l7LogsFileAggregationKind:
-                description: 'TODO: This will be changed during the aggregation work.
-                  L7LogsFileAggregationKind is used to choose the type of aggregation
-                  for L7 log entries. [Default: 1 - client name prefix aggregation].
-                  Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over
-                  clients with the same name prefix'
-                type: integer
+              l7LogsFileAggregationDestinationInfo:
+                description: 'L7LogsFileAggregationDestinationInfo is used to choose
+                  the type of aggregation for the destination metadata on L7 log entries.
+                  [Default: IncludeL7DestinationInfo - include destination metadata].
+                  Accepted values are IncludeL7DestinationInfo and ExcludeL7DestinationInfo.
+                  IncludeL7DestinationInfo - Include destination metadata in the logs.
+                  ExcludeL7DestinationInfo - Aggregate over all other fields ignoring
+                  the destination aggregated name, namespace, and type.'
+                type: string
+              l7LogsFileAggregationHTTPHeaderInfo:
+                description: 'L7LogsFileAggregationHTTPHeaderInfo is used to choose
+                  the type of aggregation for HTTP header data on L7 log entries.
+                  [Default: ExcludeL7HTTPHeaderInfo - http header info removal]. Accepted
+                  values are IncludeL7HTTPHeaderInfo and ExcludeL7HTTPHeaderInfo.
+                  IncludeL7HTTPHeaderInfo - Include HTTP header data in the logs.
+                  ExcludeL7HTTPHeaderInfo - Aggregate over all other fields ignoring
+                  the user agent and log type.'
+                type: string
+              l7LogsFileAggregationHTTPMethod:
+                description: 'L7LogsFileAggregationHTTPMethod is used to choose the
+                  type of aggregation for the HTTP request method on L7 log entries.
+                  [Default: IncludeL7HTTPMethod - include the HTTP method]. Accepted
+                  values are IncludeL7HTTPMethod and ExcludeL7HTTPMethod. IncludeL7HTTPMethod
+                  - Include HTTP method in the logs. ExcludeL7HTTPMethod - Aggregate
+                  over all other fields ignoring the HTTP method.'
+                type: string
+              l7LogsFileAggregationResponseCode:
+                description: 'L7LogsFileAggregationResponseCode is used to choose
+                  the type of aggregation for the response code on L7 log entries.
+                  [Default: IncludeL7ResponseCode - include the response code]. Accepted
+                  values are IncludeL7ResponseCode and ExcludeL7ResponseCode. IncludeL7ResponseCode
+                  - Include the response code in the logs. ExcludeL7ResponseCode -
+                  Aggregate over all other fields ignoring the response code.'
+                type: string
+              l7LogsFileAggregationServiceInfo:
+                description: 'L7LogsFileAggregationServiceInfo is used to choose the
+                  type of aggregation for the service data on L7 log entries. [Default:
+                  IncludeL7ServiceInfo - include service data]. Accepted values are
+                  IncludeL7ServiceInfo and ExcludeL7ServiceInfo. IncludeL7ServiceInfo
+                  - Include service data in the logs. ExcludeL7ServiceInfo - Aggregate
+                  over all other fields ignoring the service name, namespace, and
+                  port.'
+                type: string
+              l7LogsFileAggregationSourceInfo:
+                description: 'L7LogsFileAggregationExcludeSourceInfo is used to choose
+                  the type of aggregation for the source metadata on L7 log entries.
+                  [Default: IncludeL7SourceInfo - include source metadata]. Accepted
+                  values are IncludeL7SourceInfo and ExcludeL7SourceInfo. IncludeL7SourceInfo
+                  - Include source metadata in the logs. ExcludeL7SourceInfo - Aggregate
+                  over all other fields ignoring the source aggregated name, namespace,
+                  and type.'
+                type: string
+              l7LogsFileAggregationTrimURL:
+                description: 'L7LogsFileAggregationTrimURL is used to choose the type
+                  of aggregation for the url on L7 log entries. [Default: IncludeL7FullURL
+                  - include the full URL up to however many path components are allowed
+                  by L7LogsFileNumURLPathAggregation]. Accepted values are 0 and 1.
+                  IncludeL7FullURL - Include the full URL up to however many path
+                  components are allowed by L7LogsFileNumURLPathAggregation. TrimURLQuery
+                  - Aggregate over all other fields ignoring the query parameters
+                  on the URL. TrimURLQueryAndPath - Aggregate over all other fields
+                  and the base URL only. ExcludeL7URL - Aggregate over all other fields
+                  ignoring the URL entirely.'
+                type: string
               l7LogsFileDirectory:
                 description: 'L7LogsFileDirectory sets the directory where L7 log
                   files are stored. [Default: /var/log/calico/l7logs]'
@@ -674,6 +731,13 @@ spec:
               l7LogsFileMaxFiles:
                 description: 'L7LogsFileMaxFiles sets the number of L7 log files to
                   keep. [Default: 5]'
+                type: integer
+              l7LogsFileNumURLPathAggregation:
+                description: 'L7LogsFileNumURLPathAggregation is used to choose the
+                  number of components in the url path to display. This allows for
+                  the url to be truncated in case parts of the path provide no value.
+                  Setting this value to negative will allow all parts of the path
+                  to be displayed. [Default: 5].'
                 type: integer
               l7LogsFilePerNodeLimit:
                 description: 'Limit on the number of L7 logs that can be emitted within

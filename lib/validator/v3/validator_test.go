@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -101,6 +101,25 @@ func init() {
 	two := 2
 	three := 3
 	minusOne := -1
+
+	// L7 log aggregation settings
+	includeL7HTTPHeaderInfo := "IncludeL7HTTPHeaderInfo"
+	excludeL7HTTPHeaderInfo := "ExcludeL7HTTPHeaderInfo"
+	includeL7HTTPMethod := "IncludeL7HTTPMethod"
+	excludeL7HTTPMethod := "ExcludeL7HTTPMethod"
+	includeL7ServiceInfo := "IncludeL7ServiceInfo"
+	excludeL7ServiceInfo := "ExcludeL7ServiceInfo"
+	includeL7DestinationInfo := "IncludeL7DestinationInfo"
+	excludeL7DestinationInfo := "ExcludeL7DestinationInfo"
+	includeL7SourceInfo := "IncludeL7SourceInfo"
+	excludeL7SourceInfo := "ExcludeL7SourceInfo"
+	includeL7ResponseCode := "IncludeL7ResponseCode"
+	excludeL7ResponseCode := "ExcludeL7ResponseCode"
+	includeL7FullURL := "IncludeL7FullURL"
+	trimURLQuery := "TrimURLQuery"
+	trimURLQueryAndPath := "TrimURLQueryAndPath"
+	excludeL7URL := "ExcludeL7URL"
+	invalidL7 := "ExcludeL7"
 
 	// Perform validation on error messages from validator
 	DescribeTable("Validator errors",
@@ -743,6 +762,36 @@ func init() {
 		Entry("should accept an valid DNSLogsFileAggregationKind value '1'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &one}, true),
 		Entry("should reject an invalid DNSLogsFileAggregationKind value '2'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &two}, false),
 		Entry("should reject an invalid DNSLogsFileAggregationKind value '-1'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &minusOne}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationHTTPHeaderInfo value 'IncludeL7HTTPHeaderInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationHTTPHeaderInfo: &includeL7HTTPHeaderInfo}, true),
+		Entry("should accept an valid L7LogsFileAggregationHTTPHeaderInfo value 'ExcludeL7HTTPHeaderInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationHTTPHeaderInfo: &excludeL7HTTPHeaderInfo}, true),
+		Entry("should reject an invalid L7LogsFileAggregationHTTPHeaderInfo value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationHTTPHeaderInfo: &invalidL7}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationHTTPMethod value 'IncludeL7HTTPMethod'", api.FelixConfigurationSpec{L7LogsFileAggregationHTTPMethod: &includeL7HTTPMethod}, true),
+		Entry("should accept an valid L7LogsFileAggregationHTTPMethod value 'ExcludeL7HTTPMethod'", api.FelixConfigurationSpec{L7LogsFileAggregationHTTPMethod: &excludeL7HTTPMethod}, true),
+		Entry("should reject an invalid L7LogsFileAggregationHTTPMethod value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationHTTPMethod: &invalidL7}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationServiceInfo value 'IncludeL7ServiceInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationServiceInfo: &includeL7ServiceInfo}, true),
+		Entry("should accept an valid L7LogsFileAggregationServiceInfo value 'ExcludeL7ServiceInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationServiceInfo: &excludeL7ServiceInfo}, true),
+		Entry("should reject an invalid L7LogsFileAggregationServiceInfo value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationServiceInfo: &invalidL7}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationDestinationInfo value 'IncludeL7DestinationInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationDestinationInfo: &includeL7DestinationInfo}, true),
+		Entry("should accept an valid L7LogsFileAggregationDestinationInfo value 'ExcludeL7DestinationInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationDestinationInfo: &excludeL7DestinationInfo}, true),
+		Entry("should reject an invalid L7LogsFileAggregationDestinationInfo value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationDestinationInfo: &invalidL7}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationSourceInfo value 'IncludeL7SourceInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &includeL7SourceInfo}, true),
+		Entry("should accept an valid L7LogsFileAggregationSourceInfo value 'ExcludeL7SourceInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &excludeL7SourceInfo}, true),
+		Entry("should reject an invalid L7LogsFileAggregationSourceInfo value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &invalidL7}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationResponseCode value 'IncludeL7ResponseCode'", api.FelixConfigurationSpec{L7LogsFileAggregationResponseCode: &includeL7ResponseCode}, true),
+		Entry("should accept an valid L7LogsFileAggregationResponseCode value 'ExcludeL7ResponseCode'", api.FelixConfigurationSpec{L7LogsFileAggregationResponseCode: &excludeL7ResponseCode}, true),
+		Entry("should reject an invalid L7LogsFileAggregationResponseCode value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationResponseCode: &invalidL7}, false),
+
+		Entry("should accept an valid L7LogsFileAggregationTrimURL value 'IncludeL7FulURL'", api.FelixConfigurationSpec{L7LogsFileAggregationTrimURL: &includeL7FullURL}, true),
+		Entry("should accept an valid L7LogsFileAggregationTrimURL value 'TrimURLQuery'", api.FelixConfigurationSpec{L7LogsFileAggregationTrimURL: &trimURLQuery}, true),
+		Entry("should accept an valid L7LogsFileAggregationTrimURL value 'TrimURLQueryAndPath'", api.FelixConfigurationSpec{L7LogsFileAggregationTrimURL: &trimURLQueryAndPath}, true),
+		Entry("should accept an valid L7LogsFileAggregationTrimURL value 'ExcludeL7URL'", api.FelixConfigurationSpec{L7LogsFileAggregationTrimURL: &excludeL7URL}, true),
+		Entry("should reject an invalid L7LogsFileAggregationTrimURL value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationTrimURL: &invalidL7}, false),
 
 		Entry("should reject an invalid BPFLogLevel value 'badVal'", api.FelixConfigurationSpec{BPFLogLevel: "badVal"}, false),
 		Entry("should accept a valid BPFLogLevel value 'Info'", api.FelixConfigurationSpec{BPFLogLevel: "Info"}, true),
