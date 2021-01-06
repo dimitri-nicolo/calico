@@ -41,9 +41,9 @@
 #include "reasons.h"
 #include "icmp.h"
 #include "arp.h"
-#include "perf.h"
 #include "sendrecv.h"
 #include "dns.h"
+#include "events.h"
 
 #ifndef CALI_FIB_LOOKUP_ENABLED
 #define CALI_FIB_LOOKUP_ENABLED true
@@ -116,7 +116,7 @@ int calico_tc_norm_pol_tail(struct __sk_buff *skb)
 	state->pol_rc = execute_policy_norm(skb, state->ip_proto, state->ip_src,
 					    state->ip_dst, state->sport, state->dport);
 
-	bpf_tail_call(skb, &cali_jump, EPILOGUE_PROG_INDEX);
+	bpf_tail_call(skb, &cali_jump, PROG_INDEX_EPILOGUE);
 	CALI_DEBUG("Tail call to post-policy program failed: DROP\n");
 
 deny:
@@ -369,6 +369,11 @@ deny:
 		CALI_INFO("Final result=DENY (%x). Program execution time: %lluns\n",
 				reason, prog_end_time-state->prog_start_time);
 	}
+
+	/*
+	 * FIXME should we also report this drop in flow logs even though it was
+	 * not because of a policy? Likely not.
+	 */
 
 	return TC_ACT_SHOT;
 }
@@ -782,12 +787,12 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	CALI_DEBUG("About to jump to policy program; lack of further "
 			"logs means policy dropped the packet...\n");
-	bpf_tail_call(skb, &cali_jump, POL_PROG_INDEX);
+	bpf_tail_call(skb, &cali_jump, PROG_INDEX_POLICY);
 	CALI_DEBUG("Tail call to policy program failed: DROP\n");
 	return TC_ACT_SHOT;
 
 icmp_send_reply:
-	bpf_tail_call(skb, &cali_jump, ICMP_PROG_INDEX);
+	bpf_tail_call(skb, &cali_jump, PROG_INDEX_ICMP);
 	/* should not reach here */
 	goto deny;
 
@@ -806,6 +811,7 @@ __attribute__((section("1/1")))
 int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 {
 	CALI_DEBUG("Entering calico_tc_skb_accepted_entrypoint\n");
+
 	struct iphdr *ip_header = NULL;
 	if (skb_too_short(skb)) {
 		CALI_DEBUG("Too short\n");
@@ -817,6 +823,9 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 		CALI_DEBUG("State map lookup failed: DROP\n");
 		goto deny;
 	}
+
+	event_flow_log(skb, state);
+	CALI_DEBUG("Flow log event generated for ALLOW\n");
 
 	struct calico_nat_dest *nat_dest = NULL;
 	struct calico_nat_dest nat_dest_2 = {
@@ -1320,7 +1329,7 @@ icmp_too_big:
 	goto icmp_send_reply;
 
 icmp_send_reply:
-	bpf_tail_call(skb, &cali_jump, ICMP_PROG_INDEX);
+	bpf_tail_call(skb, &cali_jump, PROG_INDEX_ICMP);
 	goto deny;
 
 nat_encap:
@@ -1441,6 +1450,25 @@ int calico_tc_skb_send_icmp_replies(struct __sk_buff *skb)
 	state->sport = state->dport = 0;
 	return forward_or_drop(skb, state, &fwd);
 deny:
+	return TC_ACT_SHOT;
+}
+
+__attribute__((section("1/3")))
+int calico_tc_skb_drop(struct __sk_buff *skb)
+{
+	CALI_DEBUG("Entering calico_tc_skb_drop\n");
+
+	__u32 key = 0;
+	struct cali_tc_state *state = cali_v4_state_lookup_elem(&key);
+	if (!state) {
+		CALI_DEBUG("State map lookup failed: no event generated\n");
+		goto drop;
+	}
+
+	event_flow_log(skb, state);
+	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
+
+drop:
 	return TC_ACT_SHOT;
 }
 

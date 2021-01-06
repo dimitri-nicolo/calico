@@ -21,9 +21,14 @@
 #include "bpf.h"
 #include "perf.h"
 #include "sock.h"
+#include "jump.h"
 #include <linux/bpf_perf_event.h>
 
 #define TASK_COMM_LEN 16
+
+#define EVENT_PROTO_STATS_V4	1
+#define EVENT_DNS		2
+#define EVENT_POLICY_VERDICT	3
 
 struct event_proto_stats_v4 {
 	struct perf_event_header hdr;
@@ -48,7 +53,7 @@ static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 
 	__builtin_memset(&event, 0, sizeof(event));
 	event.hdr.len = sizeof(struct event_proto_stats_v4);
-	event.hdr.type = BPF_EVENT_PROTO_STATS_V4;
+	event.hdr.type = EVENT_PROTO_STATS_V4;
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
 	event.pid = pid;
 	event.proto = proto;
@@ -61,6 +66,22 @@ static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
 		CALI_DEBUG("kprobe: perf_commit_event returns %d\n", err);
+	}
+}
+
+static CALI_BPF_INLINE void event_flow_log(struct __sk_buff *skb, struct cali_tc_state *state)
+{
+	state->eventhdr.type = EVENT_POLICY_VERDICT,
+	state->eventhdr.len = sizeof(struct perf_event_header) +4 /* padding for 64bit align */ +
+		28 /* pkt info */ + sizeof(__u32) /* count */ + MAX_RULE_IDS * sizeof(__u64);
+
+	/* Due to stack space limitations, the begining of the state is structured as the
+	 * event and so we can send the data straight without copying in BPF.
+	 */
+	int err = perf_commit_event(skb, state, state->eventhdr.len);
+
+	if (err != 0) {
+		CALI_DEBUG("flowlog: perf_commit_event returns %d\n", err);
 	}
 }
 

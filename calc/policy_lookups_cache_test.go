@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -329,6 +329,40 @@ var _ = Describe("RuleID tests", func() {
 		Entry("Staged Namespaced network policy in non default tier", "netsec", "staged:np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.staged:np-2|allow"),
 		Entry("Staged Kubernetes network policy", "default", "staged:knp.default.allow-all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/staged:knp.default.allow-all|allow"),
 	)
+})
+
+var _ = Describe("PolicyLookupsCache 64bit id test", func() {
+	pc := NewPolicyLookupsCache()
+
+	It("should not create 64bit IDs by default", func() {
+		pc.OnPolicyActive(gnp1_t1_4i2e_key, gnp1_t1_4i2e)
+		Expect(pc.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(Equal(ruleID_gnp1_t1_i1D))
+		Expect(pc.GetID64FromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(Equal(uint64(0)))
+	})
+
+	It("should create 64bit IDs if enabled", func() {
+		pc.SetUseIDs()
+
+		var id64 uint64
+
+		By("injecting policy creates nflong prefix and id64", func() {
+			pc.OnPolicyActive(gnp1_t1_4i2e_key, gnp1_t1_4i2e)
+			Expect(pc.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(Equal(ruleID_gnp1_t1_i1D))
+			id64 = pc.GetID64FromNFLOGPrefix(prefix_gnp1_t1_i1D)
+			Expect(id64).NotTo(Equal(uint64(0)))
+		})
+
+		By("requesting id64 returns expected rule ID", func() {
+			Expect(pc.GetRuleIDFromID64(id64)).To(Equal(ruleID_gnp1_t1_i1D))
+		})
+
+		By("deleting policy removes nflog prefix and id64", func() {
+			pc.OnPolicyInactive(gnp1_t1_4i2e_key)
+			Expect(pc.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(BeNil())
+			Expect(pc.GetRuleIDFromID64(id64)).To(BeNil())
+			Expect(pc.GetID64FromNFLOGPrefix(prefix_gnp1_t1_i1D)).To(Equal(uint64(0)))
+		})
+	})
 })
 
 func toprefix(s string) [64]byte {

@@ -70,6 +70,10 @@ func nextOffset(size int, align int) int16 {
 	return int16(offset)
 }
 
+const (
+	stateEventHdrSize int16 = 8
+)
+
 var (
 	// Stack offsets.  These are defined locally.
 	offStateKey    = nextOffset(4, 4)
@@ -78,17 +82,19 @@ var (
 
 	// Offsets within the cal_tc_state struct.
 	// WARNING: must be kept in sync with the definitions in bpf/include/jump.h.
-	stateOffIPSrc          int16 = 0
-	stateOffIPDst          int16 = 4
+	stateOffIPSrc          int16 = stateEventHdrSize + 0
+	stateOffIPDst          int16 = stateEventHdrSize + 4
 	_                            = stateOffIPDst
-	stateOffPostNATIPDst   int16 = 8
-	stateOffPolResult      int16 = 16
-	stateOffSrcPort        int16 = 20
-	stateOffDstPort        int16 = 22
-	stateOffICMPType       int16 = 22
-	_                            = stateOffDstPort
-	stateOffPostNATDstPort int16 = 24
-	stateOffIPProto        int16 = 26
+	stateOffPostNATIPDst   int16 = stateEventHdrSize + 8
+	stateOffPolResult      int16 = stateEventHdrSize + 16
+	stateOffSrcPort        int16 = stateEventHdrSize + 20
+	stateOffDstPort        int16 = stateEventHdrSize + 22
+	stateOffICMPType             = stateOffDstPort
+	stateOffPostNATDstPort int16 = stateEventHdrSize + 24
+	stateOffIPProto        int16 = stateEventHdrSize + 26
+
+	stateOffRulesHit int16 = stateEventHdrSize + 28
+	stateOffRuleIDs  int16 = stateEventHdrSize + 32
 
 	// Compile-time check that IPSetEntrySize hasn't changed; if it changes, the code will need to change.
 	_ = [1]struct{}{{}}[20-ipsets.IPSetEntrySize]
@@ -104,7 +110,10 @@ var (
 	ipsKeyPad    int16 = 19
 )
 
-type Rule = *proto.Rule
+type Rule struct {
+	*proto.Rule
+	MatchID RuleMatchID
+}
 
 type Policy struct {
 	Name  string
@@ -112,14 +121,18 @@ type Policy struct {
 }
 
 type Tier struct {
-	Name     string
-	Policies []Policy
+	Name      string
+	EndRuleID RuleMatchID
+	Policies  []Policy
 }
 
 type Rules struct {
-	Tiers    []Tier
-	Profiles []Profile
+	Tiers            []Tier
+	Profiles         []Profile
+	NoProfileMatchID RuleMatchID
 }
+
+type RuleMatchID = uint64
 
 type Profile = Policy
 
@@ -149,7 +162,7 @@ func (p *Builder) writeProgramHeader() {
 	p.b.LoadMapFD(R1, uint32(p.stateMapFD)) // R1 = 0 (64-bit immediate)
 	p.b.Call(HelperMapLookupElem)           // Call helper
 	// Check return value for NULL.
-	p.b.JumpEqImm64(R0, 0, "deny")
+	p.b.JumpEqImm64(R0, 0, "exit")
 	// Save state pointer in R9.
 	p.b.Mov64(R9, R0)
 	p.b.LabelNextInsn("policy")
@@ -158,14 +171,33 @@ func (p *Builder) writeProgramHeader() {
 const (
 	jumpIdxPolicy = iota
 	jumpIdxEpilogue
+	jumpIdxICMP
+	jumpIdxDrop
+
 	_ = jumpIdxPolicy
+	_ = jumpIdxICMP
+	_ = jumpIdxDrop
 )
 
 // writeProgramFooter emits the program exit jump targets.
 func (p *Builder) writeProgramFooter() {
 	// Fall through here if there's no match.  Also used when we hit an error or if policy rejects packet.
 	p.b.LabelNextInsn("deny")
+
+	// Store the policy result in the state for the next program to see.
+	p.b.MovImm32(R1, int32(state.PolicyDeny))
+	p.b.Store32(R9, R1, stateOffPolResult)
+
+	// Execute the tail call.
+	p.b.Mov64(R1, R6)                      // First arg is the context.
+	p.b.LoadMapFD(R2, uint32(p.jumpMapFD)) // Second arg is the map.
+	p.b.MovImm32(R3, jumpIdxDrop)          // Third arg is the index (rather than a pointer to the index).
+	p.b.Call(HelperTailCall)
+
+	// Fall through if tail call fails.
+	p.b.LabelNextInsn("exit")
 	p.b.MovImm64(R0, 2 /* TC_ACT_SHOT */)
+
 	p.b.Exit()
 
 	if p.b.TargetIsUsed("allow") {
@@ -185,6 +217,29 @@ func (p *Builder) writeProgramFooter() {
 		p.b.MovImm64(R0, 2 /* TC_ACT_SHOT */)
 		p.b.Exit()
 	}
+}
+
+func (p *Builder) writeRecordRuleHit(r Rule, skipLabel string) {
+	log.Debugf("Hit rule ID 0x%x", r.MatchID)
+	// Load the hit count
+	p.b.Load8(R1, R9, stateOffRulesHit)
+
+	// Make sure we do not hit too many rules, if so skip to action without
+	// recording the rule ID
+	p.b.JumpGEImm64(R1, state.MaxRuleIDs, skipLabel)
+
+	// Increment the hit count
+	p.b.Mov64(R2, R1)
+	p.b.AddImm64(R2, 1)
+	// Store the new count
+	p.b.Store8(R9, R2, stateOffRulesHit)
+
+	// Store the rule ID in the rule ids array
+	p.b.ShiftLImm64(R1, 3) // x8
+	p.b.AddImm64(R1, int32(stateOffRuleIDs))
+	p.b.LoadImm64(R2, int64(r.MatchID))
+	p.b.Add64(R1, R9)
+	p.b.Store64(R1, R2, 0)
 }
 
 func (p *Builder) setUpSrcIPSetKey(ipsetID uint64) {
@@ -231,7 +286,10 @@ func (p *Builder) writeRules(rules Rules) {
 		// End of tier drop rule.
 		log.Debugf("End of tier drop")
 
-		p.writeRule(&proto.Rule{Action: "deny"}, endOfTierLabel)
+		p.writeRule(Rule{
+			Rule:    &proto.Rule{Action: "deny"},
+			MatchID: tier.EndRuleID,
+		}, endOfTierLabel)
 		p.b.LabelNextInsn(endOfTierLabel)
 	}
 
@@ -243,7 +301,10 @@ func (p *Builder) writeRules(rules Rules) {
 	}
 
 	log.Debugf("End of profiles drop")
-	p.writeRule(&proto.Rule{Action: "deny"}, endLabel)
+	p.writeRule(Rule{
+		Rule:    &proto.Rule{Action: "deny"},
+		MatchID: rules.NoProfileMatchID,
+	}, endLabel)
 
 	p.b.LabelNextInsn(endLabel)
 }
@@ -275,9 +336,9 @@ const (
 	legDest   matchLeg = "dest"
 )
 
-func (p *Builder) writeRule(rule *proto.Rule, passLabel string) {
+func (p *Builder) writeRule(r Rule, passLabel string) {
 
-	rule = rules.FilterRuleToIPVersion(4, rule)
+	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
 		log.Debugf("Version mismatch, skipping rule")
 		return
@@ -374,7 +435,7 @@ func (p *Builder) writeRule(rule *proto.Rule, passLabel string) {
 		}
 	}
 
-	p.writeEndOfRule(rule, passLabel)
+	p.writeEndOfRule(r, passLabel)
 	p.ruleID++
 	p.rulePartID = 0
 }
@@ -382,14 +443,17 @@ func (p *Builder) writeRule(rule *proto.Rule, passLabel string) {
 func (p *Builder) writeStartOfRule() {
 }
 
-func (p *Builder) writeEndOfRule(rule *proto.Rule, passLabel string) {
-	// If all the match criteria are mat, we fall through to the end of the rule
+func (p *Builder) writeEndOfRule(rule Rule, passLabel string) {
+	// If all the match criteria are met, we fall through to the end of the rule
 	// so all that's left to do is to jump to the relevant action.
 	// TODO log and log-and-xxx actions
 	action := strings.ToLower(rule.Action)
 	if action == "pass" || action == "next-tier" {
 		action = passLabel
 	}
+
+	p.writeRecordRuleHit(rule, action)
+
 	p.b.Jump(action)
 
 	p.b.LabelNextInsn(p.endOfRuleLabel())

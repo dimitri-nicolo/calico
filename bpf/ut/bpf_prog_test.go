@@ -73,7 +73,7 @@ var (
 			Name: "base tier",
 			Policies: []polprog.Policy{{
 				Name:  "allow all",
-				Rules: []*proto.Rule{{Action: "Allow"}},
+				Rules: []polprog.Rule{{Rule: &proto.Rule{Action: "Allow"}}},
 			}},
 		}},
 	}
@@ -149,7 +149,31 @@ type testLogger interface {
 	Logf(format string, args ...interface{})
 }
 
-func setupAndRun(logger testLogger, loglevel string, section string, rules polprog.Rules, runFn func(progName string)) {
+func setupAndRun(logger testLogger, loglevel string, section string, rules polprog.Rules,
+	runFn func(progName string), opts ...testOption) {
+
+	topts := testOpts{
+		subtests: true,
+		logLevel: log.DebugLevel,
+	}
+
+	for _, o := range opts {
+		o(&topts)
+	}
+
+	maps := make([]bpf.Map, len(progMaps))
+	copy(maps, progMaps)
+
+outter:
+	for _, m := range topts.extraMaps {
+		for i := range maps {
+			if maps[i].Path() == m.Path() {
+				continue outter
+			}
+		}
+		maps = append(maps, m)
+	}
+
 	tempDir, err := ioutil.TempDir("", "calico-bpf-")
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(tempDir)
@@ -199,7 +223,7 @@ func setupAndRun(logger testLogger, loglevel string, section string, rules polpr
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir, progMaps...)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	if err != nil {
@@ -223,7 +247,7 @@ func setupAndRun(logger testLogger, loglevel string, section string, rules polpr
 }
 
 // runBpfTest runs a specific section of the entire bpf program in isolation
-func runBpfTest(t *testing.T, section string, rules polprog.Rules, testFn func(bpfProgRunFn)) {
+func runBpfTest(t *testing.T, section string, rules polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
 	RegisterTestingT(t)
 	setupAndRun(t, "debug", section, rules, func(progName string) {
 		t.Run(section, func(_ *testing.T) {
@@ -236,7 +260,7 @@ func runBpfTest(t *testing.T, section string, rules polprog.Rules, testFn func(b
 				return res, err
 			})
 		})
-	})
+	}, opts...)
 }
 
 type forceAllocator struct {
@@ -358,6 +382,10 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, maps ...bpf.Map) error {
 		return errors.Wrap(err, "failed to update jump map (epilogue program)")
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "2", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_2"))
+	if err != nil {
+		return errors.Wrap(err, "failed to update jump map (epilogue program)")
+	}
+	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "3", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_3"))
 	if err != nil {
 		return errors.Wrap(err, "failed to update jump map (epilogue program)")
 	}

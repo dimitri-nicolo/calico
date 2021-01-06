@@ -20,6 +20,7 @@
 
 #include "bpf.h"
 #include "perf.h"
+#include "events.h"
 #include "sock.h"
 #include <linux/bpf_perf_event.h>
 
@@ -28,7 +29,7 @@ static CALI_BPF_INLINE void calico_report_dns(struct __sk_buff *skb)
 	int plen = skb->len;
 	struct perf_event_timestamp_header hdr;
 	__builtin_memset(&hdr, 0, sizeof(hdr));
-	hdr.h.type = BPF_EVENT_DNS;
+	hdr.h.type = EVENT_DNS;
 	hdr.h.len = sizeof(hdr) + plen;
 	hdr.timestamp_ns = bpf_ktime_get_ns();
 	int err = perf_commit_event_ctx(skb, plen, &hdr, sizeof(hdr));

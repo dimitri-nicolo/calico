@@ -46,7 +46,11 @@ const (
 //    struct calico_nat_dest nat_dest;
 //    __u64 prog_start_time;
 // };
+
+const MaxRuleIDs = 32
+
 type State struct {
+	padHdr              uint64
 	SrcAddr             uint32
 	DstAddr             uint32
 	PostNATDstAddr      uint32
@@ -56,8 +60,11 @@ type State struct {
 	DstPort             uint16
 	PostNATDstPort      uint16
 	IPProto             uint8
-	Pad                 uint8
+	pad8                uint8
+	RulesHit            uint32
+	RuleIDs             [MaxRuleIDs]uint64
 	ConntrackResultType uint32
+	pad32               uint32
 	ConntrackData       uint64
 	ConntrackDataTun    uint32
 	Pad2                uint32
@@ -65,7 +72,7 @@ type State struct {
 	ProgStartTime       uint64
 }
 
-const expectedSize = 64
+const expectedSize = 8 /*eventhdr*/ + 328
 
 func (s *State) AsBytes() []byte {
 	size := unsafe.Sizeof(State{})

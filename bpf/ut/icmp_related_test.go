@@ -34,10 +34,10 @@ var rulesAllowUDP = polprog.Rules{
 		Name: "base tier",
 		Policies: []polprog.Policy{{
 			Name: "allow all udp",
-			Rules: []*proto.Rule{{
+			Rules: []polprog.Rule{{Rule: &proto.Rule{
 				Action:   "Allow",
 				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "udp"}},
-			}},
+			}}},
 		}},
 	}},
 }

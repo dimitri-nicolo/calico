@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,11 +41,13 @@ import (
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/polprog"
 	"github.com/projectcalico/felix/bpf/tc"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/ratelimited"
+	"github.com/projectcalico/felix/rules"
 )
 
 const jumpMapCleanupInterval = 10 * time.Second
@@ -128,6 +130,8 @@ type bpfEndpointManager struct {
 
 	// onStillAlive is called from loops to reset the watchdog.
 	onStillAlive func()
+
+	lookupsCache *calc.LookupsCache
 }
 
 type bpfAllowChainRenderer interface {
@@ -149,6 +153,7 @@ func newBPFEndpointManager(
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTable *iptables.Table,
 	livenessCallback func(),
+	lookupsCache *calc.LookupsCache,
 ) *bpfEndpointManager {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
@@ -181,6 +186,7 @@ func newBPFEndpointManager(
 			tc.CleanUpJumpMaps()
 		}),
 		onStillAlive: livenessCallback,
+		lookupsCache: lookupsCache,
 	}
 }
 
@@ -910,7 +916,11 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType
 }
 
 func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames []string, direction PolDirection) polprog.Rules {
-	var rules polprog.Rules
+	var r polprog.Rules
+	dir := rules.RuleDirIngress
+	if direction == PolDirnEgress {
+		dir = rules.RuleDirEgress
+	}
 	for _, tier := range tiers {
 		directionalPols := tier.IngressPolicies
 		if direction == PolDirnEgress {
@@ -920,49 +930,120 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 		if len(directionalPols) > 0 {
 
 			polTier := polprog.Tier{
-				Name:     tier.Name,
-				Policies: make([]polprog.Policy, len(directionalPols)),
+				Name:      tier.Name,
+				EndRuleID: m.endOfTierDropID(dir, tier.Name),
+				Policies:  make([]polprog.Policy, len(directionalPols)),
 			}
 
 			for i, polName := range directionalPols {
 				pol := m.policies[proto.PolicyID{Tier: tier.Name, Name: polName}]
+				var prules []*proto.Rule
 				if direction == PolDirnIngress {
-					polTier.Policies[i] = polprog.Policy{
-						Name:  polName,
-						Rules: pol.InboundRules,
-					}
+					prules = pol.InboundRules
 				} else {
-					polTier.Policies[i] = polprog.Policy{
-						Name:  polName,
-						Rules: pol.OutboundRules,
+					prules = pol.OutboundRules
+				}
+				policy := polprog.Policy{
+					Name:  polName,
+					Rules: make([]polprog.Rule, len(prules)),
+				}
+
+				for ri, r := range prules {
+					policy.Rules[ri] = polprog.Rule{
+						Rule:    r,
+						MatchID: m.ruleMatchID(dir, r.Action, rules.RuleOwnerTypePolicy, ri, polName),
 					}
 				}
+
+				polTier.Policies[i] = policy
 			}
 
-			rules.Tiers = append(rules.Tiers, polTier)
+			r.Tiers = append(r.Tiers, polTier)
 		}
 	}
 
 	if count := len(profileNames); count > 0 {
-		rules.Profiles = make([]polprog.Profile, count)
+		r.Profiles = make([]polprog.Profile, count)
 
 		for i, profName := range profileNames {
 			prof := m.profiles[proto.ProfileID{Name: profName}]
+			var prules []*proto.Rule
 			if direction == PolDirnIngress {
-				rules.Profiles[i] = polprog.Profile{
-					Name:  profName,
-					Rules: prof.InboundRules,
-				}
+				prules = prof.InboundRules
 			} else {
-				rules.Profiles[i] = polprog.Profile{
-					Name:  profName,
-					Rules: prof.OutboundRules,
+				prules = prof.OutboundRules
+			}
+			profile := polprog.Profile{
+				Name:  profName,
+				Rules: make([]polprog.Rule, len(prules)),
+			}
+
+			for ri, r := range prules {
+				profile.Rules[ri] = polprog.Rule{
+					Rule:    r,
+					MatchID: m.ruleMatchID(dir, r.Action, rules.RuleOwnerTypeProfile, ri, profName),
 				}
 			}
+
+			r.Profiles[i] = profile
 		}
 	}
 
-	return rules
+	r.NoProfileMatchID = m.profileNoMatchID(dir)
+
+	return r
+}
+
+func strToByte64(s string) [64]byte {
+	var bytes [64]byte
+	copy(bytes[:], []byte(s))
+	return bytes
+}
+
+func (m *bpfEndpointManager) ruleMatchIDFromNFLOGPrefix(nflogPrefix string) polprog.RuleMatchID {
+	return m.lookupsCache.GetID64FromNFLOGPrefix(strToByte64(nflogPrefix))
+}
+
+func (m *bpfEndpointManager) endOfTierPassID(dir rules.RuleDir, tier string) polprog.RuleMatchID {
+	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateEndOfTierPassNFLOGPrefixStr(dir, tier))
+}
+
+func (m *bpfEndpointManager) endOfTierDropID(dir rules.RuleDir, tier string) polprog.RuleMatchID {
+	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateEndOfTierDropNFLOGPrefixStr(dir, tier))
+}
+
+func (m *bpfEndpointManager) policyNoMatchID(dir rules.RuleDir, policy string) polprog.RuleMatchID {
+	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateNoMatchPolicyNFLOGPrefixStr(dir, policy))
+}
+
+func (m *bpfEndpointManager) profileNoMatchID(dir rules.RuleDir) polprog.RuleMatchID {
+	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateNoMatchProfileNFLOGPrefixStr(dir))
+}
+
+func (m *bpfEndpointManager) ruleMatchID(
+	dir rules.RuleDir,
+	action string,
+	owner rules.RuleOwnerType,
+	idx int,
+	name string) polprog.RuleMatchID {
+
+	var a rules.RuleAction
+	switch action {
+	case "", "allow":
+		a = rules.RuleActionAllow
+	case "next-tier", "pass":
+		a = rules.RuleActionPass
+	case "deny":
+		a = rules.RuleActionDeny
+	case "log":
+		// If we get it here, we dont know what to do about that, 0 means
+		// invalid, but does not break anything.
+		return 0
+	default:
+		log.WithField("action", action).Panic("Unknown rule action")
+	}
+
+	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateNFLOGPrefixStr(a, owner, dir, idx, name))
 }
 
 func (m *bpfEndpointManager) isWorkloadIface(iface string) bool {

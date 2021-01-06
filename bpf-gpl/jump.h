@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,10 +20,15 @@
 
 #include "conntrack.h"
 #include "policy.h"
+#include "perf.h"
+
+#define MAX_RULE_IDS	32
 
 // struct cali_tc_state holds state that is passed between the BPF programs.
 // WARNING: must be kept in sync with the definitions in bpf/polprog/pol_prog_builder.go.
 struct cali_tc_state {
+	struct perf_event_header eventhdr;
+
 	__be32 ip_src;
 	__be32 ip_dst;
 	__be32 post_nat_ip_dst;
@@ -42,7 +47,14 @@ struct cali_tc_state {
 	__u16 post_nat_dport;
 	__u8 ip_proto;
 	__u8 flags;
+
+	__u32 rules_hit;
+	__u64 rule_ids[MAX_RULE_IDS];
+
+	/* We must not scatter the above ^^^ to copy it in a single memcpy */
+
 	struct calico_ct_result ct_result;
+	__u32 _pad32;
 	struct calico_nat_dest nat_dest;
 	__u64 prog_start_time;
 };
@@ -78,8 +90,9 @@ static CALI_BPF_INLINE void tc_state_fill_from_iphdr(struct cali_tc_state *state
 
 /* Add new values to the end as these are program indices */
 enum cali_jump_index {
-	POL_PROG_INDEX,
-	EPILOGUE_PROG_INDEX,
-	ICMP_PROG_INDEX,
+	PROG_INDEX_POLICY,
+	PROG_INDEX_EPILOGUE,
+	PROG_INDEX_ICMP,
+	PROG_INDEX_DROP,
 };
 #endif /* __CALI_BPF_JUMP_H__ */
