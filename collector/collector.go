@@ -790,6 +790,13 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	// Split out the service port if available
 	addr, port := getAddressAndPort(hd.Domain)
 
+	// Set default ports for specific log types.
+	// Currently the only default ports we set are for http log types since
+	// they are the only logs that capture service information.
+	if strings.Contains(strings.ToLower(hd.Type), "http") && port == 0 {
+		port = 80
+	}
+
 	var validService bool
 	svcName := addr
 	svcNamespace := dstMeta.Namespace

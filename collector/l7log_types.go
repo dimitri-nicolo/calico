@@ -43,12 +43,12 @@ type L7Log struct {
 	SrcNameAggr      string              `json:"src_name_aggr"`
 	SrcNamespace     string              `json:"src_namespace"`
 	SrcType          FlowLogEndpointType `json:"src_type"`
-	ServiceName      string              `json:"dst_service_name"`
-	ServiceNamespace string              `json:"dst_service_namespace"`
-	ServicePort      int                 `json:"dst_service_port"`
-	DstNameAggr      string              `json:"dst_name_aggr"`
-	DstNamespace     string              `json:"dst_namespace"`
-	DstType          FlowLogEndpointType `json:"dst_type"`
+	ServiceName      string              `json:"dest_service_name"`
+	ServiceNamespace string              `json:"dest_service_namespace"`
+	ServicePort      int                 `json:"dest_service_port"`
+	DstNameAggr      string              `json:"dest_name_aggr"`
+	DstNamespace     string              `json:"dest_namespace"`
+	DstType          FlowLogEndpointType `json:"dest_type"`
 	Method           string              `json:"method"`
 	UserAgent        string              `json:"user_agent"`
 	URL              string              `json:"url"`
