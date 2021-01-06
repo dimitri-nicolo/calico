@@ -23,13 +23,22 @@ class RESTClient:
         if headers is not None:
             self.headers.update(headers)
 
-
-    def exec(self, method, path, filename):
+    def request(self, method, path, filename):
         if filename != "":
             with open(filename) as data:
                 response = self.session.request(method, self.base_url + path, data=os.path.expandvars(data.read()), headers=self.headers, verify=self.verify)
         else:
             response = self.session.request(method, self.base_url + path, headers=self.headers, verify=self.verify)
+        return response
+
+    def exec(self, method, path, filename):
+        response = self.request(method, path, filename)
+
+        # If a conflict arose with the POST (creating the resource) then attempt a PUT (update it).
+        if response.status_code == 409 and method == "POST":
+            print("POST", path, "failed with 409, attempting PUT")
+            method = "PUT"
+            response = self.request(method, path, filename)
 
         if response.status_code == 200:
             print(method, path, "- 200 OK")
@@ -37,7 +46,7 @@ class RESTClient:
             print(method, path, "- 404 Skipping")
         elif (path.endswith("_stop") or path.endswith("_close")) and response.status_code == 404:
             print(method, path, "- 404 Skipping")
-        elif  response.status_code == 403:
+        elif response.status_code == 403:
             try:
                 for cause in response.json()["error"]["root_cause"]:
                     if cause["type"] == "security_exception" and "current license is non-compliant" in cause["reason"]:
