@@ -55,8 +55,19 @@ var _ = Describe("L7 Log Reporter", func() {
 		dispatcher = &testL7Dispatcher{}
 		dispatcherMap["testL7"] = dispatcher
 		flushTrigger = make(chan time.Time)
+		// Set all the aggregation fields off
+		agg := L7AggregationKind{
+			HTTPHeader:      L7HTTPHeaderInfo,
+			HTTPMethod:      L7HTTPMethod,
+			Service:         L7ServiceInfo,
+			Destination:     L7DestinationInfo,
+			Source:          L7SourceInfo,
+			TrimURL:         L7FullURL,
+			ResponseCode:    L7ResponseCode,
+			NumURLPathParts: -1,
+		}
 		reporter = NewL7LogReporterWithShims(dispatcherMap, flushTrigger, nil)
-		reporter.AddAggregator(NewL7LogAggregator(), []string{"testL7"})
+		reporter.AddAggregator(NewL7LogAggregator().AggregateOver(agg), []string{"testL7"})
 		reporter.Start()
 		remoteWlEpKey1 := model.WorkloadEndpointKey{
 			OrchestratorID: "orchestrator",
@@ -128,7 +139,7 @@ var _ = Describe("L7 Log Reporter", func() {
 			DurationMax:   12,
 			BytesReceived: 500,
 			BytesSent:     30,
-			ResponseCode:  200,
+			ResponseCode:  "200",
 			Method:        "GET",
 			Domain:        "www.test.com",
 			Path:          "/test/path",
@@ -145,7 +156,7 @@ var _ = Describe("L7 Log Reporter", func() {
 			DurationMax:   22,
 			BytesReceived: 30,
 			BytesSent:     50,
-			ResponseCode:  200,
+			ResponseCode:  "200",
 			Method:        "GET",
 			Domain:        "www.testanother.com",
 			Path:          "/test/different",
@@ -163,7 +174,7 @@ var _ = Describe("L7 Log Reporter", func() {
 			Expect(l.SrcType).To(Equal(FlowLogEndpointTypeWep))
 			Expect(l.Method).To(Equal("GET"))
 			Expect(l.UserAgent).To(Equal("firefox"))
-			Expect(l.ResponseCode).To(Equal(200))
+			Expect(l.ResponseCode).To(Equal("200"))
 			Expect(l.Type).To(Equal("html/1.1"))
 			Expect(l.Count).To(Equal(1))
 		}

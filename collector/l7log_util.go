@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func NewL7MetaSpecFromUpdate(update L7Update, sk L7SvcAggregationKind, uk L7URLAggregationKind, ek L7ErrAggregationKind) (L7Meta, L7Spec, error) {
+func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7Spec, error) {
 	meta := L7Meta{
 		ResponseCode:     update.ResponseCode,
 		Method:           update.Method,
@@ -46,37 +46,71 @@ func NewL7MetaSpecFromUpdate(update L7Update, sk L7SvcAggregationKind, uk L7URLA
 		meta.ServiceNamespace = dstMeta.Namespace
 	}
 
-	// TODO: Fix up the aggregation values
-	/*
-		if sk == L7DstSvcName {
-			meta.DstService = flowLogFieldNotIncluded
-		}
+	// Handle aggregation and remove any unneeded values.
+	if ak.HTTPHeader == L7HTTPHeaderInfoNone {
+		meta.UserAgent = flowLogFieldNotIncluded
+		meta.Type = flowLogFieldNotIncluded
+	}
 
-		u, err := url.Parse(update.Url)
-		if err != nil {
-			return meta, spec, err
-		}
-		switch uk {
-		case L7URLQuery:
-			// Trim URL of query params
-			u.RawQuery = ""
-			u.Fragment = ""
-			meta.Url = u.String()
-		case L7URLQueryPath:
-			// Trim URL of query params and path
-			u.RawQuery = ""
-			u.Fragment = ""
-			u.Path = ""
-			meta.Url = u.String()
-		case L7URLQueryPathBase:
-			// Remove the URL entirely
-			meta.Url = flowLogFieldNotIncluded
-		}
+	if ak.HTTPMethod == L7HTTPMethodNone {
+		meta.Method = flowLogFieldNotIncluded
+	}
 
-		if ek == L7ErrorCode {
-			meta.ResponseCode = flowLogFieldNotIncluded
+	if ak.Service == L7ServiceInfoNone {
+		meta.ServiceName = flowLogFieldNotIncluded
+		meta.ServiceNamespace = flowLogFieldNotIncluded
+		meta.ServicePort = 0
+	}
+
+	if ak.Destination == L7DestinationInfoNone {
+		meta.DstNameAggr = flowLogFieldNotIncluded
+		meta.DstNamespace = flowLogFieldNotIncluded
+		meta.DstType = flowLogFieldNotIncluded
+	}
+
+	if ak.Source == L7SourceInfoNone {
+		meta.SrcNameAggr = flowLogFieldNotIncluded
+		meta.SrcNamespace = flowLogFieldNotIncluded
+		meta.SrcType = flowLogFieldNotIncluded
+	}
+
+	if ak.ResponseCode == L7ResponseCodeNone {
+		meta.ResponseCode = flowLogFieldNotIncluded
+	}
+
+	switch ak.TrimURL {
+	case L7FullURL:
+		// If the whole URL is specified, trim the path if required.
+		if ak.NumURLPathParts >= 0 {
+			// Remove the query portion of the URL
+			path := strings.Split(update.Path, "?")[0]
+
+			// Split the path into components and only grab the specified number of components.
+			parts := strings.Split(path, "/")
+			// Since the Path is expected to lead with "/", parts
+			// will be 1 longer than the valid parts of the path.
+			if len(parts) > ak.NumURLPathParts+1 {
+				trimmed := []string{}
+				i := 0
+				for i < ak.NumURLPathParts+1 {
+					trimmed = append(trimmed, parts[i])
+					i++
+				}
+				parts = trimmed
+			}
+			meta.Path = strings.Join(parts, "/")
 		}
-	*/
+	case L7URLWithoutQuery:
+		// Trim path of query params
+		meta.Path = strings.Split(meta.Path, "?")[0]
+	case L7BaseURL:
+		// Remove path
+		meta.Path = flowLogFieldNotIncluded
+	case L7URLNone:
+		// Remove the URL entirely
+		meta.Domain = flowLogFieldNotIncluded
+		meta.Path = flowLogFieldNotIncluded
+	}
 
 	spec := L7Spec{
 		Duration:      update.Duration,

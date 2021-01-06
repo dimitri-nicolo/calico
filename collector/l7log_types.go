@@ -22,7 +22,7 @@ type L7Update struct {
 	ServiceName      string
 	ServiceNamespace string
 	ServicePort      int
-	ResponseCode     int
+	ResponseCode     string
 	Method           string
 	Domain           string
 	Path             string
@@ -33,8 +33,8 @@ type L7Update struct {
 
 // L7Log represents the log we are pushing to fluentd/elastic.
 type L7Log struct {
-	StartTime        time.Time           `json:"start_time"`
-	EndTime          time.Time           `json:"end_time"`
+	StartTime        int64               `json:"start_time"`
+	EndTime          int64               `json:"end_time"`
 	DurationMean     time.Duration       `json:"duration_mean"`
 	DurationMax      time.Duration       `json:"duration_max"`
 	BytesIn          int                 `json:"bytes_in"`
@@ -52,7 +52,7 @@ type L7Log struct {
 	Method           string              `json:"method"`
 	UserAgent        string              `json:"user_agent"`
 	URL              string              `json:"url"`
-	ResponseCode     int                 `json:"response_code"`
+	ResponseCode     string              `json:"response_code"`
 	Type             string              `json:"type"`
 }
 
@@ -67,7 +67,7 @@ type L7Meta struct {
 	ServiceName      string
 	ServiceNamespace string
 	ServicePort      int
-	ResponseCode     int
+	ResponseCode     string
 	Method           string
 	Domain           string
 	Path             string
@@ -101,8 +101,8 @@ type L7Data struct {
 
 func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 	res := &L7Log{
-		StartTime:        startTime,
-		EndTime:          endTime,
+		StartTime:        startTime.Unix(),
+		EndTime:          endTime.Unix(),
 		BytesIn:          ld.BytesReceived,
 		BytesOut:         ld.BytesSent,
 		Count:            ld.Count,
@@ -127,7 +127,11 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 
 	// Create the URL from the domain and path
 	// Path is expected to have a leading "/" character.
-	res.URL = fmt.Sprintf("%s%s", ld.Domain, ld.Path)
+	if ld.Domain != flowLogFieldNotIncluded && ld.Path != flowLogFieldNotIncluded {
+		res.URL = fmt.Sprintf("%s%s", ld.Domain, ld.Path)
+	} else if ld.Domain != flowLogFieldNotIncluded && ld.Path == flowLogFieldNotIncluded {
+		res.URL = ld.Domain
+	}
 
 	return res
 }

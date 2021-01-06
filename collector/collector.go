@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -771,7 +772,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		DurationMax:   int(hd.DurationMax),
 		BytesReceived: int(hd.BytesReceived),
 		BytesSent:     int(hd.BytesSent),
-		ResponseCode:  int(hd.ResponseCode),
+		ResponseCode:  strconv.Itoa(int(hd.ResponseCode)),
 		Method:        hd.RequestMethod,
 		Path:          hd.RequestPath,
 		UserAgent:     hd.UserAgent,

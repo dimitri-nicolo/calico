@@ -19,7 +19,7 @@ type L7LogGetter interface {
 
 type L7LogAggregator interface {
 	L7LogGetter
-	AggregateOver(L7SvcAggregationKind, L7URLAggregationKind, L7ErrAggregationKind) L7LogAggregator
+	AggregateOver(L7AggregationKind) L7LogAggregator
 	FeedUpdate(L7Update) error
 }
 

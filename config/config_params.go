@@ -323,14 +323,20 @@ type Config struct {
 	DNSLogsFilePerNodeLimit    int           `config:"int;0"`
 	DNSLogsLatency             bool          `config:"bool;true"`
 
-	L7LogsFlushInterval     time.Duration `config:"seconds;300"`
-	L7LogsFileEnabled       bool          `config:"bool;false"`
-	L7LogsFileDirectory     string        `config:"string;/var/log/calico/l7logs"`
-	L7LogsFileMaxFiles      int           `config:"int;5"`
-	L7LogsFileMaxFileSizeMB int           `config:"int;100"`
-	// TODO: Figure out the appropriate aggregation levels
-	L7LogsFileAggregationKind int `config:"int(0:1);1"`
-	L7LogsFilePerNodeLimit    int `config:"int;0"`
+	L7LogsFlushInterval                  time.Duration `config:"seconds;300"`
+	L7LogsFileEnabled                    bool          `config:"bool;false"`
+	L7LogsFileDirectory                  string        `config:"string;/var/log/calico/l7logs"`
+	L7LogsFileMaxFiles                   int           `config:"int;5"`
+	L7LogsFileMaxFileSizeMB              int           `config:"int;100"`
+	L7LogsFileAggregationHTTPHeaderInfo  string        `config:"string;ExcludeL7HTTPHeaderInfo"`
+	L7LogsFileAggregationHTTPMethod      string        `config:"string;IncludeL7Method"`
+	L7LogsFileAggregationServiceInfo     string        `config:"string;IncludeL7ServiceInfo"`
+	L7LogsFileAggregationDestinationInfo string        `config:"string;IncludeL7DestinationInfo"`
+	L7LogsFileAggregationSourceInfo      string        `config:"string;IncludeL7SourceInfo"`
+	L7LogsFileAggregationResponseCode    string        `config:"string;IncludeL7ResponseCode"`
+	L7LogsFileAggregationTrimURL         string        `config:"string;IncludeL7FullURL"`
+	L7LogsFileAggregationNumURLPath      int           `config:"int;5"`
+	L7LogsFilePerNodeLimit               int           `config:"int;0"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
