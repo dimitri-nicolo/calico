@@ -103,12 +103,18 @@ var CloudCommunityAPIs = set{
 	api.NewNetworkPolicyList().GetObjectKind().GroupVersionKind().String():                 true,
 	api.NewNetworkSet().GetObjectKind().GroupVersionKind().String():                        true,
 	api.NewNetworkSetList().GetObjectKind().GroupVersionKind().String():                    true,
+	api.NewNode().GetObjectKind().GroupVersionKind().String():                              true,
+	api.NewNodeList().GetObjectKind().GroupVersionKind().String():                          true,
+	api.NewProfile().GetObjectKind().GroupVersionKind().String():                           true,
+	api.NewProfileList().GetObjectKind().GroupVersionKind().String():                       true,
 	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():         true,
 	api.NewStagedGlobalNetworkPolicyList().GetObjectKind().GroupVersionKind().String():     true,
 	api.NewStagedKubernetesNetworkPolicy().GetObjectKind().GroupVersionKind().String():     true,
 	api.NewStagedKubernetesNetworkPolicyList().GetObjectKind().GroupVersionKind().String(): true,
 	api.NewStagedNetworkPolicy().GetObjectKind().GroupVersionKind().String():               true,
 	api.NewStagedNetworkPolicyList().GetObjectKind().GroupVersionKind().String():           true,
+	api.NewWorkloadEndpoint().GetObjectKind().GroupVersionKind().String():                  true,
+	api.NewWorkloadEndpointList().GetObjectKind().GroupVersionKind().String():              true,
 }
 
 // CloudStarter package has in addition to CloudCommuniy EgressAccessControl and Tiers
