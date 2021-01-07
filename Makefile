@@ -34,7 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-GO_BUILD_VER?=v0.49
+GO_BUILD_VER?=v0.50
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins
@@ -222,8 +222,8 @@ bin/calico-felix-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 bin/calico-felix.exe: $(SRC_FILES)
 	@echo Building felix for Windows...
 	mkdir -p bin
-	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	   	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+	   	GOOS=windows CC=x86_64-w64-mingw32-gcc go build --buildmode=exe -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
@@ -873,14 +873,6 @@ cover-report: combined.coverprofile
 bin/calico-felix.transfer-url: bin/calico-felix
 	$(DOCKER_GO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
 
-# Cross-compile Felix for Windows
-bin/calico-felix.exe: $(SRC_FILES)
-	@echo Building felix for Windows...
-	mkdir -p bin
-	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	   	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
-		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
-		( echo "Error: $@ was not statically linked"; false ) )'
 
 .PHONY: patch-script
 patch-script: bin/calico-felix.transfer-url

@@ -75,6 +75,9 @@ type endpointManager struct {
 	pendingHostAddrs []string
 	// hostAddrs contains the list of IPs detected on the host.
 	hostAddrs []string
+
+	// List of endpoint event listener.
+	eventListeners []endPointEventListener
 }
 
 type hnsInterface interface {
@@ -83,7 +86,9 @@ type hnsInterface interface {
 	GetAttachedContainerIDs(endpoint *hns.HNSEndpoint) ([]string, error)
 }
 
-func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDataplane) *endpointManager {
+func newEndpointManager(hns hnsInterface,
+	policysets policysets.PolicySetsDataplane,
+	eventListeners []endPointEventListener) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -115,11 +120,36 @@ func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDatapl
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		hostAddrs:           hostIPv4s,
+		eventListeners:      eventListeners,
 	}
 }
 
 func (m *endpointManager) OnHostAddrsUpdate(hostAddrs []string) {
 	m.pendingHostAddrs = hostAddrs
+}
+
+type endPointEventListener interface {
+	HandleEndpointsUpdate(ids []string)
+	HandlePolicyUpdate(id string)
+}
+
+func (m *endpointManager) PropagateEndpointsUpdate() {
+	ids := []string{}
+	for _, id := range m.addressToEndpointId {
+		ids = append(ids, id)
+	}
+	log.WithField("event", ids).Debug("Refresh endpoints")
+
+	for _, listener := range m.eventListeners {
+		listener.HandleEndpointsUpdate(ids)
+	}
+}
+
+func (m *endpointManager) PropagatePolicyUpdate(id string) {
+	log.WithField("event", id).Debug("Policy Update")
+	for _, listener := range m.eventListeners {
+		listener.HandlePolicyUpdate(id)
+	}
 }
 
 // OnUpdate is called by the main dataplane driver loop during the first phase. It processes
@@ -316,6 +346,14 @@ func (m *endpointManager) CompleteDeferredWork() error {
 		// WEP updates. This is because an IP address can be recycled and assigned to a
 		// different endpoint since last time HnsEndpointCache been updated.
 		_ = m.RefreshHnsEndpointCache(true)
+
+		// Inform collector for any endpoint updates.
+		// It is possible that a WEP has been removed before a HNS endpoint is deleted by kubelet.
+		// In that case, endpoint manager still sends down hns endpoint id of the deleted WEP.
+		// This is fine since the stale endpoint will be deleted next time when we get a WEP update.
+		if len(m.eventListeners) != 0 {
+			m.PropagateEndpointsUpdate()
+		}
 	}
 
 	// Loop through each pending update
@@ -395,6 +433,11 @@ func (m *endpointManager) CompleteDeferredWork() error {
 				// Failed to apply, this will be rescheduled and retried
 				log.WithError(err).Error("Failed to apply rules update")
 				return err
+			}
+
+			// Inform collector for any policy updates.
+			if len(m.eventListeners) != 0 {
+				m.PropagatePolicyUpdate(endpointId)
 			}
 
 			m.activeWlEndpoints[id] = workload
