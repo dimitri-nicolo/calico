@@ -18,12 +18,15 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/windows/hcn"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/felix/dataplane/windows/vfp"
 
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/jitter"
@@ -55,10 +58,15 @@ type Config struct {
 	IPv6Enabled      bool
 	HealthAggregator *health.HealthAggregator
 
+	// Optional stats collector
+	Collector collector.Collector
+
 	Hostname     string
 	VXLANEnabled bool
 	VXLANID      int
 	VXLANPort    int
+
+	LookupsCache *calc.LookupsCache
 }
 
 // winDataplane implements an in-process Felix dataplane driver capable of applying network policy
@@ -175,9 +183,21 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	}
 	dp.policySets = policysets.NewPolicySets(hns, ipsc)
 
+	// If required, create vfpInfoReader
+	var epEventListeners []endPointEventListener
+	if config.Collector != nil {
+		log.Debug("Stats collection is required, create VFP info reader")
+		vfpInfoReader := vfp.NewInfoReader(config.LookupsCache, collector.DefaultConntrackPollingInterval)
+
+		config.Collector.SetPacketInfoReader(vfpInfoReader)
+		config.Collector.SetConntrackInfoReader(vfpInfoReader)
+
+		epEventListeners = append(epEventListeners, vfpInfoReader.EndpointEventHandler())
+	}
+
 	dp.RegisterManager(newIPSetsManager(ipSetsV4))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
-	dp.endpointMgr = newEndpointManager(hns, dp.policySets)
+	dp.endpointMgr = newEndpointManager(hns, dp.policySets, epEventListeners)
 	dp.RegisterManager(dp.endpointMgr)
 	if config.VXLANEnabled {
 		log.Info("VXLAN enabled, starting the VXLAN manager")

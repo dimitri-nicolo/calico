@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -23,11 +23,11 @@ type EventProtoStatsV4 struct {
 	Daddr       uint32
 	Sport       uint16
 	Dport       uint16
-	TxBytes     uint32
-	RxBytes     uint32
+	Bytes       uint32
 	SndBuf      uint32
 	RcvBuf      uint32
 	ProcessName [ProcessNameLen]byte
+	IsRx        uint32
 }
 
 func parseEventProtov4Stats(raw []byte) EventProtoStatsV4 {
