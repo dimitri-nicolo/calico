@@ -61,7 +61,7 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 	// port.  Miss implies that CTLB isn't in use or DNAT hasn't happened yet; either
 	// way the message in hand already had the dst IP and port that we need.)
 	__be32 dst_ip = ctx->state->ip_dst;
-	__be16 dst_port = ctx->state->dport;
+	__be16 dst_port = bpf_htons(ctx->state->dport);
 	struct sendrecv4_key key = {
 		.ip	= dst_ip,
 		.port	= dst_port,
