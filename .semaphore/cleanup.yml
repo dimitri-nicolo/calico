@@ -22,6 +22,8 @@ blocks:
     prologue:
       commands:
       - checkout
+      # The following settings all need to match the corresponding ones in semaphore.yml,
+      # in the places that launch the VMs (for UT or FV testing).
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
       - export ZONE=europe-west3-c
