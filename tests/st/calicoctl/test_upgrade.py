@@ -23,6 +23,7 @@ from nose_parameterized import parameterized
 from tests.st.utils.utils import calicoctl, \
     name, wipe_etcd, get_ip, clean_calico_data
 from tests.st.utils.v1_data import data
+from tests.st.utils.data import valid_cnx_license_expires_september_02_2021
 
 ETCD_SCHEME = os.environ.get("ETCD_SCHEME", "http")
 ETCD_CA = os.environ.get("ETCD_CA_CERT_FILE", "")
@@ -73,6 +74,10 @@ def _test_converter(testname, fail_expected, error_text=None, format="yaml"):
     # Let's start every test afresh
     wipe_etcd(get_ip())
     testdata = data[testname]
+
+    # Apply the license in order to access the APIs
+    rc = calicoctl("create", data=valid_cnx_license_expires_september_02_2021)
+    rc.assert_no_error()
 
     # Convert data to V3 API using the tool under test
     rc = calicoctl("convert -o %s" % format, data=testdata, format=format)

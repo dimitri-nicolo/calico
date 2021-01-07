@@ -38,6 +38,7 @@ class TestCalicoctlValidate(TestBase):
         - Expect success for expired, but valid license
         - Expect error for corrupt license (and non-zero exit code)
         - Expect error for non-license manifest (and non-zero exit code)
+        - Expect success for valid license
         """
         rc = calicoctl("validate -f %s" % (filebase+"expired-production-license.yaml"))
         rc.assert_no_error()
@@ -47,3 +48,6 @@ class TestCalicoctlValidate(TestBase):
 
         rc = calicoctl("validate -f %s" % (filebase_v3+"networkpolicy.yaml"))
         rc.assert_error()
+
+        rc = calicoctl("validate -f %s" % (filebase+"license.yaml"))
+        rc.assert_no_error

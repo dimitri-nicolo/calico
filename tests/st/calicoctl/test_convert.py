@@ -47,6 +47,11 @@ class TestCalicoctlConvert(TestBase):
     Test calicoctl convert
     """
 
+    def setUp(self):
+        super(TestCalicoctlConvert, self).setUp()
+        rc = calicoctl("create", data=valid_cnx_license_expires_september_02_2021)
+        rc.assert_no_error()
+
     def _test_convert_successful(self, filename, format="yaml"):
         """
         Test convert successfully

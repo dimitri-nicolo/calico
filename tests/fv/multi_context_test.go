@@ -15,9 +15,10 @@
 package fv_test
 
 import (
-	log "github.com/sirupsen/logrus"
 	"os"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	. "github.com/onsi/gomega"
 	. "github.com/projectcalico/calicoctl/v3/tests/fv/utils"
@@ -33,6 +34,10 @@ func TestMultiCluster(t *testing.T) {
 	RegisterTestingT(t)
 
 	os.Setenv("KUBECONFIG", "/go/src/github.com/projectcalico/calicoctl/test-data/kubectl-config.yaml")
+
+	// Setup the license
+	out := Calicoctl(true, "create", "-f", "/go/src/github.com/projectcalico/calicoctl/test-data/licenses/license.yaml", "--context", "main")
+	Expect(out).To(ContainSubstring("Successfully"))
 
 	// This check will Fail, kubectl-config.yaml file that we are using for this only contains "main" context.
 	out, err := CalicoctlMayFail(true, "get", "node", "--context", "fake")

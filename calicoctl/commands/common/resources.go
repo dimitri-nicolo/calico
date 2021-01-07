@@ -301,11 +301,10 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 func ExecuteResourceAction(args map[string]interface{}, client client.Interface, resource resourcemgr.ResourceObject, action action) ([]runtime.Object, error) {
 	ctx := context.Background()
 
-	// If the resource is Tier/TierList or RemoteClusterConfiguration/RemoteClusterConfigurationList then check the
-	// license first then continue only if the license is valid.
+	// If the resource is LicenseKey/LicenseKeyList then check the
+	// license first then continue only if the license is valid or the feature is included in the license
 	resGVK := resource.GetObjectKind().GroupVersionKind().String()
-	if resGVK == api.NewTier().GroupVersionKind().String() || resGVK == api.NewTierList().GroupVersionKind().String() ||
-		resGVK == api.NewRemoteClusterConfiguration().GroupVersionKind().String() || resGVK == api.NewRemoteClusterConfigurationList().GroupVersionKind().String() {
+	if shouldCheckAPIUsage(resGVK, action) {
 
 		lic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{ResourceVersion: ""})
 		if err != nil {
@@ -334,7 +333,12 @@ func ExecuteResourceAction(args map[string]interface{}, client client.Interface,
 			fmt.Println("Contact Tigera support or email licensing@tigera.io")
 			fmt.Println()
 		} else {
-			log.Info("License is valid")
+			if claims.ValidateAPIUsage(resGVK) {
+				log.Info("License is valid")
+			} else {
+				fmt.Printf("[WARNING] Your license does not support accessing this API. Please update your license to restore normal operations.\n")
+				fmt.Printf("Contact Tigera support or email licensing@tigera.io\n")
+			}
 		}
 	}
 
@@ -380,6 +384,13 @@ func ExecuteResourceAction(args map[string]interface{}, client client.Interface,
 	}
 
 	return []runtime.Object{resOut}, err
+}
+
+// shouldCheckAPIUsage determines if we should check that the API usage is allowed
+// according to the license package. By default, we are allowing access to LicenseKey API
+// and restrict access to action like CREATE, APPLY to all other projectcalico resourcess
+func shouldCheckAPIUsage(resGVK string, action action) bool {
+	return resGVK != api.NewLicenseKey().GroupVersionKind().String() && resGVK != api.NewLicenseKeyList().GroupVersionKind().String() && (action == ActionCreate || action == ActionApply)
 }
 
 // tryEnsureInitialized is called from any write action (apply, create, update). This
