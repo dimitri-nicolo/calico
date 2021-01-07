@@ -256,3 +256,27 @@ func (r *NetLinkConntrackReader) processCtEntry(ctEntry nfnetlink.CtEntry) {
 func (r *NetLinkConntrackReader) ConntrackInfoChan() <-chan ConntrackInfo {
 	return r.outC
 }
+
+func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
+	var l4Src, l4Dst int
+	if nflogTuple.Proto == 1 {
+		l4Src = nflogTuple.L4Src.Id
+		l4Dst = int(uint16(nflogTuple.L4Dst.Type)<<8 | uint16(nflogTuple.L4Dst.Code))
+	} else {
+		l4Src = nflogTuple.L4Src.Port
+		l4Dst = nflogTuple.L4Dst.Port
+	}
+	return MakeTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
+}
+
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {
+	var l4Src, l4Dst int
+	if ctTuple.ProtoNum == 1 {
+		l4Src = ctTuple.L4Src.Id
+		l4Dst = int(uint16(ctTuple.L4Dst.Type)<<8 | uint16(ctTuple.L4Dst.Code))
+	} else {
+		l4Src = ctTuple.L4Src.Port
+		l4Dst = ctTuple.L4Dst.Port
+	}
+	return MakeTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+}

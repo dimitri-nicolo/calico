@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
@@ -80,12 +78,12 @@ func New(
 	}
 	if configParams.FlowLogsFileEnabled {
 		log.WithFields(log.Fields{
-			"directory": configParams.FlowLogsFileDirectory,
+			"directory": configParams.GetFlowLogsFileDirectory(),
 			"max_size":  configParams.FlowLogsFileMaxFileSizeMB,
 			"max_files": configParams.FlowLogsFileMaxFiles,
 		}).Info("Creating Flow Logs FileDispatcher")
 		fd := NewFileDispatcher(
-			configParams.FlowLogsFileDirectory,
+			configParams.GetFlowLogsFileDirectory(),
 			FlowLogFilename,
 			configParams.FlowLogsFileMaxFileSizeMB,
 			configParams.FlowLogsFileMaxFiles,
@@ -96,7 +94,7 @@ func New(
 		log.Info("Creating Flow Logs Reporter")
 		var offsetReader LogOffset = &NoOpLogOffset{}
 		if configParams.FlowLogsDynamicAggregationEnabled {
-			offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.FlowLogsPositionFilePath),
+			offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.GetFlowLogsPositionFilePath()),
 				int64(configParams.FlowLogsAggregationThresholdBytes))
 		}
 		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator, configParams.FlowLogsEnableHostEndpoint, offsetReader)
@@ -118,7 +116,7 @@ func New(
 		lookupsCache,
 		rm,
 		&Config{
-			StatsDumpFilePath:            configParams.StatsDumpFilePath,
+			StatsDumpFilePath:            configParams.GetStatsDumpFilePath(),
 			AgeTimeout:                   DefaultAgeTimeout,
 			InitialReportingDelay:        DefaultInitialReportingDelay,
 			ExportingInterval:            DefaultExportingInterval,

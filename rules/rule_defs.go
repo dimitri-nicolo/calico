@@ -112,6 +112,9 @@ const (
 	NFLOGOutboundGroup uint16 = 2
 	NFLOGDomainGroup   uint16 = 3
 
+	// Windows Hns rule delimeter between prefix string, rule name and sequence number.
+	WindowsHnsRuleNameDelimeter = "---"
+
 	// HistoricNATRuleInsertRegex is a regex pattern to match to match
 	// special-case rules inserted by old versions of felix.  Specifically,
 	// Python felix used to insert a masquerade rule directly into the

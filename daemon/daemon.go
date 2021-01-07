@@ -397,18 +397,13 @@ configRetry:
 
 	var lookupsCache *calc.LookupsCache
 	var dpStatsCollector collector.Collector
-	if runtime.GOOS != "windows" {
-		// Initialzed the lookup cache here and pass it along to both the calc_graph
-		// as well as dataplane driver, which actually uses this for lookups.
-		lookupsCache = calc.NewLookupsCache()
 
-		// Start the stats collector which also depends on the lookups cache.
-		dpStatsCollector = collector.New(configParams, lookupsCache, healthAggregator)
-	} else {
-		// For windows OS, make lookupsCache nil and rest of all lookupCache
-		// should handle the nil pointer
-		lookupsCache = nil
-	}
+	// Initialzed the lookup cache here and pass it along to both the calc_graph
+	// as well as dataplane driver, which actually uses this for lookups.
+	lookupsCache = calc.NewLookupsCache()
+
+	// Start the stats collector which also depends on the lookups cache.
+	dpStatsCollector = collector.New(configParams, lookupsCache, healthAggregator)
 
 	if configParams.DebugPanicAfter > 0 {
 		log.WithField("delay", configParams.DebugPanicAfter).Warn("DebugPanicAfter is set, will panic after delay!")
