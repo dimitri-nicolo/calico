@@ -19,27 +19,7 @@
 #define __CALI_PERF_H__
 
 #include "bpf.h"
-
-struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
-	.type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
-	.key_size = 4,
-	.value_size = 4,
-	.max_entries = 512,
-	CALI_MAP_TC_EXT_PIN(MAP_PIN_GLOBAL)
-};
-
-/* We need the header to be 64bit of size so that any 64bit fields in the
- * message structures that embed this header are also aligned.
- */
-struct perf_event_header {
-	__u32 type;
-	__u32 len;
-};
-
-struct perf_event_timestamp_header {
-	struct perf_event_header h;
-	__u64 timestamp_ns;
-};
+#include "perf_types.h"
 
 /* perf_commit_event commits an event with the provided data */
 static CALI_BPF_INLINE int perf_commit_event(void *ctx, void *data, __u64 size)

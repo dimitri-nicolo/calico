@@ -35,12 +35,16 @@ struct tuple {
 static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
 {
 	int err;
+	struct cali_tc_ctx ctx = {
+		.skb = skb,
+	};
 
-	/* emulate the size check that the caller would have done */
-	if (skb_shorter(skb, ETH_IPV4_UDP_SIZE))
+	if (skb_refresh_validate_ptrs(&ctx, UDP_SIZE)) {
+		ctx.fwd.reason = CALI_REASON_SHORT;
+		CALI_DEBUG("Too short\n");
 		return -1;
-
-	struct iphdr *ip = skb_iphdr(skb);
+	}
+	struct iphdr *ip = ctx.ip_header;
 
 	struct tuple tp = {
 		.hdr = {
