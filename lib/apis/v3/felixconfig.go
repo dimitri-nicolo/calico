@@ -481,6 +481,15 @@ type FelixConfigurationSpec struct {
 	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
 	FlowLogsAggregationThresholdBytes *int `json:"flowLogsAggregationThresholdBytes,omitempty"`
 
+	// WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: "c:\\TigeraCalico\\flowlogs"].
+	WindowsFlowLogsFileDirectory string `json:"windowsFlowLogsFileDirectory,omitempty"`
+	// WindowsFlowLogsPositionFilePath is used to specify the position of the external pipeline that reads flow logs on Windows nodes.
+	// [Default: "c:\\TigeraCalico\\flowlogs\\flows.log.pos"].
+	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
+	WindowsFlowLogsPositionFilePath string `json:"windowsFlowLogsPositionFilePath,omitempty"`
+	// WindowsStatsDumpFilePath is used to specify the path of the stats dump file on Windows nodes. [Default: "c:\\TigeraCalico\\stats\\dump"]
+	WindowsStatsDumpFilePath string `json:"windowsStatsDumpFilePath,omitempty"`
+
 	// The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an
 	// explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS
 	// service. `<port>` defaults to the first service port, or 53 for an IP, and `<namespace>` to

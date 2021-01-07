@@ -5596,6 +5596,27 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"windowsFlowLogsFileDirectory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: \"c:\\TigeraCalico\\flowlogs\"].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"windowsFlowLogsPositionFilePath": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WindowsFlowLogsPositionFilePath is used to specify the position of the external pipeline that reads flow logs on Windows nodes. [Default: \"c:\\TigeraCalico\\flowlogs\\flows.log.pos\"]. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"windowsStatsDumpFilePath": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WindowsStatsDumpFilePath is used to specify the path of the stats dump file on Windows nodes. [Default: \"c:\\TigeraCalico\\stats\\dump\"]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"dnsTrustedServers": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS service. `<port>` defaults to the first service port, or 53 for an IP, and `<namespace>` to `kube-system`. An IPv6 address with a port must use the square brackets convention, for example `[fd00:83a6::12]:5353`.Note that Felix (calico-node) will need RBAC permission to read the details of each service specified by a `k8s-service:...` form. [Default: \"k8s-service:kube-dns\"].",
