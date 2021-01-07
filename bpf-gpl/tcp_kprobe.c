@@ -38,6 +38,13 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 		bpf_probe_read(&dport, 2, &sk_cmn->skc_dport);
 		bpf_probe_read(&saddr, 4, &sk_cmn->skc_rcv_saddr);
 		bpf_probe_read(&daddr, 4, &sk_cmn->skc_daddr);
+		/* Do not send data when any of src ip,src port, dst ip, dst port is 0.
+		 * This being the socket data, value of 0 indicates a socket in listening
+		 * state. Further data cannot be correlated in felix.
+		 */
+		if (!sport || !dport || !saddr || !daddr) {
+			return 0;
+		}
 		pid = bpf_get_current_pid_tgid() >> 32;
 		ts = bpf_ktime_get_ns();
 		if (family == 2 /* AF_INET */) {
@@ -46,30 +53,30 @@ static int CALI_BPF_INLINE tcp_collect_stats(struct pt_regs *ctx, struct sock_co
 			key.sport = sport;
 			key.daddr = daddr;
 			key.dport = dport;
-			val = cali_v4_stats_lookup_elem(&key);
+			if (tx) {
+				val = cali_v4_txstats_lookup_elem(&key);
+			} else {
+				val = cali_v4_rxstats_lookup_elem(&key);
+			}
 			if (val == NULL) {
 				v4_value.timestamp = ts;
+				v4_value.bytes = bytes;
+				event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.bytes, IPPROTO_TCP, !tx);
 				if (tx) {
-					v4_value.txBytes = bytes;
+					ret = cali_v4_txstats_update_elem(&key, &v4_value, 0);
 				} else {
-					v4_value.rxBytes = bytes;
+					ret = cali_v4_rxstats_update_elem(&key, &v4_value, 0);
 				}
-				event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.txBytes, v4_value.rxBytes, IPPROTO_TCP);
-				ret = cali_v4_stats_update_elem(&key, &v4_value, 0);
 				if (ret < 0) {
 					goto error;
 				}
 			} else {
 				diff = ts - val->timestamp;
 				if (diff >= SEND_DATA_INTERVAL) {
-					event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->txBytes, val->rxBytes, IPPROTO_TCP);
+					event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->bytes, IPPROTO_TCP, !tx);
 					val->timestamp = ts;
 				}
-				if (tx) {
-					val->txBytes += bytes;
-				} else {
-					val->rxBytes += bytes;
-				}
+				val->bytes += bytes;
 			}
 			return 0;
 		}

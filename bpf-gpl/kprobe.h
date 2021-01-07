@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include "bpf.h"
 #include "tracing.h"
 
-#define SEND_DATA_INTERVAL 2000000000
+#define SEND_DATA_INTERVAL 10000000000
 struct __attribute__((__packed__)) calico_kprobe_proto_v4_key {
 	__u32 pid;
 	__u32 saddr;
@@ -31,15 +31,18 @@ struct __attribute__((__packed__)) calico_kprobe_proto_v4_key {
 };
 
 struct calico_kprobe_proto_v4_value {
-	__u32 txBytes;
-	__u32 rxBytes;
+	__u32 bytes;
 	__u64	timestamp;
 };
 
-CALI_MAP_V1(cali_v4_stats,
+CALI_MAP_V1(cali_v4_txstats,
 		BPF_MAP_TYPE_LRU_HASH,
 		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
 		511000, 0, MAP_PIN_GLOBAL)
 
+CALI_MAP_V1(cali_v4_rxstats,
+		BPF_MAP_TYPE_LRU_HASH,
+		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
+		511000, 0, MAP_PIN_GLOBAL)
 #endif /* __CALI_KPROBE_H__ */
 

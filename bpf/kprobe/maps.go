@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,15 +23,28 @@ import (
 const protoV4KeySize = 16
 const protoV4ValueSize = 16
 
-var Protov4MapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_stats",
+var Protov4TxMapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_txstats",
 	Type:       "lru_hash",
 	KeySize:    protoV4KeySize,
 	ValueSize:  protoV4ValueSize,
 	MaxEntries: 511000,
-	Name:       "cali_v4_stats",
+	Name:       "cali_v4_txstats",
 }
 
-func MapProtov4(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(Protov4MapParameters)
+func MapProtov4Tx(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(Protov4TxMapParameters)
+}
+
+var Protov4RxMapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_rxstats",
+	Type:       "lru_hash",
+	KeySize:    protoV4KeySize,
+	ValueSize:  protoV4ValueSize,
+	MaxEntries: 511000,
+	Name:       "cali_v4_rxstats",
+}
+
+func MapProtov4Rx(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(Protov4RxMapParameters)
 }

@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -157,11 +157,15 @@ func TestBPFLoaderWithTcpKprobe(t *testing.T) {
 	perfMap := perf.Map(mc, "perf_evnt", events.MaxCPUs)
 	err := perfMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
-	statMap := kprobe.MapProtov4(mc)
-	err = statMap.EnsureExists()
+	txStatMap := kprobe.MapProtov4Tx(mc)
+	err = txStatMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	loader, err := elf.NewLoaderFromFile(fileName, perfMap, statMap)
+	rxStatMap := kprobe.MapProtov4Rx(mc)
+	err = rxStatMap.EnsureExists()
+	Expect(err).NotTo(HaveOccurred())
+
+	loader, err := elf.NewLoaderFromFile(fileName, perfMap, txStatMap, rxStatMap)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
 
