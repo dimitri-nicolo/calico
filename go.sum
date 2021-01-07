@@ -557,8 +557,6 @@ github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNx
 github.com/mattn/go-isatty v0.0.4/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
 github.com/mattn/go-isatty v0.0.9/go.mod h1:YNRxwqDuOph6SZLI9vUUz6OYw3QyUt7WiY2yME+cCiQ=
-github.com/mattn/go-isatty v0.0.10 h1:qxFzApOv4WsAL965uUPIsXzAKCZxN2p9UqdhFS4ZW10=
-github.com/mattn/go-isatty v0.0.10/go.mod h1:qgIWMr58cqv1PHHyhnkY9lrL7etaEgOFcMEpPG5Rm84=
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-runewidth v0.0.2/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
 github.com/mattn/go-shellwords v1.0.3/go.mod h1:3xCvwCdWdlDJUrvuMn7Wuy9eWs4pE8vqg+NOMyg4B2o=
@@ -754,8 +752,6 @@ github.com/spf13/cobra v0.0.1/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3
 github.com/spf13/cobra v0.0.2/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3XqQ=
 github.com/spf13/cobra v0.0.3/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3XqQ=
 github.com/spf13/cobra v0.0.5/go.mod h1:3K3wKZymM7VvHMDS9+Akkh4K60UwM26emMESw8tLCHU=
-github.com/spf13/cobra v0.0.6 h1:breEStsVwemnKh2/s6gMvSdMEkwW0sK8vGStnlVBMCs=
-github.com/spf13/cobra v0.0.6/go.mod h1:/6GTrnGXV9HjY+aR4k0oJ5tcvakLuG6EuKReYlHNrgE=
 github.com/spf13/cobra v1.0.0/go.mod h1:/6GTrnGXV9HjY+aR4k0oJ5tcvakLuG6EuKReYlHNrgE=
 github.com/spf13/jwalterweatherman v0.0.0-20170901151539-12bd96e66386/go.mod h1:cQK4TGJAtQXfYWX+Ddv3mKDzgVb68N+wFjFa4jdeBTo=
 github.com/spf13/jwalterweatherman v0.0.0-20180109140146-7c0cea34c8ec/go.mod h1:cQK4TGJAtQXfYWX+Ddv3mKDzgVb68N+wFjFa4jdeBTo=
@@ -797,8 +793,8 @@ github.com/tigera/apimachinery-private v0.0.0-20201204234441-e565126b30e8 h1:oV4
 github.com/tigera/apimachinery-private v0.0.0-20201204234441-e565126b30e8/go.mod h1:PF5taHbXgTEJLU+xMypMmYTXTWPJ5LaW8bfsisxnEXk=
 github.com/tigera/apiserver v0.0.0-20210107195834-3b737db6f271 h1:yRwrYRMdochy55IAAD08RusyfhOj2/4SIExfuy9Sats=
 github.com/tigera/apiserver v0.0.0-20210107195834-3b737db6f271/go.mod h1:JXo7mx5GeBpypYcsv73eOkgvUrRM1ohdAq1r4G0bi94=
-github.com/tigera/compliance v0.0.0-20210107101357-eb3df4c35439 h1:SXwVVzrmPcicsgSGy9P9YPlJwhXRQu140Z+JzqwcJWI=
-github.com/tigera/compliance v0.0.0-20210107101357-eb3df4c35439/go.mod h1:1wZK4aH8IUZattcC9fdGFXN5bFBrtgDa2wfRwCwNIAs=
+github.com/tigera/compliance v0.0.0-20210107201310-be3003546f7f h1:9R/JBnl5rj21Png9ZykjfEtoR9JJsRUg6jmNS9UMGpM=
+github.com/tigera/compliance v0.0.0-20210107201310-be3003546f7f/go.mod h1:pGhkELePaUSZmTYhMeCXgipPwROEnCtCiAubPsuqxvU=
 github.com/tigera/felix-private v0.0.0-20210107184122-631d922e1233 h1:3MndUyxbzx9A0bz2ycbO+UoUexSU+mfNtpw0b5xcUFk=
 github.com/tigera/felix-private v0.0.0-20210107184122-631d922e1233/go.mod h1:8AUaVFsc2pbYtqqGujkfeKY+z0v6oOoEK3ndN70Wq3o=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4 h1:XymhYjjsyI9K1ePmn7YgYZ7HTP3dvgFKiRDGDbs+lko=
