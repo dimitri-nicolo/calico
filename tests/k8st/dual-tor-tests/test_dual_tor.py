@@ -107,6 +107,7 @@ class FailoverTestConfig(object):
             output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         except Exception:
             print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
+            subprocess.call("kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip, shell=True)
             cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
             output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
 
