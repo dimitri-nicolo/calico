@@ -54,7 +54,7 @@ require (
 	k8s.io/client-go v0.19.6
 
 	// Felix imports kubernetes itself to pick up the kube-proxy business logic.
-	k8s.io/kubernetes v1.19.6
+	k8s.io/kubernetes v1.18.12
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
 )
 
