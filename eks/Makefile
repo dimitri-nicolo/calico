@@ -2,6 +2,13 @@
 
 all: eks-log-forwarder-startup
 
+# This makefile applies only to non-Windows systems.
+# For Windows, we override the main target to do nothing.
+ifeq ($(OS),Windows_NT)
+eks-log-forwarder-startup:
+
+else
+
 GO_BUILD_VER    ?= v0.50
 CALICO_BUILD     = calico/go-build:$(GO_BUILD_VER)
 BINDIR          ?= bin
@@ -95,3 +102,5 @@ test-eks-log-forwarder-startup: eks-log-forwarder-startup
 clean: clean-eks-log-forwarder-startup
 clean-eks-log-forwarder-startup:
 	rm -rf $(BINDIR)
+
+endif

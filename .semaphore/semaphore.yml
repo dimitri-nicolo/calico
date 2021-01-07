@@ -2,7 +2,7 @@ version: v1.0
 name: Fluentd
 
 execution_time_limit:
-  minutes: 30
+  minutes: 60
 
 agent:
   machine:
@@ -24,7 +24,7 @@ global_job_config:
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
       # Login to docker in order to pull images.
-      - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+      - docker login -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
       - checkout
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
@@ -42,9 +42,9 @@ blocks:
 
   - name: 'Push Images (non-PR builds only)'
     dependencies: ["CI"]
-    skip:
+    #skip:
       # Only run on branches, not PRs.
-      when: "branch !~ '.+'"
+      #when: "branch !~ '.+'" TESTING ONLY
     task:
       secrets:
         - name: google-service-account-for-gcr
@@ -55,10 +55,84 @@ blocks:
           # Add the key to the ssh agent:
           - ssh-add ~/.keys/*
           # Login to docker in order to pull images.
-          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+          - docker login -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
+            - unset SEMAPHORE_GIT_PR_NUMBER # TESTING ONLY
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
+
+  - name: 'Push Windows Images (non-PR builds only)'
+    dependencies: ["CI"]
+    #skip:
+      # Only run on branches, not PRs.
+      #when: "branch !~ '.+'" TESTING ONLY
+    task:
+      secrets:
+        - name: banzai-secrets
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
+          # Clone the process repo and provision Windows instances.
+          - pushd .
+          - git clone git@github.com:tigera/process.git ~/process
+          # Testing!
+          #- cd ~/process/testing/windows-instances
+          - cd ~/process && git checkout lmm-windows && cd ~/process/testing/windows-instances
+          - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh
+          # Save windows-instances terraform.
+          - tar cvzf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
+          - artifact push job --expire-in 2w ~/windows-tf.tar.gz
+          - popd
+      epilogue:
+        always:
+          commands:
+            - cd ~/process/testing/windows-instances
+            - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
+      jobs:
+        - name: Run CD
+          commands:
+            - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
+            - export PROCESS_REPO=~/process/testing/windows-instances
+            - unset SEMAPHORE_GIT_PR_NUMBER # TESTING ONLY
+            - >-
+              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+                CONFIRM=true .semaphore/windows-cd.sh
+              fi
+
+  - name: 'Push Manifest Image'
+    dependencies:
+    - "Push Images (non-PR builds only)"
+    - "Push Windows Images (non-PR builds only)"
+    #skip:
+      # Only run on branches, not PRs.
+      #when: "branch !~ '.+'" TESTING ONLY
+    task:
+      secrets:
+        - name: banzai-secrets
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to push images.
+          - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
+      jobs:
+        - name: Run CD
+          commands:
+            - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
+            - unset SEMAPHORE_GIT_PR_NUMBER # TESTING ONLY
+            - >-
+              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+                make push-manifest CONFIRM=true
+              fi

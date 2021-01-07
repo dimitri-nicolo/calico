@@ -4,3 +4,4 @@ test/tmp/*
 *.go-pkg-cache*
 */bin/*
 .idea
+.manifest.yaml
