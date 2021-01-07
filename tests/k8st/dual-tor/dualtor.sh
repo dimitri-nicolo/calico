@@ -299,7 +299,7 @@ EOF
 
     # Disable the full mesh and configure Calico nodes to peer instead
     # with their ToR.
-    cat << EOF | ${kubectl} exec -ti -n kube-system calicoctl -- /calicoctl apply -f -
+    cat << EOF | ${kubectl} exec -i -n kube-system calicoctl -- /calicoctl apply -f -
 apiVersion: projectcalico.org/v3
 kind: BGPConfiguration
 metadata:
