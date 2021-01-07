@@ -60,11 +60,11 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 	// happened, because of CTLB being in use, but now we have the pre-DNAT IP and
 	// port.  Miss implies that CTLB isn't in use or DNAT hasn't happened yet; either
 	// way the message in hand already had the dst IP and port that we need.)
-	__be32 dst_ip = ctx->ip_header->daddr;
-	__be16 dst_port = ctx->udp_header->dest;
+	__be32 dst_ip = ctx->state->ip_dst;
+	__be16 dst_port = ctx->state->dport;
 	struct sendrecv4_key key = {
-		.ip	= ctx->ip_header->daddr,
-		.port	= ctx->udp_header->dest,
+		.ip	= dst_ip,
+		.port	= dst_port,
 		.cookie	= cookie,
 	};
 	struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
