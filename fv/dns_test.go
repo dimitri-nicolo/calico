@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -247,11 +247,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	Context("after host wget microsoft.com", func() {
 
-		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-			// Skip because don't yet capture DNS from host.
-			return
-		}
-
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			hostCanWgetMicrosoft()
@@ -349,10 +344,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 
 	It("host can wget microsoft.com", func() {
-		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-			Skip("don't yet snoop DNS from host in BPF mode")
-		}
-
 		hostCanWgetMicrosoft()
 	})
 
@@ -374,10 +365,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 		// There's no HostEndpoint yet, so the policy doesn't affect the host.
 		It("host can wget microsoft.com", func() {
-			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-				Skip("don't yet snoop DNS from host in BPF mode")
-			}
-
 			hostCanWgetMicrosoft()
 		})
 
