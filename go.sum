@@ -570,8 +570,8 @@ github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4 h1:XymhYjjsyI9K1ePmn7YgYZ7HTP3dvgFKiRDGDbs+lko=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4/go.mod h1:oTA2hqn5a9rGIbzvCjpp2Frcahtfp3C07ctf/crKRyY=
-github.com/tigera/licensing v1.0.1-0.20210106172157-5a8555a57edb h1:dDKygphf9+KJDy0W1R5iR3usaWECinJzrsvYmkBC9KM=
-github.com/tigera/licensing v1.0.1-0.20210106172157-5a8555a57edb/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
+github.com/tigera/licensing v1.0.1-0.20210108182732-27874b544b4a h1:EGQFT/apixNVX66tdigVYoWl4u+FS8xnDNFTouJKYDA=
+github.com/tigera/licensing v1.0.1-0.20210108182732-27874b544b4a/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
