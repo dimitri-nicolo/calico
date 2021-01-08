@@ -7,21 +7,28 @@ canonical_url: '/getting-started/windows-calico/limitations'
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
 {: .alert .alert-info}
 
-### Calico Enterprise for Windows feature limitations
+### Feature support and limitations
 
-In this release, the following is supported:
+| Feature                        |                                                              |
+| ------------------------------ | ------------------------------------------------------------ |
+| Kubernetes platforms           | **Supported:** Only EKS, AWS, GCE, Azure. <br />**Note**: EKS, [non-production only](#service-clusterips-incompatible-with-selectors-pod-ips-in-network-policy) |
+| Install method                 | **Supported**: Only manifest with manual upgrade             |
+| Networking                     | **Supported**:<br />- Calico Enterprise VXLAN without cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise BGP with [limitations](#bgp-networking-limitations)<br />- IPv4 |
+|                                | **Not supported**: IPv6, dual-ToR, service advertisement, multiple networks to pods |
+| Policy                         | **Supported**: Tiered policy with [limitations](#network-policy-with-tiers), recommend policy, policy preview |
+|                                | **Not supported**: Stage policy, DNS policy, policy for firewalls, Istio, non-cluster hosts |
+| Visibility and troubleshooting | **Supported**:<br />- Flow logs for traffic to/from windows pods with [limitations](#flow-log-limitations)           <br />- Audit logs<br />- Alerts |
+|                                | **Not supported**: Packet capture, DNS logs, iptable logs, L7 metrics |
+| Threat defense                 | **Supported**: Block traffic to/from src/dst based on a threat feed |
+|                                | **Not supported**: Honeypods, anomaly detection              |
+| Multi-cluster management       | **Not supported**, including federated identity endpoints and services |
+| Compliance and security        | **Supported**: Compliance audits: network-access, inventory, policy-audit only |
+|                                | **Not supported**: CIS benchmark and other reports, encryption |
+| Metrics                        | **Not supported**: Prometheus monitoring                     |
+| ebpf                           | **Not applicable**                                           |
 
-- Networking
-  - {{site.prodname}} VXLAN without cross-subnet or VXLAN MTU settings
-  - {{site.prodname}} BGP
-- Platforms: EKS/AWS 
-- Manifest install
-- {{site.prodname}} network policy with tiers
-- IPv4
 
-All other {{site.prodname}} features are not supported.
-
-### {{site.prodname}} BGP networking limitations 
+### BGP networking limitations 
 
 If you are using {{site.prodname}} with BGP, note these current limitations with Windows.
 
@@ -78,7 +85,7 @@ In this case, the IPv4 address is 172.20.41.103 and the mask is represented as b
 
 Because the linux node has network 192.168.171.136/24 and the Windows node has a different network, 172.20.32.0/19, they are unlikely to be on the same layer 2 network. 
 
-### {{site.prodname}} VXLAN networking limitations 
+### VXLAN networking limitations 
 
 Because of differences between the Linux and Windows dataplane feature sets, the following {{site.prodname}} features are not supported on Windows.
 
@@ -121,7 +128,7 @@ Restarting Felix or changes to policy (including changes to endpoints referred t
 
 Felix must reprogram the HNS ACL policy attached to the pod. This reprogramming can cause TCP resets. Microsoft has confirmed this is a HNS issue, and they are investigating.
 
-### Service ClusterIPs incompatible with selectors/pod IPs in network policy
+### Service ClusterIPs incompatible with selectors pod IPs in network policy
 
 **Windows 1809 and 1903 prior to build 18317**
 
@@ -181,6 +188,16 @@ Because of the way the Windows dataplane handles rules, the following limitation
 - Tiers: maximum of 5
 - `pass` rules: maximum of 10 per tier
 - If each tier contains a large number of rules, and has pass rules, you may need to reduce the number of tiers further.
+
+### Flow log limitations
+
+{{site.prodname}} support flow logs with these limitations:
+
+- No packet/bytes stats for denied traffic
+- No DNS stats
+- No Http stats
+- No RuleTrace for tiers
+- No BGP logs
 
 ### Next steps
 
