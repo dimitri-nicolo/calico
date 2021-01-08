@@ -15,15 +15,30 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include "ut.h"
+#ifndef __CALI_PERF_TYPES_H__
+#define __CALI_PERF_TYPES_H__
+
 #include "bpf.h"
-#include "nat.h"
 
-static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
-{
-	struct cali_tc_ctx ctx = {
-		.skb = skb,
-	};
-	return icmp_v4_too_big(&ctx);
-}
+struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
+	.type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
+	.key_size = 4,
+	.value_size = 4,
+	.max_entries = 512,
+	CALI_MAP_TC_EXT_PIN(MAP_PIN_GLOBAL)
+};
 
+/* We need the header to be 64bit of size so that any 64bit fields in the
+ * message structures that embed this header are also aligned.
+ */
+struct perf_event_header {
+	__u32 type;
+	__u32 len;
+};
+
+struct perf_event_timestamp_header {
+	struct perf_event_header h;
+	__u64 timestamp_ns;
+};
+
+#endif /* __CALI_PERF_TYPES_H__ */

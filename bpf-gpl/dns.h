@@ -24,35 +24,31 @@
 #include "sock.h"
 #include <linux/bpf_perf_event.h>
 
-static CALI_BPF_INLINE void calico_report_dns(struct __sk_buff *skb)
+static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
 {
-	int plen = skb->len;
+	int plen = ctx->skb->len;
 	struct perf_event_timestamp_header hdr;
 	__builtin_memset(&hdr, 0, sizeof(hdr));
 	hdr.h.type = EVENT_DNS;
 	hdr.h.len = sizeof(hdr) + plen;
 	hdr.timestamp_ns = bpf_ktime_get_ns();
-	int err = perf_commit_event_ctx(skb, plen, &hdr, sizeof(hdr));
+	int err = perf_commit_event_ctx(ctx->skb, plen, &hdr, sizeof(hdr));
 	if (err) {
 		CALI_DEBUG("perf_commit_event_ctx error %d\n", err);
 	}
 }
 
-static CALI_BPF_INLINE void calico_check_for_dns(
-	struct __sk_buff *skb,
-	struct cali_tc_state *state,
-	struct iphdr *ip_header,
-	struct udphdr *udp_header)
+static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 {
 	// Support UDP only; bail for TCP or any other IP protocol.
-	if (state->ip_proto != IPPROTO_UDP) {
+	if (ctx->state->ip_proto != IPPROTO_UDP) {
 		return;
 	}
 
 	// Get the sending socket's cookie.  We need this to look up the apparent
 	// destination IP and port in the cali_v4_srmsg map, to discover if a DNAT was
 	// performed by our connect-time load balancer.
-	__u64 cookie = bpf_get_socket_cookie(skb);
+	__u64 cookie = bpf_get_socket_cookie(ctx->skb);
 	if (!cookie) {
 		CALI_DEBUG("failed to get socket cookie for possible DNS request");
 		return;
@@ -64,11 +60,11 @@ static CALI_BPF_INLINE void calico_check_for_dns(
 	// happened, because of CTLB being in use, but now we have the pre-DNAT IP and
 	// port.  Miss implies that CTLB isn't in use or DNAT hasn't happened yet; either
 	// way the message in hand already had the dst IP and port that we need.)
-	__be32 dst_ip = ip_header->daddr;
-	__be16 dst_port = udp_header->dest;
+	__be32 dst_ip = ctx->state->ip_dst;
+	__be16 dst_port = bpf_htons(ctx->state->dport);
 	struct sendrecv4_key key = {
-		.ip	= ip_header->daddr,
-		.port	= udp_header->dest,
+		.ip	= dst_ip,
+		.port	= dst_port,
 		.cookie	= cookie,
 	};
 	struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
@@ -92,11 +88,11 @@ static CALI_BPF_INLINE void calico_check_for_dns(
 	if (bpf_map_lookup_elem(&cali_v4_ip_sets, &sip)) {
 		CALI_DEBUG("Dst IP/port are trusted for DNS\n");
 		// Store 'trusted DNS connection' status in conntrack entry.
-		state->ct_result.flags |= CALI_CT_FLAG_TRUST_DNS;
+		ctx->state->ct_result.flags |= CALI_CT_FLAG_TRUST_DNS;
 		// Emit event to pass (presumed) DNS request up to Felix
 		// userspace.
 		CALI_DEBUG("report probable DNS request\n");
-		calico_report_dns(skb);
+		calico_report_dns(ctx);
 	} else {
 		CALI_DEBUG("Dst IP/port are not trusted for DNS\n");
 	}
