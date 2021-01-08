@@ -3,7 +3,7 @@ module github.com/tigera/compliance
 go 1.15
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210107184122-631d922e1233
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210108113828-105de5a1d07b
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210107100957-b5ddd6fdca06
@@ -52,18 +52,18 @@ require (
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/apiserver v0.0.0-20210107195834-3b737db6f271
-	github.com/tigera/lma v0.0.0-20210107200421-e4bc024a4f97
+	github.com/tigera/apiserver v0.0.0-20210108183808-543c4e264cf1
+	github.com/tigera/lma v0.0.0-20210108184358-8ca3cba314f7
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.18.12
-	k8s.io/apimachinery v0.18.12
+	k8s.io/api v0.19.6
+	k8s.io/apimachinery v0.19.6
 	k8s.io/apiserver v0.18.12
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v1.0.0
