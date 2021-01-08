@@ -1,26 +1,45 @@
-# !/bin/bash
-# save paths for the packages we want to manually cleanup.
-packagefiles=('/var/log/yum.log')
-for OUTPUT in $(rpm -ql elfutils-libelf elfutils-default-yama-scope lua libdb dbus-libs dbus-python dbus dbus-glib bzip2-libs rpm rpm-python rpm-libs rpm-build-libs yum-metadata-parser yum yum-plugin-ovl yum-plugin-fastestmirror yum-utils tar file-libs libdb-utils procps-ng libsmartcols libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base gnupg2 gpgme libtasn1 json-c systemd-libs shadow-utils bind-license systemd)
-do
-	packagefiles+=($OUTPUT)
-done
+#!/bin/bash
+# Disable exit on non 0
+set +e
 
-# elastic readiness probe shell script needs curl and bash.
-# Curl Requirements:
-# libidn
-# libssh2
-# krb5-libs
-# openldap
-# eck-operator needs sqlite
+# Remove python and python dependencies
+PACKAGES="python3-libs platform-python python3-libcomps platform-python-setuptools platform-python-pip python3-rpm python3-unbound"
+PACKAGES+=" python3-dnf python3-hawkey python3-libdnf python3-gpg crypto-policies-scripts unbound-libs dnf libdnf yum"
 
-# cleanup binaries which can not be removed by rpm
-echo 'Removing related package paths:'
-for i in "${packagefiles[@]}"
-do
-	echo $i
-	rm -rf $i
-done
+# delete systemd and dependent packages
+PACKAGES+=" systemd-udev systemd-pam systemd dracut-squash dracut-network dracut dbus trousers-lib trousers kexec-tools"
+PACKAGES+=" dhcp-client libkcapi-hmaccalc libkcapi dhcp-client iputils device-mapper-libs device-mapper os-prober grub2-tools"
+PACKAGES+=" cryptsetup-libs kpartx grub2-tools grub2-tools-minimal grubby rpm-build-libs rpm-plugin-systemd-inhibit"
 
-# remove this script from fs
+PACKAGES+=" kmod bind-export-libs kmod-libs openldap libevent ima-evm-utils xz openssl openssl-pkcs11 libidn2 gnupg2 gnutls"
+PACKAGES+=" gnupg2 gpgme gnupg2-smime glib2 libmodulemd1 pinentry libsecret librepo elfutils-libs elfutils-debuginfod-client libsolv"
+PACKAGES+=" libmodulemd shadow-utils libsemanage zip unzip libsolv gettext-libs gettext libcroco nmap-ncat json-c cyrus-sasl-lib util-linux"
+PACKAGES+=" libpwquality kbd pam libnsl2 libtirpc iproute sqlite-libs elfutils-default-yama-scope tar file-5.33-16.el8 file-libs"
+PACKAGES+=" procps-ng libsmartcols dbus-libs dbus-tools dbus-daemon systemd-libs dhcp-libs libusbx libblkid libuuid libmount"
+PACKAGES+=" libfdisk binutils vim-minimal libyaml"
+
+# remove packages vulnerable packages that rpm relies on last
+PACKAGES+=" squashfs-tools libtasn1 lz4-libs lua-libs elfutils-libelf expat libcomps libmetalink readline gawk gdbm"
+PACKAGES+=" p11-kit-trust ca-certificates bzip2-libs ca-certificates libzstd krb5-libs openssl-libs libcurl-minimal"
+PACKAGES+=" libarchive libdb libdb-utils curl libxml2 libcomps rpm-libs rpm"
+
+echo "$PACKAGES"
+
+if ! PACKAGE_FILES=$(rpm -ql ${PACKAGES} | tr '\n' ' '); then
+  echo "failed to list package files"
+  exit 1
+fi
+
+if ! rpm -e ${PACKAGES}; then
+  echo "failed to remove packages"
+  exit 1
+fi
+
+# We don't care if rm fails, we're just making a best effort to remove any left over cruft from the erased packages.
+rm -rf ${PACKAGE_FILES}
+rm -rf /var/log/*
+
+# Delete this script
 rm "$0"
+
+exit 0
