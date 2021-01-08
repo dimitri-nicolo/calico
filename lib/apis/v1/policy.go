@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016,2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import (
 //  	- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping
 //        all further tiers and profiles. This is not recommended in general, because it prevents
 //        further policy from being executed.
-// 	- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all
+// 	- Match the packet and apply a "deny" action; this drops the packet immediately, skipping all
 //        further tiers and profiles.
 // 	- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.
 //        If there are no more policies in the tier then the packet is dropped.
