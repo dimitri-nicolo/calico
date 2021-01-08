@@ -179,3 +179,9 @@ func (s *Scanner) Stop() {
 func (s *Scanner) AddUnlocked(scanner EntryScanner) {
 	s.scanners = append(s.scanners, scanner)
 }
+
+// AddFirstUnlocked adds an additional EntryScanner to a non-running Scanner as
+// the first scanner to be called.
+func (s *Scanner) AddFirstUnlocked(scanner EntryScanner) {
+	s.scanners = append([]EntryScanner{scanner}, s.scanners...)
+}

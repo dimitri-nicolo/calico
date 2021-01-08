@@ -136,8 +136,10 @@ func (c *collector) startStatsCollectionAndReporting() {
 	for {
 		select {
 		case ctInfo := <-ctInfoC:
+			log.WithField("ConntrackInfo", ctInfo).Debug("collector event")
 			c.handleCtInfo(ctInfo)
 		case pktInfo := <-pktInfoC:
+			log.WithField("PacketInfo", pktInfo).Debug("collector event")
 			c.ApplyPacketInfo(pktInfo)
 		case <-c.ticker.Channel():
 			c.checkEpStats()
