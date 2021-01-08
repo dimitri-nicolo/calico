@@ -174,6 +174,12 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 	return claims, nil
 }
 
+// IsOpenSourceAPI determines is a calico API is defined as an open
+// source API
+func IsOpenSourceAPI(resourceGroupVersionKind string) bool {
+	return features.CloudCommunityAPIs[resourceGroupVersionKind]
+}
+
 // ErrExpiredButWithinGracePeriod indicates the license has expired but is within the grace period.
 type ErrExpiredButWithinGracePeriod struct {
 	Err error
