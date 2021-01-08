@@ -305,8 +305,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210106011840-b16d671c435d h1:fYes3JXcYcFjTzTbFTeKNzk6EqaBkOXKu1ynj5xCF70=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210106011840-b16d671c435d/go.mod h1:oTA2hqn5a9rGIbzvCjpp2Frcahtfp3C07ctf/crKRyY=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4 h1:XymhYjjsyI9K1ePmn7YgYZ7HTP3dvgFKiRDGDbs+lko=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4/go.mod h1:oTA2hqn5a9rGIbzvCjpp2Frcahtfp3C07ctf/crKRyY=
 github.com/tigera/licensing v1.0.1-0.20210106172157-5a8555a57edb h1:dDKygphf9+KJDy0W1R5iR3usaWECinJzrsvYmkBC9KM=
 github.com/tigera/licensing v1.0.1-0.20210106172157-5a8555a57edb/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
