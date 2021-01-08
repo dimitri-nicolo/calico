@@ -1,44 +1,86 @@
-.PHONY: ci cd image
+.PHONY: cd image
+PACKAGE_NAME?=github.com/tigera/kibana-docker
+GO_BUILD_VER?=v0.50
 
 GIT_VERSION?=$(shell git describe --tags --dirty --always --long --abbrev=12)
 
-KIBANA_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/kibana
+###############################################################################
+# Download and include Makefile.common
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
-GTM_INTEGRATION?=disable
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-ifdef IMAGE_PREFIX
-	LATEST_TAG=$(IMAGE_PREFIX)-latest
-else
-	LATEST_TAG=latest
-endif
+include Makefile.common
 
+build:
+	git submodule init
+	git submodule update
+
+clean:
+	rm -rf docker/Dockerfile \
+		   Makefile.*
+	bash -l -c '\
+		cd kibana && \
+		nvm install && nvm use && \
+		yarn kbn clean && yarn cache clean'
+
+kibana-bootstrap:
+	bash -l -c '\
+		cd kibana && \
+		nvm install && nvm use && \
+		yarn kbn bootstrap'
+
+kibana-image: kibana-bootstrap
+	bash -l -c '\
+		cd kibana && \
+		nvm install && nvm use && \
+		yarn build --docker --skip-docker-ubi --no-oss --release'
+
+BUILD_IMAGE_NAME?=tigera/kibana
+BUILD_IMAGE_TAG?=latest
+BUILD_IMAGE?=$(BUILD_IMAGE_NAME):$(BUILD_IMAGE_TAG)
+
+PUSH_IMAGE_NAME?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE_NAME)
+
+KIBANA_VERSION=$(shell jq -r '.version' kibana/package.json)
 
 image:
-	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) --pull -t $(KIBANA_IMAGE):$(LATEST_TAG) ./
+	cd docker && KIBANA_VERSION=$(KIBANA_VERSION) bash Dockerfile-template.sh
+	docker build docker/. -t $(BUILD_IMAGE)
 
-ci: image
+compressed-image: image
+	$(MAKE) docker-compress IMAGE_NAME=$(BUILD_IMAGE)
 
-cd: image
-ifndef CONFIRM
-	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
+# Set the image tags if the branch name is defined
+ifdef BRANCH_NAME
+ifdef IMAGE_PREFIX
+BRANCH_NAME_TAG=$(IMAGE_PREFIX)-$(BRANCH_NAME)
+GIT_VERSION_TAG=$(IMAGE_PREFIX)-$(GIT_VERSION)
+else
+BRANCH_NAME_TAG=$(BRANCH_NAME)
+GIT_VERSION_TAG=$(GIT_VERSION)
 endif
+endif
+
+tag-images:
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-ifdef IMAGE_PREFIX
-	$(eval BRANCH_NAME_TAG := $(IMAGE_PREFIX)-$(BRANCH_NAME))
-	$(eval GIT_VERSION_TAG := $(IMAGE_PREFIX)-$(GIT_VERSION))
-else
-	$(eval BRANCH_NAME_TAG := $(BRANCH_NAME))
-	$(eval GIT_VERSION_TAG := $(GIT_VERSION))
+	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(BRANCH_NAME_TAG)
+	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(GIT_VERSION_TAG)
+
+cd: compressed-image tag-images
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
-	docker tag $(KIBANA_IMAGE):$(LATEST_TAG) \
-	           $(KIBANA_IMAGE):$(BRANCH_NAME_TAG)
-	docker push $(KIBANA_IMAGE):$(BRANCH_NAME_TAG)
-
-	docker tag $(KIBANA_IMAGE):$(LATEST_TAG) \
-	           $(KIBANA_IMAGE):$(GIT_VERSION_TAG)
-	docker push $(KIBANA_IMAGE):$(GIT_VERSION_TAG)
-
-dev:
-	docker-compose -f docker-compose.dev.yml up --build
+	docker push $(PUSH_IMAGE_NAME):$(BRANCH_NAME_TAG)
+	docker push $(PUSH_IMAGE_NAME):$(GIT_VERSION_TAG)
