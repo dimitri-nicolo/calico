@@ -51,6 +51,10 @@ type BGPConfigurationSpec struct {
 	// Extensions is a mapping of keys to values that can be used in custom BGP templates
 	Extensions map[string]string `json:"extensions,omitempty" validate:"omitempty" confignamev1:"extensions"`
 
+	// ServiceLoadBalancerIPs are the CIDR blocks for Kubernetes Service LoadBalancer IPs.
+	// Kubernetes Service status.LoadBalancer.Ingress IPs will only be advertised if they are within one of these blocks.
+	ServiceLoadBalancerIPs []ServiceLoadBalancerIPBlock `json:"serviceLoadBalancerIPs,omitempty" validate:"omitempty,dive" confignamev1:"svc_loadbalancer_ips"`
+
 	// ServiceExternalIPs are the CIDR blocks for Kubernetes Service External IPs.
 	// Kubernetes Service ExternalIPs will only be advertised if they are within one of these blocks.
 	ServiceExternalIPs []ServiceExternalIPBlock `json:"serviceExternalIPs,omitempty" validate:"omitempty,dive" confignamev1:"svc_external_ips"`
@@ -69,6 +73,11 @@ type BGPConfigurationSpec struct {
 	// +kubebuilder:validation:Minimum:=1
 	// +kubebuilder:validation:Maximum:=65535
 	ListenPort uint16 `json:"listenPort,omitempty" validate:"omitempty,gt=0" confignamev1:"listen_port"`
+}
+
+// ServiceLoadBalancerIPBlock represents a single allowed LoadBalancer IP CIDR block.
+type ServiceLoadBalancerIPBlock struct {
+	CIDR string `json:"cidr,omitempty" validate:"omitempty,net"`
 }
 
 // ServiceExternalIPBlock represents a single allowed External IP CIDR block.

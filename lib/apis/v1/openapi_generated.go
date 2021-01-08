@@ -365,7 +365,7 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 					},
 					"selector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Selector is an optional field that contains a selector expression (see Policy for sample syntax).  Only traffic that originates from (terminates at) endpoints matching the selector will be matched.\n\nNote that: in addition to the negated version of the Selector (see NotSelector below), the selector expression syntax itself supports negation.  The two types of negation are subtly different. One negates the set of matched endpoints, the other negates the whole match:\n\n\tSelector = \"!has(my_label)\" matches packets that are from other Calico-controlled\n\tendpoints that do not have the label “my_label”.\n\n\tNotSelector = \"has(my_label)\" matches packets that are not from Calico-controlled\n\tendpoints that do have the label “my_label”.\n\nThe effect is that the latter will accept packets from non-Calico sources whereas the former is limited to packets from Calico-controlled endpoints.",
+							Description: "Selector is an optional field that contains a selector expression (see Policy for sample syntax).  Only traffic that originates from (terminates at) endpoints matching the selector will be matched.\n\nNote that: in addition to the negated version of the Selector (see NotSelector below), the selector expression syntax itself supports negation.  The two types of negation are subtly different. One negates the set of matched endpoints, the other negates the whole match:\n\n\tSelector = \"!has(my_label)\" matches packets that are from other Calico-controlled\n\tendpoints that do not have the label \"my_label\".\n\n\tNotSelector = \"has(my_label)\" matches packets that are not from Calico-controlled\n\tendpoints that do have the label \"my_label\".\n\nThe effect is that the latter will accept packets from non-Calico sources whereas the former is limited to packets from Calico-controlled endpoints.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -508,7 +508,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpoint(ref common.ReferenceCallback) 
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpoint contains information about a “bare-metal” interfaces attached to the host that is running Calico’s agent, Felix. By default, Calico doesn’t apply any policy to such interfaces.",
+				Description: "HostEndpoint contains information about a \"bare-metal\" interfaces attached to the host that is running Calico's agent, Felix. By default, Calico doesn't apply any policy to such interfaces.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
@@ -601,7 +601,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref common.ReferenceCa
 					},
 					"labels": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The labels applied to the host endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
+							Description: "The labels applied to the host endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all \"production\" workloads with \"deployment=prod\" so that security policy can be applied to production workloads.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -632,7 +632,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"interfaceName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The name of the linux interface to apply policy to; for example “eth0”. If \"InterfaceName\" is not present then at least one expected IP must be specified.",
+							Description: "The name of the linux interface to apply policy to; for example \"eth0\". If \"InterfaceName\" is not present then at least one expected IP must be specified.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -701,7 +701,7 @@ func schema_libcalico_go_lib_apis_v1_ICMPFields(ref common.ReferenceCallback) co
 					},
 					"code": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Match on a specific ICMP code.  If specified, the Type value must also be specified. This is a technical limitation imposed by the kernel’s iptables firewall, which Calico uses to enforce the rule.",
+							Description: "Match on a specific ICMP code.  If specified, the Type value must also be specified. This is a technical limitation imposed by the kernel's iptables firewall, which Calico uses to enforce the rule.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -1154,7 +1154,7 @@ func schema_libcalico_go_lib_apis_v1_Policy(ref common.ReferenceCallback) common
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Policy contains information about a tiered security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring\n       to the next tier (or the explicit profiles if this is the last tier.\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further tiers and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all\n       further tiers and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.\n       If there are no more policies in the tier then the packet is dropped.\n\nNote:\n\tIf no policies in a tier match an endpoint then the packet skips the tier completely. The\n\t“default deny” behavior described above only applies if some of the policies in a tier match\n\tthe endpoint.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy. If no policies in a tier match a given endpoint then that tier is skipped.",
+				Description: "Policy contains information about a tiered security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring\n       to the next tier (or the explicit profiles if this is the last tier.\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further tiers and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a \"deny\" action; this drops the packet immediately, skipping all\n       further tiers and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.\n       If there are no more policies in the tier then the packet is dropped.\n\nNote:\n\tIf no policies in a tier match an endpoint then the packet skips the tier completely. The\n\t“default deny” behavior described above only applies if some of the policies in a tier match\n\tthe endpoint.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy. If no policies in a tier match a given endpoint then that tier is skipped.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
@@ -1457,7 +1457,7 @@ func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallbac
 					},
 					"labels": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The labels to apply to each endpoint that references this profile.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
+							Description: "The labels to apply to each endpoint that references this profile.  It is expected that many endpoints share the same labels. For example, they could be used to label all \"production\" workloads with \"deployment=prod\" so that security policy can be applied to production workloads.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -1524,7 +1524,7 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with ”Not”. All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
+				Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with \"Not\". All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"action": {
@@ -1818,7 +1818,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref common.Referen
 					},
 					"labels": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The labels applied to the workload endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
+							Description: "The labels applied to the workload endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all \"production\" workloads with \"deployment=prod\" so that security policy can be applied to production workloads.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
