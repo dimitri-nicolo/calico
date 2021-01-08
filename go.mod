@@ -16,15 +16,14 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/typha v0.7.3-0.20200917205717-211e99c80f9a
-	github.com/sirupsen/logrus v1.4.2
-	google.golang.org/appengine v1.6.5 // indirect
-	k8s.io/api v0.18.12
-	k8s.io/apimachinery v0.18.12
-	k8s.io/client-go v0.18.12
+	github.com/sirupsen/logrus v1.6.0
+	k8s.io/api v0.19.6
+	k8s.io/apimachinery v0.19.6
+	k8s.io/client-go v0.19.6
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210106011840-b16d671c435d
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210106022954-f538a2e6a9f4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210108223937-a3b320c37bbb
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210108235021-216cabe9d0bd
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
