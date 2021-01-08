@@ -304,7 +304,7 @@ func ExecuteResourceAction(args map[string]interface{}, client client.Interface,
 	// If the resource is LicenseKey/LicenseKeyList then check the
 	// license first then continue only if the license is valid or the feature is included in the license
 	resGVK := resource.GetObjectKind().GroupVersionKind().String()
-	if shouldCheckAPIUsage(resGVK, action) {
+	if !licClient.IsOpenSourceAPI(resGVK) && shouldCheckAPIUsage(resGVK, action) {
 
 		lic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{ResourceVersion: ""})
 		if err != nil {
