@@ -216,3 +216,6 @@ foss-checks:
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
 	  -w /code/$(PACKAGE_NAME) \
 	  $(CALICO_BUILD) /usr/local/bin/fossa
+
+migrate-dashboards:
+	bash migrate_dashboards.sh

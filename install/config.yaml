@@ -54,4 +54,4 @@ kibana:
   - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/honeypod-dashboard.json"]
   - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/dns-dashboard.json"]
   - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/kubernetes-api-dashboard.json"]
-  - ["PUT", "tigera-kibana/api/saved_objects/config/7.6.2" , "./data/siem-index.json"]
+  - ["POST", "tigera-kibana/api/saved_objects/config/7.6.2" , "./data/siem-index.json"]
