@@ -6,8 +6,6 @@ spec:
   serviceClusterIPs:
   - cidr: 10.101.0.0/16
   - cidr: fd00:96::/112
-  serviceLoadBalancerIPs:
-  - cidr: 80.15.0.0/24
 
 ---
 
@@ -15,6 +13,9 @@ kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
   name: kube-master
+  labels:
+    # Don't ever advertise services from kube-master.
+    node.kubernetes.io/exclude-from-external-load-balancers: "true"
 spec:
   bgp:
     ipv4Address: 10.192.0.2/16

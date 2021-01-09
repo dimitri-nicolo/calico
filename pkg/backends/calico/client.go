@@ -180,6 +180,17 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	// racing with syncer-derived updates.
 	c.onExternalIPsUpdate(externalCIDRs)
 
+	// Get LoadBalancer CIDRs.
+	lbCIDRs := []string{}
+	if cfg != nil && cfg.Spec.ServiceLoadBalancerIPs != nil {
+		for _, c := range cfg.Spec.ServiceLoadBalancerIPs {
+			lbCIDRs = append(lbCIDRs, c.CIDR)
+		}
+	}
+	// Note: do this initial update before starting the syncer, so there's no chance of this
+	// racing with syncer-derived updates.
+	c.onLoadBalancerIPsUpdate(lbCIDRs)
+
 	// Start the main syncer loop.  If the node-to-node mesh is enabled then we need to
 	// monitor all nodes.  If this setting changes (which we will monitor in the OnUpdates
 	// callback) then we terminate confd - the calico/node init process will restart the
@@ -290,11 +301,13 @@ type client struct {
 	// This node's log level key.
 	nodeLogKey string
 
-	// Current values of <bgpconfig>.spec.serviceExternalIPs and
-	// <bgpconfig>.spec.serviceClusterIPs.
-	externalIPs    []string
-	externalIPNets []*net.IPNet // same as externalIPs but parsed
-	clusterCIDRs   []string
+	// Current values of <bgpconfig>.spec.serviceExternalIPs,
+	// <bgpconfig>.spec.serviceLoadBalancerIPs, and <bgpconfig>.spec.serviceClusterIPs.
+	externalIPs        []string
+	externalIPNets     []*net.IPNet // same as externalIPs but parsed
+	clusterCIDRs       []string
+	loadBalancerIPs    []string
+	loadBalancerIPNets []*net.IPNet // same as externalIPs but parsed
 
 	// This node's IP address keys.
 	nodeIPv4Key string
@@ -343,6 +356,19 @@ func (c *client) onStatusUpdated(status api.SyncStatus) {
 	case api.WaitForDatastore:
 		c.OnSyncChange(SourceSyncer, false)
 	}
+}
+
+// ExcludeServiceAdvertisement returns true if this node should be excluded from
+// service advertisement based on node labels, and false if it is OK to advertise
+// services from this node.
+func (c *client) ExcludeServiceAdvertisement() bool {
+	excludeLabel := "node.kubernetes.io/exclude-from-external-load-balancers"
+
+	labels, ok := c.nodeLabels[template.NodeName]
+	if ok && labels[excludeLabel] == "true" {
+		return true
+	}
+	return false
 }
 
 // OnInSync handles multiplexing in-sync messages from multiple data sources
@@ -855,6 +881,14 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 					c.nodeLabels[v3key.Name] = v3res.Labels
 					needUpdatePeersV1 = true
 					needUpdatePeersReasons = append(needUpdatePeersReasons, v3key.Name+" updated")
+
+					if v3key.Name == template.NodeName && c.rg != nil {
+						// If it was our own labels that changed, and service advertisement is enabled,
+						// then we need to resync service advertisements as well, since a change in labels
+						// may trigger whether this node is a valid service advertisement target.
+						needServiceAdvertisementUpdates = true
+					}
+
 				}
 			}
 		}
@@ -926,6 +960,13 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 		}
 		c.onClusterIPsUpdate(clusterIPs)
 
+		// Same for loadbalancer CIDRs.
+		var loadBalancerIPs []string
+		if len(c.cache["/calico/bgp/v1/global/svc_loadbalancer_ips"]) > 0 {
+			loadBalancerIPs = strings.Split(c.cache["/calico/bgp/v1/global/svc_loadbalancer_ips"], ",")
+		}
+		c.onLoadBalancerIPsUpdate(loadBalancerIPs)
+
 		if c.rg != nil {
 			// Trigger the route generator to recheck and advertise or withdraw
 			// node-specific routes.
@@ -946,6 +987,7 @@ func (c *client) updateBGPConfigCache(resName string, v3res *apiv3.BGPConfigurat
 		c.getASNumberKVPair(v3res, model.GlobalBGPConfigKey{}, updatePeersV1, updateReasons)
 		c.getServiceExternalIPsKVPair(v3res, model.GlobalBGPConfigKey{}, svcAdvertisement)
 		c.getServiceClusterIPsKVPair(v3res, model.GlobalBGPConfigKey{}, svcAdvertisement)
+		c.getServiceLoadBalancerIPsKVPair(v3res, model.GlobalBGPConfigKey{}, svcAdvertisement)
 		c.getNodeToNodeMeshKVPair(v3res, model.GlobalBGPConfigKey{})
 		c.getLogSeverityKVPair(v3res, model.GlobalBGPConfigKey{})
 		c.getExtensionsKVPair(v3res, model.GlobalBGPConfigKey{})
@@ -1084,7 +1126,7 @@ func (c *client) getASNumberKVPair(v3res *apiv3.BGPConfiguration, key interface{
 }
 
 func (c *client) getServiceExternalIPsKVPair(v3res *apiv3.BGPConfiguration, key interface{}, svcAdvertisement *bool) {
-	scvExternalIPKey := getBGPConfigKey("svc_external_ips", key)
+	svcExternalIPKey := getBGPConfigKey("svc_external_ips", key)
 
 	if v3res != nil && v3res.Spec.ServiceExternalIPs != nil && len(v3res.Spec.ServiceExternalIPs) != 0 {
 		// We wrap each Service external IP in a ServiceExternalIPBlock struct to
@@ -1093,9 +1135,24 @@ func (c *client) getServiceExternalIPsKVPair(v3res *apiv3.BGPConfiguration, key 
 		for i, ipBlock := range v3res.Spec.ServiceExternalIPs {
 			ipCidrs[i] = ipBlock.CIDR
 		}
-		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(scvExternalIPKey, strings.Join(ipCidrs, ",")))
+		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(svcExternalIPKey, strings.Join(ipCidrs, ",")))
 	} else {
-		c.updateCache(api.UpdateTypeKVDeleted, getKVPair(scvExternalIPKey))
+		c.updateCache(api.UpdateTypeKVDeleted, getKVPair(svcExternalIPKey))
+	}
+	*svcAdvertisement = true
+}
+
+func (c *client) getServiceLoadBalancerIPsKVPair(v3res *apiv3.BGPConfiguration, key interface{}, svcAdvertisement *bool) {
+	svcLoadBalancerIPKey := getBGPConfigKey("svc_loadbalancer_ips", key)
+
+	if v3res != nil && v3res.Spec.ServiceLoadBalancerIPs != nil && len(v3res.Spec.ServiceLoadBalancerIPs) != 0 {
+		ipCidrs := make([]string, len(v3res.Spec.ServiceLoadBalancerIPs))
+		for i, ipBlock := range v3res.Spec.ServiceLoadBalancerIPs {
+			ipCidrs[i] = ipBlock.CIDR
+		}
+		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(svcLoadBalancerIPKey, strings.Join(ipCidrs, ",")))
+	} else {
+		c.updateCache(api.UpdateTypeKVDeleted, getKVPair(svcLoadBalancerIPKey))
 	}
 	*svcAdvertisement = true
 }
@@ -1208,6 +1265,16 @@ func (c *client) onClusterIPsUpdate(clusterCIDRs []string) {
 	}
 }
 
+func (c *client) onLoadBalancerIPsUpdate(lbIPs []string) {
+	if err := c.updateGlobalRoutes(c.loadBalancerIPs, lbIPs); err == nil {
+		c.loadBalancerIPs = lbIPs
+		c.loadBalancerIPNets = parseIPNets(c.loadBalancerIPs)
+		log.Infof("Updated with new Loadbalancer IP CIDRs: %s", lbIPs)
+	} else {
+		log.WithError(err).Error("Failed to update external IP routes")
+	}
+}
+
 func (c *client) AdvertiseClusterIPs() bool {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
@@ -1218,6 +1285,12 @@ func (c *client) GetExternalIPs() []*net.IPNet {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 	return c.externalIPNets
+}
+
+func (c *client) GetLoadBalancerIPs() []*net.IPNet {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+	return c.loadBalancerIPNets
 }
 
 // "Global" here means the routes for cluster IP and external IP CIDRs that are advertised from
@@ -1239,11 +1312,22 @@ func (c *client) updateGlobalRoutes(current, new []string) error {
 		}
 	}
 
-	// Withdraw the old CIDRs and add the new.
-	c.addRoutesLockHeld(rejectKeyPrefix, rejectKeyPrefixV6, new)
-	c.addRoutesLockHeld(routeKeyPrefix, routeKeyPrefixV6, new)
-	c.deleteRoutesLockHeld(rejectKeyPrefix, rejectKeyPrefixV6, withdraws)
-	c.deleteRoutesLockHeld(routeKeyPrefix, routeKeyPrefixV6, withdraws)
+	if !c.ExcludeServiceAdvertisement() {
+		// Withdraw the old CIDRs and add the new.
+		log.Info("Advertise global service ranges from this node")
+		c.addRoutesLockHeld(rejectKeyPrefix, rejectKeyPrefixV6, new)
+		c.addRoutesLockHeld(routeKeyPrefix, routeKeyPrefixV6, new)
+		c.deleteRoutesLockHeld(rejectKeyPrefix, rejectKeyPrefixV6, withdraws)
+		c.deleteRoutesLockHeld(routeKeyPrefix, routeKeyPrefixV6, withdraws)
+	} else {
+		// If this node is excluded from service advertisement, we should not advertise any
+		// routes. However, we should still program reject rules for the CIDR range so we do not
+		// program any learned routes into the data plane.
+		log.Info("Do not advertise global service ranges from this node")
+		c.deleteRoutesLockHeld(rejectKeyPrefix, rejectKeyPrefixV6, current)
+		c.deleteRoutesLockHeld(routeKeyPrefix, routeKeyPrefixV6, current)
+		c.addRoutesLockHeld(rejectKeyPrefix, rejectKeyPrefixV6, new)
+	}
 
 	return nil
 }

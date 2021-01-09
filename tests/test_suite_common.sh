@@ -753,8 +753,10 @@ execute_tests_daemon() {
         run_individual_test 'mesh/ipip-cross-subnet'
         run_individual_test 'mesh/ipip-off'
         run_individual_test 'mesh/static-routes'
-        run_edited_individual_test 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
+        run_individual_test 'mesh/static-routes-exclude-node'
         run_individual_test 'mesh/communities'
+
+        run_edited_individual_test 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
     done
 
     # Turn the node-mesh off.
@@ -803,6 +805,7 @@ execute_tests_oneshot() {
         run_individual_test_oneshot 'explicit_peering/selectors'
         run_individual_test_oneshot 'explicit_peering/route_reflector'
         run_individual_test_oneshot 'mesh/static-routes'
+        run_individual_test_oneshot 'mesh/static-routes-exclude-node'
         run_individual_test_oneshot 'mesh/communities'
         run_individual_test_oneshot 'explicit_peering/keepnexthop'
         run_individual_test_oneshot 'explicit_peering/keepnexthop-global'

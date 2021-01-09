@@ -237,17 +237,31 @@ func (rg *routeGenerator) getAllRoutesForService(svc *v1.Service) []string {
 		// Only advertise cluster IPs if we've been told to.
 		routes = append(routes, svc.Spec.ClusterIP)
 	}
+	svcID := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
 
 	if svc.Spec.ExternalIPs != nil {
 		for _, externalIP := range svc.Spec.ExternalIPs {
 			// Only advertise whitelisted external IPs
 			if !rg.isAllowedExternalIP(externalIP) {
-				svc := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
-				log.WithFields(log.Fields{"ip": externalIP, "svc": svc}).Info("Cannot advertise External IP - not whitelisted")
+				log.WithFields(log.Fields{"ip": externalIP, "svc": svcID}).Info("Cannot advertise External IP - not whitelisted")
 				continue
 			}
 			routes = append(routes, externalIP)
 		}
+	}
+
+	if svc.Status.LoadBalancer.Ingress != nil {
+		for _, lbIngress := range svc.Status.LoadBalancer.Ingress {
+			if len(lbIngress.IP) > 0 {
+				// Only advertise whitelisted LB IPs
+				if !rg.isAllowedLoadBalancerIP(lbIngress.IP) {
+					log.WithFields(log.Fields{"ip": lbIngress.IP, "svc": svcID}).Info("Cannot advertise LoadBalancer IP - not whitelisted")
+					continue
+				}
+				routes = append(routes, lbIngress.IP)
+			}
+		}
+
 	}
 
 	return addFullIPLength(routes)
@@ -318,7 +332,26 @@ func (rg *routeGenerator) isAllowedExternalIP(externalIP string) bool {
 
 	// Guilty until proven innocent
 	return false
+}
 
+// isAllowedLoadBalancerIP determines if the given IP is in the list of
+// whitelisted LoadBalancer CIDRs given in the default bgpconfiguration.
+func (rg *routeGenerator) isAllowedLoadBalancerIP(loadBalancerIP string) bool {
+
+	ip := net.ParseIP(loadBalancerIP)
+	if ip == nil {
+		log.Errorf("Could not parse service LB IP: %s", loadBalancerIP)
+		return false
+	}
+
+	for _, allowedNet := range rg.client.GetLoadBalancerIPs() {
+		if allowedNet.Contains(ip) {
+			return true
+		}
+	}
+
+	// Guilty until proven innocent
+	return false
 }
 
 // addFullIPLength returns a new slice, with the full IP length appended onto every item.
@@ -349,6 +382,12 @@ func contains(items []string, target string) bool {
 func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints) bool {
 	logc := log.WithField("svc", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)).WithField("type", svc.Spec.Type)
 
+	// Don't advertise routes if this node is explicitly excluded from load balancers.
+	if rg.client.ExcludeServiceAdvertisement() {
+		logc.Debug("Skipping service because node is explicitly excluded from load balancers")
+		return false
+	}
+
 	// do nothing if the svc is not a relevant type
 	if (svc.Spec.Type != v1.ServiceTypeClusterIP) && (svc.Spec.Type != v1.ServiceTypeNodePort) && (svc.Spec.Type != v1.ServiceTypeLoadBalancer) {
 		logc.Debugf("Skipping service with type %s", svc.Spec.Type)
@@ -357,7 +396,7 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints
 
 	// also do nothing if the clusterIP is empty or None
 	if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == "None" {
-		logc.Debugf("Skipping service with no cluster IP %s", svc.Spec.Type)
+		logc.Debug("Skipping service with no cluster IP")
 		return false
 	}
 
