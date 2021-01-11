@@ -42,9 +42,9 @@ blocks:
 
   - name: 'Push Images (non-PR builds only)'
     dependencies: ["CI"]
-    #skip:
+    skip:
       # Only run on branches, not PRs.
-      #when: "branch !~ '.+'" TESTING ONLY
+      when: "branch !~ '.+'"
     task:
       secrets:
         - name: google-service-account-for-gcr
@@ -61,14 +61,13 @@ blocks:
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
-            - unset SEMAPHORE_GIT_PR_NUMBER # TESTING ONLY
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
 
   - name: 'Push Windows Images (non-PR builds only)'
     dependencies: ["CI"]
-    #skip:
+    skip:
       # Only run on branches, not PRs.
-      #when: "branch !~ '.+'" TESTING ONLY
+      when: "branch !~ '.+'"
     task:
       secrets:
         - name: banzai-secrets
@@ -100,7 +99,6 @@ blocks:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
             - export PROCESS_REPO=~/process/testing/windows-instances
-            - unset SEMAPHORE_GIT_PR_NUMBER # TESTING ONLY
             - >-
               if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
                 CONFIRM=true .semaphore/windows-cd.sh
@@ -109,9 +107,9 @@ blocks:
   - name: 'Push Manifest Image'
     dependencies:
     - "Push Windows Images (non-PR builds only)"
-    #skip:
+    skip:
       # Only run on branches, not PRs.
-      #when: "branch !~ '.+'" TESTING ONLY
+      when: "branch !~ '.+'"
     task:
       secrets:
         - name: banzai-secrets
@@ -128,7 +126,6 @@ blocks:
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
-            - unset SEMAPHORE_GIT_PR_NUMBER # TESTING ONLY
             - >-
               if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
                 make push-windows-manifest CONFIRM=true

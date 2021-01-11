@@ -1,5 +1,4 @@
-# TESTING ONLY
-GCR_REPO?=gcr.io/unique-caldron-775/laurence
+GCR_REPO?=gcr.io/unique-caldron-775/cnx
 REPO?=$(GCR_REPO)
 PUSH_IMAGE_BASE?=$(REPO)
 PUSH_IMAGE?=$(PUSH_IMAGE_BASE)/$(BUILD_IMAGE)
