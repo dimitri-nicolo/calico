@@ -27,7 +27,12 @@ Description:
 
   See 'calicoctl cluster <command> --help' to read about a specific subcommand.`
 
-	arguments, err := docopt.Parse(doc, args, true, "", true, false)
+	var parser = &docopt.Parser{
+		HelpHandler:   docopt.PrintHelpAndExit,
+		OptionsFirst:  true,
+		SkipHelpFlags: false,
+	}
+	arguments, err := parser.ParseArgs(doc, args, "")
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}

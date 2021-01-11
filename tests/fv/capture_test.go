@@ -18,7 +18,6 @@ func init() {
 	log.SetFormatter(&logutils.Formatter{})
 }
 
-
 func TestCaptureArgs(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -26,9 +25,9 @@ func TestCaptureArgs(t *testing.T) {
   calicoctl [options] <command> [<args>...]`
 
 	var tables = []struct {
-		args []string
+		args           []string
 		expectedOutput string
-		shouldFail bool
+		shouldFail     bool
 	}{
 		{[]string{"captured-packets"}, "Invalid option", true},
 		{[]string{"captured-packets", "--any_command"}, "Invalid option", true},

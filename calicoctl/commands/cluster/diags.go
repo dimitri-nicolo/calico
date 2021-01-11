@@ -36,7 +36,7 @@ Options:
 Description:
   The cluster diags command collects a snapshot of diagnostic info and logs related to Calico for the given cluster.
 `
-	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
+	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
