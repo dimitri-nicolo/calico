@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -206,7 +206,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 		testOpts.protocol, protoExt, testOpts.connTimeEnabled,
 		testOpts.bpfLogLevel, testOpts.tunnel, testOpts.dsr,
 	)
-
 	return infrastructure.DatastoreDescribe(desc, []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 		var (
 			infra              infrastructure.DatastoreInfra
@@ -2717,6 +2716,80 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					})
 				})
 			})
+		})
+
+		Describe("with BPF disabled to begin with", func() {
+			BeforeEach(func() {
+				options.TestManagesBPF = true
+				setupCluster()
+
+				// Default to Allow...
+				pol := api.NewGlobalNetworkPolicy()
+				pol.Namespace = "fv"
+				pol.Name = "policy-1"
+				pol.Spec.Ingress = []api.Rule{{Action: "Allow"}}
+				pol.Spec.Egress = []api.Rule{{Action: "Allow"}}
+				pol.Spec.Selector = "all()"
+				pol = createPolicy(pol)
+			})
+
+			enableBPF := func() {
+				By("Enabling BPF")
+				// Some tests start with a felix config pre-created, try to update it...
+				fc, err := calicoClient.FelixConfigurations().Get(context.Background(), "default", options2.GetOptions{})
+				bpfEnabled := true
+				if err == nil {
+					fc.Spec.BPFEnabled = &bpfEnabled
+					_, err := calicoClient.FelixConfigurations().Update(context.Background(), fc, options2.SetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					return
+				}
+
+				// Fall back on creating it...
+				fc = api.NewFelixConfiguration()
+				fc.Name = "default"
+				fc.Spec.BPFEnabled = &bpfEnabled
+				fc, err = calicoClient.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Wait for BPF to be active.
+				numTCProgramsOnEth0 := func() int {
+					total := 0
+					for i, f := range felixes {
+						for _, dir := range []string{"ingress", "egress"} {
+							out, err := f.ExecOutput("tc", "filter", "show", "dev", "eth0", dir)
+							Expect(err).NotTo(HaveOccurred())
+							count := strings.Count(out, "direct-action")
+							log.Debugf("Output from tc filter show for felix %d, dir=%s: %q (count=%d)", i, dir, out, count)
+							total += count
+						}
+					}
+					return total
+				}
+				Eventually(numTCProgramsOnEth0, "10s").Should(Equal(len(felixes) * 2))
+			}
+
+			if testOpts.protocol == "tcp" && testOpts.dsr {
+				It("should keep a connection up between hosts when BPF is enabled", func() {
+					By("Starting persistent connection")
+					pc := hostW[0].StartPersistentConnection(hostW[1].IP, 8055, workload.PersistentConnectionOpts{
+						MonitorConnectivity: true,
+					})
+					defer pc.Stop()
+
+					expectPongs := func() {
+						EventuallyWithOffset(1, pc.SinceLastPong, "5s").Should(
+							BeNumerically("<", time.Second),
+							"Expected to see pong responses on the connection but didn't receive any")
+						log.Info("Pongs received within last 1s")
+					}
+
+					By("having initial connectivity", expectPongs)
+					By("enabling BPF mode", enableBPF)
+					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
+					By("still having connectivity on the existing connection", expectPongs)
+				})
+			}
 		})
 
 		Describe("3rd party CNI", func() {

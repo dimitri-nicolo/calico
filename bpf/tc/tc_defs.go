@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ const (
 	MarkSeenNATOutgoing              = MarkSeenBypass | 0x00800000
 	MarkSeenNATOutgoingMask          = MarkSeenBypassMask | MarkSeenNATOutgoing
 
-	MarkLinuxConntrackEstablished = MarkCalico | 0x08000000
+	MarkLinuxConntrackEstablished     = MarkCalico | 0x08000000
 	MarkLinuxConntrackEstablishedMask = MarkCalico | 0x08000000
 
 	MarksMask = 0xfff00000
