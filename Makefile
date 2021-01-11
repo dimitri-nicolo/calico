@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.49
+GO_BUILD_VER?=v0.50
 
 GIT_USE_SSH = true
 
@@ -236,11 +236,9 @@ $(NODE_CONTAINER_BINARY): $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
 
 $(WINDOWS_BINARY):
-	$(DOCKER_RUN) \
-		-e GOOS=windows \
-		$(LOCAL_BUILD_MOUNTS) \
-		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go'
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+		GOOS=windows CC=x86_64-w64-mingw32-gcc \
+		go build --buildmode=exe -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go'
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe:
 	$(DOCKER_RUN) \
