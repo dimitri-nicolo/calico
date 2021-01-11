@@ -22,7 +22,7 @@ spec:
             - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
               value: "true"
             # Include services in Calico Enterprise Flow Log
-            - name: FELIX_FLOWLOGSFILEINCLUDESERVICES
+            - name: FELIX_FLOWLOGSFILEINCLUDESERVICE
               value: "true"
             # Enable processing network sets in EE Flow Logs
             - name: FELIX_FLOWLOGSENABLENETWORKSETS
