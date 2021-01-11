@@ -453,6 +453,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 	if (!v) {
 		if (CALI_F_FROM_HOST && proto_orig == IPPROTO_TCP) {
 			// Mid-flow TCP packet with no conntrack entry leaving the host namespace.
+			CALI_DEBUG("BPF CT Miss for mid-flow TCP\n");
 			if ((tc_ctx->skb->mark & CALI_SKB_MARK_CT_ESTABLISHED_MASK) == CALI_SKB_MARK_CT_ESTABLISHED) {
 				// Linux Conntrack has marked the packet as part of an established flow.
 				// TODO-HEP Create a tracking entry for uplifted flow so that we handle the reverse traffic more efficiently.
@@ -460,6 +461,9 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 				 result.rc = CALI_CT_ESTABLISHED;
 				 return result;
 			}
+			CALI_DEBUG("BPF CT Miss but Linux CT entry not signalled\n");
+			result.rc = CALI_CT_MID_FLOW_MISS;
+			return result;
 		}
 		if (CALI_F_TO_HOST && proto_orig == IPPROTO_TCP) {
 			// Miss for a mid-flow TCP packet towards the host.  This may be part of a

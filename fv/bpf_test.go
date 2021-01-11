@@ -2789,6 +2789,27 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
 					By("still having connectivity on the existing connection", expectPongs)
 				})
+
+
+				It("should keep a connection up between workloads on different hosts when BPF is enabled", func() {
+					By("Starting persistent connection")
+					pc := w[0][0].StartPersistentConnection(w[1][0].IP, 8055, workload.PersistentConnectionOpts{
+						MonitorConnectivity: true,
+					})
+					defer pc.Stop()
+
+					expectPongs := func() {
+						EventuallyWithOffset(1, pc.SinceLastPong, "5s").Should(
+							BeNumerically("<", time.Second),
+							"Expected to see pong responses on the connection but didn't receive any")
+						log.Info("Pongs received within last 1s")
+					}
+
+					By("having initial connectivity", expectPongs)
+					By("enabling BPF mode", enableBPF)
+					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
+					By("still having connectivity on the existing connection", expectPongs)
+				})
 			}
 		})
 
