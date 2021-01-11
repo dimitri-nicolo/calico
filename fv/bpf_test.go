@@ -2719,6 +2719,8 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 		})
 
 		Describe("with BPF disabled to begin with", func() {
+			var pc *PersistentConnection
+
 			BeforeEach(func() {
 				options.TestManagesBPF = true
 				setupCluster()
@@ -2731,6 +2733,14 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				pol.Spec.Egress = []api.Rule{{Action: "Allow"}}
 				pol.Spec.Selector = "all()"
 				pol = createPolicy(pol)
+
+				pc = nil
+			})
+
+			AfterEach(func() {
+				if pc != nil {
+					pc.Stop()
+				}
 			})
 
 			enableBPF := func() {
@@ -2769,20 +2779,19 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				Eventually(numTCProgramsOnEth0, "10s").Should(Equal(len(felixes) * 2))
 			}
 
+			expectPongs := func() {
+				EventuallyWithOffset(1, pc.SinceLastPong, "5s").Should(
+					BeNumerically("<", time.Second),
+					"Expected to see pong responses on the connection but didn't receive any")
+				log.Info("Pongs received within last 1s")
+			}
+
 			if testOpts.protocol == "tcp" && testOpts.dsr {
 				It("should keep a connection up between hosts when BPF is enabled", func() {
 					By("Starting persistent connection")
-					pc := hostW[0].StartPersistentConnection(hostW[1].IP, 8055, workload.PersistentConnectionOpts{
+					pc = hostW[0].StartPersistentConnection(hostW[1].IP, 8055, workload.PersistentConnectionOpts{
 						MonitorConnectivity: true,
 					})
-					defer pc.Stop()
-
-					expectPongs := func() {
-						EventuallyWithOffset(1, pc.SinceLastPong, "5s").Should(
-							BeNumerically("<", time.Second),
-							"Expected to see pong responses on the connection but didn't receive any")
-						log.Info("Pongs received within last 1s")
-					}
 
 					By("having initial connectivity", expectPongs)
 					By("enabling BPF mode", enableBPF)
@@ -2790,20 +2799,35 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					By("still having connectivity on the existing connection", expectPongs)
 				})
 
-
 				It("should keep a connection up between workloads on different hosts when BPF is enabled", func() {
 					By("Starting persistent connection")
-					pc := w[0][0].StartPersistentConnection(w[1][0].IP, 8055, workload.PersistentConnectionOpts{
+					pc = w[0][0].StartPersistentConnection(w[1][0].IP, 8055, workload.PersistentConnectionOpts{
 						MonitorConnectivity: true,
 					})
-					defer pc.Stop()
 
-					expectPongs := func() {
-						EventuallyWithOffset(1, pc.SinceLastPong, "5s").Should(
-							BeNumerically("<", time.Second),
-							"Expected to see pong responses on the connection but didn't receive any")
-						log.Info("Pongs received within last 1s")
-					}
+					By("having initial connectivity", expectPongs)
+					By("enabling BPF mode", enableBPF)
+					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
+					By("still having connectivity on the existing connection", expectPongs)
+				})
+
+				It("should keep a connection up between hosts and remote workloads when BPF is enabled", func() {
+					By("Starting persistent connection")
+					pc = hostW[0].StartPersistentConnection(w[1][0].IP, 8055, workload.PersistentConnectionOpts{
+						MonitorConnectivity: true,
+					})
+
+					By("having initial connectivity", expectPongs)
+					By("enabling BPF mode", enableBPF)
+					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
+					By("still having connectivity on the existing connection", expectPongs)
+				})
+
+				It("should keep a connection up between hosts and local workloads when BPF is enabled", func() {
+					By("Starting persistent connection")
+					pc = hostW[0].StartPersistentConnection(w[0][0].IP, 8055, workload.PersistentConnectionOpts{
+						MonitorConnectivity: true,
+					})
 
 					By("having initial connectivity", expectPongs)
 					By("enabling BPF mode", enableBPF)
