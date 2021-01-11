@@ -1,10 +1,11 @@
 # Set repo config.
-BUILD_IMAGE?=tigera/fluentd
 
 ifeq ($(OS),Windows_NT)
 DOCKERFILE?=Dockerfile.windows
+BUILD_IMAGE?=tigera/fluentd-windows
 else
 DOCKERFILE?=Dockerfile
+BUILD_IMAGE?=tigera/fluentd
 endif
 
 # Override shell if we're on Windows
@@ -14,19 +15,21 @@ SHELL := powershell.exe
 .SHELLFLAGS := -NoProfile -Command
 endif
 
-# We append a tag to identify the arch the container image targets. For example, "$(VERSION)-windows-1903"
+# For Windows we append to the image tag to identify the Windows 10 version.
+# For example, "v3.5.0-calient-0.dev-26-gbaba2f0b96a4-windows-1903"
 #
 # We support these platforms:
-# - Linux/amd64
 # - Windows 10 1809 amd64
 # - Windows 10 1903 amd64
 # - Windows 10 1909 amd64
 # - Windows 10 2004 amd64
+#
+# For Linux, we leave the image tag alone.
 ifeq ($(OS),Windows_NT)
 $(eval WINDOWS_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ReleaseId))
 ARCH_TAG=-windows-$(WINDOWS_VERSION)
 else
-ARCH_TAG=-linux-amd64
+ARCH_TAG=
 endif
 
 SRC_DIR?=$(PWD)
