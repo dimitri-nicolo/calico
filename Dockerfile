@@ -1,7 +1,8 @@
 FROM fluent/fluentd:v1.11.1-1.0
 MAINTAINER spike@tigera.io
 
-USER root
+# Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
+USER 0
 
 RUN apk add --update --virtual .build-deps \
         build-base=0.5-r1 ruby-dev=2.5.8-r0 \
