@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -173,6 +173,8 @@ create:
 	src_to_dst->seqno = seq;
 	src_to_dst->syn_seen = syn;
 	src_to_dst->opener = 1;
+	src_to_dst->packets = 1;
+	src_to_dst->bytes = ct_ctx->skb->len;
 	src_to_dst->ifindex = ifindex;
 	CALI_DEBUG("NEW src_to_dst->ifindex %d\n", src_to_dst->ifindex);
 	dst_to_src->ifindex = CT_INVALID_IFINDEX;
@@ -790,6 +792,12 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		 * packets in the opposite direction are coming from.
 		 */
 		result.ifindex_fwd = dst_to_src->ifindex;
+	}
+
+	if (!skb_seen(ct_ctx->skb)) {
+		/* Account for the src->dst leg if we haven't seen the packet yet */
+		src_to_dst->packets++;
+		src_to_dst->bytes += ct_ctx->skb->len;
 	}
 
 	CALI_CT_DEBUG("result: %d\n", result.rc);

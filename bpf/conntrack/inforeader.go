@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package conntrack
 
@@ -50,14 +50,14 @@ func (r *InfoReader) Check(key Key, val Value, get EntryGet) ScanVerdict {
 
 	switch val.Type() {
 	case TypeNATReverse:
-		r.pushOut(r.dnatConntrackInfo(key, val))
+		r.pushOut(r.makeConntrackInfo(key, val, true))
 
 	case TypeNATForward:
 		// Do nothing, all the relevant info is in the reverce entry that we
 		// must hit as well.
 
 	case TypeNormal:
-		r.pushOut(r.normalConntrackInfo(key, val))
+		r.pushOut(r.makeConntrackInfo(key, val, false))
 	}
 
 	// We never delete
@@ -85,20 +85,33 @@ func (r *InfoReader) normalConntrackInfo(key Key, val Value) collector.Conntrack
 
 	data := val.Data()
 
+	coutersSrc := collector.ConntrackCounters{
+		Packets: int(data.A2B.Packets),
+		Bytes:   int(data.A2B.Bytes),
+	}
+
+	coutersDst := collector.ConntrackCounters{
+		Packets: int(data.B2A.Packets),
+		Bytes:   int(data.B2A.Bytes),
+	}
+
 	if data.B2A.Opener {
 		// We assume that one of the legs has the opener. If none or both, we
 		// cannot tell the direction anyway.
 		ipSrc, ipDst = ipDst, ipSrc
 		portSrc, portDst = portDst, portSrc
+		coutersSrc, coutersDst = coutersDst, coutersSrc
 	}
 
 	return collector.ConntrackInfo{
-		Expired: expired,
-		Tuple:   makeTuple(ipSrc, ipDst, portSrc, portDst, proto),
+		Expired:       expired,
+		Tuple:         makeTuple(ipSrc, ipDst, portSrc, portDst, proto),
+		Counters:      coutersSrc,
+		ReplyCounters: coutersDst,
 	}
 }
 
-func (r *InfoReader) dnatConntrackInfo(key Key, val Value) collector.ConntrackInfo {
+func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.ConntrackInfo {
 	_, expired := r.timeouts.EntryExpired(r.cachedKTime, key.Proto(), val)
 
 	proto := key.Proto()
@@ -110,29 +123,40 @@ func (r *InfoReader) dnatConntrackInfo(key Key, val Value) collector.ConntrackIn
 
 	data := val.Data()
 
-	svcIP := data.OrigDst
-	svcPort := data.OrigPort
+	coutersSrc := collector.ConntrackCounters{
+		Packets: int(data.A2B.Packets),
+		Bytes:   int(data.A2B.Bytes),
+	}
+
+	coutersDst := collector.ConntrackCounters{
+		Packets: int(data.B2A.Packets),
+		Bytes:   int(data.B2A.Bytes),
+	}
 
 	if data.B2A.Opener {
 		// We assume that one of the legs has the opener. If none or both, we
 		// cannot tell the direction anyway.
 		ipSrc, ipDst = ipDst, ipSrc
 		portSrc, portDst = portDst, portSrc
+		coutersSrc, coutersDst = coutersDst, coutersSrc
 	}
 
-	return collector.ConntrackInfo{
-		Expired:      expired,
-		IsDNAT:       true,
-		Tuple:        makeTuple(ipSrc, ipDst, portSrc, portDst, proto),
-		PreDNATTuple: makeTuple(ipSrc, svcIP, portSrc, svcPort, proto),
+	info := collector.ConntrackInfo{
+		Expired:       expired,
+		IsDNAT:        dnat,
+		Tuple:         makeTuple(ipSrc, ipDst, portSrc, portDst, proto),
+		Counters:      coutersSrc,
+		ReplyCounters: coutersDst,
 	}
+
+	if dnat {
+		info.PreDNATTuple = makeTuple(ipSrc, data.OrigDst, portSrc, data.OrigPort, proto)
+	}
+
+	return info
 }
 
 func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
-	// XXX we do not count packets yet, so send at least non-zeroes, we must
-	// have seen some packets / bytes.
-	i.Counters = collector.ConntrackCounters{Packets: 1, Bytes: 1}
-	i.ReplyCounters = collector.ConntrackCounters{Packets: 1, Bytes: 1}
 	// XXX we may want to make this non-blocking and what cannot go out now,
 	// should be deffered until the end of iteration not to block iterating over
 	// the conntrack table.

@@ -44,6 +44,9 @@ enum cali_ct_type {
 #define CALI_CT_FLAG_WORKLOAD	(1 << 5) /* marks a flow that was originated from a workload */
 
 struct calico_ct_leg {
+	__u64 bytes;
+	__u32 packets;
+
 	__u32 seqno;
 
 	__u32 syn_seen:1;
@@ -62,35 +65,44 @@ struct calico_ct_leg {
 struct calico_ct_value {
 	__u64 created;
 	__u64 last_seen; // 8
-	__u8 type;		 // 16
-	__u8 flags;
 
-	// Important to use explicit padding, otherwise the compiler can decide
-	// not to zero the padding bytes, which upsets the verifier.  Worse than
-	// that, debug logging often prevents such optimisation resulting in
-	// failures when debug logging is compiled out only :-).
-	__u8 pad0[6];
+	__u8 type;		// 16
+	__u8 flags;		// 17
+
+	__u8 _pad64[6];		// 18
+
+	/* 64bit aligned by here */
+
 	union {
 		// CALI_CT_TYPE_NORMAL and CALI_CT_TYPE_NAT_REV.
 		struct {
-			struct calico_ct_leg a_to_b; // 24
-			struct calico_ct_leg b_to_a; // 36
+			struct calico_ct_leg a_to_b;	// 24
+			struct calico_ct_leg b_to_a;	// 48
 
 			// CALI_CT_TYPE_NAT_REV
-			__u32 orig_ip;                     // 44
-			__u16 orig_port;                   // 48
-			__u8 pad1[2];                      // 50
-			__u32 tun_ip;                      // 52
-			__u32 pad3;                        // 56
+			__u32 tun_ip;			// 72
+			__u32 orig_ip;			// 76
+			__u16 orig_port;		// 80
+			__u16 _pad16;			// 82
+			__u32 _pad32;			// 84
 		};
 
 		// CALI_CT_TYPE_NAT_FWD; key for the CALI_CT_TYPE_NAT_REV entry.
 		struct {
-			struct calico_ct_key nat_rev_key;  // 24
-			__u8 pad2[8];
+			struct calico_ct_key nat_rev_key;  // 16
+			__u8 pad2[48]; // 32
 		};
 	};
+
+	/* 64bit aligned by here */
 };
+
+static CALI_BPF_INLINE void __xxx_compile_asserts(void) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+	COMPILE_TIME_ASSERT((sizeof(struct calico_ct_value) == 88))
+#pragma clang diagnostic pop
+}
 
 #define CT_CREATE_NORMAL	0
 #define CT_CREATE_NAT		1
@@ -112,7 +124,7 @@ struct ct_ctx {
 	__u8 flags;
 };
 
-CALI_MAP(cali_v4_ct, 2,
+CALI_MAP(cali_v4_ct, 3,
 		BPF_MAP_TYPE_HASH,
 		struct calico_ct_key, struct calico_ct_value,
 		512000, BPF_F_NO_PREALLOC, MAP_PIN_GLOBAL)

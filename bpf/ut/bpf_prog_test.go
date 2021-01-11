@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -587,19 +587,24 @@ func udpResposeRaw(in []byte) []byte {
 	ethR := ethL.(*layers.Ethernet)
 	ethR.SrcMAC, ethR.DstMAC = ethR.DstMAC, ethR.SrcMAC
 
+	payload := pkt.ApplicationLayer().Payload()
+	lenDiff := uint16(len(resposeDefault) - len(payload))
+
 	ipv4L := pkt.Layer(layers.LayerTypeIPv4)
 	ipv4R := ipv4L.(*layers.IPv4)
 	ipv4R.SrcIP, ipv4R.DstIP = ipv4R.DstIP, ipv4R.SrcIP
+	ipv4R.Length += lenDiff
 
 	udpL := pkt.Layer(layers.LayerTypeUDP)
 	udpR := udpL.(*layers.UDP)
 	udpR.SrcPort, udpR.DstPort = udpR.DstPort, udpR.SrcPort
+	udpR.Length += lenDiff
 
 	_ = udpR.SetNetworkLayerForChecksum(ipv4R)
 
 	out := gopacket.NewSerializeBuffer()
 	err := gopacket.SerializeLayers(out, gopacket.SerializeOptions{ComputeChecksums: true},
-		ethR, ipv4R, udpR, gopacket.Payload(pkt.ApplicationLayer().Payload()))
+		ethR, ipv4R, udpR, gopacket.Payload(resposeDefault))
 	Expect(err).NotTo(HaveOccurred())
 
 	return out.Bytes()
@@ -695,10 +700,12 @@ var ethDefault = &layers.Ethernet{
 }
 
 var payloadDefault = []byte("ABCDEABCDEXXXXXXXXXXXX")
+var resposeDefault = []byte("THISISRESPONSETHISISRESPONSETHISISRESPONSE")
 
 var srcIP = net.IPv4(1, 1, 1, 1)
 var dstIP = net.IPv4(2, 2, 2, 2)
 var srcV4CIDR = ip.CIDRFromNetIP(srcIP).(ip.V4CIDR)
+var dstV4CIDR = ip.CIDRFromNetIP(dstIP).(ip.V4CIDR)
 
 var ipv4Default = &layers.IPv4{
 	Version:  4,

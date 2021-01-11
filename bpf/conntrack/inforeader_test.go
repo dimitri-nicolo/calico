@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package conntrack_test
 
@@ -49,10 +49,6 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		func(k conntrack.Key, v conntrack.Value, expected collector.ConntrackInfo) {
 			reader.Check(k, v, nil)
 			got := <-reader.ConntrackInfoChan()
-
-			// XXX conters are always set to 1 for now
-			expected.Counters = collector.ConntrackCounters{Packets: 1, Bytes: 1}
-			expected.ReplyCounters = collector.ConntrackCounters{Packets: 1, Bytes: 1}
 
 			Expect(got).To(Equal(expected))
 		},
