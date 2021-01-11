@@ -298,6 +298,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		// This file tests that Felix writes out its DNS mappings file on shutdown, so we
 		// need to stop Felix gracefully.
 		opts.FelixStopGraceful = true
+		// Tests in this file require a node IP, so that Felix can attach a BPF program to
+		// host interfaces.
+		opts.NeedNodeIP = true
 		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
