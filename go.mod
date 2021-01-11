@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
-	github.com/docopt/docopt-go v0.0.0-20160216232012-784ddc588536
+	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v0.0.0-20180227141424-093482f3f8ce // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -22,7 +22,7 @@ require (
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
@@ -32,11 +32,11 @@ require (
 	gopkg.in/square/go-jose.v2 v2.4.1
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/apiextensions-apiserver v0.18.12
-	k8s.io/apimachinery v0.18.12
+	k8s.io/apiextensions-apiserver v0.19.6
+	k8s.io/apimachinery v0.19.6
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210108223937-a3b320c37bbb
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

@@ -49,9 +49,9 @@ Options:
 
 Description:
   The bgp peers command prints BGP related information about a given node's peers. For the
-  NAME parameter, you can provide either the node name or pod name of the node instance. 
+  NAME parameter, you can provide either the node name or pod name of the node instance.
 `
-	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
+	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
