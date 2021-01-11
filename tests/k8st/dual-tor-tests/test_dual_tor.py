@@ -107,6 +107,7 @@ class FailoverTestConfig(object):
             output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         except Exception:
             print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
+            subprocess.call("kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip, shell=True)
             cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
             output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
 
@@ -373,19 +374,19 @@ class FailoverCluster(object):
 
         # Create client, ra-server, rb-server and service.
         kubectl("run --generator=run-pod/v1 client -n dualtor" +
-                " --image busybox --labels='pod-name=client' " +
+                " --image busybox:1.32 --labels='pod-name=client' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 client-host -n dualtor" +
-                " --image busybox --labels='pod-name=client-host' " +
+                " --image busybox:1.32 --labels='pod-name=client-host' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"hostNetwork\": true, \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 ra-server -n dualtor" +
-                " --image busybox --labels='pod-name=ra-server,app=server' " +
+                " --image busybox:1.32 --labels='pod-name=ra-server,app=server' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-control-plane\" } } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 rb-server -n dualtor" +
-                " --image busybox --labels='pod-name=rb-server,app=server' " +
+                " --image busybox:1.32 --labels='pod-name=rb-server,app=server' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker3\" } } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("wait --timeout=1m --for=condition=ready" +
@@ -497,7 +498,7 @@ class TestFailoverServiceIP(TestBase):
         # deploy four pods onto four nodes
         nodes = ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]
         for node in nodes:
-            kubectl("run --generator=run-pod/v1 " + node + " -n dualtor --image busybox " +
+            kubectl("run --generator=run-pod/v1 " + node + " -n dualtor --image busybox:1.32 " +
                     " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"" + node + "\" } } }'" +
                     " --command /bin/sleep -- 3600")
             kubectl("wait --timeout=1m --for=condition=ready" +

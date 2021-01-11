@@ -299,7 +299,7 @@ EOF
 
     # Disable the full mesh and configure Calico nodes to peer instead
     # with their ToR.
-    cat << EOF | ${kubectl} exec -ti -n kube-system calicoctl -- /calicoctl apply -f -
+    cat << EOF | ${kubectl} exec -i -n kube-system calicoctl -- /calicoctl apply -f -
 apiVersion: projectcalico.org/v3
 kind: BGPConfiguration
 metadata:
@@ -535,117 +535,6 @@ EOF
     # Remove taints for master node, this would allow some test cases to run pod on master node.
     ${kubectl} taint node kind-control-plane node-role.kubernetes.io/master-
 
-}
-
-function break_plane {
-    plane=$1
-    docker exec bird-a${plane} ip link set dev eth1 down
-}
-
-function restore_plane {
-    plane=$1
-    docker exec bird-a${plane} ip link set dev eth1 up
-}
-
-function do_resilience {
-    # Create test client on kind-worker (rack A).
-    ${kubectl} apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    pod-name: client
-  name: client
-spec:
-  containers:
-  - args:
-    - /bin/sh
-    - -c
-    - sleep 360000
-    image: busybox
-    imagePullPolicy: Always
-    name: client
-  nodeSelector:
-    beta.kubernetes.io/os: linux
-  nodeName: kind-worker
-EOF
-
-    # Create test server on kind-worker3 (rack B).
-    ${kubectl} apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    pod-name: server
-  name: server
-spec:
-  containers:
-  - args:
-    - /bin/sh
-    - -c
-    - sleep 360000
-    image: busybox
-    imagePullPolicy: Always
-    name: server
-  nodeSelector:
-    beta.kubernetes.io/os: linux
-  nodeName: kind-worker3
-EOF
-
-    # Start server listening.
-    ${kubectl} exec server -- nc -l -p 8080 > rcvd.txt &
-
-    # Get server IP.
-    server_ip=`${kubectl} get po server -o wide | tail -1 | awk '{print $6;}'`
-
-    # Send from client.
-    time ${kubectl} exec client -- sh -c 'for i in `seq 1 3000`; do echo "$i -- dual tor test"; sleep 0.01; done |'" nc -w 1 ${server_ip} 8080" &
-
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-
-    break_plane 1
-
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-
-    restore_plane 1
-
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-
-    break_plane 1
-
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-    sleep 5
-    wc -c rcvd.txt
-
-    restore_plane 1
-
-    wait
-}
-
-function do_test {
-    time ${E2E_TEST} --kubeconfig=$KUBECONFIG -ginkgo.focus="NetworkPolicy and GlobalNetworkPolicy"
 }
 
 function do_cleanup {
