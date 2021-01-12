@@ -1363,9 +1363,9 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 								{
 									Name:      "TCP allow - staged",
 									Staged:    true,
-									NoMatchID: 0x6,
+									NoMatchID: 0x66,
 									Rules: []polprog.Rule{{
-										MatchID: 6,
+										MatchID: 0x6,
 										Rule: &proto.Rule{
 											Action: "Allow",
 											Protocol: &proto.Protocol{
@@ -1377,9 +1377,9 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 								{
 									Name:      "UDP allow - staged",
 									Staged:    true,
-									NoMatchID: 0x17,
+									NoMatchID: 0x1717,
 									Rules: []polprog.Rule{{
-										MatchID: 17,
+										MatchID: 0x17,
 										Rule: &proto.Rule{
 											Action: "Allow",
 											Protocol: &proto.Protocol{
@@ -1399,15 +1399,15 @@ func TestPolicyProgramsFlowLog(t *testing.T) {
 				allowedPackets: []testFlowLogCase{
 					{
 						packet:  udpPkt("10.0.0.1:31245", "10.0.0.2:80"),
-						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x6, 17, 1},
+						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x66, 0x17, 1},
 					},
 					{
 						packet:  tcpPkt("10.0.0.2:80", "10.0.0.1:31245"),
-						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 6, 0x17, 1},
+						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x6, 0x1717, 1},
 					},
 					{
 						packet:  icmpPkt("10.0.0.1", "10.0.0.2"),
-						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x6, 0x17, 1},
+						matches: []uint64{1234, 0xdead, 0x600d, 0x7455, 0x66, 0x1717, 1},
 					},
 				},
 			},
