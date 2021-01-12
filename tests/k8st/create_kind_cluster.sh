@@ -236,6 +236,15 @@ function test_connection() {
     fi
 }
 
+echo "Install MetalLB controller for allocating LoadBalancer IPs"
+${kubectl} create ns metallb-system
+${kubectl} apply -f $TEST_DIR/infra/metallb.yaml
+${kubectl} apply -f $TEST_DIR/infra/metallb-config.yaml
+
+# Create and monitor a test webserver service for dual stack.
+echo "Create test-webserver deployment..."
+${kubectl} apply -f tests/k8st/infra/test-webserver.yaml
+
 if dual_stack; then
     # Create and monitor a test webserver service for dual stack.
     echo "Create test-webserver deployment..."
