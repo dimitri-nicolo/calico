@@ -198,7 +198,7 @@ func (s *domainInfoStore) Start() {
 }
 
 func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
-	log.Infof("DNS packet from BPF: %v", e)
+	log.Debugf("DNS packet from BPF: %v", e)
 
 	// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
 	// packet data begins after that.
