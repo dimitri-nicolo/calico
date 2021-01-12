@@ -61,6 +61,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	 */
 	skb->mark = CALI_SET_SKB_MARK;
 #endif
+	CALI_DEBUG("New packet; mark=%x\n", skb->mark);
 
 	/* Optimisation: if another BPF program has already pre-approved the packet,
 	 * skip all processing. */
@@ -253,8 +254,14 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			fwd_fib_set(&ctx.fwd, false);
 			goto finalize;
 		} else {
-			CALI_DEBUG("CT mid-flow miss away from host with no Linux conntrack entry, drop.\n");
-			goto deny;
+			if (CALI_F_HEP) {
+				// TODO-HEP for data interfaces, this should allow, for active HEPs it should drop or apply policy.
+				CALI_DEBUG("CT mid-flow miss away from host with no Linux conntrack entry, allow.\n");
+				goto allow;
+			} else {
+				CALI_DEBUG("CT mid-flow miss away from host with no Linux conntrack entry, drop.\n");
+				goto deny;
+			}
 		}
 	}
 
