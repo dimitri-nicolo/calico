@@ -94,6 +94,9 @@
     ingress-collector:
       image: tigera/ingress-collector
       version: master
+    l7-collector:
+      image: tigera/l7-collector
+      version: master
     license-agent:
       image: tigera/license-agent
       version: master
@@ -145,3 +148,10 @@
       image: calico/pod2daemon-flexvol
       version: master
       registry: quay.io
+    envoy:
+      image: envoyproxy/envoy
+      version: v1.16-latest
+      registry: docker.io
+    envoy-init:
+      image: tigera/envoy-init
+      version: master
