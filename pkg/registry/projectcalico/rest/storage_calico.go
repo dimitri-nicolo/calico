@@ -71,6 +71,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	authorizer authorizer.Authorizer,
 	resources *calicostorage.ManagedClusterResources,
 	calculator rbac.Calculator,
+	licenseCache calicostorage.LicenseCache,
 ) (map[string]rest.Storage, error) {
 	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"))
 	if err != nil {
@@ -87,7 +88,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: policyRESTOptions,
+			RESTOptions:  policyRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -108,7 +110,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: networksetRESTOptions,
+			RESTOptions:  networksetRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -129,7 +132,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: stagedk8spolicyRESTOptions,
+			RESTOptions:  stagedk8spolicyRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -150,7 +154,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: stagedpolicyRESTOptions,
+			RESTOptions:  stagedpolicyRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -171,7 +176,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: tierRESTOptions,
+			RESTOptions:  tierRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -192,7 +198,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: gpolicyRESTOptions,
+			RESTOptions:  gpolicyRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -213,7 +220,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: stagedgpolicyRESTOptions,
+			RESTOptions:  stagedgpolicyRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -234,7 +242,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: gNetworkSetRESTOptions,
+			RESTOptions:  gNetworkSetRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -255,7 +264,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: licenseKeyRESTOptions,
+			RESTOptions:  licenseKeyRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -276,7 +286,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: gAlertRESTOptions,
+			RESTOptions:  gAlertRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -297,7 +308,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: gAlertTemplateRESTOptions,
+			RESTOptions:  gAlertTemplateRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -318,7 +330,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: gThreatFeedRESTOptions,
+			RESTOptions:  gThreatFeedRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -339,7 +352,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: hostEndpointRESTOptions,
+			RESTOptions:  hostEndpointRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -360,7 +374,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: globalReportRESTOptions,
+			RESTOptions:  globalReportRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -381,7 +396,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: globalReportTypeRESTOptions,
+			RESTOptions:  globalReportTypeRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -402,7 +418,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: ipPoolRESTOptions,
+			RESTOptions:  ipPoolRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -423,7 +440,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: bgpConfigurationRESTOptions,
+			RESTOptions:  bgpConfigurationRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -444,7 +462,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: bgpPeerRESTOptions,
+			RESTOptions:  bgpPeerRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -465,7 +484,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: profileRESTOptions,
+			RESTOptions:  profileRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -486,7 +506,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: remoteclusterconfigRESTOptions,
+			RESTOptions:  remoteclusterconfigRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -507,7 +528,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: felixConfigRESTOptions,
+			RESTOptions:  felixConfigRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -528,7 +550,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: kubeControllersConfigsRESTOptions,
+			RESTOptions:  kubeControllersConfigsRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -551,6 +574,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		calicostorage.Options{
 			RESTOptions:             managedClusterRESTOptions,
 			ManagedClusterResources: resources,
+			LicenseCache:            licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -571,7 +595,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: clusterInformationRESTOptions,
+			RESTOptions:  clusterInformationRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,
@@ -592,7 +617,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: packetCaptureRESTOptions,
+			RESTOptions:  packetCaptureRESTOptions,
+			LicenseCache: licenseCache,
 		},
 		p.StorageType,
 		authorizer,

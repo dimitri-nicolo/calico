@@ -67,6 +67,7 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 		watch:             watchFn,
 		resourceName:      "HostEndpoint",
 		converter:         HostEndpointConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc HostEndpointConverter) convertToLibcalico(aapiObj runtime.Object) resou
 	lcgHostEndpoint := &libcalicoapi.HostEndpoint{}
 	lcgHostEndpoint.TypeMeta = aapiHostEndpoint.TypeMeta
 	lcgHostEndpoint.ObjectMeta = aapiHostEndpoint.ObjectMeta
+	lcgHostEndpoint.Kind = libcalicoapi.KindHostEndpoint
+	lcgHostEndpoint.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgHostEndpoint.Spec = aapiHostEndpoint.Spec
 	return lcgHostEndpoint
 }

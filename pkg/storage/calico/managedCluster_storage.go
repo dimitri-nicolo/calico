@@ -118,6 +118,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		watch:             watchFn,
 		resourceName:      "ManagedCluster",
 		converter:         ManagedClusterConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -130,6 +131,8 @@ func (gc ManagedClusterConverter) convertToLibcalico(aapiObj runtime.Object) res
 	lcgManagedCluster := &libcalicoapi.ManagedCluster{}
 	lcgManagedCluster.TypeMeta = aapiManagedCluster.TypeMeta
 	lcgManagedCluster.ObjectMeta = aapiManagedCluster.ObjectMeta
+	lcgManagedCluster.Kind = libcalicoapi.KindManagedCluster
+	lcgManagedCluster.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgManagedCluster.Spec = aapiManagedCluster.Spec
 	lcgManagedCluster.Status = aapiManagedCluster.Status
 	return lcgManagedCluster

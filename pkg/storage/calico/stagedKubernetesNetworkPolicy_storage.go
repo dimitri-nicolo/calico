@@ -67,6 +67,7 @@ func NewStagedKubernetesNetworkPolicyStorage(opts Options) (registry.DryRunnable
 		watch:             watchFn,
 		resourceName:      "StagedKubernetesNetworkPolicy",
 		converter:         StagedKubernetesNetworkPolicyConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (rc StagedKubernetesNetworkPolicyConverter) convertToLibcalico(aapiObj runt
 	lcgPolicy := &libcalicoapi.StagedKubernetesNetworkPolicy{}
 	lcgPolicy.TypeMeta = aapiPolicy.TypeMeta
 	lcgPolicy.ObjectMeta = aapiPolicy.ObjectMeta
+	lcgPolicy.Kind = libcalicoapi.KindStagedKubernetesNetworkPolicy
+	lcgPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgPolicy.Spec = aapiPolicy.Spec
 	return lcgPolicy
 }

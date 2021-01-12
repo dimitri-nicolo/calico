@@ -67,6 +67,7 @@ func NewGlobalNetworkSetStorage(opts Options) (registry.DryRunnableStorage, fact
 		watch:             watchFn,
 		resourceName:      "GlobalNetworkSet",
 		converter:         GlobalNetworkSetConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc GlobalNetworkSetConverter) convertToLibcalico(aapiObj runtime.Object) r
 	lcgGlobalNetworkSet := &libcalicoapi.GlobalNetworkSet{}
 	lcgGlobalNetworkSet.TypeMeta = aapiGlobalNetworkSet.TypeMeta
 	lcgGlobalNetworkSet.ObjectMeta = aapiGlobalNetworkSet.ObjectMeta
+	lcgGlobalNetworkSet.Kind = libcalicoapi.KindGlobalNetworkSet
+	lcgGlobalNetworkSet.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgGlobalNetworkSet.Spec = aapiGlobalNetworkSet.Spec
 	return lcgGlobalNetworkSet
 }

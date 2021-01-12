@@ -66,6 +66,7 @@ func NewFelixConfigurationStorage(opts Options) (registry.DryRunnableStorage, fa
 		watch:             watchFn,
 		resourceName:      "FelixConfiguration",
 		converter:         FelixConfigurationConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -78,6 +79,8 @@ func (gc FelixConfigurationConverter) convertToLibcalico(aapiObj runtime.Object)
 	lcgFelixConfig := &libcalicoapi.FelixConfiguration{}
 	lcgFelixConfig.TypeMeta = aapiFelixConfig.TypeMeta
 	lcgFelixConfig.ObjectMeta = aapiFelixConfig.ObjectMeta
+	lcgFelixConfig.Kind = libcalicoapi.KindFelixConfiguration
+	lcgFelixConfig.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgFelixConfig.Spec = aapiFelixConfig.Spec
 	return lcgFelixConfig
 }

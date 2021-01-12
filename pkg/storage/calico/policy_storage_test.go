@@ -603,6 +603,9 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 		os.Exit(1)
 	}
 
+	cache := NewLicenseCache()
+	cache.Store(*getLicenseKey("default", validLicenseCertificate, validLicenseToken))
+
 	klog.Infof("Client: %v", c)
 	opts := Options{
 		RESTOptions: generic.RESTOptions{
@@ -610,6 +613,7 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 				Codec: codec,
 			},
 		},
+		LicenseCache: cache,
 	}
 	store, _ := NewNetworkPolicyStorage(opts)
 	gnpStore, _ := NewGlobalNetworkPolicyStorage(opts)

@@ -91,6 +91,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		watch:             watchFn,
 		resourceName:      "StagedNetworkPolicy",
 		converter:         StagedNetworkPolicyConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -103,6 +104,8 @@ func (rc StagedNetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object
 	lcgPolicy := &libcalicoapi.StagedNetworkPolicy{}
 	lcgPolicy.TypeMeta = aapiPolicy.TypeMeta
 	lcgPolicy.ObjectMeta = aapiPolicy.ObjectMeta
+	lcgPolicy.Kind = libcalicoapi.KindStagedNetworkPolicy
+	lcgPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgPolicy.Spec = aapiPolicy.Spec
 	return lcgPolicy
 }

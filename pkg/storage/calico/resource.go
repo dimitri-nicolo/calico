@@ -24,6 +24,7 @@ import (
 	"k8s.io/klog"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -45,7 +46,6 @@ type resourceConverter interface {
 	convertToAAPI(resourceObject, runtime.Object)
 	convertToAAPIList(resourceListObject, runtime.Object, storage.SelectionPredicate)
 }
-
 type clientOpts interface{}
 
 type clientObjectOperator func(context.Context, clientv3.Interface, resourceObject, clientOpts) (resourceObject, error)
@@ -70,6 +70,7 @@ type resourceStore struct {
 	watch             clientWatcher
 	resourceName      string
 	converter         resourceConverter
+	licenseCache      LicenseCache
 }
 
 func CreateClientFromConfig() clientv3.Interface {
@@ -122,6 +123,14 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	klog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
 	lcObj := rs.converter.convertToLibcalico(obj)
 
+	var gvk = lcObj.GetObjectKind().GroupVersionKind().String()
+	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
+		rs.licenseCache.Store(*lcObj.(*libcalicoapi.LicenseKey))
+	} else if rs.licenseCache.IsAPIRestricted(gvk) {
+		err := fmt.Errorf("our license does not support creating resources this API (%s). Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license", gvk)
+		return aapiError(err, key)
+	}
+
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
 	createdObj, err := rs.create(ctx, rs.client, lcObj, opts)
 	if err != nil {
@@ -170,6 +179,12 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 		klog.Errorf("Clientv3 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
 		return aapiError(err, key)
 	}
+
+	var gvk = libcalicoObj.GetObjectKind().GroupVersionKind().String()
+	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
+		rs.licenseCache.Clear()
+	}
+
 	rs.converter.convertToAAPI(libcalicoObj, out)
 	return nil
 }

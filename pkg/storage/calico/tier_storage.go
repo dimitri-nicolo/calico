@@ -67,6 +67,7 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 		watch:             watchFn,
 		resourceName:      "Tier",
 		converter:         TierConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (tc TierConverter) convertToLibcalico(aapiObj runtime.Object) resourceObjec
 	lcgTier := &libcalicoapi.Tier{}
 	lcgTier.TypeMeta = aapiTier.TypeMeta
 	lcgTier.ObjectMeta = aapiTier.ObjectMeta
+	lcgTier.Kind = libcalicoapi.KindTier
+	lcgTier.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgTier.Spec = aapiTier.Spec
 	return lcgTier
 }

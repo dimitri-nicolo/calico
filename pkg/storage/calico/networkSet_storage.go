@@ -67,6 +67,7 @@ func NewNetworkSetStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		watch:             watchFn,
 		resourceName:      "NetworkSet",
 		converter:         NetworkSetConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc NetworkSetConverter) convertToLibcalico(aapiObj runtime.Object) resourc
 	lcgNetworkSet := &libcalicoapi.NetworkSet{}
 	lcgNetworkSet.TypeMeta = aapiNetworkSet.TypeMeta
 	lcgNetworkSet.ObjectMeta = aapiNetworkSet.ObjectMeta
+	lcgNetworkSet.Kind = libcalicoapi.KindNetworkSet
+	lcgNetworkSet.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgNetworkSet.Spec = aapiNetworkSet.Spec
 	return lcgNetworkSet
 }

@@ -67,6 +67,7 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		watch:             watchFn,
 		resourceName:      "RemoteClusterConfiguration",
 		converter:         RemoteClusterConfigurationConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc RemoteClusterConfigurationConverter) convertToLibcalico(aapiObj runtime
 	lcgConfig := &libcalicoapi.RemoteClusterConfiguration{}
 	lcgConfig.TypeMeta = aapiConfig.TypeMeta
 	lcgConfig.ObjectMeta = aapiConfig.ObjectMeta
+	lcgConfig.Kind = libcalicoapi.KindRemoteClusterConfiguration
+	lcgConfig.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgConfig.Spec = aapiConfig.Spec
 	return lcgConfig
 }

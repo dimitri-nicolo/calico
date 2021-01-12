@@ -26,6 +26,7 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.GlobalAlert)
+
 		return c.GlobalAlerts().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
@@ -67,6 +68,7 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		watch:             watchFn,
 		resourceName:      "GlobalAlert",
 		converter:         GlobalAlertConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -78,6 +80,8 @@ func (gc GlobalAlertConverter) convertToLibcalico(aapiObj runtime.Object) resour
 	aapiGlobalAlert := aapiObj.(*aapi.GlobalAlert)
 	lcgGlobalAlert := &libcalicoapi.GlobalAlert{}
 	lcgGlobalAlert.TypeMeta = aapiGlobalAlert.TypeMeta
+	lcgGlobalAlert.Kind = libcalicoapi.KindGlobalAlert
+	lcgGlobalAlert.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgGlobalAlert.ObjectMeta = aapiGlobalAlert.ObjectMeta
 	lcgGlobalAlert.Spec = aapiGlobalAlert.Spec
 	lcgGlobalAlert.Status = aapiGlobalAlert.Status

@@ -67,6 +67,7 @@ func NewGlobalReportTypeStorage(opts Options) (registry.DryRunnableStorage, fact
 		watch:             watchFn,
 		resourceName:      "GlobalReportType",
 		converter:         GlobalReportTypeConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc GlobalReportTypeConverter) convertToLibcalico(aapiObj runtime.Object) r
 	lcgGlobalReportType := &libcalicoapi.GlobalReportType{}
 	lcgGlobalReportType.TypeMeta = aapiGlobalReportType.TypeMeta
 	lcgGlobalReportType.ObjectMeta = aapiGlobalReportType.ObjectMeta
+	lcgGlobalReportType.Kind = libcalicoapi.KindGlobalReportList
+	lcgGlobalReportType.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgGlobalReportType.Spec = aapiGlobalReportType.Spec
 	return lcgGlobalReportType
 }

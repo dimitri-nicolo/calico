@@ -66,6 +66,7 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		watch:             watchFn,
 		resourceName:      "BGPPeer",
 		converter:         BGPPeerConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -78,6 +79,8 @@ func (gc BGPPeerConverter) convertToLibcalico(aapiObj runtime.Object) resourceOb
 	lcgBGPPeer := &libcalicoapi.BGPPeer{}
 	lcgBGPPeer.TypeMeta = aapiBGPPeer.TypeMeta
 	lcgBGPPeer.ObjectMeta = aapiBGPPeer.ObjectMeta
+	lcgBGPPeer.Kind = libcalicoapi.KindBGPPeer
+	lcgBGPPeer.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgBGPPeer.Spec = aapiBGPPeer.Spec
 	return lcgBGPPeer
 }

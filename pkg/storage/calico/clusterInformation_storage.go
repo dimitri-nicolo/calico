@@ -66,6 +66,7 @@ func NewClusterInformationStorage(opts Options) (registry.DryRunnableStorage, fa
 		watch:             watchFn,
 		resourceName:      "ClusterInformation",
 		converter:         ClusterInformationConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -78,6 +79,8 @@ func (gc ClusterInformationConverter) convertToLibcalico(aapiObj runtime.Object)
 	lcgClusterInformation := &libcalicoapi.ClusterInformation{}
 	lcgClusterInformation.TypeMeta = aapiClusterInformation.TypeMeta
 	lcgClusterInformation.ObjectMeta = aapiClusterInformation.ObjectMeta
+	lcgClusterInformation.Kind = libcalicoapi.KindClusterInformation
+	lcgClusterInformation.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgClusterInformation.Spec = aapiClusterInformation.Spec
 	return lcgClusterInformation
 }

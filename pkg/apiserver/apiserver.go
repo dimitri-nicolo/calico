@@ -3,6 +3,7 @@
 package apiserver
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+	"github.com/projectcalico/libcalico-go/lib/options"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,6 +26,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 
 	"github.com/tigera/apiserver/pkg/apis/projectcalico"
 	"github.com/tigera/apiserver/pkg/apis/projectcalico/install"
@@ -75,6 +78,7 @@ type Config struct {
 type ProjectCalicoServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 	RBACCalculator   rbac.Calculator
+	calico.LicenseCache
 }
 
 type completedConfig struct {
@@ -137,13 +141,16 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 		return nil, err
 	}
 
+	licenseCache := c.initLicenseCache()
+
 	s := &ProjectCalicoServer{
 		GenericAPIServer: genericServer,
 		RBACCalculator:   calculator,
+		LicenseCache:     licenseCache,
 	}
 
 	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(
-		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator,
+		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator, licenseCache,
 	)
 	if err != nil {
 		return nil, err
@@ -154,6 +161,23 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	}
 
 	return s, nil
+}
+
+func (c completedConfig) initLicenseCache() calico.LicenseCache {
+	// Create a Calico v3 clientset.
+	cc := calico.CreateClientFromConfig()
+	licenseCache := calico.NewLicenseCache()
+
+	// Read the license if it was previously created
+	license, err := cc.LicenseKey().Get(context.Background(), "default", options.GetOptions{ResourceVersion: ""})
+	if err != nil {
+		klog.Warning("No license is found to initialize the license cache. The cache will be created without a license")
+		return licenseCache
+	}
+
+	licenseCache.Store(*license)
+
+	return licenseCache
 }
 
 func (c completedConfig) NewRBACCalculator() (rbac.Calculator, error) {

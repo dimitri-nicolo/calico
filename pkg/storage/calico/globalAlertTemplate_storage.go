@@ -67,6 +67,7 @@ func NewGlobalAlertTemplateStorage(opts Options) (registry.DryRunnableStorage, f
 		watch:             watchFn,
 		resourceName:      "GlobalAlertTemplate",
 		converter:         GlobalAlertTemplateConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc GlobalAlertTemplateConverter) convertToLibcalico(aapiObj runtime.Object
 	lcgGlobalAlertTemplate := &libcalicoapi.GlobalAlertTemplate{}
 	lcgGlobalAlertTemplate.TypeMeta = aapiGlobalAlertTemplate.TypeMeta
 	lcgGlobalAlertTemplate.ObjectMeta = aapiGlobalAlertTemplate.ObjectMeta
+	lcgGlobalAlertTemplate.Kind = libcalicoapi.KindGlobalAlertTemplate
+	lcgGlobalAlertTemplate.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgGlobalAlertTemplate.Spec = aapiGlobalAlertTemplate.Spec
 	return lcgGlobalAlertTemplate
 }

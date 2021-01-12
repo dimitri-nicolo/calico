@@ -57,7 +57,7 @@ func TestGroupVersion(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.NetworkPolicy{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGroupVersion(client); err != nil {
 				t.Fatal(err)
@@ -124,7 +124,7 @@ func TestNoName(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.NetworkPolicy{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testNoName(client); err != nil {
 				t.Fatal(err)
@@ -157,7 +157,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.NetworkPolicy{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testNetworkPolicyClient(client, name); err != nil {
 				t.Fatal(err)
@@ -303,7 +303,7 @@ func TestStagedNetworkPolicyClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.NetworkPolicy{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testStagedNetworkPolicyClient(client, name); err != nil {
 				t.Fatal(err)
@@ -439,7 +439,7 @@ func TestTierClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.Tier{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
 				t.Fatal(err)
@@ -505,7 +505,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalNetworkPolicy{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalNetworkPolicyClient(client, name); err != nil {
 				t.Fatal(err)
@@ -610,7 +610,7 @@ func TestStagedGlobalNetworkPolicyClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.StagedGlobalNetworkPolicy{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testStagedGlobalNetworkPolicyClient(client, name); err != nil {
 				t.Fatal(err)
@@ -715,7 +715,7 @@ func TestGlobalNetworkSetClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalNetworkSet{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalNetworkSetClient(client, name); err != nil {
 				t.Fatal(err)
@@ -781,7 +781,7 @@ func TestNetworkSetClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.NetworkSet{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testNetworkSetClient(client, name); err != nil {
 				t.Fatal(err)
@@ -874,7 +874,7 @@ func TestLicenseKeyClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.LicenseKey{}
-			})
+			}, false)
 			defer shutdownServer()
 			if err := testLicenseKeyClient(client, name); err != nil {
 				t.Fatal(err)
@@ -915,7 +915,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	} else if err.Error() != "LicenseKey.projectcalico.org \"default\" is invalid: LicenseKeySpec.token: Internal error: the license you're trying to create expired on 2019-02-08 07:59:59 +0000 UTC" {
 		fmt.Printf("Incorrect error: %+v\n", err)
 	}
-	//Valid License with Maximum supported Nodes 100
+	// Valid License with Maximum supported Nodes 100
 	validLicenseKey := getValidLicenseKey(name)
 	lic, err := licenseKeyClient.Create(ctx, validLicenseKey, metav1.CreateOptions{})
 	if err != nil {
@@ -929,7 +929,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 
 	//Check for Certificate Expiry date
-	if lic.Status.Expiry.Time.String() != "2022-03-05 23:59:59 +0000 UTC" {
+	if lic.Status.Expiry.Time.String() != "2021-10-01 23:59:59 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
@@ -973,42 +973,6 @@ IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
 
 const expiredLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiI5WGxaNTlIb3FfTXRkU25oIiwidGFnIjoiSng5SnJFWEpidThYTktBRTFkNF9odyIsInR5cCI6IkpXVCJ9.3aOzJ8CseHdknq4-5iyyVQ.Ajhfz-axov0_Fb64.0YE2hNz_KvgatHKB8hJCgemy09n8zJDc6haiFLkYGh9L96MXEhCUXg9V9iLioi311BtLT6RWXLuQspTNHLDvdIJLyPoNR3OvIYcHTz7kHhaX61lGutAEUBDdByPczoLVkkZccaKgIP8xho4XWmkjDMWXvhMXcTilN3cgeAEdQILXWL1pDPf-h0u-a7Esw5d0O8Ok1CBjFLrthgGnCVtMH5t7l3kBiWbzmAVo7Nz9Eegki0bmOqVSzBxmpDspNitbZFxzYWV23Km6Lmx_FWsEsTtx4nLyBARuxBQsf_l2UjqwowXUlK26Lw7Vqt6e8Upbw4sUrMjIZQzBbKwbAfPFm14QwgXmOfkcMwpeqz8v4oVml3WDIK4Ree6K-Z-ae-cMRGGCTHdp6XDidwykYAQXYC4pbdm-Hm86qO6AYODP_v8lvorXJQgfC0L4Mf5_7uM3daYxIa_80ZlNF9Ffa4YPsB4CuJFbHEEhSStDUlxCNTh5W1SnhgYgelVttnwaYCCVHlyqP4vCCGYgQIkoy01RKCq5dqXl2JPqpUt1bJZ_ywDlhi1xTKrO4uA6qfvKR_tNC1eYPrNmAR7sXMTj8gbUpklvh00edn-sHaR0yTj7ShMbAkK0o9WKUmElsMa_cpjTQ7dVEw6E1hoxjIdEI9kL87ex8uPRQ5383Df-NxO8I093Ef1RXVROeQp3Sass38ewkBuAM32AHUNfY8eP3aaw1ntGzeh93sa015Ob158t5W4ExsVp25RvM0RaV7UBhX0rkbCIVclJR87PkoSAfxtH5E1pkyBJB7rwGHKhWo0kO7U0QFLhAE2_l77pLME_QaHXLogUdLgGbloH2igxFLzboNfTs2yTc2JHeJDiPZDJBs-hbOEdJDD_JX_BcSWw_ZKFxeqA36RZl8LHvXOIS0C4LXmG9qAJvIabIlSIkVRNoSPWL8iXfCwkGHLl3uFc0_0USnunVIELwtEiaf2RUUv2-W1oHBBkrmkW2vxtwMB7GMItUs4l2oR024Qgqm4w9aIVBHvpz9f9QBKcUiWOyMvrqwCLUPDApQdU9bETwEngZOYtSZdX5G5qU-WbpVH91Y7ta81mJEm7Dtj55S5Vyx0NXyeO49M.BWNb4Ddh5iAoVq9eA8Vo_w`
 
-const validLicenseCertificate = `-----BEGIN CERTIFICATE-----
-MIIFxjCCA66gAwIBAgIQVq3rz5D4nQF1fIgMEh71DzANBgkqhkiG9w0BAQsFADCB
-tTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
-biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1
-cml0eSA8c2lydEB0aWdlcmEuaW8+MT8wPQYDVQQDEzZUaWdlcmEgRW50aXRsZW1l
-bnRzIEludGVybWVkaWF0ZSBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkwHhcNMTgwNDA1
-MjEzMDI5WhcNMjAxMDA2MjEzMDI5WjCBnjELMAkGA1UEBhMCVVMxEzARBgNVBAgT
-CkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xFDASBgNVBAoTC1Rp
-Z2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1cml0eSA8c2lydEB0aWdlcmEuaW8+MSgw
-JgYDVQQDEx9UaWdlcmEgRW50aXRsZW1lbnRzIENlcnRpZmljYXRlMIIBojANBgkq
-hkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwg3LkeHTwMi651af/HEXi1tpM4K0LVqb
-5oUxX5b5jjgi+LHMPzMI6oU+NoGPHNqirhAQqK/k7W7r0oaMe1APWzaCAZpHiMxE
-MlsAXmLVUrKg/g+hgrqeije3JDQutnN9h5oZnsg1IneBArnE/AKIHH8XE79yMG49
-LaKpPGhpF8NoG2yoWFp2ekihSohvqKxa3m6pxoBVdwNxN0AfWxb60p2SF0lOi6B3
-hgK6+ILy08ZqXefiUs+GC1Af4qI1jRhPkjv3qv+H1aQVrq6BqKFXwWIlXCXF57CR
-hvUaTOG3fGtlVyiPE4+wi7QDo0cU/+Gx4mNzvmc6lRjz1c5yKxdYvgwXajSBx2pw
-kTP0iJxI64zv7u3BZEEII6ak9mgUU1CeGZ1KR2Xu80JiWHAYNOiUKCBYHNKDCUYl
-RBErYcAWz2mBpkKyP6hbH16GjXHTTdq5xENmRDHabpHw5o+21LkWBY25EaxjwcZa
-Y3qMIOllTZ2iRrXu7fSP6iDjtFCcE2bFAgMBAAGjZzBlMA4GA1UdDwEB/wQEAwIF
-oDATBgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQUIY7LzqNTzgyTBE5efHb5
-kZ71BUEwHwYDVR0jBBgwFoAUxZA5kifzo4NniQfGKb+4wruTIFowDQYJKoZIhvcN
-AQELBQADggIBAAK207LaqMrnphF6CFQnkMLbskSpDZsKfqqNB52poRvUrNVUOB1w
-3dSEaBUjhFgUU6yzF+xnuH84XVbjD7qlM3YbdiKvJS9jrm71saCKMNc+b9HSeQAU
-DGY7GPb7Y/LG0GKYawYJcPpvRCNnDLsSVn5N4J1foWAWnxuQ6k57ymWwcddibYHD
-OPakOvO4beAnvax3+K5dqF0bh2Np79YolKdIgUVzf4KSBRN4ZE3AOKlBfiKUvWy6
-nRGvu8O/8VaI0vGaOdXvWA5b61H0o5cm50A88tTm2LHxTXynE3AYriHxsWBbRpoM
-oFnmDaQtGY67S6xGfQbwxrwCFd1l7rGsyBQ17cuusOvMNZEEWraLY/738yWKw3qX
-U7KBxdPWPIPd6iDzVjcZrS8AehUEfNQ5yd26gDgW+rZYJoAFYv0vydMEyoI53xXs
-cpY84qV37ZC8wYicugidg9cFtD+1E0nVgOLXPkHnmc7lIDHFiWQKfOieH+KoVCbb
-zdFu3rhW31ygphRmgszkHwApllCTBBMOqMaBpS8eHCnetOITvyB4Kiu1/nKvVxhY
-exit11KQv8F3kTIUQRm0qw00TSBjuQHKoG83yfimlQ8OazciT+aLpVaY8SOrrNnL
-IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
------END CERTIFICATE-----`
-
-const validLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJJOTdyUWRaMVNXaUtSSXdGIiwidGFnIjoiZVFmTnNhcjBvcHdJTXJBRnREQXpvUSIsInR5cCI6IkpXVCJ9.S87Ufx8wtm-y3JmIHN6D7g.JJ3h6_KAQ7ntwwOH.ddzfQY2M_wWqZFoh8lr4pMqs8bz777Eh_5JFAvlYcu7cN35EAYhHWiPL6FUSiZz-pVRSdfNZ1vGwkWSnn7r4002YO-ojdnr2Ua1JJkFoGzbxKNK-iGP-I3fHKvnvYB7EC6KxtsK-4vS7fsoYFXm8puqedRXzvoSKFgjQZKMEWEI5t_GJ7dhY1llWYQyKozWnWnNEa_teZDSXfXaMh8k7AEh5zkRs8I7KW0nocPWT2yV8AjkHNdQjBF--Id16GifuYrwpuCgus22oWZ-dCxU9DOuSep_brKZHqtR6lU30c7uuNJdquqbepHssAgjLxIqb0eKSsTtYR-jaA6wvaMDdOSQSWH0XsIPjhfuZ7yQm-hi-Fv41QgmmXIntJ69DIhMU54WsmLz0Oee2EIad9ThJOBj-10Nl4y8wVAAweTiazCmYhza0a_-XDZScgEpdoAIIqMGrt_bzo6uoRPiAfIaxZjBTepbK0jXtDDTvf-zsFbRsclWbm1rLu0tXe-YLY3iVgox1N_NCv36JNcfud1I2Lpue70cbkpbu0RG8Vv0jcZncFU-nYyXsSK0ol6bPIDSHE3BUmZJpUeT-kPS7hQgSXMapvd5UrMLTbWhR-OgDIcqo7UUVm6O48ZE3T3P-5Qu6f-VHbm5AXHpVfew6Zit5-Voi14nJz7HmcQa8b3WTKmyggnVxt47VlBrzdVj_bJJLdBBj2i-l2_3tXdtj4nUEBACC8UBpR1GilDy4WHnhmjwRZtws_N8j-gLjXgTCxnVS6B_9ImVhZT-HOKkmBtXAGsSy7GySG6MdWzkfiuQHRZU4ferUKK-VFWSxFNrIcnbErWyPdW10efg74mfyxpVY60k2BeB1HxHAEKhcT8woaJQSjEIkIe246fA6D7P_p4BbZR-rNm0KGZa6UChtyTe2-v6tNvplsAYV-twmnyELPE3iSQdNAtigJ5Z4GqBKXr_cFiqQTGpSS49bqsxMlY2qG1HXZFn2mvtPsJm4UuF-RaL3i6LdkKaG8yM0tm1TAFldpepy7icaW9tbgJ9-LeM8kTa-rvboifsAA98ot-TdhnsI44vxD6mNlDsUfJHcfO5wNLKbBlrZ7BAf5ox46BBY40TRWIyaefk_HoIthZiMKEA.U2ayMukyzhFXcY24bqBGKA`
-
 func getExpiredLicenseKey(name string) *v3.LicenseKey {
 	expiredLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
@@ -1018,16 +982,6 @@ func getExpiredLicenseKey(name string) *v3.LicenseKey {
 	return expiredLicenseKey
 }
 
-func getValidLicenseKey(name string) *v3.LicenseKey {
-
-	validLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
-
-	validLicenseKey.Spec.Certificate = validLicenseCertificate
-	validLicenseKey.Spec.Token = validLicenseToken
-
-	return validLicenseKey
-}
-
 // TestGlobalAlertClient exercises the GlobalAlert client.
 func TestGlobalAlertClient(t *testing.T) {
 	const name = "test-globalalert"
@@ -1035,7 +989,7 @@ func TestGlobalAlertClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalAlert{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalAlertClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1204,7 +1158,7 @@ func TestGlobalAlertTemplateClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalAlertTemplate{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalAlertTemplateClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1338,7 +1292,7 @@ func TestGlobalThreatFeedClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalThreatFeed{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalThreatFeedClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1495,7 +1449,7 @@ func TestHostEndpointClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.HostEndpoint{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testHostEndpointClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1615,7 +1569,7 @@ func TestGlobalReportClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalReport{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalReportClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1848,7 +1802,7 @@ func TestGlobalReportTypeClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.GlobalReportType{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testGlobalReportTypeClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1974,7 +1928,7 @@ func TestIPPoolClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.IPPool{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testIPPoolClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2043,7 +1997,7 @@ func TestBGPConfigurationClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.BGPConfiguration{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testBGPConfigurationClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2104,7 +2058,7 @@ func TestBGPPeerClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.BGPPeer{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testBGPPeerClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2169,7 +2123,7 @@ func TestProfileClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.Profile{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testProfileClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2234,7 +2188,7 @@ func TestRemoteClusterConfigurationClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.RemoteClusterConfiguration{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testRemoteClusterConfigurationClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2301,7 +2255,7 @@ func TestFelixConfigurationClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.FelixConfiguration{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testFelixConfigurationClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2374,7 +2328,7 @@ func TestKubeControllersConfigurationClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.KubeControllersConfiguration{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testKubeControllersConfigurationClient(client); err != nil {
 				t.Fatal(err)
@@ -2537,6 +2491,7 @@ func TestManagedClusterClient(t *testing.T) {
 				managedClustersCACertPath:     "../ca.crt",
 				managedClustersCAKeyPath:      "../ca.key",
 				managementClusterAddr:         "example.org:1234",
+				applyTigeraLicense:            true,
 			}
 
 			client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
@@ -2561,6 +2516,7 @@ func TestManagedClusterClient(t *testing.T) {
 			enableManagedClusterCreateAPI: false,
 			managedClustersCACertPath:     "../ca.crt",
 			managedClustersCAKeyPath:      "../ca.key",
+			applyTigeraLicense:            true,
 		}
 
 		client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
@@ -2752,7 +2708,7 @@ func TestClusterInformationClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.ClusterInformation{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testClusterInformationClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2794,7 +2750,7 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.AuthenticationReview{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testAuthenticationReviewsClient(client); err != nil {
 				t.Fatal(err)
@@ -2975,7 +2931,7 @@ func TestPacketCaptureClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &projectcalico.PacketCapture{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testPacketCapturesClient(client, name); err != nil {
 				t.Fatal(err)

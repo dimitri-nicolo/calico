@@ -67,6 +67,7 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		watch:             watchFn,
 		resourceName:      "Profile",
 		converter:         ProfileConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc ProfileConverter) convertToLibcalico(aapiObj runtime.Object) resourceOb
 	lcgProfile := &libcalicoapi.Profile{}
 	lcgProfile.TypeMeta = aapiProfile.TypeMeta
 	lcgProfile.ObjectMeta = aapiProfile.ObjectMeta
+	lcgProfile.Kind = libcalicoapi.KindProfile
+	lcgProfile.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgProfile.Spec = aapiProfile.Spec
 	return lcgProfile
 }

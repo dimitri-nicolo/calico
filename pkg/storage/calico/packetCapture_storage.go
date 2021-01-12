@@ -67,6 +67,7 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 		watch:             watchFn,
 		resourceName:      "PacketCapture",
 		converter:         PacketCaptureConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc PacketCaptureConverter) convertToLibcalico(aapiObj runtime.Object) reso
 	lcgPacketCapture := &libcalicoapi.PacketCapture{}
 	lcgPacketCapture.TypeMeta = aapiPacketCapture.TypeMeta
 	lcgPacketCapture.ObjectMeta = aapiPacketCapture.ObjectMeta
+	lcgPacketCapture.Kind = libcalicoapi.KindPacketCapture
+	lcgPacketCapture.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgPacketCapture.Spec = aapiPacketCapture.Spec
 	return lcgPacketCapture
 }

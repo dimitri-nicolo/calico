@@ -67,6 +67,7 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 		watch:             watchFn,
 		resourceName:      "GlobalThreatFeed",
 		converter:         GlobalThreatFeedConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc GlobalThreatFeedConverter) convertToLibcalico(aapiObj runtime.Object) r
 	lcgGlobalThreatFeed := &libcalicoapi.GlobalThreatFeed{}
 	lcgGlobalThreatFeed.TypeMeta = aapiGlobalThreatFeed.TypeMeta
 	lcgGlobalThreatFeed.ObjectMeta = aapiGlobalThreatFeed.ObjectMeta
+	lcgGlobalThreatFeed.Kind = libcalicoapi.KindGlobalThreatFeed
+	lcgGlobalThreatFeed.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgGlobalThreatFeed.Spec = aapiGlobalThreatFeed.Spec
 	lcgGlobalThreatFeed.Status = aapiGlobalThreatFeed.Status
 	return lcgGlobalThreatFeed

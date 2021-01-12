@@ -67,6 +67,7 @@ func NewKubeControllersConfigurationStorage(opts Options) (registry.DryRunnableS
 		watch:             watchFn,
 		resourceName:      "KubeControllersConfiguration",
 		converter:         KubeControllersConfigurationConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc KubeControllersConfigurationConverter) convertToLibcalico(aapiObj runti
 	lcgKubeControllersConfiguration := &libcalicoapi.KubeControllersConfiguration{}
 	lcgKubeControllersConfiguration.TypeMeta = aapiKubeControllersConfiguration.TypeMeta
 	lcgKubeControllersConfiguration.ObjectMeta = aapiKubeControllersConfiguration.ObjectMeta
+	lcgKubeControllersConfiguration.Kind = libcalicoapi.KindKubeControllersConfiguration
+	lcgKubeControllersConfiguration.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgKubeControllersConfiguration.Spec = aapiKubeControllersConfiguration.Spec
 	lcgKubeControllersConfiguration.Status = aapiKubeControllersConfiguration.Status
 	return lcgKubeControllersConfiguration

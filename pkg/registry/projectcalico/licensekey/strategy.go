@@ -49,9 +49,11 @@ func (apiServerStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
-
+func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	lcgLicenseKey := convertToLibcalico(obj)
+	lcgLicenseKey.TypeMeta.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgLicenseKey.TypeMeta.Kind = libcalicoapi.KindLicenseKey
+
 	licClaims, err := licClient.Decode(*lcgLicenseKey)
 	if err != nil {
 		return

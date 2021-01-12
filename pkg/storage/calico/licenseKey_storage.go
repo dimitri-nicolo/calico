@@ -69,6 +69,7 @@ func NewLicenseKeyStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		watch:             watchFn,
 		resourceName:      "LicenseKey",
 		converter:         LicenseKeyConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -81,6 +82,8 @@ func (gc LicenseKeyConverter) convertToLibcalico(aapiObj runtime.Object) resourc
 	lcgLicenseKey := &libcalicoapi.LicenseKey{}
 	lcgLicenseKey.TypeMeta = aapiLicenseKey.TypeMeta
 	lcgLicenseKey.ObjectMeta = aapiLicenseKey.ObjectMeta
+	lcgLicenseKey.Kind = libcalicoapi.KindLicenseKey
+	lcgLicenseKey.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgLicenseKey.Spec = aapiLicenseKey.Spec
 	lcgLicenseKey.Status = aapiLicenseKey.Status
 	return lcgLicenseKey

@@ -66,6 +66,7 @@ func NewBGPConfigurationStorage(opts Options) (registry.DryRunnableStorage, fact
 		watch:             watchFn,
 		resourceName:      "BGPConfiguration",
 		converter:         BGPConfigurationConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -78,6 +79,8 @@ func (gc BGPConfigurationConverter) convertToLibcalico(aapiObj runtime.Object) r
 	lcgBGPConfiguration := &libcalicoapi.BGPConfiguration{}
 	lcgBGPConfiguration.TypeMeta = aapiBGPConfiguration.TypeMeta
 	lcgBGPConfiguration.ObjectMeta = aapiBGPConfiguration.ObjectMeta
+	lcgBGPConfiguration.Kind = libcalicoapi.KindBGPConfiguration
+	lcgBGPConfiguration.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgBGPConfiguration.Spec = aapiBGPConfiguration.Spec
 	return lcgBGPConfiguration
 }

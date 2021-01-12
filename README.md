@@ -314,25 +314,27 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ...
 
   licenseKeyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("licensekeys"))
-  if err != nil {
-  	return nil, err
-  }
-  licenseKeysSetOpts := server.NewOptions(
-  	etcd.Options{
-  		RESTOptions:   licenseKeyRESTOptions,
-  		Capacity:      10,
-  		ObjectType:    calicolicensekey.EmptyObject(),
-  		ScopeStrategy: calicolicensekey.NewStrategy(scheme),
-  		NewListFunc:   calicolicensekey.NewList,
-  		GetAttrsFunc:  calicolicensekey.GetAttrs,
-  		Trigger:       storage.NoTriggerPublisher,
-  	},
-  	calicostorage.Options{
-  		RESTOptions: licenseKeyRESTOptions,
-  	},
-  	p.StorageType,
-  	authorizer,
-  )
+	if err != nil {
+		return nil, err
+	}
+	licenseKeysSetOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   licenseKeyRESTOptions,
+			Capacity:      10,
+			ObjectType:    calicolicensekey.EmptyObject(),
+			ScopeStrategy: calicolicensekey.NewStrategy(scheme),
+			NewListFunc:   calicolicensekey.NewList,
+			GetAttrsFunc:  calicolicensekey.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions:  licenseKeyRESTOptions,
+			LicenseCache: licenseCache,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
   ```
 
   Update the storage map (also in `pkg/registry/projectcalico/rest/storage_calico.go`)

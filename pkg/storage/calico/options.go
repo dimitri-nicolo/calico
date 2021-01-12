@@ -26,4 +26,5 @@ type ManagedClusterResources struct {
 type Options struct {
 	RESTOptions generic.RESTOptions
 	*ManagedClusterResources
+	LicenseCache
 }

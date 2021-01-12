@@ -66,6 +66,7 @@ func NewIPPoolStorage(opts Options) (registry.DryRunnableStorage, factory.Destro
 		watch:             watchFn,
 		resourceName:      "IPPool",
 		converter:         IPPoolConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -78,6 +79,8 @@ func (gc IPPoolConverter) convertToLibcalico(aapiObj runtime.Object) resourceObj
 	lcgIPPool := &libcalicoapi.IPPool{}
 	lcgIPPool.TypeMeta = aapiIPPool.TypeMeta
 	lcgIPPool.ObjectMeta = aapiIPPool.ObjectMeta
+	lcgIPPool.Kind = libcalicoapi.KindIPPool
+	lcgIPPool.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgIPPool.Spec = aapiIPPool.Spec
 	return lcgIPPool
 }

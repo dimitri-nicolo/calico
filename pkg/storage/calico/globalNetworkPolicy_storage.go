@@ -67,6 +67,7 @@ func NewGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		watch:             watchFn,
 		resourceName:      "GlobalNetworkPolicy",
 		converter:         GlobalNetworkPolicyConverter{},
+		licenseCache:      opts.LicenseCache,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -79,6 +80,8 @@ func (gc GlobalNetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object
 	lcgGlobalNetworkPolicy := &libcalicoapi.GlobalNetworkPolicy{}
 	lcgGlobalNetworkPolicy.TypeMeta = aapiGlobalNetworkPolicy.TypeMeta
 	lcgGlobalNetworkPolicy.ObjectMeta = aapiGlobalNetworkPolicy.ObjectMeta
+	lcgGlobalNetworkPolicy.Kind = libcalicoapi.KindGlobalNetworkPolicy
+	lcgGlobalNetworkPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgGlobalNetworkPolicy.Spec = aapiGlobalNetworkPolicy.Spec
 	return lcgGlobalNetworkPolicy
 }
