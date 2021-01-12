@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/coreos/go-oidc"
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/apiserver/pkg/authentication"
 	"gopkg.in/square/go-jose.v2"
 	"k8s.io/apiserver/pkg/authentication/user"
-
-	"github.com/coreos/go-oidc"
 )
 
 const (
@@ -246,8 +246,18 @@ func (d *dexAuthenticator) Authenticate(authHeader string) (user.Info, int, erro
 		}
 	}
 
+	// Setting issuer and subject as Extra, this can be used to identify userInfo authenticated by dex
+	extra := make(map[string][]string)
+	extra["iss"] = []string{iss}
+	if subClaim, ok := claims[defaultUsernameClaim].(string); !ok {
+		log.Warn("subject claim is not of type string")
+	} else {
+		extra["sub"] = []string{subClaim}
+	}
+
 	return &user.DefaultInfo{
 		Name:   username,
 		Groups: groups,
+		Extra:  extra,
 	}, 200, nil
 }

@@ -55,6 +55,8 @@ var _ = Describe("Test dex authenticator and options", func() {
 		Expect(usr).NotTo(BeNil())
 		Expect(usr.GetName()).To(Equal(prefixedUser))
 		Expect(usr.GetGroups()[0]).To(Equal(prefixedGroup))
+		Expect(usr.GetExtra()["iss"]).To(Equal([]string{iss}))
+		Expect(usr.GetExtra()["sub"]).To(Equal([]string{"ChUxMDkxMzE"}))
 		Expect(stat).To(Equal(200))
 	})
 
