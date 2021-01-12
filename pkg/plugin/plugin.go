@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,6 +123,9 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 				msg = fmt.Sprintf("%s: error=%s", msg, err)
 			}
 			err = fmt.Errorf(msg)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("Final result of CNI ADD was an error.")
 		}
 	}()
 
@@ -546,6 +549,9 @@ func cmdDel(args *skel.CmdArgs) (err error) {
 				msg = fmt.Sprintf("%s: error=%s", msg, err)
 			}
 			err = fmt.Errorf(msg)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("Final result of CNI DEL was an error.")
 		}
 	}()
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -742,7 +742,7 @@ func ConfigureLogging(conf types.NetConf) {
 		logrus.SetLevel(logrus.ErrorLevel)
 	} else {
 		// Default level
-		logrus.SetLevel(logrus.WarnLevel)
+		logrus.SetLevel(logrus.InfoLevel)
 	}
 
 	writers := []io.Writer{os.Stderr}

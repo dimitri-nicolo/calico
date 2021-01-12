@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -352,6 +352,8 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 			return fmt.Errorf("failed to re-enable cluster: %s", err)
 		}
 		log.Info("successfully set Calico datastore readiness to true!")
+	} else {
+		log.Info("not setting datastore readiness, rolling update is still going")
 	}
 
 	// Delete the host-local IPAM data directory.
