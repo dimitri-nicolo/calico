@@ -292,6 +292,10 @@ func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset 
 	p.b.StoreStack32(R1, keyOffset+ipsKeyID+4)
 }
 
+func passAction(action string) bool {
+	return action == "pass" || action == "next-tier"
+}
+
 func (p *Builder) writeRules(rules Rules) {
 	for _, tier := range rules.Tiers {
 		endOfTierLabel := fmt.Sprint("end_of_tier_", p.tierID)
@@ -310,10 +314,15 @@ func (p *Builder) writeRules(rules Rules) {
 		// End of tier drop rule.
 		log.Debugf("End of tier %d %q: %s", p.tierID, tier.Name, action)
 
+		actionLabel := string(action)
+		if passAction(string(action)) {
+			actionLabel = endOfTierLabel
+		}
+
 		p.writeRule(Rule{
-			Rule:    &proto.Rule{Action: string(action)},
+			Rule:    &proto.Rule{},
 			MatchID: tier.EndRuleID,
-		}, endOfTierLabel, false)
+		}, actionLabel)
 		p.b.LabelNextInsn(endOfTierLabel)
 		p.tierID++
 	}
@@ -327,23 +336,33 @@ func (p *Builder) writeRules(rules Rules) {
 
 	log.Debugf("End of profiles drop")
 	p.writeRule(Rule{
-		Rule:    &proto.Rule{Action: "deny"},
+		Rule:    &proto.Rule{},
 		MatchID: rules.NoProfileMatchID,
-	}, endLabel, false)
+	}, "deny")
 
 	p.b.LabelNextInsn(endLabel)
 }
 
 func (p *Builder) writePolicyRules(policy Policy, endLabel string) {
 	if policy.Staged {
+		// When a pass or accept rule matches in a staged policy then we want to skip
+		// the rest of the rules in the staged policy and continue processing the next
+		// policy in the same tier.
 		endLabel = fmt.Sprintf("end_of_policy_%d", p.policyID)
 	}
 
 	for ruleIdx, rule := range policy.Rules {
 		log.Debugf("Start of rule %d", ruleIdx)
-		p.writeRule(rule, endLabel, policy.Staged)
+
+		action := strings.ToLower(rule.Action)
+		actionLabel := action
+		if passAction(action) || policy.Staged {
+			actionLabel = endLabel
+		}
+		p.writeRule(rule, actionLabel)
 		log.Debugf("End of rule %d", ruleIdx)
 	}
+
 	if policy.Staged {
 		log.Debugf("NoMatch policy ID 0x%x", policy.NoMatchID)
 		p.writeRecordRuleID(policy.NoMatchID, endLabel)
@@ -370,7 +389,7 @@ const (
 	legDest   matchLeg = "dest"
 )
 
-func (p *Builder) writeRule(r Rule, passLabel string, staged bool) {
+func (p *Builder) writeRule(r Rule, actionLabel string) {
 
 	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
@@ -469,7 +488,7 @@ func (p *Builder) writeRule(r Rule, passLabel string, staged bool) {
 		}
 	}
 
-	p.writeEndOfRule(r, passLabel, staged)
+	p.writeEndOfRule(r, actionLabel)
 	p.ruleID++
 	p.rulePartID = 0
 }
@@ -477,22 +496,14 @@ func (p *Builder) writeRule(r Rule, passLabel string, staged bool) {
 func (p *Builder) writeStartOfRule() {
 }
 
-func (p *Builder) writeEndOfRule(rule Rule, passLabel string, staged bool) {
+func (p *Builder) writeEndOfRule(rule Rule, actionLabel string) {
 	// If all the match criteria are met, we fall through to the end of the rule
 	// so all that's left to do is to jump to the relevant action.
 	// TODO log and log-and-xxx actions
-	action := strings.ToLower(rule.Action)
-	if action == "pass" || action == "next-tier" {
-		action = passLabel
-	}
 
-	p.writeRecordRuleHit(rule, action)
+	p.writeRecordRuleHit(rule, actionLabel)
 
-	if staged {
-		action = passLabel
-	}
-
-	p.b.Jump(action)
+	p.b.Jump(actionLabel)
 
 	p.b.LabelNextInsn(p.endOfRuleLabel())
 }
