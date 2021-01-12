@@ -171,7 +171,7 @@ fi
 # Include output destination for L7 logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for DNS is turned on.
 if [ -z ${DISABLE_ES_L7_LOG} ] || [ "${DISABLE_ES_L7_LOG}" == "false" ] || [ "${SYSLOG_L7_LOG}" == "true" ] || [ "${SPLUNK_L7_LOG}" == "true" ] || [ "${SUMO_L7_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
   cat ${ROOT_DIR}/fluentd/etc/output_match/l7.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
-  echo >> /fluentd/etc/fluent.conf
+  echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 fi
 
 # Include output destination for EE Audit logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for EE Audit is turned on.
