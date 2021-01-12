@@ -12,10 +12,9 @@ canonical_url: '/getting-started/kubernetes/requirements'
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
 
-- 1.16
-- 1.17
 - 1.18
 - 1.19
+- 1.20
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
@@ -24,9 +23,9 @@ Other versions may work, but we do not actively test {{site.prodname}}
 
 We test {{site.prodname}} {{page.version}} against the following managed Kubernetes versions.
 
-- AKS: 1.17 (preview), 1.16
-- GKE: 1.17 (preview), 1.16
-- EKS: 1.16
+- AKS: 1.19 
+- GKE: 1.18 (rapid)
+- EKS: 1.18
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.

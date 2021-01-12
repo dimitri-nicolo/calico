@@ -6,7 +6,7 @@
   The following distributions have the required kernel, its dependencies, and are
   known to work well with {{site.prodname}} and {{include.orch}}.{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
   - CentOS 7
-  - Ubuntu 16.04 and 18.04
+  - Ubuntu 18.04 and 20.04
   - RHEL 7
   - Debian 9
   {% endif %}{% if include.orch == "OpenShift" %}
