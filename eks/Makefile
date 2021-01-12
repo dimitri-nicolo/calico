@@ -2,7 +2,14 @@
 
 all: eks-log-forwarder-startup
 
-GO_BUILD_VER    ?= v0.25
+# This makefile applies only to non-Windows systems.
+# For Windows, we override the main target to do nothing.
+ifeq ($(OS),Windows_NT)
+eks-log-forwarder-startup:
+
+else
+
+GO_BUILD_VER    ?= v0.50
 CALICO_BUILD     = calico/go-build:$(GO_BUILD_VER)
 BINDIR          ?= bin
 SRC_DIR          = $(pwd)
@@ -36,14 +43,13 @@ endif
 
 MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
 
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   mkdir -p .go-build-cache && \
-                   docker run --rm \
+DOCKER_GO_BUILD = mkdir -p .go-pkg-cache && \
+                  mkdir -p .go-build-cache && \
+                  docker run --rm \
                         --net=host \
                         -e LOCAL_USER_ID=$(LOCAL_UID) \
                         -e LOCAL_GROUP_ID=$(LOCAL_GID) \
                         -e GOARCH=$(ARCH) \
-                        -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
                         -v $${PWD}/:/eks/:rw \
                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                         -v $${PWD}/.go-build-cache:/go-build:rw \
@@ -55,7 +61,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                         $(CALICO_BUILD)
 
 # Target definitions.
-eks-log-forwarder-startup: bin/eks-log-forwarder-startup
+eks-log-forwarder-startup: bin/eks-log-forwarder-startup bin/eks-log-forwarder-startup.exe
 bin/eks-log-forwarder-startup: $(SRC_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
@@ -67,7 +73,22 @@ endif
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
 	        go build -o $@ -v $(LDFLAGS) $(SRC_DIR) && \
-	            ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
+	            ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
+	                ( echo "Error: $(BINDIR)/$@ was not statically linked"; false ) )'
+
+bin/eks-log-forwarder-startup.exe: $(SRC_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
+	$(eval EXTRA_DOCKER_ARGS += -e GOOS=windows)
+	@echo "Building eks init-container executable for windows"
+	mkdir -p $(BINDIR)
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+	        go build -o $@ -v $(LDFLAGS) $(SRC_DIR) && \
+	            ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
 	                ( echo "Error: $(BINDIR)/$@ was not statically linked"; false ) )'
 
 .PHONY: ut
@@ -81,3 +102,5 @@ test-eks-log-forwarder-startup: eks-log-forwarder-startup
 clean: clean-eks-log-forwarder-startup
 clean-eks-log-forwarder-startup:
 	rm -rf $(BINDIR)
+
+endif
