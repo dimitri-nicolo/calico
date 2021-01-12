@@ -23,14 +23,13 @@ require (
 	github.com/tigera/api v0.0.0-20201210003641-f72711afec9e
 	github.com/tigera/licensing v1.0.1-0.20210108182732-27874b544b4a
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
-	golang.org/x/mod v0.3.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.19.6
 	k8s.io/apimachinery v0.19.6
 	k8s.io/apiserver v0.19.6
 	k8s.io/client-go v0.19.6
 	k8s.io/klog v1.0.0
-	sigs.k8s.io/controller-runtime v0.7.0
+	sigs.k8s.io/controller-runtime v0.7.0 // indirect
 )
 
 replace (
