@@ -87,3 +87,13 @@ $env:FELIX_LOGSEVERITYSYS = "none"
 # confd logs to screen at info level by default.  Uncomment this line to override the log
 # level.
 #$env:BGP_LOGSEVERITYSCREEN = "debug"
+#
+
+# Enable flowlogs. 
+$env:FELIX_FLOWLOGSFILEENABLED = "true"
+
+# If FELIX_FLOWLOGSFILEENABLED is true, then the below take effect.
+$env:FELIX_WINDOWSFLOWLOGSFILEDIRECTORY = "c:\var\log\calico\flowlogs"
+$env:FELIX_WINDOWSFLOWlOGSPOSITIONFILEPATH = "c:\var\log\calico\flowlogs"
+$env:FELIX_FLOWLOGSFLUSHINTERVAL = 30
+
