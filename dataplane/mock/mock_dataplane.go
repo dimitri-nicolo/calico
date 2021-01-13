@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -473,8 +473,6 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		Expect(d.activeVTEPs).To(HaveKey(event.Node), "delete for unknown VTEP")
 		delete(d.activeVTEPs, event.Node)
 	case *proto.PacketCaptureUpdate:
-		Expect(d.activePacketCaptures.Contains(fmt.Sprintf("%+v", *event))).To(BeFalse(),
-			"Received PacketCaptureUpdate for already-existing entry")
 		d.activePacketCaptures.Add(fmt.Sprintf("%+v", *event))
 	case *proto.PacketCaptureRemove:
 		Expect(d.activePacketCaptures.Contains(fmt.Sprintf("%+v", *event))).To(BeTrue(),
