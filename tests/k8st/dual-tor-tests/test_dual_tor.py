@@ -12,7 +12,7 @@ import logging
 from kubernetes import client, config
 
 from tests.k8st.test_base import TestBase
-from tests.k8st.utils.utils import retry_until_success, DiagsCollector, kubectl
+from tests.k8st.utils.utils import retry_until_success, DiagsCollector, kubectl, run
 
 _log = logging.getLogger(__name__)
 
@@ -208,6 +208,8 @@ class FailoverTest(object):
         if previous_seq != 0 and seq != self.config.total_packets and diff < 50:
             error =1
             _log.error("server log of %s at %d seconds -- received %d packets, link broken", name, count, diff)
+            run("docker exec kind-worker ip r")
+            run("docker exec kind-worker3 ip r")
             if self.rb_error == 5:
                 print "may stop for debug"
                 #time.sleep(2)
