@@ -502,6 +502,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		v = cali_v4_ct_lookup_elem(&k);
 		if (!v) {
 			if (CALI_F_FROM_HOST &&
+				proto_orig == IPPROTO_TCP &&
 				(tc_ctx->skb->mark & CALI_SKB_MARK_CT_ESTABLISHED_MASK) == CALI_SKB_MARK_CT_ESTABLISHED) {
 				// Linux Conntrack has marked the packet as part of a known flow.
 				// TODO-HEP Create a tracking entry for uplifted flow so that we handle the reverse traffic more efficiently.

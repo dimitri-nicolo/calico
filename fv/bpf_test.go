@@ -2787,52 +2787,32 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			}
 
 			if testOpts.protocol == "tcp" && testOpts.dsr {
-				It("should keep a connection up between hosts when BPF is enabled", func() {
+				verifyConnectivityWhileEnablingBPF := func(from,to *workload.Workload) {
 					By("Starting persistent connection")
-					pc = hostW[0].StartPersistentConnection(hostW[1].IP, 8055, workload.PersistentConnectionOpts{
+					pc = from.StartPersistentConnection(to.IP, 8055, workload.PersistentConnectionOpts{
 						MonitorConnectivity: true,
 					})
 
 					By("having initial connectivity", expectPongs)
-					By("enabling BPF mode", enableBPF)
+					By("enabling BPF mode", enableBPF) // Waits for BPF programs to be installed
 					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
 					By("still having connectivity on the existing connection", expectPongs)
+				}
+
+				It("should keep a connection up between hosts when BPF is enabled", func() {
+					verifyConnectivityWhileEnablingBPF(hostW[0], hostW[1])
 				})
 
 				It("should keep a connection up between workloads on different hosts when BPF is enabled", func() {
-					By("Starting persistent connection")
-					pc = w[0][0].StartPersistentConnection(w[1][0].IP, 8055, workload.PersistentConnectionOpts{
-						MonitorConnectivity: true,
-					})
-
-					By("having initial connectivity", expectPongs)
-					By("enabling BPF mode", enableBPF)
-					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
-					By("still having connectivity on the existing connection", expectPongs)
+					verifyConnectivityWhileEnablingBPF(w[0][0], w[1][0])
 				})
 
 				It("should keep a connection up between hosts and remote workloads when BPF is enabled", func() {
-					By("Starting persistent connection")
-					pc = hostW[0].StartPersistentConnection(w[1][0].IP, 8055, workload.PersistentConnectionOpts{
-						MonitorConnectivity: true,
-					})
-
-					By("having initial connectivity", expectPongs)
-					By("enabling BPF mode", enableBPF)
-					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
-					By("still having connectivity on the existing connection", expectPongs)
+					verifyConnectivityWhileEnablingBPF(hostW[0], w[1][0])
 				})
 
 				It("should keep a connection up between hosts and local workloads when BPF is enabled", func() {
-					By("Starting persistent connection")
-					pc = hostW[0].StartPersistentConnection(w[0][0].IP, 8055, workload.PersistentConnectionOpts{
-						MonitorConnectivity: true,
-					})
-
-					By("having initial connectivity", expectPongs)
-					By("enabling BPF mode", enableBPF)
-					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
-					By("still having connectivity on the existing connection", expectPongs)
+					verifyConnectivityWhileEnablingBPF(hostW[0], w[0][0])
 				})
 			}
 		})
