@@ -35,6 +35,8 @@ import (
 
 type Builder struct {
 	b               *Block
+	tierID          int
+	policyID        int
 	ruleID          int
 	rulePartID      int
 	ipSetIDProvider ipSetIDProvider
@@ -116,13 +118,16 @@ type Rule struct {
 }
 
 type Policy struct {
-	Name  string
-	Rules []Rule
+	Name      string
+	Rules     []Rule
+	NoMatchID RuleMatchID
+	Staged    bool
 }
 
 type Tier struct {
 	Name      string
 	EndRuleID RuleMatchID
+	EndAction TierEndAction
 	Policies  []Policy
 }
 
@@ -135,6 +140,14 @@ type Rules struct {
 type RuleMatchID = uint64
 
 type Profile = Policy
+
+type TierEndAction string
+
+const (
+	TierEndUndef TierEndAction = ""
+	TierEndDrop                = "deny"
+	TierEndPass                = "pass"
+)
 
 func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	p.b = NewBlock()
@@ -219,8 +232,7 @@ func (p *Builder) writeProgramFooter() {
 	}
 }
 
-func (p *Builder) writeRecordRuleHit(r Rule, skipLabel string) {
-	log.Debugf("Hit rule ID 0x%x", r.MatchID)
+func (p *Builder) writeRecordRuleID(id RuleMatchID, skipLabel string) {
 	// Load the hit count
 	p.b.Load8(R1, R9, stateOffRulesHit)
 
@@ -237,9 +249,14 @@ func (p *Builder) writeRecordRuleHit(r Rule, skipLabel string) {
 	// Store the rule ID in the rule ids array
 	p.b.ShiftLImm64(R1, 3) // x8
 	p.b.AddImm64(R1, int32(stateOffRuleIDs))
-	p.b.LoadImm64(R2, int64(r.MatchID))
+	p.b.LoadImm64(R2, int64(id))
 	p.b.Add64(R1, R9)
 	p.b.Store64(R1, R2, 0)
+}
+
+func (p *Builder) writeRecordRuleHit(r Rule, skipLabel string) {
+	log.Debugf("Hit rule ID 0x%x", r.MatchID)
+	p.writeRecordRuleID(r.MatchID, skipLabel)
 }
 
 func (p *Builder) setUpSrcIPSetKey(ipsetID uint64) {
@@ -275,22 +292,39 @@ func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset 
 	p.b.StoreStack32(R1, keyOffset+ipsKeyID+4)
 }
 
-func (p *Builder) writeRules(rules Rules) {
-	for idx, tier := range rules.Tiers {
-		endOfTierLabel := fmt.Sprint("end_of_tier_", idx)
+func passAction(action string) bool {
+	return action == "pass" || action == "next-tier"
+}
 
-		log.Debugf("Start of tier %d", idx)
-		for polIdx, pol := range tier.Policies {
-			p.writePolicy(pol, polIdx, endOfTierLabel)
+func (p *Builder) writeRules(rules Rules) {
+	for _, tier := range rules.Tiers {
+		endOfTierLabel := fmt.Sprint("end_of_tier_", p.tierID)
+
+		log.Debugf("Start of tier %d %q", p.tierID, tier.Name)
+		for _, pol := range tier.Policies {
+			p.writePolicy(pol, endOfTierLabel)
+			p.policyID++
 		}
+
+		action := tier.EndAction
+		if action == TierEndUndef {
+			action = TierEndDrop
+		}
+
 		// End of tier drop rule.
-		log.Debugf("End of tier drop")
+		log.Debugf("End of tier %d %q: %s", p.tierID, tier.Name, action)
+
+		actionLabel := string(action)
+		if passAction(string(action)) {
+			actionLabel = endOfTierLabel
+		}
 
 		p.writeRule(Rule{
-			Rule:    &proto.Rule{Action: "deny"},
+			Rule:    &proto.Rule{},
 			MatchID: tier.EndRuleID,
-		}, endOfTierLabel)
+		}, actionLabel)
 		p.b.LabelNextInsn(endOfTierLabel)
+		p.tierID++
 	}
 
 	endLabel := "end_of_profiles"
@@ -302,30 +336,49 @@ func (p *Builder) writeRules(rules Rules) {
 
 	log.Debugf("End of profiles drop")
 	p.writeRule(Rule{
-		Rule:    &proto.Rule{Action: "deny"},
+		Rule:    &proto.Rule{},
 		MatchID: rules.NoProfileMatchID,
-	}, endLabel)
+	}, "deny")
 
 	p.b.LabelNextInsn(endLabel)
 }
 
-func (p *Builder) writePolicyRules(policy Policy, idx int, endLabel string) {
+func (p *Builder) writePolicyRules(policy Policy, endLabel string) {
+	if policy.Staged {
+		// When a pass or accept rule matches in a staged policy then we want to skip
+		// the rest of the rules in the staged policy and continue processing the next
+		// policy in the same tier.
+		endLabel = fmt.Sprintf("end_of_policy_%d", p.policyID)
+	}
+
 	for ruleIdx, rule := range policy.Rules {
 		log.Debugf("Start of rule %d", ruleIdx)
-		p.writeRule(rule, endLabel)
+
+		action := strings.ToLower(rule.Action)
+		actionLabel := action
+		if passAction(action) || policy.Staged {
+			actionLabel = endLabel
+		}
+		p.writeRule(rule, actionLabel)
 		log.Debugf("End of rule %d", ruleIdx)
+	}
+
+	if policy.Staged {
+		log.Debugf("NoMatch policy ID 0x%x", policy.NoMatchID)
+		p.writeRecordRuleID(policy.NoMatchID, endLabel)
+		p.b.LabelNextInsn(endLabel)
 	}
 }
 
-func (p *Builder) writePolicy(policy Policy, idx int, endLabel string) {
-	log.Debugf("Start of policy %q %d", policy.Name, idx)
-	p.writePolicyRules(policy, idx, endLabel)
-	log.Debugf("End of policy %q %d", policy.Name, idx)
+func (p *Builder) writePolicy(policy Policy, endLabel string) {
+	log.Debugf("Start of policy %q %d", policy.Name, p.policyID)
+	p.writePolicyRules(policy, endLabel)
+	log.Debugf("End of policy %q %d", policy.Name, p.policyID)
 }
 
 func (p *Builder) writeProfile(profile Profile, idx int, endLabel string) {
 	log.Debugf("Start of profile %q %d", profile.Name, idx)
-	p.writePolicyRules(profile, idx, endLabel)
+	p.writePolicyRules(profile, endLabel)
 	log.Debugf("End of profile %q %d", profile.Name, idx)
 }
 
@@ -336,7 +389,7 @@ const (
 	legDest   matchLeg = "dest"
 )
 
-func (p *Builder) writeRule(r Rule, passLabel string) {
+func (p *Builder) writeRule(r Rule, actionLabel string) {
 
 	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
@@ -435,7 +488,7 @@ func (p *Builder) writeRule(r Rule, passLabel string) {
 		}
 	}
 
-	p.writeEndOfRule(r, passLabel)
+	p.writeEndOfRule(r, actionLabel)
 	p.ruleID++
 	p.rulePartID = 0
 }
@@ -443,18 +496,14 @@ func (p *Builder) writeRule(r Rule, passLabel string) {
 func (p *Builder) writeStartOfRule() {
 }
 
-func (p *Builder) writeEndOfRule(rule Rule, passLabel string) {
+func (p *Builder) writeEndOfRule(rule Rule, actionLabel string) {
 	// If all the match criteria are met, we fall through to the end of the rule
 	// so all that's left to do is to jump to the relevant action.
 	// TODO log and log-and-xxx actions
-	action := strings.ToLower(rule.Action)
-	if action == "pass" || action == "next-tier" {
-		action = passLabel
-	}
 
-	p.writeRecordRuleHit(rule, action)
+	p.writeRecordRuleHit(rule, actionLabel)
 
-	p.b.Jump(action)
+	p.b.Jump(actionLabel)
 
 	p.b.LabelNextInsn(p.endOfRuleLabel())
 }
