@@ -1490,6 +1490,12 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 				"Contact Tigera support or email licensing@tigera.io")
 			licenseOverrides["FlowLogsFileEnabled"] = "false"
 		}
+
+		if configParams.L7LogsFileEnabled && !licenseMonitor.GetFeatureStatus(features.FileOutputL7Logs) {
+			log.Warn("Not licensed for L7 Logs File Output feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+			licenseOverrides["L7LogsFileEnabled"] = "false"
+		}
 	}
 
 	if len(licenseOverrides) > 0 {
