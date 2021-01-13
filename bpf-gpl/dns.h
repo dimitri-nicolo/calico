@@ -45,35 +45,43 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 		return;
 	}
 
-	// Get the sending socket's cookie.  We need this to look up the apparent
-	// destination IP and port in the cali_v4_srmsg map, to discover if a DNAT was
-	// performed by our connect-time load balancer.
-	__u64 cookie = bpf_get_socket_cookie(ctx->skb);
-	if (!cookie) {
-		CALI_DEBUG("failed to get socket cookie for possible DNS request");
-		return;
-	}
-	CALI_DEBUG("Got socket cookie 0x%lx for possible DNS\n", cookie);
-
-	// Lookup dst IP and port in cali_v4_srmsg map.  If there's a hit, henceforth use
-	// dst IP and port from the map entry.  (Hit implies that a DNAT has already
-	// happened, because of CTLB being in use, but now we have the pre-DNAT IP and
-	// port.  Miss implies that CTLB isn't in use or DNAT hasn't happened yet; either
-	// way the message in hand already had the dst IP and port that we need.)
 	__be32 dst_ip = ctx->state->ip_dst;
 	__be16 dst_port = bpf_htons(ctx->state->dport);
-	struct sendrecv4_key key = {
-		.ip	= dst_ip,
-		.port	= dst_port,
-		.cookie	= cookie,
-	};
-	struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
-	if (revnat) {
-		CALI_DEBUG("Got cali_v4_srmsg entry\n");
-		dst_ip = revnat->ip;
-		dst_port = bpf_htons(ctx_port_to_host(revnat->port));
+
+	// For the case where the packet was sent from a socket on this host, get the
+	// sending socket's cookie, so we can reverse a DNAT that that socket may have
+	// already done.
+	__u64 cookie = bpf_get_socket_cookie(ctx->skb);
+	if (!cookie) {
+		// Expected if the packet was sent from outside the host.  We shouldn't
+		// currently see this, because the `calico_check_for_dns` call is guarded
+		// by CALI_F_FROM_WEP || CALI_F_TO_HEP.  But this branch can come into
+		// play if we have a future requirement for snooping DNS lookups that are
+		// originated from another host.  In that case, stick with the dest IP and
+		// port that we already have in hand.
+		CALI_DEBUG("failed to get socket cookie for possible DNS request\n");
 	} else {
-		CALI_DEBUG("No cali_v4_srmsg entry\n");
+		CALI_DEBUG("Got socket cookie 0x%lx for possible DNS\n", cookie);
+
+		// Lookup apparent dst IP and port in cali_v4_srmsg map.  If there's a
+		// hit, henceforth use dst IP and port from the map entry.  (Hit implies
+		// that a DNAT has already happened, because of CTLB being in use, but now
+		// we have the pre-DNAT IP and port.  Miss implies that CTLB isn't in use
+		// or DNAT hasn't happened yet; either way the message in hand already had
+		// the dst IP and port that we need.)
+		struct sendrecv4_key key = {
+			.ip	= dst_ip,
+			.port	= dst_port,
+			.cookie	= cookie,
+		};
+		struct sendrecv4_val *revnat = cali_v4_srmsg_lookup_elem(&key);
+		if (revnat) {
+			CALI_DEBUG("Got cali_v4_srmsg entry\n");
+			dst_ip = revnat->ip;
+			dst_port = bpf_htons(ctx_port_to_host(revnat->port));
+		} else {
+			CALI_DEBUG("No cali_v4_srmsg entry\n");
+		}
 	}
 	CALI_DEBUG("Now have dst IP 0x%x port %d\n", bpf_ntohl(dst_ip), bpf_ntohs(dst_port));
 

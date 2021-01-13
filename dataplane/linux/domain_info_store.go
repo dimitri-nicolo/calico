@@ -198,7 +198,7 @@ func (s *domainInfoStore) Start() {
 }
 
 func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
-	log.Infof("DNS packet from BPF: %v", e)
+	log.Debugf("DNS packet from BPF: %v", e)
 
 	// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
 	// packet data begins after that.
@@ -365,7 +365,7 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	log.WithField("file", s.saveFile).Info("Saving DNS mappings...")
+	log.WithField("file", s.saveFile).Debug("Saving DNS mappings...")
 
 	// Write first to a temporary save file, so that we can atomically rename it to the intended
 	// file once it contains new data.  Thus we avoid overwriting a previous version of the file
@@ -414,7 +414,7 @@ func (s *domainInfoStore) saveMappingsV1() error {
 		return err
 	}
 
-	log.WithField("file", s.saveFile).Info("Finished saving DNS mappings")
+	log.WithField("file", s.saveFile).Debug("Finished saving DNS mappings")
 
 	return nil
 }

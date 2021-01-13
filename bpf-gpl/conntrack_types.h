@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ enum cali_ct_type {
 #define CALI_CT_FLAG_NP_FWD	(1 << 2) /* marks entry into the tunnel on the fwd node */
 #define CALI_CT_FLAG_SKIP_FIB	(1 << 3) /* marks traffic that should pass through host IP stack */
 #define CALI_CT_FLAG_TRUST_DNS	(1 << 4) /* marks connection to a trusted DNS server */
+#define CALI_CT_FLAG_WORKLOAD	(1 << 5) /* marks a flow that was originated from a workload */
 
 struct calico_ct_leg {
 	__u32 seqno;
