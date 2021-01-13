@@ -376,19 +376,19 @@ class FailoverCluster(object):
         # Create client, ra-server, rb-server and service.
         kubectl("run --generator=run-pod/v1 client -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=client' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 client-host -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=client-host' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"hostNetwork\": true, \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"hostNetwork\": true, \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 ra-server -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=ra-server,app=server' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-control-plane\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-control-plane\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 rb-server -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=rb-server,app=server' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker3\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker3\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("wait --timeout=1m --for=condition=ready" +
                 " pod/client -n dualtor")
