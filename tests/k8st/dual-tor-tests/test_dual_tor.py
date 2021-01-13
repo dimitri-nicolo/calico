@@ -202,7 +202,7 @@ class FailoverTest(object):
         seq = int(seq_string)
         diff = seq - previous_seq
 
-        _log.info("%d second -- %s %s packets received", count, diff, name)
+        _log.info("%d second -- %s %s packets received (latest seq # %d)", count, diff, name, seq)
         #check if packets received is more than 50 except for first and last iterations.
         if previous_seq != 0 and seq != self.config.total_packets and diff < 50:
             error =1
