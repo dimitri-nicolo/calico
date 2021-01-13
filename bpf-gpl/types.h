@@ -39,12 +39,22 @@
 // WARNING: must be kept in sync with the definitions in bpf/polprog/pol_prog_builder.go.
 struct cali_tc_state {
 	struct perf_event_header eventhdr;
-
+	/* Initial IP read from the packet, updated to host's IP when doing NAT encap/ICMP error.
+	 * updated when doing CALI_CT_ESTABLISHED_SNAT handling. Used for FIB lookup. */
 	__be32 ip_src;
+	/* Initial IP read from packet. Updated when doing encap and ICMP errors or CALI_CT_ESTABLISHED_DNAT. */
 	__be32 ip_dst;
+	/* If no NAT, ip_dst.  Otherwise the NAT dest that we look up from the NAT maps or the conntrack entry
+	 * for CALI_CT_ESTABLISHED_DNAT. */
 	__be32 post_nat_ip_dst;
+	/* For packets that arrived over our VXLAN tunnel, the source IP of the tunnel packet.
+	 * Zeroed out when we decide to respond with an ICMP error.
+	 * Also used to stash the ICMP MTU when calling the ICMP response program. */
 	__be32 tun_ip;
+	/* Return code from the policy program CALI_POL_DENY/ALLOW etc. */
 	__s32 pol_rc;
+	/* Source port of the packet; updated on the CALI_CT_ESTABLISHED_SNAT path or when doing encap.
+	 * zeroed out on the ICMP response path. */
 	__u16 sport;
 	union
 	{
@@ -55,17 +65,24 @@ struct cali_tc_state {
 			__u8 icmp_code;
 		};
 	};
+	/* Post-NAT dest port; set similarly to post_nat_ip_dst. */
 	__u16 post_nat_dport;
+	/* Packet IP proto; updated to UDP when we encap. */
 	__u8 ip_proto;
+	/* Flags such as CALI_ST_SKIP_FIB/NAT_OUTGOING etc. */
 	__u8 flags;
 
+	/* Count of rules that were hit while processing policy. */
 	__u32 rules_hit;
+	/* Record of the rule IDs of the rules that were hit. */
 	__u64 rule_ids[MAX_RULE_IDS];
 
 	/* We must not scatter the above ^^^ to copy it in a single memcpy */
 
+	/* Result of the conntrack lookup. */
 	struct calico_ct_result ct_result;
 	__u32 _pad32;
+	/* Result of the NAT calculation.  Zeroed if there is no DNAT. */
 	struct calico_nat_dest nat_dest;
 	__u64 prog_start_time;
 };
