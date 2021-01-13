@@ -329,7 +329,7 @@ type Config struct {
 	L7LogsFileMaxFiles                   int           `config:"int;5"`
 	L7LogsFileMaxFileSizeMB              int           `config:"int;100"`
 	L7LogsFileAggregationHTTPHeaderInfo  string        `config:"string;ExcludeL7HTTPHeaderInfo"`
-	L7LogsFileAggregationHTTPMethod      string        `config:"string;IncludeL7Method"`
+	L7LogsFileAggregationHTTPMethod      string        `config:"string;IncludeL7HTTPMethod"`
 	L7LogsFileAggregationServiceInfo     string        `config:"string;IncludeL7ServiceInfo"`
 	L7LogsFileAggregationDestinationInfo string        `config:"string;IncludeL7DestinationInfo"`
 	L7LogsFileAggregationSourceInfo      string        `config:"string;IncludeL7SourceInfo"`
