@@ -43,6 +43,7 @@ type TopologyOptions struct {
 	ExtraVolumes              map[string]string
 	WithTypha                 bool
 	WithFelixTyphaTLS         bool
+	TestManagesBPF            bool
 	TyphaLogSeverity          string
 	IPIPEnabled               bool
 	IPIPRoutesEnabled         bool
