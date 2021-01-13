@@ -16,12 +16,12 @@ PACKAGES+=" gnupg2 gpgme gnupg2-smime glib2 libmodulemd1 pinentry libsecret libr
 PACKAGES+=" libmodulemd shadow-utils libsemanage zip unzip libsolv gettext-libs gettext libcroco nmap-ncat json-c cyrus-sasl-lib util-linux"
 PACKAGES+=" libpwquality kbd pam libnsl2 libtirpc iproute sqlite-libs elfutils-default-yama-scope tar file-5.33-16.el8 file-libs"
 PACKAGES+=" procps-ng libsmartcols dbus-libs dbus-tools dbus-daemon systemd-libs dhcp-libs libusbx libblkid libuuid libmount"
-PACKAGES+=" libfdisk binutils vim-minimal libyaml"
+PACKAGES+=" libfdisk binutils vim-minimal libyaml libseccomp"
 
 # remove packages vulnerable packages that rpm relies on last
 PACKAGES+=" squashfs-tools libtasn1 lz4-libs lua-libs elfutils-libelf expat libcomps libmetalink readline gawk gdbm"
-PACKAGES+=" p11-kit-trust ca-certificates bzip2-libs ca-certificates libzstd krb5-libs openssl-libs libcurl-minimal"
-PACKAGES+=" libarchive libdb libdb-utils curl libxml2 libcomps rpm-libs rpm"
+PACKAGES+=" p11-kit p11-kit-trust ca-certificates bzip2-libs ca-certificates libzstd krb5-libs openssl-libs"
+PACKAGES+=" libcurl-minimal libarchive libdb libdb-utils curl libxml2 libcomps rpm-libs rpm"
 
 echo "$PACKAGES"
 
