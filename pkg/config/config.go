@@ -23,6 +23,11 @@ type Config struct {
 	// Number requests sent in the batch of logs from the collector.
 	// A negative number will return as many requests as possible.
 	EnvoyRequestsPerInterval int `envconfig:"ENVOY_LOG_REQUESTS_PER_INTERVAL"`
+	// Max limit of number of bytes that the tail is allowed
+	// to be behind the latest logs written. A negative number
+	// means that we will not check that the log ingestion is
+	// keeping up with log creation rate.
+	EnvoyTailMaxLag int `envconfig: "ENVOY_TAIL_MAX_LAG"`
 
 	// Configuration for tests
 	// Sets where the log file should be read from.
@@ -65,6 +70,11 @@ func LoadConfig() (*Config, error) {
 	// Default the EnvoyLogBatchSize to negative. This will make the batch size unlimited
 	if config.EnvoyRequestsPerInterval == 0 {
 		config.EnvoyRequestsPerInterval = -1
+	}
+
+	// Default the EnvoyTailMaxLag to 1 MB
+	if config.EnvoyTailMaxLag == 0 {
+		config.EnvoyTailMaxLag = 1000000
 	}
 
 	// Make sure that the tail reads from the end of the envoy log.
