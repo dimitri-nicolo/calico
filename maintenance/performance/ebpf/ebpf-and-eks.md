@@ -45,7 +45,7 @@ EKS is Amazon's managed Kubernetes offering.
 
 #### Create an eBPF compatible EKS cluster
 
-By default, EKS uses Ubuntu 18.04 as its base image for EKS, which does not meet the kernel version requirement for
+By default, EKS uses Amazon Linux 2 as its base image for EKS, which does not meet the kernel version requirement for
 eBPF mode.  Below, we give a couple of options for how to get the cluster running with a suitable kernel:
 
 
@@ -55,8 +55,8 @@ eBPF mode.  Below, we give a couple of options for how to get the cluster runnin
 
 #### Option 1: Bottlerocket
 
-The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's 
-[Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a 
+The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's
+[Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a
 container-optimised OS with an emphasis on security; it has a version of the kernel which is compatible with eBPF mode.
 
 * To create a 2-node test cluster with a Bottlerocket node group, run the command below.  It is important to use the config-file
@@ -100,7 +100,7 @@ container-optimised OS with an emphasis on security; it has a version of the ker
 * Create a {{site.prodname}} IP pool that matches your VPC subnet and has the `natOutgoing` flag set.
   The IP pool will not be used for IPAM since AWS VPC CNI has its own IPAM, but it will tell {{site.prodname}}
   to SNAT traffic that is leaving the confines of your VPC.
-  
+
   ```
   calicoctl apply -f - <<EOF
   apiVersion: projectcalico.org/v3
@@ -118,15 +118,17 @@ container-optimised OS with an emphasis on security; it has a version of the ker
 <label:Custom AMI>
 <%
 
-If you are familiar with the AMI creation process, it is also possible to create a custom AMI based on Ubuntu 20.04, 
+If you are familiar with the AMI creation process, it is also possible to create a custom AMI based on Ubuntu 20.04,
 which is suitable:
 
-* Create an instance from the default EKS Ubuntu image.
+* Create an EKS cluster with a nodeGroup that uses `amiFamily=Ubuntu1804`
 
-* Log into the instance with `ssh` and upgrade it to Ubuntu 20.04.
+* Log into a worker instance with `ssh` and upgrade it to Ubuntu 20.04.
 
 * [Save the instance off as a custom AMI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html){:target="_blank"}
   and make a note of the AMI ID
+
+* Delete the EKS cluster.
 
 * Using `eksctl`: start your cluster as normal:
   ```
@@ -137,13 +139,13 @@ which is suitable:
    --without-nodegroup
   ```
 
-* To use {{site.prodname}} with the AWS VPC CNI: 
+* To use {{site.prodname}} with the AWS VPC CNI:
 
   * install {{site.prodname}} using the following manifest from the AWS VPC CNI project:
     ```bash
     kubectl apply -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/ae02a103b091f38b0aafd0ff6dd0e8f611cf9e67/config/master/calico.yaml
     ```
-  
+
     > **Note**: It's important to use this manifest because the version linked from the
     > [<u>current EKS docs</u>](https://docs.aws.amazon.com/eks/latest/userguide/calico.html) uses a version of {{site.prodname}}
     > that is too old and only has partial support for eBPF mode.
@@ -154,7 +156,7 @@ which is suitable:
   * Create a {{site.prodname}} IP pool that matches your VPC subnet and has the `natOutgoing` flag set.
     The IP pool will now be used for IPAM since AWS VPC CNI has its own IPAM, but it will tell {{site.prodname}}
     to SNAT traffic that is leaving the confines of your VPC.
-  
+
     ```
     calicoctl apply -f - <<EOF
     apiVersion: projectcalico.org/v3
