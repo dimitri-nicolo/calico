@@ -20,14 +20,14 @@ PACKAGES+=" kbd"
 
 PACKAGES+=" sqlite-libs-3.26.0-11.el8.i686 sqlite-libs-3.26.0-11.el8.x86_64 nss-softokn-3.53.1-11.el8_2.x86_64"
 PACKAGES+=" nss-softokn-3.53.1-11.el8_2.i686 elfutils-default-yama-scope libyaml dbus-common dbus-tools dbus-libs dbus-daemon"
-PACKAGES+=" tar"
+PACKAGES+=" tar libseccomp"
 
 # Remove rpm and packages that rpm depends on.
 PACKAGES+=" squashfs-tools libtasn1 lz4-libs bzip2-libs ca-certificates krb5-libs openssl-libs openssl openssl-pkcs11"
 PACKAGES+=" libarchive libdb libdb-utils expat curl p11-kit-trust libcurl-minimal libzstd lua-libs elfutils-libelf"
 PACKAGES+=" dbus-daemon libdb file-libs libdb-utils procps-ng libsmartcols libblkid libuuid libmount binutils readline"
 PACKAGES+=" systemd-libs libcomps libmetalink file libfdisk gdbm gawk dhcp-libs openssl libdb libdb-utils expat curl"
-PACKAGES+=" p11-kit-trust libusbx rpm-libs rpm"
+PACKAGES+=" p11-kit p11-kit-trust libusbx rpm-libs rpm"
 
 echo "$PACKAGES"
 
