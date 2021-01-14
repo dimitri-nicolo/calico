@@ -427,6 +427,10 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	// TODO-HEP set pre-DNAT fields to connect-time lb's recorded values...
 	ctx.state->pre_nat_ip_dst = ctx.state->ip_dst;
 	ctx.state->pre_nat_dport = ctx.state->dport;
+	if (rt_addr_is_local_host(ctx.state->post_nat_ip_dst)) {
+		CALI_DEBUG("Post-NAT dest IP is local host.\n");
+		ctx.state->flags |= CALI_ST_DEST_IS_HOST;
+	}
 
 	CALI_DEBUG("About to jump to policy program; lack of further "
 			"logs means policy dropped the packet...\n");

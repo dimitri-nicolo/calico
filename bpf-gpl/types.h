@@ -98,8 +98,14 @@ struct cali_tc_state {
 };
 
 enum cali_state_flags {
+	/* CALI_ST_NAT_OUTGOING is set if this packet is from a NAT-outgoing IP pool and is leaving the
+	 * Calico network. Such packets are dropped through to iptables for SNAT. */
 	CALI_ST_NAT_OUTGOING	= (1 << 0),
+	/* CALI_ST_SKIP_FIB is set if the BPF FIB lookup should be skipped for this packet (for example, to
+	 * allow for the kernel RPF check to run. */
 	CALI_ST_SKIP_FIB	= (1 << 1),
+	/* CALI_ST_DEST_IS_HOST is set if the packet is towards the host namespace and the destination is
+	 * belongs to the host. */
 	CALI_ST_DEST_IS_HOST	= (1 << 2),
 };
 
