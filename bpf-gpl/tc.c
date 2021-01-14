@@ -424,6 +424,10 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		goto skip_policy;
 	}
 
+	// TODO-HEP set pre-DNAT fields to connect-time lb's recorded values...
+	ctx.state->pre_nat_ip_dst = ctx.state->ip_dst;
+	ctx.state->pre_nat_dport = ctx.state->dport;
+
 	CALI_DEBUG("About to jump to policy program; lack of further "
 			"logs means policy dropped the packet...\n");
 	bpf_tail_call(skb, &cali_jump, PROG_INDEX_POLICY);

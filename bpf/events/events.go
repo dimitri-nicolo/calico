@@ -180,22 +180,22 @@ func (e ErrLostEvents) Error() string {
 func ParsePolicyVerdict(data []byte) PolicyVerdict {
 	fl := PolicyVerdict{
 		SrcAddr:        net.IP(data[0:4]),
-		DstAddr:        net.IP(data[4:8]),
-		PostNATDstAddr: net.IP(data[8:12]),
-		NATTunSrcAddr:  net.IP(data[12:16]),
-		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[16:20])),
-		SrcPort:        binary.LittleEndian.Uint16(data[20:22]),
-		DstPort:        binary.LittleEndian.Uint16(data[22:24]),
-		PostNATDstPort: binary.LittleEndian.Uint16(data[24:26]),
-		IPProto:        uint8(data[26]),
-		RulesHit:       binary.LittleEndian.Uint32(data[28:32]),
+		DstAddr:        net.IP(data[8:12]),
+		PostNATDstAddr: net.IP(data[12:16]),
+		NATTunSrcAddr:  net.IP(data[16:20]),
+		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[20:24])),
+		SrcPort:        binary.LittleEndian.Uint16(data[24:26]),
+		DstPort:        binary.LittleEndian.Uint16(data[28:30]),
+		PostNATDstPort: binary.LittleEndian.Uint16(data[30:32]),
+		IPProto:        uint8(data[32]),
+		RulesHit:       binary.LittleEndian.Uint32(data[36:40]),
 	}
 
 	if fl.RulesHit > state.MaxRuleIDs {
 		fl.RulesHit = state.MaxRuleIDs
 	}
 
-	off := 32
+	off := 40
 	for i := 0; i < int(fl.RulesHit); i++ {
 		fl.RuleIDs[i] = binary.LittleEndian.Uint64(data[off : off+8])
 		off += 8

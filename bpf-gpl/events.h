@@ -72,8 +72,7 @@ static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 static CALI_BPF_INLINE void event_flow_log(struct __sk_buff *skb, struct cali_tc_state *state)
 {
 	state->eventhdr.type = EVENT_POLICY_VERDICT,
-	state->eventhdr.len = sizeof(struct perf_event_header) +4 /* padding for 64bit align */ +
-		28 /* pkt info */ + sizeof(__u32) /* count */ + MAX_RULE_IDS * sizeof(__u64);
+	state->eventhdr.len = offsetof(struct cali_tc_state, rule_ids) + sizeof(__u64) * MAX_RULE_IDS;
 
 	/* Due to stack space limitations, the begining of the state is structured as the
 	 * event and so we can send the data straight without copying in BPF.
