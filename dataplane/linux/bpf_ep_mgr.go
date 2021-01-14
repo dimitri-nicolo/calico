@@ -209,7 +209,7 @@ func (m *bpfEndpointManager) withIface(ifaceName string, fn func(iface *bpfInter
 		logCtx.Debug("Interface info is now empty.")
 		delete(m.nameToIface, ifaceName)
 	} else {
-		// Always store the result (rather than checking hte dirty flag) because dirty only covers the info..
+		// Always store the result (rather than checking the dirty flag) because dirty only covers the info..
 		m.nameToIface[ifaceName] = iface
 	}
 
