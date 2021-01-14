@@ -229,15 +229,12 @@ class FailoverTest(object):
         for node in ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]:
             routes = run("docker exec %s ip r" % node)
             for line in routes.splitlines():
-                if "/26" in line:
-                    if "/26 proto bird" in line:
-                        # Good.  This is what we expect to see as the first line of an
-                        # ECMP route, with the possible paths on the following lines, or
-                        # in the blackhole route on the node that hosts that /26.
-                        continue
-                    # Anything else with "/26" indicates a problem.  For example, if the
-                    # route is still single path it looks like this: "10.244.195.192/26
-                    # via 172.31.12.1 dev eth1 proto bird".
+                if "/26 via" in line:
+                    # This indicates a /26 route with a single path, which is wrong; for
+                    # example: "10.244.195.192/26 via 172.31.12.1 dev eth1 proto bird".
+                    # In comparison, a good route has "/26 proto bird": either a blackhole
+                    # route on the node that hosts that /26, or an ECMP route with the
+                    # possible paths on the following lines.
                     _log.info("Found non-ECMP /26 route: %s", line)
                     raise Exception("Non-ECMP /26 route on %s: %s", node, line)
         _log.info("All /26 routes are ECMP")
