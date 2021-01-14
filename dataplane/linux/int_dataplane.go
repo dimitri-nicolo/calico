@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -662,6 +662,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		// Register BPF event handling for DNS events.
 		bpfEventPoller.Register(events.TypeDNSEvent, dp.domainInfoStore.DNSPacketFromBPF)
+		log.Info("BPF: Registered events sink for TypeDNSEvent")
 	}
 
 	if config.FlowLogsCollectProcessInfo {
@@ -683,6 +684,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		bpfEventPoller.Register(events.TypeProtoStatsV4, eventProtoStatsV4Sink)
+		log.Info("BPF: Registered events sink for TypeProtoStatsV4")
 	}
 
 	if config.BPFEnabled {
@@ -840,6 +842,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if config.Collector != nil {
 			policyEventListener := events.NewCollectorPolicyListener(config.LookupsCache)
 			bpfEventPoller.Register(events.TypePolicyVerdict, policyEventListener.EventHandler)
+			log.Info("BPF: Registered events sink for TypePolicyVerdict")
 
 			collectorPacketInfoReader = policyEventListener
 
@@ -852,10 +855,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			// conntrack.LivenessScanner as we want to see expired connections and the
 			// liveness scanner would remove them for us.
 			conntrackScanner.AddFirstUnlocked(conntrackInfoReader)
+			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
 			collectorConntrackInfoReader = conntrackInfoReader
 		}
 
 		conntrackScanner.Start()
+		log.Info("conntrackScanner started")
 	}
 
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
@@ -1060,7 +1065,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		config.Collector.SetPacketInfoReader(collectorPacketInfoReader)
+		log.Info("PacketInfoReader added to collector")
 		config.Collector.SetConntrackInfoReader(collectorConntrackInfoReader)
+		log.Info("ConntrackInfoReader added to collector")
 	}
 
 	if bpfEventPoller != nil {
