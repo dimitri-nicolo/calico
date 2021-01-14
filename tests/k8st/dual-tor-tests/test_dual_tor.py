@@ -225,6 +225,8 @@ class FailoverTest(object):
                 output=subprocess.check_output(cmd_prefix + "killall nc", shell=True, stderr=subprocess.STDOUT)
 
     def run_single_test(self, case_name, client_func, break_func, restore_func):
+        run("docker exec kind-worker ip r")
+        run("docker exec kind-worker3 ip r")
         test_name = "<" + self.config.spec_name + " -- " + case_name + ">"
         _log.info("\nstart running test %s ...", test_name)
 
