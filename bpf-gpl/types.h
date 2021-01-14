@@ -79,7 +79,7 @@ struct cali_tc_state {
 	__u16 post_nat_dport;
 	/* Packet IP proto; updated to UDP when we encap. */
 	__u8 ip_proto;
-	/* Flags such as CALI_ST_SKIP_FIB/NAT_OUTGOING etc. */
+	/* Flags from enum cali_state_flags. */
 	__u8 flags;
 
 	/* Count of rules that were hit while processing policy. */
@@ -95,6 +95,12 @@ struct cali_tc_state {
 	/* Result of the NAT calculation.  Zeroed if there is no DNAT. */
 	struct calico_nat_dest nat_dest;
 	__u64 prog_start_time;
+};
+
+enum cali_state_flags {
+	CALI_ST_NAT_OUTGOING	= (1 << 0),
+	CALI_ST_SKIP_FIB	= (1 << 1),
+	CALI_ST_DEST_IS_HOST	= (1 << 2),
 };
 
 struct fwd {
