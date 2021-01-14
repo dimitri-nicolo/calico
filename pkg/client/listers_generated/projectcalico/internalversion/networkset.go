@@ -12,10 +12,13 @@ import (
 )
 
 // NetworkSetLister helps list NetworkSets.
+// All objects returned here must be treated as read-only.
 type NetworkSetLister interface {
 	// List lists all NetworkSets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.NetworkSet, err error)
 	// Get retrieves the NetworkSet from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.NetworkSet, error)
 	NetworkSetListerExpansion
 }

@@ -12,10 +12,13 @@ import (
 )
 
 // ProfileLister helps list Profiles.
+// All objects returned here must be treated as read-only.
 type ProfileLister interface {
 	// List lists all Profiles in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.Profile, err error)
 	// Get retrieves the Profile from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.Profile, error)
 	ProfileListerExpansion
 }

@@ -12,10 +12,13 @@ import (
 )
 
 // StagedGlobalNetworkPolicyLister helps list StagedGlobalNetworkPolicies.
+// All objects returned here must be treated as read-only.
 type StagedGlobalNetworkPolicyLister interface {
 	// List lists all StagedGlobalNetworkPolicies in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.StagedGlobalNetworkPolicy, err error)
 	// Get retrieves the StagedGlobalNetworkPolicy from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.StagedGlobalNetworkPolicy, error)
 	StagedGlobalNetworkPolicyListerExpansion
 }

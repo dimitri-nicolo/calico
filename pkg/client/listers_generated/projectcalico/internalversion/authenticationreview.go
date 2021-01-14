@@ -12,10 +12,13 @@ import (
 )
 
 // AuthenticationReviewLister helps list AuthenticationReviews.
+// All objects returned here must be treated as read-only.
 type AuthenticationReviewLister interface {
 	// List lists all AuthenticationReviews in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.AuthenticationReview, err error)
 	// Get retrieves the AuthenticationReview from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.AuthenticationReview, error)
 	AuthenticationReviewListerExpansion
 }

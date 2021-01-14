@@ -12,8 +12,10 @@ import (
 )
 
 // PacketCaptureLister helps list PacketCaptures.
+// All objects returned here must be treated as read-only.
 type PacketCaptureLister interface {
 	// List lists all PacketCaptures in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v3.PacketCapture, err error)
 	// PacketCaptures returns an object that can list and get PacketCaptures.
 	PacketCaptures(namespace string) PacketCaptureNamespaceLister
@@ -44,10 +46,13 @@ func (s *packetCaptureLister) PacketCaptures(namespace string) PacketCaptureName
 }
 
 // PacketCaptureNamespaceLister helps list and get PacketCaptures.
+// All objects returned here must be treated as read-only.
 type PacketCaptureNamespaceLister interface {
 	// List lists all PacketCaptures in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v3.PacketCapture, err error)
 	// Get retrieves the PacketCapture from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v3.PacketCapture, error)
 	PacketCaptureNamespaceListerExpansion
 }

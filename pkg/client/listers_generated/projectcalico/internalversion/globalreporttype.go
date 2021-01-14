@@ -12,10 +12,13 @@ import (
 )
 
 // GlobalReportTypeLister helps list GlobalReportTypes.
+// All objects returned here must be treated as read-only.
 type GlobalReportTypeLister interface {
 	// List lists all GlobalReportTypes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.GlobalReportType, err error)
 	// Get retrieves the GlobalReportType from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.GlobalReportType, error)
 	GlobalReportTypeListerExpansion
 }

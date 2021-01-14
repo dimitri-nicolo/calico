@@ -87,7 +87,8 @@ func TestTierCreateWithTTL(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	w, err := store.Watch(ctx, key, out.ResourceVersion, storage.Everything)
+	opts := storage.ListOptions{ResourceVersion: out.ResourceVersion, Predicate: storage.Everything}
+	w, err := store.Watch(ctx, key, opts)
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
@@ -136,7 +137,8 @@ func TestTierGet(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.Tier{}
-		err := store.Get(ctx, tt.key, "", out, tt.ignoreNotFound)
+		opts := storage.GetOptions{IgnoreNotFound: tt.ignoreNotFound}
+		err := store.Get(ctx, tt.key, opts, out)
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
 				t.Errorf("#%d: expecting not found error, but get: %s", i, err)
@@ -259,7 +261,8 @@ func TestTierGetToList(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.TierList{}
-		err := store.GetToList(ctx, tt.key, "", tt.pred, out)
+		opts := storage.ListOptions{Predicate: tt.pred}
+		err := store.GetToList(ctx, tt.key, opts, out)
 		if err != nil {
 			t.Fatalf("GetToList failed: %v", err)
 		}
@@ -418,7 +421,8 @@ func TestTierGuaranteedUpdateWithTTL(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	w, err := store.Watch(ctx, key, out.ResourceVersion, storage.Everything)
+	opts := storage.ListOptions{ResourceVersion: out.ResourceVersion, Predicate: storage.Everything}
+	w, err := store.Watch(ctx, key, opts)
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
@@ -501,7 +505,8 @@ func TestTierList(t *testing.T) {
 	}
 
 	defaultTier := &calico.Tier{}
-	store.Get(ctx, "projectcalico.org/tiers/default", "", defaultTier, false)
+	opts := storage.GetOptions{IgnoreNotFound: false}
+	store.Get(ctx, "projectcalico.org/tiers/default", opts, defaultTier)
 
 	tests := []struct {
 		prefix      string
@@ -526,7 +531,8 @@ func TestTierList(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.TierList{}
-		err := store.List(ctx, tt.prefix, "0", tt.pred, out)
+		opts := storage.ListOptions{ResourceVersion: "0", Predicate: tt.pred}
+		err := store.List(ctx, tt.prefix, opts, out)
 		if err != nil {
 			t.Fatalf("List failed: %v", err)
 		}

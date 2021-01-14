@@ -12,10 +12,13 @@ import (
 )
 
 // GlobalNetworkSetLister helps list GlobalNetworkSets.
+// All objects returned here must be treated as read-only.
 type GlobalNetworkSetLister interface {
 	// List lists all GlobalNetworkSets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.GlobalNetworkSet, err error)
 	// Get retrieves the GlobalNetworkSet from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.GlobalNetworkSet, error)
 	GlobalNetworkSetListerExpansion
 }

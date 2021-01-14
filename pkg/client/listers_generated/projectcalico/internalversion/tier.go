@@ -12,10 +12,13 @@ import (
 )
 
 // TierLister helps list Tiers.
+// All objects returned here must be treated as read-only.
 type TierLister interface {
 	// List lists all Tiers in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.Tier, err error)
 	// Get retrieves the Tier from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.Tier, error)
 	TierListerExpansion
 }

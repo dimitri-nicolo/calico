@@ -157,7 +157,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		klog.Infof("Authentication and authorization disabled for testing purposes")
 	}
 
-	if err := o.RecommendedOptions.Audit.ApplyTo(&serverConfig.Config, nil, nil, o.RecommendedOptions.ProcessInfo, nil); err != nil {
+	if err := o.RecommendedOptions.Audit.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
 	if err := o.RecommendedOptions.Features.ApplyTo(&serverConfig.Config); err != nil {

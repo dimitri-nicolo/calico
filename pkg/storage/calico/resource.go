@@ -211,14 +211,13 @@ func checkPreconditions(key string, preconditions *storage.Preconditions, out ru
 // (e.g. reconnecting without missing any updates).
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
-func (rs *resourceStore) Watch(ctx context.Context, key string, resourceVersion string,
-	p storage.SelectionPredicate) (k8swatch.Interface, error) {
+func (rs *resourceStore) Watch(ctx context.Context, key string, opts storage.ListOptions) (k8swatch.Interface, error) {
 	klog.Infof("Watch called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return nil, err
 	}
-	return rs.watchResource(ctx, resourceVersion, p, name, ns)
+	return rs.watchResource(ctx, opts.ResourceVersion, opts.Predicate, name, ns)
 }
 
 // WatchList begins watching the specified key's items. Items are decoded into API
@@ -228,14 +227,13 @@ func (rs *resourceStore) Watch(ctx context.Context, key string, resourceVersion 
 // (e.g. reconnecting without missing any updates).
 // If resource version is "0", this interface will list current objects directory defined by key
 // and send them in "ADDED" events, before watch starts.
-func (rs *resourceStore) WatchList(ctx context.Context, key string, resourceVersion string,
-	p storage.SelectionPredicate) (k8swatch.Interface, error) {
+func (rs *resourceStore) WatchList(ctx context.Context, key string, opts storage.ListOptions) (k8swatch.Interface, error) {
 	klog.Infof("WatchList called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return nil, err
 	}
-	return rs.watchResource(ctx, resourceVersion, p, name, ns)
+	return rs.watchResource(ctx, opts.ResourceVersion, opts.Predicate, name, ns)
 }
 
 // Get unmarshals json found at key into objPtr. On a not found error, will either
@@ -243,18 +241,18 @@ func (rs *resourceStore) WatchList(ctx context.Context, key string, resourceVers
 // Treats empty responses and nil response nodes exactly like a not found error.
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
-func (rs *resourceStore) Get(ctx context.Context, key string, resourceVersion string,
-	out runtime.Object, ignoreNotFound bool) error {
+func (rs *resourceStore) Get(ctx context.Context, key string, optsK8s storage.GetOptions,
+	out runtime.Object) error {
 	klog.Infof("Get called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return err
 	}
-	opts := options.GetOptions{ResourceVersion: resourceVersion}
+	opts := options.GetOptions{ResourceVersion: optsK8s.ResourceVersion}
 	libcalicoObj, err := rs.get(ctx, rs.client, ns, name, opts)
 	if err != nil {
 		e := aapiError(err, key)
-		if storage.IsNotFound(e) && ignoreNotFound {
+		if storage.IsNotFound(e) && optsK8s.IgnoreNotFound {
 			return runtime.SetZeroValue(out)
 		}
 		return e
@@ -267,34 +265,33 @@ func (rs *resourceStore) Get(ctx context.Context, key string, resourceVersion st
 // (an object that satisfies the runtime.IsList definition).
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
-func (rs *resourceStore) GetToList(ctx context.Context, key string, resourceVersion string,
-	p storage.SelectionPredicate, listObj runtime.Object) error {
+func (rs *resourceStore) GetToList(ctx context.Context, key string,
+	opts storage.ListOptions, listObj runtime.Object) error {
 	klog.Infof("GetToList called with key: %v on resource %v\n", key, rs.resourceName)
-	return rs.List(ctx, key, resourceVersion, p, listObj)
+	return rs.List(ctx, key, opts, listObj)
 }
 
 // List unmarshalls jsons found at directory defined by key and opaque them
 // into *List api object (an object that satisfies runtime.IsList definition).
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
-func (rs *resourceStore) List(ctx context.Context, key string, resourceVersion string,
-	p storage.SelectionPredicate, listObj runtime.Object) error {
+func (rs *resourceStore) List(ctx context.Context, key string, optsK8s storage.ListOptions, listObj runtime.Object) error {
 	klog.Infof("List called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return err
 	}
-	opts := options.ListOptions{Namespace: ns, Name: name, ResourceVersion: resourceVersion}
+	opts := options.ListOptions{Namespace: ns, Name: name, ResourceVersion: optsK8s.ResourceVersion}
 	libcalicoObjList, err := rs.list(ctx, rs.client, opts)
 	if err != nil {
 		e := aapiError(err, key)
 		if storage.IsNotFound(e) {
-			rs.converter.convertToAAPIList(libcalicoObjList, listObj, p)
+			rs.converter.convertToAAPIList(libcalicoObjList, listObj, optsK8s.Predicate)
 			return nil
 		}
 		return e
 	}
-	rs.converter.convertToAAPIList(libcalicoObjList, listObj, p)
+	rs.converter.convertToAAPIList(libcalicoObjList, listObj, optsK8s.Predicate)
 	return nil
 }
 
@@ -382,7 +379,8 @@ func (rs *resourceStore) GuaranteedUpdate(
 		initObj = suggestion[0]
 	} else {
 		initObj = reflect.New(rs.aapiType).Interface().(runtime.Object)
-		if err := rs.Get(ctx, key, "", initObj, ignoreNotFound); err != nil {
+		opts := storage.GetOptions{IgnoreNotFound: ignoreNotFound}
+		if err := rs.Get(ctx, key, opts, initObj); err != nil {
 			klog.Errorf("getting initial object (%s)", err)
 			return aapiError(err, key)
 		}
@@ -455,7 +453,8 @@ func (rs *resourceStore) GuaranteedUpdate(
 						key,
 					)
 					newCurObj := reflect.New(rs.aapiType).Interface().(runtime.Object)
-					if err := rs.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
+					opts := storage.GetOptions{IgnoreNotFound: ignoreNotFound}
+					if err := rs.Get(ctx, key, opts, newCurObj); err != nil {
 						klog.Errorf("getting new current object (%s)", err)
 						return aapiError(err, key)
 					}

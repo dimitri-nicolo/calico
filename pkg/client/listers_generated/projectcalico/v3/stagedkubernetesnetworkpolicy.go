@@ -12,8 +12,10 @@ import (
 )
 
 // StagedKubernetesNetworkPolicyLister helps list StagedKubernetesNetworkPolicies.
+// All objects returned here must be treated as read-only.
 type StagedKubernetesNetworkPolicyLister interface {
 	// List lists all StagedKubernetesNetworkPolicies in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v3.StagedKubernetesNetworkPolicy, err error)
 	// StagedKubernetesNetworkPolicies returns an object that can list and get StagedKubernetesNetworkPolicies.
 	StagedKubernetesNetworkPolicies(namespace string) StagedKubernetesNetworkPolicyNamespaceLister
@@ -44,10 +46,13 @@ func (s *stagedKubernetesNetworkPolicyLister) StagedKubernetesNetworkPolicies(na
 }
 
 // StagedKubernetesNetworkPolicyNamespaceLister helps list and get StagedKubernetesNetworkPolicies.
+// All objects returned here must be treated as read-only.
 type StagedKubernetesNetworkPolicyNamespaceLister interface {
 	// List lists all StagedKubernetesNetworkPolicies in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v3.StagedKubernetesNetworkPolicy, err error)
 	// Get retrieves the StagedKubernetesNetworkPolicy from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v3.StagedKubernetesNetworkPolicy, error)
 	StagedKubernetesNetworkPolicyNamespaceListerExpansion
 }

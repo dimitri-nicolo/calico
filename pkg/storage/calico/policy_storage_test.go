@@ -89,7 +89,8 @@ func TestNetworkPolicyCreateWithTTL(t *testing.T) {
 	if err := store.Create(ctx, key, input, out, 1); err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	w, err := store.Watch(ctx, key, out.ResourceVersion, storage.Everything)
+	opts := storage.ListOptions{ResourceVersion: out.ResourceVersion, Predicate: storage.Everything}
+	w, err := store.Watch(ctx, key, opts)
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
@@ -159,7 +160,8 @@ func TestNetworkPolicyGet(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicy{}
-		err := store.Get(ctx, tt.key, "", out, tt.ignoreNotFound)
+		opts := storage.GetOptions{IgnoreNotFound: tt.ignoreNotFound}
+		err := store.Get(ctx, tt.key, opts, out)
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
 				t.Errorf("#%d: expecting not found error, but get: %s", i, err)
@@ -296,7 +298,8 @@ func TestNetworkPolicyGetToList(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicyList{}
-		err := store.GetToList(ctx, tt.key, "", tt.pred, out)
+		opts := storage.ListOptions{Predicate: tt.pred}
+		err := store.GetToList(ctx, tt.key, opts, out)
 		if err != nil {
 			t.Fatalf("GetToList failed: %v", err)
 		}
@@ -455,7 +458,8 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 		t.Fatalf("Guranteed Update failed: %v", err)
 	}
 
-	w, err := store.Watch(ctx, key, out.ResourceVersion, storage.Everything)
+	opts := storage.ListOptions{ResourceVersion: out.ResourceVersion, Predicate: storage.Everything}
+	w, err := store.Watch(ctx, key, opts)
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
@@ -571,7 +575,8 @@ func TestNetworkPolicyList(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicyList{}
-		err := store.List(ctx, tt.prefix, "0", tt.pred, out)
+		opts := storage.ListOptions{ResourceVersion: "0", Predicate: tt.pred}
+		err := store.List(ctx, tt.prefix, opts, out)
 		if err != nil {
 			t.Fatalf("List failed: %v", err)
 		}

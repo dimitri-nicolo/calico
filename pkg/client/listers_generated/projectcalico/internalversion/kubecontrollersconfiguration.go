@@ -12,10 +12,13 @@ import (
 )
 
 // KubeControllersConfigurationLister helps list KubeControllersConfigurations.
+// All objects returned here must be treated as read-only.
 type KubeControllersConfigurationLister interface {
 	// List lists all KubeControllersConfigurations in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.KubeControllersConfiguration, err error)
 	// Get retrieves the KubeControllersConfiguration from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.KubeControllersConfiguration, error)
 	KubeControllersConfigurationListerExpansion
 }

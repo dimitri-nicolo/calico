@@ -12,10 +12,13 @@ import (
 )
 
 // LicenseKeyLister helps list LicenseKeys.
+// All objects returned here must be treated as read-only.
 type LicenseKeyLister interface {
 	// List lists all LicenseKeys in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*projectcalico.LicenseKey, err error)
 	// Get retrieves the LicenseKey from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*projectcalico.LicenseKey, error)
 	LicenseKeyListerExpansion
 }

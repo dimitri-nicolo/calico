@@ -81,8 +81,7 @@ func withConfigGetFreshApiserverServerAndClient(
 	}
 
 	t.Logf("Starting server on port: %d", securePort)
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion),
-		genericoptions.NewProcessInfo("tigera-apiserver", "tigera-system"))
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
 	ro.Etcd.StorageConfig.Transport.ServerList = serverConfig.etcdServerList
 	options := &server.CalicoServerOptions{
 		RecommendedOptions: ro,

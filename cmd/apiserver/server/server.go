@@ -48,8 +48,7 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 
 	stopCh := make(chan struct{})
 
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion),
-		genericoptions.NewProcessInfo("tigera-apiserver", "tigera-system"))
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
 	opts := &CalicoServerOptions{
 		RecommendedOptions: ro,
 		StopCh:             stopCh,
