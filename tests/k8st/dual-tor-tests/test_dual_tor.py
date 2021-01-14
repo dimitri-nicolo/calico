@@ -12,7 +12,7 @@ import logging
 from kubernetes import client, config
 
 from tests.k8st.test_base import TestBase
-from tests.k8st.utils.utils import retry_until_success, DiagsCollector, kubectl
+from tests.k8st.utils.utils import retry_until_success, DiagsCollector, kubectl, run
 
 _log = logging.getLogger(__name__)
 
@@ -202,11 +202,14 @@ class FailoverTest(object):
         seq = int(seq_string)
         diff = seq - previous_seq
 
-        _log.info("%d second -- %s %s packets received", count, diff, name)
+        _log.info("%d second -- %s %s packets received (latest seq # %d, %d server log lines)",
+                  count, diff, name, seq, len(server_log))
         #check if packets received is more than 50 except for first and last iterations.
         if previous_seq != 0 and seq != self.config.total_packets and diff < 50:
             error =1
             _log.error("server log of %s at %d seconds -- received %d packets, link broken", name, count, diff)
+            run("docker exec kind-worker ip r")
+            run("docker exec kind-worker3 ip r")
             if self.rb_error == 5:
                 print "may stop for debug"
                 #time.sleep(2)
@@ -222,6 +225,8 @@ class FailoverTest(object):
                 output=subprocess.check_output(cmd_prefix + "killall nc", shell=True, stderr=subprocess.STDOUT)
 
     def run_single_test(self, case_name, client_func, break_func, restore_func):
+        run("docker exec kind-worker ip r")
+        run("docker exec kind-worker3 ip r")
         test_name = "<" + self.config.spec_name + " -- " + case_name + ">"
         _log.info("\nstart running test %s ...", test_name)
 
@@ -375,19 +380,19 @@ class FailoverCluster(object):
         # Create client, ra-server, rb-server and service.
         kubectl("run --generator=run-pod/v1 client -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=client' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 client-host -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=client-host' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"hostNetwork\": true, \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"hostNetwork\": true, \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 ra-server -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=ra-server,app=server' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-control-plane\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-control-plane\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("run --generator=run-pod/v1 rb-server -n dualtor" +
                 " --image busybox:1.32 --labels='pod-name=rb-server,app=server' " +
-                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker3\" } } }'" +
+                " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker3\" }, \"terminationGracePeriodSeconds\": 0 } }'" +
                 " --command /bin/sleep -- 3600")
         kubectl("wait --timeout=1m --for=condition=ready" +
                 " pod/client -n dualtor")
@@ -438,7 +443,7 @@ class TestFailoverPodIP(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-        config = FailoverTestConfig(2000, "pod ip", 8)
+        config = FailoverTestConfig(2000, "pod ip", 10)
         self.test = FailoverTest(config)
 
     def tearDown(self):
@@ -472,7 +477,7 @@ class TestFailoverServiceIP(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-        config = FailoverTestConfig(2000, "service ip", 8)
+        config = FailoverTestConfig(2000, "service ip", 10)
         self.test = FailoverTest(config)
 
     def tearDown(self):
@@ -517,8 +522,8 @@ class TestFailoverNodePort(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        # Node Port takes longer time to failover.
-        config = FailoverTestConfig(2000, "node port", 8)
+
+        config = FailoverTestConfig(2000, "node port", 10)
         self.test = FailoverTest(config)
 
     def tearDown(self):
@@ -553,8 +558,7 @@ class TestFailoverHostAccess(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-        # host access takes longer time to failover.
-        config = FailoverTestConfig(2000, "host access", 8)
+        config = FailoverTestConfig(2000, "host access", 10)
         self.test = FailoverTest(config)
 
     def tearDown(self):
