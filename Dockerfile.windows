@@ -38,8 +38,19 @@ ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
 ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
 ADD elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
-COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
-COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
+
+ENV FLOW_LOG_FILE=${ROOT_DIR}/TigeraCalico/flowlogs/flows.log
+ENV POS_DIR=${ROOT_DIR}/TigeraCalico/flowlogs
+
+# Use Windows-specific sources and transforms config - we only support flowlogs for now.
+COPY fluent_sources.conf.windows /fluentd/etc/fluent_sources.conf
+COPY fluent_transforms.conf.windows /fluentd/etc/fluent_transforms.conf
+
+# Disable unsupported logs.
+ENV DISABLE_ES_DNS_LOG=true
+ENV DISABLE_ES_L7_LOG=true
+ENV DISABLE_ES_BGP_LOG=true
+
 COPY output_match /fluentd/etc/output_match
 COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
@@ -48,15 +59,12 @@ COPY filters /fluentd/etc/filters
 # Compliance reports logs needs a regex pattern because there will be
 # multiple logs (one per report type), e.g. compliance.network-access.reports.log
 ENV COMPLIANCE_LOG_FILE=${ROOT_DIR}/var/log/calico/compliance/compliance.*.reports.log
-ENV FLOW_LOG_FILE=${ROOT_DIR}/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=${ROOT_DIR}/var/log/calico/dnslogs/dns.log
 ENV BIRD_LOG_FILE=${ROOT_DIR}/var/log/calico/bird/current
 ENV BIRD6_LOG_FILE=${ROOT_DIR}/var/log/calico/bird6/current
 ENV IDS_EVENT_LOG_FILE=${ROOT_DIR}/var/log/calico/ids/events.log
 ENV L7_LOG_FILE=${ROOT_DIR}/var/log/calico/l7logs/l7.log
 ENV EE_AUDIT_LOG_FILE=${ROOT_DIR}/var/log/calico/audit/tsee-audit.log
-
-ENV POS_DIR=${ROOT_DIR}/var/log/calico
 
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
