@@ -1,6 +1,8 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -40,4 +42,27 @@ func AuthorizeRequest(authz lmaauth.RBACAuthorizer, handler http.Handler) http.H
 
 		handler.ServeHTTP(w, req)
 	}
+}
+
+// SetAuthorizationHeaderFromCookie takes the bearer token from the cookie named "Bearer" and adds the authorization
+// header that's needed for authentication and authorization.
+func SetAuthorizationHeaderFromCookie(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		bearerCookie, err := req.Cookie("Bearer")
+		if err != nil {
+			log.WithError(err).Error("failed to get the bearer cookie")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if bearerCookie == nil {
+			log.Debug("No bearer cookie found.")
+			return
+		}
+
+		newReq := req
+		newReq.Header.Add("Authorization", fmt.Sprintf("Bearer %s", bearerCookie.Value))
+
+		h.ServeHTTP(w, newReq)
+	})
 }

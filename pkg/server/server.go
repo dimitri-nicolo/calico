@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/tigera/es-proxy/pkg/kibana"
+
 	"github.com/tigera/lma/pkg/list"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -125,6 +127,10 @@ func Start(cfg *Config) error {
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
 
+	kibanaCli := kibana.NewClient(&http.Client{
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+	}, cfg.ElasticKibanaEndpoint, cfg.ElasticVersion)
+
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
@@ -160,6 +166,11 @@ func Start(cfg *Config) error {
 		sm.Handle("/user",
 			middleware.AuthenticateRequest(authenticator,
 				middleware.NewUserHandler(k8sClientSet, cfg.DexEnabled, cfg.DexIssuer, cfg.ElasticLicenseType)))
+		sm.Handle("/kibana/login",
+			middleware.SetAuthorizationHeaderFromCookie(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.DexEnabled, cfg.DexIssuer,
+						middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
 	case ServiceUserMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 		sm.Handle("/recommend",
@@ -193,6 +204,11 @@ func Start(cfg *Config) error {
 		sm.Handle("/user",
 			middleware.AuthenticateRequest(authenticator,
 				middleware.NewUserHandler(k8sClientSet, cfg.DexEnabled, cfg.DexIssuer, cfg.ElasticLicenseType)))
+		sm.Handle("/kibana/login",
+			middleware.SetAuthorizationHeaderFromCookie(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.DexEnabled, cfg.DexIssuer,
+						middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:

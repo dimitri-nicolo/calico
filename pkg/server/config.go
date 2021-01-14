@@ -36,6 +36,8 @@ const (
 	elasticConnRetryIntervalEnv  = "ELASTIC_CONN_RETRY_INTERVAL"
 	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
 	elasticLicenseTypeEnv        = "ELASTIC_LICENSE_TYPE"
+	elasticVersionEnv            = "ELASTIC_VERSION"
+	elasticKibanaEndpointEnv     = "ELASTIC_KIBANA_ENDPOINT"
 
 	voltronCAPathEnv = "VOLTRON_CA_PATH"
 
@@ -63,6 +65,8 @@ const (
 
 	defaultUsernameClaim = "email"
 	defaultJWSKURL       = "https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys"
+
+	defaultKibanaEndpoint = "https://tigera-secure-kb-http.tigera-kibana.svc:5601"
 )
 
 type ElasticAccessMode string
@@ -135,6 +139,8 @@ type Config struct {
 	ElasticConnRetryInterval time.Duration
 	ElasticEnableTrace       bool
 	ElasticLicenseType       string
+	ElasticVersion           string
+	ElasticKibanaEndpoint    string
 
 	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.
 	ProxyConnectTimeout  time.Duration
@@ -199,7 +205,11 @@ func NewConfigFromEnv() (*Config, error) {
 		log.WithError(err).Error("Failed to parse " + elasticEnableTraceEnv)
 		elasticEnableTrace = false
 	}
+
 	elasticLicenseType := getEnv(elasticLicenseTypeEnv)
+	elasticVersion := getEnv(elasticVersionEnv)
+
+	elasticKibanaEndpoint := getEnvOrDefaultString(elasticKibanaEndpointEnv, defaultKibanaEndpoint)
 
 	connectTimeout, err := getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
 	if err != nil {
@@ -237,6 +247,8 @@ func NewConfigFromEnv() (*Config, error) {
 		ElasticConnRetryInterval:  elasticConnRetryInterval,
 		ElasticEnableTrace:        elasticEnableTrace,
 		ElasticLicenseType:        elasticLicenseType,
+		ElasticVersion:            elasticVersion,
+		ElasticKibanaEndpoint:     elasticKibanaEndpoint,
 		ElasticConnRetries:        int(elasticConnRetries),
 		ProxyConnectTimeout:       connectTimeout,
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
