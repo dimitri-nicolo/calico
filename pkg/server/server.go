@@ -157,6 +157,9 @@ func Start(cfg *Config) error {
 				middleware.AuthenticateRequest(authenticator,
 					middleware.AuthorizeRequest(authz,
 						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
+		sm.Handle("/user",
+			middleware.AuthenticateRequest(authenticator,
+				middleware.NewUserHandler(k8sClientSet, cfg.DexEnabled, cfg.DexIssuer, cfg.ElasticLicenseType)))
 	case ServiceUserMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 		sm.Handle("/recommend",
@@ -187,6 +190,9 @@ func Start(cfg *Config) error {
 				middleware.AuthenticateRequest(authenticator,
 					middleware.AuthorizeRequest(authz,
 						middleware.NewFlowHandler(esClient, k8sClientFactory)))))
+		sm.Handle("/user",
+			middleware.AuthenticateRequest(authenticator,
+				middleware.NewUserHandler(k8sClientSet, cfg.DexEnabled, cfg.DexIssuer, cfg.ElasticLicenseType)))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
