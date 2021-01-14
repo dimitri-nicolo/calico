@@ -35,6 +35,7 @@ const (
 	elasticConnRetriesEnv        = "ELASTIC_CONN_RETRIES"
 	elasticConnRetryIntervalEnv  = "ELASTIC_CONN_RETRY_INTERVAL"
 	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
+	elasticLicenseTypeEnv        = "ELASTIC_LICENSE_TYPE"
 
 	voltronCAPathEnv = "VOLTRON_CA_PATH"
 
@@ -133,6 +134,7 @@ type Config struct {
 	ElasticConnRetries       int
 	ElasticConnRetryInterval time.Duration
 	ElasticEnableTrace       bool
+	ElasticLicenseType       string
 
 	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.
 	ProxyConnectTimeout  time.Duration
@@ -197,6 +199,7 @@ func NewConfigFromEnv() (*Config, error) {
 		log.WithError(err).Error("Failed to parse " + elasticEnableTraceEnv)
 		elasticEnableTrace = false
 	}
+	elasticLicenseType := getEnv(elasticLicenseTypeEnv)
 
 	connectTimeout, err := getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
 	if err != nil {
@@ -233,6 +236,7 @@ func NewConfigFromEnv() (*Config, error) {
 		ElasticIndexSuffix:        elasticIndexSuffix,
 		ElasticConnRetryInterval:  elasticConnRetryInterval,
 		ElasticEnableTrace:        elasticEnableTrace,
+		ElasticLicenseType:        elasticLicenseType,
 		ElasticConnRetries:        int(elasticConnRetries),
 		ProxyConnectTimeout:       connectTimeout,
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
