@@ -4,34 +4,38 @@ description: Review limitations before starting installation.
 canonical_url: '/getting-started/windows-calico/limitations'
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
+### Feature support and limitations
 
-### Calico Enterprise for Windows feature limitations
+| Feature                        |                                                              |
+| ------------------------------ | ------------------------------------------------------------ |
+| Kubernetes platforms           | **Supported:** EKS, AWS, GCE, and Azure. <br />**Note**: EKS, [non-production only](#service-clusterips-incompatible-with-selectors-pod-ips-in-network-policy) |
+| Install method                 | **Supported**: Only manifest with manual upgrade             |
+| Networking                     | **Supported**:<br />- Calico Enterprise VXLAN without cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise BGP with [limitations](#bgp-networking-limitations)<br />- IPv4 |
+|                                | **Not supported**: IPv6, dual-ToR, service advertisement, multiple networks to pods |
+| Policy                         | **Supported**: Tiered policy with [limitations](#network-policy-with-tiers), policy recommendations, policy impact preview |
+|                                | **Not supported**: Staged network-policy, DNS policy, firewall integrations, Istio, non-cluster hosts |
+| Visibility and troubleshooting | **Supported**:<br />- Flow logs for traffic to/from windows pods with [limitations](#flow-log-limitations)           <br />- Audit logs<br />- Alerts |
+|                                | **Not supported**: Packet capture, DNS logs, iptable logs, L7 metrics |
+| Threat defense                 | **Supported**: Block traffic to/from src/dst based on a threat feed |
+|                                | **Not supported**: Honeypods, anomaly detection              |
+| Multi-cluster management       | **Not supported**, including federated identity endpoints and services |
+| Compliance and security        | **Supported**: Compliance reports: network-access, inventory, policy-audit only |
+|                                | **Not supported**: CIS benchmark and other reports, encryption |
+| Metrics                        | **Not supported**: Prometheus monitoring                     |
+| eBPF                           | **Not applicable**                                           |
 
-In this release, the following is supported:
 
-- Networking
-  - {{site.prodname}} VXLAN without cross-subnet or VXLAN MTU settings
-  - {{site.prodname}} BGP
-- Platforms: EKS/AWS 
-- Manifest install
-- {{site.prodname}} network policy with tiers
-- IPv4
-
-All other {{site.prodname}} features are not supported.
-
-### {{site.prodname}} BGP networking limitations 
+### BGP networking limitations 
 
 If you are using {{site.prodname}} with BGP, note these current limitations with Windows.
 
 | Feature                  | Limitation                                                   |
 | ------------------------ | ------------------------------------------------------------ |
-| IP mobility/ borrowing   | {{site.prodname}} IPAM allocates IPs to host in blocks for aggregation purposes.<br/>If the IP pool is full, nodes can also "borrow" IPs from another node's block. In BGP terms, the borrower then advertises a more specific "/32" route for the borrowed IP and traffic for that IP only is routed to the borrowing host. <br /><br />Windows nodes do not support this borrowing mechanism; they will not borrow IPs even if the IP pool is full and they mark their blocks so that Linux nodes will not borrow from them. |
+| IP mobility/ borrowing   | {{site.prodname}} IPAM allocates IPs to host in blocks for aggregation purposes.<br/>If the IP pool is full, nodes can also "borrow" IPs from another node's block. In BGP terms, the borrower then advertises a more specific "/32" route for the borrowed IP and traffic for that IP is only routed to the borrowing host. <br /><br />Windows nodes do not support this borrowing mechanism; they will not borrow IPs even if the IP pool is full and they mark their blocks so that Linux nodes will not borrow from them. |
 | IPs reserved for Windows | {{site.prodname}} IPAM allocates IPs in CIDR blocks. Due to networking requirements on Windows, four IPs per Windows node-owned block must be reserved for internal purposes.<br /><br/>For example, with the default block size of /26, each block contains 64 IP addresses, 4 are reserved for Windows, leaving 60 for pod networking.<br /><br />To reduce the impact of these reservations, a larger block size can be configured at the IP pool scope (before any pods are created). |
-| Single IP block per host | {{site.prodname}} IPAM is designed to allocate blocks of IPs (default size /26) to hosts on demand. While the {{site.prodname}} CNI plugin was written to do the same, kube-proxy currently only supports a single IP block per host. Tigera is working with Microsoft to find a resolution.<br/><br />To work around the default limit of one /26 per host there some options:<br/><br />- With {{site.prodname}} BGP networking and the etcd datastore before creating any blocks, change the block size used by the IP pool so that it is sufficient for the largest number of Pods that are to be used on a single Windows host.<br/>- Use {{site.prodname}} BGP networking with the kubernetes datastore. In that mode, {{site.prodname}} IPAM is not used and the CNI host-local IPAM plugin is used with the node's Pod CIDR.<br/><br />To allow multiple IPAM blocks per host (at the expense of kube-proxy compatibility), set the `windows_use_single_network` flag to `false` in the `cni.conf.template` before installing {{site.prodname}}. Changing that setting after pods are networked is not recommended because it may leak HNS endpoints. |
+| Single IP block per host | {{site.prodname}} IPAM is designed to allocate blocks of IPs (default size /26) to hosts on demand. While the {{site.prodname}} CNI plugin was written to do the same, kube-proxy for Windows currently only supports a single IP block per host. <br/><br />To work around the default limit of one /26 per host there some options:<br/><br />- With {{site.prodname}} BGP networking and the etcd datastore before creating any blocks, change the block size used by the IP pool so that it is sufficient for the largest number of Pods that are to be used on a single Windows host.<br/>- Use {{site.prodname}} BGP networking with the kubernetes datastore. In that mode, {{site.prodname}} IPAM is not used and the CNI host-local IPAM plugin is used with the node's Pod CIDR.<br/><br />To allow multiple IPAM blocks per host (at the expense of kube-proxy compatibility), set the `windows_use_single_network` flag to `false` in the `cni.conf.template` before installing {{site.prodname}}. Changing that setting after pods are networked is not recommended because it may leak HNS endpoints. |
 | IP-in-IP overlay         | {{site.prodname}}'s IPIP overlay mode cannot be used in clusters that contain Windows nodes because Windows does not support IP-in-IP. |
-| NAT-outgoing             | {{site.prodname}} IP pools support a "NAT outgoing" setting with the following behaviour: <br /><br />- Traffic between {{site.prodname}} workloads (in any IP pools) is not NATted. <br />- Traffic leaving the configured IP pools is NATted if the workload has an IP within an IP pool that has NAT outgoing enabled. {{ site.prodNameWindows }} honors the above setting but it is only applied at pod creation time. If the IP pool configuration is updated after a pod is created, the pod's traffic will continue to be NATted (or not) as before. NAT policy for newly-networked pods will honor the new configuration. {{ site.prodNameWindows }} automatically adds the host itself and its subnet to the NAT exclusion list. This behaviour can be disabled by setting flag `windows_disable_host_subnet_nat_exclusion` to `true` in `cni.conf.template` before running the install script. |
+| NAT-outgoing             | {{site.prodname}} IP pools support a "NAT outgoing" setting with the following behaviour: <br /><br />- Traffic between {{site.prodname}} workloads (in any IP pools) is not NATted. <br />- Traffic leaving the configured IP pools is NATted if the workload has an IP within an IP pool that has NAT outgoing enabled. {{site.prodnameWindows}} honors the above setting but it is only applied at pod creation time. If the IP pool configuration is updated after a pod is created, the pod's traffic will continue to be NATted (or not) as before. NAT policy for newly-networked pods will honor the new configuration. {{site.prodnameWindows}} automatically adds the host itself and its subnet to the NAT exclusion list. This behaviour can be disabled by setting flag `windows_disable_host_subnet_nat_exclusion` to `true` in `cni.conf.template` before running the install script. |
 | Service IP advertisement | This {{site.prodname}} feature is not supported on Windows.  |
 
 #### Check your network configuration 
@@ -76,9 +80,9 @@ Ethernet adapter vEthernet (Ethernet 2):
 ``` 
 In this case, the IPv4 address is 172.20.41.103 and the mask is represented as bytes 255.255.224.0 rather than CIDR notation. Applying the mask, we get a network address 172.20.32.0/19. 
 
-Because the linux node has network 192.168.171.136/24 and the Windows node has a different network, 172.20.32.0/19, they are unlikely to be on the same layer 2 network. 
+Because the Linux node has network 192.168.171.136/24 and the Windows node has a different network, 172.20.32.0/19, they are unlikely to be on the same layer 2 network. 
 
-### {{site.prodname}} VXLAN networking limitations 
+### VXLAN networking limitations 
 
 Because of differences between the Linux and Windows dataplane feature sets, the following {{site.prodname}} features are not supported on Windows.
 
@@ -114,14 +118,14 @@ One example is the VXLAN VNI setting. To change such parameters:
 
 ### Pod-to-pod connections are dropped with TCP reset packets
 
-Restarting Felix or changes to policy (including changes to endpoints referred to in policy), can cause pod-to-pod connections to be dropped with TCP reset packets. When one of the following occurs:
+Restarting Felix or changes to policy (including changes to endpoints referred to in policy) can cause pod-to-pod connections to be dropped with TCP reset packets when one of the following occurs:
 
 - The policy that applies to a pod is updated
 - Some ingress or egress policy that applies to a pod contains selectors and the set of endpoints that those selectors match changes
 
 Felix must reprogram the HNS ACL policy attached to the pod. This reprogramming can cause TCP resets. Microsoft has confirmed this is a HNS issue, and they are investigating.
 
-### Service ClusterIPs incompatible with selectors/pod IPs in network policy
+### Service ClusterIPs incompatible with selectors on pod IPs in network policy
 
 **Windows 1809 and 1903 prior to build 18317**
 
@@ -181,6 +185,16 @@ Because of the way the Windows dataplane handles rules, the following limitation
 - Tiers: maximum of 5
 - `pass` rules: maximum of 10 per tier
 - If each tier contains a large number of rules, and has pass rules, you may need to reduce the number of tiers further.
+
+### Flow log limitations
+
+{{site.prodname}} support flow logs with these limitations:
+
+- No packet/bytes stats for denied traffic
+- No DNS stats
+- No Http stats
+- No RuleTrace for tiers
+- No BGP logs
 
 ### Next steps
 
