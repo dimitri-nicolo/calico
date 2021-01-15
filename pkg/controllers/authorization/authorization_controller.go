@@ -1,26 +1,27 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package authorization
 
 import (
-	"context"
+	"fmt"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/kube-controllers/pkg/rbaccache"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/kube-controllers/pkg/resource"
+	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -36,7 +37,12 @@ type authorizationController struct {
 	resyncPeriod   time.Duration
 	usernamePrefix string
 	groupPrefix    string
+	esLicenseType  string
 }
+
+const (
+	ElasticsearchLicenseTypeBasic = "basic"
+)
 
 func New(k8sCLI kubernetes.Interface, esServiceURL string, config *config.AuthorizationControllerCfg) controller.Controller {
 	// TODO remove this default when this is properly hooked up to using KubeControllerConfiguration
@@ -52,6 +58,7 @@ func New(k8sCLI kubernetes.Interface, esServiceURL string, config *config.Author
 		resyncPeriod:   resyncPeriod,
 		usernamePrefix: config.OIDCAuthUsernamePrefix,
 		groupPrefix:    config.OIDCAuthGroupPrefix,
+		esLicenseType:  config.ElasticsearchLicenseType,
 	}
 }
 
@@ -103,15 +110,31 @@ func (c *authorizationController) Run(stop chan struct{}) {
 	)
 
 	log.Debug("Starting ClusterRole and ClusterRoleBinding workers.")
-	// Start the role workers before initialising the cache and removing the stale mappings so we don't lose any deletion
-	// updates.
+	// Start the workers before initialising the cache and removing the stale values so we don't lose any deletion updates.
 	go clusterRoleWorker.Run(c.numWorkers, stop)
 	go clusterRoleBindingWorker.Run(c.numWorkers, stop)
 
-	log.Debug("Synchronizing K8s RBAC with Elasticsearch role mappings")
+	if c.esLicenseType == ElasticsearchLicenseTypeBasic {
+		configMapWorker := worker.New(&configMapReconciler{
+			k8sCLI:          c.k8sCLI,
+			resourceUpdates: resourceUpdatesChan,
+		})
+		selector, err := fields.ParseSelector(fmt.Sprintf("metadata.name=%s", resource.OIDCUsersConfigMapName))
+		if err != nil {
+			log.WithError(err).Error("failed to parse selector")
+			return
+		}
+		configMapWorker.AddWatch(
+			cache.NewListWatchFromClient(c.k8sCLI.CoreV1().RESTClient(), "configmaps", resource.TigeraElasticsearchNamespace, selector),
+			&corev1.ConfigMap{},
+		)
 
-	synchronizer := c.initializeRoleMappingSynchronizer(stop, esCLI, resourceUpdatesChan)
-	go synchronizer.synchronizeRoleMappings()
+		log.Debug("Starting ConfigMap workers.")
+		go configMapWorker.Run(c.numWorkers, stop)
+	}
+
+	updateHandler := c.initializeK8sUpdateHandler(stop, esCLI, resourceUpdatesChan)
+	go updateHandler.listenAndSynchronize()
 
 	ticker := time.NewTicker(c.resyncPeriod)
 	defer ticker.Stop()
@@ -120,13 +143,13 @@ func (c *authorizationController) Run(stop chan struct{}) {
 	for !done {
 		select {
 		case <-ticker.C:
-			log.Info("Resyncing role mappings")
-			synchronizer.stop()
-			synchronizer = c.initializeRoleMappingSynchronizer(stop, esCLI, resourceUpdatesChan)
+			log.Info("Resyncing")
+			updateHandler.stop()
+			updateHandler = c.initializeK8sUpdateHandler(stop, esCLI, resourceUpdatesChan)
 
-			go synchronizer.synchronizeRoleMappings()
+			go updateHandler.listenAndSynchronize()
 
-			log.Info("Finished Resyncing role mappings")
+			log.Info("Finished Resyncing")
 		case <-stop:
 			done = true
 		}
@@ -135,69 +158,33 @@ func (c *authorizationController) Run(stop chan struct{}) {
 	<-stop
 }
 
-func (c *authorizationController) initializeRoleMappingSynchronizer(stop chan struct{}, esCLI elasticsearch.Client, resourceUpdatesChan chan resourceUpdate) *esRoleMappingSynchronizer {
-	var clusterRoleCache rbaccache.ClusterRoleCache
-	var err error
+// initializeK8sUpdateHandler initializes a k8sUpdateHandler and resyncs the backend with cache.
+func (c *authorizationController) initializeK8sUpdateHandler(stop chan struct{}, esCLI elasticsearch.Client, resourceUpdatesChan chan resourceUpdate) *k8sUpdateHandler {
+	var synchronizer k8sRBACSynchronizer
 
-	log.Debug("Initializing ClusterRole cache.")
-	// Initialize the cache so removeStaleMappings can calculate what Elasticsearch role mappings should be removed.
-	stopped := retry(stop, 5*time.Second, "failed to initialize cache", func() error {
-		clusterRoleCache, err = initializeRolesCache(c.k8sCLI)
-		return err
-	})
-	if stopped {
+	if c.esLicenseType == ElasticsearchLicenseTypeBasic {
+		synchronizer = newNativeUserSynchronizer(stop, esCLI, c.k8sCLI)
+	} else {
+		synchronizer = newRoleMappingSynchronizer(stop, esCLI, c.k8sCLI, c.usernamePrefix, c.groupPrefix)
+	}
+
+	if synchronizer == nil {
 		return nil
 	}
 
-	synchronizer := &esRoleMappingSynchronizer{
+	updateHandler := &k8sUpdateHandler{
 		stopChan:        make(chan chan struct{}),
-		roleCache:       clusterRoleCache,
-		esCLI:           esCLI,
 		resourceUpdates: resourceUpdatesChan,
-		usernamePrefix:  c.usernamePrefix,
-		groupPrefix:     c.groupPrefix,
+		synchronizer:    synchronizer,
 	}
 
-	// Clean up any Elasticsearch mappings that don't have an appropriate ClusterRole with ClusterRoleBinding
-	stopped = retry(stop, 5*time.Second, "failed to remove stale Elasticsearch mappings", synchronizer.removeStaleMappings)
+	// Clean up any items in backend that don't have an associated cached item and also adds missing item to backend if associated cached item is available.
+	stopped := retry(stop, 5*time.Second, "failed to remove stale Elasticsearch mappings", updateHandler.synchronizer.resync)
 	if stopped {
 		return nil
 	}
 
-	// Clean up any Elasticsearch mappings that don't have an appropriate ClusterRole with ClusterRoleBinding
-	stopped = retry(stop, 5*time.Second, "failed to sync Elasticsearch mappings", synchronizer.syncBoundClusterRoles)
-	if stopped {
-		return nil
-	}
-
-	return synchronizer
-}
-
-// initializeRolesCache creates and fills the rbaccache.ClusterRoleCache with the available ClusterRoles and ClusterRoleBindings.
-func initializeRolesCache(k8sCLI kubernetes.Interface) (rbaccache.ClusterRoleCache, error) {
-	ctx := context.Background()
-
-	clusterRolesCache := rbaccache.NewClusterRoleCache([]string{rbacv1.UserKind, rbacv1.GroupKind}, []string{"lma.tigera.io"})
-
-	clusterRoleBindings, err := k8sCLI.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	clusterRoles, err := k8sCLI.RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, binding := range clusterRoleBindings.Items {
-		clusterRolesCache.AddClusterRoleBinding(&binding)
-	}
-
-	for _, role := range clusterRoles.Items {
-		clusterRolesCache.AddClusterRole(&role)
-	}
-
-	return clusterRolesCache, nil
+	return updateHandler
 }
 
 // retry continuously runs the given function f until it succeeds, i.e. doesn't return an error. If f eventually succeeds,

@@ -1,158 +1,66 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package authorization
 
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/projectcalico/kube-controllers/pkg/strutil"
+	"k8s.io/client-go/kubernetes"
 
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	log "github.com/sirupsen/logrus"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/kube-controllers/pkg/rbaccache"
-	rbacv1 "k8s.io/api/rbac/v1"
-
-	log "github.com/sirupsen/logrus"
 )
 
-const (
-	roleMappingPrefix = "tigera-k8s"
-
-	resourceUpdated = "updated"
-	resourceDeleted = "deleted"
-)
-
-var resourceNameToElasticsearchRole = map[string]string{
-	"flows":      esusers.ElasticsearchRoleNameFlowsViewer,
-	"audit*":     esusers.ElasticsearchRoleNameAuditViewer,
-	"audit_ee":   esusers.ElasticsearchRoleNameAuditEEViewer,
-	"audit_kube": esusers.ElasticsearchRoleNameAuditKubeViewer,
-	"events":     esusers.ElasticsearchRoleNameEventsViewer,
-	"dns":        esusers.ElasticsearchRoleNameDNSViewer,
-	"l7":         esusers.ElasticsearchRoleNameL7Viewer,
+// roleMappingSynchronizer is an implementation of k8sRBACSynchronizer interface, to keep Elasticsearch role mappings updated.
+type roleMappingSynchronizer struct {
+	roleCache      rbaccache.ClusterRoleCache
+	esCLI          elasticsearch.Client
+	usernamePrefix string
+	groupPrefix    string
 }
 
-var resourceNameToGlobalElasticsearchRoles = map[string]string{
-	"kibana_login":            esusers.ElasticsearchRoleNameKibanaViewer,
-	"elasticsearch_superuser": esusers.ElasticsearchRoleNameSuperUser,
-	"kibana_admin":            esusers.ElasticsearchRoleNameKibanaAdmin,
-}
+func newRoleMappingSynchronizer(stop chan struct{}, esCLI elasticsearch.Client, k8sCLI kubernetes.Interface, usernamePrefix string, groupPrefix string) k8sRBACSynchronizer {
+	var clusterRoleCache rbaccache.ClusterRoleCache
+	var err error
 
-type resourceUpdate struct {
-	typ      string
-	name     string
-	resource interface{}
-}
-
-type esRoleMappingSynchronizer struct {
-	stopChan        chan chan struct{}
-	roleCache       rbaccache.ClusterRoleCache
-	esCLI           elasticsearch.Client
-	resourceUpdates chan resourceUpdate
-	usernamePrefix  string
-	groupPrefix     string
-}
-
-// synchronizeRoleMappings watches for updates over the resourceUpdates channel, attempts to update the ClusterRoleCache
-// with the updates (either "updated" / "deleted" ClusterRole / ClusterRoleBinding) and if the cache was updated it synchronizes
-// the ClusterRole (either the ClusterRole sent over the resourceUpdates channel or the one bound the the ClusterRoleBinding
-// send over the channel) associated Elasticsearch role mapping. The ClusterRole to Elasticsearch role mapping synchronization
-// may create / update or delete the role mapping for a ClusterRole. The Elasticsearch role mapping for a ClusterRole is
-// deleted is delete when the ClusterRole has been delete, the rule for the lma.tigera.io API group is removed from the
-// ClusterRole, or if  the ClusterRole no longer has an associated ClusterRoleBinding with a subject of type "User" or "Group".
-func (r *esRoleMappingSynchronizer) synchronizeRoleMappings() {
-	for {
-		select {
-		case notify, ok := <-r.stopChan:
-			if !ok {
-				return
-			}
-
-			close(notify)
-			return
-		case update, ok := <-r.resourceUpdates:
-			if !ok {
-				return
-			}
-			// clusterRoleName is retrieved differently depending on if the resource is a ClusterRole or a ClusterRole
-			// binding, but is needed for the role mapping synchronization after the switch
-			var clusterRoleName string
-
-			cacheUpdated := true
-
-			switch update.resource.(type) {
-			case *rbacv1.ClusterRole:
-				clusterRoleName = update.name
-
-				switch update.typ {
-				case resourceUpdated:
-					cacheUpdated = r.roleCache.AddClusterRole(update.resource.(*rbacv1.ClusterRole))
-				case resourceDeleted:
-					cacheUpdated = r.roleCache.RemoveClusterRole(update.name)
-				default:
-					log.Errorf("unknown resource update type %s", update.typ)
-					continue
-				}
-			case *rbacv1.ClusterRoleBinding:
-				switch update.typ {
-				case resourceUpdated:
-					clusterRoleBinding := update.resource.(*rbacv1.ClusterRoleBinding)
-					clusterRoleName = clusterRoleBinding.RoleRef.Name
-
-					cacheUpdated = r.roleCache.AddClusterRoleBinding(clusterRoleBinding)
-				case resourceDeleted:
-					clusterRoleName = r.roleCache.ClusterRoleNameForBinding(update.name)
-					if clusterRoleName == "" {
-						log.Errorf("couldn't find ClusterRole for ClusterRoleBinding %s", update.name)
-						continue
-					}
-					cacheUpdated = r.roleCache.RemoveClusterRoleBinding(update.name)
-				default:
-					log.Errorf("unknown resource update type %s", update.typ)
-					continue
-				}
-			}
-
-			if cacheUpdated {
-				if err := r.synchronizeElasticsearchMapping(clusterRoleName); err != nil {
-					//TODO we might want to try requeueing the failed updates
-					log.WithError(err).Errorf("failed to synchronize ClusterRole %s", clusterRoleName)
-				}
-			}
-		}
+	log.Debug("Initializing ClusterRole cache.")
+	// Initialize the cache so resync can calculate what Elasticsearch role mappings or native users should be removed and created/overwritten.
+	stopped := retry(stop, 5*time.Second, "failed to initialize cache", func() error {
+		clusterRoleCache, err = initializeRolesCache(k8sCLI)
+		return err
+	})
+	if stopped {
+		return nil
 	}
-
+	log.Info("Synchronizing K8s RBAC with Elasticsearch role mappings")
+	return createRoleMappingSynchronizer(clusterRoleCache, esCLI, usernamePrefix, groupPrefix)
 }
 
-// stop sends a signal to the stopChan which stops the loop running in synchronizeRoleMappings. This function blocks until
-// it receives confirm
-func (r *esRoleMappingSynchronizer) stop() {
-	done := make(chan struct{})
-	r.stopChan <- done
-	<-done
-	close(r.stopChan)
+func createRoleMappingSynchronizer(roleCache rbaccache.ClusterRoleCache,
+	esCLI elasticsearch.Client,
+	usernamePrefix string,
+	groupPrefix string) k8sRBACSynchronizer {
+	return &roleMappingSynchronizer{
+		roleCache:      roleCache,
+		esCLI:          esCLI,
+		usernamePrefix: usernamePrefix,
+		groupPrefix:    groupPrefix,
+	}
 }
 
-// syncBoundClusterRoles retrieves the ClusterRoles from the cache that have have an associated ClusterRole with rule for
+// resync removes any Elasticsearch role mapping that does not have an associate ClusterRole with rules for
+// the lma.tigera.io API group or a ClusterRoleBinding with a User or Group subject kind, and it also
+// retrieves the ClusterRoles from the cache that have an associated ClusterRole with rule for
 // the lma.tigera.io API group and a ClusterRoleBinding with a User or Group subject kind and creates / overwrites the Elasticsearch
 // mapping for the ClusterRole.
-func (r *esRoleMappingSynchronizer) syncBoundClusterRoles() error {
+func (r *roleMappingSynchronizer) resync() error {
 	rolesWithBindings := r.roleCache.ClusterRoleNamesWithBindings()
-	for _, clusterRoleName := range rolesWithBindings {
-		if err := r.synchronizeElasticsearchMapping(clusterRoleName); err != nil {
-			return err
-		}
-	}
 
-	return nil
-}
-
-// removeStaleMappings removes any Elasticsearch role mapping that does not have an associate ClusterRole with rules for
-// the lma.tigera.io API group or a ClusterRoleBinding with a User or Group subject kind.
-func (r *esRoleMappingSynchronizer) removeStaleMappings() error {
-	rolesWithBindings := r.roleCache.ClusterRoleNamesWithBindings()
 	existingMappings := make(map[string]struct{})
 	for _, name := range rolesWithBindings {
 		existingMappings[fmt.Sprintf("%s-%s", roleMappingPrefix, name)] = struct{}{}
@@ -176,10 +84,75 @@ func (r *esRoleMappingSynchronizer) removeStaleMappings() error {
 		}
 	}
 
+	for _, clusterRoleName := range rolesWithBindings {
+		if err := r.synchronizeElasticsearchMapping(clusterRoleName); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (r *esRoleMappingSynchronizer) synchronizeElasticsearchMapping(clusterRoleName string) error {
+// synchronize updates the cache with changes to k8s resource and also updates affected role mapping in Elasticsearch.
+func (r *roleMappingSynchronizer) synchronize(update resourceUpdate) error {
+	var clusterRoleNamesUpdated []string
+	switch update.resource.(type) {
+	case *rbacv1.ClusterRole:
+		clusterRole := update.resource.(*rbacv1.ClusterRole)
+		clusterRoleName := update.name
+		switch update.typ {
+		case resourceUpdated:
+			if r.roleCache.AddClusterRole(clusterRole) {
+				clusterRoleNamesUpdated = []string{clusterRole.Name}
+			}
+		case resourceDeleted:
+			if r.roleCache.RemoveClusterRole(clusterRoleName) {
+				clusterRoleNamesUpdated = []string{clusterRoleName}
+			}
+		default:
+			log.Errorf("unknown resource update type %s", update.typ)
+		}
+
+	case *rbacv1.ClusterRoleBinding:
+		clusterRoleBinding := update.resource.(*rbacv1.ClusterRoleBinding)
+		clusterRoleBindingName := update.name
+		switch update.typ {
+		case resourceUpdated:
+			if r.roleCache.AddClusterRoleBinding(clusterRoleBinding) {
+				clusterRoleNamesUpdated = []string{clusterRoleBinding.RoleRef.Name}
+			}
+		case resourceDeleted:
+			role := r.roleCache.ClusterRoleNameForBinding(clusterRoleBindingName)
+			if role == "" {
+				log.Errorf("couldn't find ClusterRole for ClusterRoleBinding %s", clusterRoleBindingName)
+				return nil
+			}
+			if r.roleCache.RemoveClusterRoleBinding(clusterRoleBindingName) {
+				clusterRoleNamesUpdated = []string{role}
+			}
+		default:
+			log.Errorf("unknown resource update type %s", update.typ)
+		}
+
+	default:
+		log.Errorf("unknown resource update type %s", update.typ)
+	}
+
+	if len(clusterRoleNamesUpdated) != 0 {
+		for _, clusterRoleName := range clusterRoleNamesUpdated {
+			if err := r.synchronizeElasticsearchMapping(clusterRoleName); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// synchronizeElasticsearchMapping accepts ClusterRole for which Elasticsearch role mapping needs to be updated.
+// The ClusterRole to Elasticsearch role mapping synchronization may create / update or delete the role mapping for a ClusterRole.
+// The Elasticsearch role mapping for a ClusterRole is deleted when the ClusterRole has been delete,
+// the rule for the lma.tigera.io API group is removed from the ClusterRole, or if
+// the ClusterRole no longer has an associated ClusterRoleBinding with a subject of type "User" or "Group".
+func (r *roleMappingSynchronizer) synchronizeElasticsearchMapping(clusterRoleName string) error {
 	log.Debugf("Reconciling %s", clusterRoleName)
 	var users, groups []string
 
@@ -219,53 +192,7 @@ func (r *esRoleMappingSynchronizer) synchronizeElasticsearchMapping(clusterRoleN
 	return nil
 }
 
-func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
-	var esRoles []string
-
-	for _, rule := range rules {
-		var baseESRoles []string
-
-		if len(rule.ResourceNames) == 0 {
-			// Even though an empty resource name list is supposed to signal that all resource names are to be applied,
-			// we still do not want to automatically give access to kibana or assign somebody superuser privileges. This
-			// would be a very unexpected privilege escalation for users migrating to a KubeControllers version that does
-			// that.
-			baseESRoles = []string{
-				esusers.ElasticsearchRoleNameFlowsViewer,
-				esusers.ElasticsearchRoleNameAuditViewer,
-				esusers.ElasticsearchRoleNameEventsViewer,
-				esusers.ElasticsearchRoleNameDNSViewer,
-				esusers.ElasticsearchRoleNameL7Viewer,
-			}
-		}
-
-		var globalRoles []string
-		for _, resourceName := range rule.ResourceNames {
-			if esRole, exists := resourceNameToElasticsearchRole[resourceName]; exists {
-				baseESRoles = append(baseESRoles, esRole)
-			} else if esRole, exists := resourceNameToGlobalElasticsearchRoles[resourceName]; exists {
-				globalRoles = append(globalRoles, esRole)
-			}
-		}
-
-		if strutil.InList(rbacv1.ResourceAll, rule.Resources) {
-			esRoles = baseESRoles
-		} else {
-			for _, clusterName := range rule.Resources {
-				// Don't add cluster name suffix for the global roles
-				for _, baseESRole := range baseESRoles {
-					esRoles = append(esRoles, fmt.Sprintf("%s_%s", baseESRole, clusterName))
-				}
-			}
-		}
-
-		esRoles = append(esRoles, globalRoles...)
-	}
-
-	return esRoles
-}
-
-func (r *esRoleMappingSynchronizer) createRoleMapping(name string, users, groups, roles []string) elasticsearch.RoleMapping {
+func (r *roleMappingSynchronizer) createRoleMapping(name string, users, groups, roles []string) elasticsearch.RoleMapping {
 	var rules []elasticsearch.Rule
 	for _, user := range users {
 		user := strings.TrimPrefix(user, r.usernamePrefix)

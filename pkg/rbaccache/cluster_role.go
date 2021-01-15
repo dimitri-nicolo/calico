@@ -3,8 +3,11 @@
 package rbaccache
 
 import (
-	"github.com/projectcalico/kube-controllers/pkg/strutil"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	"github.com/projectcalico/kube-controllers/pkg/utils"
+
+	"github.com/projectcalico/kube-controllers/pkg/strutil"
 )
 
 // ClusterRoleCache is an interface which caches ClusterRole information along with their bound ClusterRoleBindings.
@@ -30,7 +33,7 @@ type ClusterRoleCache interface {
 	// clusterRoleName
 	ClusterRoleSubjects(clusterRoleName string, kind string) []rbacv1.Subject
 
-	// ClusterRoleRules gets the rules for the ClusterRole with given name
+	// ClusterRoleRules gets the rules for the ClusterRole with given name.
 	ClusterRoleRules(clusterRoleName string) []rbacv1.PolicyRule
 
 	// ClusterRoleNameForBinding retrieves the ClusterRole name bound to the ClusterRoleBinding with the given name.
@@ -40,22 +43,39 @@ type ClusterRoleCache interface {
 	// in the cache, i.e. a ClusterRole with name "role" was added via AddClusterRole and a ClusterRoleBinding was added
 	// via AddClusterRoleBinding.
 	ClusterRoleNamesWithBindings() []string
+
+	// ClusterRoleNamesForSubjectName retrieves list of ClusterRole names from the cache that have associated ClusterRoleBindings
+	// with give rbacv1.Subject name.
+	// When OIDCUsersConfigMapName is updated, this will be used to get ClusterRole for the oidc subject ID's username and groups.
+	ClusterRoleNamesForSubjectName(rbacSubjectName string) []string
+
+	// ClusterRoleBindingsForClusterRole retrieves list of ClusterRoleBindings for the give ClusterRoleName name
+	// When ClusterRole is updated, the ClusterRoleBindings returned by this will be used in finding the oidc users affected
+	// by the change in this ClusterRole.
+	ClusterRoleBindingsForClusterRole(clusterRoleName string) []string
+
+	// SubjectNamesForBinding retrieves list of rbacv1.Subject name for the given ClusterRoleBinding.
+	SubjectNamesForBinding(clusterRoleBindingName string) []string
 }
 
 func NewClusterRoleCache(subjectsToCache []string, apiGroupRulesToCache []string) ClusterRoleCache {
 	return &clusterRoleCache{
-		subjectsToCache:      subjectsToCache,
-		apiGroupRulesToCache: apiGroupRulesToCache,
-		entryCache:           make(map[string]*clusterRoleCacheEntry),
-		bindingToRoleCache:   make(map[string]string),
+		subjectsToCache:       subjectsToCache,
+		apiGroupRulesToCache:  apiGroupRulesToCache,
+		entryCache:            make(map[string]*clusterRoleCacheEntry),
+		bindingToRoleCache:    make(map[string]string),
+		bindingToSubjectNames: make(map[string][]string),
+		subjectNameToBindings: make(map[string][]string),
 	}
 }
 
 type clusterRoleCache struct {
-	subjectsToCache      []string
-	apiGroupRulesToCache []string
-	entryCache           map[string]*clusterRoleCacheEntry
-	bindingToRoleCache   map[string]string
+	subjectsToCache       []string
+	apiGroupRulesToCache  []string
+	entryCache            map[string]*clusterRoleCacheEntry
+	bindingToRoleCache    map[string]string
+	bindingToSubjectNames map[string][]string
+	subjectNameToBindings map[string][]string
 }
 
 func (cache *clusterRoleCache) getOrCreateCacheEntry(roleName string) *clusterRoleCacheEntry {
@@ -114,6 +134,9 @@ func (cache *clusterRoleCache) AddClusterRoleBinding(clusterRoleBinding *rbacv1.
 	for _, subject := range clusterRoleBinding.Subjects {
 		if len(cache.subjectsToCache) == 0 || strutil.InList(subject.Kind, cache.subjectsToCache) {
 			subjectMap[subject.Kind] = append(subjectMap[subject.Kind], subject)
+
+			cache.subjectNameToBindings[subject.Name] = append(cache.subjectNameToBindings[subject.Name], clusterRoleBinding.Name)
+			cache.bindingToSubjectNames[clusterRoleBinding.Name] = append(cache.bindingToSubjectNames[clusterRoleBinding.Name], subject.Name)
 		}
 	}
 
@@ -133,6 +156,16 @@ func (cache *clusterRoleCache) RemoveClusterRoleBinding(clusterRoleBindingName s
 		delete(cache.entryCache[role].subjects, clusterRoleBindingName)
 		delete(cache.bindingToRoleCache, clusterRoleBindingName)
 
+		rbacSubjectNamesForBinding := cache.bindingToSubjectNames[clusterRoleBindingName]
+		delete(cache.bindingToSubjectNames, clusterRoleBindingName)
+
+		// remove the binding from cache.subjectNameToBindings
+		for _, subjectName := range rbacSubjectNamesForBinding {
+			cache.subjectNameToBindings[subjectName] = utils.DeleteFromArray(cache.subjectNameToBindings[subjectName], clusterRoleBindingName)
+			if len(cache.subjectNameToBindings[subjectName]) == 0 {
+				delete(cache.subjectNameToBindings, subjectName)
+			}
+		}
 		return true
 	}
 
@@ -177,6 +210,44 @@ func (cache *clusterRoleCache) ClusterRoleNamesWithBindings() []string {
 	}
 
 	return rolesWithBindings
+}
+
+// ClusterRoleNamesForSubjectName retrieves list of ClusterRole names from the cache that have associated ClusterRoleBindings
+// with give rbacv1.Subject name.
+// When OIDCUsersConfigMapName is updated, this will be used to get ClusterRole for the oidc subject ID's username and groups.
+func (cache *clusterRoleCache) ClusterRoleNamesForSubjectName(rbacSubjectName string) []string {
+	var clusterRoleNames []string
+	bindings, ok := cache.subjectNameToBindings[rbacSubjectName]
+	if !ok {
+		return clusterRoleNames
+	}
+	for _, binding := range bindings {
+		if val := cache.ClusterRoleNameForBinding(binding); val != "" {
+			clusterRoleNames = append(clusterRoleNames, val)
+		}
+	}
+	return clusterRoleNames
+}
+
+// ClusterRoleBindingsForClusterRole retrieves list of ClusterRoleBindings for the give ClusterRoleName name
+// When ClusterRole is updated, the ClusterRoleBindings returned by this will be used in finding the oidc users affected
+// by the change in this ClusterRole.
+func (cache *clusterRoleCache) ClusterRoleBindingsForClusterRole(clusterRoleName string) []string {
+	var bindings []string
+	entry := cache.entryCache[clusterRoleName]
+	// if any entry has rules, that means the ClusterRole is in the cache, and if it has subjects it means it has
+	// an appropriate ClusterRoleBinding
+	if entry != nil && len(entry.subjects) > 0 && len(entry.rules) > 0 {
+		for bind := range entry.subjects {
+			bindings = append(bindings, bind)
+		}
+	}
+	return bindings
+}
+
+// SubjectNamesForBinding retrieves list of rbacv1.Subject name for the given ClusterRoleBinding.
+func (cache *clusterRoleCache) SubjectNamesForBinding(clusterRoleBindingName string) []string {
+	return cache.bindingToSubjectNames[clusterRoleBindingName]
 }
 
 type clusterRoleCacheEntry struct {

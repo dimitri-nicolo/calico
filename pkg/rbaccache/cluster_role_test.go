@@ -11,6 +11,8 @@ import (
 )
 
 var _ = Describe("ClusterRoleCache", func() {
+	var emptyStrArray []string
+
 	Context("AddClusterRole", func() {
 		It("Adds the ClusterRole to the cache", func() {
 			rule := rbacv1.PolicyRule{
@@ -109,6 +111,8 @@ var _ = Describe("ClusterRoleCache", func() {
 			Expect(roleCache.ClusterRoleSubjects("test-cluster-role", rbacv1.ServiceAccountKind)).Should(Equal([]rbacv1.Subject{subject1}))
 			Expect(roleCache.ClusterRoleSubjects("test-cluster-role", rbacv1.UserKind)).Should(Equal([]rbacv1.Subject{subject2}))
 			Expect(roleCache.ClusterRoleNameForBinding("test-cluster-role-binding")).Should(Equal("test-cluster-role"))
+			Expect(roleCache.SubjectNamesForBinding("test-cluster-role-binding")).Should(BeEquivalentTo([]string{"test-service-account", "test-user"}))
+			Expect(roleCache.ClusterRoleNamesForSubjectName("test-service-account")).Should(Equal([]string{"test-cluster-role"}))
 		})
 
 		It("Filters ClusterRoleBinding subjects not in the allowed list of subjects", func() {
@@ -170,6 +174,7 @@ var _ = Describe("ClusterRoleCache", func() {
 			Expect(roleCache.ClusterRoleNameForBinding("test-cluster-role-binding-2")).Should(Equal("test-cluster-role-2"))
 		})
 	})
+
 	Context("RemoveClusterRole", func() {
 		It("Removes the ClusterRole from the cache", func() {
 			rule := rbacv1.PolicyRule{
@@ -188,6 +193,7 @@ var _ = Describe("ClusterRoleCache", func() {
 
 			Expect(roleCache.RemoveClusterRole("test-cluster-role")).Should(BeTrue())
 			Expect(roleCache.ClusterRoleRules("test-cluster-role")).Should(Equal([]rbacv1.PolicyRule{}))
+			Expect(roleCache.ClusterRoleBindingsForClusterRole("test-cluster-role")).Should(Equal(emptyStrArray))
 		})
 
 		It("Returns false when the ClusterRole isn't in the cache", func() {
@@ -217,11 +223,14 @@ var _ = Describe("ClusterRoleCache", func() {
 				Subjects: []rbacv1.Subject{subject1, subject2},
 				RoleRef:  rbacv1.RoleRef{Name: "test-cluster-role"},
 			})).Should(BeTrue())
-
 			Expect(roleCache.RemoveClusterRoleBinding("test-cluster-role-binding")).Should(BeTrue())
 			Expect(roleCache.ClusterRoleSubjects("test-cluster-role", rbacv1.ServiceAccountKind)).Should(Equal([]rbacv1.Subject(nil)))
 			Expect(roleCache.ClusterRoleSubjects("test-cluster-role", rbacv1.UserKind)).Should(Equal([]rbacv1.Subject(nil)))
 			Expect(roleCache.ClusterRoleNameForBinding("test-cluster-role-binding")).Should(Equal(""))
+			Expect(roleCache.SubjectNamesForBinding("test-cluster-role-binding")).Should(BeEquivalentTo(emptyStrArray))
+			Expect(roleCache.ClusterRoleNamesForSubjectName("test-service-account")).Should(BeEquivalentTo(emptyStrArray))
+			Expect(roleCache.ClusterRoleNamesForSubjectName("test-user")).Should(BeEquivalentTo(emptyStrArray))
+
 		})
 
 		It("Returns false when the ClusterRoleBinding isn't in the cache", func() {

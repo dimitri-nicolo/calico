@@ -54,3 +54,18 @@ func (m *MockClusterRoleCache) ClusterRoleNamesWithBindings() []string {
 	args := m.Called()
 	return args[0].([]string)
 }
+
+func (m *MockClusterRoleCache) ClusterRoleNamesForSubjectName(userOrGroup string) []string {
+	args := m.Called(userOrGroup)
+	return args[0].([]string)
+}
+
+func (m *MockClusterRoleCache) ClusterRoleBindingsForClusterRole(clusterRoleName string) []string {
+	args := m.Called(clusterRoleName)
+	return args[0].([]string)
+}
+
+func (m *MockClusterRoleCache) SubjectNamesForBinding(clusterRoleBindingName string) []string {
+	args := m.Called(clusterRoleBindingName)
+	return args[0].([]string)
+}

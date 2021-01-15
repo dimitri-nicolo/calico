@@ -88,6 +88,8 @@ type Config struct {
 
 	OIDCAuthUsernamePrefix string `default:"" split_words:"true"`
 	OIDCAuthGroupPrefix    string `default:"" split_words:"true"`
+
+	ElasticLicenseType string `default:"" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct
