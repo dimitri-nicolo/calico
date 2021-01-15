@@ -73,44 +73,6 @@ func makeTuple(ipSrc, ipDst net.IP, portSrc, portDst uint16, proto uint8) collec
 	return collector.MakeTuple(src, dst, int(proto), int(portSrc), int(portDst))
 }
 
-func (r *InfoReader) normalConntrackInfo(key Key, val Value) collector.ConntrackInfo {
-	_, expired := r.timeouts.EntryExpired(r.cachedKTime, key.Proto(), val)
-
-	proto := key.Proto()
-	ipSrc := key.AddrA()
-	ipDst := key.AddrB()
-
-	portSrc := key.PortA()
-	portDst := key.PortB()
-
-	data := val.Data()
-
-	coutersSrc := collector.ConntrackCounters{
-		Packets: int(data.A2B.Packets),
-		Bytes:   int(data.A2B.Bytes),
-	}
-
-	coutersDst := collector.ConntrackCounters{
-		Packets: int(data.B2A.Packets),
-		Bytes:   int(data.B2A.Bytes),
-	}
-
-	if data.B2A.Opener {
-		// We assume that one of the legs has the opener. If none or both, we
-		// cannot tell the direction anyway.
-		ipSrc, ipDst = ipDst, ipSrc
-		portSrc, portDst = portDst, portSrc
-		coutersSrc, coutersDst = coutersDst, coutersSrc
-	}
-
-	return collector.ConntrackInfo{
-		Expired:       expired,
-		Tuple:         makeTuple(ipSrc, ipDst, portSrc, portDst, proto),
-		Counters:      coutersSrc,
-		ReplyCounters: coutersDst,
-	}
-}
-
 func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.ConntrackInfo {
 	_, expired := r.timeouts.EntryExpired(r.cachedKTime, key.Proto(), val)
 
