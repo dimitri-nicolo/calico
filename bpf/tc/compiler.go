@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,10 +42,11 @@ const (
 type EndpointType string
 
 const (
-	EpTypeWorkload  EndpointType = "workload"
-	EpTypeHost      EndpointType = "host"
-	EpTypeTunnel    EndpointType = "tunnel"
-	EpTypeWireguard EndpointType = "wireguard"
+	EpTypeWorkload     EndpointType = "workload"
+	EpTypeHost         EndpointType = "host"
+	EpTypeHostNoPolicy EndpointType = "data"
+	EpTypeTunnel       EndpointType = "tunnel"
+	EpTypeWireguard    EndpointType = "wireguard"
 )
 
 func SectionName(endpointType EndpointType, fromOrTo ToOrFromEp) string {
@@ -73,7 +74,7 @@ func ProgFilename(epType EndpointType, toOrFrom ToOrFromEp, epToHostDrop, fib, d
 		fibPart = "fib_"
 	}
 	dsrPart := ""
-	if dsr && ((epType == EpTypeWorkload && toOrFrom == FromEp) || (epType == EpTypeHost)) {
+	if dsr && ((epType == EpTypeWorkload && toOrFrom == FromEp) || (epType == EpTypeHost) || (epType == EpTypeHostNoPolicy)) {
 		dsrPart = "dsr_"
 	}
 	logLevel = strings.ToLower(logLevel)
@@ -86,6 +87,8 @@ func ProgFilename(epType EndpointType, toOrFrom ToOrFromEp, epToHostDrop, fib, d
 		epTypeShort = "wep"
 	case EpTypeHost:
 		epTypeShort = "hep"
+	case EpTypeHostNoPolicy:
+		epTypeShort = "data"
 	case EpTypeTunnel:
 		epTypeShort = "tnl"
 	case EpTypeWireguard:

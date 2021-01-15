@@ -36,7 +36,7 @@ for log_level in debug info no_log; do
       # The workload-to-host drop setting only applies to the from-workload hook.
       ep_types="wep"
     else
-      ep_types="wep hep tnl wg"
+      ep_types="wep hep data tnl wg"
     fi
     for fib in "" "fib_"; do
       for ep_type in $ep_types; do
@@ -49,7 +49,7 @@ for log_level in debug info no_log; do
         fi
         for from_or_to in $directions; do
           extra="dsr_"
-          if [ "${ep_type}" = "hep" ]; then
+          if [ "${ep_type}" = "hep" ] || [ "${ep_type}" = "data" ]; then
             emit_filename
           fi
           if [ "${from_or_to}" = "from" ] && [ "${ep_type}" = "wep" ]; then

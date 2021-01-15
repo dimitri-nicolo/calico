@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 				epTypes := []tc.EndpointType{
 					tc.EpTypeWorkload,
 					tc.EpTypeHost,
+					tc.EpTypeHostNoPolicy,
 					tc.EpTypeTunnel,
 					tc.EpTypeWireguard,
 				}
@@ -71,8 +72,9 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 
 						for _, dsr := range []bool{false, true} {
 							if dsr && !((epType == tc.EpTypeWorkload && toOrFrom == tc.FromEp) ||
-								(epType == tc.EpTypeHost)) {
-								log.Debug("DST only affects from WEP and HEP")
+								(epType == tc.EpTypeHost) ||
+								(epType == tc.EpTypeHostNoPolicy)) {
+								log.Debug("DSR only affects from WEP and HEP")
 								continue
 							}
 
