@@ -38,16 +38,15 @@ See [Enforce network policy using Istio tutorial]({{site.baseurl}}/security/tuto
 
 - [{{site.prodname}} is installed]({{site.baseurl}}/getting-started/kubernetes/)
 - Make sure that you've installed *kubectl*.
-- Kubernetes 1.15 or older (Istio 1.1.7 does not support Kubernetes 1.16+).
-See this [issue](https://github.com/projectcalico/calico/issues/2943){:target="_blank"} for details and workaround.
+- Make sure that the version of Istio you've installed supports your Kubernetes version.
 
 **Istio support**
 
-Following Istio versions have been verified to work with application layer policies:
-- Istio v1.6.14
-- Istio v1.7.5
+The following Istio versions have been verified to work with application layer policies:
+- [Istio 1.6.14](https://istio.io/v1.6/docs/setup/platform-setup/){:target="_blank"}
+- [Istio 1.7.5](https://istio.io/v1.7/docs/setup/platform-setup/){:target="_blank"}
 
-Istio v1.5.x is **not** supported.
+Istio v1.5.x and earlier is **not** supported.
 
 Although we expect future minor versions to work with the corresponding manifest below (for example, v1.6.14 or v1.7.5), manifest compatibility depends entirely on the upstream changes in the respective Istio release.
 
