@@ -93,7 +93,7 @@ $env:FELIX_LOGSEVERITYSYS = "none"
 $env:FELIX_FLOWLOGSFILEENABLED = "true"
 
 # If FELIX_FLOWLOGSFILEENABLED is true, then the below take effect.
-$env:FELIX_WINDOWSFLOWLOGSFILEDIRECTORY = "c:\var\log\calico\flowlogs"
-$env:FELIX_WINDOWSFLOWlOGSPOSITIONFILEPATH = "c:\var\log\calico\flowlogs"
+$env:FELIX_WINDOWSFLOWLOGSFILEDIRECTORY = "c:\TigeraCalico\flowlogs"
+$env:FELIX_WINDOWSFLOWlOGSPOSITIONFILEPATH = "c:\TigeraCalico\flowlogs\flows.log.pos"
 $env:FELIX_FLOWLOGSFLUSHINTERVAL = 30
 
