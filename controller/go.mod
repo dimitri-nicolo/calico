@@ -3,34 +3,34 @@ module github.com/tigera/intrusion-detection/controller
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210107095615-ad25a96b49b4
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210108183808-543c4e264cf1
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210108223937-a3b320c37bbb
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210114061825-f540cf0785a0
 
 	// k8s apiserver upgrade
-	k8s.io/api => k8s.io/api v0.18.12
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.12
+	k8s.io/api => k8s.io/api v0.19.6
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
 
-	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.18.12
-	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20201204234441-e565126b30e8
+	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.19.6
+	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20210112230657-1d8c923392f0
 
-	k8s.io/apiserver => k8s.io/apiserver v0.18.12
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.12
-	k8s.io/client-go => k8s.io/client-go v0.18.12
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.18.12
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.18.12
-	k8s.io/code-generator => k8s.io/code-generator v0.18.12
-	k8s.io/component-base => k8s.io/component-base v0.18.12
-	k8s.io/cri-api => k8s.io/cri-api v0.18.12
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.18.12
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.12
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.18.12
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.18.12
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.18.12
-	k8s.io/kubectl => k8s.io/kubectl v0.18.12
-	k8s.io/kubelet => k8s.io/kubelet v0.18.12
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.18.12
-	k8s.io/metrics => k8s.io/metrics v0.18.12
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.18.12
+	k8s.io/apiserver => k8s.io/apiserver v0.19.6
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.6
+	k8s.io/client-go => k8s.io/client-go v0.19.6
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.19.6
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.19.6
+	k8s.io/code-generator => k8s.io/code-generator v0.19.6
+	k8s.io/component-base => k8s.io/component-base v0.19.6
+	k8s.io/cri-api => k8s.io/cri-api v0.19.6
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.19.6
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.6
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.19.6
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.19.6
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.19.6
+	k8s.io/kubectl => k8s.io/kubectl v0.19.6
+	k8s.io/kubelet => k8s.io/kubelet v0.19.6
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.19.6
+	k8s.io/metrics => k8s.io/metrics v0.19.6
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.19.6
 )
 
 require (
@@ -44,15 +44,15 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/simplereach/timeutils v1.2.0 // indirect
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.6.0
 	github.com/tigera/apiserver v0.0.0-20200602183955-40e8ca4efae0
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
-	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	k8s.io/api v0.18.12
-	k8s.io/apimachinery v0.18.12
-	k8s.io/client-go v0.18.12
-	k8s.io/klog/v2 v2.0.0-20200127113903-12be8a0d907a
+	k8s.io/api v0.19.6
+	k8s.io/apimachinery v0.19.6
+	k8s.io/client-go v0.19.6
+	k8s.io/klog/v2 v2.4.0
 )
