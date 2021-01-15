@@ -181,11 +181,19 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		break;
 	case 4:
 		// IPIP
-		if (CALI_F_HEP) {
-			// TODO-HEPs IPIP whitelist.
-			CALI_DEBUG("IPIP: allow\n");
-			fwd_fib_set(&ctx.fwd, false);
-			goto allow;
+		if (CALI_F_FROM_HEP) {
+			enum cali_rt_flags rf = cali_rt_lookup_flags(ctx.state->ip_src);
+			if (cali_rt_flags_remote_host(rf)) {
+				CALI_DEBUG("IPIP packet from known Calico host, allow.");
+				goto allow;
+			} else {
+				CALI_DEBUG("IPIP packet from unknown source, drop.");
+				goto deny;
+			}
+		}
+		if (CALI_F_FROM_WEP) {
+			CALI_DEBUG("IPIP traffic from workload: drop");
+			goto deny;
 		}
 	default:
 		CALI_DEBUG("Unknown protocol (%d), unable to extract ports\n", (int)ctx.state->ip_proto);
