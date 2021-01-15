@@ -932,7 +932,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType
 // Given a slice of TierInfo - as present on workload and host endpoints - that actually consists
 // only of tier and policy NAMEs, build and return a slice of tier data that includes all of the
 // implied policy rules as well.
-func (m *bpfEndpointManager) extractTiers(tiers []*proto.TierInfo, direction PolDirection) (rTiers []polprog.Tier) {
+func (m *bpfEndpointManager) extractTiers(tiers []*proto.TierInfo, direction PolDirection, endTierDrop bool) (rTiers []polprog.Tier) {
 	dir := direction.RuleDir()
 	for _, tier := range tiers {
 		directionalPols := tier.IngressPolicies
@@ -983,7 +983,7 @@ func (m *bpfEndpointManager) extractTiers(tiers []*proto.TierInfo, direction Pol
 				polTier.Policies[i] = policy
 			}
 
-			if !stagedOnly {
+			if endTierDrop && !stagedOnly {
 				polTier.EndRuleID = m.endOfTierDropID(dir, tier.Name)
 				polTier.EndAction = polprog.TierEndDrop
 			} else {
@@ -1001,9 +1001,16 @@ func (m *bpfEndpointManager) extractRules(preDnatTiers []*proto.TierInfo, tiers 
 	var r polprog.Rules
 	dir := direction.RuleDir()
 
-	r.PreDnatTiers = m.extractTiers(preDnatTiers, direction)
+	const EndTierDrop = true
+	const NoEndTierDrop = false
 
-	r.Tiers = m.extractTiers(tiers, direction)
+	// When there is applicable pre-DNAT policy that does not explicitly Allow or Deny traffic,
+	// we continue onto to subsequent tiers and normal or AoF policy.
+	r.PreDnatTiers = m.extractTiers(preDnatTiers, direction, NoEndTierDrop)
+
+	// When there is applicable normal policy that does not explicitly Allow or Deny traffic,
+	// traffic is dropped.
+	r.Tiers = m.extractTiers(tiers, direction, EndTierDrop)
 
 	if count := len(profileNames); count > 0 {
 		r.Profiles = make([]polprog.Profile, count)
@@ -1034,7 +1041,9 @@ func (m *bpfEndpointManager) extractRules(preDnatTiers []*proto.TierInfo, tiers 
 
 	r.NoProfileMatchID = m.profileNoMatchID(dir)
 
-	r.ForwardTiers = m.extractTiers(forwardTiers, direction)
+	// When there is applicable normal policy that does not explicitly Allow or Deny traffic,
+	// traffic is dropped.
+	r.ForwardTiers = m.extractTiers(forwardTiers, direction, EndTierDrop)
 
 	return r
 }
