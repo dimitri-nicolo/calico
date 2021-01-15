@@ -1,0 +1,41 @@
+<source>
+  @type monitor_agent
+  bind 127.0.0.1
+  port 24220
+</source>
+
+<source>
+  @type tail
+  @id in_tail_flow_logs
+  path "#{ENV['FLOW_LOG_FILE']}"
+  read_from_head true
+  pos_file "#{ENV['POS_DIR']}/flows.log.pos"
+  tag flows
+  emit_unmatched_lines false
+  <parse>
+    @type json
+  </parse>
+</source>
+
+<source>
+  @type tail
+  path "#{ENV['EE_AUDIT_LOG_FILE']}"
+  read_from_head true
+  pos_file "#{ENV['POS_DIR']}/tsee-audit.log.pos"
+  tag audit.tsee
+  emit_unmatched_lines false
+  format json
+  time_key time
+  time_format %Y-%m-%dT%H:%M:%S.%N%z
+</source>
+
+<source>
+  @type tail
+  path "#{ENV['KUBE_AUDIT_LOG']}"
+  pos_file "#{ENV['KUBE_AUDIT_POS']}"
+  tag audit.kube
+  emit_unmatched_lines false
+  format json
+  time_key time
+  time_format %Y-%m-%dT%H:%M:%S.%N%z
+</source>
