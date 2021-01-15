@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -244,6 +244,27 @@ func TestNATPodPodXNode(t *testing.T) {
 	dumpCTMap(ctMap)
 
 	// Response leaving to original source
+
+	// Check that the pkt/byte counts are updated in the NAT case as that is
+	// using 2 entries - in contract to the normal case.
+	ct, err := conntrack.LoadMapMem(ctMap)
+	Expect(err).NotTo(HaveOccurred())
+
+	k := conntrack.NewKey(17, ipv4.DstIP, uint16(udp.DstPort), ipv4.SrcIP, uint16(udp.SrcPort))
+	v := ct[k]
+
+	Expect(v.Type()).To(Equal(conntrack.TypeNATForward))
+	k = v.ReverseNATKey()
+
+	v = ct[k]
+	e := v.Data()
+
+	// One leg is set on creation, the other leg is incremented from zeroes upon
+	// receiving the response.
+	Expect(e.A2B.Packets).To(Equal(uint32(1)))
+	Expect(e.A2B.Bytes).To(Equal(uint64(len(pktBytes))))
+	Expect(e.B2A.Packets).To(Equal(uint32(1)))
+	Expect(e.B2A.Bytes).To(Equal(uint64(len(respPkt))))
 
 	// clean up
 	resetCTMap(ctMap)
@@ -630,7 +651,7 @@ func TestNATNodePort(t *testing.T) {
 
 		payloadL := pktR.ApplicationLayer()
 		Expect(payloadL).NotTo(BeNil())
-		Expect(payload).To(Equal(payloadL.Payload()))
+		Expect(resposeDefault).To(Equal(payloadL.Payload()))
 
 		recvPkt = res.dataOut
 	})
@@ -833,7 +854,7 @@ func TestNATNodePortNoFWD(t *testing.T) {
 	bpfIfaceName = "NPlo"
 	defer func() { bpfIfaceName = "" }()
 
-	_, ipv4, l4, payload, pktBytes, err := testPacketUDPDefaultNP(node1ip)
+	_, ipv4, l4, _, pktBytes, err := testPacketUDPDefaultNP(node1ip)
 	Expect(err).NotTo(HaveOccurred())
 	udp := l4.(*layers.UDP)
 	mc := &bpf.MapContext{}
@@ -971,7 +992,7 @@ func TestNATNodePortNoFWD(t *testing.T) {
 
 		payloadL := pktR.ApplicationLayer()
 		Expect(payloadL).NotTo(BeNil())
-		Expect(payload).To(Equal(payloadL.Payload()))
+		Expect(resposeDefault).To(Equal(payloadL.Payload()))
 
 	})
 
@@ -1148,7 +1169,7 @@ func TestNATNodePortMultiNIC(t *testing.T) {
 
 		payloadL := pktR.ApplicationLayer()
 		Expect(payloadL).NotTo(BeNil())
-		Expect(payload).To(Equal(payloadL.Payload()))
+		Expect(resposeDefault).To(Equal(payloadL.Payload()))
 
 		recvPkt = res.dataOut
 	})

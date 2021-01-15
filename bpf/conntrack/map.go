@@ -34,7 +34,7 @@ import (
 //   uint16_t port_a, port_b; // HBO
 // };
 const KeySize = 16
-const ValueSize = 64
+const ValueSize = 88
 const MaxEntries = 512000
 
 type Key [KeySize]byte
@@ -93,49 +93,63 @@ func NewKey(proto uint8, ipA net.IP, portA uint16, ipB net.IP, portB uint16) Key
 //    // CALI_CT_TYPE_NORMAL and CALI_CT_TYPE_NAT_REV.
 //    struct {
 //      struct calico_ct_leg a_to_b; // 24
-//      struct calico_ct_leg b_to_a; // 36
+//      struct calico_ct_leg b_to_a; // 56
 //
 //      // CALI_CT_TYPE_NAT_REV only.
-//      __u32 orig_dst;                    // 48
-//      __u16 orig_port;                   // 52
-//      __u8 pad1[2];                      // 54
-//      __u32 tun_ip;                      // 56
-//      __u32 pad3;                        // 60
+//      __u32 orig_dst;                    // 88
+//      __u16 orig_port;                   // 92
+//      __u8 pad1[2];                      // 94
+//      __u32 tun_ip;                      // 96
+//      __u32 pad3;                        // 100
 //    };
 //
 //    // CALI_CT_TYPE_NAT_FWD; key for the CALI_CT_TYPE_NAT_REV entry.
 //    struct {
 //      struct calico_ct_key nat_rev_key;  // 24
-//      __u8 pad2[8];
+//      __u8 pad2[64];
 //    };
 //  };
 // };
+
+const (
+	voCreated  int = 0
+	voLastSeen     = 8
+	voType         = 16
+	voFlags        = 17
+	voRevKey       = 24
+	voLegAB        = 24
+	voLegBA        = 48
+	voTunIP        = 72
+	voOrigIP       = 76
+	voOrigPort     = 80
+)
+
 type Value [ValueSize]byte
 
 func (e Value) Created() int64 {
-	return int64(binary.LittleEndian.Uint64(e[:8]))
+	return int64(binary.LittleEndian.Uint64(e[voCreated : voCreated+8]))
 }
 
 func (e Value) LastSeen() int64 {
-	return int64(binary.LittleEndian.Uint64(e[8:16]))
+	return int64(binary.LittleEndian.Uint64(e[voLastSeen : voLastSeen+8]))
 }
 
 func (e Value) Type() uint8 {
-	return e[16]
+	return e[voType]
 }
 
 func (e Value) Flags() uint8 {
-	return e[17]
+	return e[voFlags]
 }
 
 // OrigIP returns the original destination IP, valid only if Type() is TypeNormal or TypeNATReverse
 func (e Value) OrigIP() net.IP {
-	return e[48:52]
+	return e[voOrigIP : voOrigIP+4]
 }
 
 // OrigPort returns the original destination port, valid only if Type() is TypeNormal or TypeNATReverse
 func (e Value) OrigPort() uint16 {
-	return binary.LittleEndian.Uint16(e[52:54])
+	return binary.LittleEndian.Uint16(e[voOrigPort : voOrigPort+2])
 }
 
 const (
@@ -155,7 +169,7 @@ func (e Value) ReverseNATKey() Key {
 	var ret Key
 
 	l := len(Key{})
-	copy(ret[:l], e[24:24+l])
+	copy(ret[:l], e[voRevKey:voRevKey+l])
 
 	return ret
 }
@@ -166,10 +180,10 @@ func (e Value) AsBytes() []byte {
 }
 
 func initValue(v *Value, created, lastSeen time.Duration, typ, flags uint8) {
-	binary.LittleEndian.PutUint64(v[:8], uint64(created))
-	binary.LittleEndian.PutUint64(v[8:16], uint64(lastSeen))
-	v[16] = typ
-	v[17] = flags
+	binary.LittleEndian.PutUint64(v[voCreated:voCreated+8], uint64(created))
+	binary.LittleEndian.PutUint64(v[voLastSeen:voLastSeen+8], uint64(lastSeen))
+	v[voType] = typ
+	v[voFlags] = flags
 }
 
 // NewValueNormal creates a new Value of type TypeNormal based on the given parameters
@@ -178,8 +192,8 @@ func NewValueNormal(created, lastSeen time.Duration, flags uint8, legA, legB Leg
 
 	initValue(&v, created, lastSeen, TypeNormal, flags)
 
-	copy(v[24:36], legA.AsBytes())
-	copy(v[36:48], legB.AsBytes())
+	copy(v[voLegAB:voLegAB+legSize], legA.AsBytes())
+	copy(v[voLegBA:voLegBA+legSize], legB.AsBytes())
 
 	return v
 }
@@ -191,7 +205,7 @@ func NewValueNATForward(created, lastSeen time.Duration, flags uint8, revKey Key
 
 	initValue(&v, created, lastSeen, TypeNATForward, flags)
 
-	copy(v[24:24+KeySize], revKey.AsBytes())
+	copy(v[voRevKey:voRevKey+KeySize], revKey.AsBytes())
 
 	return v
 }
@@ -204,18 +218,20 @@ func NewValueNATReverse(created, lastSeen time.Duration, flags uint8, legA, legB
 
 	initValue(&v, created, lastSeen, TypeNATReverse, flags)
 
-	copy(v[24:36], legA.AsBytes())
-	copy(v[36:48], legB.AsBytes())
+	copy(v[voLegAB:voLegAB+legSize], legA.AsBytes())
+	copy(v[voLegBA:voLegBA+legSize], legB.AsBytes())
 
-	copy(v[48:52], origIP.To4())
-	binary.LittleEndian.PutUint16(v[52:54], origPort)
+	copy(v[voOrigIP:voOrigIP+4], origIP.To4())
+	binary.LittleEndian.PutUint16(v[voOrigPort:voOrigPort+2], origPort)
 
-	copy(v[56:60], tunnelIP.To4())
+	copy(v[voTunIP:voTunIP+4], tunnelIP.To4())
 
 	return v
 }
 
 type Leg struct {
+	Bytes       uint64
+	Packets     uint32
 	Seqno       uint32
 	SynSeen     bool
 	AckSeen     bool
@@ -226,6 +242,8 @@ type Leg struct {
 	Ifindex     uint32
 }
 
+const legSize int = 24
+
 func setBit(bits *uint32, bit uint8, val bool) {
 	if val {
 		*bits |= (1 << bit)
@@ -234,7 +252,7 @@ func setBit(bits *uint32, bit uint8, val bool) {
 
 // AsBytes returns Leg serialized as a slice of bytes
 func (leg Leg) AsBytes() []byte {
-	bytes := make([]byte, 12)
+	bytes := make([]byte, 24)
 
 	bits := uint32(0)
 
@@ -245,9 +263,11 @@ func (leg Leg) AsBytes() []byte {
 	setBit(&bits, 4, leg.Whitelisted)
 	setBit(&bits, 5, leg.Opener)
 
-	binary.LittleEndian.PutUint32(bytes[0:4], leg.Seqno)
-	binary.LittleEndian.PutUint32(bytes[4:8], bits)
-	binary.LittleEndian.PutUint32(bytes[8:12], leg.Ifindex)
+	binary.LittleEndian.PutUint64(bytes[0:8], leg.Bytes)
+	binary.LittleEndian.PutUint32(bytes[8:12], leg.Packets)
+	binary.LittleEndian.PutUint32(bytes[12:16], leg.Seqno)
+	binary.LittleEndian.PutUint32(bytes[16:20], bits)
+	binary.LittleEndian.PutUint32(bytes[20:24], leg.Ifindex)
 
 	return bytes
 }
@@ -280,16 +300,18 @@ func bitSet(bits uint32, bit uint8) bool {
 }
 
 func readConntrackLeg(b []byte) Leg {
-	bits := binary.LittleEndian.Uint32(b[4:8])
+	bits := binary.LittleEndian.Uint32(b[16:20])
 	return Leg{
-		Seqno:       binary.BigEndian.Uint32(b[0:4]),
+		Bytes:       binary.LittleEndian.Uint64(b[0:8]),
+		Packets:     binary.LittleEndian.Uint32(b[8:12]),
+		Seqno:       binary.BigEndian.Uint32(b[12:16]),
 		SynSeen:     bitSet(bits, 0),
 		AckSeen:     bitSet(bits, 1),
 		FinSeen:     bitSet(bits, 2),
 		RstSeen:     bitSet(bits, 3),
 		Whitelisted: bitSet(bits, 4),
 		Opener:      bitSet(bits, 5),
-		Ifindex:     binary.LittleEndian.Uint32(b[8:12]),
+		Ifindex:     binary.LittleEndian.Uint32(b[20:24]),
 	}
 }
 
@@ -318,13 +340,13 @@ func (data EntryData) FINsSeenDSR() bool {
 }
 
 func (e Value) Data() EntryData {
-	ip := e[48:52]
-	tip := e[56:60]
+	ip := e[voOrigIP : voOrigIP+4]
+	tip := e[voTunIP : voTunIP+4]
 	return EntryData{
-		A2B:      readConntrackLeg(e[24:36]),
-		B2A:      readConntrackLeg(e[36:48]),
+		A2B:      readConntrackLeg(e[voLegAB : voLegAB+legSize]),
+		B2A:      readConntrackLeg(e[voLegBA : voLegBA+legSize]),
 		OrigDst:  ip,
-		OrigPort: binary.LittleEndian.Uint16(e[52:54]),
+		OrigPort: binary.LittleEndian.Uint16(e[voOrigPort : voOrigPort+2]),
 		TunIP:    tip,
 	}
 }
@@ -372,7 +394,7 @@ var MapParams = bpf.MapParameters{
 	MaxEntries: MaxEntries,
 	Name:       "cali_v4_ct",
 	Flags:      unix.BPF_F_NO_PREALLOC,
-	Version:    2,
+	Version:    3,
 }
 
 func Map(mc *bpf.MapContext) bpf.Map {

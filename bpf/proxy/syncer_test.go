@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package proxy_test
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -78,8 +79,8 @@ var _ = Describe("BPF Syncer", func() {
 	makestep := func(step func()) func() {
 		return func() {
 			defer func() {
-				log("svcs = %+v\n", svcs)
-				log("eps = %+v\n", eps)
+				log("svcs = %v\n", svcs)
+				log("eps = %v\n", eps)
 			}()
 
 			step()
@@ -956,6 +957,16 @@ func (m *mockNATMap) Update(k, v []byte) error {
 	return nil
 }
 
+func (m *mockNATMap) String() string {
+	out := "{"
+	for k, v := range m.m {
+		out += fmt.Sprintf("\n\tkey: %v : value: %v", k, v)
+	}
+	out += "\n}"
+
+	return out
+}
+
 func (m *mockNATMap) Get(k []byte) ([]byte, error) {
 	panic("not implemented")
 }
@@ -1060,6 +1071,16 @@ func (m *mockNATBackendMap) Delete(k []byte) error {
 	delete(m.m, key)
 
 	return nil
+}
+
+func (m *mockNATBackendMap) String() string {
+	out := "{"
+	for k, v := range m.m {
+		out += fmt.Sprintf("\n\tkey: %v : value: %v", k, v)
+	}
+	out += "\n}"
+
+	return out
 }
 
 type mockAffinityMap struct {
