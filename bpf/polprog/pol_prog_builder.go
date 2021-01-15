@@ -158,7 +158,9 @@ const (
 func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	p.b = NewBlock()
 	p.writeProgramHeader()
-	p.writeRules(rules)
+	p.writeTiers(rules.PreDnatTiers)
+	p.writeTiers(rules.Tiers)
+	p.writeProfiles(rules)
 	p.writeProgramFooter()
 	return p.b.Assemble()
 }
@@ -302,8 +304,8 @@ func passAction(action string) bool {
 	return action == "pass" || action == "next-tier"
 }
 
-func (p *Builder) writeRules(rules Rules) {
-	for _, tier := range rules.Tiers {
+func (p *Builder) writeTiers(tiers []Tier) {
+	for _, tier := range tiers {
 		endOfTierLabel := fmt.Sprint("end_of_tier_", p.tierID)
 
 		log.Debugf("Start of tier %d %q", p.tierID, tier.Name)
@@ -332,7 +334,9 @@ func (p *Builder) writeRules(rules Rules) {
 		p.b.LabelNextInsn(endOfTierLabel)
 		p.tierID++
 	}
+}
 
+func (p *Builder) writeProfiles(rules Rules) {
 	endLabel := "end_of_profiles"
 
 	log.Debugf("Start of profiles")
