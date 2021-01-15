@@ -8,7 +8,7 @@ canonical_url: '/getting-started/windows-calico/limitations'
 
 | Feature                        |                                                              |
 | ------------------------------ | ------------------------------------------------------------ |
-| Kubernetes platforms           | **Supported:** EKS, AWS, GCE, and Azure. <br />**Note**: EKS, [non-production only](#service-clusterips-incompatible-with-selectors-pod-ips-in-network-policy) |
+| Kubernetes platforms           | **Supported:** EKS, AWS, GCE, and Azure. <br />**Note**: EKS, [non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy) |
 | Install method                 | **Supported**: Only manifest with manual upgrade             |
 | Networking                     | **Supported**:<br />- Calico Enterprise VXLAN without cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise BGP with [limitations](#bgp-networking-limitations)<br />- IPv4 |
 |                                | **Not supported**: IPv6, dual-ToR, service advertisement, multiple networks to pods |
