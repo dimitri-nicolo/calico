@@ -1202,7 +1202,10 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.Host
 
 	// Create or update HEP programming for current host interfaces.
 	for ifaceName, ep := range hostIfaceToEpMap {
-		m.updateHEPProgramsForIface(ifaceName, ep)
+		err := m.updateHEPProgramsForIface(ifaceName, ep)
+		if err != nil {
+			log.WithError(err).Error("Failed to update HEP programs")
+		}
 	}
 
 	// Record new state.
