@@ -157,7 +157,7 @@ func (pr *prometheusBGPReporter) recordMetrics(stop <-chan struct{}) {
 						if err != nil {
 							log.WithFields(fields).Errorf("Failed to compute metrics: %v", err)
 						} else {
-							log.WithFields(fields).Infoln("Trigger compute metrics")
+							log.WithFields(fields).Debugln("Trigger compute metrics")
 						}
 					}
 
