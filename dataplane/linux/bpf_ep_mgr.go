@@ -706,7 +706,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 
 	// If tiers or profileIDs is nil, this will return an empty set of rules but updatePolicyProgram appends a
 	// drop rule, giving us default drop behaviour in that case.
-	rules := m.extractRules(tiers, profileIDs, polDirection)
+	rules := m.extractRules(nil, tiers, profileIDs, nil, polDirection)
 
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
 	if jumpMapFD != 0 {
@@ -885,6 +885,13 @@ const (
 	PolDirnEgress
 )
 
+func (polDirection PolDirection) RuleDir() rules.RuleDir {
+	if polDirection == PolDirnIngress {
+		return rules.RuleDirIngress
+	}
+	return rules.RuleDirEgress
+}
+
 func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType, policyDirection PolDirection, ifaceName string) tc.AttachPoint {
 	var ap tc.AttachPoint
 
@@ -922,12 +929,11 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType
 	return ap
 }
 
-func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames []string, direction PolDirection) polprog.Rules {
-	var r polprog.Rules
-	dir := rules.RuleDirIngress
-	if direction == PolDirnEgress {
-		dir = rules.RuleDirEgress
-	}
+// Given a slice of TierInfo - as present on workload and host endpoints - that actually consists
+// only of tier and policy NAMEs, build and return a slice of tier data that includes all of the
+// implied policy rules as well.
+func (m *bpfEndpointManager) extractTiers(tiers []*proto.TierInfo, direction PolDirection) (rTiers []polprog.Tier) {
+	dir := direction.RuleDir()
 	for _, tier := range tiers {
 		directionalPols := tier.IngressPolicies
 		if direction == PolDirnEgress {
@@ -985,9 +991,19 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 				polTier.EndAction = polprog.TierEndPass
 			}
 
-			r.Tiers = append(r.Tiers, polTier)
+			rTiers = append(rTiers, polTier)
 		}
 	}
+	return
+}
+
+func (m *bpfEndpointManager) extractRules(preDnatTiers []*proto.TierInfo, tiers []*proto.TierInfo, profileNames []string, forwardTiers []*proto.TierInfo, direction PolDirection) polprog.Rules {
+	var r polprog.Rules
+	dir := direction.RuleDir()
+
+	r.PreDnatTiers = m.extractTiers(preDnatTiers, direction)
+
+	r.Tiers = m.extractTiers(tiers, direction)
 
 	if count := len(profileNames); count > 0 {
 		r.Profiles = make([]polprog.Profile, count)
@@ -1017,6 +1033,8 @@ func (m *bpfEndpointManager) extractRules(tiers []*proto.TierInfo, profileNames 
 	}
 
 	r.NoProfileMatchID = m.profileNoMatchID(dir)
+
+	r.ForwardTiers = m.extractTiers(forwardTiers, direction)
 
 	return r
 }
@@ -1220,6 +1238,8 @@ func (m *bpfEndpointManager) updateHEPProgramsForIface(ifaceName string, ep *pro
 func (m *bpfEndpointManager) updateHEPPolicyProgram(ifaceName string, ep *proto.HostEndpoint, polDirection PolDirection) error {
 	var err error
 
+	rules := m.extractRules(ep.PreDnatTiers, ep.Tiers, ep.ProfileIds, ep.ForwardTiers, polDirection)
+
 	ap := m.calculateTCAttachPoint(tc.EpTypeHost, polDirection, ifaceName)
 
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
@@ -1231,7 +1251,5 @@ func (m *bpfEndpointManager) updateHEPPolicyProgram(ifaceName string, ep *proto.
 		m.setJumpMapFD(ifaceName, polDirection, jumpMapFD)
 	}
 
-	update
-
-	return nil
+	return m.updatePolicyProgram(jumpMapFD, rules)
 }
