@@ -424,9 +424,33 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		goto skip_policy;
 	}
 
-	// TODO-HEP set pre-DNAT fields to connect-time lb's recorded values...
+	// For the case where the packet was sent from a socket on this host, get the
+	// sending socket's cookie, so we can reverse a DNAT that the CTLB may have done.
+	// This allows us to give the policy program the pre-DNAT destination as well as
+	// the post-DNAT destination in all cases.
+	__u64 cookie = bpf_get_socket_cookie(ctx.skb);
+	if (cookie) {
+		CALI_DEBUG("Socket cookie: %x\n", cookie);
+		struct ct_nats_key ct_nkey = {
+			.cookie	= cookie,
+			.proto = ctx.state->ip_proto,
+			.ip	= ctx.state->ip_dst,
+			.port	= host_to_ctx_port(ctx.state->dport),
+		};
+		struct sendrecv4_val *revnat = cali_v4_ct_nats_lookup_elem(&ct_nkey);
+		if (revnat) {
+			CALI_DEBUG("Got cali_v4_ct_nats entry; flow was NATted by CTLB.\n");
+			ctx.state->pre_nat_ip_dst = revnat->ip;
+			ctx.state->pre_nat_dport = ctx_port_to_host(revnat->port);
+			goto skip_pre_dnat_default;
+		}
+	}
+	// If we didn't find a CTLB NAT entry then use the packet's own IP/port for the
+	// pre-DNAT values.
 	ctx.state->pre_nat_ip_dst = ctx.state->ip_dst;
 	ctx.state->pre_nat_dport = ctx.state->dport;
+
+skip_pre_dnat_default:
 	if (rt_addr_is_local_host(ctx.state->post_nat_ip_dst)) {
 		CALI_DEBUG("Post-NAT dest IP is local host.\n");
 		ctx.state->flags |= CALI_ST_DEST_IS_HOST;
