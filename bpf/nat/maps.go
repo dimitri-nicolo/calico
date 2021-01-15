@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -521,6 +521,7 @@ func AffinityMapMemIter(m AffinityMapMem) bpf.IterCallback {
 // };
 
 const sendRecvMsgKeySize = 16
+const ctNATsMsgKeySize = 17
 
 // SendRecvMsgKey is the key for SendRecvMsgMap
 type SendRecvMsgKey [sendRecvMsgKeySize]byte
@@ -576,10 +577,23 @@ var SendRecvMsgMapParameters = bpf.MapParameters{
 	Name:       "cali_v4_srmsg",
 }
 
+var CTNATsMapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_ct_nats",
+	Type:       "lru_hash",
+	KeySize:    ctNATsMsgKeySize,
+	ValueSize:  sendRecvMsgValueSize,
+	MaxEntries: 10000,
+	Name:       "cali_v4_ct_nats",
+}
+
 // SendRecvMsgMap tracks reverse translations for sendmsg/recvmsg of
 // unconnected UDP
 func SendRecvMsgMap(mc *bpf.MapContext) bpf.Map {
 	return mc.NewPinnedMap(SendRecvMsgMapParameters)
+}
+
+func AllNATsMsgMap(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(CTNATsMapParameters)
 }
 
 // SendRecvMsgMapMem represents affinity map in memory

@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,6 +33,18 @@ CALI_MAP_V1(cali_v4_srmsg,
 		BPF_MAP_TYPE_LRU_HASH,
 		struct sendrecv4_key, struct sendrecv4_val,
 		510000, 0, MAP_PIN_GLOBAL)
+
+struct ct_nats_key {
+	__u64 cookie;
+	__u32 ip;
+	__u16 port;
+	__u8 proto;
+};
+
+CALI_MAP_V1(cali_v4_ct_nats,
+		BPF_MAP_TYPE_LRU_HASH,
+		struct ct_nats_key, struct sendrecv4_val,
+		10000, 0, MAP_PIN_GLOBAL)
 
 static CALI_BPF_INLINE __u16 ctx_port_to_host(__u32 port)
 {
