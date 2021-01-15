@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -202,6 +202,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
+	bpfEndpointManager     *bpfEndpointManager
 	nlHandle               netlinkHandle
 }
 
@@ -221,6 +222,7 @@ func newEndpointManager(
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 	bpfEnabled bool,
+	bpfEndpointManager *bpfEndpointManager,
 	callbacks *callbacks,
 ) *endpointManager {
 	nlHandle, _ := netlink.NewHandle()
@@ -239,6 +241,7 @@ func newEndpointManager(
 		writeProcSys,
 		os.Stat,
 		bpfEnabled,
+		bpfEndpointManager,
 		callbacks,
 		nlHandle,
 	)
@@ -258,6 +261,7 @@ func newEndpointManagerWithShims(
 	procSysWriter procSysWriter,
 	osStat func(name string) (os.FileInfo, error),
 	bpfEnabled bool,
+	bpfEndpointManager *bpfEndpointManager,
 	callbacks *callbacks,
 	nlHandle netlinkHandle,
 ) *endpointManager {
@@ -269,6 +273,7 @@ func newEndpointManagerWithShims(
 		wlIfacesRegexp:         wlIfacesRegexp,
 		kubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
 		bpfEnabled:             bpfEnabled,
+		bpfEndpointManager:     bpfEndpointManager,
 
 		rawTable:     rawTable,
 		mangleTable:  mangleTable,
@@ -912,6 +917,7 @@ func (m *endpointManager) resolveHostEndpoints() {
 		newHostEpIDToIfaceNames[bestHostEpId] = append(
 			newHostEpIDToIfaceNames[bestHostEpId], allInterfaces)
 	}
+
 	if !m.bpfEnabled {
 		// Set up programming for the host endpoints that are now to be used.
 		newHostIfaceFiltChains := map[string][]*iptables.Chain{}
@@ -1013,7 +1019,18 @@ func (m *endpointManager) resolveHostEndpoints() {
 	m.activeIfaceNameToHostEpID = newIfaceNameToHostEpID
 	m.activeHostEpIDToIfaceNames = newHostEpIDToIfaceNames
 
+	// Code after this point is for dispatch chains and IPVS endpoint marking, which aren't
+	// needed in BPF mode.
 	if m.bpfEnabled {
+		// Construct map of interface names to host endpoints, to pass to the BPF endpoint
+		// manager.
+		hostIfaceToEpMap := map[string]*proto.HostEndpoint{}
+		for ifaceName, id := range newIfaceNameToHostEpID {
+			hostIfaceToEpMap[ifaceName] = m.rawHostEndpoints[id]
+		}
+		if m.bpfEndpointManager != nil {
+			m.bpfEndpointManager.OnHEPUpdate(hostIfaceToEpMap)
+		}
 		return
 	}
 

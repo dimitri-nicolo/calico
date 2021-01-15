@@ -645,8 +645,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var (
-		bpfEvnt        events.Events
-		bpfEventPoller *bpfEventPoller
+		bpfEvnt            events.Events
+		bpfEventPoller     *bpfEventPoller
+		bpfEndpointManager *bpfEndpointManager
 
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
@@ -753,7 +754,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(failsafeMgr)
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
-		dp.RegisterManager(newBPFEndpointManager(
+		bpfEndpointManager = newBPFEndpointManager(
 			config.BPFLogLevel,
 			config.Hostname,
 			fibLookupEnabled,
@@ -769,7 +770,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			filterTableV4,
 			dp.reportHealth,
 			config.LookupsCache,
-		))
+		)
+		dp.RegisterManager(bpfEndpointManager)
 
 		// Pre-create the NAT maps so that later operations can assume access.
 		frontendMap := nat.FrontendMap(bpfMapContext)
@@ -895,6 +897,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 		config.BPFEnabled,
+		bpfEndpointManager,
 		callbacks)
 	dp.RegisterManager(epManager)
 	dp.endpointsSourceV4 = epManager
@@ -1003,6 +1006,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.RulesConfig.WorkloadIfacePrefixes,
 			dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 			config.BPFEnabled,
+			nil,
 			callbacks))
 		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6))
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))

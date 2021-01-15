@@ -135,6 +135,9 @@ type bpfEndpointManager struct {
 	onStillAlive func()
 
 	lookupsCache *calc.LookupsCache
+
+	// HEP processing.
+	hostIfaceToEpMap map[string]*proto.HostEndpoint
 }
 
 type bpfAllowChainRenderer interface {
@@ -188,8 +191,9 @@ func newBPFEndpointManager(
 			log.Debug("Jump map cleanup triggered.")
 			tc.CleanUpJumpMaps()
 		}),
-		onStillAlive: livenessCallback,
-		lookupsCache: lookupsCache,
+		onStillAlive:     livenessCallback,
+		lookupsCache:     lookupsCache,
+		hostIfaceToEpMap: map[string]*proto.HostEndpoint{},
 	}
 }
 
@@ -1159,4 +1163,75 @@ func (m *bpfEndpointManager) removeProfileToWEPMappings(profileIds []string, wlI
 			delete(m.profilesToWorkloads, profID)
 		}
 	}
+}
+
+func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.HostEndpoint) {
+	// Clean up any old host interfaces.
+	for ifaceName := range m.hostIfaceToEpMap {
+		if _, current := hostIfaceToEpMap[ifaceName]; !current {
+			m.removeHEPProgramsFromIface(ifaceName)
+		}
+	}
+
+	// Create or update HEP programming for current host interfaces.
+	for ifaceName, ep := range hostIfaceToEpMap {
+		m.updateHEPProgramsForIface(ifaceName, ep)
+	}
+
+	// Record new state.
+	m.hostIfaceToEpMap = hostIfaceToEpMap
+}
+
+func (m *bpfEndpointManager) removeHEPProgramsFromIface(ifaceName string) {
+	log.WithField("ifaceName", ifaceName).Info("Removed BPF policy programs for HEP")
+}
+
+func (m *bpfEndpointManager) updateHEPProgramsForIface(ifaceName string, ep *proto.HostEndpoint) error {
+	startTime := time.Now()
+
+	var ingressErr, egressErr error
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		ingressErr = m.updateHEPPolicyProgram(ifaceName, ep, PolDirnIngress)
+	}()
+	go func() {
+		defer wg.Done()
+		egressErr = m.updateHEPPolicyProgram(ifaceName, ep, PolDirnEgress)
+	}()
+	wg.Wait()
+
+	if ingressErr != nil {
+		return ingressErr
+	}
+	if egressErr != nil {
+		return egressErr
+	}
+
+	log.WithFields(log.Fields{
+		"timeTaken": time.Since(startTime),
+		"ifaceName": ifaceName,
+	}).Info("Finished updating BPF policy programs for HEP")
+	return nil
+}
+
+func (m *bpfEndpointManager) updateHEPPolicyProgram(ifaceName string, ep *proto.HostEndpoint, polDirection PolDirection) error {
+	var err error
+
+	ap := m.calculateTCAttachPoint(tc.EpTypeHost, polDirection, ifaceName)
+
+	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
+	if jumpMapFD == 0 {
+		jumpMapFD, err = FindJumpMap(ap)
+		if err != nil {
+			return fmt.Errorf("failed to look up jump map: %w", err)
+		}
+		m.setJumpMapFD(ifaceName, polDirection, jumpMapFD)
+	}
+
+	update
+
+	return nil
 }

@@ -136,9 +136,11 @@ type Tier struct {
 }
 
 type Rules struct {
+	PreDnatTiers     []Tier
 	Tiers            []Tier
 	Profiles         []Profile
 	NoProfileMatchID RuleMatchID
+	ForwardTiers     []Tier
 }
 
 type RuleMatchID = uint64
