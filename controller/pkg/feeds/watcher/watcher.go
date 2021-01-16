@@ -137,6 +137,7 @@ func NewWatcher(
 
 func (s *watcher) Run(ctx context.Context) {
 	s.once.Do(func() {
+		log.Info("Start Feeds controller")
 
 		s.ctx, s.cancel = context.WithCancel(ctx)
 

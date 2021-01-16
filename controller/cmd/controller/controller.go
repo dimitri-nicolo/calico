@@ -16,13 +16,18 @@ import (
 	"strconv"
 	"syscall"
 
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	log "github.com/sirupsen/logrus"
 	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
+	"github.com/tigera/licensing/monitor"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	alertElastic "github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
 	alertWatcher "github.com/tigera/intrusion-detection/controller/pkg/alert/watcher"
 	anomalyWatcher "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
@@ -44,6 +49,11 @@ const (
 	DefaultConfigMapNamespace = "tigera-intrusion-detection"
 	DefaultSecretsNamespace   = "tigera-intrusion-detection"
 )
+
+// backendClientAccessor is an interface to access the backend client from the main v2 client.
+type backendClientAccessor interface {
+	Backend() bapi.Client
+}
 
 func main() {
 	var ver, debug bool
@@ -196,6 +206,37 @@ func main() {
 	e.Run(ctx)
 	defer e.Close()
 
+	clientCalico, err := client.NewFromEnv()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to build calico client")
+	}
+
+	licenseMonitor := monitor.New(clientCalico.(backendClientAccessor).Backend())
+	err = licenseMonitor.RefreshLicense(ctx)
+	if err != nil {
+		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
+	}
+
+	licenseChangedChan := make(chan struct{})
+
+	// Define some of the callbacks for the license monitor. Any changes just send a signal back on the license changed channel.
+	licenseMonitor.SetFeaturesChangedCallback(func() {
+		licenseChangedChan <- struct{}{}
+	})
+
+	licenseMonitor.SetStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
+		licenseChangedChan <- struct{}{}
+	})
+
+	// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
+	// status changes.
+	go func() {
+		err := licenseMonitor.MonitorForever(context.Background())
+		if err != nil {
+			log.WithError(err).Warn("Error while continuously monitoring the license.")
+		}
+	}()
+
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
 	eip := syncElastic.NewIPSetController(e)
 	edn := syncElastic.NewDomainNameSetController(e)
@@ -212,34 +253,20 @@ func main() {
 		edn,
 		&http.Client{},
 		e, e, sIP, sDN, e)
-	if os.Getenv("DISABLE_FEEDS") != "yes" {
-		s.Run(ctx)
-		defer s.Close()
-	}
-
 	a := anomalyWatcher.NewWatcher(e, e, e)
-	if os.Getenv("DISABLE_ANOMALY") != "yes" {
-		a.Run(ctx)
-		defer a.Close()
-	}
-
 	a2 := alertWatcher.NewWatcher(
 		calicoClient.ProjectcalicoV3().GlobalAlerts(),
 		ean,
 		e,
 		&http.Client{},
 	)
-	if os.Getenv("DISABLE_ALERTS") != "yes" {
-		a2.Run(ctx)
-		defer a2.Close()
-	}
+	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
+	var enableForwarding = (err == nil && valueEnableForwarding)
+	var enableFeeds = (os.Getenv("DISABLE_FEEDS") != "yes")
+	var enableAnomaly = (os.Getenv("DISABLE_ANOMALY") != "yes")
+	var enableAlerts = (os.Getenv("DISABLE_ALERTS") != "yes")
 
-	enableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
-	if err == nil && enableForwarding {
-		f := forwarder.NewEventForwarder("eventforwarder-1", e)
-		f.Run(ctx)
-		defer f.Close()
-	}
+	f := forwarder.NewEventForwarder("eventforwarder-1", e)
 
 	hs := health.NewServer(health.Pingers{s, a, a2}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
 	go func() {
@@ -248,13 +275,68 @@ func main() {
 			log.WithError(err).Error("failed to start healthz server")
 		}
 	}()
-
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	<-sig
-	log.Info("got signal; shutting down")
-	err = hs.Close()
-	if err != nil {
-		log.WithError(err).Error("failed to stop healthz server")
+
+	var runningControllers bool
+	for {
+		hasLicense := licenseMonitor.GetFeatureStatus(features.ThreatDefense)
+		if hasLicense && !runningControllers {
+			log.Info("Starting watchers and controllers for intrusion detection.")
+			if enableFeeds {
+				s.Run(ctx)
+				defer s.Close()
+			}
+
+			if enableAnomaly {
+				a.Run(ctx)
+				defer a.Close()
+			}
+
+			if enableAlerts {
+				a2.Run(ctx)
+				defer a2.Close()
+			}
+
+			if enableForwarding {
+				f.Run(ctx)
+				defer f.Close()
+			}
+
+			runningControllers = true
+		} else if !hasLicense && runningControllers {
+			log.Info("License is no longer active/feature is disabled.")
+
+			if enableFeeds {
+				s.Close()
+			}
+
+			if enableAnomaly {
+				a.Close()
+			}
+
+			if enableAlerts {
+				a2.Close()
+			}
+
+			if enableForwarding {
+				f.Close()
+			}
+
+			runningControllers = false
+		}
+
+		select {
+		case <-sig:
+			log.Info("got signal; shutting down")
+			err = hs.Close()
+			if err != nil {
+				log.WithError(err).Error("failed to stop healthz server")
+			}
+			return
+		case <-licenseChangedChan:
+			log.Info("License status has changed")
+			continue
+		}
 	}
 }

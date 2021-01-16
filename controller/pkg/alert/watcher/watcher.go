@@ -107,7 +107,7 @@ func NewWatcher(
 
 func (s *watcher) Run(ctx context.Context) {
 	s.once.Do(func() {
-
+		log.Info("Starting Alert Watcher")
 		s.ctx, s.cancel = context.WithCancel(ctx)
 
 		go func() {

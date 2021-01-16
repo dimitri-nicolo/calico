@@ -331,6 +331,8 @@ APISERVER_REPO=github.com/tigera/apiserver
 APIMACHINERY_REPO_ORIG=k8s.io/apimachinery
 APIMACHINERY_REPO=github.com/tigera/apimachinery-private
 APIMACHINERY_BRANCH=$(PIN_BRANCH)
+LICENSING_BRANCH=$(PIN_BRANCH)
+LICENSING_REPO=github.com/tigera/licensing
 
 replace-apiserver-pin:
 	$(call update_replace_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
@@ -338,4 +340,7 @@ replace-apiserver-pin:
 replace-apimachinery-pin:
 	$(call update_replace_pin,$(APIMACHINERY_REPO_ORIG),$(APIMACHINERY_REPO),$(APIMACHINERY_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-apimachinery-pin replace-apiserver-pin
+replace-licensing-pin:
+	$(call update_replace_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-apimachinery-pin replace-apiserver-pin replace-licensing-pin

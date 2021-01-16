@@ -6,6 +6,7 @@ import (
 	"context"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/filters"
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/statser"
@@ -49,6 +50,7 @@ func NewWatcher(events db.Events, auditLog db.AuditLog, xPack elastic.XPackAnoma
 
 func (w *watcher) Run(ctx context.Context) {
 	w.once.Do(func() {
+		log.Info("Starting Anomaly Watcher")
 		ctx, w.cancel = context.WithCancel(ctx)
 
 		go func() {

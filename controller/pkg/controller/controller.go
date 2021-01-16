@@ -140,7 +140,7 @@ func (c *controller) Run(ctx context.Context) {
 
 func (c *controller) run(ctx context.Context) {
 
-	log.Debug("starting elastic controller")
+	log.Infof("Starting elastic controller for %T", c.data)
 
 	// Initially, we're just processing state updates, and not triggering any
 	// reconcilliation.
