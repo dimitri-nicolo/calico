@@ -8,11 +8,11 @@ import (
 	"sort"
 	"strings"
 
-	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/fv/infrastructure"
+
+	. "github.com/onsi/gomega"
 )
 
 type Aggregation int
@@ -27,6 +27,10 @@ const (
 	NoService = "- - -"
 )
 
+type FlowLogReader interface {
+	ReadFlowLogs(output string) ([]collector.FlowLog, error)
+}
+
 // The expected policies for the flow.
 type ExpectedPolicy struct {
 	Reporter string
@@ -40,7 +44,7 @@ type FlowTester struct {
 	destPortStr    string
 	expectLabels   bool
 	expectPolicies bool
-	felixes        []*infrastructure.Felix
+	readers        []FlowLogReader
 	flowsStarted   []map[collector.FlowMeta]int
 	flowsCompleted []map[collector.FlowMeta]int
 	packets        []map[collector.FlowMeta]int
@@ -48,23 +52,23 @@ type FlowTester struct {
 }
 
 // NewFlowTester creates a new FlowTester initialized for the supplied felix instances.
-func NewFlowTester(felixes []*infrastructure.Felix, expectLabels, expectPolicies bool, destPort int) *FlowTester {
+func NewFlowTester(readers []FlowLogReader, expectLabels, expectPolicies bool, destPort int) *FlowTester {
 	return &FlowTester{
 		destPort:       destPort,
 		destPortStr:    fmt.Sprint(destPort),
 		expectLabels:   expectLabels,
 		expectPolicies: expectPolicies,
-		felixes:        felixes,
-		flowsStarted:   make([]map[collector.FlowMeta]int, len(felixes)),
-		flowsCompleted: make([]map[collector.FlowMeta]int, len(felixes)),
-		packets:        make([]map[collector.FlowMeta]int, len(felixes)),
-		policies:       make([]map[collector.FlowMeta][]string, len(felixes)),
+		readers:        readers,
+		flowsStarted:   make([]map[collector.FlowMeta]int, len(readers)),
+		flowsCompleted: make([]map[collector.FlowMeta]int, len(readers)),
+		packets:        make([]map[collector.FlowMeta]int, len(readers)),
+		policies:       make([]map[collector.FlowMeta][]string, len(readers)),
 	}
 }
 
 // PopulateFromFlowLogs initializes the flow tester from the flow logs.
 func (t *FlowTester) PopulateFromFlowLogs(flowLogsOutput string) error {
-	for ii, f := range t.felixes {
+	for ii, f := range t.readers {
 		t.flowsStarted[ii] = make(map[collector.FlowMeta]int)
 		t.flowsCompleted[ii] = make(map[collector.FlowMeta]int)
 		t.packets[ii] = make(map[collector.FlowMeta]int)
@@ -177,7 +181,7 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, nu
 	var errs []string
 
 	// Validate input.
-	Expect(actionsPolicies).To(HaveLen(len(t.felixes)), "ActionsPolicies should be specified for each felix instance monitored by the FlowTester")
+	Expect(actionsPolicies).To(HaveLen(len(t.readers)), "ActionsPolicies should be specified for each felix instance monitored by the FlowTester")
 
 	// Host loop.
 	for ii, handling := range actionsPolicies {
@@ -255,7 +259,7 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, nu
 func (t *FlowTester) CheckAllFlowsAccountedFor() error {
 	// Finally check that there are no remaining flow logs that we did not expect.
 	var errs []string
-	for ii := range t.felixes {
+	for ii := range t.readers {
 		for meta, count := range t.flowsCompleted[ii] {
 			if count != 0 {
 				errs = append(errs, fmt.Sprintf("Unexpected flow logs (%d) for %v", count, meta))
