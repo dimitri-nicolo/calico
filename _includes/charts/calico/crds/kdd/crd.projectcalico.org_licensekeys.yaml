@@ -55,6 +55,15 @@ spec:
               maxnodes:
                 description: Maximum Number of Allowed Nodes
                 type: integer
+              package:
+                description: License package defines type of Calico license that is
+                  being enforced
+                enum:
+                - CloudCommunity
+                - CloudStarter
+                - CloudPro
+                - Enterprise
+                type: string
             type: object
         type: object
     served: true
