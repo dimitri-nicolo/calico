@@ -3,7 +3,7 @@ module github.com/tigera/lma
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210108223937-a3b320c37bbb // indirect
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210118192844-201f2f5030ce // indirect
 	k8s.io/api => k8s.io/api v0.19.6
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.19.6
