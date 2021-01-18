@@ -98,6 +98,7 @@ var (
 	_                            = stateOffPreNATDstPort
 	stateOffPostNATDstPort int16 = stateEventHdrSize + 30
 	stateOffIPProto        int16 = stateEventHdrSize + 32
+	stateOffFlags          int16 = stateEventHdrSize + 33
 
 	stateOffRulesHit int16 = stateEventHdrSize + 36
 	stateOffRuleIDs  int16 = stateEventHdrSize + 40
@@ -114,6 +115,10 @@ var (
 	ipsKeyPort   int16 = 16
 	ipsKeyProto  int16 = 18
 	ipsKeyPad    int16 = 19
+
+	// Bits in the state flags field.
+	flagDestIsHost uint8 = 1 << 2
+	flagSrcIsHost  uint8 = 1 << 3
 )
 
 type Rule struct {
@@ -136,11 +141,14 @@ type Tier struct {
 }
 
 type Rules struct {
-	PreDnatTiers     []Tier
 	Tiers            []Tier
 	Profiles         []Profile
 	NoProfileMatchID RuleMatchID
-	ForwardTiers     []Tier
+	HostPreDnatTiers []Tier
+	HostForwardTiers []Tier
+	HostNormalTiers  []Tier
+	HostProfiles     []Profile
+	ForHostInterface bool
 }
 
 type RuleMatchID = uint64
@@ -151,16 +159,55 @@ type TierEndAction string
 
 const (
 	TierEndUndef TierEndAction = ""
-	TierEndDrop                = "deny"
+	TierEndDeny                = "deny"
 	TierEndPass                = "pass"
 )
 
 func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	p.b = NewBlock()
 	p.writeProgramHeader()
-	p.writeTiers(rules.PreDnatTiers, legDestPreNAT)
-	p.writeTiers(rules.Tiers, legDest)
-	p.writeProfiles(rules)
+
+	// Pre-DNAT policy: on a host interface, or host-* policy on a workload interface.  Traffic
+	// is allowed to continue if there is no applicable pre-DNAT policy.
+	p.writeTiers(rules.HostPreDnatTiers, legDestPreNAT, "allowed_by_host_policy")
+
+	// If traffic is to or from the local host, skip over any apply-on-forward policy.  Note
+	// that this case can be:
+	// - on a workload interface, workload <--> own host
+	// - on a host interface, this host (not a workload) <--> anywhere outside this host
+	p.writeJumpIfToOrFromHost("to_or_from_host")
+
+	// At this point we know we have traffic that is being forwarded through the host's root
+	// network namespace.  Note that this case can be:
+	// - workload interface, workload <--> another local workload
+	// - workload interface, workload <--> anywhere outside this host
+	// - host interface, workload <--> anywhere outside this host
+	// - host interface, anywhere outside this host <--> anywhere outside this host
+
+	// Apply-On-Forward policy: on a host interface, or host-* policy on a workload interface.
+	// Traffic is allowed to continue if there is no applicable AoF policy.
+	p.writeTiers(rules.HostForwardTiers, legDest, "allowed_by_host_policy")
+
+	// Now skip over normal host policy and jump to where we apply possible workload policy.
+	p.b.Jump("allowed_by_host_policy")
+
+	// "Normal" host policy, i.e. for non-forwarded traffic.
+	p.b.LabelNextInsn("to_or_from_host")
+	p.writeTiers(rules.HostNormalTiers, legDest, "allowed_by_host_policy")
+	p.writeProfiles(rules.HostProfiles, rules.NoProfileMatchID, "allowed_by_host_policy")
+
+	// End of host policy.
+	p.b.LabelNextInsn("allowed_by_host_policy")
+
+	if rules.ForHostInterface {
+		// On a host interface there is no workload policy, so we are now done.
+		p.b.Jump("allow")
+	} else {
+		// Workload policy.
+		p.writeTiers(rules.Tiers, legDest, "allow")
+		p.writeProfiles(rules.Profiles, rules.NoProfileMatchID, "allow")
+	}
+
 	p.writeProgramFooter()
 	return p.b.Assemble()
 }
@@ -199,6 +246,17 @@ const (
 	_ = jumpIdxICMP
 	_ = jumpIdxDrop
 )
+
+func (p *Builder) writeJumpIfToOrFromHost(label string) {
+	// Load state flags.
+	p.b.Load8(R1, R9, stateOffFlags)
+
+	// Mask against host bits.
+	p.b.AndImm32(R1, int32(flagDestIsHost|flagSrcIsHost))
+
+	// If non-zero, jump to specified label.
+	p.b.JumpNEImm64(R1, 0, label)
+}
 
 // writeProgramFooter emits the program exit jump targets.
 func (p *Builder) writeProgramFooter() {
@@ -308,91 +366,89 @@ func passAction(action string) bool {
 	return action == "pass" || action == "next-tier"
 }
 
-func (p *Builder) writeTiers(tiers []Tier, destLeg matchLeg) {
+func (p *Builder) writeTiers(tiers []Tier, destLeg matchLeg, allowLabel string) {
+	actionLabels := map[string]string{
+		"allow": allowLabel,
+		"deny":  "deny",
+	}
 	for _, tier := range tiers {
 		endOfTierLabel := fmt.Sprint("end_of_tier_", p.tierID)
+		actionLabels["pass"] = endOfTierLabel
+		actionLabels["next-tier"] = endOfTierLabel
 
 		log.Debugf("Start of tier %d %q", p.tierID, tier.Name)
 		for _, pol := range tier.Policies {
-			p.writePolicy(pol, endOfTierLabel, destLeg)
+			p.writePolicy(pol, actionLabels, destLeg)
 			p.policyID++
 		}
 
+		// End of tier rule.
 		action := tier.EndAction
 		if action == TierEndUndef {
-			action = TierEndDrop
+			action = TierEndDeny
 		}
-
-		// End of tier drop rule.
 		log.Debugf("End of tier %d %q: %s", p.tierID, tier.Name, action)
-
-		actionLabel := string(action)
-		if passAction(string(action)) {
-			actionLabel = endOfTierLabel
-		}
-
 		p.writeRule(Rule{
 			Rule:    &proto.Rule{},
 			MatchID: tier.EndRuleID,
-		}, actionLabel, destLeg)
+		}, actionLabels[string(action)], destLeg)
 		p.b.LabelNextInsn(endOfTierLabel)
 		p.tierID++
 	}
 }
 
-func (p *Builder) writeProfiles(rules Rules) {
-	endLabel := "end_of_profiles"
-
+func (p *Builder) writeProfiles(profiles []Policy, noProfileMatchID uint64, allowLabel string) {
 	log.Debugf("Start of profiles")
-	for idx, prof := range rules.Profiles {
-		p.writeProfile(prof, idx, endLabel)
+	for idx, prof := range profiles {
+		p.writeProfile(prof, idx, allowLabel)
 	}
 
 	log.Debugf("End of profiles drop")
 	p.writeRule(Rule{
 		Rule:    &proto.Rule{},
-		MatchID: rules.NoProfileMatchID,
+		MatchID: noProfileMatchID,
 	}, "deny", legDest)
-
-	p.b.LabelNextInsn(endLabel)
 }
 
-func (p *Builder) writePolicyRules(policy Policy, endLabel string, destLeg matchLeg) {
+func (p *Builder) writePolicyRules(policy Policy, actionLabels map[string]string, destLeg matchLeg) {
+	endOfPolicyLabel := fmt.Sprintf("end_of_policy_%d", p.policyID)
+
 	if policy.Staged {
-		// When a pass or accept rule matches in a staged policy then we want to skip
+		// When a pass or allow rule matches in a staged policy then we want to skip
 		// the rest of the rules in the staged policy and continue processing the next
 		// policy in the same tier.
-		endLabel = fmt.Sprintf("end_of_policy_%d", p.policyID)
+		actionLabels["pass"] = endOfPolicyLabel
+		actionLabels["next-tier"] = endOfPolicyLabel
+		actionLabels["allow"] = endOfPolicyLabel
 	}
 
 	for ruleIdx, rule := range policy.Rules {
 		log.Debugf("Start of rule %d", ruleIdx)
-
 		action := strings.ToLower(rule.Action)
-		actionLabel := action
-		if passAction(action) || policy.Staged {
-			actionLabel = endLabel
-		}
-		p.writeRule(rule, actionLabel, destLeg)
+		p.writeRule(rule, actionLabels[action], destLeg)
 		log.Debugf("End of rule %d", ruleIdx)
 	}
 
 	if policy.Staged {
 		log.Debugf("NoMatch policy ID 0x%x", policy.NoMatchID)
-		p.writeRecordRuleID(policy.NoMatchID, endLabel)
-		p.b.LabelNextInsn(endLabel)
+		p.writeRecordRuleID(policy.NoMatchID, endOfPolicyLabel)
+		p.b.LabelNextInsn(endOfPolicyLabel)
 	}
 }
 
-func (p *Builder) writePolicy(policy Policy, endLabel string, destLeg matchLeg) {
+func (p *Builder) writePolicy(policy Policy, actionLabels map[string]string, destLeg matchLeg) {
 	log.Debugf("Start of policy %q %d", policy.Name, p.policyID)
-	p.writePolicyRules(policy, endLabel, destLeg)
+	p.writePolicyRules(policy, actionLabels, destLeg)
 	log.Debugf("End of policy %q %d", policy.Name, p.policyID)
 }
 
-func (p *Builder) writeProfile(profile Profile, idx int, endLabel string) {
+func (p *Builder) writeProfile(profile Profile, idx int, allowLabel string) {
+	actionLabels := map[string]string{
+		"allow": allowLabel,
+		"deny":  "deny",
+	}
 	log.Debugf("Start of profile %q %d", profile.Name, idx)
-	p.writePolicyRules(profile, endLabel, legDest)
+	p.writePolicyRules(profile, actionLabels, legDest)
 	log.Debugf("End of profile %q %d", profile.Name, idx)
 }
 
@@ -405,6 +461,9 @@ const (
 )
 
 func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
+	if actionLabel == "" {
+		log.Panic("empty action label")
+	}
 
 	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
