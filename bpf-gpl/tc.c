@@ -470,8 +470,15 @@ skip_pre_dnat_default:
 	CALI_DEBUG("About to jump to policy program; lack of further "
 			"logs means policy dropped the packet...\n");
 	bpf_tail_call(skb, &cali_jump, PROG_INDEX_POLICY);
-	CALI_DEBUG("Tail call to policy program failed: DROP\n");
-	return TC_ACT_SHOT;
+	if (CALI_F_HEP) {
+		CALI_DEBUG("HEP with no policy, allow.\n");
+		ctx.state->pol_rc = CALI_POL_ALLOW;
+		goto skip_policy;
+	} else {
+		/* should not reach here */
+		CALI_DEBUG("WEP with no policy, deny.\n");
+		goto deny;
+	}
 
 icmp_send_reply:
 	bpf_tail_call(skb, &cali_jump, PROG_INDEX_ICMP);
@@ -704,13 +711,13 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 	case CALI_CT_NEW:
 		switch (state->pol_rc) {
 		case CALI_POL_NO_MATCH:
-			CALI_DEBUG("Implicitly denied by normal policy: DROP\n");
+			CALI_DEBUG("Implicitly denied by policy: DROP\n");
 			goto deny;
 		case CALI_POL_DENY:
-			CALI_DEBUG("Denied by normal policy: DROP\n");
+			CALI_DEBUG("Denied by policy: DROP\n");
 			goto deny;
 		case CALI_POL_ALLOW:
-			CALI_DEBUG("Allowed by normal policy: ACCEPT\n");
+			CALI_DEBUG("Allowed by policy: ACCEPT\n");
 		}
 
 		if (CALI_F_FROM_WEP &&
