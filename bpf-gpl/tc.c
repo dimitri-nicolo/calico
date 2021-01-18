@@ -467,8 +467,7 @@ skip_pre_dnat_default:
 		ctx.state->flags |= CALI_ST_SRC_IS_HOST;
 	}
 
-	CALI_DEBUG("About to jump to policy program; lack of further "
-			"logs means policy dropped the packet...\n");
+	CALI_DEBUG("About to jump to policy program.\n");
 	bpf_tail_call(skb, &cali_jump, PROG_INDEX_POLICY);
 	if (CALI_F_HEP) {
 		CALI_DEBUG("HEP with no policy, allow.\n");

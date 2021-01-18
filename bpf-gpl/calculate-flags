@@ -73,7 +73,7 @@ if [[ "${filename}" =~ .*data.* ]]; then
 elif [[ "${filename}" =~ .*hep.* ]]; then
   # Host endpoint.
   ((flags |= CALI_TC_HOST_EP))
-  args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALICOLO")
+  args+=("-DCALI_DEBUG_NO_PROG" "-DCALI_LOG_PFX=CALICOLO")
   ep_type="host"
 elif [[ "${filename}" =~ .*tnl.* ]]; then
   # Tunnel.
