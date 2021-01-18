@@ -1,7 +1,7 @@
 ---
 title: Install an OpenShift 4 cluster on Windows nodes
 description: Install Calico on an OpenShift 4 cluster on Windows nodes
-canonical_url: '/getting-started/windows-calico/openshift/installation'
+canonical_url: '/windows-calico/openshift/installation'
 ---
 
 ### Big picture

@@ -1,7 +1,7 @@
 ---
 title: Install Calico Enterprise for Windows on a Rancher Kubernetes Engine cluster
 description: Install Calico Enterprise for Windows on a Rancher RKE cluster.
-canonical_url: '/getting-started/windows-calico/kubernetes/rancher'
+canonical_url: '/windows-calico/kubernetes/rancher'
 ---
 
 ### Big picture
@@ -26,8 +26,8 @@ Run Linux and Windows workloads on a RKE cluster with {{site.prodname}}.
 **Required**
 
 - An RKE cluster provisioned with {% include open-new-window.html text='no network plugin' url='https://rancher.com/docs/rke/latest/en/config-options/add-ons/network-plugins#disabling-deployment-of-a-network-plug-in' %}
-but which otherwise meets the {{site.prodnameWindows}} Kubernetes [cluster requirements]({{site.baseurl}}/getting-started/windows-calico/kubernetes/requirements). This guide was tested with RKE v1.18.9.
-- One or more Windows nodes that meet the [requirements]({{site.baseurl}}/getting-started/windows-calico/kubernetes/requirements).
+but which otherwise meets the {{site.prodnameWindows}} Kubernetes [cluster requirements]({{site.baseurl}}/windows-calico/kubernetes/requirements). This guide was tested with RKE v1.18.9.
+- One or more Windows nodes that meet the [requirements]({{site.baseurl}}/windows-calico/kubernetes/requirements).
 
 ### How to
 
@@ -103,7 +103,7 @@ The following steps will outline the installation of {{site.prodname}} networkin
    calicoctl ipam configure --strictaffinity=true
    ```
 
-1. Finally, follow the {{site.prodnameWindows}} [quickstart guide for Kubernetes]({{site.baseurl}}/getting-started/windows-calico/quickstart#install-calico-enterprise-for-windows)
+1. Finally, follow the {{site.prodnameWindows}} [quickstart guide for Kubernetes]({{site.baseurl}}/windows-calico/quickstart#install-calico-enterprise-for-windows)
    For VXLAN clusters, follow the instructions under the "Kubernetes VXLAN" tab. For BGP clusters, follow the instructions under the "Kubernetes BGP" tab.
 
    > **Note**: For Rancher default values for service CIDR and DNS cluster IP, see the {% include open-new-window.html text='Rancher kube-api service options' url='https://rancher.com/docs/rke/latest/en/config-options/services/#kubernetes-api-server-options' %}.
@@ -113,5 +113,5 @@ The following steps will outline the installation of {{site.prodname}} networkin
 
 ### Next steps
 
-- [Try the basic policy demo]({{site.baseurl}}/getting-started/windows-calico/demo)
+- [Try the basic policy demo]({{site.baseurl}}/windows-calico/demo)
 - [Secure pods with {{site.prodname}} network policy]({{site.baseurl}}/security/calico-network-policy)

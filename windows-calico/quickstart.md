@@ -1,7 +1,7 @@
 ---
 title: Quickstart
 description: Install Calico Enterprise for Windows on a Kubernetes cluster for testing or development.
-canonical_url: '/getting-started/windows-calico/quickstart'
+canonical_url: '/windows-calico/quickstart'
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
@@ -337,4 +337,4 @@ Congratulations! You now have a Kubernetes cluster with {{site.prodnameWindows}}
 
 ### Next steps
 
-You can now use the {{site.prodname}} Linux-based docs site for your documentation. Before you continue, review the [Limitations and known issues]({{site.baseurl}}/getting-started/windows-calico/limitations) to understand the features (and sections of documentation) that do not apply to Windows.
+You can now use the {{site.prodname}} Linux-based docs site for your documentation. Before you continue, review the [Limitations and known issues]({{site.baseurl}}/windows-calico/limitations) to understand the features (and sections of documentation) that do not apply to Windows.

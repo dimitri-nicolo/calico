@@ -1,9 +1,9 @@
 ---
-title: OpenShift
-description: Install Calico Enterprise for Windows on an OpenShift cluster.
+title: Kubernetes
+description: Get Calico Enterprise for Windows running in your Kubernetes cluster.
 show_read_time: false
 show_toc: false
-canonical_url: '/getting-started/windows-calico/openshift/index'
+canonical_url: '/windows-calico/kubernetes/index'
 ---
 {{ page.description }}
 {% capture content %}{% include index.html %}{% endcapture %}
