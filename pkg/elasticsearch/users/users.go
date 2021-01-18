@@ -145,15 +145,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 								Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*")},
 								Privileges: []string{"read"},
 							},
-							{
-								Names: []string{
-									indexPattern(".tigera.ipset", clusterName, ""),
-									indexPattern("tigera_secure_ee_events", clusterName, ""),
-									indexPattern(".tigera.domainnameset", clusterName, ""),
-									indexPattern(".tigera.forwarderconfig", clusterName, ""),
-								},
-								Privileges: []string{"all"},
-							},
+							buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName, management),
 						},
 					},
 				},
@@ -192,6 +184,28 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 	}
 
 	return users
+}
+
+func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isManagement bool) elasticsearch.RoleIndex {
+	roleIndex := elasticsearch.RoleIndex{
+		Names: []string{
+			indexPattern(".tigera.ipset", clusterName, ""),
+			indexPattern(".tigera.domainnameset", clusterName, ""),
+			indexPattern(".tigera.forwarderconfig", clusterName, ""),
+		},
+		Privileges: []string{"all"},
+	}
+
+	// When configuring a management cluster we need to provide permissions for the events index across all clusters
+	// (used by the IDS alert forwarding feature).
+	// Otherwise, we only need permissions to the events index specific for that individual cluster.
+	if isManagement {
+		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", "*", ".*"))
+	} else {
+		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", clusterName, ""))
+	}
+
+	return roleIndex
 }
 
 func buildManagedUserPattern() []*regexp.Regexp {
@@ -264,7 +278,7 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 	}
 }
 
-func indexPattern(prefix string, cluster string, suffix string) string {
+func indexPattern(prefix, cluster, suffix string) string {
 	return fmt.Sprintf("%s.%s%s", prefix, cluster, suffix)
 }
 
