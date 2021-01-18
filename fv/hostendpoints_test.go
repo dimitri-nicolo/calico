@@ -201,6 +201,11 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				_, err := client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
+
+			// Wait for HEPs to become active.
+			expectDenyHostToHostTraffic()
+			cc.CheckConnectivity()
+			cc.ResetExpectations()
 		})
 
 		It("should allow connectivity from nodes to the Kubernetes API server", func() {
