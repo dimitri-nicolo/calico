@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/apiserver/pkg/helpers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -101,7 +102,7 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 		if licClaims.Validate() == licClient.Valid {
 			aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 				Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-				MaxNodes: *licClaims.Nodes}
+				MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
 		}
 	}
 }

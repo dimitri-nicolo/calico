@@ -934,6 +934,11 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("License Expiry date don't match")
 	}
 
+	if lic.Status.Package != "Enterprise" {
+		fmt.Printf("License's package type does not match :%v\n", lic.Status.Package)
+		return fmt.Errorf("License Package Type does not match")
+	}
+
 	return nil
 }
 

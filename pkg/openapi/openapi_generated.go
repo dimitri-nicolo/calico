@@ -8703,6 +8703,13 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 							Format:      "int32",
 						},
 					},
+					"package": {
+						SchemaProps: spec.SchemaProps{
+							Description: "License package defines type of Calico license that is being enforced",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

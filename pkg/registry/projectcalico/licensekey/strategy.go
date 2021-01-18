@@ -30,6 +30,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/apiserver/pkg/helpers"
 	licClient "github.com/tigera/licensing/client"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -63,7 +64,7 @@ func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 	if licClaims.Validate() == licClient.Valid {
 		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes}
+			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
 	}
 }
 
@@ -79,7 +80,7 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 	if licClaims.Validate() == licClient.Valid {
 		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes}
+			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
 	}
 }
 
@@ -119,7 +120,7 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	newLicenseKey := obj.(*calico.LicenseKey)
 	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-		MaxNodes: *licClaims.Nodes}
+		MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
 }
 
 // ValidateUpdate is the default update validation for an end user updating status
