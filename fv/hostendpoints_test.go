@@ -213,7 +213,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			cc.CheckConnectivity()
 		})
 
-		It("should block all traffic except pod-to-pod and host-to-own-pod traffic", func() {
+		It("_BPF-SAFE_ should block all traffic except pod-to-pod and host-to-own-pod traffic", func() {
 			expectDenyHostToHostTraffic()
 			expectDenyHostToOtherPodTraffic()
 			expectPodToPodTraffic()
@@ -224,7 +224,7 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			cc.CheckConnectivity()
 		})
 
-		It("should allow felixes[0] => felixes[1] traffic if ingress and egress policies are in place", func() {
+		It("_BPF-SAFE_ should allow felixes[0] => felixes[1] traffic if ingress and egress policies are in place", func() {
 			// Create a policy selecting felix[0] that allows egress.
 			policy := api.NewGlobalNetworkPolicy()
 			policy.Name = "f0-egress"
