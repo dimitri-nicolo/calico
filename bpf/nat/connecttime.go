@@ -142,13 +142,16 @@ func InstallConnectTimeLoadBalancer(frontendMap, backendMap, rtMap bpf.Map, cgro
 	sendrecvMap := SendRecvMsgMap(&bpf.MapContext{
 		RepinningEnabled: repin,
 	})
-	allNATsMap := AllNATsMsgMap(&bpf.MapContext{
-		RepinningEnabled: repin,
-	})
-
 	err = sendrecvMap.EnsureExists()
 	if err != nil {
 		return errors.WithMessage(err, "failed to create sendrecv BPF Map")
+	}
+	allNATsMap := AllNATsMsgMap(&bpf.MapContext{
+		RepinningEnabled: repin,
+	})
+	err = allNATsMap.EnsureExists()
+	if err != nil {
+		return errors.WithMessage(err, "failed to create all-NATs BPF Map")
 	}
 
 	maps := []bpf.Map{frontendMap, backendMap, rtMap, sendrecvMap, allNATsMap}

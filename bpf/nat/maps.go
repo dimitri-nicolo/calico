@@ -521,7 +521,7 @@ func AffinityMapMemIter(m AffinityMapMem) bpf.IterCallback {
 // };
 
 const sendRecvMsgKeySize = 16
-const ctNATsMsgKeySize = 17
+const ctNATsMsgKeySize = 24
 
 // SendRecvMsgKey is the key for SendRecvMsgMap
 type SendRecvMsgKey [sendRecvMsgKeySize]byte
