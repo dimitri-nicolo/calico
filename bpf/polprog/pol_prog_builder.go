@@ -158,8 +158,8 @@ const (
 func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	p.b = NewBlock()
 	p.writeProgramHeader()
-	p.writeTiers(rules.PreDnatTiers)
-	p.writeTiers(rules.Tiers)
+	p.writeTiers(rules.PreDnatTiers, legDestPreNAT)
+	p.writeTiers(rules.Tiers, legDest)
 	p.writeProfiles(rules)
 	p.writeProgramFooter()
 	return p.b.Assemble()
@@ -275,6 +275,10 @@ func (p *Builder) setUpDstIPSetKey(ipsetID uint64) {
 	p.setUpIPSetKey(ipsetID, offDstIPSetKey, stateOffPostNATIPDst, stateOffPostNATDstPort)
 }
 
+func (p *Builder) setUpPreNATDstIPSetKey(ipsetID uint64) {
+	p.setUpIPSetKey(ipsetID, offDstIPSetKey, stateOffPreNATIPDst, stateOffPreNATDstPort)
+}
+
 func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset int16) {
 	// TODO track whether we've already done an initialisation and skip the parts that don't change.
 	// Zero the padding.
@@ -304,13 +308,13 @@ func passAction(action string) bool {
 	return action == "pass" || action == "next-tier"
 }
 
-func (p *Builder) writeTiers(tiers []Tier) {
+func (p *Builder) writeTiers(tiers []Tier, destLeg matchLeg) {
 	for _, tier := range tiers {
 		endOfTierLabel := fmt.Sprint("end_of_tier_", p.tierID)
 
 		log.Debugf("Start of tier %d %q", p.tierID, tier.Name)
 		for _, pol := range tier.Policies {
-			p.writePolicy(pol, endOfTierLabel)
+			p.writePolicy(pol, endOfTierLabel, destLeg)
 			p.policyID++
 		}
 
@@ -330,7 +334,7 @@ func (p *Builder) writeTiers(tiers []Tier) {
 		p.writeRule(Rule{
 			Rule:    &proto.Rule{},
 			MatchID: tier.EndRuleID,
-		}, actionLabel)
+		}, actionLabel, destLeg)
 		p.b.LabelNextInsn(endOfTierLabel)
 		p.tierID++
 	}
@@ -348,12 +352,12 @@ func (p *Builder) writeProfiles(rules Rules) {
 	p.writeRule(Rule{
 		Rule:    &proto.Rule{},
 		MatchID: rules.NoProfileMatchID,
-	}, "deny")
+	}, "deny", legDest)
 
 	p.b.LabelNextInsn(endLabel)
 }
 
-func (p *Builder) writePolicyRules(policy Policy, endLabel string) {
+func (p *Builder) writePolicyRules(policy Policy, endLabel string, destLeg matchLeg) {
 	if policy.Staged {
 		// When a pass or accept rule matches in a staged policy then we want to skip
 		// the rest of the rules in the staged policy and continue processing the next
@@ -369,7 +373,7 @@ func (p *Builder) writePolicyRules(policy Policy, endLabel string) {
 		if passAction(action) || policy.Staged {
 			actionLabel = endLabel
 		}
-		p.writeRule(rule, actionLabel)
+		p.writeRule(rule, actionLabel, destLeg)
 		log.Debugf("End of rule %d", ruleIdx)
 	}
 
@@ -380,26 +384,27 @@ func (p *Builder) writePolicyRules(policy Policy, endLabel string) {
 	}
 }
 
-func (p *Builder) writePolicy(policy Policy, endLabel string) {
+func (p *Builder) writePolicy(policy Policy, endLabel string, destLeg matchLeg) {
 	log.Debugf("Start of policy %q %d", policy.Name, p.policyID)
-	p.writePolicyRules(policy, endLabel)
+	p.writePolicyRules(policy, endLabel, destLeg)
 	log.Debugf("End of policy %q %d", policy.Name, p.policyID)
 }
 
 func (p *Builder) writeProfile(profile Profile, idx int, endLabel string) {
 	log.Debugf("Start of profile %q %d", profile.Name, idx)
-	p.writePolicyRules(profile, endLabel)
+	p.writePolicyRules(profile, endLabel, legDest)
 	log.Debugf("End of profile %q %d", profile.Name, idx)
 }
 
 type matchLeg string
 
 const (
-	legSource matchLeg = "source"
-	legDest   matchLeg = "dest"
+	legSource     matchLeg = "source"
+	legDest       matchLeg = "dest"
+	legDestPreNAT matchLeg = "destPreNAT"
 )
 
-func (p *Builder) writeRule(r Rule, actionLabel string) {
+func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
 
 	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
@@ -428,11 +433,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string) {
 
 	if len(rule.DstNet) != 0 {
 		log.WithField("cidrs", rule.DstNet).Debugf("DstNet match")
-		p.writeCIDRSMatch(false, legDest, rule.DstNet)
+		p.writeCIDRSMatch(false, destLeg, rule.DstNet)
 	}
 	if len(rule.NotDstNet) != 0 {
 		log.WithField("cidrs", rule.NotDstNet).Debugf("NotDstNet match")
-		p.writeCIDRSMatch(true, legDest, rule.NotDstNet)
+		p.writeCIDRSMatch(true, destLeg, rule.NotDstNet)
 	}
 
 	if len(rule.SrcIpSetIds) > 0 {
@@ -454,11 +459,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string) {
 	if len(dstIPSetIDs) > 0 {
 		log.WithField("ipSetIDs", rule.DstDomainIpSetIds).Debugf("DstDomainIpSetIds match")
 		log.WithField("ipSetIDs", rule.DstIpSetIds).Debugf("DstIpSetIds match")
-		p.writeIPSetOrMatch(legDest, dstIPSetIDs)
+		p.writeIPSetOrMatch(destLeg, dstIPSetIDs)
 	}
 	if len(rule.NotDstIpSetIds) > 0 {
 		log.WithField("ipSetIDs", rule.NotDstIpSetIds).Debugf("NotDstIpSetIds match")
-		p.writeIPSetMatch(true, legDest, rule.NotDstIpSetIds)
+		p.writeIPSetMatch(true, destLeg, rule.NotDstIpSetIds)
 	}
 
 	if len(rule.SrcPorts) > 0 || len(rule.SrcNamedPortIpSetIds) > 0 {
@@ -472,11 +477,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string) {
 
 	if len(rule.DstPorts) > 0 || len(rule.DstNamedPortIpSetIds) > 0 {
 		log.WithField("ports", rule.DstPorts).Debugf("DstPorts match")
-		p.writePortsMatch(false, legDest, rule.DstPorts, rule.DstNamedPortIpSetIds)
+		p.writePortsMatch(false, destLeg, rule.DstPorts, rule.DstNamedPortIpSetIds)
 	}
 	if len(rule.NotDstPorts) > 0 || len(rule.NotDstNamedPortIpSetIds) > 0 {
 		log.WithField("ports", rule.NotDstPorts).Debugf("NotDstPorts match")
-		p.writePortsMatch(true, legDest, rule.NotDstPorts, rule.NotDstNamedPortIpSetIds)
+		p.writePortsMatch(true, destLeg, rule.NotDstPorts, rule.NotDstNamedPortIpSetIds)
 	}
 
 	if rule.Icmp != nil {
@@ -549,6 +554,8 @@ func (p *Builder) writeCIDRSMatch(negate bool, leg matchLeg, cidrs []string) {
 	var offset int16
 	if leg == legSource {
 		offset = stateOffIPSrc
+	} else if leg == legDestPreNAT {
+		offset = stateOffPreNATIPDst
 	} else {
 		offset = stateOffPostNATIPDst
 	}
@@ -593,6 +600,9 @@ func (p *Builder) writeIPSetMatch(negate bool, leg matchLeg, ipSets []string) {
 		if leg == legSource {
 			p.setUpSrcIPSetKey(id)
 			keyOffset = offSrcIPSetKey
+		} else if leg == legDestPreNAT {
+			p.setUpPreNATDstIPSetKey(id)
+			keyOffset = offDstIPSetKey
 		} else {
 			p.setUpDstIPSetKey(id)
 			keyOffset = offDstIPSetKey
@@ -630,6 +640,9 @@ func (p *Builder) writeIPSetOrMatch(leg matchLeg, ipSets []string) {
 		if leg == legSource {
 			p.setUpSrcIPSetKey(id)
 			keyOffset = offSrcIPSetKey
+		} else if leg == legDestPreNAT {
+			p.setUpPreNATDstIPSetKey(id)
+			keyOffset = offDstIPSetKey
 		} else {
 			p.setUpDstIPSetKey(id)
 			keyOffset = offDstIPSetKey
@@ -657,6 +670,8 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 	var portOffset int16
 	if leg == legSource {
 		portOffset = stateOffSrcPort
+	} else if leg == legDestPreNAT {
+		portOffset = stateOffPreNATDstPort
 	} else {
 		portOffset = stateOffPostNATDstPort
 	}
