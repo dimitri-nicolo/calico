@@ -30,6 +30,8 @@ For v2.1 we basically have 2 major features:
 Spec for `carrotctl generate` is:
 
 ```
+Generate CNX license file and store the fields in the database
+
 Usage:
   carrotctl generate [flags]
 
@@ -44,10 +46,17 @@ Flags:
   -g, --graceperiod int      Number of days the cluster will keep working after the license expires (default 90)
   -h, --help                 help for generate
   -n, --nodes int            Number of nodes customer is licensed for. If not specified, it'll be an unlimited nodes license.
+  -p, --package string       License Package and feature selection to be assigned to a license (default "cnx|all")
       --signing-key string   Private key path to sign the license content (default "./tigera.io_private_key.pem")
 ```
 
 If none of the flags are passed then it will interactively ask the user to enter the data.
+
+In order to select a license package type one of the following values must be set:
+- `cloud|community`
+- `cloud|pro`
+- `cloud|starter`
+- `cnx|all`
 
 ### Examples
 
