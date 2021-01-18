@@ -462,6 +462,10 @@ skip_pre_dnat_default:
 		CALI_DEBUG("Post-NAT dest IP is local host.\n");
 		ctx.state->flags |= CALI_ST_DEST_IS_HOST;
 	}
+	if (rt_addr_is_local_host(ctx.state->ip_src)) {
+		CALI_DEBUG("Source IP is local host.\n");
+		ctx.state->flags |= CALI_ST_SRC_IS_HOST;
+	}
 
 	CALI_DEBUG("About to jump to policy program; lack of further "
 			"logs means policy dropped the packet...\n");
