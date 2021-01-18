@@ -23,6 +23,16 @@ const (
 	KindLicenseKeyList = "LicenseKeyList"
 )
 
+// +kubebuilder:validation:Enum=CloudCommunity;CloudStarter;CloudPro;Enterprise
+type LicensePackageType string
+
+const (
+	CloudCommunity LicensePackageType = "CloudCommunity"
+	CloudStarter   LicensePackageType = "CloudStarter"
+	CloudPro       LicensePackageType = "CloudPro"
+	Enterprise     LicensePackageType = "Enterprise"
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -52,6 +62,8 @@ type LicenseKeyStatus struct {
 	Expiry metav1.Time `json:"expiry,omitempty" yaml:"expiry"`
 	// Maximum Number of Allowed Nodes
 	MaxNodes int `json:"maxnodes,omitempty" yaml:"maxnodes" validate:"omitempty"`
+	// License package defines type of Calico license that is being enforced
+	Package LicensePackageType `json:"package,omitempty" yaml:"package" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
