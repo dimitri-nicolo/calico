@@ -26,11 +26,14 @@ import (
 )
 
 const (
-	IPSetIndexPattern           = ".tigera.ipset.%s"
-	DomainNameSetIndexPattern   = ".tigera.domainnameset.%s"
-	FlowLogIndexPattern         = "tigera_secure_ee_flows.%s.*"
-	DNSLogIndexPattern          = "tigera_secure_ee_dns.%s.*"
-	EventIndexPattern           = "tigera_secure_ee_events.%s"
+	IPSetIndexPattern         = ".tigera.ipset.%s"
+	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
+	FlowLogIndexPattern       = "tigera_secure_ee_flows.%s.*"
+	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
+	EventIndexPattern         = "tigera_secure_ee_events.%s"
+	// EventIndexWildCardPattern is an alternate version of the events index pattern using a wildcard. This is for alert forwarding
+	// in a multi-cluster scenario, where we need to query across all cluster event indices.
+	EventIndexWildCardPattern   = "tigera_secure_ee_events.*"
 	AuditIndexPattern           = "tigera_secure_ee_audit_*.%s.*"
 	ForwarderConfigIndexPattern = ".tigera.forwarderconfig.%s"
 	WatchIndex                  = ".watches"
@@ -536,10 +539,17 @@ func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterf
 
 // GetSecurityEvents retrieves a listing of security events from ES sorted in ascending order,
 // where each events time falls within the range given by start and end time.
-func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time) ([]db.SecurityEvent, error) {
+func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) ([]db.SecurityEvent, error) {
 	l := log.WithFields(logrus.Fields{"func": "GetSecurityEvents"})
+
+	// Determine whether we're querying for events across all clusters (or just the current cluster)
+	index := EventIndex
+	if allClusters {
+		index = EventIndexWildCardPattern
+	}
+
 	searchResult, err := e.c.Search().
-		Index(EventIndex).
+		Index(index).
 		Query(elastic.NewRangeQuery("time").Gte(start).Lte(end)). // query for events within the specified time range
 		Sort("time", true).                                       // sort by "time" field, ascending order (oldest events first)
 		From(0).Size(10000).                                      // we want all events from the time range (avoid pagination)
@@ -549,7 +559,7 @@ func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time) (
 		return nil, err
 	}
 
-	l.Debugf("Query took %d milliseconds", searchResult.TookInMillis)
+	l.Debugf("Query index %s took %d milliseconds", index, searchResult.TookInMillis)
 	l.Debugf("Found a total of %d security events", searchResult.TotalHits())
 
 	var events []db.SecurityEvent

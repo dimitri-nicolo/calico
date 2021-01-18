@@ -389,7 +389,7 @@ func (f *eventForwarder) retrieveAndForward(start, end time.Time, numAttempts ui
 	err = retry.Do(
 		func() error {
 			var err error
-			rawEvents, err = f.events.GetSecurityEvents(f.ctx, start, end)
+			rawEvents, err = f.events.GetSecurityEvents(f.ctx, start, end, true)
 			return err
 		},
 		retry.Attempts(numAttempts),

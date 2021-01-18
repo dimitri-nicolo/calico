@@ -39,7 +39,7 @@ type SecurityEventInterface interface {
 
 type Events interface {
 	PutSecurityEvent(context.Context, SecurityEventInterface) error
-	GetSecurityEvents(ctx context.Context, start, end time.Time) ([]SecurityEvent, error)
+	GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) ([]SecurityEvent, error)
 	PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error
 	GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error)
 }

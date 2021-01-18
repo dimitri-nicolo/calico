@@ -25,7 +25,7 @@ func (m *MockEvents) PutSecurityEvent(ctx context.Context, l SecurityEventInterf
 	return nil
 }
 
-func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time) ([]SecurityEvent, error) {
+func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) ([]SecurityEvent, error) {
 	return []SecurityEvent{}, nil
 }
 
