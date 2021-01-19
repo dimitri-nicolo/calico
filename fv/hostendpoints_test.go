@@ -38,7 +38,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ named host endpoints",
 		describeHostEndpointTests(getInfra, false)
 	})
 
-var _ = infrastructure.DatastoreDescribe("all-interfaces host endpoints",
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ all-interfaces host endpoints",
 	[]apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 		describeHostEndpointTests(getInfra, true)
 	})
