@@ -38,7 +38,7 @@
 // struct cali_tc_state holds state that is passed between the BPF programs.
 // WARNING: must be kept in sync with
 // - the definitions in bpf/polprog/pol_prog_builder.go.
-// - the Go vesion of the struct in bpf/state/map.go
+// - the Go version of the struct in bpf/state/map.go
 // - the enterprise event handling logic in bpf/events/collector_policy_listener.go.
 struct cali_tc_state {
 	struct perf_event_header eventhdr;
@@ -46,7 +46,8 @@ struct cali_tc_state {
 	 * updated when doing CALI_CT_ESTABLISHED_SNAT handling. Used for FIB lookup. */
 	__be32 ip_src;
 	/* Initial IP read from packet. Updated when doing encap and ICMP errors or CALI_CT_ESTABLISHED_DNAT.
-	 * If connect-time load balancing is enabled, this will typically start as the post-NAT IP because */
+	 * If connect-time load balancing is enabled, this will be the post-NAT IP because the connect-time
+	 * load balancer gets in before TC. */
 	__be32 ip_dst;
 	/* Set when invoking the policy program; if no NAT, ip_dst; otherwise, the pre-DNAT IP.  If the connect
 	 * time load balancer is enabled, this may be different from ip_dst. */

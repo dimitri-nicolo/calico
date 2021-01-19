@@ -51,13 +51,15 @@ struct bpf_map_def_extended {
 // CALI_TC_HOST_EP is set for all host interfaces including tunnels.
 #define CALI_TC_HOST_EP		(1<<0)
 // CALI_TC_INGRESS is set when compiling a program in the "ingress" direction as defined by
-// for policy.  For host endpoints, ingress has its natural meaning (towards the host namespace)
+// policy.  For host endpoints, ingress has its natural meaning (towards the host namespace)
 // and it agrees with TC's definition of ingress. For workload endpoint programs, ingress is
 // relative to the workload so the ingress program is applied at egress from the host namespace
 // and vice-versa.
 #define CALI_TC_INGRESS		(1<<1)
 // CALI_TC_TUNNEL is set when compiling the program for the IPIP tunnel. It is *not* set
-// when compiling the wireguard tunnel program.
+// when compiling the wireguard or tunnel program (or VXLAN).  IPIP is a special case because
+// it is a layer 3 device, so we don't see an ethernet header on packets arriving from the IPIP
+// device.
 #define CALI_TC_TUNNEL		(1<<2)
 // CALI_CGROUP is set when compiling the cgroup connect-time load balancer programs.
 #define CALI_CGROUP		(1<<3)
