@@ -1028,6 +1028,39 @@ var polProgramTests = []polProgramTest{
 		DroppedPackets: []packet{
 			icmpPktWithTypeCode("10.0.0.1", "10.0.0.2", 8, 3)},
 	},
+
+	// Test cases with host policy.
+	{
+		PolicyName: "pre-DNAT",
+		Policy: polprog.Rules{
+			ForHostInterface: true,
+			HostPreDnatTiers: []polprog.Tier{{
+				Name:      "default",
+				EndAction: "pass",
+				Policies: []polprog.Policy{{
+					Name: "p1",
+					Rules: []polprog.Rule{{
+						Rule: &proto.Rule{
+							Action: "Allow",
+							DstNet: []string{"10.96.0.10/32"},
+						}}, {
+						Rule: &proto.Rule{
+							Action: "Deny",
+						}},
+					}},
+				}},
+			},
+		},
+		AllowedPackets: []packet{
+			udpPkt("123.0.0.1:1024", "10.0.0.2:12345").preNAT("10.96.0.10:53"),
+			udpPkt("123.0.0.1:1024", "10.96.0.10:53"),
+		},
+		DroppedPackets: []packet{
+			udpPkt("123.0.0.1:1024", "10.0.0.2:12345").preNAT("10.96.0.11:53"),
+			udpPkt("123.0.0.1:1024", "10.96.0.10:53").preNAT("10.0.0.2:12345"),
+			udpPkt("123.0.0.1:1024", "10.96.0.11:53"),
+		},
+	},
 }
 
 // polProgramTestWrapper allows to keep polProgramTest intact as well as the tests that
@@ -1497,6 +1530,32 @@ type packet struct {
 	srcPort  int
 	dstAddr  string
 	dstPort  int
+
+	preNATDstAddr string
+	preNATDstPort int
+	fromHostFlag  bool
+	toHostFlag    bool
+}
+
+func (p packet) preNAT(dst string) packet {
+	var err error
+	parts := strings.Split(dst, ":")
+	p.preNATDstAddr = parts[0]
+	p.preNATDstPort, err = strconv.Atoi(parts[1])
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func (p packet) fromHost() packet {
+	p.fromHostFlag = true
+	return p
+}
+
+func (p packet) toHost() packet {
+	p.toHostFlag = true
+	return p
 }
 
 func (p packet) String() string {
@@ -1509,10 +1568,36 @@ func (p packet) String() string {
 	case 1:
 		protoName = "icmp"
 	}
-	return fmt.Sprintf("%s-%s:%d->%s:%d", protoName, p.srcAddr, p.srcPort, p.dstAddr, p.dstPort)
+	preNAT := ""
+	if p.preNATDstAddr != "" {
+		preNAT = fmt.Sprintf("%s:%d->", p.preNATDstAddr, p.preNATDstPort)
+	}
+	fromHost := ""
+	if p.fromHostFlag {
+		fromHost = "(H)"
+	}
+	toHost := ""
+	if p.toHostFlag {
+		toHost = "(H)"
+	}
+	return fmt.Sprintf("%s-%s%s:%d->%s%s%s:%d", protoName, p.srcAddr, fromHost, p.srcPort, preNAT, p.dstAddr, toHost, p.dstPort)
 }
 
 func (p packet) StateIn() state.State {
+	preNATDstAddr := p.dstAddr
+	preNATDstPort := p.dstPort
+	if p.preNATDstAddr != "" {
+		preNATDstAddr = p.preNATDstAddr
+		preNATDstPort = p.preNATDstPort
+	}
+	flags := uint8(0)
+	if p.fromHostFlag {
+		flags |= uint8(1 << 3)
+	}
+	if p.toHostFlag {
+		flags |= uint8(1 << 2)
+	}
+
 	if uint8(p.protocol) == 1 {
 		return state.State{
 			IPProto:        uint8(p.protocol),
@@ -1520,6 +1605,9 @@ func (p packet) StateIn() state.State {
 			PostNATDstAddr: ipUintFromString(p.dstAddr),
 			SrcPort:        uint16(p.srcPort),
 			DstPort:        uint16(p.dstPort),
+			PreNATDstAddr:  ipUintFromString(preNATDstAddr),
+			PreNATDstPort:  uint16(preNATDstPort),
+			Flags:          flags,
 		}
 	}
 	return state.State{
@@ -1528,6 +1616,9 @@ func (p packet) StateIn() state.State {
 		PostNATDstAddr: ipUintFromString(p.dstAddr),
 		SrcPort:        uint16(p.srcPort),
 		PostNATDstPort: uint16(p.dstPort),
+		PreNATDstAddr:  ipUintFromString(preNATDstAddr),
+		PreNATDstPort:  uint16(preNATDstPort),
+		Flags:          flags,
 	}
 }
 
