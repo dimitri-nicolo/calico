@@ -50,7 +50,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 				epTypes := []tc.EndpointType{
 					tc.EpTypeWorkload,
 					tc.EpTypeHost,
-					tc.EpTypeHostNoPolicy,
+					tc.EpTypeHost,
 					tc.EpTypeTunnel,
 					tc.EpTypeWireguard,
 				}
@@ -72,8 +72,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 
 						for _, dsr := range []bool{false, true} {
 							if dsr && !((epType == tc.EpTypeWorkload && toOrFrom == tc.FromEp) ||
-								(epType == tc.EpTypeHost) ||
-								(epType == tc.EpTypeHostNoPolicy)) {
+								(epType == tc.EpTypeHost)) {
 								log.Debug("DSR only affects from WEP and HEP")
 								continue
 							}

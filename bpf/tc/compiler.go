@@ -42,11 +42,10 @@ const (
 type EndpointType string
 
 const (
-	EpTypeWorkload     EndpointType = "workload"
-	EpTypeHost         EndpointType = "host"
-	EpTypeHostNoPolicy EndpointType = "data"
-	EpTypeTunnel       EndpointType = "tunnel"
-	EpTypeWireguard    EndpointType = "wireguard"
+	EpTypeWorkload  EndpointType = "workload"
+	EpTypeHost      EndpointType = "host"
+	EpTypeTunnel    EndpointType = "tunnel"
+	EpTypeWireguard EndpointType = "wireguard"
 )
 
 func SectionName(endpointType EndpointType, fromOrTo ToOrFromEp) string {
@@ -74,7 +73,7 @@ func ProgFilename(epType EndpointType, toOrFrom ToOrFromEp, epToHostDrop, fib, d
 		fibPart = "fib_"
 	}
 	dsrPart := ""
-	if dsr && ((epType == EpTypeWorkload && toOrFrom == FromEp) || (epType == EpTypeHost) || (epType == EpTypeHostNoPolicy)) {
+	if dsr && ((epType == EpTypeWorkload && toOrFrom == FromEp) || (epType == EpTypeHost)) {
 		dsrPart = "dsr_"
 	}
 	logLevel = strings.ToLower(logLevel)
@@ -87,8 +86,6 @@ func ProgFilename(epType EndpointType, toOrFrom ToOrFromEp, epToHostDrop, fib, d
 		epTypeShort = "wep"
 	case EpTypeHost:
 		epTypeShort = "hep"
-	case EpTypeHostNoPolicy:
-		epTypeShort = "data"
 	case EpTypeTunnel:
 		epTypeShort = "tnl"
 	case EpTypeWireguard:

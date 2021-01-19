@@ -858,7 +858,7 @@ func FindJumpMap(ap tc.AttachPoint) (mapFD bpf.MapFD, err error) {
 }
 
 func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, polDirection PolDirection) error {
-	epType := tc.EpTypeHostNoPolicy
+	epType := tc.EpTypeHost
 	if ifaceName == "tunl0" {
 		epType = tc.EpTypeTunnel
 	} else if ifaceName == "wireguard.cali" {

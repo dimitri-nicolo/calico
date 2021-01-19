@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -373,9 +373,13 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, maps ...bpf.Map) error {
 		return err
 	}
 
-	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "0", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_0"))
-	if err != nil {
-		return errors.Wrap(err, "failed to update jump map (epilogue program)")
+	polProgPath := path.Join(bpfFsDir, "1_0")
+	_, err = os.Stat(polProgPath)
+	if err == nil {
+		_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "0", "0", "0", "0", "value", "pinned", polProgPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to update jump map (policy program)")
+		}
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "1", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_1"))
 	if err != nil {
@@ -383,11 +387,11 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, maps ...bpf.Map) error {
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "2", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_2"))
 	if err != nil {
-		return errors.Wrap(err, "failed to update jump map (epilogue program)")
+		return errors.Wrap(err, "failed to update jump map (icmp program)")
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "3", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_3"))
 	if err != nil {
-		return errors.Wrap(err, "failed to update jump map (epilogue program)")
+		return errors.Wrap(err, "failed to update jump map (drop program)")
 	}
 
 	return nil

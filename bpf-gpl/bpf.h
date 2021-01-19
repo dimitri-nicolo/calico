@@ -67,9 +67,6 @@ struct bpf_map_def_extended {
 #define CALI_TC_DSR		(1<<4)
 // CALI_TC_WIREGUARD is set for the programs attached to the wireguard interface.
 #define CALI_TC_WIREGUARD	(1<<5)
-// CALI_TC_NO_POLICY is set for "data" interface programs.  I.e. those for host interfaces
-// that are not controlled by a host endpoint and hence should let all traffic through.
-#define CALI_TC_NO_POLICY	(1<<6)
 
 #ifndef CALI_DROP_WORKLOAD_TO_HOST
 #define CALI_DROP_WORKLOAD_TO_HOST false
@@ -83,7 +80,6 @@ struct bpf_map_def_extended {
 #define CALI_F_EGRESS  (!CALI_F_INGRESS)
 
 #define CALI_F_HEP     	 ((CALI_COMPILE_FLAGS) & CALI_TC_HOST_EP)
-#define CALI_F_HEP_NO_POLICY	 (((CALI_COMPILE_FLAGS) & CALI_TC_NO_POLICY) & CALI_F_HEP)
 #define CALI_F_WEP     	 (!CALI_F_HEP)
 #define CALI_F_TUNNEL  	 ((CALI_COMPILE_FLAGS) & CALI_TC_TUNNEL)
 #define CALI_F_WIREGUARD ((CALI_COMPILE_FLAGS) & CALI_TC_WIREGUARD)

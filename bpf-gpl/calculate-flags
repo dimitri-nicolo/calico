@@ -65,12 +65,7 @@ flags=0
 ((CALI_TC_WIREGUARD = 1 << 5))
 ((CALI_TC_NO_POLICY = 1 << 6))
 
-if [[ "${filename}" =~ .*data.* ]]; then
-  # "Data" interface, no-policy host endpoint.
-  ((flags |= CALI_TC_HOST_EP | CALI_TC_NO_POLICY))
-  args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALICOLO")
-  ep_type="data"
-elif [[ "${filename}" =~ .*hep.* ]]; then
+if [[ "${filename}" =~ .*hep.* ]]; then
   # Host endpoint.
   ((flags |= CALI_TC_HOST_EP))
   args+=("-DCALI_DEBUG_NO_PROG" "-DCALI_LOG_PFX=CALICOLO")

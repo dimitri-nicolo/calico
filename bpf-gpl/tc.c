@@ -423,14 +423,6 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		ctx.state->nat_dest.port = 0;
 	}
 
-	if (CALI_F_HEP_NO_POLICY) {
-		/* Host interface with no governing host endpoint, skip policy; this program's purpose is only
-		 * to do bypass/redirects. */
-		ctx.state->pol_rc = CALI_POL_ALLOW;
-		CALI_DEBUG("HEP; no policy\n");
-		goto skip_policy;
-	}
-
 	// For the case where the packet was sent from a socket on this host, get the
 	// sending socket's cookie, so we can reverse a DNAT that the CTLB may have done.
 	// This allows us to give the policy program the pre-DNAT destination as well as
