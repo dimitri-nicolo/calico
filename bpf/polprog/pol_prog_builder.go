@@ -379,7 +379,6 @@ func (p *Builder) writeTiers(tiers []Tier, destLeg matchLeg, allowLabel string) 
 		log.Debugf("Start of tier %d %q", p.tierID, tier.Name)
 		for _, pol := range tier.Policies {
 			p.writePolicy(pol, actionLabels, destLeg)
-			p.policyID++
 		}
 
 		// End of tier rule.
@@ -416,10 +415,13 @@ func (p *Builder) writePolicyRules(policy Policy, actionLabels map[string]string
 	if policy.Staged {
 		// When a pass or allow rule matches in a staged policy then we want to skip
 		// the rest of the rules in the staged policy and continue processing the next
-		// policy in the same tier.
-		actionLabels["pass"] = endOfPolicyLabel
-		actionLabels["next-tier"] = endOfPolicyLabel
-		actionLabels["allow"] = endOfPolicyLabel
+		// policy in the same tier.  Note: don't modify the caller's map here!
+		actionLabels = map[string]string{
+			"pass":      endOfPolicyLabel,
+			"next-tier": endOfPolicyLabel,
+			"allow":     endOfPolicyLabel,
+			"deny":      endOfPolicyLabel,
+		}
 	}
 
 	for ruleIdx, rule := range policy.Rules {
@@ -440,6 +442,7 @@ func (p *Builder) writePolicy(policy Policy, actionLabels map[string]string, des
 	log.Debugf("Start of policy %q %d", policy.Name, p.policyID)
 	p.writePolicyRules(policy, actionLabels, destLeg)
 	log.Debugf("End of policy %q %d", policy.Name, p.policyID)
+	p.policyID++
 }
 
 func (p *Builder) writeProfile(profile Profile, idx int, allowLabel string) {
@@ -450,6 +453,7 @@ func (p *Builder) writeProfile(profile Profile, idx int, allowLabel string) {
 	log.Debugf("Start of profile %q %d", profile.Name, idx)
 	p.writePolicyRules(profile, actionLabels, legDest)
 	log.Debugf("End of profile %q %d", profile.Name, idx)
+	p.policyID++
 }
 
 type matchLeg string
