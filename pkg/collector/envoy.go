@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -52,13 +53,21 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 			Whence: ec.config.TailWhence,
 		},
 	})
-	defer stop(t)
+	defer func() {
+		// Call stop from within a defered function so that
+		// t can be reassigned if the tail is restarted.
+		stop(t)
+	}()
 	if err != nil {
 		// TODO: Figure out proper error handling
 		log.Warnf("Failed to tail envoy logs: %v", err)
 		return
 	}
 	defer log.Errorf("Tail stopped with error: %v", t.Err())
+
+	// Open the file for  monitoring it's size
+	file, _ := os.Open(ec.config.EnvoyLogPath)
+	defer file.Close()
 
 	// Set up the ticker for reading the log files
 	ticker := time.NewTicker(time.Duration(ec.config.EnvoyLogIntervalSecs) * time.Second)
@@ -72,6 +81,41 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			ec.ingestLogs()
+
+			// If a maximum tail lag amount is set, check to make sure
+			// that the tail is not falling too far behind.
+			if ec.config.EnvoyTailMaxLag > 0 {
+				// Seek the current progress of the tail
+				current, err := t.Tell()
+				if err != nil {
+					log.Errorf("Error in attempting to monitor tail progress: %s", err)
+					continue
+				}
+
+				// Seek the location of the end of the file
+				end, err := file.Seek(0, 2)
+				if err != nil {
+					log.Errorf("Error in attempting retrieve end of log file for monitoring tail progress: %s", err)
+					continue
+				}
+
+				// Restart the tail if we have fallen behind the maximum offset while tailing the logs
+				if end-current > int64(ec.config.EnvoyTailMaxLag) {
+					log.Warn("Log ingestion has fallen behind creation by 100 MB. Skipping to the most recent logs")
+					newTail, err := tail.TailFile(ec.config.EnvoyLogPath, tail.Config{
+						Follow: true,
+						ReOpen: true,
+						Location: &tail.SeekInfo{
+							Whence: ec.config.TailWhence,
+						},
+					})
+					if err != nil {
+						log.Errorf("Error creating new tail for the envoy logs: %s. Continuing with the behind tail.", err)
+						continue
+					}
+					t = newTail
+				}
+			}
 			continue
 		default:
 			// Leave an empty default case so select statement will not block and wait.
