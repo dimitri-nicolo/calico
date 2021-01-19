@@ -754,16 +754,16 @@ func (m *bpfEndpointManager) addHostPolicy(rules *polprog.Rules, hostEndpoint *p
 
 	// When there is applicable pre-DNAT policy that does not explicitly Allow or Deny traffic,
 	// we continue onto to subsequent tiers and normal or AoF policy.
-	rules.HostPreDnatTiers = m.extractTiers(m.wildcardHostEndpoint.PreDnatTiers, polDirection, NoEndTierDrop)
+	rules.HostPreDnatTiers = m.extractTiers(hostEndpoint.PreDnatTiers, polDirection, NoEndTierDrop)
 
 	// When there is applicable apply-on-forward policy that does not explicitly Allow or Deny
 	// traffic, traffic is dropped.
-	rules.HostForwardTiers = m.extractTiers(m.wildcardHostEndpoint.ForwardTiers, polDirection, EndTierDrop)
+	rules.HostForwardTiers = m.extractTiers(hostEndpoint.ForwardTiers, polDirection, EndTierDrop)
 
 	// When there is applicable normal policy that does not explicitly Allow or Deny traffic,
 	// traffic is dropped.
-	rules.HostNormalTiers = m.extractTiers(m.wildcardHostEndpoint.Tiers, polDirection, EndTierDrop)
-	rules.HostProfiles = m.extractProfiles(m.wildcardHostEndpoint.ProfileIds, polDirection)
+	rules.HostNormalTiers = m.extractTiers(hostEndpoint.Tiers, polDirection, EndTierDrop)
+	rules.HostProfiles = m.extractProfiles(hostEndpoint.ProfileIds, polDirection)
 }
 
 func (m *bpfEndpointManager) getJumpMapFD(ifaceName string, direction PolDirection) (fd bpf.MapFD) {
