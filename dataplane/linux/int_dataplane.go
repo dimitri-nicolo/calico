@@ -39,6 +39,7 @@ import (
 	"github.com/projectcalico/felix/bpf/arp"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/events"
+	"github.com/projectcalico/felix/bpf/failsafes"
 	bpfipsets "github.com/projectcalico/felix/bpf/ipsets"
 	"github.com/projectcalico/felix/bpf/kprobe"
 	"github.com/projectcalico/felix/bpf/nat"
@@ -736,6 +737,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		config.LookupsCache.EnableID64()
 
+		failsafesMap := failsafes.Map(bpfMapContext)
+		err = arpMap.EnsureExists()
+		if err != nil {
+			log.WithError(err).Panic("Failed to create failsafe port BPF map.")
+		}
+
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		dp.RegisterManager(newBPFEndpointManager(
 			config.BPFLogLevel,
@@ -749,6 +756,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.BPFNodePortDSREnabled,
 			ipSetsMap,
 			stateMap,
+			failsafesMap,
+			config.RulesConfig.FailsafeInboundHostPorts,
+			config.RulesConfig.FailsafeOutboundHostPorts,
 			ruleRenderer,
 			filterTableV4,
 			dp.reportHealth,

@@ -23,41 +23,42 @@
 
 struct failsafe_key {
 	__u16 port;
+	__u8 ip_proto;
+	__u8 flags;
 };
 
 struct failsafe_val {
 	__u32 unused;
 };
 
-CALI_MAP_V1(cali_v4_failsafe_in,
+CALI_MAP_V1(cali_v4_fsafes,
 		BPF_MAP_TYPE_HASH,
 		struct failsafe_key, struct failsafe_val,
 		65536,
 		BPF_F_NO_PREALLOC,
 		MAP_PIN_GLOBAL)
 
-CALI_MAP_V1(cali_v4_failsafe_out,
-		BPF_MAP_TYPE_HASH,
-		struct failsafe_key, struct failsafe_val,
-		65536,
-		BPF_F_NO_PREALLOC,
-		MAP_PIN_GLOBAL)
+#define CALI_FSAFE_OUT 1
 
-static CALI_BPF_INLINE bool is_failsafe_in(__u16 dport) {
+static CALI_BPF_INLINE bool is_failsafe_in(__u8 ip_proto, __u16 dport) {
 	struct failsafe_key key = {
+		.ip_proto = ip_proto,
 		.port = dport,
+		.flags = 0,
 	};
-	if (cali_v4_failsafe_in_lookup_elem(&key)) {
+	if (cali_v4_fsafes_lookup_elem(&key)) {
 		return true;
 	}
 	return false;
 }
 
-static CALI_BPF_INLINE bool is_failsafe_out(__u16 dport) {
+static CALI_BPF_INLINE bool is_failsafe_out(__u8 ip_proto, __u16 dport) {
 	struct failsafe_key key = {
+		.ip_proto = ip_proto,
 		.port = dport,
+		.flags = CALI_FSAFE_OUT,
 	};
-	if (cali_v4_failsafe_out_lookup_elem(&key)) {
+	if (cali_v4_fsafes_lookup_elem(&key)) {
 		return true;
 	}
 	return false;
