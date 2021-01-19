@@ -49,6 +49,7 @@ Earlier versions may work, but we do not actively test {{site.prodnameWindows}} 
 #### Linux platform 
 
 - At least four Linux Kubernetes worker nodes to run {{site.prodname}}'s cluster-wide components that meets [Linux system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements), and is installed with Calico Enterprise v2.7.6+
+- Must not be running in eBPF mode
 - VXLAN or BGP without encapsulation is supported if using Calico CNI. IPIP (default encapsulation mode) is not supported. Use the following command to turn off IPIP.
 ```bash
 kubectl patch felixconfiguration default -p '{"spec":{"ipipEnabled":false}}'
