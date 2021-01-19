@@ -50,7 +50,6 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 				epTypes := []tc.EndpointType{
 					tc.EpTypeWorkload,
 					tc.EpTypeHost,
-					tc.EpTypeHost,
 					tc.EpTypeTunnel,
 					tc.EpTypeWireguard,
 				}

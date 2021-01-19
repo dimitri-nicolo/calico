@@ -63,21 +63,20 @@ flags=0
 ((CALI_CGROUP = 1 << 3))
 ((CALI_TC_DSR = 1 << 4))
 ((CALI_TC_WIREGUARD = 1 << 5))
-((CALI_TC_NO_POLICY = 1 << 6))
 
 if [[ "${filename}" =~ .*hep.* ]]; then
   # Host endpoint.
   ((flags |= CALI_TC_HOST_EP))
-  args+=("-DCALI_DEBUG_NO_PROG" "-DCALI_LOG_PFX=CALICOLO")
+  args+=("-DCALI_NO_DEFAULT_POLICY_PROG" "-DCALI_LOG_PFX=CALICOLO")
   ep_type="host"
 elif [[ "${filename}" =~ .*tnl.* ]]; then
   # Tunnel.
-  ((flags |= CALI_TC_TUNNEL | CALI_TC_HOST_EP | CALI_TC_NO_POLICY))
+  ((flags |= CALI_TC_TUNNEL | CALI_TC_HOST_EP))
   args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALICOLO")
   ep_type="tunnel"
 elif [[ "${filename}" =~ .*wg.* ]]; then
   # Wireguard.
-  ((flags |= CALI_TC_WIREGUARD | CALI_TC_HOST_EP | CALI_TC_NO_POLICY))
+  ((flags |= CALI_TC_WIREGUARD | CALI_TC_HOST_EP))
   args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALICOLO")
   ep_type="wireguard"
 elif [[ "${filename}" =~ .*connect.* ]]; then

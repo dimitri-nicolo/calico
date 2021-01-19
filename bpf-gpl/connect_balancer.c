@@ -64,7 +64,7 @@ static CALI_BPF_INLINE void do_nat_common(struct bpf_sock_addr *ctx, __u8 proto)
 			bpf_ntohl(nat_dest->addr), bpf_ntohs((__u16)dport_be), cookie);
 
 	/* For all protocols, record recent NAT operations in an LRU map; other BPF programs use this
-	 * cache to reverse our DNAT do they can do pre-DNAT policy. */
+	 * cache to reverse our DNAT so they can do pre-DNAT policy. */
 	struct ct_nats_key natk = {
 		.cookie = cookie,
 		.ip = nat_dest->addr,

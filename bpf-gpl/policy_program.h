@@ -26,7 +26,7 @@
 #ifndef __CALI_POL_PROG_H__
 #define __CALI_POL_PROG_H__
 
-#ifndef CALI_DEBUG_NO_PROG
+#ifndef CALI_NO_DEFAULT_POLICY_PROG
 #ifdef CALI_DEBUG_ALLOW_ALL
 
 /* If we want to just compile the code without defining any policies and to
