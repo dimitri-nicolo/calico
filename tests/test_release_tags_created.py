@@ -36,6 +36,7 @@ MAPPED_COMPONENTS = {
     'compliance-server': 'compliance',
     'compliance-benchmarker': 'compliance',
     'ingress-collector': 'ingress-collector',
+    'l7-collector': 'envoy-collector',
     'tigera-cni': 'cni-plugin-private',
     'license-agent': 'license-agent',
     'firewall-integration': 'firewall-integration',
