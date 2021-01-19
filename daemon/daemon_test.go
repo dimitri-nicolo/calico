@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,6 +63,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 			"CloudWatchMetricsReporterEnabled":  "true",
 			"CloudWatchNodeHealthStatusEnabled": "true",
 			"FlowLogsFileEnabled":               "true",
+			"EgressIPSupport":                   "EnabledPerNamespace",
 		}, config.DatastoreGlobal)
 
 		Expect(cfg.IPSecMode).To(Equal("PSK"))
@@ -73,6 +74,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeTrue())
 		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeTrue())
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
+		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
 	})
 
 	It("Should reset all values if there is no license", func() {
@@ -86,6 +88,7 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
 		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 
 	It("Should allow IPSec insecure if IPSec feature is in grace period", func() {
@@ -200,6 +203,40 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
 		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
+	})
+
+	It("Should leave EgressIPSupport setting unchanged if EgressIPSupport license is valid", func() {
+		removeUnlicensedFeaturesFromConfig(cfg, dlc{
+			status: lclient.Valid,
+			features: map[string]bool{
+				features.EgressAccessControl: true,
+			},
+		})
+		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
+		Expect(cfg.DropActionOverride).To(Equal("DROP"))
+		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
+		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
+		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
+		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
+	})
+
+	It("Should update EgressIPSupport setting if EgressIPSupport license is disabled", func() {
+		removeUnlicensedFeaturesFromConfig(cfg, dlc{
+			status: lclient.Valid,
+			features: map[string]bool{
+				features.EgressAccessControl: false,
+			},
+		})
+		Expect(cfg.IPSecMode).To(Equal(""))
+		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
+		Expect(cfg.DropActionOverride).To(Equal("DROP"))
+		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
+		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
+		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
+		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
+		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
 })
 

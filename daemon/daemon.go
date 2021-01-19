@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1495,6 +1495,12 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 			log.Warn("Not licensed for L7 Logs File Output feature. License either invalid or expired. " +
 				"Contact Tigera support or email licensing@tigera.io")
 			licenseOverrides["L7LogsFileEnabled"] = "false"
+		}
+
+		if configParams.EgressIPSupport != "Disabled" && !licenseMonitor.GetFeatureStatus(features.EgressAccessControl) {
+			log.Warn("Not licensed for Egress Access Controles feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+			licenseOverrides["EgressIPSupport"] = "Disabled"
 		}
 	}
 
