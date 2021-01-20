@@ -110,7 +110,7 @@ blocks:
       - mkdir artifacts
       - ./.semaphore/create-test-vm ${VM_NAME}
       - 'gcloud --quiet compute scp --zone=${ZONE} -- /home/semaphore/tigera-dev-ci.json ubuntu@${VM_NAME}:/tmp/tigera-dev-ci.json'
-      - gcloud --quiet compute ssh --zone=${ZONE} ubuntu@${VM_NAME} -- -A -o ServerAliveInterval=10 sh -c 'docker login --username casey@tigera.io -u _json_key -p "$(cat /tmp/tigera-dev-ci.json)" https://gcr.io'
+      - echo 'docker login --username casey@tigera.io -u _json_key -p "$(cat /tmp/tigera-dev-ci.json)" https://gcr.io' | gcloud --quiet compute ssh --zone=${ZONE} ubuntu@${VM_NAME} -- -A -o ServerAliveInterval=10 sh
     jobs:
     - name: UT and Wireguard non-BPF FV on newer kernel
       commands:
