@@ -197,7 +197,7 @@ Example output:
 10.244.42.0/26
 ```
 
-#### Nodeports on Linux do pass connections to Windows pods
+#### Nodeports on Linux do not pass connections on to Windows pods
 Check that your linux nodes are NOT running in eBPF mode.  This can be checked by running:
 ```
 kubectl get felixconfiguration default -o yaml
