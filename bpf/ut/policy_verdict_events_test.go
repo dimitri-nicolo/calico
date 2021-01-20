@@ -148,7 +148,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 			skbMark = 0
 			resetCTMap(ctMap) // ensure it is clean to enforce policy
 
-			runBpfTest(t, "calico_to_workload_ep", tc.policy, func(bpfrun bpfProgRunFn) {
+			runBpfTest(t, "calico_to_workload_ep", &tc.policy, func(bpfrun bpfProgRunFn) {
 				res, err := bpfrun(pktBytes)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Retval).To(Equal(tcRes))
