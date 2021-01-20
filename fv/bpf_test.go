@@ -518,7 +518,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 					expJumpMaps := func(numWorkloads int) int {
 						numHostIfaces := 1
-						expectedNumMaps := 2*numWorkloads + 1*numHostIfaces
+						expectedNumMaps := 2*numWorkloads + 2*numHostIfaces
 						return expectedNumMaps
 					}
 
@@ -2787,7 +2787,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			}
 
 			if testOpts.protocol == "tcp" && testOpts.dsr {
-				verifyConnectivityWhileEnablingBPF := func(from,to *workload.Workload) {
+				verifyConnectivityWhileEnablingBPF := func(from, to *workload.Workload) {
 					By("Starting persistent connection")
 					pc = from.StartPersistentConnection(to.IP, 8055, workload.PersistentConnectionOpts{
 						MonitorConnectivity: true,
@@ -2795,7 +2795,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 					By("having initial connectivity", expectPongs)
 					By("enabling BPF mode", enableBPF) // Waits for BPF programs to be installed
-					time.Sleep(2 * time.Second) // pongs time out after 1s, make sure we look for fresh pongs.
+					time.Sleep(2 * time.Second)        // pongs time out after 1s, make sure we look for fresh pongs.
 					By("still having connectivity on the existing connection", expectPongs)
 				}
 

@@ -87,16 +87,20 @@ var (
 	stateOffIPSrc          int16 = stateEventHdrSize + 0
 	stateOffIPDst          int16 = stateEventHdrSize + 4
 	_                            = stateOffIPDst
-	stateOffPostNATIPDst   int16 = stateEventHdrSize + 8
-	stateOffPolResult      int16 = stateEventHdrSize + 16
-	stateOffSrcPort        int16 = stateEventHdrSize + 20
-	stateOffDstPort        int16 = stateEventHdrSize + 22
+	stateOffPreNATIPDst    int16 = stateEventHdrSize + 8
+	_                            = stateOffPreNATIPDst
+	stateOffPostNATIPDst   int16 = stateEventHdrSize + 12
+	stateOffPolResult      int16 = stateEventHdrSize + 20
+	stateOffSrcPort        int16 = stateEventHdrSize + 24
+	stateOffDstPort        int16 = stateEventHdrSize + 26
 	stateOffICMPType             = stateOffDstPort
-	stateOffPostNATDstPort int16 = stateEventHdrSize + 24
-	stateOffIPProto        int16 = stateEventHdrSize + 26
+	stateOffPreNATDstPort  int16 = stateEventHdrSize + 28
+	_                            = stateOffPreNATDstPort
+	stateOffPostNATDstPort int16 = stateEventHdrSize + 30
+	stateOffIPProto        int16 = stateEventHdrSize + 32
 
-	stateOffRulesHit int16 = stateEventHdrSize + 28
-	stateOffRuleIDs  int16 = stateEventHdrSize + 32
+	stateOffRulesHit int16 = stateEventHdrSize + 36
+	stateOffRuleIDs  int16 = stateEventHdrSize + 40
 
 	// Compile-time check that IPSetEntrySize hasn't changed; if it changes, the code will need to change.
 	_ = [1]struct{}{{}}[20-ipsets.IPSetEntrySize]
