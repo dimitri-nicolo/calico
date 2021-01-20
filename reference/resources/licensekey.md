@@ -40,14 +40,14 @@ kubectl apply -f awesome-corp-license.yaml
 To view the number of licensed nodes and the license key expiry, use:
 
 ```
-kubectl get licensekeys.p -o custom-columns='Name:.metadata.name,MaxNodes:.status.maxnodes,Expiry:.status.expiry'
+kubectl get licensekeys.p -o custom-columns='Name:.metadata.name,MaxNodes:.status.maxnodes,Expiry:.status.expiry,PackageType:.status.package'
 ```
 
 This is an example of the output of above command.
 
 ```
-Name      MaxNodes   Expiry
-default   100        2022-03-05 23:59:59 +0000 UTC
+Name      MaxNodes   Expiry                 Package
+default   100        2021-10-01T23:59:59Z   Enterprise
 ```
 {: .no-select-button}
 
@@ -65,6 +65,10 @@ spec:
     MII...n5
     -----END CERTIFICATE-----
   token: eyJ...zaQ
+status:
+  expiry: "2021-10-01T23:59:59Z"
+  maxnodes: 100
+  package: Enterprise
 ```
 
 The data fields in the license key resource may change without warning.  The license key resource
