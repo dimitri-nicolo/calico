@@ -126,9 +126,9 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	var gvk = lcObj.GetObjectKind().GroupVersionKind().String()
 	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
 		rs.licenseCache.Store(*lcObj.(*libcalicoapi.LicenseKey))
-	} else if rs.licenseCache.IsAPIRestricted(gvk) {
-		err := fmt.Errorf("our license does not support creating resources this API (%s). Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license", gvk)
-		return aapiError(err, key)
+	} else if rs.licenseCache.IsAPIRestricted(gvk, lcObj) {
+		msg := fmt.Sprintf("our license does not support creating resources this API (%s). Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license", gvk)
+		return aapierrors.NewUnauthorized(msg)
 	}
 
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}

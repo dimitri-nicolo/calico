@@ -43,7 +43,89 @@ func TestIsAPIRestricted(t *testing.T) {
 		}
 
 		var cache = newLicenseCache(&claims)
-		var result = cache.IsAPIRestricted(test.gvk)
+		var result = cache.IsAPIRestricted(test.gvk, nil)
+
+		if result != test.expected {
+			t.Fatalf("API restriction for %s is not enforced. Expect check to return %v, but got %v instead", test.gvk, test.expected, result)
+		}
+	}
+}
+
+func TestEgressAccessControls(t *testing.T) {
+	var data = []struct {
+		featureLicense []string
+		gvk            string
+		obj            resourceObject
+		expected       bool
+	}{
+		{[]string{"cnx", "all"}, libcalicoapi.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.NetworkPolicy{Spec: libcalicoapi.NetworkPolicySpec{
+			Egress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, false},
+		{[]string{"cloud", "community"}, libcalicoapi.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.NetworkPolicy{Spec: libcalicoapi.NetworkPolicySpec{
+			Egress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.NetworkPolicy{Spec: libcalicoapi.NetworkPolicySpec{
+			Ingress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.GlobalNetworkPolicy{Spec: libcalicoapi.GlobalNetworkPolicySpec{
+			Egress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.GlobalNetworkPolicy{Spec: libcalicoapi.GlobalNetworkPolicySpec{
+			Ingress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.StagedGlobalNetworkPolicy{Spec: libcalicoapi.StagedGlobalNetworkPolicySpec{
+			Egress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.StagedGlobalNetworkPolicy{Spec: libcalicoapi.StagedGlobalNetworkPolicySpec{
+			Ingress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewStagedNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.StagedNetworkPolicy{Spec: libcalicoapi.StagedNetworkPolicySpec{
+			Egress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewStagedNetworkPolicy().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.StagedNetworkPolicy{Spec: libcalicoapi.StagedNetworkPolicySpec{
+			Ingress: []libcalicoapi.Rule{
+				{Destination: libcalicoapi.EntityRule{Domains: []string{"google.con"}}},
+			},
+		}}, true},
+		{[]string{"cloud", "community"}, libcalicoapi.NewGlobalNetworkSet().GetObjectKind().GroupVersionKind().String(), &libcalicoapi.GlobalNetworkSet{Spec: libcalicoapi.GlobalNetworkSetSpec{
+			AllowedEgressDomains: []string{"google.com"},
+		}}, true},
+	}
+
+	const any = "any"
+
+	for _, test := range data {
+		var numNodes = 5
+		var claims = client.LicenseClaims{
+			LicenseID:   any,
+			Nodes:       &numNodes,
+			Customer:    any,
+			GracePeriod: 90,
+			Features:    test.featureLicense,
+			Claims: jwt.Claims{
+				Expiry: jwt.NumericDate(time.Now().Add(72 * time.Hour).UTC().Unix()),
+				Issuer: any,
+			},
+		}
+
+		var cache = newLicenseCache(&claims)
+		var result = cache.IsAPIRestricted(test.gvk, test.obj)
 
 		if result != test.expected {
 			t.Fatalf("API restriction for %s is not enforced. Expect check to return %v, but got %v instead", test.gvk, test.expected, result)
@@ -93,7 +175,7 @@ func TestClear(t *testing.T) {
 		}
 
 		// validate that API can be accessed
-		result = cache.IsAPIRestricted(test.api)
+		result = cache.IsAPIRestricted(test.api, nil)
 		if result != test.isRestricted {
 			t.Fatalf("API restriction for %s is not enforced. Expect check to return %v, but got %v instead", test.api, test.isRestricted, result)
 		}
@@ -102,7 +184,7 @@ func TestClear(t *testing.T) {
 		cache.Clear()
 
 		// validate that API can no longer be accessed
-		result = cache.IsAPIRestricted(test.api)
+		result = cache.IsAPIRestricted(test.api, nil)
 		if result != test.isRestrictedAfterClearing {
 			t.Fatalf("API restriction for %s is not enforced. Expect check to return %v, but got %v instead", test.api, test.isRestrictedAfterClearing, result)
 		}
