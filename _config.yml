@@ -145,6 +145,7 @@ defaults:
         compliance-reporter: tigera/compliance-reporter
         compliance-benchmarker: tigera/compliance-benchmarker
         ingress-collector: tigera/ingress-collector
+        l7-collector: tigera/l7-collector
         kibana: tigera/kibana
         elasticsearch: tigera/elasticsearch
         license-agent: tigera/license-agent

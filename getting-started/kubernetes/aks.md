@@ -27,16 +27,15 @@ Ensure that your AKS cluster meets the following requirements.
 
   - Azure CNI networking plugin is used with transparent mode.
   - Network policy is not set.
-  This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
+    This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
 
-> **Note**: Azure CLI does not support setting Azure CNI network plugin to transparent mode. Users are required to use ARM template to create cluster as outlined below.
-{: .alert .alert-info}
+##### Using Azure CLI
+
+AKS cluster created using the {% include open-new-window.html text='Azure CLI' url='https://docs.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest' %} are created with transparent mode by default. Ensure cluster is started with the option `--network-plugin azure`
 
 ##### Using Azure Resource Manager (ARM) template
 
-AKS clusters created using {% include open-new-window.html text='ARM templates' url='https://azure.microsoft.com/en-us/resources/templates/?resourceType=Microsoft.Containerservice&term=AKS' %} can leverage native support for enabling Azure CNI plugin with transparent mode
-
-> **Note**: ARM templates must create resources using {% include open-new-window.html text='Microsoft.ContainerService apiVersion 2020-02-01' url='https://docs.microsoft.com/en-us/azure/templates/microsoft.containerservice/2020-02-01/managedclusters' %} or newer
+> **Note**: {% include open-new-window.html text='ARM templates' url='https://azure.microsoft.com/en-us/resources/templates/?resourceType=Microsoft.Containerservice&term=AKS' %} must create resources using {% include open-new-window.html text='Microsoft.ContainerService apiVersion 2020-02-01' url='https://docs.microsoft.com/en-us/azure/templates/microsoft.containerservice/2020-02-01/managedclusters' %} or newer
 {: .alert .alert-info}
 
 1. Enable network mode using the `aks-preview` extension.

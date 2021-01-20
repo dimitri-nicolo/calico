@@ -1,7 +1,7 @@
 ---
 title: Limitations and known issues
 description: Review limitations before starting installation.
-canonical_url: '/getting-started/windows-calico/limitations'
+canonical_url: '/windows-calico/limitations'
 ---
 
 ### Feature support and limitations
@@ -198,5 +198,5 @@ Because of the way the Windows dataplane handles rules, the following limitation
 
 ### Next steps
 
-- [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
-- [Standard install]({{site.baseurl}}/getting-started/windows-calico/kubernetes/standard)
+- [Quickstart]({{site.baseurl}}/windows-calico/quickstart)
+- [Standard install]({{site.baseurl}}/windows-calico/kubernetes/standard)

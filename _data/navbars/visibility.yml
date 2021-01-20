@@ -36,6 +36,13 @@ section:
     path: /visibility/elastic/retention
   - title: Archive logs
     path: /visibility/elastic/archive-storage
+  - title: L7 logs
+    path: /visibility/elastic/l7/
+    section:
+    - title: Configure L7 logs
+      path: /visibility/elastic/l7/configure
+    - title: L7 log data types
+      path: /visibility/elastic/l7/datatypes
 - title: Troubleshoot Elasticsearch
   path: /visibility/troubleshoot
 - title: iptables logs

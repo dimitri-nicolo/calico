@@ -1,7 +1,7 @@
 ---
 title: Basic policy demo
 description: An interactive demo to show how to apply basic network policy to pods in a Calico Enterprise for Windows cluster.
-canonical_url: '/getting-started/windows-calico/demo'
+canonical_url: '/windows-calico/demo'
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
@@ -11,7 +11,7 @@ This guide provides a simple demo to illustrate basic pod-to-pod connectivity an
 
 ## Prerequisites
 
-To run this demo, you will need a [{{site.prodnameWindows}} cluster]({{site.baseurl}}/getting-started/windows-calico/quickstart) with
+To run this demo, you will need a [{{site.prodnameWindows}} cluster]({{site.baseurl}}/windows-calico/quickstart) with
 Windows Server 1809 (build 10.0.17763). More recent versions of Windows Server can be used with a change to the demo manifests.
 
 >**Note**: Windows Server 1809 (build 10.0.17763) does not currently support [direct server return](https://techcommunity.microsoft.com/t5/networking-blog/direct-server-return-dsr-in-a-nutshell/ba-p/693710){:target="_blank"}. This means that policy support is limited to only pod IP addresses.

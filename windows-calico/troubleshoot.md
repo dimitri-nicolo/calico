@@ -1,7 +1,7 @@
 ---
 title: Troubleshoot Calico Enterprise for Windows
 description: Help for troubleshooting Calico Enterprise for Windows issues.
-canonical_url: /getting-started/windows-calico/troubleshoot
+canonical_url: /windows-calico/troubleshoot
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
@@ -108,7 +108,7 @@ items:
 
 #### Felix log error: "Failed to create datastore client"
 
-If the error includes `loading config file <path-to-kubeconfig>`, follow the instructions in [Set environment variables]({{site.baseurl}}/getting-started/windows-calico/kubernetes/standard#install-calico-enterprise-for-windows-and-kubernetes-on-windows-nodes) to update the `KUBECONFIG` environment variable to the path of your kubeconfig file.
+If the error includes `loading config file <path-to-kubeconfig>`, follow the instructions in [Set environment variables]({{site.baseurl}}/windows-calico/kubernetes/standard#install-calico-enterprise-for-windows-and-kubernetes-on-windows-nodes) to update the `KUBECONFIG` environment variable to the path of your kubeconfig file.
 
 #### Felix starts, but does not output logs
 

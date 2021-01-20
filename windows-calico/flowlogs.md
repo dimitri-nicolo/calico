@@ -1,7 +1,7 @@
 ---
 title: Configure flow logs for workloads 
 description: Configure flow logs for Calico Enterprise for Windows workloads.
-canonical_url: '/getting-started/windows-calico/flowlogs'
+canonical_url: '/windows-calico/flowlogs'
 ---
 
 ### Big picture

@@ -1,10 +1,12 @@
 ---
-title: OpenShift
-description: Install Calico Enterprise for Windows on an OpenShift cluster.
+title: L7 logs.
+description: Configure Elasticsearch L7 logs.
+canonical_url: '/visibility/elastic/l7/index'
 show_read_time: false
 show_toc: false
-canonical_url: '/getting-started/windows-calico/openshift/index'
 ---
+
 {{ page.description }}
+
 {% capture content %}{% include index.html %}{% endcapture %}
 {{ content | replace: "    ", "" }}

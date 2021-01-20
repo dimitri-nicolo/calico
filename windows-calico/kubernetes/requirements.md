@@ -1,7 +1,7 @@
 ---
 title: Requirements 
 description: Review requirements for the standard install for Calico Enterprise for Windows.
-canonical_url: '/getting-started/windows-calico/kubernetes/requirements'
+canonical_url: '/windows-calico/kubernetes/requirements'
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
@@ -66,7 +66,7 @@ calicoctl ipam configure --strictaffinity=true
 
 - Windows versions:
   - Windows Server 1903 (AKA 19H1) build 18317 or greater
-  - Windows Server 2019 / 1809 (RS5) or greater, with [some limitations]({{site.baseurl}}/getting-started/windows-calico/limitations)
+  - Windows Server 2019 / 1809 (RS5) or greater, with [some limitations]({{site.baseurl}}/windows-calico/limitations)
   - Windows Server 2019 with DSR support:
     - OS 1809: Build 17763.1432, binary version: 10.0.17763.1432
     - OS 1903: Build 18362.1049, binary version: 10.0.18362.1049
@@ -82,4 +82,4 @@ calicoctl ipam configure --strictaffinity=true
 
 ### Next steps
 
-[Install {{site.prodnameWindows}}]({{site.baseurl}}/getting-started/windows-calico/kubernetes/standard)
+[Install {{site.prodnameWindows}}]({{site.baseurl}}/windows-calico/kubernetes/standard)

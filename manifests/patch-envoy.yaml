@@ -1,0 +1,68 @@
+---
+layout: null
+---
+
+spec:
+  template:
+    spec:
+      containers:
+      - name: envoy-proxy
+        image: {% include component_image component="envoy" %}
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh","-c"]
+        args: ["touch /tmp/envoy.log && envoy -c /etc/envoy/envoy.yaml"]
+        securityContext:
+          runAsUser: 1729
+          runAsGroup: 1729
+          runAsNonRoot: true
+        env:
+        - name: ENVOY_UID
+          value: '1729'
+        - name: ENVOY_GID
+          value: '1729'
+        volumeMounts:
+        - name: envoy-config
+          mountPath: /etc/envoy
+        - name: envoy-logs
+          mountPath: /tmp/
+      - name: l7-collector
+        image: {{page.registry}}{% include component_image component="l7-collector" %}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: LOG_LEVEL
+          value: "Panic"
+        - name: FELIX_DIAL_TARGET
+          value: "/var/run/felix/nodeagent/socket"
+        volumeMounts:
+        - name: envoy-logs
+          mountPath: /tmp/
+        - name: felix-sync
+          mountPath: /var/run/felix
+      imagePullSecrets:
+      - name: tigera-pull-secret
+      volumes:
+      - name: envoy-logs
+        emptyDir: {}
+      - name: felix-sync
+        flexVolume:
+          driver: nodeagent/uds
+      - name: envoy-config
+        configMap:
+          name: envoy-config
+      initContainers:
+      - name: envoy-init
+        image: {{page.registry}}{% include component_image component="envoy-init" %}
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0

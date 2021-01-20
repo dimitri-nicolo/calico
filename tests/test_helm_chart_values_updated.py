@@ -40,6 +40,7 @@ EXCLUDED_IMAGES = [
     # Enterprise images
     'calicoq',
     'ingress-collector',
+    'l7-collector',
     'cloud-controllers',
     'cnx-manager',
     'voltron',
