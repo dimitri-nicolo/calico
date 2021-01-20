@@ -949,6 +949,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			wl.Stop()
 		}
 		for _, felix := range felixes {
+			if bpfEnabled {
+				felix.Exec("calico-bpf", "connect-time", "clean")
+			}
 			felix.Stop()
 		}
 
