@@ -170,7 +170,7 @@ The following steps will configure {{site.prodname}} to advertise Service `statu
 1. Check to see if you have a default BGPConfiguration.
 
    ```bash
-   calicoctl get bgpconfig default
+   kubectl get bgpconfiguration default
    ```
 
 1. Based on above results, update or create a BGPConfiguration.
@@ -179,14 +179,14 @@ The following steps will configure {{site.prodname}} to advertise Service `statu
    Patch the BGPConfiguration using the following command, adding your own service load balancer IP CIDRs:
 
    ```bash
-   calicoctl patch BGPConfig default --patch '{"spec": {"serviceLoadBalancer": [{"cidr": "x.x.x.x/16"}]}}'
+   kubectl patch bgpconfiguration default --patch '{"spec": {"serviceLoadBalancerIPs": [{"cidr": "x.x.x.x/16"}]}}'
    ```
 
    **Create default BGPConfiguration**
    Use the following sample command to create a default BGPConfiguration. Add your CIDR blocks for load balancer IPs to be advertised in the `serviceLoadBalancerIPs` field.
 
    ```bash
-   calicoctl create -f - <<EOF
+   kubectl create -f - <<EOF
    apiVersion: projectcalico.org/v3
    kind: BGPConfiguration
    metadata:
