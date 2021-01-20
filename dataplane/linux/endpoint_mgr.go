@@ -1019,8 +1019,6 @@ func (m *endpointManager) resolveHostEndpoints() {
 	m.activeIfaceNameToHostEpID = newIfaceNameToHostEpID
 	m.activeHostEpIDToIfaceNames = newHostEpIDToIfaceNames
 
-	// Code after this point is for dispatch chains and IPVS endpoint marking, which aren't
-	// needed in BPF mode.
 	if m.bpfEnabled {
 		// Construct map of interface names to host endpoints, to pass to the BPF endpoint
 		// manager.
@@ -1031,6 +1029,9 @@ func (m *endpointManager) resolveHostEndpoints() {
 		if m.bpfEndpointManager != nil {
 			m.bpfEndpointManager.OnHEPUpdate(hostIfaceToEpMap)
 		}
+
+		// Code after this point is for dispatch chains and IPVS endpoint marking, which
+		// aren't needed in BPF mode.
 		return
 	}
 

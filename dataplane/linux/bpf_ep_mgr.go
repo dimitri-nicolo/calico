@@ -753,7 +753,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 func (m *bpfEndpointManager) addHostPolicy(rules *polprog.Rules, hostEndpoint *proto.HostEndpoint, polDirection PolDirection) {
 
 	// When there is applicable pre-DNAT policy that does not explicitly Allow or Deny traffic,
-	// we continue onto to subsequent tiers and normal or AoF policy.
+	// we continue on to subsequent tiers and normal or AoF policy.
 	rules.HostPreDnatTiers = m.extractTiers(hostEndpoint.PreDnatTiers, polDirection, NoEndTierDrop)
 
 	// When there is applicable apply-on-forward policy that does not explicitly Allow or Deny
@@ -1244,19 +1244,17 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.Host
 		delete(hostIfaceToEpMap, allInterfaces)
 	}
 
-	// If the host-* endpoint is or was non-nil, update policy programs for all workload
-	// interfaces.
-	if wildcardHostEndpoint == nil && m.wildcardHostEndpoint == nil {
-		log.Debug("Host-* endpoint was and is not configured")
-	} else if wildcardHostEndpoint == m.wildcardHostEndpoint {
-		log.Debug("Host-* endpoint is unchanged")
-	} else if wildcardHostEndpoint == nil || m.wildcardHostEndpoint == nil || !reflect.DeepEqual(*wildcardHostEndpoint, *m.wildcardHostEndpoint) {
+	// If the host-* endpoint is changing, update policy programs for all workload interfaces.
+	if !reflect.DeepEqual(wildcardHostEndpoint, m.wildcardHostEndpoint) {
 		log.Infof("Host-* endpoint is changing; was %v, now %v", m.wildcardHostEndpoint, wildcardHostEndpoint)
 		m.wildcardHostEndpoint = wildcardHostEndpoint
 		for ifaceName := range m.nameToIface {
 			if m.isWorkloadIface(ifaceName) {
 				log.Info("Update workload policy program for possible host-* change")
-				m.applyPolicy(ifaceName)
+				err := m.applyPolicy(ifaceName)
+				if err != nil {
+					log.WithError(err).Error("Failed to update workload policy for host-* change")
+				}
 			}
 		}
 	} else {

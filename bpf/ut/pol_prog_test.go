@@ -1592,10 +1592,10 @@ func (p packet) StateIn() state.State {
 	}
 	flags := uint8(0)
 	if p.fromHostFlag {
-		flags |= uint8(1 << 3)
+		flags |= polprog.FlagSrcIsHost
 	}
 	if p.toHostFlag {
-		flags |= uint8(1 << 2)
+		flags |= polprog.FlagDestIsHost
 	}
 
 	if uint8(p.protocol) == 1 {

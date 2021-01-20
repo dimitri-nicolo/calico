@@ -117,8 +117,8 @@ var (
 	ipsKeyPad    int16 = 19
 
 	// Bits in the state flags field.
-	flagDestIsHost uint8 = 1 << 2
-	flagSrcIsHost  uint8 = 1 << 3
+	FlagDestIsHost uint8 = 1 << 2
+	FlagSrcIsHost  uint8 = 1 << 3
 )
 
 type Rule struct {
@@ -141,14 +141,26 @@ type Tier struct {
 }
 
 type Rules struct {
+	// Both workload and host interfaces can enforce host endpoint policy (carried here in the
+	// Host... fields); in the case of a workload interface, that can only come from the
+	// wildcard host endpoint, aka "host-*".
+	//
+	// However, only a workload interface can have any workload policy (carried here in the
+	// Tiers and Profiles fields), and workload interfaces also Deny by default when there is no
+	// workload policy at all.  ForHostInterface (with reversed polarity) is the boolean that
+	// tells us whether or not to implement workload policy and that default Deny.
+	ForHostInterface bool
+
+	// Workload policy.
 	Tiers            []Tier
 	Profiles         []Profile
 	NoProfileMatchID RuleMatchID
+
+	// Host endpoint policy.
 	HostPreDnatTiers []Tier
 	HostForwardTiers []Tier
 	HostNormalTiers  []Tier
 	HostProfiles     []Profile
-	ForHostInterface bool
 }
 
 type RuleMatchID = uint64
@@ -252,7 +264,7 @@ func (p *Builder) writeJumpIfToOrFromHost(label string) {
 	p.b.Load8(R1, R9, stateOffFlags)
 
 	// Mask against host bits.
-	p.b.AndImm32(R1, int32(flagDestIsHost|flagSrcIsHost))
+	p.b.AndImm32(R1, int32(FlagDestIsHost|FlagSrcIsHost))
 
 	// If non-zero, jump to specified label.
 	p.b.JumpNEImm64(R1, 0, label)
@@ -464,6 +476,37 @@ const (
 	legDestPreNAT matchLeg = "destPreNAT"
 )
 
+func (leg matchLeg) offsetToStateIPAddressField() (offset int16) {
+	if leg == legSource {
+		offset = stateOffIPSrc
+	} else if leg == legDestPreNAT {
+		offset = stateOffPreNATIPDst
+	} else {
+		offset = stateOffPostNATIPDst
+	}
+	return
+}
+
+func (leg matchLeg) offsetToStatePortField() (portOffset int16) {
+	if leg == legSource {
+		portOffset = stateOffSrcPort
+	} else if leg == legDestPreNAT {
+		portOffset = stateOffPreNATDstPort
+	} else {
+		portOffset = stateOffPostNATDstPort
+	}
+	return
+}
+
+func (leg matchLeg) stackOffsetToIPSetKey() (keyOffset int16) {
+	if leg == legSource {
+		keyOffset = offSrcIPSetKey
+	} else {
+		keyOffset = offDstIPSetKey
+	}
+	return
+}
+
 func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
 	if actionLabel == "" {
 		log.Panic("empty action label")
@@ -614,16 +657,7 @@ func (p *Builder) writeICMPTypeCodeMatch(negate bool, icmpType, icmpCode uint8) 
 	}
 }
 func (p *Builder) writeCIDRSMatch(negate bool, leg matchLeg, cidrs []string) {
-	var offset int16
-	if leg == legSource {
-		offset = stateOffIPSrc
-	} else if leg == legDestPreNAT {
-		offset = stateOffPreNATIPDst
-	} else {
-		offset = stateOffPostNATIPDst
-	}
-
-	p.b.Load32(R1, R9, offset)
+	p.b.Load32(R1, R9, leg.offsetToStateIPAddressField())
 
 	var onMatchLabel string
 	if negate {
@@ -659,18 +693,8 @@ func (p *Builder) writeIPSetMatch(negate bool, leg matchLeg, ipSets []string) {
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
 		}
 
-		var keyOffset int16
-		if leg == legSource {
-			p.setUpSrcIPSetKey(id)
-			keyOffset = offSrcIPSetKey
-		} else if leg == legDestPreNAT {
-			p.setUpPreNATDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		} else {
-			p.setUpDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		}
-
+		keyOffset := leg.stackOffsetToIPSetKey()
+		p.setUpIPSetKey(id, keyOffset, leg.offsetToStateIPAddressField(), leg.offsetToStatePortField())
 		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
 		p.b.Mov64(R2, R10)
 		p.b.AddImm64(R2, int32(keyOffset))
@@ -699,18 +723,8 @@ func (p *Builder) writeIPSetOrMatch(leg matchLeg, ipSets []string) {
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
 		}
 
-		var keyOffset int16
-		if leg == legSource {
-			p.setUpSrcIPSetKey(id)
-			keyOffset = offSrcIPSetKey
-		} else if leg == legDestPreNAT {
-			p.setUpPreNATDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		} else {
-			p.setUpDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		}
-
+		keyOffset := leg.stackOffsetToIPSetKey()
+		p.setUpIPSetKey(id, keyOffset, leg.offsetToStateIPAddressField(), leg.offsetToStatePortField())
 		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
 		p.b.Mov64(R2, R10)
 		p.b.AddImm64(R2, int32(keyOffset))
@@ -730,15 +744,6 @@ func (p *Builder) writeIPSetOrMatch(leg matchLeg, ipSets []string) {
 func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.PortRange, namedPorts []string) {
 	// For a ports match, numeric ports and named ports are ORed together.  Check any
 	// numeric ports first and then any named ports.
-	var portOffset int16
-	if leg == legSource {
-		portOffset = stateOffSrcPort
-	} else if leg == legDestPreNAT {
-		portOffset = stateOffPreNATDstPort
-	} else {
-		portOffset = stateOffPostNATDstPort
-	}
-
 	var onMatchLabel string
 	if negate {
 		// Match negated, if we match any port then we jump to the next rule.
@@ -749,7 +754,7 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 	}
 
 	// R1 = port to test against.
-	p.b.Load16(R1, R9, portOffset)
+	p.b.Load16(R1, R9, leg.offsetToStatePortField())
 
 	for _, portRange := range ports {
 		if portRange.First == portRange.Last {
@@ -777,15 +782,8 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
 		}
 
-		var keyOffset int16
-		if leg == legSource {
-			p.setUpSrcIPSetKey(id)
-			keyOffset = offSrcIPSetKey
-		} else {
-			p.setUpDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		}
-
+		keyOffset := leg.stackOffsetToIPSetKey()
+		p.setUpIPSetKey(id, keyOffset, leg.offsetToStateIPAddressField(), leg.offsetToStatePortField())
 		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
 		p.b.Mov64(R2, R10)
 		p.b.AddImm64(R2, int32(keyOffset))
