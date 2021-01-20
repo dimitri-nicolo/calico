@@ -41,11 +41,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/failsafes"
 	"github.com/projectcalico/felix/bpf/polprog"
 	"github.com/projectcalico/felix/bpf/tc"
 	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/iptables"
@@ -124,10 +122,9 @@ type bpfEndpointManager struct {
 	vxlanMTU           int
 	dsrEnabled         bool
 
-	ipSetMap            bpf.Map
-	stateMap            bpf.Map
-	failsafesMap        bpf.Map
-	failsafesInSync     bool
+	ipSetMap bpf.Map
+	stateMap bpf.Map
+
 	ruleRenderer        bpfAllowChainRenderer
 	iptablesFilterTable *iptables.Table
 
@@ -138,8 +135,6 @@ type bpfEndpointManager struct {
 	onStillAlive func()
 
 	lookupsCache *calc.LookupsCache
-	failsafesIn  []config.ProtoPort
-	failsafesOut []config.ProtoPort
 }
 
 type bpfAllowChainRenderer interface {
@@ -158,8 +153,6 @@ func newBPFEndpointManager(
 	dsrEnabled bool,
 	ipSetMap bpf.Map,
 	stateMap bpf.Map,
-	failsafesMap bpf.Map,
-	failsafesIn, failsafesOut []config.ProtoPort,
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTable *iptables.Table,
 	livenessCallback func(),
@@ -189,9 +182,6 @@ func newBPFEndpointManager(
 		dsrEnabled:          dsrEnabled,
 		ipSetMap:            ipSetMap,
 		stateMap:            stateMap,
-		failsafesMap:        failsafesMap,
-		failsafesIn:         failsafesIn,
-		failsafesOut:        failsafesOut,
 		ruleRenderer:        iptablesRuleRenderer,
 		iptablesFilterTable: iptablesFilterTable,
 		mapCleanupRunner: ratelimited.NewRunner(jumpMapCleanupInterval, func(ctx context.Context) {
@@ -408,10 +398,6 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 	// Do one-off initialisation.
 	m.ensureStarted()
 
-	if !m.failsafesInSync {
-		m.resyncFailsafes()
-	}
-
 	m.applyProgramsToDirtyDataInterfaces()
 	m.updateWEPsInDataplane()
 
@@ -426,65 +412,6 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 	bpfHappyEndpointsGauge.Set(float64(len(m.happyWEPs)))
 
 	return nil
-}
-
-func (m *bpfEndpointManager) resyncFailsafes() {
-	err := m.failsafesMap.EnsureExists()
-	if err != nil {
-		// Shouldn't happen because int_dataplane opens the map already.
-		log.WithError(err).Panic("Failed to open failsafe port map.")
-	}
-
-	syncFailed := false
-	unknownKeys := set.New()
-	err = m.failsafesMap.Iter(func(rawKey, _ []byte) bpf.IteratorAction {
-		key := failsafes.KeyFromSlice(rawKey)
-		unknownKeys.Add(key)
-		return bpf.IterNone
-	})
-	if err != nil {
-		log.WithError(err).Panic("Failed to iterate failsafe ports map.")
-		return
-	}
-
-	addPort := func(p config.ProtoPort, outbound bool) {
-		var ipProto uint8
-		switch strings.ToLower(p.Protocol) {
-		case "tcp":
-			ipProto = 6
-		case "udp":
-			ipProto = 17
-		default:
-			log.WithField("proto", p.Protocol).Warn("Ignoring failsafe port; protocol not supported in BPF mode.")
-			return
-		}
-		k := failsafes.MakeKey(ipProto, p.Port, outbound)
-		unknownKeys.Discard(k)
-		err := m.failsafesMap.Update(k.ToSlice(), failsafes.Value())
-		if err != nil {
-			log.WithError(err).Error("Failed to update failsafe port.")
-			syncFailed = true
-		}
-	}
-
-	for _, p := range m.failsafesIn {
-		addPort(p, false)
-	}
-	for _, p := range m.failsafesOut {
-		addPort(p, true)
-	}
-
-	unknownKeys.Iter(func(item interface{}) error {
-		k := item.(failsafes.Key)
-		err := m.failsafesMap.Delete(k.ToSlice())
-		if err != nil {
-			log.WithError(err).WithField("key", k).Warn("Failed to remove failsafe port from map.")
-			syncFailed = true
-		}
-		return nil
-	})
-
-	m.failsafesInSync = !syncFailed
 }
 
 func (m *bpfEndpointManager) setAcceptLocal(iface string, val bool) error {

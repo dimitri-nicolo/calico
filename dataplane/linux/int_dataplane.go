@@ -737,11 +737,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		config.LookupsCache.EnableID64()
 
+		// The failsafe manager sets up the failsafe port map.  It's important that it is registered before the
+		// endpoint managers so that the map is brought up to date before they run for the first time.
 		failsafesMap := failsafes.Map(bpfMapContext)
 		err = arpMap.EnsureExists()
 		if err != nil {
 			log.WithError(err).Panic("Failed to create failsafe port BPF map.")
 		}
+		failsafeMgr := failsafes.NewManager(
+			failsafesMap,
+			config.RulesConfig.FailsafeInboundHostPorts,
+			config.RulesConfig.FailsafeOutboundHostPorts,
+			dp.loopSummarizer,
+		)
+		dp.RegisterManager(failsafeMgr)
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		dp.RegisterManager(newBPFEndpointManager(
@@ -756,9 +765,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.BPFNodePortDSREnabled,
 			ipSetsMap,
 			stateMap,
-			failsafesMap,
-			config.RulesConfig.FailsafeInboundHostPorts,
-			config.RulesConfig.FailsafeOutboundHostPorts,
 			ruleRenderer,
 			filterTableV4,
 			dp.reportHealth,
