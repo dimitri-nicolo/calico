@@ -153,7 +153,7 @@ type Rules struct {
 
 	// Indicates to suppress normal host policy because it's trumped by the setting of
 	// DefaultEndpointToHostAction.
-	SuppressToOrFromHostPolicy bool
+	SuppressNormalHostPolicy bool
 
 	// Workload policy.
 	Tiers            []Tier
@@ -192,10 +192,10 @@ func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	// - on a workload interface, workload <--> own host
 	// - on a host interface, this host (not a workload) <--> anywhere outside this host
 	//
-	// When rules.SuppressToOrFromHostPolicy is true, we also skip normal host policy; this is
+	// When rules.SuppressNormalHostPolicy is true, we also skip normal host policy; this is
 	// the case when we're building the policy program for workload -> host and
-	// DefaultEndpointToHostAction is ACCEPT or DROP.
-	if rules.SuppressToOrFromHostPolicy {
+	// DefaultEndpointToHostAction is ACCEPT or DROP; or for host -> workload.
+	if rules.SuppressNormalHostPolicy {
 		p.writeJumpIfToOrFromHost("allowed_by_host_policy")
 	} else {
 		p.writeJumpIfToOrFromHost("to_or_from_host")
@@ -215,7 +215,7 @@ func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	// Now skip over normal host policy and jump to where we apply possible workload policy.
 	p.b.Jump("allowed_by_host_policy")
 
-	if !rules.SuppressToOrFromHostPolicy {
+	if !rules.SuppressNormalHostPolicy {
 		// "Normal" host policy, i.e. for non-forwarded traffic.
 		p.b.LabelNextInsn("to_or_from_host")
 		p.writeTiers(rules.HostNormalTiers, legDest, "allowed_by_host_policy")

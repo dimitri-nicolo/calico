@@ -718,7 +718,12 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	// If workload egress and DefaultEndpointToHostAction is ACCEPT or DROP, suppress the normal
 	// host-* endpoint policy.
 	if polDirection == PolDirnEgress && m.epToHostAction != "RETURN" {
-		rules.SuppressToOrFromHostPolicy = true
+		rules.SuppressNormalHostPolicy = true
+	}
+
+	// If host -> workload, always suppress the normal host-* endpoint policy.
+	if polDirection == PolDirnIngress {
+		rules.SuppressNormalHostPolicy = true
 	}
 
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
