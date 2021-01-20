@@ -95,3 +95,8 @@ $env:FELIX_FLOWLOGSFILEINCLUDELABELS = "true"
 $env:FELIX_FLOWLOGSFILEINCLUDEPOLICIES = "true"
 $env:FELIX_FLOWLOGSFILEINCLUDESERVICE = "true"
 $env:FELIX_FLOWLOGSENABLENETWORKSETS = "true"
+
+# Enable Felix to keep track of denied packets and publish as prometheus
+# metrics.
+$env:FELIX_PROMETHEUSREPORTERENABLED = "true"
+$env:FELIX_PROMETHEUSREPORTERPORT = "9081"
