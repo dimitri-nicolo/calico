@@ -151,6 +151,10 @@ type Rules struct {
 	// tells us whether or not to implement workload policy and that default Deny.
 	ForHostInterface bool
 
+	// Indicates to suppress normal host policy because it's trumped by the setting of
+	// DefaultEndpointToHostAction.
+	SuppressToOrFromHostPolicy bool
+
 	// Workload policy.
 	Tiers            []Tier
 	Profiles         []Profile
@@ -187,7 +191,15 @@ func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	// that this case can be:
 	// - on a workload interface, workload <--> own host
 	// - on a host interface, this host (not a workload) <--> anywhere outside this host
-	p.writeJumpIfToOrFromHost("to_or_from_host")
+	//
+	// When rules.SuppressToOrFromHostPolicy is true, we also skip normal host policy; this is
+	// the case when we're building the policy program for workload -> host and
+	// DefaultEndpointToHostAction is ACCEPT or DROP.
+	if rules.SuppressToOrFromHostPolicy {
+		p.writeJumpIfToOrFromHost("allowed_by_host_policy")
+	} else {
+		p.writeJumpIfToOrFromHost("to_or_from_host")
+	}
 
 	// At this point we know we have traffic that is being forwarded through the host's root
 	// network namespace.  Note that this case can be:
@@ -203,10 +215,12 @@ func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	// Now skip over normal host policy and jump to where we apply possible workload policy.
 	p.b.Jump("allowed_by_host_policy")
 
-	// "Normal" host policy, i.e. for non-forwarded traffic.
-	p.b.LabelNextInsn("to_or_from_host")
-	p.writeTiers(rules.HostNormalTiers, legDest, "allowed_by_host_policy")
-	p.writeProfiles(rules.HostProfiles, rules.NoProfileMatchID, "allowed_by_host_policy")
+	if !rules.SuppressToOrFromHostPolicy {
+		// "Normal" host policy, i.e. for non-forwarded traffic.
+		p.b.LabelNextInsn("to_or_from_host")
+		p.writeTiers(rules.HostNormalTiers, legDest, "allowed_by_host_policy")
+		p.writeProfiles(rules.HostProfiles, rules.NoProfileMatchID, "allowed_by_host_policy")
+	}
 
 	// End of host policy.
 	p.b.LabelNextInsn("allowed_by_host_policy")

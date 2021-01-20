@@ -119,7 +119,7 @@ type bpfEndpointManager struct {
 	dataIfaceRegex     *regexp.Regexp
 	workloadIfaceRegex *regexp.Regexp
 	ipSetIDAlloc       *idalloc.IDAllocator
-	epToHostDrop       bool
+	epToHostAction     string
 	vxlanMTU           int
 	dsrEnabled         bool
 
@@ -150,7 +150,7 @@ func newBPFEndpointManager(
 	bpfLogLevel string,
 	hostname string,
 	fibLookupEnabled bool,
-	epToHostDrop bool,
+	epToHostAction string,
 	dataIfaceRegex *regexp.Regexp,
 	workloadIfaceRegex *regexp.Regexp,
 	ipSetIDAlloc *idalloc.IDAllocator,
@@ -182,7 +182,7 @@ func newBPFEndpointManager(
 		dataIfaceRegex:      dataIfaceRegex,
 		workloadIfaceRegex:  workloadIfaceRegex,
 		ipSetIDAlloc:        ipSetIDAlloc,
-		epToHostDrop:        epToHostDrop,
+		epToHostAction:      epToHostAction,
 		vxlanMTU:            vxlanMTU,
 		dsrEnabled:          dsrEnabled,
 		ipSetMap:            ipSetMap,
@@ -715,6 +715,12 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		m.addHostPolicy(&rules, m.wildcardHostEndpoint, polDirection.Inverse())
 	}
 
+	// If workload egress and DefaultEndpointToHostAction is ACCEPT or DROP, suppress the normal
+	// host-* endpoint policy.
+	if polDirection == PolDirnEgress && m.epToHostAction != "RETURN" {
+		rules.SuppressToOrFromHostPolicy = true
+	}
+
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
 	if jumpMapFD != 0 {
 		if attached, err := ap.IsAttached(); err != nil {
@@ -960,7 +966,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType
 	ap.Iface = ifaceName
 	ap.Type = endpointType
 	ap.ToOrFrom = toOrFrom
-	ap.ToHostDrop = m.epToHostDrop
+	ap.ToHostDrop = (m.epToHostAction == "DROP")
 	ap.FIB = m.fibLookupEnabled
 	ap.DSR = m.dsrEnabled
 	ap.LogLevel = m.bpfLogLevel

@@ -758,7 +758,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.BPFLogLevel,
 			config.Hostname,
 			fibLookupEnabled,
-			config.RulesConfig.EndpointToHostAction == "DROP",
+			config.RulesConfig.EndpointToHostAction,
 			config.BPFDataIfacePattern,
 			workloadIfaceRegex,
 			ipSetIDAllocator,
