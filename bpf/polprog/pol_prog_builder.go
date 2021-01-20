@@ -473,8 +473,10 @@ func (p *Builder) writePolicy(policy Policy, actionLabels map[string]string, des
 
 func (p *Builder) writeProfile(profile Profile, idx int, allowLabel string) {
 	actionLabels := map[string]string{
-		"allow": allowLabel,
-		"deny":  "deny",
+		"allow":     allowLabel,
+		"deny":      "deny",
+		"pass":      "deny",
+		"next-tier": "deny",
 	}
 	log.Debugf("Start of profile %q %d", profile.Name, idx)
 	p.writePolicyRules(profile, actionLabels, legDest)
