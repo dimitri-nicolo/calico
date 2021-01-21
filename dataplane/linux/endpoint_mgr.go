@@ -881,9 +881,11 @@ func (m *endpointManager) resolveHostEndpoints() map[string]proto.HostEndpointID
 	if m.bpfEnabled && m.bpfEndpointManager != nil {
 		// Construct map of interface names to host endpoints, and pass to the BPF endpoint
 		// manager.
-		hostIfaceToEpMap := map[string]*proto.HostEndpoint{}
+		hostIfaceToEpMap := map[string]proto.HostEndpoint{}
 		for ifaceName, id := range newIfaceNameToHostEpID {
-			hostIfaceToEpMap[ifaceName] = m.rawHostEndpoints[id]
+			// Note, dereference the proto.HostEndpoint here so that the data lifetime
+			// is decoupled from the validity of the pointer here.
+			hostIfaceToEpMap[ifaceName] = *m.rawHostEndpoints[id]
 		}
 		m.bpfEndpointManager.OnHEPUpdate(hostIfaceToEpMap)
 	}

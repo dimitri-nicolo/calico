@@ -138,8 +138,9 @@ type bpfEndpointManager struct {
 	lookupsCache *calc.LookupsCache
 
 	// HEP processing.
-	hostIfaceToEpMap     map[string]*proto.HostEndpoint
-	wildcardHostEndpoint *proto.HostEndpoint
+	hostIfaceToEpMap     map[string]proto.HostEndpoint
+	wildcardHostEndpoint proto.HostEndpoint
+	wildcardExists       bool
 }
 
 type bpfAllowChainRenderer interface {
@@ -195,7 +196,7 @@ func newBPFEndpointManager(
 		}),
 		onStillAlive:     livenessCallback,
 		lookupsCache:     lookupsCache,
-		hostIfaceToEpMap: map[string]*proto.HostEndpoint{},
+		hostIfaceToEpMap: map[string]proto.HostEndpoint{},
 	}
 }
 
@@ -333,7 +334,7 @@ func (m *bpfEndpointManager) onPolicyUpdate(msg *proto.ActivePolicyUpdate) {
 	polID := *msg.Id
 	log.WithField("id", polID).Debug("Policy update")
 	m.policies[polID] = msg.Policy
-	m.markPolicyUsersDirty(polID)
+	m.markEndpointsDirty(m.policiesToWorkloads[polID], "policy")
 }
 
 // onPolicyRemove removes the policy from the cache and marks any endpoints using it dirty.
@@ -341,7 +342,7 @@ func (m *bpfEndpointManager) onPolicyUpdate(msg *proto.ActivePolicyUpdate) {
 func (m *bpfEndpointManager) onPolicyRemove(msg *proto.ActivePolicyRemove) {
 	polID := *msg.Id
 	log.WithField("id", polID).Debug("Policy removed")
-	m.markPolicyUsersDirty(polID)
+	m.markEndpointsDirty(m.policiesToWorkloads[polID], "policy")
 	delete(m.policies, polID)
 	delete(m.policiesToWorkloads, polID)
 }
@@ -351,7 +352,7 @@ func (m *bpfEndpointManager) onProfileUpdate(msg *proto.ActiveProfileUpdate) {
 	profID := *msg.Id
 	log.WithField("id", profID).Debug("Profile update")
 	m.profiles[profID] = msg.Profile
-	m.markProfileUsersDirty(profID)
+	m.markEndpointsDirty(m.profilesToWorkloads[profID], "profile")
 }
 
 // onProfileRemove removes the profile from the cache and marks any endpoints that were using it as dirty.
@@ -359,33 +360,33 @@ func (m *bpfEndpointManager) onProfileUpdate(msg *proto.ActiveProfileUpdate) {
 func (m *bpfEndpointManager) onProfileRemove(msg *proto.ActiveProfileRemove) {
 	profID := *msg.Id
 	log.WithField("id", profID).Debug("Profile removed")
-	m.markProfileUsersDirty(profID)
+	m.markEndpointsDirty(m.profilesToWorkloads[profID], "profile")
 	delete(m.profiles, profID)
 	delete(m.profilesToWorkloads, profID)
 }
 
-func (m *bpfEndpointManager) markPolicyUsersDirty(id proto.PolicyID) {
-	wls := m.policiesToWorkloads[id]
-	if wls == nil {
-		// Hear about the policy before the endpoint.
+func (m *bpfEndpointManager) markEndpointsDirty(ids set.Set, kind string) {
+	if ids == nil {
+		// Hear about the policy/profile before the endpoint.
 		return
 	}
-	wls.Iter(func(item interface{}) error {
-		wlID := item.(proto.WorkloadEndpointID)
-		m.markExistingWEPDirty(wlID, "policy")
-		return nil
-	})
-}
-
-func (m *bpfEndpointManager) markProfileUsersDirty(id proto.ProfileID) {
-	wls := m.profilesToWorkloads[id]
-	if wls == nil {
-		// Hear about the policy before the endpoint.
-		return
-	}
-	wls.Iter(func(item interface{}) error {
-		wlID := item.(proto.WorkloadEndpointID)
-		m.markExistingWEPDirty(wlID, "profile")
+	ids.Iter(func(item interface{}) error {
+		switch id := item.(type) {
+		case proto.WorkloadEndpointID:
+			m.markExistingWEPDirty(id, kind)
+		case string:
+			if id == allInterfaces {
+				for ifaceName := range m.nameToIface {
+					if m.isWorkloadIface(ifaceName) {
+						log.Debugf("Mark WEP iface dirty, for host-* endpoint %v change", kind)
+						m.dirtyIfaceNames.Add(ifaceName)
+					}
+				}
+			} else {
+				log.Debugf("Mark host iface dirty, for host %v change", kind)
+				m.dirtyIfaceNames.Add(id)
+			}
+		}
 		return nil
 	})
 }
@@ -473,14 +474,19 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 				return
 			}
 
+			var hepPtr *proto.HostEndpoint
+			if hep, hepExists := m.hostIfaceToEpMap[iface]; hepExists {
+				hepPtr = &hep
+			}
+
 			var ingressWG sync.WaitGroup
 			var ingressErr error
 			ingressWG.Add(1)
 			go func() {
 				defer ingressWG.Done()
-				ingressErr = m.attachDataIfaceProgram(iface, PolDirnIngress)
+				ingressErr = m.attachDataIfaceProgram(iface, hepPtr, PolDirnIngress)
 			}()
-			err = m.attachDataIfaceProgram(iface, PolDirnEgress)
+			err = m.attachDataIfaceProgram(iface, hepPtr, PolDirnEgress)
 			ingressWG.Wait()
 			if err == nil {
 				err = ingressErr
@@ -696,6 +702,12 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	//   for resizing the packet, so we have to reduce the apparent MTU by another 50 bytes
 	//   when we cannot encap the packet - non-GSO & too close to veth MTU
 	ap.TunnelMTU = uint16(m.vxlanMTU - 50)
+
+	jumpMapFD, err := m.ensureProgramAttached(&ap, polDirection)
+	if err != nil {
+		return err
+	}
+
 	var profileIDs []string
 	var tiers []*proto.TierInfo
 	if endpoint != nil {
@@ -711,8 +723,8 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	rules := m.extractRules(tiers, profileIDs, polDirection)
 
 	// If host-* endpoint is configured, add in its policy.
-	if m.wildcardHostEndpoint != nil {
-		m.addHostPolicy(&rules, m.wildcardHostEndpoint, polDirection.Inverse())
+	if m.wildcardExists {
+		m.addHostPolicy(&rules, &m.wildcardHostEndpoint, polDirection.Inverse())
 	}
 
 	// If workload egress and DefaultEndpointToHostAction is ACCEPT or DROP, suppress the normal
@@ -726,20 +738,25 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		rules.SuppressNormalHostPolicy = true
 	}
 
-	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
+	return m.updatePolicyProgram(jumpMapFD, rules)
+}
+
+// Ensure TC program is attached to the specified interface and return its jump map FD.
+func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirection PolDirection) (bpf.MapFD, error) {
+	jumpMapFD := m.getJumpMapFD(ap.Iface, polDirection)
 	if jumpMapFD != 0 {
 		if attached, err := ap.IsAttached(); err != nil {
-			return fmt.Errorf("failed to check if interface %s had BPF program; %w", ifaceName, err)
+			return jumpMapFD, fmt.Errorf("failed to check if interface %s had BPF program; %w", ap.Iface, err)
 		} else if !attached {
 			// BPF program is missing; maybe we missed a notification of the interface being recreated?
 			// Close the now-defunct jump map.
-			log.WithField("iface", ifaceName).Info(
+			log.WithField("iface", ap.Iface).Info(
 				"Detected that BPF program no longer attached to interface.")
 			err := jumpMapFD.Close()
 			if err != nil {
 				log.WithError(err).Warn("Failed to close jump map FD. Ignoring.")
 			}
-			m.setJumpMapFD(ifaceName, polDirection, 0)
+			m.setJumpMapFD(ap.Iface, polDirection, 0)
 			jumpMapFD = 0 // Trigger program to be re-added below.
 		}
 	}
@@ -748,17 +765,17 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		// We don't have a program attached to this interface yet, attach one now.
 		err := ap.AttachProgram()
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		jumpMapFD, err = FindJumpMap(ap)
 		if err != nil {
-			return fmt.Errorf("failed to look up jump map: %w", err)
+			return 0, fmt.Errorf("failed to look up jump map: %w", err)
 		}
-		m.setJumpMapFD(ifaceName, polDirection, jumpMapFD)
+		m.setJumpMapFD(ap.Iface, polDirection, jumpMapFD)
 	}
 
-	return m.updatePolicyProgram(jumpMapFD, rules)
+	return jumpMapFD, nil
 }
 
 func (m *bpfEndpointManager) addHostPolicy(rules *polprog.Rules, hostEndpoint *proto.HostEndpoint, polDirection PolDirection) {
@@ -843,7 +860,7 @@ func (m *bpfEndpointManager) removePolicyProgram(jumpMapFD bpf.MapFD) error {
 	return nil
 }
 
-func FindJumpMap(ap tc.AttachPoint) (mapFD bpf.MapFD, err error) {
+func FindJumpMap(ap *tc.AttachPoint) (mapFD bpf.MapFD, err error) {
 	logCtx := log.WithField("iface", ap.Iface)
 	logCtx.Debug("Looking up jump map.")
 	out, err := tc.ExecTC("filter", "show", "dev", ap.Iface, string(ap.Hook))
@@ -906,11 +923,26 @@ func FindJumpMap(ap tc.AttachPoint) (mapFD bpf.MapFD, err error) {
 	return 0, errors.New("failed to find TC program")
 }
 
-func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, polDirection PolDirection) error {
+func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.HostEndpoint, polDirection PolDirection) error {
 	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
 	ap.HostIP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)
-	return ap.AttachProgram()
+
+	jumpMapFD, err := m.ensureProgramAttached(&ap, polDirection)
+	if err != nil {
+		return err
+	}
+
+	if ep != nil {
+		rules := polprog.Rules{
+			ForHostInterface: true,
+			NoProfileMatchID: m.profileNoMatchID(polDirection.RuleDir()),
+		}
+		m.addHostPolicy(&rules, ep, polDirection)
+		return m.updatePolicyProgram(jumpMapFD, rules)
+	}
+
+	return m.removePolicyProgram(jumpMapFD)
 }
 
 // PolDirection is the Calico datamodel direction of policy.  On a host endpoint, ingress is towards the host.
@@ -1166,13 +1198,13 @@ func (m *bpfEndpointManager) isDataIface(iface string) bool {
 
 func (m *bpfEndpointManager) addWEPToIndexes(wlID proto.WorkloadEndpointID, wl *proto.WorkloadEndpoint) {
 	for _, t := range wl.Tiers {
-		m.addPolicyToWEPMappings(t.IngressPolicies, wlID)
-		m.addPolicyToWEPMappings(t.EgressPolicies, wlID)
+		m.addPolicyToEPMappings(t.IngressPolicies, wlID)
+		m.addPolicyToEPMappings(t.EgressPolicies, wlID)
 	}
-	m.addProfileToWEPMappings(wl.ProfileIds, wlID)
+	m.addProfileToEPMappings(wl.ProfileIds, wlID)
 }
 
-func (m *bpfEndpointManager) addPolicyToWEPMappings(polNames []string, wlID proto.WorkloadEndpointID) {
+func (m *bpfEndpointManager) addPolicyToEPMappings(polNames []string, id interface{}) {
 	for _, pol := range polNames {
 		polID := proto.PolicyID{
 			Tier: "default",
@@ -1181,11 +1213,11 @@ func (m *bpfEndpointManager) addPolicyToWEPMappings(polNames []string, wlID prot
 		if m.policiesToWorkloads[polID] == nil {
 			m.policiesToWorkloads[polID] = set.New()
 		}
-		m.policiesToWorkloads[polID].Add(wlID)
+		m.policiesToWorkloads[polID].Add(id)
 	}
 }
 
-func (m *bpfEndpointManager) addProfileToWEPMappings(profileIds []string, wlID proto.WorkloadEndpointID) {
+func (m *bpfEndpointManager) addProfileToEPMappings(profileIds []string, id interface{}) {
 	for _, profName := range profileIds {
 		profID := proto.ProfileID{Name: profName}
 		profSet := m.profilesToWorkloads[profID]
@@ -1193,7 +1225,7 @@ func (m *bpfEndpointManager) addProfileToWEPMappings(profileIds []string, wlID p
 			profSet = set.New()
 			m.profilesToWorkloads[profID] = profSet
 		}
-		profSet.Add(wlID)
+		profSet.Add(id)
 	}
 }
 
@@ -1203,11 +1235,11 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID proto.WorkloadEndpointID,
 	}
 
 	for _, t := range wep.Tiers {
-		m.removePolicyToWEPMappings(t.IngressPolicies, wlID)
-		m.removePolicyToWEPMappings(t.EgressPolicies, wlID)
+		m.removePolicyToEPMappings(t.IngressPolicies, wlID)
+		m.removePolicyToEPMappings(t.EgressPolicies, wlID)
 	}
 
-	m.removeProfileToWEPMappings(wep.ProfileIds, wlID)
+	m.removeProfileToEPMappings(wep.ProfileIds, wlID)
 
 	m.withIface(wep.Name, func(iface *bpfInterface) bool {
 		iface.info.endpointID = nil
@@ -1215,7 +1247,7 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID proto.WorkloadEndpointID,
 	})
 }
 
-func (m *bpfEndpointManager) removePolicyToWEPMappings(polNames []string, wlID proto.WorkloadEndpointID) {
+func (m *bpfEndpointManager) removePolicyToEPMappings(polNames []string, id interface{}) {
 	for _, pol := range polNames {
 		polID := proto.PolicyID{
 			Tier: "default",
@@ -1225,7 +1257,7 @@ func (m *bpfEndpointManager) removePolicyToWEPMappings(polNames []string, wlID p
 		if polSet == nil {
 			continue
 		}
-		polSet.Discard(wlID)
+		polSet.Discard(id)
 		if polSet.Len() == 0 {
 			// Defensive; we also clean up when the profile is removed.
 			delete(m.policiesToWorkloads, polID)
@@ -1233,14 +1265,14 @@ func (m *bpfEndpointManager) removePolicyToWEPMappings(polNames []string, wlID p
 	}
 }
 
-func (m *bpfEndpointManager) removeProfileToWEPMappings(profileIds []string, wlID proto.WorkloadEndpointID) {
+func (m *bpfEndpointManager) removeProfileToEPMappings(profileIds []string, id interface{}) {
 	for _, profName := range profileIds {
 		profID := proto.ProfileID{Name: profName}
 		profSet := m.profilesToWorkloads[profID]
 		if profSet == nil {
 			continue
 		}
-		profSet.Discard(wlID)
+		profSet.Discard(id)
 		if profSet.Len() == 0 {
 			// Defensive; we also clean up when the policy is removed.
 			delete(m.profilesToWorkloads, profID)
@@ -1248,14 +1280,14 @@ func (m *bpfEndpointManager) removeProfileToWEPMappings(profileIds []string, wlI
 	}
 }
 
-func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.HostEndpoint) {
+func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint) {
 	// Pre-process the map for the host-* endpoint: if there is a host-* endpoint, any host
 	// interface without its own HEP should use the host-* endpoint's policy.
-	wildcardHostEndpoint := hostIfaceToEpMap[allInterfaces]
-	if wildcardHostEndpoint != nil {
+	wildcardHostEndpoint, wildcardExists := hostIfaceToEpMap[allInterfaces]
+	if wildcardExists {
 		log.Info("Host-* endpoint is configured")
 		for ifaceName := range m.nameToIface {
-			if hostIfaceToEpMap[ifaceName] == nil && m.isDataIface(ifaceName) {
+			if _, specificExists := hostIfaceToEpMap[ifaceName]; m.isDataIface(ifaceName) && !specificExists {
 				log.Infof("Use host-* endpoint policy for %v", ifaceName)
 				hostIfaceToEpMap[ifaceName] = wildcardHostEndpoint
 			}
@@ -1263,99 +1295,73 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]*proto.Host
 		delete(hostIfaceToEpMap, allInterfaces)
 	}
 
-	// If the host-* endpoint is changing, update policy programs for all workload interfaces.
+	// If there are parts of proto.HostEndpoint that do not affect us, we could mask those out
+	// here so that they can't cause spurious updates - at the cost of having different
+	// proto.HostEndpoint data here than elsewhere.  For example, the ExpectedIpv4Addrs and
+	// ExpectedIpv6Addrs fields.  But currently there are no fields that are sufficiently likely
+	// to change as to make this worthwhile.
+
+	// If the host-* endpoint is changing, mark all workload interfaces as dirty.
 	if !reflect.DeepEqual(wildcardHostEndpoint, m.wildcardHostEndpoint) {
 		log.Infof("Host-* endpoint is changing; was %v, now %v", m.wildcardHostEndpoint, wildcardHostEndpoint)
+		m.removeHEPFromIndexes(allInterfaces, &m.wildcardHostEndpoint)
 		m.wildcardHostEndpoint = wildcardHostEndpoint
+		m.wildcardExists = wildcardExists
+		m.addHEPToIndexes(allInterfaces, &wildcardHostEndpoint)
 		for ifaceName := range m.nameToIface {
 			if m.isWorkloadIface(ifaceName) {
-				log.Info("Update workload policy program for possible host-* change")
-				err := m.applyPolicy(ifaceName)
-				if err != nil {
-					log.WithError(err).Error("Failed to update workload policy for host-* change")
-				}
-			}
-		}
-	} else {
-		// Old and new host-* endpoints are identical, but we should still update the pointer.
-		m.wildcardHostEndpoint = wildcardHostEndpoint
-	}
-
-	// Clean up any old host interfaces.
-	for ifaceName := range m.hostIfaceToEpMap {
-		if _, current := hostIfaceToEpMap[ifaceName]; !current {
-			err := m.updateHEPProgramsForIface(ifaceName, nil)
-			if err != nil {
-				log.WithError(err).Error("Failed to remove HEP programs")
+				log.Info("Mark WEP iface dirty, for host-* endpoint change")
+				m.dirtyIfaceNames.Add(ifaceName)
 			}
 		}
 	}
 
-	// Create or update HEP programming for current host interfaces.
-	for ifaceName, ep := range hostIfaceToEpMap {
-		err := m.updateHEPProgramsForIface(ifaceName, ep)
-		if err != nil {
-			log.WithError(err).Error("Failed to update HEP programs")
+	// Loop through existing host endpoints, in case they are changing or disappearing.
+	for ifaceName, existingEp := range m.hostIfaceToEpMap {
+		newEp, stillExists := hostIfaceToEpMap[ifaceName]
+		if stillExists && reflect.DeepEqual(newEp, existingEp) {
+			log.Debugf("No change to host endpoint for ifaceName=%v", ifaceName)
+		} else {
+			m.removeHEPFromIndexes(ifaceName, &existingEp)
+			if stillExists {
+				log.Infof("Host endpoint changing for ifaceName=%v", ifaceName)
+				m.addHEPToIndexes(ifaceName, &newEp)
+				m.hostIfaceToEpMap[ifaceName] = newEp
+			} else {
+				log.Infof("Host endpoint deleted for ifaceName=%v", ifaceName)
+				delete(m.hostIfaceToEpMap, ifaceName)
+			}
+			m.dirtyIfaceNames.Add(ifaceName)
 		}
+		delete(hostIfaceToEpMap, ifaceName)
 	}
 
-	// Record new state.
-	m.hostIfaceToEpMap = hostIfaceToEpMap
+	// Now anything remaining in hostIfaceToEpMap must be a new host endpoint.
+	for ifaceName, newEp := range hostIfaceToEpMap {
+		log.Infof("Host endpoint added for ifaceName=%v", ifaceName)
+		m.addHEPToIndexes(ifaceName, &newEp)
+		m.hostIfaceToEpMap[ifaceName] = newEp
+		m.dirtyIfaceNames.Add(ifaceName)
+	}
 }
 
-func (m *bpfEndpointManager) updateHEPProgramsForIface(ifaceName string, ep *proto.HostEndpoint) error {
-	startTime := time.Now()
-
-	var ingressErr, egressErr error
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		ingressErr = m.updateHEPPolicyProgram(ifaceName, ep, PolDirnIngress)
-	}()
-	go func() {
-		defer wg.Done()
-		egressErr = m.updateHEPPolicyProgram(ifaceName, ep, PolDirnEgress)
-	}()
-	wg.Wait()
-
-	if ingressErr != nil {
-		return ingressErr
+func (m *bpfEndpointManager) addHEPToIndexes(ifaceName string, ep *proto.HostEndpoint) {
+	for _, tiers := range [][]*proto.TierInfo{ep.Tiers, ep.UntrackedTiers, ep.PreDnatTiers, ep.ForwardTiers} {
+		for _, t := range tiers {
+			m.addPolicyToEPMappings(t.IngressPolicies, ifaceName)
+			m.addPolicyToEPMappings(t.EgressPolicies, ifaceName)
+		}
 	}
-	if egressErr != nil {
-		return egressErr
-	}
-
-	log.WithFields(log.Fields{
-		"timeTaken": time.Since(startTime),
-		"ifaceName": ifaceName,
-	}).Info("Finished updating BPF policy programs for HEP")
-	return nil
+	m.addProfileToEPMappings(ep.ProfileIds, ifaceName)
 }
 
-func (m *bpfEndpointManager) updateHEPPolicyProgram(ifaceName string, ep *proto.HostEndpoint, polDirection PolDirection) error {
-	var err error
-
-	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
-
-	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
-	if jumpMapFD == 0 {
-		jumpMapFD, err = FindJumpMap(ap)
-		if err != nil {
-			return fmt.Errorf("failed to look up jump map: %w", err)
+func (m *bpfEndpointManager) removeHEPFromIndexes(ifaceName string, ep *proto.HostEndpoint) {
+	for _, tiers := range [][]*proto.TierInfo{ep.Tiers, ep.UntrackedTiers, ep.PreDnatTiers, ep.ForwardTiers} {
+		for _, t := range tiers {
+			m.removePolicyToEPMappings(t.IngressPolicies, ifaceName)
+			m.removePolicyToEPMappings(t.EgressPolicies, ifaceName)
 		}
-		m.setJumpMapFD(ifaceName, polDirection, jumpMapFD)
 	}
 
-	if ep != nil {
-		rules := polprog.Rules{
-			ForHostInterface: true,
-			NoProfileMatchID: m.profileNoMatchID(polDirection.RuleDir()),
-		}
-		m.addHostPolicy(&rules, ep, polDirection)
-		return m.updatePolicyProgram(jumpMapFD, rules)
-	}
-
-	return m.removePolicyProgram(jumpMapFD)
+	m.removeProfileToEPMappings(ep.ProfileIds, ifaceName)
 }
