@@ -28,6 +28,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/projectcalico/felix/bpf/failsafes"
 	"github.com/projectcalico/felix/ip"
 
 	"github.com/projectcalico/felix/bpf/ipsets"
@@ -212,6 +213,7 @@ outter:
 	}
 
 	obj += ".o"
+	log.Infof("Patching binary %s", obj)
 
 	bin, err := bpf.BinaryFromFile(obj)
 	Expect(err).NotTo(HaveOccurred())
@@ -278,7 +280,7 @@ func bpftool(args ...string) ([]byte, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
-			log.WithField("stderr", string(e.Stderr)).Errorf("bpftool %s failed", args[2])
+			log.WithField("stderr", string(e.Stderr)).Panicf("bpftool %s failed", args[2])
 			// to make the output reflect the new lines, logrus ignores it
 			fmt.Print(fmt.Sprint(string(e.Stderr)))
 		}
@@ -290,9 +292,9 @@ func bpftool(args ...string) ([]byte, error) {
 var (
 	mapInitOnce sync.Once
 
-	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap bpf.Map
-	perfMap                                                                                      bpf.Map
-	allMaps, progMaps                                                                            []bpf.Map
+	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap, fsafeMap bpf.Map
+	perfMap                                                                                                bpf.Map
+	allMaps, progMaps                                                                                      []bpf.Map
 )
 
 func initMapsOnce() {
@@ -310,8 +312,9 @@ func initMapsOnce() {
 		affinityMap = nat.AffinityMap(mc)
 		arpMap = arp.Map(mc)
 		perfMap = perf.Map(mc, "perf_evnt", 512)
+		fsafeMap = failsafes.Map(mc)
 
-		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap}
+		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap, fsafeMap}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -333,6 +336,7 @@ func initMapsOnce() {
 			stateMap,
 			affinityMap,
 			arpMap,
+			fsafeMap,
 		}
 
 	})
@@ -500,6 +504,7 @@ outter:
 
 	objFname := "../../bpf-gpl/ut/" + strings.TrimSuffix(source, path.Ext(source)) + ".o"
 
+	log.Infof("Patching binary %s", objFname)
 	bin, err := bpf.BinaryFromFile(objFname)
 	Expect(err).NotTo(HaveOccurred())
 	err = bin.PatchIPv4(hostIP)

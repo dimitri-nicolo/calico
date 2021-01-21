@@ -447,8 +447,6 @@ func (kds *K8sDatastoreInfra) EnsureReady() {
 }
 
 func (kds *K8sDatastoreInfra) Stop() {
-	kds.bpfLog.Stop()
-
 	// We don't tear down and recreate the Kubernetes infra between tests because it's
 	// too expensive.  We don't even, immediately, clean up any resources that may
 	// have been left behind by the test that has just finished.  Instead, mark all
@@ -458,6 +456,8 @@ func (kds *K8sDatastoreInfra) Stop() {
 	log.Info("K8sDatastoreInfra told to stop, deferring cleanup...")
 	kds.needsCleanup = true
 	kds.runningTest = ""
+	
+	kds.bpfLog.Stop()
 }
 
 type cleanupFunc func(clientset *kubernetes.Clientset, calicoClient client.Interface)

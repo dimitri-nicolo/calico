@@ -38,6 +38,8 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/polprog"
 	"github.com/projectcalico/felix/bpf/tc"
@@ -48,7 +50,6 @@ import (
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/ratelimited"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 const jumpMapCleanupInterval = 10 * time.Second
@@ -121,8 +122,9 @@ type bpfEndpointManager struct {
 	vxlanMTU           int
 	dsrEnabled         bool
 
-	ipSetMap            bpf.Map
-	stateMap            bpf.Map
+	ipSetMap bpf.Map
+	stateMap bpf.Map
+
 	ruleRenderer        bpfAllowChainRenderer
 	iptablesFilterTable *iptables.Table
 
