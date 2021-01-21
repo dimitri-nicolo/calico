@@ -200,7 +200,7 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 	// (used by the IDS alert forwarding feature).
 	// Otherwise, we only need permissions to the events index specific for that individual cluster.
 	if isManagement {
-		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", "*", ".*"))
+		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", "*", ""))
 	} else {
 		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", clusterName, ""))
 	}

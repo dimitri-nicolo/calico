@@ -281,7 +281,7 @@ var _ = Describe("ElasticseachUsers", func() {
 												".tigera.ipset.cluster",
 												".tigera.domainnameset.cluster",
 												".tigera.forwarderconfig.cluster",
-												"tigera_secure_ee_events.*.*",
+												"tigera_secure_ee_events.*",
 											},
 											Privileges: []string{"all"},
 										},
