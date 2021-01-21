@@ -659,6 +659,20 @@ CalicoNetworkSpec
 </tr>
 <tr>
 <td>
+<code>typhaAffinity</code><br>
+<em>
+<a href="#operator.tigera.io/v1.TyphaAffinity">
+TyphaAffinity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TyphaAffinity allows configuration of node affinity characteristics for Typha pods.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>controlPlaneNodeSelector</code><br>
 <em>
 map[string]string
@@ -666,8 +680,23 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ControlPlaneNodeSelector is used to select control plane nodes on which to run specific Calico
-components. This currently only applies to kube-controllers and the apiserver.</p>
+<p>ControlPlaneNodeSelector is used to select control plane nodes on which to run Calico
+components. This is globally applied to all resources created by the operator excluding daemonsets.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controlPlaneTolerations</code><br>
+<em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#toleration-v1-core">
+[]Kubernetes core/v1.Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlaneTolerations specify tolerations which are then globally applied to all resources
+created by the operator.</p>
 </td>
 </tr>
 <tr>
@@ -1667,7 +1696,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -1856,7 +1885,7 @@ string
 </em>
 </td>
 <td>
-<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: https://api.my-ocp-domain.com:6443</p>
+<p>IssuerURL is the URL to the Openshift OAuth provider. Ex.: <a href="https://api.my-ocp-domain.com:6443">https://api.my-ocp-domain.com:6443</a></p>
 </td>
 </tr>
 </tbody>
@@ -2591,7 +2620,7 @@ int32
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.Installation">Installation</a>,
+<a href="#operator.tigera.io/v1.Installation">Installation</a>, 
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>InstallationSpec defines configuration for a Calico or Calico Enterprise installation.</p>
@@ -2714,6 +2743,20 @@ CalicoNetworkSpec
 </tr>
 <tr>
 <td>
+<code>typhaAffinity</code><br>
+<em>
+<a href="#operator.tigera.io/v1.TyphaAffinity">
+TyphaAffinity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TyphaAffinity allows configuration of node affinity characteristics for Typha pods.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>controlPlaneNodeSelector</code><br>
 <em>
 map[string]string
@@ -2721,8 +2764,23 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ControlPlaneNodeSelector is used to select control plane nodes on which to run specific Calico
-components. This currently only applies to kube-controllers and the apiserver.</p>
+<p>ControlPlaneNodeSelector is used to select control plane nodes on which to run Calico
+components. This is globally applied to all resources created by the operator excluding daemonsets.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controlPlaneTolerations</code><br>
+<em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#toleration-v1-core">
+[]Kubernetes core/v1.Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlaneTolerations specify tolerations which are then globally applied to all resources
+created by the operator.</p>
 </td>
 </tr>
 <tr>
@@ -3477,11 +3535,45 @@ Kubernetes core/v1.ResourceRequirements
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.PreferredNodeAffinity">PreferredNodeAffinity
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.TyphaAffinity">TyphaAffinity</a>)
+</p>
+<p>PreferredNodeAffinity is similar to an affinity except it only exposes the Preferred scheduling option,
+which ensures a pod will still be scheduled even when all the nodes it matches are unschedulable.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>preferredDuringSchedulingIgnoredDuringExecution</code><br>
+<em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#preferredschedulingterm-v1-core">
+[]Kubernetes core/v1.PreferredSchedulingTerm
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The scheduler will prefer to schedule pods to nodes that satisfy
+the affinity expressions specified by this field, but it may choose
+a node that violates one or more of the expressions.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.ProductVariant">ProductVariant
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
@@ -3837,6 +3929,37 @@ string
 <td>
 <p>Conditions represents the latest observed set of conditions for this component. A component may be one or more of
 Available, Progressing, or Degraded.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.TyphaAffinity">TyphaAffinity
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
+</p>
+<p>TyphaAffinity allows configuration of node affinitiy characteristics for Typha pods.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>nodeAffinity</code><br>
+<em>
+<a href="#operator.tigera.io/v1.PreferredNodeAffinity">
+PreferredNodeAffinity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeAffinity describes node affinity scheduling rules for typha.</p>
 </td>
 </tr>
 </tbody>
