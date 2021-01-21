@@ -20,6 +20,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list","get"]
+  - apiGroups: ["crd.projectcalico.org"]
+    resources: ["licensekeys"]
+    verbs: ["list","watch"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
