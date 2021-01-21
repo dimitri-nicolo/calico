@@ -38,5 +38,11 @@ $(document).ready(function(){
     }
   });
 
+  // Higlight header of current page navbar 
+  $('.link.current-page')
+    .closest('div.panel')
+    .find('div.panel-heading')
+    .addClass('current-page');
+
   $('table').wrap($('<div />', { class: 'table-responsive' }));
 });

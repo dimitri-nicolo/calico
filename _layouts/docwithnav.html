@@ -144,7 +144,7 @@ The code is a little roundabout for a few reasons:
                     {% assign navbar_id = navbar.path | replace: "/", "-" | prepend: "navbar" %}
                     <div class="panel panel-default">
                       <div
-                        class="panel-heading{% if this_pages_navbar == navbar %} current-page {% endif %}"
+                        class="panel-heading"
                         role="button"
                         data-toggle="collapse"
                         data-target="#{{ navbar_id }}"
