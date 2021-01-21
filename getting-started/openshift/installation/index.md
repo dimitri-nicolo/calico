@@ -25,10 +25,7 @@ Augments the applicable steps in the {% include open-new-window.html text='OpenS
 
 - A {% include open-new-window.html text='RedHat account' url='https://cloud.redhat.com/' %} for the pull secret to provision an OpenShift cluster.
 
-- OpenShift installer **v4.3 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}
-
-  > **Note**: OpenShift v4.2 installation supports only {{site.prodname}} images pulled from quay.io
-  {: .alert .alert-info}
+- OpenShift installer **v4.5 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}
 
 - A {% include open-new-window.html text='generated a local SSH private key' url='https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-default.html#ssh-agent-using_installing-aws-default' %} that is added to your ssh-agent
 
