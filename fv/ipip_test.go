@@ -334,7 +334,7 @@ var _ = infrastructure.DatastoreDescribe("IPIP topology before adding host IPs t
 			}
 
 			if bpfEnabled {
-				Eventually(felixes[1].NumTCBPFProgsEth0).Should(Equal(2))
+				Eventually(felixes[1].NumTCBPFProgsEth0, "5s", "200ms").Should(Equal(2))
 			} else {
 				for _, f := range felixes {
 					// Removing the BGP config triggers a Felix restart and Felix has a 2s timer during
