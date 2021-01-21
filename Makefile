@@ -51,8 +51,9 @@ RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
 
 BUILD_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/envoy-collector
-PUSH_IMAGES ?= $(BUILD_IMAGE)
-RELEASE_IMAGES ?= quay.io/tigera/envoy-collector
+INIT_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/envoy-init
+PUSH_IMAGES ?= $(BUILD_IMAGE),$(INIT_IMAGE)
+RELEASE_IMAGES ?= quay.io/tigera/envoy-collector,quay.io/tigera/envoy-init
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -186,7 +187,7 @@ proto/felixbackend.pb.go: proto/felixbackend.proto
 CONTAINER_CREATED=.envoy-collector.created-$(ARCH)
 .PHONY: image $(BUILD_IMAGE)
 image: $(BUILD_IMAGE)
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES)) image-init
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
@@ -197,6 +198,10 @@ ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
 	touch $@
+
+.PHONY: image-init
+image-init:
+	docker build -t $(INIT_IMAGE):latest --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f envoy-init/Dockerfile envoy-init/.
 
 # ensure we have a real imagetag
 imagetag:
