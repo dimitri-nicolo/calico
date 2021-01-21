@@ -79,7 +79,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ host-port tests", []apiconf
 	BeforeEach(func() {
 		infra = getInfra()
 
-		felix, client = infrastructure.StartSingleNodeTopology(infrastructure.DefaultTopologyOptions(), infra)
+		options := infrastructure.DefaultTopologyOptions()
+		options.NeedNodeIP = bpfEnabled
+		felix, client = infrastructure.StartSingleNodeTopology(options, infra)
 
 		metricsPortReachable = func() bool {
 			return MetricsPortReachable(felix)
