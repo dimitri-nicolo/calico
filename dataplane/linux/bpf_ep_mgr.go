@@ -687,7 +687,7 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 var calicoRouterIP = net.IPv4(169, 254, 1, 1).To4()
 
 func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *proto.WorkloadEndpoint, polDirection PolDirection) error {
-	ap := m.calculateTCAttachPoint(tc.EpTypeWorkload, polDirection, ifaceName)
+	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
 	// Host side of the veth is always configured as 169.254.1.1.
 	ap.HostIP = calicoRouterIP
 	// * VXLAN MTU should be the host ifaces MTU -50, in order to allow space for VXLAN.
@@ -907,13 +907,7 @@ func FindJumpMap(ap tc.AttachPoint) (mapFD bpf.MapFD, err error) {
 }
 
 func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, polDirection PolDirection) error {
-	epType := tc.EpTypeHost
-	if ifaceName == "tunl0" {
-		epType = tc.EpTypeTunnel
-	} else if ifaceName == "wireguard.cali" {
-		epType = tc.EpTypeWireguard
-	}
-	ap := m.calculateTCAttachPoint(epType, polDirection, ifaceName)
+	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
 	ap.HostIP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)
 	return ap.AttachProgram()
@@ -942,8 +936,22 @@ func (polDirection PolDirection) Inverse() PolDirection {
 	return PolDirnIngress
 }
 
-func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType, policyDirection PolDirection, ifaceName string) tc.AttachPoint {
+func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection, ifaceName string) tc.AttachPoint {
 	var ap tc.AttachPoint
+	var endpointType tc.EndpointType
+
+	// Determine endpoint type.
+	if m.isWorkloadIface(ifaceName) {
+		endpointType = tc.EpTypeWorkload
+	} else if ifaceName == "tunl0" {
+		endpointType = tc.EpTypeTunnel
+	} else if ifaceName == "wireguard.cali" {
+		endpointType = tc.EpTypeWireguard
+	} else if m.isDataIface(ifaceName) {
+		endpointType = tc.EpTypeHost
+	} else {
+		log.Panicf("Unsupported ifaceName %v", ifaceName)
+	}
 
 	if endpointType == tc.EpTypeWorkload {
 		// Policy direction is relative to the workload so, from the host namespace it's flipped.
@@ -1329,7 +1337,7 @@ func (m *bpfEndpointManager) updateHEPProgramsForIface(ifaceName string, ep *pro
 func (m *bpfEndpointManager) updateHEPPolicyProgram(ifaceName string, ep *proto.HostEndpoint, polDirection PolDirection) error {
 	var err error
 
-	ap := m.calculateTCAttachPoint(tc.EpTypeHost, polDirection, ifaceName)
+	ap := m.calculateTCAttachPoint(polDirection, ifaceName)
 
 	jumpMapFD := m.getJumpMapFD(ifaceName, polDirection)
 	if jumpMapFD == 0 {
