@@ -351,18 +351,6 @@ func (p *Builder) writeRecordRuleHit(r Rule, skipLabel string) {
 	p.writeRecordRuleID(r.MatchID, skipLabel)
 }
 
-func (p *Builder) setUpSrcIPSetKey(ipsetID uint64) {
-	p.setUpIPSetKey(ipsetID, offSrcIPSetKey, stateOffIPSrc, stateOffSrcPort)
-}
-
-func (p *Builder) setUpDstIPSetKey(ipsetID uint64) {
-	p.setUpIPSetKey(ipsetID, offDstIPSetKey, stateOffPostNATIPDst, stateOffPostNATDstPort)
-}
-
-func (p *Builder) setUpPreNATDstIPSetKey(ipsetID uint64) {
-	p.setUpIPSetKey(ipsetID, offDstIPSetKey, stateOffPreNATIPDst, stateOffPreNATDstPort)
-}
-
 func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset int16) {
 	// TODO track whether we've already done an initialisation and skip the parts that don't change.
 	// Zero the padding.
@@ -386,10 +374,6 @@ func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset 
 	p.b.StoreStack32(R1, keyOffset+ipsKeyID)
 	p.b.MovImm32(R1, int32(beIPSetID>>32))
 	p.b.StoreStack32(R1, keyOffset+ipsKeyID+4)
-}
-
-func passAction(action string) bool {
-	return action == "pass" || action == "next-tier"
 }
 
 func (p *Builder) writeTiers(tiers []Tier, destLeg matchLeg, allowLabel string) {
