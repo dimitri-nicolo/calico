@@ -936,7 +936,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 						ExpectedIpv6Addrs: spec.ipv6Addrs,
 					},
 				})
-				err := epMgr.CompleteDeferredWork()
+				err := epMgr.ResolveUpdateBatch()
+				Expect(err).ToNot(HaveOccurred())
+				err = epMgr.CompleteDeferredWork()
 				Expect(err).ToNot(HaveOccurred())
 			}
 		}
@@ -981,7 +983,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 						EndpointId: id,
 					},
 				})
-				err := epMgr.CompleteDeferredWork()
+				err := epMgr.ResolveUpdateBatch()
+				Expect(err).ToNot(HaveOccurred())
+				err = epMgr.CompleteDeferredWork()
 				Expect(err).ToNot(HaveOccurred())
 			}
 		}
@@ -1004,7 +1008,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 					Name:  "lo",
 					Addrs: loAddrs,
 				})
-				err := epMgr.CompleteDeferredWork()
+				err := epMgr.ResolveUpdateBatch()
+				Expect(err).ToNot(HaveOccurred())
+				err = epMgr.CompleteDeferredWork()
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -1305,7 +1311,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Name:  "eth1",
 							Addrs: eth1Addrs,
 						})
-						err := epMgr.CompleteDeferredWork()
+						err := epMgr.ResolveUpdateBatch()
+						Expect(err).ToNot(HaveOccurred())
+						err = epMgr.CompleteDeferredWork()
 						Expect(err).ToNot(HaveOccurred())
 					})
 
@@ -1509,7 +1517,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 						Name:  "eth0",
 						Addrs: eth0Addrs,
 					})
-					err := epMgr.CompleteDeferredWork()
+					err := epMgr.ResolveUpdateBatch()
+					Expect(err).ToNot(HaveOccurred())
+					err = epMgr.CompleteDeferredWork()
 					Expect(err).ToNot(HaveOccurred())
 				})
 				It("should have expected chains", expectChainsFor(ipVersion, "eth0"))
@@ -1562,7 +1572,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Ipv6Nets:   []string{"2001:db8:2::2/128"},
 						},
 					})
-					err := epMgr.CompleteDeferredWork()
+					err := epMgr.ResolveUpdateBatch()
+					Expect(err).ToNot(HaveOccurred())
+					err = epMgr.CompleteDeferredWork()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -1577,7 +1589,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Name:  "cali12345-ab",
 							Addrs: set.New(),
 						})
-						err := epMgr.CompleteDeferredWork()
+						err := epMgr.ResolveUpdateBatch()
+						Expect(err).ToNot(HaveOccurred())
+						err = epMgr.CompleteDeferredWork()
 						Expect(err).ToNot(HaveOccurred())
 						epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 							Id: &wlEPID1,
@@ -1592,6 +1606,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 								IsEgressGateway: true,
 							},
 						})
+						err = epMgr.ResolveUpdateBatch()
+						Expect(err).ToNot(HaveOccurred())
 						err = epMgr.CompleteDeferredWork()
 						Expect(err).ToNot(HaveOccurred())
 					})
@@ -1642,7 +1658,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 									IsEgressGateway: false,
 								},
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
 
@@ -1661,7 +1679,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 								Id: &wlEPID1,
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
 							By("signaling WEP iface down")
@@ -1669,6 +1689,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 								Name:  "cali12345-ab",
 								State: "down",
 							})
+							err = epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
@@ -1692,6 +1714,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 								Name:  "cali12345-ab",
 								Addrs: set.New(),
 							})
+							err = epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 
@@ -1709,6 +1733,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 									IsEgressGateway: true,
 								},
 							})
+							err = epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
 							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
@@ -1776,7 +1802,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 									Ipv6Nets:   []string{"2001:db8:2::2/128"},
 								},
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
 
@@ -1788,7 +1816,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 								epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 									Id: &wlEPID1,
 								})
-								err := epMgr.CompleteDeferredWork()
+								err := epMgr.ResolveUpdateBatch()
+								Expect(err).ToNot(HaveOccurred())
+								err = epMgr.CompleteDeferredWork()
 								Expect(err).ToNot(HaveOccurred())
 							})
 
@@ -1804,7 +1834,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EndpointId:     "endpoint-id-11",
 										},
 									})
-									err := epMgr.CompleteDeferredWork()
+									err := epMgr.ResolveUpdateBatch()
+									Expect(err).ToNot(HaveOccurred())
+									err = epMgr.CompleteDeferredWork()
 									Expect(err).ToNot(HaveOccurred())
 								})
 
@@ -1832,7 +1864,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 									Ipv6Nets:   []string{"2001:db8:2::2/128"},
 								},
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
 
@@ -1844,7 +1878,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 								epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 									Id: &wlEPID1,
 								})
-								err := epMgr.CompleteDeferredWork()
+								err := epMgr.ResolveUpdateBatch()
+								Expect(err).ToNot(HaveOccurred())
+								err = epMgr.CompleteDeferredWork()
 								Expect(err).ToNot(HaveOccurred())
 							})
 
@@ -1860,7 +1896,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 											EndpointId:     "endpoint-id-11",
 										},
 									})
-									err := epMgr.CompleteDeferredWork()
+									err := epMgr.ResolveUpdateBatch()
+									Expect(err).ToNot(HaveOccurred())
+									err = epMgr.CompleteDeferredWork()
 									Expect(err).ToNot(HaveOccurred())
 								})
 
@@ -1924,7 +1962,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Name:  "cali12345-ab",
 							Addrs: set.New(),
 						})
-						err := epMgr.CompleteDeferredWork()
+						err := epMgr.ResolveUpdateBatch()
+						Expect(err).ToNot(HaveOccurred())
+						err = epMgr.CompleteDeferredWork()
 						Expect(err).ToNot(HaveOccurred())
 					})
 					It("should report the interface in error", func() {
@@ -1944,7 +1984,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Name:  "cali12345-ab",
 							Addrs: set.New(),
 						})
-						err := epMgr.CompleteDeferredWork()
+						err := epMgr.ResolveUpdateBatch()
+						Expect(err).ToNot(HaveOccurred())
+						err = epMgr.CompleteDeferredWork()
 						Expect(err).ToNot(HaveOccurred())
 					})
 
@@ -1995,7 +2037,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 									},
 								},
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
 
@@ -2041,7 +2085,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 								Id: &wlEPID1,
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
 
@@ -2077,7 +2123,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 									Ipv6Nets:   []string{"2001:db8:2::2/128"},
 								},
 							})
-							err := epMgr.CompleteDeferredWork()
+							err := epMgr.ResolveUpdateBatch()
+							Expect(err).ToNot(HaveOccurred())
+							err = epMgr.CompleteDeferredWork()
 							Expect(err).ToNot(HaveOccurred())
 						})
 
@@ -2128,7 +2176,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Ipv6Nets:   []string{"2001:db8:2::2/128"},
 						},
 					})
-					err := epMgr.CompleteDeferredWork()
+					err := epMgr.ResolveUpdateBatch()
+					Expect(err).ToNot(HaveOccurred())
+					err = epMgr.CompleteDeferredWork()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
