@@ -47,6 +47,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ all-interfaces host endpoin
 // If allInterfaces, then interfaceName: "*". Otherwise, interfaceName: "eth0".
 func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfaces bool) {
 	var (
+		bpfEnabled = os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 		infra   infrastructure.DatastoreInfra
 		felixes []*infrastructure.Felix
 		client  client.Interface
@@ -200,6 +201,10 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				}
 				_, err := client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
+
+				if bpfEnabled {
+					Eventually(f.NumTCBPFProgsEth0, "5s", "200ms").Should(Equal(2))
+				}
 			}
 
 			// Wait for HEPs to become active.
