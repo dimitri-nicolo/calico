@@ -235,12 +235,20 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 	for i := 0; i < n; i++ {
 		// Then start Felix and create a node for it.
 		opts.ExtraEnvVars["BPF_LOG_PFX"] = fmt.Sprintf("%d-", i)
+		// Arrange for only the first Felix to enable the BPF connect-time load balancer, as
+		// we get unpredictable behaviour if more than one Felix enables it on the same
+		// host.
+		optsFirstFelix := opts
+		opts.ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancingEnabled"] = "false"
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			defer ginkgo.GinkgoRecover()
-			felix := RunFelix(infra, i, opts)
-			felixes[i] = felix
+			if i == 0 {
+				felixes[i] = RunFelix(infra, i, optsFirstFelix)
+			} else {
+				felixes[i] = RunFelix(infra, i, opts)
+			}
 		}(i)
 	}
 	wg.Wait()
