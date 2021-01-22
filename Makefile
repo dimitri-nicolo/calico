@@ -53,7 +53,6 @@ SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
 BUILD_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/l7-collector
 INIT_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/envoy-init
 PUSH_IMAGES ?= $(BUILD_IMAGE)
-PUSH_IMAGES+=$(INIT_IMAGE)
 RELEASE_IMAGES ?= quay.io/tigera/l7-collector,quay.io/tigera/envoy-init
 
 # If this is a release, also tag and push additional images.
@@ -202,7 +201,7 @@ endif
 
 .PHONY: image-init
 image-init:
-	docker build -t $(INIT_IMAGE):latest --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f envoy-init/Dockerfile envoy-init/.
+	docker build -t $(INIT_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f envoy-init/Dockerfile.$(ARCH) envoy-init/.
 
 # ensure we have a real imagetag
 imagetag:
@@ -227,6 +226,10 @@ push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
+push-init: imagetag $(addprefix sub-init-,$(call escapefs,$(INIT_IMAGE)))
+sub-init-%:
+	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
 ## push multi-arch manifest where supported
 push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
 sub-manifest-%:
@@ -244,10 +247,13 @@ else
 endif
 
 ## tag images of one arch
-tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES))) $(addprefix sub-single-tag-images-init-,$(call escapefs,$(INIT_IMAGE)))
 
 sub-single-tag-images-arch-%:
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
+sub-single-tag-images-init-%:
+	docker tag $(INIT_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
@@ -336,8 +342,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
@@ -399,7 +405,7 @@ release-publish: release-prereqs
 	git push origin $(VERSION)
 
 	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
+	$(MAKE) push-all push-init push-manifests push-non-manifests IMAGETAG=$(VERSION)
 
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
@@ -414,7 +420,7 @@ release-publish: release-prereqs
 # run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
 release-publish-latest: release-prereqs
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
+	$(MAKE) push-all push-init push-manifests push-non-manifests IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
