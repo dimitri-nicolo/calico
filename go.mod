@@ -3,13 +3,13 @@ module github.com/tigera/es-proxy
 go 1.15
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210121094716-e6d5d1fb27c3
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210118192844-201f2f5030ce
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210122195140-754347c1bc02
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210122200408-4958db874d93
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210118194135-0b7a2a5ac708
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210120182150-c38998a32719
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20210120192834-40cb9c44903e
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20210120191948-15d58e5fe9e9
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20210122200936-b428e2cc555f
 
 	k8s.io/api => k8s.io/api v0.19.6
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
