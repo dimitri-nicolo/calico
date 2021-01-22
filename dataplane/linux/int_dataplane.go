@@ -716,6 +716,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipSetsConfigV4,
 			ipSetIDAllocator,
 			ipSetsMap,
+			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
 		dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
