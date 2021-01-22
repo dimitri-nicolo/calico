@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package users_test
 
@@ -92,6 +92,7 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"tigera-ee-compliance-reporter-anyCluster",
 					"tigera-ee-compliance-snapshotter-anyCluster",
 					"tigera-ee-installer-anyCluster",
+					"tigera-ee-ad-job-anyCluster",
 					"tigera-ee-intrusion-detection-anyCluster",
 					"tigera-eks-log-forwarder-anyCluster",
 					"tigera-fluentd-anyCluster",
@@ -101,6 +102,7 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"tigera-ee-compliance-reporter-anyCluster",
 					"tigera-ee-compliance-snapshotter-anyCluster",
 					"tigera-ee-installer-anyCluster",
+					"tigera-ee-ad-job-anyCluster",
 					"tigera-ee-intrusion-detection-anyCluster",
 					"tigera-eks-log-forwarder-anyCluster",
 					"tigera-fluentd-anyCluster",
@@ -113,6 +115,7 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 		"tigera-ee-compliance-controller-old-cluster",
 		"tigera-ee-compliance-reporter-old-cluster",
 		"tigera-ee-compliance-snapshotter-old-cluster",
+		"tigera-ee-ad-job-old-cluster",
 		"tigera-ee-installer-old-cluster",
 		"tigera-ee-intrusion-detection-old-cluster",
 		"tigera-eks-log-forwarder-old-cluster",

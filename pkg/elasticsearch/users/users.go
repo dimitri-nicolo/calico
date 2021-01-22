@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // package users contains the current elasticsearch users that can be used in a k8s cluster
 
@@ -22,6 +22,7 @@ const (
 	ElasticsearchUserNameComplianceSnapshotter ElasticsearchUserName = "tigera-ee-compliance-snapshotter"
 	ElasticsearchUserNameComplianceServer      ElasticsearchUserName = "tigera-ee-compliance-server"
 	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
+	ElasticsearchUserNameADJob                 ElasticsearchUserName = "tigera-ee-ad-job"
 	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
@@ -150,7 +151,6 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					},
 				},
 				{
-					// TODO look into this role, it may give managed clusters abilities we don't want them to have (SAAS-626)
 					Name: "watcher_admin",
 				},
 			},
@@ -174,6 +174,27 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					}},
 				},
 			}},
+		},
+		ElasticsearchUserNameADJob: {
+			Username: formatName(ElasticsearchUserNameADJob, clusterName, management),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNameADJob, clusterName, management),
+					Definition: &elasticsearch.RoleDefinition{
+						Cluster: []string{"monitor", "manage_index_templates"},
+						Indices: []elasticsearch.RoleIndex{
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_flows", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, "")},
+								Privileges: []string{"read", "write"},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 

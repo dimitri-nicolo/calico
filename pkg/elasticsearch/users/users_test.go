@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package users_test
 
@@ -160,6 +160,25 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-ad-job": {
+						Username: "tigera-ee-ad-job-managed-cluster",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-ad-job-managed-cluster",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates"},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_flows.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_events.managed-cluster"},
+										Privileges: []string{"read", "write"},
+									},
+								},
+							},
+						}},
+					},
 				},
 			)
 		})
@@ -310,6 +329,25 @@ var _ = Describe("ElasticseachUsers", func() {
 									Privileges:  []string{"all"},
 									Resources:   []string{"*"},
 								}},
+							},
+						}},
+					},
+					"tigera-ee-ad-job": {
+						Username: "tigera-ee-ad-job",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-ad-job",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates"},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_flows.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_events.cluster"},
+										Privileges: []string{"read", "write"},
+									},
+								},
 							},
 						}},
 					},
