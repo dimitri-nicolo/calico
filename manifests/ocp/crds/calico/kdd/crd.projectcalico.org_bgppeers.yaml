@@ -35,7 +35,6 @@ spec:
                 failureDetectionMode:
                   type: string
                 keepOriginalNextHop:
-                  default: false
                   type: boolean
                 maxRestartTime:
                   type: string
