@@ -193,6 +193,8 @@ spec:
                   type: string
                 flowLogsAggregationThresholdBytes:
                   type: integer
+                flowLogsCollectProcessInfo:
+                  type: boolean
                 flowLogsDynamicAggregationEnabled:
                   type: boolean
                 flowLogsEnableHostEndpoint:
@@ -290,6 +292,34 @@ spec:
                     pattern: ^.*
                     x-kubernetes-int-or-string: true
                   type: array
+                l7LogsFileAggregationDestinationInfo:
+                  type: string
+                l7LogsFileAggregationHTTPHeaderInfo:
+                  type: string
+                l7LogsFileAggregationHTTPMethod:
+                  type: string
+                l7LogsFileAggregationNumURLPath:
+                  type: integer
+                l7LogsFileAggregationResponseCode:
+                  type: string
+                l7LogsFileAggregationServiceInfo:
+                  type: string
+                l7LogsFileAggregationSourceInfo:
+                  type: string
+                l7LogsFileAggregationTrimURL:
+                  type: string
+                l7LogsFileDirectory:
+                  type: string
+                l7LogsFileEnabled:
+                  type: boolean
+                l7LogsFileMaxFileSizeMB:
+                  type: integer
+                l7LogsFileMaxFiles:
+                  type: integer
+                l7LogsFilePerNodeLimit:
+                  type: integer
+                l7LogsFlushInterval:
+                  type: string
                 logDropActionOverride:
                   type: boolean
                 logFilePath:
@@ -308,6 +338,8 @@ spec:
                   type: string
                 metadataPort:
                   type: integer
+                mtuIfacePattern:
+                  type: string
                 natOutgoingAddress:
                   type: string
                 natPortRange:
@@ -370,6 +402,8 @@ spec:
                     - max
                     - min
                   type: object
+                serviceLoopPrevention:
+                  type: string
                 sidecarAccelerationEnabled:
                   type: boolean
                 statsDumpFilePath:
@@ -394,7 +428,13 @@ spec:
                   type: integer
                 vxlanVNI:
                   type: integer
+                windowsFlowLogsFileDirectory:
+                  type: string
+                windowsFlowLogsPositionFilePath:
+                  type: string
                 windowsNetworkName:
+                  type: string
+                windowsStatsDumpFilePath:
                   type: string
                 wireguardEnabled:
                   type: boolean
