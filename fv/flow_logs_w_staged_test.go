@@ -397,27 +397,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			// 1-1 -> 2-1 Allow
 			// This was via the service cluster IP and therefore should contain the service name on the source side
 			// where the DNAT occurs.
-			if !bpfEnabled {
-				err = flowTester.CheckFlow(
-					"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
-					"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
-					"default test-service port-"+wepPortStr, 3, 1,
-					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
-						{},
-					})
-			} else {
-				// Due to connect-time LB, we are not going to see the clusterIP
-				// in the logs and thus we cannot determine the service.
-				err = flowTester.CheckFlow(
-					"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
-					"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
-					metrics.NoService, 3, 1,
-					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
-						{},
-					})
-			}
+			err = flowTester.CheckFlow(
+				"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
+				"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
+				"default test-service port-"+wepPortStr, 3, 1,
+				[]metrics.ExpectedPolicy{
+					{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
+					{},
+				})
 			if err != nil {
 				errs = append(errs, "Ingress 1-1->2-1: "+err.Error())
 			}
