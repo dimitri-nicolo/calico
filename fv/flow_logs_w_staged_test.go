@@ -347,7 +347,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 	It("should get expected flow logs", func() {
 		// Describe the connectivity that we now expect.
-		// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
+		// For ep1_1 -> ep2_1 we use the service cluster IP to test service info in the flow log
 		cc = &connectivity.Checker{}
 		cc.ExpectSome(ep1_1, connectivity.TargetIP(clusterIP), uint16(svcPort)) // allowed by np1-1
 		cc.ExpectSome(ep1_1, ep2_2)                                             // allowed by np3-3
