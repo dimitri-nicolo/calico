@@ -4,3 +4,4 @@ proto/*.pb.go
 bin/
 report/
 Makefile.common*
+.ingress-collector.created*
