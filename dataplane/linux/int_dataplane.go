@@ -716,7 +716,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
 		dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
-		bpfRTMgr := newBPFRouteManager(config.Hostname, bpfMapContext)
+		bpfRTMgr := newBPFRouteManager(config.Hostname, config.ExternalNodesCidrs, bpfMapContext)
 		dp.RegisterManager(bpfRTMgr)
 
 		// Create an 'ipset' to represent trusted DNS servers.

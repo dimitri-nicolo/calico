@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"os"
 	"runtime"
 	"sync/atomic"
+	"syscall"
 	"unsafe"
 
 	"github.com/pkg/errors"
@@ -185,7 +186,10 @@ func (p *perf) Next() (Event, error) {
 		if p.readyIdx >= p.readyCnt {
 			err := p.poll()
 			if err != nil {
-				return Event{}, err
+				if err != syscall.EINTR {
+					return Event{}, err
+				}
+				continue // EINTR is benign a happens often, just retry the loop
 			}
 		}
 
