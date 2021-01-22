@@ -189,6 +189,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 				goto allow;
 			} else {
 				CALI_DEBUG("IPIP packet from unknown source, drop.");
+				ctx.fwd.reason = CALI_REASON_UNAUTH_SOURCE;
 				goto deny;
 			}
 		} else if (CALI_F_TO_HEP) {
@@ -198,11 +199,13 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 				goto allow;
 			} else {
 				CALI_DEBUG("IPIP packet to unknown dest, drop.");
+				ctx.fwd.reason = CALI_REASON_UNAUTH_SOURCE;
 				goto deny;
 			}
 		}
 		if (CALI_F_FROM_WEP) {
 			CALI_DEBUG("IPIP traffic from workload: drop");
+			ctx.fwd.reason = CALI_REASON_UNAUTH_SOURCE;
 			goto deny;
 		}
 	default:
