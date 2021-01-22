@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/tigera/envoy-collector/pkg/collector"
-	"github.com/tigera/envoy-collector/proto"
+	"github.com/tigera/l7-collector/pkg/collector"
+	"github.com/tigera/l7-collector/proto"
 )
 
 const (

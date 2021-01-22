@@ -1,4 +1,4 @@
-module github.com/tigera/envoy-collector
+module github.com/tigera/l7-collector
 
 go 1.13
 

@@ -5,7 +5,7 @@ package fv_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/envoy-collector/proto"
+	"github.com/tigera/l7-collector/proto"
 )
 
 var handler *CollectorTestHandler

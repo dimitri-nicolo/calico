@@ -3,7 +3,7 @@
 package fv_test
 
 import (
-	"github.com/tigera/envoy-collector/proto"
+	"github.com/tigera/l7-collector/proto"
 )
 
 var (
