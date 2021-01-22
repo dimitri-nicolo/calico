@@ -53,7 +53,7 @@ blocks:
     jobs:
     - name: Clean up winfv aws resources
       commands:
-      - git clone -b song-winfv git@github.com:tigera/process.git
+      - git clone git@github.com:tigera/process.git
       - aws ec2 delete-key-pair --key-name ${KEYPAIR_NAME} || true
       - cd process/testing/winfv && NAME_PREFIX="${CLUSTER_NAME}" ./setup-fv.sh -q -u
       env_vars:

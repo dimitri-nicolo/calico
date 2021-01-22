@@ -148,7 +148,7 @@ blocks:
         - export KEYPAIR_NAME=${CLUSTER_NAME}
         - echo CLUSTER_NAME=${CLUSTER_NAME}
         - sudo apt-get install putty-tools
-        - git clone -b song-winfv git@github.com:tigera/process.git
+        - git clone git@github.com:tigera/process.git
         - checkout
         - make build && make fv/win-fv.exe
     epilogue:
