@@ -11,6 +11,7 @@ curl {{ "/manifests/ocp/crds/01-crd-eck-kibana.yaml" | absolute_url }} -o manife
 curl {{ "/manifests/ocp/crds/01-crd-eck-trustrelationship.yaml" | absolute_url }} -o manifests/01-crd-eck-trustrelationship.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-beat.yaml" | absolute_url }} -o manifests/01-crd-eck-beat.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-enterprisesearch.yaml" | absolute_url }} -o manifests/01-crd-eck-enterprisesearch.yaml
+curl {{ "/manifests/ocp/crds/01-crd-imageset.yaml" | absolute_url }} -o manifests/01-crd-imageset.yaml
 curl {{ "/manifests/ocp/crds/01-crd-installation.yaml" | absolute_url }} -o manifests/01-crd-installation.yaml
 curl {{ "/manifests/ocp/crds/01-crd-intrusiondetection.yaml" | absolute_url }} -o manifests/01-crd-intrusiondetection.yaml
 curl {{ "/manifests/ocp/crds/01-crd-logstorage.yaml" | absolute_url }} -o manifests/01-crd-logstorage.yaml
