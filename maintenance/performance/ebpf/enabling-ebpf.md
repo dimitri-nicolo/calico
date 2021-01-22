@@ -3,7 +3,10 @@ title: Enable the eBPF dataplane
 description: Step-by-step instructions for enabling the eBPF dataplane.
 ---
 
->**Note**: The eBPF dataplane does not currently support Calico Enterprise features. This guide is provided for preview only.
+>**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production 
+> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This 
+> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward 
+> policy); flow logs; and DNS policy.
 {: .alert .alert-info}
 
 ### Big picture
@@ -29,10 +32,13 @@ eBPF mode currently has some limitations relative to the standard Linux pipeline
 
 - eBPF mode only supports x86-64.  (The eBPF programs are not currently built for the other platforms.)
 - eBPF mode does not yet support IPv6.
-- eBPF mode does not yet support host endpoints, or, their associated policy types.
-- Switching to and from eBPF mode is disruptive to existing workload connections.  Workloads that do not detect and recover from connection loss may need to be restarted.
+- eBPF mode does not yet support host endpoint `doNotTrack` policy (but it does support normal, pre-DNAT and apply-on-forward policy for host endpoints).
+- When enabling eBPF mode, pre-existing connections continue to use the non-BPF datapath; such connections should not be disrupted, but they do no benefit from eBPF mode's advantages.
+- Disabling eBPF mode _is_ disruptive; connections that were handled through the eBPF dataplane may be broken and services that do not detect and recover may need to be restarted.
 - Hybrid clusters (with some eBPF nodes and some standard dataplane nodes) are not supported.  (In such a cluster, NodePort traffic from eBPF nodes to non-eBPF nodes will be dropped.)  This includes clusters with Windows nodes.
-- eBPF mode does not support floating IPs. 
+- eBPF mode does not support floating IPs.
+- eBPF mode only supports UDP, TCP and ICMP; SCTP is not supported.
+- eBPF mode requires that node  [IP autodetection]({{site.baseurl}}/networking/ip-autodetection) is enabled even in environments where {{site.prodname}} CNI and BGP are not in use.  In eBPF mode, the node IP is used to originate VXLAN packets when forwarding traffic from external sources to services.
 
 ### Features
 
@@ -60,19 +66,20 @@ eBPF mode has the following pre-requisites:
   If {{site.prodname}} does not detect a compatible kernel, {{site.prodname}} will emit a warning and fall back to standard linux networking.
 
 - On each node, the BPF filesystem must be mounted at `/sys/fs/bpf`.  This is required so that the BPF filesystem persists
-  when {{site.prodname}} is restarted.  (If the filesystem does not persist then pods will temporarily lose connectivity when
-  {{site.prodname}} is restarted.)
+  when {{site.prodname}} is restarted.  If the filesystem does not persist then pods will temporarily lose connectivity when
+  {{site.prodname}} is restarted and host endpoints may be left unsecured (because their attached policy program will be 
+  discarded).
 - For best pod-to-pod performance, an underlying network that doesn't require Calico to use an overlay.  For example:
 
   - A cluster within a single AWS subnet.
   - A cluster using a compatible cloud provider's CNI (such as the AWS VPC CNI plugin).
   - An on-prem cluster with BGP peering configured.
 
-  If you must use an overlay, we recommend that you use VXLAN, not IPIP.  This is because IPIP performs poorly with eBPF mode due
-  to technical limitations in the kernel.
+  If you must use an overlay, we recommend that you use VXLAN, not IPIP.  VXLAN has much better performance than IPIP in
+  eBPF mode due to various kernel optimisations.
   
 - The underlying network must be configured to allow VXLAN packets between {{site.prodname}} hosts (even if you normally 
-  use IPIP or non-overlay for Calico traffic).  In eBPF mode, VXLAN is used to forward traffic to Kubernetes NodePorts, 
+  use IPIP or non-overlay for Calico traffic).  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic, 
   while preserving source IP.  eBPF mode honours the Felix `VXLANMTU` setting (see [Configuring MTU]({{ site.baseurl }}/networking/mtu)).
 - A stable way to address the Kubernetes API server. Since eBPF mode takes over from kube-proxy, {{site.prodname}} 
   needs a way to reach the API server directly.
@@ -163,13 +170,11 @@ First, make a note of the address of the API server:
 > 443 (the standard HTTPS port).
 {: .alert .alert-success}
 
-The next step depends on whether you installed {{site.prodname}} using the operator, or a manifest:
-
 {% tabs tab-group:grp1 %}
 <label:Operator,active:true>
 <%
 
-If you installed {{site.prodname}} using the operator, create the following config map in the `tigera-operator` namespace using the host and port determined above:
+Create the following config map in the `tigera-operator` namespace using the host and port determined above:
 
 ```
 kind: ConfigMap
@@ -263,7 +268,12 @@ You should see the following log, with the correct `KUBERNETES_SERVICE_...` valu
 
 #### Configure kube-proxy
 
-In eBPF mode {{site.prodname}} replaces `kube-proxy` so it wastes resources to run both.  To disable `kube-proxy` reversibly, we recommend adding a node selector to `kube-proxy`'s `DaemonSet` that matches no nodes, for example:
+In eBPF mode {{site.prodname}} replaces `kube-proxy` so it wastes resources to run both.  This section explains how 
+to disable `kube-proxy` in some common environments.
+
+##### Clusters that run `kube-proxy` with a `DaemonSet` (such as `kubeadm`)
+
+For a cluster that runs `kube-proxy` in a `DaemonSet` (such as a `kubeadm`-created cluster), you can disable `kube-proxy` reversibly by adding a node selector to `kube-proxy`'s `DaemonSet` that matches no nodes, for example:
 
 ```
 kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": "true"}}}}}'
@@ -278,6 +288,20 @@ kubectl patch felixconfiguration.p default --patch='{"spec": {"bpfKubeProxyIptab
 ```
 
 If both `kube-proxy` and `BPFKubeProxyIptablesCleanupEnabled` is enabled then `kube-proxy` will write its iptables rules and Felix will try to clean them up resulting in iptables flapping between the two.
+
+##### OpenShift
+
+If you are running OpenShift, you can disable `kube-proxy` as follows:
+
+```
+kubectl patch networks.operator.openshift.io cluster --type merge -p '{"spec":{"deployKubeProxy": false}}'
+```
+
+To re-enable it:
+
+```
+kubectl patch networks.operator.openshift.io cluster --type merge -p '{"spec":{"deployKubeProxy": true}}'
+```
 
 #### Enable eBPF mode
 
