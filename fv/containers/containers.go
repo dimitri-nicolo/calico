@@ -766,7 +766,6 @@ func (c *Container) BPFNATHasBackendForService(svcIP string, svcPort, proto int,
 	back := fmt.Sprintf("%s:%d", ip, port)
 
 	nat := c.BPFNATDump()
-	fmt.Printf("nat = %+v\n", nat)
 	if natBack, ok := nat[front]; ok {
 		found := false
 		for _, b := range natBack {
