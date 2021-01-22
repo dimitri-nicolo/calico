@@ -9,7 +9,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2-0.20200807225946-83627ff7d609
+	github.com/projectcalico/libcalico-go v1.7.2-0.20210119213343-e868fb8ee2fb
 	github.com/sirupsen/logrus v1.6.0
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	google.golang.org/grpc v1.27.0
