@@ -3,6 +3,8 @@
 set -e
 set -x
 
+exit 0
+
 FV_DIR="/home/semaphore/process/testing/winfv"
 
 pushd ${FV_DIR}
