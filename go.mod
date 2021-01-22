@@ -23,10 +23,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210122202047-645413ff3d3c
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210122232503-f3603eebfd9f
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210122200408-4958db874d93
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210118194135-0b7a2a5ac708
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210122222004-63491c8ca974
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.19.6
