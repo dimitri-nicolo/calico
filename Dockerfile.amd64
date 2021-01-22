@@ -1,4 +1,4 @@
 FROM scratch
 
-ADD bin/envoy-collector-amd64 /envoy-collector
-CMD ["/envoy-collector"]
+ADD bin/l7-collector-amd64 /l7-collector
+CMD ["/l7-collector"]

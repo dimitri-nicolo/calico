@@ -1,4 +1,4 @@
-PACKAGE_NAME    ?= github.com/tigera/envoy-collector
+PACKAGE_NAME    ?= github.com/tigera/l7-collector
 GO_BUILD_VER    ?= v0.38
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
@@ -50,10 +50,11 @@ RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
 
-BUILD_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/envoy-collector
+BUILD_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/l7-collector
 INIT_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/envoy-init
-PUSH_IMAGES ?= $(BUILD_IMAGE),$(INIT_IMAGE)
-RELEASE_IMAGES ?= quay.io/tigera/envoy-collector,quay.io/tigera/envoy-init
+PUSH_IMAGES ?= $(BUILD_IMAGE)
+PUSH_IMAGES+=$(INIT_IMAGE)
+RELEASE_IMAGES ?= quay.io/tigera/l7-collector,quay.io/tigera/envoy-init
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -96,24 +97,24 @@ endif
 ###############################################################################
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
-build-all: $(addprefix bin/envoy-collector-,$(VALIDARCHES))
+build-all: $(addprefix bin/l7-collector-,$(VALIDARCHES))
 
 .PHONY: build
-build: bin/envoy-collector-$(ARCH)
+build: bin/l7-collector-$(ARCH)
 
-bin/envoy-collector-amd64: ARCH=amd64
-bin/envoy-collector-arm64: ARCH=arm64
-bin/envoy-collector-ppc64le: ARCH=ppc64le
-bin/envoy-collector-s390x: ARCH=s390x
-bin/envoy-collector-%: proto $(SRC_FILES)
+bin/l7-collector-amd64: ARCH=amd64
+bin/l7-collector-arm64: ARCH=arm64
+bin/l7-collector-ppc64le: ARCH=ppc64le
+bin/l7-collector-s390x: ARCH=s390x
+bin/l7-collector-%: proto $(SRC_FILES)
 ifndef VERSION
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LD_FLAGS))
 endif
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build $(LDFLAGS) -v -o bin/envoy-collector-$(ARCH) \
-	   	./cmd/envoy-collector'
+		go build $(LDFLAGS) -v -o bin/l7-collector-$(ARCH) \
+	   	./cmd/l7-collector'
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -184,7 +185,7 @@ proto/felixbackend.pb.go: proto/felixbackend.proto
 ###############################################################################
 # Building the image
 ###############################################################################
-CONTAINER_CREATED=.envoy-collector.created-$(ARCH)
+CONTAINER_CREATED=.l7-collector.created-$(ARCH)
 .PHONY: image $(BUILD_IMAGE)
 image: $(BUILD_IMAGE)
 image-all: $(addprefix sub-image-,$(VALIDARCHES)) image-init
@@ -192,7 +193,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(BUILD_IMAGE): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/envoy-collector-$(ARCH)
+$(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/l7-collector-$(ARCH)
 	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
@@ -295,7 +296,7 @@ GINKGO_FOCUS?=.*
 
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: proto bin/envoy-collector-$(ARCH)
+ut: proto bin/l7-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN) \
 	    $(LOCAL_BUILD_MOUNTS) \
@@ -303,7 +304,7 @@ ut: proto bin/envoy-collector-$(ARCH)
 	    ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
-fv: proto bin/envoy-collector-$(ARCH)
+fv: proto bin/l7-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN_RO) \
 	    $(LOCAL_BUILD_MOUNTS) \
@@ -379,8 +380,8 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /envoy-collector --version | grep '^$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /envoy-collector --version` "\nExpected version: $(VERSION)"; \
+	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /l7-collector --version | grep '^$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /l7-collector --version` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \

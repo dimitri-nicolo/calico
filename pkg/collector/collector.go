@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tigera/envoy-collector/pkg/config"
+	"github.com/tigera/l7-collector/pkg/config"
 )
 
 const (

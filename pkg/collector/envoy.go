@@ -14,7 +14,7 @@ import (
 	"github.com/hpcloud/tail"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/envoy-collector/pkg/config"
+	"github.com/tigera/l7-collector/pkg/config"
 )
 
 const DestinationEnvoyReporter = "destination"
