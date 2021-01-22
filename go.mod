@@ -34,8 +34,8 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210120042154-68cf8bffef46
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210121094716-e6d5d1fb27c3
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210118192844-201f2f5030ce
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210122202047-645413ff3d3c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210122200408-4958db874d93
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210118194135-0b7a2a5ac708
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
