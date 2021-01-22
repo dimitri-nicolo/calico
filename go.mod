@@ -44,7 +44,7 @@ require (
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/tigera/licensing v1.0.1-0.20210118190145-3df357e1ea21
 	github.com/tigera/nfnetlink v0.0.0-20210105181106-4ac282dc9ec8
-	github.com/tigera/windows-networking v0.0.0-20210104100945-e5af43e23f74
+	github.com/tigera/windows-networking v0.0.0-20210122174114-908d3873095f
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb

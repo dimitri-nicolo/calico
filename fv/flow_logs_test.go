@@ -12,9 +12,6 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -25,6 +22,9 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 // Config variations covered here:
@@ -104,6 +104,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		useInvalidLicense bool
 		expectation       expectation
 		felixes           []*infrastructure.Felix
+		flowLogsReaders   []metrics.FlowLogReader
 		client            client.Interface
 		wlHost1           [4]*workload.Workload
 		wlHost2           [2]*workload.Workload
@@ -284,6 +285,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for ii := range felixes {
 			felixes[ii].Exec("conntrack", "-F")
 		}
+
+		flowLogsReaders = []metrics.FlowLogReader{}
+		for _, f := range felixes {
+			flowLogsReaders = append(flowLogsReaders, f)
+		}
 	})
 
 	checkFlowLogs := func(flowLogsOutput string) {
@@ -450,7 +456,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		// Within 30s we should see the complete set of expected allow and deny
 		// flow logs.
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTester(felixes, expectation.labels, expectation.policies, 8055)
+			flowTester := metrics.NewFlowTester(flowLogsReaders, expectation.labels, expectation.policies, 8055)
 			err := flowTester.PopulateFromFlowLogs(flowLogsOutput)
 			if err != nil {
 				return err

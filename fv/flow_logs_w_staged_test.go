@@ -16,9 +16,6 @@ import (
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/metrics"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -29,6 +26,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var (
@@ -77,6 +77,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		infra                      infrastructure.DatastoreInfra
 		opts                       infrastructure.TopologyOptions
 		felixes                    []*infrastructure.Felix
+		flowLogsReaders            []metrics.FlowLogReader
 		client                     client.Interface
 		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
 		cc                         *connectivity.Checker
@@ -332,6 +333,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 					ep2_1.IP+":"+wepPortStr)
 			}
 		}
+
+		flowLogsReaders = []metrics.FlowLogReader{}
+		for _, f := range felixes {
+			flowLogsReaders = append(flowLogsReaders, f)
+		}
 	})
 
 	It("should get expected flow logs", func() {
@@ -367,7 +373,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		}
 
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTester(felixes, true, true, wepPort)
+			flowTester := metrics.NewFlowTester(flowLogsReaders, true, true, wepPort)
 			err := flowTester.PopulateFromFlowLogs("file")
 			if err != nil {
 				return fmt.Errorf("Unable to populate flow tester from flow logs: %v", err)
