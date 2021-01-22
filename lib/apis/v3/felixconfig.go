@@ -480,6 +480,9 @@ type FelixConfigurationSpec struct {
 	// FlowLogsAggregationThresholdBytes is used specify how far behind the external pipeline that reads flow logs can be. Default is 8192 bytes.
 	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
 	FlowLogsAggregationThresholdBytes *int `json:"flowLogsAggregationThresholdBytes,omitempty"`
+	// FlowLogsFilePerFlowProcessLimit, is used to specify the maximum number of flow log entries with distinct process information
+	// beyond which process information will be aggregated. [Default: 2]
+	FlowLogsFilePerFlowProcessLimit *int `json:"flowLogsFilePerFlowProcessLimit,omitempty" validate:"omitempty"`
 
 	// WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: "c:\\TigeraCalico\\flowlogs"].
 	WindowsFlowLogsFileDirectory string `json:"windowsFlowLogsFileDirectory,omitempty"`
