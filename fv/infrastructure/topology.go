@@ -240,6 +240,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		// host.
 		optsFirstFelix := opts
 		opts.ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancingEnabled"] = "false"
+		opts.ExtraEnvVars["FELIX_DebugSkipCTLBCleanup"] = "true"
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
