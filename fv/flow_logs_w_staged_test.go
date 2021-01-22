@@ -319,6 +319,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
+			checkNat := func() bool {
+				for _, f := range felixes {
+					if !f.BPFNATHasBackendForService(clusterIP, svcPort, 6, ep2_1.IP, wepPort) {
+						return false
+					}
+				}
+				return true
+			}
+
+			Eventually(checkNat, "10s", "1s").Should(BeTrue(), "Expected NAT to be programmed")
+
 			time.Sleep(5 * time.Second)
 		}
 
@@ -342,7 +353,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 
 	It("should get expected flow logs", func() {
 		// Describe the connectivity that we now expect.
-		// For ep1_1 -> ep2_1 we use the service cluster IP to test sevice info in the flow log
+		// For ep1_1 -> ep2_1 we use the service cluster IP to test service info in the flow log
 		cc = &connectivity.Checker{}
 		cc.ExpectSome(ep1_1, connectivity.TargetIP(clusterIP), uint16(svcPort)) // allowed by np1-1
 		cc.ExpectSome(ep1_1, ep2_2)                                             // allowed by np3-3
@@ -392,27 +403,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			// 1-1 -> 2-1 Allow
 			// This was via the service cluster IP and therefore should contain the service name on the source side
 			// where the DNAT occurs.
-			if !bpfEnabled {
-				err = flowTester.CheckFlow(
-					"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
-					"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
-					"default test-service port-"+wepPortStr, 3, 1,
-					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
-						{},
-					})
-			} else {
-				// Due to connect-time LB, we are not going to see the clusterIP
-				// in the logs and thus we cannot determine the service.
-				err = flowTester.CheckFlow(
-					"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
-					"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
-					metrics.NoService, 3, 1,
-					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
-						{},
-					})
-			}
+			err = flowTester.CheckFlow(
+				"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
+				"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
+				"default test-service port-"+wepPortStr, 3, 1,
+				[]metrics.ExpectedPolicy{
+					{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
+					{},
+				})
 			if err != nil {
 				errs = append(errs, "Ingress 1-1->2-1: "+err.Error())
 			}
@@ -549,6 +547,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		ep2_2.Stop()
 		ep2_3.Stop()
 		for _, felix := range felixes {
+			if bpfEnabled {
+				felix.Exec("calico-bpf", "connect-time", "clean")
+			}
 			felix.Stop()
 		}
 

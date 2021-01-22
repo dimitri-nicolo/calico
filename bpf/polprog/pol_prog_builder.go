@@ -98,6 +98,7 @@ var (
 	_                            = stateOffPreNATDstPort
 	stateOffPostNATDstPort int16 = stateEventHdrSize + 30
 	stateOffIPProto        int16 = stateEventHdrSize + 32
+	stateOffFlags          int16 = stateEventHdrSize + 33
 
 	stateOffRulesHit int16 = stateEventHdrSize + 36
 	stateOffRuleIDs  int16 = stateEventHdrSize + 40
@@ -114,6 +115,10 @@ var (
 	ipsKeyPort   int16 = 16
 	ipsKeyProto  int16 = 18
 	ipsKeyPad    int16 = 19
+
+	// Bits in the state flags field.
+	FlagDestIsHost uint8 = 1 << 2
+	FlagSrcIsHost  uint8 = 1 << 3
 )
 
 type Rule struct {
@@ -136,9 +141,30 @@ type Tier struct {
 }
 
 type Rules struct {
+	// Both workload and host interfaces can enforce host endpoint policy (carried here in the
+	// Host... fields); in the case of a workload interface, that can only come from the
+	// wildcard host endpoint, aka "host-*".
+	//
+	// However, only a workload interface can have any workload policy (carried here in the
+	// Tiers and Profiles fields), and workload interfaces also Deny by default when there is no
+	// workload policy at all.  ForHostInterface (with reversed polarity) is the boolean that
+	// tells us whether or not to implement workload policy and that default Deny.
+	ForHostInterface bool
+
+	// Indicates to suppress normal host policy because it's trumped by the setting of
+	// DefaultEndpointToHostAction.
+	SuppressNormalHostPolicy bool
+
+	// Workload policy.
 	Tiers            []Tier
 	Profiles         []Profile
 	NoProfileMatchID RuleMatchID
+
+	// Host endpoint policy.
+	HostPreDnatTiers []Tier
+	HostForwardTiers []Tier
+	HostNormalTiers  []Tier
+	HostProfiles     []Profile
 }
 
 type RuleMatchID = uint64
@@ -149,14 +175,65 @@ type TierEndAction string
 
 const (
 	TierEndUndef TierEndAction = ""
-	TierEndDrop                = "deny"
+	TierEndDeny                = "deny"
 	TierEndPass                = "pass"
 )
 
 func (p *Builder) Instructions(rules Rules) (Insns, error) {
 	p.b = NewBlock()
 	p.writeProgramHeader()
-	p.writeRules(rules)
+
+	// Pre-DNAT policy: on a host interface, or host-* policy on a workload interface.  Traffic
+	// is allowed to continue if there is no applicable pre-DNAT policy.
+	p.writeTiers(rules.HostPreDnatTiers, legDestPreNAT, "allowed_by_host_policy")
+
+	// If traffic is to or from the local host, skip over any apply-on-forward policy.  Note
+	// that this case can be:
+	// - on a workload interface, workload <--> own host
+	// - on a host interface, this host (not a workload) <--> anywhere outside this host
+	//
+	// When rules.SuppressNormalHostPolicy is true, we also skip normal host policy; this is
+	// the case when we're building the policy program for workload -> host and
+	// DefaultEndpointToHostAction is ACCEPT or DROP; or for host -> workload.
+	if rules.SuppressNormalHostPolicy {
+		p.writeJumpIfToOrFromHost("allowed_by_host_policy")
+	} else {
+		p.writeJumpIfToOrFromHost("to_or_from_host")
+	}
+
+	// At this point we know we have traffic that is being forwarded through the host's root
+	// network namespace.  Note that this case can be:
+	// - workload interface, workload <--> another local workload
+	// - workload interface, workload <--> anywhere outside this host
+	// - host interface, workload <--> anywhere outside this host
+	// - host interface, anywhere outside this host <--> anywhere outside this host
+
+	// Apply-On-Forward policy: on a host interface, or host-* policy on a workload interface.
+	// Traffic is allowed to continue if there is no applicable AoF policy.
+	p.writeTiers(rules.HostForwardTiers, legDest, "allowed_by_host_policy")
+
+	// Now skip over normal host policy and jump to where we apply possible workload policy.
+	p.b.Jump("allowed_by_host_policy")
+
+	if !rules.SuppressNormalHostPolicy {
+		// "Normal" host policy, i.e. for non-forwarded traffic.
+		p.b.LabelNextInsn("to_or_from_host")
+		p.writeTiers(rules.HostNormalTiers, legDest, "allowed_by_host_policy")
+		p.writeProfiles(rules.HostProfiles, rules.NoProfileMatchID, "allowed_by_host_policy")
+	}
+
+	// End of host policy.
+	p.b.LabelNextInsn("allowed_by_host_policy")
+
+	if rules.ForHostInterface {
+		// On a host interface there is no workload policy, so we are now done.
+		p.b.Jump("allow")
+	} else {
+		// Workload policy.
+		p.writeTiers(rules.Tiers, legDest, "allow")
+		p.writeProfiles(rules.Profiles, rules.NoProfileMatchID, "allow")
+	}
+
 	p.writeProgramFooter()
 	return p.b.Assemble()
 }
@@ -195,6 +272,17 @@ const (
 	_ = jumpIdxICMP
 	_ = jumpIdxDrop
 )
+
+func (p *Builder) writeJumpIfToOrFromHost(label string) {
+	// Load state flags.
+	p.b.Load8(R1, R9, stateOffFlags)
+
+	// Mask against host bits.
+	p.b.AndImm32(R1, int32(FlagDestIsHost|FlagSrcIsHost))
+
+	// If non-zero, jump to specified label.
+	p.b.JumpNEImm64(R1, 0, label)
+}
 
 // writeProgramFooter emits the program exit jump targets.
 func (p *Builder) writeProgramFooter() {
@@ -263,14 +351,6 @@ func (p *Builder) writeRecordRuleHit(r Rule, skipLabel string) {
 	p.writeRecordRuleID(r.MatchID, skipLabel)
 }
 
-func (p *Builder) setUpSrcIPSetKey(ipsetID uint64) {
-	p.setUpIPSetKey(ipsetID, offSrcIPSetKey, stateOffIPSrc, stateOffSrcPort)
-}
-
-func (p *Builder) setUpDstIPSetKey(ipsetID uint64) {
-	p.setUpIPSetKey(ipsetID, offDstIPSetKey, stateOffPostNATIPDst, stateOffPostNATDstPort)
-}
-
 func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset int16) {
 	// TODO track whether we've already done an initialisation and skip the parts that don't change.
 	// Zero the padding.
@@ -296,104 +376,141 @@ func (p *Builder) setUpIPSetKey(ipsetID uint64, keyOffset, ipOffset, portOffset 
 	p.b.StoreStack32(R1, keyOffset+ipsKeyID+4)
 }
 
-func passAction(action string) bool {
-	return action == "pass" || action == "next-tier"
-}
-
-func (p *Builder) writeRules(rules Rules) {
-	for _, tier := range rules.Tiers {
+func (p *Builder) writeTiers(tiers []Tier, destLeg matchLeg, allowLabel string) {
+	actionLabels := map[string]string{
+		"allow": allowLabel,
+		"deny":  "deny",
+	}
+	for _, tier := range tiers {
 		endOfTierLabel := fmt.Sprint("end_of_tier_", p.tierID)
+		actionLabels["pass"] = endOfTierLabel
+		actionLabels["next-tier"] = endOfTierLabel
 
 		log.Debugf("Start of tier %d %q", p.tierID, tier.Name)
 		for _, pol := range tier.Policies {
-			p.writePolicy(pol, endOfTierLabel)
-			p.policyID++
+			p.writePolicy(pol, actionLabels, destLeg)
 		}
 
+		// End of tier rule.
 		action := tier.EndAction
 		if action == TierEndUndef {
-			action = TierEndDrop
+			action = TierEndDeny
 		}
-
-		// End of tier drop rule.
 		log.Debugf("End of tier %d %q: %s", p.tierID, tier.Name, action)
-
-		actionLabel := string(action)
-		if passAction(string(action)) {
-			actionLabel = endOfTierLabel
-		}
-
 		p.writeRule(Rule{
 			Rule:    &proto.Rule{},
 			MatchID: tier.EndRuleID,
-		}, actionLabel)
+		}, actionLabels[string(action)], destLeg)
 		p.b.LabelNextInsn(endOfTierLabel)
 		p.tierID++
 	}
+}
 
-	endLabel := "end_of_profiles"
-
+func (p *Builder) writeProfiles(profiles []Policy, noProfileMatchID uint64, allowLabel string) {
 	log.Debugf("Start of profiles")
-	for idx, prof := range rules.Profiles {
-		p.writeProfile(prof, idx, endLabel)
+	for idx, prof := range profiles {
+		p.writeProfile(prof, idx, allowLabel)
 	}
 
 	log.Debugf("End of profiles drop")
 	p.writeRule(Rule{
 		Rule:    &proto.Rule{},
-		MatchID: rules.NoProfileMatchID,
-	}, "deny")
-
-	p.b.LabelNextInsn(endLabel)
+		MatchID: noProfileMatchID,
+	}, "deny", legDest)
 }
 
-func (p *Builder) writePolicyRules(policy Policy, endLabel string) {
+func (p *Builder) writePolicyRules(policy Policy, actionLabels map[string]string, destLeg matchLeg) {
+	endOfPolicyLabel := fmt.Sprintf("end_of_policy_%d", p.policyID)
+
 	if policy.Staged {
-		// When a pass or accept rule matches in a staged policy then we want to skip
+		// When a pass or allow rule matches in a staged policy then we want to skip
 		// the rest of the rules in the staged policy and continue processing the next
-		// policy in the same tier.
-		endLabel = fmt.Sprintf("end_of_policy_%d", p.policyID)
+		// policy in the same tier.  Note: don't modify the caller's map here!
+		actionLabels = map[string]string{
+			"pass":      endOfPolicyLabel,
+			"next-tier": endOfPolicyLabel,
+			"allow":     endOfPolicyLabel,
+			"deny":      endOfPolicyLabel,
+		}
 	}
 
 	for ruleIdx, rule := range policy.Rules {
 		log.Debugf("Start of rule %d", ruleIdx)
-
 		action := strings.ToLower(rule.Action)
-		actionLabel := action
-		if passAction(action) || policy.Staged {
-			actionLabel = endLabel
-		}
-		p.writeRule(rule, actionLabel)
+		p.writeRule(rule, actionLabels[action], destLeg)
 		log.Debugf("End of rule %d", ruleIdx)
 	}
 
 	if policy.Staged {
 		log.Debugf("NoMatch policy ID 0x%x", policy.NoMatchID)
-		p.writeRecordRuleID(policy.NoMatchID, endLabel)
-		p.b.LabelNextInsn(endLabel)
+		p.writeRecordRuleID(policy.NoMatchID, endOfPolicyLabel)
+		p.b.LabelNextInsn(endOfPolicyLabel)
 	}
 }
 
-func (p *Builder) writePolicy(policy Policy, endLabel string) {
+func (p *Builder) writePolicy(policy Policy, actionLabels map[string]string, destLeg matchLeg) {
 	log.Debugf("Start of policy %q %d", policy.Name, p.policyID)
-	p.writePolicyRules(policy, endLabel)
+	p.writePolicyRules(policy, actionLabels, destLeg)
 	log.Debugf("End of policy %q %d", policy.Name, p.policyID)
+	p.policyID++
 }
 
-func (p *Builder) writeProfile(profile Profile, idx int, endLabel string) {
+func (p *Builder) writeProfile(profile Profile, idx int, allowLabel string) {
+	actionLabels := map[string]string{
+		"allow":     allowLabel,
+		"deny":      "deny",
+		"pass":      "deny",
+		"next-tier": "deny",
+	}
 	log.Debugf("Start of profile %q %d", profile.Name, idx)
-	p.writePolicyRules(profile, endLabel)
+	p.writePolicyRules(profile, actionLabels, legDest)
 	log.Debugf("End of profile %q %d", profile.Name, idx)
+	p.policyID++
 }
 
 type matchLeg string
 
 const (
-	legSource matchLeg = "source"
-	legDest   matchLeg = "dest"
+	legSource     matchLeg = "source"
+	legDest       matchLeg = "dest"
+	legDestPreNAT matchLeg = "destPreNAT"
 )
 
-func (p *Builder) writeRule(r Rule, actionLabel string) {
+func (leg matchLeg) offsetToStateIPAddressField() (offset int16) {
+	if leg == legSource {
+		offset = stateOffIPSrc
+	} else if leg == legDestPreNAT {
+		offset = stateOffPreNATIPDst
+	} else {
+		offset = stateOffPostNATIPDst
+	}
+	return
+}
+
+func (leg matchLeg) offsetToStatePortField() (portOffset int16) {
+	if leg == legSource {
+		portOffset = stateOffSrcPort
+	} else if leg == legDestPreNAT {
+		portOffset = stateOffPreNATDstPort
+	} else {
+		portOffset = stateOffPostNATDstPort
+	}
+	return
+}
+
+func (leg matchLeg) stackOffsetToIPSetKey() (keyOffset int16) {
+	if leg == legSource {
+		keyOffset = offSrcIPSetKey
+	} else {
+		keyOffset = offDstIPSetKey
+	}
+	return
+}
+
+func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
+	if actionLabel == "" {
+		log.Panic("empty action label")
+	}
 
 	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
@@ -422,11 +539,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string) {
 
 	if len(rule.DstNet) != 0 {
 		log.WithField("cidrs", rule.DstNet).Debugf("DstNet match")
-		p.writeCIDRSMatch(false, legDest, rule.DstNet)
+		p.writeCIDRSMatch(false, destLeg, rule.DstNet)
 	}
 	if len(rule.NotDstNet) != 0 {
 		log.WithField("cidrs", rule.NotDstNet).Debugf("NotDstNet match")
-		p.writeCIDRSMatch(true, legDest, rule.NotDstNet)
+		p.writeCIDRSMatch(true, destLeg, rule.NotDstNet)
 	}
 
 	if len(rule.SrcIpSetIds) > 0 {
@@ -448,11 +565,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string) {
 	if len(dstIPSetIDs) > 0 {
 		log.WithField("ipSetIDs", rule.DstDomainIpSetIds).Debugf("DstDomainIpSetIds match")
 		log.WithField("ipSetIDs", rule.DstIpSetIds).Debugf("DstIpSetIds match")
-		p.writeIPSetOrMatch(legDest, dstIPSetIDs)
+		p.writeIPSetOrMatch(destLeg, dstIPSetIDs)
 	}
 	if len(rule.NotDstIpSetIds) > 0 {
 		log.WithField("ipSetIDs", rule.NotDstIpSetIds).Debugf("NotDstIpSetIds match")
-		p.writeIPSetMatch(true, legDest, rule.NotDstIpSetIds)
+		p.writeIPSetMatch(true, destLeg, rule.NotDstIpSetIds)
 	}
 
 	if len(rule.SrcPorts) > 0 || len(rule.SrcNamedPortIpSetIds) > 0 {
@@ -466,11 +583,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string) {
 
 	if len(rule.DstPorts) > 0 || len(rule.DstNamedPortIpSetIds) > 0 {
 		log.WithField("ports", rule.DstPorts).Debugf("DstPorts match")
-		p.writePortsMatch(false, legDest, rule.DstPorts, rule.DstNamedPortIpSetIds)
+		p.writePortsMatch(false, destLeg, rule.DstPorts, rule.DstNamedPortIpSetIds)
 	}
 	if len(rule.NotDstPorts) > 0 || len(rule.NotDstNamedPortIpSetIds) > 0 {
 		log.WithField("ports", rule.NotDstPorts).Debugf("NotDstPorts match")
-		p.writePortsMatch(true, legDest, rule.NotDstPorts, rule.NotDstNamedPortIpSetIds)
+		p.writePortsMatch(true, destLeg, rule.NotDstPorts, rule.NotDstNamedPortIpSetIds)
 	}
 
 	if rule.Icmp != nil {
@@ -540,14 +657,7 @@ func (p *Builder) writeICMPTypeCodeMatch(negate bool, icmpType, icmpCode uint8) 
 	}
 }
 func (p *Builder) writeCIDRSMatch(negate bool, leg matchLeg, cidrs []string) {
-	var offset int16
-	if leg == legSource {
-		offset = stateOffIPSrc
-	} else {
-		offset = stateOffPostNATIPDst
-	}
-
-	p.b.Load32(R1, R9, offset)
+	p.b.Load32(R1, R9, leg.offsetToStateIPAddressField())
 
 	var onMatchLabel string
 	if negate {
@@ -583,15 +693,8 @@ func (p *Builder) writeIPSetMatch(negate bool, leg matchLeg, ipSets []string) {
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
 		}
 
-		var keyOffset int16
-		if leg == legSource {
-			p.setUpSrcIPSetKey(id)
-			keyOffset = offSrcIPSetKey
-		} else {
-			p.setUpDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		}
-
+		keyOffset := leg.stackOffsetToIPSetKey()
+		p.setUpIPSetKey(id, keyOffset, leg.offsetToStateIPAddressField(), leg.offsetToStatePortField())
 		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
 		p.b.Mov64(R2, R10)
 		p.b.AddImm64(R2, int32(keyOffset))
@@ -620,15 +723,8 @@ func (p *Builder) writeIPSetOrMatch(leg matchLeg, ipSets []string) {
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
 		}
 
-		var keyOffset int16
-		if leg == legSource {
-			p.setUpSrcIPSetKey(id)
-			keyOffset = offSrcIPSetKey
-		} else {
-			p.setUpDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		}
-
+		keyOffset := leg.stackOffsetToIPSetKey()
+		p.setUpIPSetKey(id, keyOffset, leg.offsetToStateIPAddressField(), leg.offsetToStatePortField())
 		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
 		p.b.Mov64(R2, R10)
 		p.b.AddImm64(R2, int32(keyOffset))
@@ -648,13 +744,6 @@ func (p *Builder) writeIPSetOrMatch(leg matchLeg, ipSets []string) {
 func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.PortRange, namedPorts []string) {
 	// For a ports match, numeric ports and named ports are ORed together.  Check any
 	// numeric ports first and then any named ports.
-	var portOffset int16
-	if leg == legSource {
-		portOffset = stateOffSrcPort
-	} else {
-		portOffset = stateOffPostNATDstPort
-	}
-
 	var onMatchLabel string
 	if negate {
 		// Match negated, if we match any port then we jump to the next rule.
@@ -665,7 +754,7 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 	}
 
 	// R1 = port to test against.
-	p.b.Load16(R1, R9, portOffset)
+	p.b.Load16(R1, R9, leg.offsetToStatePortField())
 
 	for _, portRange := range ports {
 		if portRange.First == portRange.Last {
@@ -693,15 +782,8 @@ func (p *Builder) writePortsMatch(negate bool, leg matchLeg, ports []*proto.Port
 			log.WithField("setID", ipSetID).Panic("Failed to look up IP set ID.")
 		}
 
-		var keyOffset int16
-		if leg == legSource {
-			p.setUpSrcIPSetKey(id)
-			keyOffset = offSrcIPSetKey
-		} else {
-			p.setUpDstIPSetKey(id)
-			keyOffset = offDstIPSetKey
-		}
-
+		keyOffset := leg.stackOffsetToIPSetKey()
+		p.setUpIPSetKey(id, keyOffset, leg.offsetToStateIPAddressField(), leg.offsetToStatePortField())
 		p.b.LoadMapFD(R1, uint32(p.ipSetMapFD))
 		p.b.Mov64(R2, R10)
 		p.b.AddImm64(R2, int32(keyOffset))

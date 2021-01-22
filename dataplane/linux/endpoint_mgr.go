@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -192,6 +192,8 @@ type endpointManager struct {
 	activeHostEpIDToIfaceNames map[proto.HostEndpointID][]string
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
+	newIfaceNameToHostEpID    map[string]proto.HostEndpointID
+
 	// Interfaces to which we've added a host-side address, for egress IP function to work.
 	egressGatewayAddressAdded map[string]netlink.Addr
 
@@ -202,6 +204,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
+	bpfEndpointManager     *bpfEndpointManager
 	nlHandle               netlinkHandle
 }
 
@@ -221,6 +224,7 @@ func newEndpointManager(
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 	bpfEnabled bool,
+	bpfEndpointManager *bpfEndpointManager,
 	callbacks *callbacks,
 ) *endpointManager {
 	nlHandle, _ := netlink.NewHandle()
@@ -239,6 +243,7 @@ func newEndpointManager(
 		writeProcSys,
 		os.Stat,
 		bpfEnabled,
+		bpfEndpointManager,
 		callbacks,
 		nlHandle,
 	)
@@ -258,6 +263,7 @@ func newEndpointManagerWithShims(
 	procSysWriter procSysWriter,
 	osStat func(name string) (os.FileInfo, error),
 	bpfEnabled bool,
+	bpfEndpointManager *bpfEndpointManager,
 	callbacks *callbacks,
 	nlHandle netlinkHandle,
 ) *endpointManager {
@@ -269,6 +275,7 @@ func newEndpointManagerWithShims(
 		wlIfacesRegexp:         wlIfacesRegexp,
 		kubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
 		bpfEnabled:             bpfEnabled,
+		bpfEndpointManager:     bpfEndpointManager,
 
 		rawTable:     rawTable,
 		mangleTable:  mangleTable,
@@ -368,7 +375,7 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 	}
 }
 
-func (m *endpointManager) CompleteDeferredWork() error {
+func (m *endpointManager) ResolveUpdateBatch() error {
 	// Copy the pending interface state to the active set and mark any interfaces that have
 	// changed state for reconfiguration by resolveWorkload/HostEndpoints()
 	for ifaceName, state := range m.pendingIfaceUpdates {
@@ -391,11 +398,21 @@ func (m *endpointManager) CompleteDeferredWork() error {
 		delete(m.pendingIfaceUpdates, ifaceName)
 	}
 
+	if m.hostEndpointsDirty {
+		log.Debug("Host endpoints updated, resolving them.")
+		m.newIfaceNameToHostEpID = m.resolveHostEndpoints()
+	}
+
+	return nil
+}
+
+func (m *endpointManager) CompleteDeferredWork() error {
+
 	m.resolveWorkloadEndpoints()
 
 	if m.hostEndpointsDirty {
 		log.Debug("Host endpoints updated, resolving them.")
-		m.resolveHostEndpoints()
+		m.updateHostEndpoints()
 		m.hostEndpointsDirty = false
 	}
 
@@ -753,7 +770,7 @@ func (m *endpointManager) resolveEndpointMarks() {
 	m.updateDispatchChains(m.activeEPMarkDispatchChains, newEndpointMarkDispatchChains, m.filterTable)
 }
 
-func (m *endpointManager) resolveHostEndpoints() {
+func (m *endpointManager) resolveHostEndpoints() map[string]proto.HostEndpointID {
 
 	// Host endpoint resolution
 	// ------------------------
@@ -782,16 +799,12 @@ func (m *endpointManager) resolveHostEndpoints() {
 	// seeing which of them are matched by the current set of HostEndpoints as a
 	// whole.
 	newIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
-	newPreDNATIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
-	newUntrackedIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
-	newHostEpIDToIfaceNames := map[proto.HostEndpointID][]string{}
 	for ifaceName, ifaceAddrs := range m.hostIfaceToAddrs {
 		ifaceCxt := log.WithFields(log.Fields{
 			"ifaceName":  ifaceName,
 			"ifaceAddrs": ifaceAddrs,
 		})
 		bestHostEpId := proto.HostEndpointID{}
-		var bestHostEp proto.HostEndpoint
 	HostEpLoop:
 		for id, hostEp := range m.rawHostEndpoints {
 			logCxt := ifaceCxt.WithField("id", id)
@@ -811,7 +824,6 @@ func (m *endpointManager) resolveHostEndpoints() {
 				// interface.
 				logCxt.Debug("Match on explicit iface name")
 				bestHostEpId = id
-				bestHostEp = *hostEp
 				continue
 			} else if hostEp.Name != "" {
 				// The HostEndpoint has an explicit name that isn't this
@@ -828,7 +840,6 @@ func (m *endpointManager) resolveHostEndpoints() {
 						// that is on this interface.
 						logCxt.Debug("Match on address")
 						bestHostEpId = id
-						bestHostEp = *hostEp
 						continue HostEpLoop
 					}
 				}
@@ -841,28 +852,80 @@ func (m *endpointManager) resolveHostEndpoints() {
 			})
 			logCxt.Debug("Got HostEp for interface")
 			newIfaceNameToHostEpID[ifaceName] = bestHostEpId
-			if len(bestHostEp.UntrackedTiers) > 0 {
-				// Optimisation: only add the endpoint chains to the raw (untracked)
-				// table if there's some untracked policy to apply.  This reduces
-				// per-packet latency since every packet has to traverse the raw
-				// table.
-				logCxt.Debug("Endpoint has untracked policies.")
-				newUntrackedIfaceNameToHostEpID[ifaceName] = bestHostEpId
-			}
-			if len(bestHostEp.PreDnatTiers) > 0 {
-				// Similar optimisation (or neatness) for pre-DNAT policy.
-				logCxt.Debug("Endpoint has pre-DNAT policies.")
-				newPreDNATIfaceNameToHostEpID[ifaceName] = bestHostEpId
-			}
-			// Record that this host endpoint is in use, for status reporting.
-			newHostEpIDToIfaceNames[bestHostEpId] = append(
-				newHostEpIDToIfaceNames[bestHostEpId], ifaceName)
 		}
+	}
 
+	// Similar loop to find the best all-interfaces host endpoint.
+	bestHostEpId := proto.HostEndpointID{}
+	for id, hostEp := range m.rawHostEndpoints {
+		logCxt := log.WithField("id", id)
+		if !forAllInterfaces(hostEp) {
+			logCxt.Debug("Skip interface-specific host endpoint")
+			continue
+		}
+		if (bestHostEpId.EndpointId != "") && (bestHostEpId.EndpointId < id.EndpointId) {
+			// We already have a HostEndpointId that is better than
+			// this one, so no point looking any further.
+			logCxt.Debug("No better than existing match")
+			continue
+		}
+		logCxt.Debug("New best all-interfaces host endpoint")
+		bestHostEpId = id
+	}
+
+	if bestHostEpId.EndpointId != "" {
+		log.WithField("bestHostEpId", bestHostEpId).Debug("Got all interfaces HostEp")
+		newIfaceNameToHostEpID[allInterfaces] = bestHostEpId
+	}
+
+	if m.bpfEnabled && m.bpfEndpointManager != nil {
+		// Construct map of interface names to host endpoints, and pass to the BPF endpoint
+		// manager.
+		hostIfaceToEpMap := map[string]proto.HostEndpoint{}
+		for ifaceName, id := range newIfaceNameToHostEpID {
+			// Note, dereference the proto.HostEndpoint here so that the data lifetime
+			// is decoupled from the validity of the pointer here.
+			hostIfaceToEpMap[ifaceName] = *m.rawHostEndpoints[id]
+		}
+		m.bpfEndpointManager.OnHEPUpdate(hostIfaceToEpMap)
+	}
+
+	return newIfaceNameToHostEpID
+}
+
+func (m *endpointManager) updateHostEndpoints() {
+
+	// Calculate filtered name/id maps for untracked and pre-DNAT policy, and a reverse map from
+	// each active host endpoint to the interfaces it is in use for.
+	newIfaceNameToHostEpID := m.newIfaceNameToHostEpID
+	newPreDNATIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
+	newUntrackedIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
+	newHostEpIDToIfaceNames := map[proto.HostEndpointID][]string{}
+	for ifaceName, id := range newIfaceNameToHostEpID {
+		logCxt := log.WithField("id", id).WithField("ifaceName", ifaceName)
+		ep := m.rawHostEndpoints[id]
+		if len(ep.UntrackedTiers) > 0 {
+			// Optimisation: only add the endpoint chains to the raw (untracked)
+			// table if there's some untracked policy to apply.  This reduces
+			// per-packet latency since every packet has to traverse the raw
+			// table.
+			logCxt.Debug("Endpoint has untracked policies.")
+			newUntrackedIfaceNameToHostEpID[ifaceName] = id
+		}
+		if len(ep.PreDnatTiers) > 0 {
+			// Similar optimisation (or neatness) for pre-DNAT policy.
+			logCxt.Debug("Endpoint has pre-DNAT policies.")
+			newPreDNATIfaceNameToHostEpID[ifaceName] = id
+		}
+		// Record that this host endpoint is in use, for status reporting.
+		newHostEpIDToIfaceNames[id] = append(
+			newHostEpIDToIfaceNames[id], ifaceName)
+
+		// Also determine endpoints for which we need to review status.
 		oldID, wasKnown := m.activeIfaceNameToHostEpID[ifaceName]
 		newID, isKnown := newIfaceNameToHostEpID[ifaceName]
 		if oldID != newID {
-			logCxt := ifaceCxt.WithFields(log.Fields{
+			logCxt := logCxt.WithFields(log.Fields{
 				"oldID": m.activeIfaceNameToHostEpID[ifaceName],
 				"newID": newIfaceNameToHostEpID[ifaceName],
 			})
@@ -878,40 +941,6 @@ func (m *endpointManager) resolveHostEndpoints() {
 		}
 	}
 
-	// Similar loop to find the best all-interfaces host endpoint.
-	bestHostEpId := proto.HostEndpointID{}
-	var bestHostEp proto.HostEndpoint
-	for id, hostEp := range m.rawHostEndpoints {
-		logCxt := log.WithField("id", id)
-		if !forAllInterfaces(hostEp) {
-			logCxt.Debug("Skip interface-specific host endpoint")
-			continue
-		}
-		if (bestHostEpId.EndpointId != "") && (bestHostEpId.EndpointId < id.EndpointId) {
-			// We already have a HostEndpointId that is better than
-			// this one, so no point looking any further.
-			logCxt.Debug("No better than existing match")
-			continue
-		}
-		logCxt.Debug("New best all-interfaces host endpoint")
-		bestHostEpId = id
-		bestHostEp = *hostEp
-	}
-
-	if bestHostEpId.EndpointId != "" {
-		logCxt := log.WithField("bestHostEpId", bestHostEpId)
-		logCxt.Debug("Got all interfaces HostEp")
-		if len(bestHostEp.PreDnatTiers) > 0 {
-			logCxt.Debug("Endpoint has pre-DNAT policies.")
-			newPreDNATIfaceNameToHostEpID[allInterfaces] = bestHostEpId
-		}
-
-		newIfaceNameToHostEpID[allInterfaces] = bestHostEpId
-
-		// Record that this host endpoint is in use, for status reporting.
-		newHostEpIDToIfaceNames[bestHostEpId] = append(
-			newHostEpIDToIfaceNames[bestHostEpId], allInterfaces)
-	}
 	if !m.bpfEnabled {
 		// Set up programming for the host endpoints that are now to be used.
 		newHostIfaceFiltChains := map[string][]*iptables.Chain{}
@@ -1014,6 +1043,8 @@ func (m *endpointManager) resolveHostEndpoints() {
 	m.activeHostEpIDToIfaceNames = newHostEpIDToIfaceNames
 
 	if m.bpfEnabled {
+		// Code after this point is for dispatch chains and IPVS endpoint marking, which
+		// aren't needed in BPF mode.
 		return
 	}
 

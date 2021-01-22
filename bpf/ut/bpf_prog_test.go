@@ -69,7 +69,7 @@ const (
 )
 
 var (
-	rulesDefaultAllow = polprog.Rules{
+	rulesDefaultAllow = &polprog.Rules{
 		Tiers: []polprog.Tier{{
 			Name: "base tier",
 			Policies: []polprog.Policy{{
@@ -124,7 +124,7 @@ var retvalToStr = map[int]string{
 }
 
 func TestCompileTemplateRun(t *testing.T) {
-	runBpfTest(t, "calico_to_workload_ep", polprog.Rules{}, func(bpfrun bpfProgRunFn) {
+	runBpfTest(t, "calico_to_workload_ep", &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
 		_, _, _, _, pktBytes, err := testPacketUDPDefault()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -150,7 +150,7 @@ type testLogger interface {
 	Logf(format string, args ...interface{})
 }
 
-func setupAndRun(logger testLogger, loglevel string, section string, rules polprog.Rules,
+func setupAndRun(logger testLogger, loglevel string, section string, rules *polprog.Rules,
 	runFn func(progName string), opts ...testOption) {
 
 	topts := testOpts{
@@ -225,7 +225,7 @@ outter:
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir, maps...)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, rules != nil, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	if err != nil {
@@ -233,23 +233,25 @@ outter:
 	}
 	Expect(err).NotTo(HaveOccurred())
 
-	alloc := &forceAllocator{alloc: idalloc.New()}
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
-	insns, err := pg.Instructions(rules)
-	Expect(err).NotTo(HaveOccurred())
-	polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
-	Expect(err).NotTo(HaveOccurred())
-	defer func() { _ = polProgFD.Close() }()
-	progFDBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(progFDBytes, uint32(polProgFD))
-	err = jumpMap.Update([]byte{0, 0, 0, 0}, progFDBytes)
-	Expect(err).NotTo(HaveOccurred())
+	if rules != nil {
+		alloc := &forceAllocator{alloc: idalloc.New()}
+		pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
+		insns, err := pg.Instructions(*rules)
+		Expect(err).NotTo(HaveOccurred())
+		polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _ = polProgFD.Close() }()
+		progFDBytes := make([]byte, 4)
+		binary.LittleEndian.PutUint32(progFDBytes, uint32(polProgFD))
+		err = jumpMap.Update([]byte{0, 0, 0, 0}, progFDBytes)
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	runFn(bpfFsDir + "/" + section)
 }
 
 // runBpfTest runs a specific section of the entire bpf program in isolation
-func runBpfTest(t *testing.T, section string, rules polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
+func runBpfTest(t *testing.T, section string, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
 	RegisterTestingT(t)
 	setupAndRun(t, "debug", section, rules, func(progName string) {
 		t.Run(section, func(_ *testing.T) {
@@ -280,7 +282,7 @@ func bpftool(args ...string) ([]byte, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
-			log.WithField("stderr", string(e.Stderr)).Panicf("bpftool %s failed", args[2])
+			log.WithField("stderr", string(e.Stderr)).Errorf("bpftool %s failed", args[2])
 			// to make the output reflect the new lines, logrus ignores it
 			fmt.Print(fmt.Sprint(string(e.Stderr)))
 		}
@@ -364,7 +366,7 @@ func cleanUpMaps() {
 	log.Info("Cleaned up all maps")
 }
 
-func bpftoolProgLoadAll(fname, bpfFsDir string, maps ...bpf.Map) error {
+func bpftoolProgLoadAll(fname, bpfFsDir string, polProg bool, maps ...bpf.Map) error {
 	args := []string{"prog", "loadall", fname, bpfFsDir, "type", "classifier"}
 
 	for _, m := range maps {
@@ -377,12 +379,19 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, maps ...bpf.Map) error {
 		return err
 	}
 
-	polProgPath := path.Join(bpfFsDir, "1_0")
-	_, err = os.Stat(polProgPath)
-	if err == nil {
-		_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "0", "0", "0", "0", "value", "pinned", polProgPath)
+	if polProg {
+		polProgPath := path.Join(bpfFsDir, "1_0")
+		_, err = os.Stat(polProgPath)
+		if err == nil {
+			_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "0", "0", "0", "0", "value", "pinned", polProgPath)
+			if err != nil {
+				return errors.Wrap(err, "failed to update jump map (policy program)")
+			}
+		}
+	} else {
+		_, err = bpftool("map", "delete", "pinned", jumpMap.Path(), "key", "0", "0", "0", "0")
 		if err != nil {
-			return errors.Wrap(err, "failed to update jump map (policy program)")
+			log.WithError(err).Info("failed to update jump map (deleting policy program)")
 		}
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "1", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_1"))
@@ -514,7 +523,7 @@ outter:
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir, maps...)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, true, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	runTest := func() {
