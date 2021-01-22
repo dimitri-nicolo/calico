@@ -7,6 +7,8 @@ all: build
 ## Run the tests for the current platform/architecture
 test: ut
 
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_APP_POLICY_PRIVATE_PROJECT_ID)
+
 ###############################################################################
 # Both native and cross architecture builds are supported.
 # The target architecture is select by setting the ARCH variable.
@@ -59,7 +61,7 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-GO_BUILD_VER?=v0.49
+GO_BUILD_VER?=v0.50
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
@@ -69,6 +71,21 @@ GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 ifeq ($(LOCAL_BUILD),true)
 	GIT_VERSION = $(shell git describe --tags --dirty --always --abbrev=12)-dev-build
 endif
+
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
@@ -89,6 +106,7 @@ BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
 PUSH_IMAGES?=$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/tigera/dikastes
 PACKAGE_NAME?=github.com/projectcalico/app-policy
+GIT_USE_SSH?=true
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -120,9 +138,7 @@ else
 endif
 
 EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
-
 EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
-GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Allow the ssh auth sock to be mapped into the build container.
 ifdef SSH_AUTH_SOCK
@@ -142,29 +158,7 @@ local_build:
 	@echo "Building app-policy-private"
 endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
-	docker run --rm \
-		--net=host \
-		$(EXTRA_DOCKER_ARGS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-e GOCACHE=/go-cache \
-		-e GOARCH=$(ARCH) \
-		-e GOPATH=/go \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-		-w /go/src/$(PACKAGE_NAME)
-
-DOCKER_RUN_RO := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
-	docker run --rm \
-		--net=host \
-		$(EXTRA_DOCKER_ARGS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-e GOCACHE=/go-cache \
-		-e GOARCH=$(ARCH) \
-		-e GOPATH=/go \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-		-w /go/src/$(PACKAGE_NAME)
+include Makefile.common
 
 DOCKER_RUN_PB := docker run --rm \
 		$(EXTRA_DOCKER_ARGS) \
@@ -174,17 +168,12 @@ DOCKER_RUN_PB := docker run --rm \
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
 
-.PHONY: pre-commit
-pre-commit:
-	$(DOCKER_RUN) $(CALICO_BUILD) git-hooks/pre-commit-in-container
-
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
-	rm -rf .go-pkg-cache
+	rm -rf .go-pkg-cache report vendor bin proto/felixbackend.pb.go \
+		   proto/healthz.pb.go Makefile.common*
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	rm -rf report vendor
-	rm -rf bin proto/felixbackend.pb.go proto/healthz.pb.go
 	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
 	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
@@ -211,7 +200,7 @@ bin/dikastes-%: local_build proto $(SRC_FILES)
 	mkdir -p bin
 	$(DOCKER_RUN_RO) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes'
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes'
 
 bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
@@ -222,7 +211,7 @@ bin/healthz-%: local_build proto $(SRC_FILES)
 	-mkdir -p .go-pkg-cache $(GOMOD_CACHE) || true
 	$(DOCKER_RUN_RO) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz'
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz'
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -320,71 +309,10 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
-###############################################################################
-# Updating pins
-###############################################################################
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-
-define get_remote_version
-	$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); git ls-remote https://$(1) $(2) | cut -f1')
-endef
-
-# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
-# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
-# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
-define update_replace_pin
-	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
-
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-		if [ ! -z "$(new_ver)" ]; then \
-			$(GIT_CONFIG_SSH); \
-			go mod edit -replace $(1)=$(2)@$(new_ver); \
-			go mod download; \
-		fi'
-endef
-
-LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-
-replace-libcalico-pin:
-	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
-
-git-status:
-	git status --porcelain
-
-git-config:
-ifdef CONFIRM
-	git config --global user.name "Semaphore Automatic Update"
-	git config --global user.email "marvin@projectcalico.io"
-endif
-
-git-commit:
-	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
-
-git-push:
-	git push
-
 update-pins: replace-libcalico-pin
 
 ## Update dependency pins to their latest changeset, committing and pushing it.
 commit-pin-updates: update-pins git-status ci git-config git-commit git-push
-
-###############################################################################
-# Static checks
-###############################################################################
-.PHONY: static-checks
-###############################################################################
-# See .golangci.yml for golangci-lint config
-LINT_ARGS +=
-static-checks: build
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
-
-.PHONY: fix
-fix:
-	goimports -w $(SRC_FILES)
-
-foss-checks: build-all
-	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
 
 ###############################################################################
 # UTs
@@ -393,14 +321,7 @@ foss-checks: build-all
 ## Run the tests in a container. Useful for CI, Mac dev
 ut: local_build proto
 	mkdir -p report
-	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH); go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
-
-###############################################################################
-# CI
-###############################################################################
-.PHONY: mod-download
-mod-download:
-	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
+	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
 
 .PHONY: ci
 ci: clean mod-download build-all static-checks ut
@@ -540,17 +461,3 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	{ helpMsg = $$0 }'						  \
 	width=20							    \
 	$(MAKEFILE_LIST)
-
-.PHONY: install-git-hooks
-## Install Git hooks
-install-git-hooks:
-	./install-git-hooks
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' go modules.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod tidy'
