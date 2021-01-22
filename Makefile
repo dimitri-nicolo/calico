@@ -59,7 +59,7 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-GO_BUILD_VER?=v0.24
+GO_BUILD_VER?=v0.49
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
@@ -103,6 +103,11 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
+# Allow the ssh auth sock to be mapped into the build container.
+ifdef SSH_AUTH_SOCK
+	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
 ifneq ($(GOPATH),)
@@ -115,8 +120,6 @@ else
 endif
 
 EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
-BUILD_FLAGS			+= -mod=vendor
-GINKGO_ARGS			+= -mod=vendor
 
 EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
 GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -168,14 +171,6 @@ DOCKER_RUN_PB := docker run --rm \
 		--user $(LOCAL_USER_ID):$(MY_GID) \
 		-v $(CURDIR):/code
 
-ENVOY_API=vendor/github.com/envoyproxy/data-plane-api
-EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2/
-EXT_AUTH_V2_ALPHA=$(ENVOY_API)/envoy/service/auth/v2alpha/
-ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
-V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
-HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
-PERCENT=$(ENVOY_API)/envoy/type/percent
-
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
 
@@ -189,8 +184,7 @@ clean:
 	rm -rf .go-pkg-cache
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
 	rm -rf report vendor
-	# Only one pb.go file exists outside the vendor dir
-	rm -rf bin vendor proto/felixbackend.pb.go
+	rm -rf bin proto/felixbackend.pb.go proto/healthz.pb.go
 	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
 	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
@@ -209,30 +203,13 @@ build-all: $(addprefix bin/dikastes-,$(VALIDARCHES))
 ## Build the binary for the current architecture and platform
 build: bin/dikastes-$(ARCH) bin/healthz-$(ARCH)
 
-## Create the vendor directory
-vendor: go.mod go.sum
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
-		go mod download; \
-		go mod vendor; \
-		# We need to checkout go.mod and go.sum since the vendor command \
-		# can sometimes modify these files, causing a dirty tree. \
-		git checkout go.mod go.sum; \
-		mkdir -p vendor/github.com/envoyproxy; \
-		mkdir -p vendor/github.com/gogo; \
-		mkdir -p vendor/github.com/lyft; \
-		mkdir -p vendor/github.com/golang; \
-		cp -fr `go list -m -f "{{.Dir}}" github.com/gogo/protobuf`/* vendor/github.com/gogo/protobuf; \
-		cp -fr `go list -m -f "{{.Dir}}" github.com/envoyproxy/data-plane-api` vendor/github.com/envoyproxy/data-plane-api; \
-		cp -fr `go list -m -f "{{.Dir}}" github.com/lyft/protoc-gen-validate` vendor/github.com/lyft/protoc-gen-validate; \
-		cp -fr `go list -m -f "{{.Dir}}" github.com/golang/protobuf`/* vendor/github.com/golang/protobuf'
-		chmod -R +w vendor/github.com
-
 bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64
 bin/dikastes-ppc64le: ARCH=ppc64le
 bin/dikastes-s390x: ARCH=s390x
-bin/dikastes-%: local_build vendor proto $(SRC_FILES)
-	$(DOCKER_RUN_RO) -ti \
+bin/dikastes-%: local_build proto $(SRC_FILES)
+	mkdir -p bin
+	$(DOCKER_RUN_RO) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes'
 
@@ -240,8 +217,10 @@ bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
 bin/healthz-ppc64le: ARCH=ppc64le
 bin/healthz-s390x: ARCH=s390x
-bin/healthz-%: local_build vendor proto $(SRC_FILES)
-	$(DOCKER_RUN_RO) -ti \
+bin/healthz-%: local_build proto $(SRC_FILES)
+	mkdir -p bin || true
+	-mkdir -p .go-pkg-cache $(GOMOD_CACHE) || true
+	$(DOCKER_RUN_RO) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz'
 
@@ -252,54 +231,12 @@ bin/healthz-%: local_build vendor proto $(SRC_FILES)
 # Envoy's validation library.
 # When importing, we must use gogo versions of google/protobuf and
 # google/rpc (aka googleapis).
-PROTOC_IMPORTS =  -I $(ENVOY_API) \
-		  -I vendor/github.com/gogo/protobuf/protobuf \
-		  -I vendor/github.com/gogo/protobuf \
-		  -I vendor/github.com/lyft/protoc-gen-validate\
-		  -I vendor/github.com/gogo/googleapis\
-		  -I proto\
+PROTOC_IMPORTS =  -I proto\
 		  -I ./
 # Also remap the output modules to gogo versions of google/protobuf and google/rpc
 PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Menvoy/type/percent.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc,Menvoy/service/auth/v2/external_auth.proto=github.com/envoyproxy/data-plane-api/envoy/service/auth/v2
 
-proto: $(EXT_AUTH)external_auth.pb.go $(EXT_AUTH_V2_ALPHA)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(PERCENT).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go proto/healthz.proto
-
-$(EXT_AUTH)external_auth.pb.go $(EXT_AUTH)attribute_context.pb.go: $(EXT_AUTH)external_auth.proto $(EXT_AUTH)attribute_context.proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      $(EXT_AUTH)*.proto \
-		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(EXT_AUTH_V2_ALPHA)external_auth.pb.go: $(EXT_AUTH_V2_ALPHA)external_auth.proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      $(EXT_AUTH_V2_ALPHA)*.proto \
-		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(ADDRESS).pb.go $(V2_BASE).pb.go: $(ADDRESS).proto $(V2_BASE).proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      $(ADDRESS).proto $(V2_BASE).proto \
-		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      $(HTTP_STATUS).proto \
-		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(PERCENT).pb.go: $(PERCENT).proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      $(PERCENT).proto \
-		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(EXT_AUTH)external_auth.proto $(EXT_AUTH_V2_ALPHA)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(PERCENT).proto $(EXT_AUTH)attribute_context.proto: vendor
+proto: proto/felixbackend.pb.go proto/healthz.proto
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
 	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
@@ -440,7 +377,7 @@ commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 # See .golangci.yml for golangci-lint config
 LINT_ARGS +=
 static-checks: build
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); GO111MODULE=off golangci-lint run $(LINT_ARGS)'
+	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
 
 .PHONY: fix
 fix:
@@ -497,7 +434,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${GIT_VERSION} EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
