@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/ingress-collector
-GO_BUILD_VER    ?= v0.38
+GO_BUILD_VER    ?= v0.50
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
@@ -67,12 +67,6 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-ENVOY_API=deps/github.com/envoyproxy/data-plane-api
-EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
-ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
-V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
-HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
-
 ############################################################################
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
@@ -81,7 +75,7 @@ hooks_installed:=$(shell ./install-git-hooks)
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	rm -rf report/
+	rm -rf report/ Makefile.common*
 	rm -rf bin proto/felixbackend.pb.go
 	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
 	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
@@ -121,12 +115,7 @@ endif
 # Envoy's validation library.
 # When importing, we must use gogo versions of google/protobuf and
 # google/rpc (aka googleapis).
-PROTOC_IMPORTS =  -I $(ENVOY_API) \
-                  -I deps/github.com/gogo/protobuf/protobuf \
-                  -I deps/github.com/gogo/protobuf \
-                  -I deps/github.com/lyft/protoc-gen-validate\
-                  -I deps/github.com/gogo/googleapis\
-                  -I proto\
+PROTOC_IMPORTS =  -I proto\
                   -I ./
 # Also remap the output modules to gogo versions of google/protobuf and google/rpc
 PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc
@@ -139,39 +128,7 @@ GOOGLEAPIS_GIT_URI:=github.com/gogo/googleapis
 PROTOBUF_GIT_URI:=github.com/gogo/protobuf
 UDPA_GIT_URI:=github.com/cncf/udpa
 
-proto-download:
-	mkdir -p deps
-	-git clone https://$(ENVOYPROXY_GIT_URI).git deps/$(ENVOYPROXY_GIT_URI)
-	-git clone https://$(PROTOC_GEN_VALIDATE_GIT_URI).git deps/$(PROTOC_GEN_VALIDATE_GIT_URI)
-	-git clone https://$(GOOGLEAPIS_GIT_URI).git deps/$(GOOGLEAPIS_GIT_URI)
-	-git clone https://$(PROTOBUF_GIT_URI).git deps/$(PROTOBUF_GIT_URI)
-	-git clone https://$(UDPA_GIT_URI).git deps/$(UDPA_GIT_URI)
-###
-
-proto: $(EXT_AUTH)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go
-
-$(EXT_AUTH)external_auth.pb.go $(EXT_AUTH)attribute_context.pb.go: $(EXT_AUTH)external_auth.proto $(EXT_AUTH)attribute_context.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(EXT_AUTH)*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(ADDRESS).pb.go $(V2_BASE).pb.go: $(ADDRESS).proto $(V2_BASE).proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(ADDRESS).proto $(V2_BASE).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(HTTP_STATUS).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(EXT_AUTH)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(EXT_AUTH)attribute_context.proto:
+proto: proto/felixbackend.pb.go
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
 	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
