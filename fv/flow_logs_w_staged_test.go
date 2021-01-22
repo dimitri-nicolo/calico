@@ -318,6 +318,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
+			checkNat := func() bool {
+				for _, f := range felixes {
+					if !f.BPFNATHasBackendForService(clusterIP, svcPort, 6, ep2_1.IP, wepPort) {
+						return false
+					}
+				}
+				return true
+			}
+
+			Eventually(checkNat, "10s", "1s").Should(BeTrue(), "Expected NAT to be programmed")
+
 			time.Sleep(5 * time.Second)
 		}
 
