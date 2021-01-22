@@ -202,6 +202,9 @@ endif
 .PHONY: image-init
 image-init:
 	docker build -t $(INIT_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f envoy-init/Dockerfile.$(ARCH) envoy-init/.
+ifeq ($(ARCH),amd64)
+	docker tag $(INIT_IMAGE):latest-$(ARCH) $(INIT_IMAGE):latest
+endif
 
 # ensure we have a real imagetag
 imagetag:
@@ -221,6 +224,9 @@ unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
 push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
 sub-single-push-%:
 	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+ifeq ($(ARCH),amd64)
+	docker push $(call unescapefs,$*:$(IMAGETAG))
+endif
 
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
@@ -229,6 +235,9 @@ sub-push-%:
 push-init: imagetag $(addprefix sub-init-,$(call escapefs,$(INIT_IMAGE)))
 sub-init-%:
 	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+ifeq ($(ARCH),amd64)
+	docker push $(call unescapefs,$*:$(IMAGETAG))
+endif
 
 ## push multi-arch manifest where supported
 push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
@@ -251,9 +260,15 @@ tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(P
 
 sub-single-tag-images-arch-%:
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+endif
 
 sub-single-tag-images-init-%:
 	docker tag $(INIT_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+ifeq ($(ARCH),amd64)
+	docker tag $(INIT_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+endif
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
