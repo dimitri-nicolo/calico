@@ -64,6 +64,8 @@ EXCLUDED_IMAGES = [
     'honeypod-controller',
     'honeypod',
     'honeypod-exp-service',
+    'envoy-init',
+    'envoy',
 
     # third party images
     'elasticsearch',

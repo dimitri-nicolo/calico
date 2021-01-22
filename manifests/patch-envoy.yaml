@@ -7,10 +7,8 @@ spec:
     spec:
       containers:
       - name: envoy-proxy
-        image: {% include component_image component="envoy" %}
+        image: {{page.registry}}{% include component_image component="envoy" %}
         imagePullPolicy: IfNotPresent
-        command: ["/bin/sh","-c"]
-        args: ["touch /tmp/envoy.log && envoy -c /etc/envoy/envoy.yaml"]
         securityContext:
           runAsUser: 1729
           runAsGroup: 1729
