@@ -239,7 +239,12 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		// we get unpredictable behaviour if more than one Felix enables it on the same
 		// host.
 		optsFirstFelix := opts
+		opts.ExtraEnvVars = map[string]string{}
+		for k, v := range optsFirstFelix.ExtraEnvVars {
+			opts.ExtraEnvVars[k] = v
+		}
 		opts.ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancingEnabled"] = "false"
+		opts.ExtraEnvVars["FELIX_DebugSkipCTLBCleanup"] = "true"
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
