@@ -38,4 +38,5 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tigera/lma v0.0.0-20210114175836-5b76fea7ad37
 	k8s.io/client-go v11.0.0+incompatible // indirect
+	github.com/tigera/licensing v1.0.1-0.20210108182732-27874b544b4a
 )
