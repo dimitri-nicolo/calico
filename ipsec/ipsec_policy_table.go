@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2021 Tigera, Inc. All rights reserved.
 
 package ipsec
 
@@ -14,6 +14,8 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/felix/logutils"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -96,9 +98,11 @@ type PolicyTable struct {
 	timeNow func() time.Time
 	// timeSince is a shim for time.Since()
 	timeSince func(time.Time) time.Duration
+
+	opRecorder logutils.OpRecorder
 }
 
-func NewPolicyTable(ourReqID int, ipsecEnabled bool, shortGraceTime bool) *PolicyTable {
+func NewPolicyTable(ourReqID int, ipsecEnabled bool, shortGraceTime bool, opRecorder logutils.OpRecorder) *PolicyTable {
 	return NewPolicyTableWithShims(
 		ourReqID,
 		ipsecEnabled,
@@ -107,6 +111,7 @@ func NewPolicyTable(ourReqID int, ipsecEnabled bool, shortGraceTime bool) *Polic
 		time.Sleep,
 		time.Now,
 		time.Since,
+		opRecorder,
 	)
 }
 
@@ -122,6 +127,7 @@ func NewPolicyTableWithShims(
 	sleep func(time.Duration),
 	timeNow func() time.Time,
 	timeSince func(time.Time) time.Duration,
+	opRecorder logutils.OpRecorder,
 ) *PolicyTable {
 	return &PolicyTable{
 		ourReqID:           ourReqID,
@@ -135,6 +141,7 @@ func NewPolicyTableWithShims(
 		timeNow:            timeNow,
 		timeSince:          timeSince,
 		useShortGraceTime:  shortGraceTime,
+		opRecorder:         opRecorder,
 	}
 }
 
@@ -230,7 +237,8 @@ func (p *PolicyTable) Apply() {
 		if p.resyncRequired {
 			// Compare our in-memory state against the dataplane and queue up
 			// modifications to fix any inconsistencies.
-			log.Info("Resyncing IPsec bindings with dataplane.")
+			log.Debug("Resyncing IPsec bindings with dataplane.")
+			p.opRecorder.RecordOperation("resync-ipsec-bindings")
 			var numProblems int
 			numProblems, err = p.tryResync()
 			if err != nil {
@@ -298,8 +306,8 @@ func (p *PolicyTable) CalculateGracefulShutdownPhase() GracefulShutdownPhase {
 }
 
 func (p *PolicyTable) tryResync() (numProblems int, err error) {
-	log.Info("IPsec resync: starting")
-	defer log.Info("IPsec resync: finished")
+	log.Debug("IPsec resync: starting")
+	defer log.Debug("IPsec resync: finished")
 
 	xfrmPols, err := p.nl().XfrmPolicyList(netlink.FAMILY_V4)
 	if err != nil {

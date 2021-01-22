@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2021 Tigera, Inc. All rights reserved.
 
 package ipsec_test
 
@@ -14,10 +14,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
+
 	"github.com/projectcalico/felix/ip"
 	. "github.com/projectcalico/felix/ipsec"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/testutils"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
 var (
@@ -199,11 +201,18 @@ var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 			mockDataplane.newNetlinkHandle,
 			mockDataplane.sleep,
 			mockDataplane.timeNow,
-			mockDataplane.timeSince)
+			mockDataplane.timeSince,
+			logutils.NewSummarizer("test"),
+		)
 	})
 
 	It("should be constructable", func() {
-		_ = NewPolicyTable(ReqID, true, false) // For coverage's sake.
+		_ = NewPolicyTable(
+			ReqID,
+			true,
+			false,
+			logutils.NewSummarizer("test"),
+		) // For coverage's sake.
 	})
 
 	Context("with empty dataplane, no pending updates", func() {
@@ -502,7 +511,9 @@ var _ = Describe("IpsecPolicyTable with IPsec disabled", func() {
 			mockDataplane.newNetlinkHandle,
 			mockDataplane.sleep,
 			mockDataplane.timeNow,
-			mockDataplane.timeSince)
+			mockDataplane.timeSince,
+			logutils.NewSummarizer("test"),
+		)
 	})
 
 	Context("with empty dataplane, no pending updates", func() {
