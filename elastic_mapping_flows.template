@@ -188,6 +188,18 @@
         },
         "num_original_source_ips": {
             "type": "long"
+        },
+        "process_name": {
+            "type": "keyword"
+        },
+        "num_process_names": {
+            "type": "long"
+        },
+        "process_id": {
+            "type": "keyword"
+        },
+        "num_process_ids": {
+            "type": "long"
         }
     }
   }
