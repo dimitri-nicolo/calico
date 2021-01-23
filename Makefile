@@ -106,6 +106,7 @@ BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
 PUSH_IMAGES?=$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/tigera/dikastes
 PACKAGE_NAME?=github.com/projectcalico/app-policy
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 GIT_USE_SSH?=true
 
 # If this is a release, also tag and push additional images.
