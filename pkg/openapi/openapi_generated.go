@@ -5937,6 +5937,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"flowLogsFilePerFlowProcessLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsFilePerFlowProcessLimit, is used to specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated. [Default: 2]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"windowsFlowLogsFileDirectory": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: \"c:\\TigeraCalico\\flowlogs\"].",
