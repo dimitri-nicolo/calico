@@ -6,6 +6,9 @@ TEST_DIR=./tests/k8st
 # gcr.io pull secrect credential file.
 : ${GCR_IO_PULL_SECRET:=./docker_auth.json}
 
+# Path to Enteprise product license
+: ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
+
 # kubectl binary.
 : ${kubectl:=./kubectl}
 
@@ -225,6 +228,11 @@ time ${kubectl} wait pod -l k8s-app=kube-dns --for=condition=Ready -n kube-syste
 time ${kubectl} wait pod calicoctl --for=condition=Ready -n kube-system --timeout=300s
 echo "Calico is running."
 echo
+
+# Apply the enterprise license.
+# FIXME(karthik): Applying the enterprise license here since the test written don't test for invalid or no license.
+# Once such tests are added, this will have to move into the test itself.
+${kubectl} exec -i -n kube-system calicoctl -- /calicoctl apply -f - < ${TSEE_TEST_LICENSE}
 
 function test_connection() {
     local svc="webserver-ipv$1"

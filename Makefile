@@ -435,7 +435,7 @@ st-checks:
 	iptables-save | grep -q 'calico-st-allow-etcd' || iptables $(IPT_ALLOW_ETCD)
 
 GCR_IO_PULL_SECRET?=${HOME}/.docker/config.json
-TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
+TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 
 .PHONY: dual-tor-test
 dual-tor-test: cnx-node.tar calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
