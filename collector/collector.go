@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -50,6 +50,7 @@ type Config struct {
 type collector struct {
 	packetInfoReader    PacketInfoReader
 	conntrackInfoReader ConntrackInfoReader
+	processInfoCache    ProcessInfoCache
 	luc                 *calc.LookupsCache
 	epStats             map[Tuple]*Data
 	ticker              jitter.JitterTicker
@@ -96,6 +97,13 @@ func (c *collector) Start() error {
 		return fmt.Errorf("ConntrackInfoReader failed to start: %w", err)
 	}
 
+	if c.processInfoCache == nil {
+		c.processInfoCache = NewNilProcessInfoCache()
+	}
+	if err := c.processInfoCache.Start(); err != nil {
+		return fmt.Errorf("ProcessInfoCache failed to start: %w", err)
+	}
+
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
 
@@ -116,6 +124,10 @@ func (c *collector) SetPacketInfoReader(pir PacketInfoReader) {
 
 func (c *collector) SetConntrackInfoReader(cir ConntrackInfoReader) {
 	c.conntrackInfoReader = cir
+}
+
+func (c *collector) SetProcessInfoCache(pic ProcessInfoCache) {
+	c.processInfoCache = pic
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
@@ -309,6 +321,25 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 			} else if _, ok := c.luc.GetNode(data.Tuple.dst); ok {
 				// Destination is a node, so could be a node port service.
 				data.dstSvc, foundService = c.luc.GetNodePortService(data.Tuple.l4Dst, data.Tuple.proto)
+			}
+		}
+
+		if data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
+			log.Debugf("Process info not set for %+v outbound", data.Tuple)
+			t := data.PreDNATTuple()
+
+			if processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirOutbound); ok {
+				log.Debugf("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
+				data.SetSourceProcessData(processInfo.Name, processInfo.Pid)
+			}
+		}
+		if data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
+			log.Debugf("Process info not set for %+v inbound", data.Tuple)
+			t := data.PreDNATTuple()
+
+			if processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirInbound); ok {
+				log.Debugf("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
+				data.SetDestProcessData(processInfo.Name, processInfo.Pid)
 			}
 		}
 	}
@@ -788,3 +819,22 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		}).Error("Failed to log request")
 	}
 }
+
+// NilProcessInfoCache implements the ProcessInfoCache interface and always returns false
+// for lookups. It is used as a default implementation of a ProcessInfoCache when one is
+// not explicitly set.
+type NilProcessInfoCache struct{}
+
+func NewNilProcessInfoCache() *NilProcessInfoCache {
+	return &NilProcessInfoCache{}
+}
+
+func (r *NilProcessInfoCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, bool) {
+	return ProcessInfo{}, false
+}
+
+func (r *NilProcessInfoCache) Start() error {
+	return nil
+}
+
+func (r *NilProcessInfoCache) Stop() {}

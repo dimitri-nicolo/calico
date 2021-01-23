@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -30,7 +30,7 @@ var _ = Describe("FlowMeta construction from MetricUpdate", func() {
 		Entry("no destination endpoints and prefix aggregation", muWithoutDstEndpointMeta, FlowPrefixName, flowMetaPrefixNoDestMeta),
 		Entry("no generated name and prefix aggregation", muWithEndpointMetaWithoutGenerateName, FlowPrefixName, flowMetaPrefixWithName),
 		Entry("full endpoints and dest port aggregation", muWithEndpointMeta, FlowNoDestPorts, flowMetaNoDestPorts),
-		Entry("full endpoints and dest port aggregation", muWithEndpointMetaWithService, FlowNoDestPorts, flowMetaNoDestPortsWithService),
+		Entry("full endpoints with service and dest port aggregation", muWithEndpointMetaWithService, FlowNoDestPorts, flowMetaNoDestPortsWithService),
 		Entry("no source endpoints and dest port aggregation", muWithoutSrcEndpointMeta, FlowNoDestPorts, flowMetaNoDestPortNoSourceMeta),
 		Entry("no destination and dest port aggregation", muWithoutDstEndpointMeta, FlowNoDestPorts, flowMetaNoDestPortNoDestMeta),
 	)
@@ -56,6 +56,401 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fe.originalSourceIPs.ToIPSlice()).Should(ConsistOf(expectedFlowExtraRef.originalSourceIPs.ToIPSlice()))
 			Expect(fe.originalSourceIPs.TotalCount()).Should(Equal(expectedFlowExtraRef.originalSourceIPs.TotalCount()))
 			Expect(fe.originalSourceIPs.TotalCountDelta()).Should(Equal(expectedFlowExtraRef.originalSourceIPs.TotalCountDelta()))
+		})
+	})
+
+	Context("FlowStatsByProcess from MetricUpdate", func() {
+		It("stores the correct FlowStatsByProcess when storing process is enabled", func() {
+			By("Extracting the correct information")
+			fsp := NewFlowStatsByProcess(muWithProcessName, true, 2)
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			expectedReportedStats := []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "1234",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update with same process name but different process ID")
+			fsp.aggregateFlowStats(muWithSameProcessNameDifferentID)
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "*",
+					NumProcessIDs:   2,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             2,
+						PacketsOut:            0,
+						BytesIn:               40,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              2,
+						NumFlowsStarted:       2,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(2))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update with a different process name and ID")
+			fsp.aggregateFlowStats(muWithDifferentProcessNameDifferentID)
+			Expect(fsp.statsByProcessName).Should(HaveLen(2))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "*",
+					NumProcessIDs:   2,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             2,
+						PacketsOut:            0,
+						BytesIn:               40,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              2,
+						NumFlowsStarted:       2,
+						NumFlowsCompleted:     0,
+					},
+				},
+				FlowProcessReportedStats{
+					ProcessName:     "test-process-2",
+					NumProcessNames: 1,
+					ProcessID:       "23456",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(3))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update with same process name with update type expire")
+			fsp.aggregateFlowStats(muWithProcessNameExpire)
+			Expect(fsp.statsByProcessName).Should(HaveLen(2))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "*",
+					NumProcessIDs:   2,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             2,
+						PacketsOut:            0,
+						BytesIn:               40,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              2,
+						NumFlowsStarted:       2,
+						NumFlowsCompleted:     1,
+					},
+				},
+				FlowProcessReportedStats{
+					ProcessName:     "test-process-2",
+					NumProcessNames: 1,
+					ProcessID:       "23456",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(2))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("cleaning up the stats for the process name")
+			fsp.aggregateFlowStats(muWithSameProcessNameDifferentIDExpire)
+			fsp.reset()
+			remainingActiveFlowsCount := fsp.gc()
+			Expect(remainingActiveFlowsCount).Should(Equal(1))
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process-2",
+					NumProcessNames: 1,
+					ProcessID:       "-",
+					NumProcessIDs:   0,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             0,
+						PacketsOut:            0,
+						BytesIn:               0,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       0,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+		})
+
+		It("stores the correct FlowStatsByProcess with including process information is disabled", func() {
+			By("Extracting the correct information")
+			fsp := NewFlowStatsByProcess(muWithEndpointMeta, false, 0)
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
+			expectedReportedStats := []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "-",
+					NumProcessNames: 0,
+					ProcessID:       "-",
+					NumProcessIDs:   0,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update")
+			fsp.aggregateFlowStats(muWithEndpointMetaWithService)
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "-",
+					NumProcessNames: 0,
+					ProcessID:       "-",
+					NumProcessIDs:   0,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             2,
+						PacketsOut:            0,
+						BytesIn:               40,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update with update type expire")
+			fsp.aggregateFlowStats(muWithEndpointMetaExpire)
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "-",
+					NumProcessNames: 0,
+					ProcessID:       "-",
+					NumProcessIDs:   0,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             2,
+						PacketsOut:            0,
+						BytesIn:               40,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     1,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(0))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("cleaning up the stats for the process name")
+			remainingActiveFlowsCount := fsp.gc()
+			Expect(remainingActiveFlowsCount).Should(Equal(0))
+			Expect(fsp.statsByProcessName).Should(HaveLen(0))
+		})
+
+		It("limits the process name information when converting FlowStatsByProcess when process information collection is enabled", func() {
+			By("Extracting the correct information")
+			fsp := NewFlowStatsByProcess(muWithProcessName, true, 2)
+			Expect(fsp.statsByProcessName).Should(HaveLen(1))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			expectedReportedStats := []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "1234",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update with different process name")
+			fsp.aggregateFlowStats(muWithProcessName2)
+			Expect(fsp.statsByProcessName).Should(HaveLen(2))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "1234",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+				FlowProcessReportedStats{
+					ProcessName:     "test-process-2",
+					NumProcessNames: 1,
+					ProcessID:       "9876",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(2))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
+			By("aggregating the metric update with a two additional process names")
+			fsp.aggregateFlowStats(muWithProcessName3)
+			fsp.aggregateFlowStats(muWithProcessName4)
+			Expect(fsp.statsByProcessName).Should(HaveLen(4))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-3"))
+			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-4"))
+			expectedReportedStats = []FlowProcessReportedStats{
+				FlowProcessReportedStats{
+					ProcessName:     "test-process",
+					NumProcessNames: 1,
+					ProcessID:       "1234",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+				FlowProcessReportedStats{
+					ProcessName:     "test-process-2",
+					NumProcessNames: 1,
+					ProcessID:       "9876",
+					NumProcessIDs:   1,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             1,
+						PacketsOut:            0,
+						BytesIn:               20,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              1,
+						NumFlowsStarted:       1,
+						NumFlowsCompleted:     0,
+					},
+				},
+				FlowProcessReportedStats{
+					ProcessName:     "*",
+					NumProcessNames: 2,
+					ProcessID:       "*",
+					NumProcessIDs:   2,
+					FlowReportedStats: FlowReportedStats{
+						PacketsIn:             2,
+						PacketsOut:            0,
+						BytesIn:               40,
+						BytesOut:              0,
+						HTTPRequestsAllowedIn: 0,
+						HTTPRequestsDeniedIn:  0,
+						NumFlows:              2,
+						NumFlowsStarted:       2,
+						NumFlowsCompleted:     0,
+					},
+				},
+			}
+			Expect(fsp.getActiveFlowsCount()).Should(Equal(4))
+			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+
 		})
 	})
 })

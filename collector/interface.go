@@ -20,4 +20,5 @@ type Collector interface {
 	LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataCount int)
 	SetPacketInfoReader(pir PacketInfoReader)
 	SetConntrackInfoReader(cir ConntrackInfoReader)
+	SetProcessInfoCache(pir ProcessInfoCache)
 }

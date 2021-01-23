@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -55,20 +55,26 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 			},
 			FlowPolicies: policies,
-			FlowReportedStats: FlowReportedStats{
-				PacketsIn:             1,
-				PacketsOut:            2,
-				BytesIn:               3,
-				BytesOut:              4,
-				NumFlowsStarted:       5,
-				NumFlowsCompleted:     6,
-				NumFlows:              7,
-				HTTPRequestsAllowedIn: 8,
-				HTTPRequestsDeniedIn:  9,
-			},
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{net.ParseIP("10.0.1.1")},
 				NumOriginalSourceIPs: 1,
+			},
+			FlowProcessReportedStats: FlowProcessReportedStats{
+				ProcessName:     "*",
+				NumProcessNames: 2,
+				ProcessID:       "*",
+				NumProcessIDs:   2,
+				FlowReportedStats: FlowReportedStats{
+					PacketsIn:             1,
+					PacketsOut:            2,
+					BytesIn:               3,
+					BytesOut:              4,
+					NumFlowsStarted:       5,
+					NumFlowsCompleted:     6,
+					NumFlows:              7,
+					HTTPRequestsAllowedIn: 8,
+					HTTPRequestsDeniedIn:  9,
+				},
 			},
 		}
 
@@ -118,20 +124,26 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				SrcLabels: nil,
 				DstLabels: nil,
 			},
-			FlowReportedStats: FlowReportedStats{
-				PacketsIn:             1,
-				PacketsOut:            2,
-				BytesIn:               3,
-				BytesOut:              4,
-				NumFlowsStarted:       5,
-				NumFlowsCompleted:     6,
-				NumFlows:              7,
-				HTTPRequestsAllowedIn: 8,
-				HTTPRequestsDeniedIn:  9,
-			},
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{},
 				NumOriginalSourceIPs: 0,
+			},
+			FlowProcessReportedStats: FlowProcessReportedStats{
+				ProcessName:     "-",
+				NumProcessNames: 0,
+				ProcessID:       "-",
+				NumProcessIDs:   0,
+				FlowReportedStats: FlowReportedStats{
+					PacketsIn:             1,
+					PacketsOut:            2,
+					BytesIn:               3,
+					BytesOut:              4,
+					NumFlowsStarted:       5,
+					NumFlowsCompleted:     6,
+					NumFlows:              7,
+					HTTPRequestsAllowedIn: 8,
+					HTTPRequestsDeniedIn:  9,
+				},
 			},
 		}
 
@@ -149,6 +161,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"Policies":             nil,
 			"OrigSourceIPs":        nil,
 			"NumOrigSourceIPs":     nil,
+			"NumProcessNames":      0,
+			"NumProcessIDs":        0,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
@@ -201,20 +215,26 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				SrcLabels: nil,
 				DstLabels: nil,
 			},
-			FlowReportedStats: FlowReportedStats{
-				PacketsIn:             1,
-				PacketsOut:            2,
-				BytesIn:               3,
-				BytesOut:              4,
-				NumFlowsStarted:       5,
-				NumFlowsCompleted:     6,
-				NumFlows:              7,
-				HTTPRequestsAllowedIn: 8,
-				HTTPRequestsDeniedIn:  9,
-			},
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{},
 				NumOriginalSourceIPs: 0,
+			},
+			FlowProcessReportedStats: FlowProcessReportedStats{
+				ProcessName:     "felix",
+				NumProcessNames: 2,
+				ProcessID:       "1234",
+				NumProcessIDs:   2,
+				FlowReportedStats: FlowReportedStats{
+					PacketsIn:             1,
+					PacketsOut:            2,
+					BytesIn:               3,
+					BytesOut:              4,
+					NumFlowsStarted:       5,
+					NumFlowsCompleted:     6,
+					NumFlows:              7,
+					HTTPRequestsAllowedIn: 8,
+					HTTPRequestsDeniedIn:  9,
+				},
 			},
 		}
 

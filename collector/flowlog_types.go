@@ -1,14 +1,16 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
+	"container/list"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -142,7 +144,7 @@ func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind, includeService bool)
 }
 
 type FlowSpec struct {
-	FlowStats
+	FlowStatsByProcess
 	flowExtrasRef
 	FlowLabels
 	FlowPolicies
@@ -152,16 +154,54 @@ type FlowSpec struct {
 	resetAggrData bool
 }
 
-func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int) FlowSpec {
-	return FlowSpec{
-		FlowLabels:    NewFlowLabels(mu),
-		FlowPolicies:  NewFlowPolicies(mu),
-		FlowStats:     NewFlowStats(mu),
-		flowExtrasRef: NewFlowExtrasRef(mu, maxOriginalIPsSize),
+func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit int) *FlowSpec {
+	return &FlowSpec{
+		FlowLabels:         NewFlowLabels(mu),
+		FlowPolicies:       NewFlowPolicies(mu),
+		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit),
+		flowExtrasRef:      NewFlowExtrasRef(mu, maxOriginalIPsSize),
 	}
 }
 
-func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
+func (f *FlowSpec) ContainsActiveRefs(mu MetricUpdate) bool {
+	return f.FlowStatsByProcess.containsActiveRefs(mu)
+}
+
+func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, includeLabels bool, includePolicies bool) []*FlowLog {
+	stats := f.FlowStatsByProcess.toFlowProcessReportedStats()
+
+	flogs := make([]*FlowLog, 0, len(stats))
+	for _, stat := range stats {
+		fl := &FlowLog{
+			FlowMeta:                 fm,
+			StartTime:                startTime,
+			EndTime:                  endTime,
+			FlowProcessReportedStats: stat,
+		}
+		if f.flowExtrasRef.originalSourceIPs != nil {
+			fe := FlowExtras{
+				OriginalSourceIPs:    f.flowExtrasRef.originalSourceIPs.ToIPSlice(),
+				NumOriginalSourceIPs: f.flowExtrasRef.originalSourceIPs.TotalCount(),
+			}
+			fl.FlowExtras = fe
+		}
+
+		if includeLabels {
+			fl.FlowLabels = f.FlowLabels
+		}
+
+		if !includePolicies {
+			fl.FlowPolicies = nil
+		} else {
+			fl.FlowPolicies = f.FlowPolicies
+		}
+
+		flogs = append(flogs, fl)
+	}
+	return flogs
+}
+
+func (f *FlowSpec) AggregateMetricUpdate(mu MetricUpdate) {
 	if f.resetAggrData {
 		// Reset the aggregated data from this metric update.
 		f.FlowPolicies = make(FlowPolicies)
@@ -176,15 +216,21 @@ func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
 	f.aggregateFlowExtrasRef(mu)
 }
 
-// mergeWith merges two flow specs. This means copying the flowRefsActive that contains a reference
+// MergeWith merges two flow specs. This means copying the flowRefsActive that contains a reference
 // to the original tuple that identifies the traffic. This help keeping the same numFlows counts while
 // changing aggregation levels
-func (f *FlowSpec) mergeWith(other FlowSpec) {
-	for tuple, _ := range other.flowsRefsActive {
-		f.flowsRefsActive.Add(tuple)
-		f.flowsRefs.Add(tuple)
+func (f *FlowSpec) MergeWith(mu MetricUpdate, other *FlowSpec) {
+	if stats, ok := f.statsByProcessName[mu.processName]; ok {
+		if otherStats, ok := other.statsByProcessName[mu.processName]; ok {
+			for tuple, _ := range otherStats.flowsRefsActive {
+				stats.flowsRefsActive.Add(tuple)
+				stats.flowsRefs.Add(tuple)
+			}
+			stats.NumFlows = stats.flowsRefs.Len()
+			// TODO(doublek): Merge processIDs.
+		}
+
 	}
-	f.NumFlows = f.flowsRefs.Len()
 }
 
 // FlowSpec has FlowStats that are stats assocated with a given FlowMeta
@@ -195,19 +241,25 @@ func (f *FlowSpec) mergeWith(other FlowSpec) {
 //
 // This also resets policy and label data which will be re-populated from metric updates for the still active
 // flows.
-func (f FlowSpec) reset() FlowSpec {
-	f.flowsStartedRefs = NewTupleSet()
-	f.flowsCompletedRefs = NewTupleSet()
-	f.flowsRefs = f.flowsRefsActive.Copy()
-	f.FlowReportedStats = FlowReportedStats{
-		NumFlows: f.flowsRefs.Len(),
-	}
+func (f *FlowSpec) Reset() {
+	f.FlowStatsByProcess.reset()
 	f.flowExtrasRef.reset()
 
 	// Set the reset flag. We'll reset the aggregated data on the next metric update - that way we don't completely
 	// zero out the labels and policies if there is no traffic for an export interval.
 	f.resetAggrData = true
-	return f
+}
+
+func (f *FlowSpec) GetActiveFlowsCount() int {
+	return f.FlowStatsByProcess.getActiveFlowsCount()
+}
+
+// GarbageCollect provides a chance to remove process names and corresponding stats that don't have
+// any active flows being tracked.
+// As an added optimization, we also return the remaining active flows so that we don't have to
+// iterate over all the flow stats grouped by processes a second time.
+func (f *FlowSpec) GarbageCollect() int {
+	return f.FlowStatsByProcess.gc()
 }
 
 type FlowLabels struct {
@@ -283,25 +335,6 @@ func (fp FlowPolicies) aggregateFlowPolicies(mu MetricUpdate) {
 	}
 }
 
-// FlowStats captures stats associated with a given FlowMeta
-type FlowStats struct {
-	FlowReportedStats
-	flowReferences
-}
-
-// FlowReportedStats are the statistics we actually report out in flow logs.
-type FlowReportedStats struct {
-	PacketsIn             int `json:"packetsIn"`
-	PacketsOut            int `json:"packetsOut"`
-	BytesIn               int `json:"bytesIn"`
-	BytesOut              int `json:"bytesOut"`
-	HTTPRequestsAllowedIn int `json:"httpRequestsAllowedIn"`
-	HTTPRequestsDeniedIn  int `json:"httpRequestsDeniedIn"`
-	NumFlows              int `json:"numFlows"`
-	NumFlowsStarted       int `json:"numFlowsStarted"`
-	NumFlowsCompleted     int `json:"numFlowsCompleted"`
-}
-
 type flowExtrasRef struct {
 	originalSourceIPs *boundedSet
 }
@@ -350,6 +383,38 @@ type flowReferences struct {
 	flowsRefs tupleSet
 }
 
+// FlowReportedStats are the statistics we actually report out in flow logs.
+type FlowReportedStats struct {
+	PacketsIn             int `json:"packetsIn"`
+	PacketsOut            int `json:"packetsOut"`
+	BytesIn               int `json:"bytesIn"`
+	BytesOut              int `json:"bytesOut"`
+	HTTPRequestsAllowedIn int `json:"httpRequestsAllowedIn"`
+	HTTPRequestsDeniedIn  int `json:"httpRequestsDeniedIn"`
+	NumFlows              int `json:"numFlows"`
+	NumFlowsStarted       int `json:"numFlowsStarted"`
+	NumFlowsCompleted     int `json:"numFlowsCompleted"`
+}
+
+func (f *FlowReportedStats) Add(other FlowReportedStats) {
+	f.PacketsIn += other.PacketsIn
+	f.PacketsOut += other.PacketsOut
+	f.BytesIn += other.BytesIn
+	f.BytesOut += other.BytesOut
+	f.HTTPRequestsAllowedIn += other.HTTPRequestsAllowedIn
+	f.HTTPRequestsDeniedIn += other.HTTPRequestsDeniedIn
+	f.NumFlows += other.NumFlows
+	f.NumFlowsStarted += other.NumFlowsStarted
+	f.NumFlowsCompleted += other.NumFlowsCompleted
+}
+
+// FlowStats captures stats associated with a given FlowMeta.
+type FlowStats struct {
+	FlowReportedStats
+	flowReferences
+	processIDs set.Set
+}
+
 func NewFlowStats(mu MetricUpdate) FlowStats {
 	flowsRefs := NewTupleSet()
 	flowsRefs.Add(mu.tuple)
@@ -364,6 +429,9 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	case UpdateTypeExpire:
 		flowsCompletedRefs.Add(mu.tuple)
 	}
+
+	pids := set.New()
+	pids.Add(strconv.Itoa(mu.processID))
 
 	return FlowStats{
 		FlowReportedStats: FlowReportedStats{
@@ -387,6 +455,7 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 			// flows associated with the flowMeta
 			flowsRefsActive: flowsRefsActive,
 		},
+		processIDs: pids,
 	}
 }
 
@@ -400,6 +469,8 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 		f.flowsRefsActive.Discard(mu.tuple)
 	}
 	f.flowsRefs.Add(mu.tuple)
+	f.processIDs.Add(strconv.Itoa(mu.processID))
+
 	f.NumFlows = f.flowsRefs.Len()
 	f.NumFlowsStarted = f.flowsStartedRefs.Len()
 	f.NumFlowsCompleted = f.flowsCompletedRefs.Len()
@@ -411,16 +482,219 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 	f.HTTPRequestsDeniedIn += mu.inMetric.deltaDeniedHTTPRequests
 }
 
-func (f FlowStats) getActiveFlowsCount() int {
+func (f *FlowStats) getActiveFlowsCount() int {
 	return len(f.flowsRefsActive)
 }
 
-// FlowData is metadata and stats about a flow (or aggregated group of flows).
-// This is an internal structure for book keeping; FlowLog is what actually gets
-// passed to dispatchers or serialized.
-type FlowData struct {
-	FlowMeta
-	FlowSpec
+func (f *FlowStats) containsActiveRefs(mu MetricUpdate) bool {
+	return f.flowsRefsActive.Contains(mu.tuple)
+}
+
+func (f *FlowStats) reset() {
+	f.flowsStartedRefs = NewTupleSet()
+	f.flowsCompletedRefs = NewTupleSet()
+	f.flowsRefs = f.flowsRefsActive.Copy()
+	f.FlowReportedStats = FlowReportedStats{
+		NumFlows: f.flowsRefs.Len(),
+	}
+	f.processIDs.Clear()
+}
+
+// FlowStatsByProcess collects statistics organized by process names. When process information is not enabled
+// this stores the stats in a single entry keyed by a "-".
+// Flow logs should be constructed by calling toFlowProcessReportedStats and then flattening the resulting
+// slice with FlowMeta and other FlowLog information such as policies and labels.
+type FlowStatsByProcess struct {
+	// statsByProcessName stores aggregated flow statistics grouped by a process name.
+	statsByProcessName map[string]FlowStats
+	// processNames stores the order in which process information is tracked and aggrgated.
+	// this is done so that when we export flow logs, we do so in the order they appeared.
+	processNames   *list.List
+	includeProcess bool
+	processLimit   int
+	// TODO(doublek): Track the most significant stats and show them as part
+	// of the flows that are included in the process limit. Current processNames
+	// only tracks insertion order.
+}
+
+func NewFlowStatsByProcess(mu MetricUpdate, includeProcess bool, processLimit int) FlowStatsByProcess {
+	f := FlowStatsByProcess{
+		statsByProcessName: make(map[string]FlowStats),
+		processNames:       list.New(),
+		includeProcess:     includeProcess,
+		processLimit:       processLimit,
+	}
+	f.aggregateFlowStats(mu)
+	return f
+}
+
+func (f *FlowStatsByProcess) aggregateFlowStats(mu MetricUpdate) {
+	if !f.includeProcess || mu.processName == "" {
+		mu.processName = flowLogFieldNotIncluded
+		mu.processID = 0
+	}
+	if stats, ok := f.statsByProcessName[mu.processName]; ok {
+		log.Debugf("Process stats found %+v for metric update %+v", stats, mu)
+		stats.aggregateFlowStats(mu)
+		log.Debugf("Aggregated stats %+v after processing metric update %+v", stats, mu)
+		f.statsByProcessName[mu.processName] = stats
+	} else {
+		log.Debugf("Process stats not found for metric update %+v", mu)
+		f.processNames.PushBack(mu.processName)
+		stats := NewFlowStats(mu)
+		f.statsByProcessName[mu.processName] = stats
+	}
+}
+
+func (f *FlowStatsByProcess) getActiveFlowsCount() int {
+	activeCount := 0
+	for _, stats := range f.statsByProcessName {
+		activeCount += stats.getActiveFlowsCount()
+	}
+	return activeCount
+}
+
+func (f *FlowStatsByProcess) containsActiveRefs(mu MetricUpdate) bool {
+	if !f.includeProcess || mu.processName == "" {
+		mu.processName = flowLogFieldNotIncluded
+	}
+	if stats, ok := f.statsByProcessName[mu.processName]; ok {
+		return stats.flowsRefsActive.Contains(mu.tuple)
+	}
+	return false
+}
+
+func (f *FlowStatsByProcess) reset() {
+	for name, stats := range f.statsByProcessName {
+		stats.reset()
+		f.statsByProcessName[name] = stats
+	}
+}
+
+// gc garbage collects any process names and corresponding stats that don't have any active flows.
+// This should only be called after stats have been reported.
+func (f *FlowStatsByProcess) gc() int {
+	var next *list.Element
+	remainingActiveFlowsCount := 0
+	for e := f.processNames.Front(); e != nil; e = next {
+		// Don't lose where we are since we may in-place delete
+		// the element.
+		next = e.Next()
+		name := e.Value.(string)
+		stats := f.statsByProcessName[name]
+		afc := stats.getActiveFlowsCount()
+		if afc == 0 {
+			delete(f.statsByProcessName, name)
+			f.processNames.Remove(e)
+			continue
+		}
+		remainingActiveFlowsCount += afc
+	}
+	return remainingActiveFlowsCount
+}
+
+// toFlowProcessReportedStats returns atmost processLimit + 1 entry slice containing
+// flow stats grouped by process information.
+func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedStats {
+	if !f.includeProcess {
+		// If we are not configured to include process information then
+		// we expect to only have a single entry with no process information
+		// and all stats are already aggregated into a single value.
+		reportedStats := make([]FlowProcessReportedStats, 0, 1)
+		if stats, ok := f.statsByProcessName[flowLogFieldNotIncluded]; ok {
+			s := FlowProcessReportedStats{
+				ProcessName:       flowLogFieldNotIncluded,
+				NumProcessNames:   0,
+				ProcessID:         flowLogFieldNotIncluded,
+				NumProcessIDs:     0,
+				FlowReportedStats: stats.FlowReportedStats,
+			}
+			reportedStats = append(reportedStats, s)
+		} else {
+			log.Warnf("No flow log status recorded %+v", f)
+		}
+		return reportedStats
+	}
+
+	// Only collect up to process limit stats and one additional entry for rest
+	// of the aggregated stats.
+	reportedStats := make([]FlowProcessReportedStats, 0, f.processLimit+1)
+	numProcessNames := 0
+	numPids := 0
+	appendAggregatedStats := false
+	aggregatedReportedStats := FlowReportedStats{}
+
+	var next *list.Element
+	// Collect in insertion order, the first processLimit entries and then aggregate
+	// the remaining statistics in a single aggregated FlowProcessReportedStats entry.
+	for e := f.processNames.Front(); e != nil; e = next {
+		next = e.Next()
+		name := e.Value.(string)
+		stats, ok := f.statsByProcessName[name]
+		if !ok {
+			log.Warnf("Stats not found for process name %v", name)
+			f.processNames.Remove(e)
+			continue
+		}
+
+		// Figure out how PIDs are to be included in a flow log entry.
+		// If there are no PIDs then the pid is not included.
+		// If there is a singe PID then the pid is added.
+		// If there are multiple PIDs for a single process name then
+		// the pid field is set to "*" (aggregated) and numProcessIDs is
+		// set to the number of PIDs for this process name.
+		numPids = stats.processIDs.Len()
+		var pid string
+		if numPids == 0 {
+			pid = flowLogFieldNotIncluded
+		} else if numPids == 1 {
+			// Get the first and only PID.
+			stats.processIDs.Iter(func(item interface{}) error {
+				pid = item.(string)
+				return set.StopIteration
+			})
+		} else {
+			pid = flowLogFieldAggregated
+		}
+
+		// If we've reached the process limit, then start aggregating the remaining
+		// stats so that we can add one additional entry containing this information.
+		if len(reportedStats) == f.processLimit {
+			numProcessNames++
+			numPids += numPids
+			aggregatedReportedStats.Add(stats.FlowReportedStats)
+			appendAggregatedStats = true
+		} else {
+			s := FlowProcessReportedStats{
+				ProcessName:       name,
+				NumProcessNames:   1,
+				ProcessID:         pid,
+				NumProcessIDs:     numPids,
+				FlowReportedStats: stats.FlowReportedStats,
+			}
+			reportedStats = append(reportedStats, s)
+		}
+	}
+	if appendAggregatedStats {
+		s := FlowProcessReportedStats{
+			ProcessName:       flowLogFieldAggregated,
+			NumProcessNames:   numProcessNames,
+			ProcessID:         flowLogFieldAggregated,
+			NumProcessIDs:     numPids,
+			FlowReportedStats: aggregatedReportedStats,
+		}
+		reportedStats = append(reportedStats, s)
+	}
+	return reportedStats
+}
+
+// FlowProcessReportedStats contains FlowReportedStats along with process information.
+type FlowProcessReportedStats struct {
+	ProcessName     string `json:"processName"`
+	NumProcessNames int    `json:"numProcessNames"`
+	ProcessID       string `json:"processID"`
+	NumProcessIDs   int    `json:"numProcessIDs"`
+	FlowReportedStats
 }
 
 // FlowLog is a record of flow data (metadata & reported stats) including
@@ -430,43 +704,15 @@ type FlowLog struct {
 	FlowMeta
 	FlowLabels
 	FlowPolicies
-	FlowReportedStats
 	FlowExtras
-}
-
-// ToFlowLog converts a FlowData to a FlowLog
-func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool, includePolicies bool) FlowLog {
-	var fl FlowLog
-	fl.FlowMeta = f.FlowMeta
-	fl.FlowReportedStats = f.FlowReportedStats
-	fl.StartTime = startTime
-	fl.EndTime = endTime
-	if f.flowExtrasRef.originalSourceIPs != nil {
-		fe := FlowExtras{
-			OriginalSourceIPs:    f.flowExtrasRef.originalSourceIPs.ToIPSlice(),
-			NumOriginalSourceIPs: f.flowExtrasRef.originalSourceIPs.TotalCount(),
-		}
-		fl.FlowExtras = fe
-	}
-
-	if includeLabels {
-		fl.FlowLabels = f.FlowLabels
-	}
-
-	if !includePolicies {
-		fl.FlowPolicies = nil
-	} else {
-		fl.FlowPolicies = f.FlowPolicies
-	}
-
-	return fl
+	FlowProcessReportedStats
 }
 
 func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
-	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies originalSourceIPs numOriginalSourceIPs destServiceNamespace dstServiceName dstServicePort
+	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies originalSourceIPs numOriginalSourceIPs destServiceNamespace dstServiceName dstServicePort processName numProcessNames processPid numProcessIds
 	// Sample entry with no aggregation and no labels.
-	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"] [1.0.0.1] 1 kube-system kube-dns
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"] [1.0.0.1] 1 kube-system kube-dns dig 23033 0
 
 	var (
 		srcType, dstType FlowLogEndpointType
@@ -595,6 +841,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Name:      parts[30],
 		Port:      parts[31],
 	}
+
+	f.ProcessName = parts[32]
+	f.NumProcessNames, _ = strconv.Atoi(parts[33])
+	f.ProcessID = parts[34]
+	f.NumProcessIDs, _ = strconv.Atoi(parts[35])
 
 	return nil
 }

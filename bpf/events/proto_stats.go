@@ -1,13 +1,11 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package intdataplane
+package events
 
 import (
 	"unsafe"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/felix/bpf/events"
 )
 
 const (
@@ -38,7 +36,24 @@ func parseEventProtov4Stats(raw []byte) EventProtoStatsV4 {
 	return e
 }
 
-func eventProtoStatsV4Sink(e events.Event) {
-	// XXX PLace here whatever should happen with these events.
-	log.WithField("event", parseEventProtov4Stats(e.Data())).Debug("Received Protocol stats")
+type EventProtoStatsV4Sink struct {
+	outChan chan EventProtoStatsV4
+}
+
+func NewEventProtoStatsV4Sink() *EventProtoStatsV4Sink {
+	return &EventProtoStatsV4Sink{
+		outChan: make(chan EventProtoStatsV4, 1000),
+	}
+}
+
+func (sink *EventProtoStatsV4Sink) HandleEvent(e Event) {
+	parsedEvent := parseEventProtov4Stats(e.Data())
+	if log.GetLevel() == log.DebugLevel {
+		log.WithField("event", parsedEvent).Debug("Received Protocol stats")
+	}
+	sink.outChan <- parsedEvent
+}
+
+func (sink *EventProtoStatsV4Sink) EventProtoStatsV4Chan() <-chan EventProtoStatsV4 {
+	return sink.outChan
 }

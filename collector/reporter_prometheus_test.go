@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -19,6 +19,10 @@ import (
 var (
 	srcPort1 = 54123
 	srcPort2 = 54124
+	srcPort3 = 54125
+	srcPort4 = 54125
+	srcPort5 = 54126
+	srcPort6 = 54127
 )
 
 // Common Tuple definitions
@@ -26,6 +30,9 @@ var (
 	tuple1 = *NewTuple(localIp1, remoteIp1, proto_tcp, srcPort1, dstPort)
 	tuple2 = *NewTuple(localIp1, remoteIp2, proto_tcp, srcPort2, dstPort)
 	tuple3 = *NewTuple(localIp2, remoteIp1, proto_tcp, srcPort1, dstPort)
+	tuple4 = *NewTuple(localIp2, remoteIp1, proto_tcp, srcPort4, dstPort)
+	tuple5 = *NewTuple(localIp2, remoteIp1, proto_tcp, srcPort5, dstPort)
+	tuple6 = *NewTuple(localIp2, remoteIp1, proto_tcp, srcPort6, dstPort)
 )
 
 // Common RuleID definitions

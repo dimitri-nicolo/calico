@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -189,6 +189,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionAllow)
 
 			// Can we use the same aggregator for file logging?
@@ -213,6 +214,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionDeny)
 			// Can we use the same aggregator for file logging?
 			if configParams.FlowLogsFileEnabled &&
@@ -239,7 +241,9 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				IncludeService(configParams.FlowLogsFileIncludeService).
+				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
 			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
@@ -251,7 +255,9 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				IncludeService(configParams.FlowLogsFileIncludeService).
+				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
 			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})

@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -288,6 +288,20 @@ var (
 			},
 		},
 	}
+
+	proc1 = ProcessInfo{
+		Tuple: Tuple{
+			src:   remoteIp1,
+			dst:   localIp1,
+			proto: proto_tcp,
+			l4Src: srcPort,
+			l4Dst: dstPort,
+		},
+		ProcessData: ProcessData{
+			Name: "test-process",
+			Pid:  1234,
+		},
+	}
 )
 
 // Nflog prefix test parameters
@@ -482,7 +496,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			c = newCollector(lm, rm, conf).(*collector)
 			c.SetPacketInfoReader(nflogReader)
 			c.SetConntrackInfoReader(dummyConntrackInfoReader{})
-			go c.startStatsCollectionAndReporting()
+			go c.Start()
 		})
 		AfterEach(func() {
 			nflogReader.Stop()
@@ -714,6 +728,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
 		c.SetConntrackInfoReader(dummyConntrackInfoReader{})
+		c.Start()
 	})
 	Describe("Test local destination", func() {
 		It("should create a single entry in inbound direction", func() {
@@ -1168,129 +1183,159 @@ var _ = Describe("Reporting Metrics", func() {
 		c = newCollector(lm, rm, conf).(*collector)
 		c.SetPacketInfoReader(nflogReader)
 		c.SetConntrackInfoReader(dummyConntrackInfoReader{})
-		go c.startStatsCollectionAndReporting()
 	})
 	AfterEach(func() {
 		nflogReader.Stop()
 	})
-	Describe("Report Denied Packets", func() {
+	Context("Without process info enabled", func() {
 		BeforeEach(func() {
-			nflogReader.nfIngressC <- ingressPktDeny
+			go c.Start()
 		})
-		Context("reporting tick", func() {
-			It("should receive metric", func() {
-				tmu := testMetricUpdate{
-					updateType:   UpdateTypeReport,
-					tuple:        *ingressPktDenyTuple,
-					srcEp:        remoteEd1,
-					dstEp:        localEd1,
-					ruleIDs:      []*calc.RuleID{defTierPolicy2DenyIngressRuleID},
-					isConnection: false,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+		Describe("Report Denied Packets", func() {
+			BeforeEach(func() {
+				nflogReader.nfIngressC <- ingressPktDeny
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:   UpdateTypeReport,
+						tuple:        *ingressPktDenyTuple,
+						srcEp:        remoteEd1,
+						dstEp:        localEd1,
+						ruleIDs:      []*calc.RuleID{defTierPolicy2DenyIngressRuleID},
+						isConnection: false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
 			})
 		})
-	})
-	Describe("Report Allowed Packets (ingress)", func() {
-		BeforeEach(func() {
-			nflogReader.nfIngressC <- ingressPktAllow
-		})
-		Context("reporting tick", func() {
-			It("should receive metric", func() {
-				tmu := testMetricUpdate{
-					updateType:   UpdateTypeReport,
-					tuple:        *ingressPktAllowTuple,
-					srcEp:        remoteEd1,
-					dstEp:        localEd1,
-					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
-					isConnection: false,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
-			})
-		})
-	})
-	Describe("Report Packets that switch from deny to allow", func() {
-		BeforeEach(func() {
-			nflogReader.nfIngressC <- ingressPktDeny
-			time.Sleep(time.Duration(500) * time.Millisecond)
-			nflogReader.nfIngressC <- ingressPktAllow
-		})
-		Context("reporting tick", func() {
-			It("should receive metric", func() {
-				tmu := testMetricUpdate{
-					updateType:   UpdateTypeReport,
-					tuple:        *ingressPktAllowTuple,
-					srcEp:        remoteEd1,
-					dstEp:        localEd1,
-					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
-					isConnection: false,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
-			})
-		})
-	})
-	Describe("Report Allowed Packets (egress)", func() {
-		BeforeEach(func() {
-			nflogReader.nfEgressC <- egressPktAllow
-		})
-		Context("reporting tick", func() {
-			It("should receive metric", func() {
-				tmu := testMetricUpdate{
-					updateType:   UpdateTypeReport,
-					tuple:        *egressPktAllowTuple,
-					srcEp:        localEd1,
-					dstEp:        remoteEd1,
-					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
-					isConnection: false,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
-			})
-		})
-	})
-	Context("With HTTP Data", func() {
 		Describe("Report Allowed Packets (ingress)", func() {
-			It("should receive metric", func() {
-				By("Sending a NFLOG packet update")
+			BeforeEach(func() {
 				nflogReader.nfIngressC <- ingressPktAllow
-				tmuIngress := testMetricUpdate{
-					updateType:   UpdateTypeReport,
-					tuple:        *ingressPktAllowTuple,
-					srcEp:        remoteEd1,
-					dstEp:        localEd1,
-					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
-					isConnection: false,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuIngress)))
-				By("Sending a dataplane stats update with HTTP Data")
-				c.ds <- &dpStatsEntryWithFwdFor
-				tmuOrigIP := testMetricUpdate{
-					updateType:    UpdateTypeReport,
-					tuple:         *ingressPktAllowTuple,
-					srcEp:         remoteEd1,
-					dstEp:         localEd1,
-					ruleIDs:       []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
-					origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
-					isConnection:  true,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:   UpdateTypeReport,
+						tuple:        *ingressPktAllowTuple,
+						srcEp:        remoteEd1,
+						dstEp:        localEd1,
+						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+						isConnection: false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
 			})
 		})
-		Describe("Report HTTP Data only", func() {
-			unknownRuleID := calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
-			It("should receive metric", func() {
-				By("Sending a dataplane stats update with HTTP Data")
-				c.ds <- &dpStatsEntryWithFwdFor
-				tmuOrigIP := testMetricUpdate{
-					updateType:    UpdateTypeReport,
-					tuple:         *ingressPktAllowTuple,
-					srcEp:         remoteEd1,
-					dstEp:         localEd1,
-					ruleIDs:       nil,
-					origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
-					unknownRuleID: unknownRuleID,
-					isConnection:  true,
-				}
-				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
+		Describe("Report Packets that switch from deny to allow", func() {
+			BeforeEach(func() {
+				nflogReader.nfIngressC <- ingressPktDeny
+				time.Sleep(time.Duration(500) * time.Millisecond)
+				nflogReader.nfIngressC <- ingressPktAllow
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:   UpdateTypeReport,
+						tuple:        *ingressPktAllowTuple,
+						srcEp:        remoteEd1,
+						dstEp:        localEd1,
+						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+						isConnection: false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Describe("Report Allowed Packets (egress)", func() {
+			BeforeEach(func() {
+				nflogReader.nfEgressC <- egressPktAllow
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:   UpdateTypeReport,
+						tuple:        *egressPktAllowTuple,
+						srcEp:        localEd1,
+						dstEp:        remoteEd1,
+						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
+						isConnection: false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
+			})
+		})
+		Context("With HTTP Data", func() {
+			Describe("Report Allowed Packets (ingress)", func() {
+				It("should receive metric", func() {
+					By("Sending a NFLOG packet update")
+					nflogReader.nfIngressC <- ingressPktAllow
+					tmuIngress := testMetricUpdate{
+						updateType:   UpdateTypeReport,
+						tuple:        *ingressPktAllowTuple,
+						srcEp:        remoteEd1,
+						dstEp:        localEd1,
+						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+						isConnection: false,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuIngress)))
+					By("Sending a dataplane stats update with HTTP Data")
+					c.ds <- &dpStatsEntryWithFwdFor
+					tmuOrigIP := testMetricUpdate{
+						updateType:    UpdateTypeReport,
+						tuple:         *ingressPktAllowTuple,
+						srcEp:         remoteEd1,
+						dstEp:         localEd1,
+						ruleIDs:       []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+						origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
+						isConnection:  true,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
+				})
+			})
+			Describe("Report HTTP Data only", func() {
+				unknownRuleID := calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
+				It("should receive metric", func() {
+					By("Sending a dataplane stats update with HTTP Data")
+					c.ds <- &dpStatsEntryWithFwdFor
+					tmuOrigIP := testMetricUpdate{
+						updateType:    UpdateTypeReport,
+						tuple:         *ingressPktAllowTuple,
+						srcEp:         remoteEd1,
+						dstEp:         localEd1,
+						ruleIDs:       nil,
+						origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
+						unknownRuleID: unknownRuleID,
+						isConnection:  true,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
+				})
+			})
+		})
+	})
+	Context("With process info enabled", func() {
+		BeforeEach(func() {
+			c.SetProcessInfoCache(mockProcessCache{})
+			go c.Start()
+		})
+		Describe("Report Allowed Packets (ingress) with process info", func() {
+			BeforeEach(func() {
+				nflogReader.nfIngressC <- ingressPktAllow
+			})
+			Context("reporting tick", func() {
+				It("should receive metric", func() {
+					tmu := testMetricUpdate{
+						updateType:   UpdateTypeReport,
+						tuple:        *ingressPktAllowTuple,
+						srcEp:        remoteEd1,
+						dstEp:        localEd1,
+						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+						isConnection: false,
+						processName:  "test-process",
+						processID:    1234,
+					}
+					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+				})
 			})
 		})
 	})
@@ -1579,6 +1624,10 @@ type testMetricUpdate struct {
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
 	isConnection bool
+
+	// Process information
+	processName string
+	processID   int
 }
 
 // Create a mockReporter that acts as a pass-thru of the updates.
@@ -1606,6 +1655,8 @@ func (mr *mockReporter) Report(mu MetricUpdate) error {
 		unknownRuleID: mu.unknownRuleID,
 		origSourceIPs: mu.origSourceIPs,
 		isConnection:  mu.isConnection,
+		processName:   mu.processName,
+		processID:     mu.processID,
 	}
 	return nil
 }
@@ -1719,3 +1770,14 @@ type dummyConntrackInfoReader struct{}
 
 func (dummyConntrackInfoReader) Start() error                            { return nil }
 func (dummyConntrackInfoReader) ConntrackInfoChan() <-chan ConntrackInfo { return nil }
+
+type mockProcessCache struct{}
+
+func (mockProcessCache) Start() error { return nil }
+func (mockProcessCache) Stop()        {}
+func (mockProcessCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, bool) {
+	if dir == TrafficDirInbound {
+		return proc1, true
+	}
+	return ProcessInfo{}, false
+}

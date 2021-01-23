@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -24,9 +24,11 @@ type FlowLogAggregator interface {
 	IncludeLabels(bool) FlowLogAggregator
 	IncludePolicies(bool) FlowLogAggregator
 	IncludeService(bool) FlowLogAggregator
+	IncludeProcess(bool) FlowLogAggregator
 	MaxOriginalIPsSize(int) FlowLogAggregator
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
+	PerFlowProcessLimit(limit int) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
 	HasAggregationLevelChanged() bool
 	GetCurrentAggregationLevel() FlowAggregationKind

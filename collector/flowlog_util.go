@@ -23,6 +23,7 @@ const (
 
 	flowLogNamespaceGlobal  = "-"
 	flowLogFieldNotIncluded = "-"
+	flowLogFieldAggregated  = "*"
 
 	FlowLogActionAllow FlowLogAction = "allow"
 	FlowLogActionDeny  FlowLogAction = "deny"
