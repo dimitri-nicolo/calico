@@ -118,6 +118,9 @@
     honeypod-controller:
       image: tigera/honeypod-controller
       version: master
+    key-cert-provisioner:
+      image: tigera/key-cert-provisioner
+      version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
     elasticsearch-operator:
