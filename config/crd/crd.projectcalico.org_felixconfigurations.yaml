@@ -493,6 +493,11 @@ spec:
                 description: FlowLogsFileMaxFiles sets the number of log files to
                   keep.
                 type: integer
+              flowLogsFilePerFlowProcessLimit:
+                description: 'FlowLogsFilePerFlowProcessLimit, is used to specify
+                  the maximum number of flow log entries with distinct process information
+                  beyond which process information will be aggregated. [Default: 2]'
+                type: integer
               flowLogsFlushInterval:
                 description: FlowLogsFlushInterval configures the interval at which
                   Felix exports flow logs.

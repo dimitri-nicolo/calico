@@ -1895,6 +1895,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.FlowLogsFilePerFlowProcessLimit != nil {
+		in, out := &in.FlowLogsFilePerFlowProcessLimit, &out.FlowLogsFilePerFlowProcessLimit
+		*out = new(int)
+		**out = **in
+	}
 	if in.DNSTrustedServers != nil {
 		in, out := &in.DNSTrustedServers, &out.DNSTrustedServers
 		*out = new([]string)
