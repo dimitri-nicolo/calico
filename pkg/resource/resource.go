@@ -16,6 +16,8 @@ const (
 	TigeraElasticsearchNamespace = "tigera-elasticsearch"
 	DefaultTSEEInstanceName      = "tigera-secure"
 	ElasticsearchServiceURL      = "https://tigera-secure-es-http.tigera-elasticsearch.svc:9200"
+	OIDCUsersConfigMapName       = "tigera-known-oidc-users"
+	OIDCUsersEsSecreteName       = "tigera-oidc-users-elasticsearch-credentials"
 )
 
 func CreateHashFromObject(obj interface{}) (string, error) {

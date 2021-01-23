@@ -5,6 +5,8 @@ package authorization
 import (
 	"context"
 
+	"github.com/projectcalico/kube-controllers/pkg/resource"
+
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,6 +19,11 @@ type clusterRoleReconciler struct {
 }
 
 type clusterRoleBindingReconciler struct {
+	k8sCLI          kubernetes.Interface
+	resourceUpdates chan resourceUpdate
+}
+
+type configMapReconciler struct {
 	k8sCLI          kubernetes.Interface
 	resourceUpdates chan resourceUpdate
 }
@@ -60,6 +67,27 @@ func (r *clusterRoleBindingReconciler) Reconcile(namespacedName types.Namespaced
 		typ:      typ,
 		name:     clusterRoleBindingName,
 		resource: clusterRoleBinding,
+	}
+
+	return nil
+}
+
+func (r *configMapReconciler) Reconcile(namespacedName types.NamespacedName) error {
+	typ := resourceUpdated
+	configMapName := namespacedName.Name
+	cm, err := r.k8sCLI.CoreV1().ConfigMaps(resource.TigeraElasticsearchNamespace).Get(context.Background(), configMapName, metav1.GetOptions{})
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+
+		typ = resourceDeleted
+	}
+
+	r.resourceUpdates <- resourceUpdate{
+		typ:      typ,
+		name:     configMapName,
+		resource: cm,
 	}
 
 	return nil

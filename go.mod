@@ -8,6 +8,7 @@ require (
 	// Elastic repo for ECK v1.0.1
 	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
+	github.com/google/go-cmp v0.5.2
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.14.2
@@ -22,6 +23,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tigera/api v0.0.0-20201210003641-f72711afec9e
 	github.com/tigera/licensing v1.0.1-0.20210118190145-3df357e1ea21
+	github.com/vektra/mockery/v2 v2.6.0 // indirect
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.19.6

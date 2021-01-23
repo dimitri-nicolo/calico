@@ -113,10 +113,11 @@ type ElasticsearchCfgControllerCfg struct {
 }
 
 type AuthorizationControllerCfg struct {
-	NumberOfWorkers        int
-	ReconcilerPeriod       time.Duration
-	OIDCAuthUsernamePrefix string
-	OIDCAuthGroupPrefix    string
+	NumberOfWorkers          int
+	ReconcilerPeriod         time.Duration
+	OIDCAuthUsernamePrefix   string
+	OIDCAuthGroupPrefix      string
+	ElasticsearchLicenseType string
 }
 
 type ManagedClusterControllerConfig struct {
@@ -392,6 +393,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
 		rc.AuthorizationConfiguration.OIDCAuthUsernamePrefix = envCfg.OIDCAuthUsernamePrefix
 		rc.AuthorizationConfiguration.OIDCAuthGroupPrefix = envCfg.OIDCAuthGroupPrefix
+		rc.AuthorizationConfiguration.ElasticsearchLicenseType = envCfg.ElasticLicenseType
 	}
 
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
