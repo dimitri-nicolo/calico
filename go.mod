@@ -8,7 +8,7 @@ require (
 	// Elastic repo for ECK v1.0.1
 	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
-	github.com/google/go-cmp v0.5.2
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.14.2
@@ -23,7 +23,6 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tigera/api v0.0.0-20201210003641-f72711afec9e
 	github.com/tigera/licensing v1.0.1-0.20210118190145-3df357e1ea21
-	github.com/vektra/mockery/v2 v2.6.0 // indirect
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.19.6
@@ -35,10 +34,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210120042154-68cf8bffef46
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210122202047-645413ff3d3c
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210122235741-940950a8bd34
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210122232503-f3603eebfd9f
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210122200408-4958db874d93
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210118194135-0b7a2a5ac708
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210122222004-63491c8ca974
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
