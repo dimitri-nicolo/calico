@@ -118,33 +118,6 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-# location of docker credentials to push manifests
-DOCKER_CONFIG ?= $(HOME)/.docker/config.json
-
-# Allow the ssh auth sock to be mapped into the build container.
-ifdef SSH_AUTH_SOCK
-	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
-# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
-ifneq ($(GOPATH),)
-	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
-	# is the default one used by go modules.
-	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
-else
-	# If gopath is empty, default to $(HOME)/go.
-	GOMOD_CACHE = $(HOME)/go/pkg/mod
-endif
-
-EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
-EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
-
-# Allow the ssh auth sock to be mapped into the build container.
-ifdef SSH_AUTH_SOCK
-	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
 .PHONY:local_build
@@ -158,12 +131,9 @@ local_build:
 	@echo "Building app-policy-private"
 endif
 
-include Makefile.common
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
-DOCKER_RUN_PB := docker run --rm \
-		$(EXTRA_DOCKER_ARGS) \
-		--user $(LOCAL_USER_ID):$(MY_GID) \
-		-v $(CURDIR):/code
+include Makefile.common
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
@@ -228,14 +198,14 @@ PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-pl
 proto: proto/felixbackend.pb.go proto/healthz.proto
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
 		      $(PROTOC_CONTAINER) \
 		      $(PROTOC_IMPORTS) \
 		      proto/*.proto \
 		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
 
 proto/healthz.pb.go: proto/healthz.proto
-	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
 		      $(PROTOC_CONTAINER) \
 		      $(PROTOC_IMPORTS) \
 		      proto/*.proto \
