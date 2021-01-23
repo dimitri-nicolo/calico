@@ -56,8 +56,8 @@ require (
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/apiserver v0.0.0-20210120182150-c38998a32719
-	github.com/tigera/lma v0.0.0-20210123055238-d8d5fc8836c7
+	github.com/tigera/apiserver v0.0.0-20210123062611-ce1964e6b5a0
+	github.com/tigera/lma v0.0.0-20210123063154-9c8bcee4302e
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
