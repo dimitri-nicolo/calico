@@ -7,9 +7,9 @@ replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210123054027-5f6d58602b33
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210123060233-1e56cccd02a3
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210120182150-c38998a32719
-	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20210123060127-d4708e3ddfed
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20210123055238-d8d5fc8836c7
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210123062611-ce1964e6b5a0
+	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20210123062303-b609a7f04cc9
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20210123063154-9c8bcee4302e
 
 	k8s.io/api => k8s.io/api v0.19.6
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
