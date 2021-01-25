@@ -33,7 +33,7 @@ eBPF mode currently has some limitations relative to the standard Linux pipeline
 - eBPF mode only supports x86-64.  (The eBPF programs are not currently built for the other platforms.)
 - eBPF mode does not yet support IPv6.
 - eBPF mode does not yet support host endpoint `doNotTrack` policy (but it does support normal, pre-DNAT and apply-on-forward policy for host endpoints).
-- When enabling eBPF mode, pre-existing connections continue to use the non-BPF datapath; such connections should not be disrupted, but they do no benefit from eBPF mode's advantages.
+- When enabling eBPF mode, pre-existing connections continue to use the non-BPF datapath; such connections should not be disrupted, but they do not benefit from eBPF mode's advantages.
 - Disabling eBPF mode _is_ disruptive; connections that were handled through the eBPF dataplane may be broken and services that do not detect and recover may need to be restarted.
 - Hybrid clusters (with some eBPF nodes and some standard dataplane nodes) are not supported.  (In such a cluster, NodePort traffic from eBPF nodes to non-eBPF nodes will be dropped.)  This includes clusters with Windows nodes.
 - eBPF mode does not support floating IPs.
@@ -284,4 +284,3 @@ To revert to standard Linux networking:
    ```
 
 1. Monitor existing workloads to make sure they re-establish any connections disrupted by the switch.
-
