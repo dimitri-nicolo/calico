@@ -1334,7 +1334,7 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostE
 	// to change as to make this worthwhile.
 
 	// If the host-* endpoint is changing, mark all workload interfaces as dirty.
-	if !reflect.DeepEqual(wildcardHostEndpoint, m.wildcardHostEndpoint) {
+	if (wildcardExists != m.wildcardExists) || !reflect.DeepEqual(wildcardHostEndpoint, m.wildcardHostEndpoint) {
 		log.Infof("Host-* endpoint is changing; was %v, now %v", m.wildcardHostEndpoint, wildcardHostEndpoint)
 		m.removeHEPFromIndexes(allInterfaces, &m.wildcardHostEndpoint)
 		m.wildcardHostEndpoint = wildcardHostEndpoint
