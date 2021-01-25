@@ -350,7 +350,7 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 		// - The verdict rules have not been found for the local endpoints.
 		// In this case data will be reported later during ticker processing.
 		if !foundService || !data.VerdictFound() {
-			log.Infof("Service not found")
+			log.Debugf("Service not found - delay statistics reporting until normal flush processing")
 			return false
 		}
 	}
