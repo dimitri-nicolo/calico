@@ -1516,6 +1516,27 @@ func TestPolicyProgramsWithStagedPolicy(t *testing.T) {
 	}
 }
 
+func TestPolicyProgramsWithDropActionOverride(t *testing.T) {
+	for i, p := range polProgramTests {
+		allowed := make([]packet, 0, len(p.AllowedPackets)+len(p.DroppedPackets))
+		allowed = append(allowed, p.AllowedPackets...)
+		allowed = append(allowed, p.DroppedPackets...)
+
+		p.AllowedPackets = allowed
+		p.DroppedPackets = nil
+
+		t.Run(fmt.Sprintf("DropActionOverride=allow %d:Policy=%s", i, p.PolicyName),
+			func(t *testing.T) { runTest(t, wrap(p), polprog.WithActionDropOverride("allow")) },
+		)
+	}
+
+	for i, p := range polProgramTests {
+		t.Run(fmt.Sprintf("DropActionOverride=deny %d:Policy=%s", i, p.PolicyName),
+			func(t *testing.T) { runTest(t, wrap(p), polprog.WithActionDropOverride("deny")) },
+		)
+	}
+}
+
 type polProgramTest struct {
 	PolicyName     string
 	Policy         polprog.Rules
@@ -1665,7 +1686,7 @@ type testCase interface {
 	MatchStateOut(stateOut state.State)
 }
 
-func runTest(t *testing.T, tp testPolicy) {
+func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	RegisterTestingT(t)
 
 	// The prog builder refuses to allocate IDs as a precaution, give it an allocator that forces allocations.
@@ -1679,7 +1700,7 @@ func runTest(t *testing.T, tp testPolicy) {
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
 	// Build the program.
-	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD())
+	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(), polprogOpts...)
 	insns, err := pg.Instructions(tp.Policy())
 	Expect(err).NotTo(HaveOccurred(), "failed to assemble program")
 

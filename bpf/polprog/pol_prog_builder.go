@@ -44,19 +44,33 @@ type Builder struct {
 	ipSetMapFD bpf.MapFD
 	stateMapFD bpf.MapFD
 	jumpMapFD  bpf.MapFD
+
+	// CaliEnt features below
+
+	actionOnDrop string
 }
 
 type ipSetIDProvider interface {
 	GetNoAlloc(ipSetID string) uint64
 }
 
-func NewBuilder(ipSetIDProvider ipSetIDProvider, ipsetMapFD, stateMapFD, jumpMapFD bpf.MapFD) *Builder {
+// Option is an additional option that can change default behaviour
+type Option func(b *Builder)
+
+func NewBuilder(ipSetIDProvider ipSetIDProvider, ipsetMapFD, stateMapFD, jumpMapFD bpf.MapFD, opts ...Option) *Builder {
 	b := &Builder{
 		ipSetIDProvider: ipSetIDProvider,
 		ipSetMapFD:      ipsetMapFD,
 		stateMapFD:      stateMapFD,
 		jumpMapFD:       jumpMapFD,
+
+		actionOnDrop: "deny",
 	}
+
+	for _, option := range opts {
+		option(b)
+	}
+
 	return b
 }
 
@@ -512,6 +526,10 @@ func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
 		log.Panic("empty action label")
 	}
 
+	if actionLabel == "deny" {
+		actionLabel = p.actionOnDrop
+	}
+
 	rule := rules.FilterRuleToIPVersion(4, r.Rule)
 	if rule == nil {
 		log.Debugf("Version mismatch, skipping rule")
@@ -828,4 +846,11 @@ func protocolToNumber(protocol *proto.Protocol) uint8 {
 		pcol = uint8(p.Number)
 	}
 	return pcol
+}
+
+// WithActionDropOverride sets the default drop action.
+func WithActionDropOverride(value string) Option {
+	return func(b *Builder) {
+		b.actionOnDrop = value
+	}
 }
