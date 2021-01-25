@@ -3,7 +3,7 @@ module github.com/tigera/lma
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210123222942-eedf2a1677e9 // indirect
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210125220919-50418ce5bfa4 // indirect
 	k8s.io/api => k8s.io/api v0.19.6
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.19.6
@@ -38,7 +38,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.4.0
-	github.com/tigera/apiserver v0.0.0-20210123222553-73e8896a86f2
+	github.com/tigera/apiserver v0.0.0-20210123224321-967b72dda676
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	k8s.io/api v0.19.6
 	k8s.io/apimachinery v0.19.6
