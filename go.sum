@@ -772,12 +772,12 @@ github.com/tigera/cni-plugin-private v1.11.1-0.20210124174020-8c03b1a139cc h1:Ew
 github.com/tigera/cni-plugin-private v1.11.1-0.20210124174020-8c03b1a139cc/go.mod h1:2ZMfrZpNeEBojQmJQFtChD8aVMbOzGFkadoxx7eXsP8=
 github.com/tigera/confd-private v1.0.1-0.20210124031052-d0ebb77b4230 h1:qARot0kELjAmyUyxuML59Uo6PqU/CixWeUAgmV68FqI=
 github.com/tigera/confd-private v1.0.1-0.20210124031052-d0ebb77b4230/go.mod h1:PIof1fe9XlizcLmm0kQXNRMhu1UV82/3mAZwdfw+TOM=
-github.com/tigera/felix-private v0.0.0-20210125133803-93ca20a998ac h1:kUy2ueUklvmxdOmeBBgmVmAk1QRUb7nQjMOeGBA+CXA=
-github.com/tigera/felix-private v0.0.0-20210125133803-93ca20a998ac/go.mod h1:TF/9BIXjRXB9k/cB1UrsyUER/5DoIe8jcB5ut63qlmY=
+github.com/tigera/felix-private v0.0.0-20210125221128-87d2bb64a151 h1:OMpwoxm1OcxO+uuwVx2LpNBm8hg+fA6y2xkJgPAQqEo=
+github.com/tigera/felix-private v0.0.0-20210125221128-87d2bb64a151/go.mod h1:TF/9BIXjRXB9k/cB1UrsyUER/5DoIe8jcB5ut63qlmY=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210123222942-eedf2a1677e9 h1:HNDgdigIsuAFZI0/UQ7A8siCYPgjec/7OZ5PpviGM6A=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210123222942-eedf2a1677e9/go.mod h1:aaHxztWCB2rADd7LBVGVb5xsEXk59n2W2TWOHT2rB2A=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210125220919-50418ce5bfa4 h1:pEOk7mJt70BMENJsnuf2QZamyJ9TV5atYZqojj4HYp8=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210125220919-50418ce5bfa4/go.mod h1:aaHxztWCB2rADd7LBVGVb5xsEXk59n2W2TWOHT2rB2A=
 github.com/tigera/licensing v1.0.1-0.20210123223002-53d994486b81 h1:iSqLAVW1cSPDAtr+j+ISKTQfM34K8UNyFio2EdIupfs=
 github.com/tigera/licensing v1.0.1-0.20210123223002-53d994486b81/go.mod h1:xrAvZGWrIH3xPmGK52CDE/TtDh8x9+Dk7padsslFK24=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
