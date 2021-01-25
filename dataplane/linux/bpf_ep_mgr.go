@@ -305,6 +305,20 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 
 	m.withIface(update.Name, func(iface *bpfInterface) bool {
 		iface.info.ifaceIsUp = update.State == ifacemonitor.StateUp
+		if iface.info.ifaceIsUp {
+			// Note, OnHEPUpdate doesn't gate on iface state, so there may already be a
+			// hostIfaceToEpMap entry for this interface, and in that case we've already
+			// added it to EPIndexes.  Here we handle when there isn't already an entry.
+			if _, hostEpConfigured := m.hostIfaceToEpMap[update.Name]; m.wildcardExists && !hostEpConfigured {
+				m.addHEPToIndexes(update.Name, &m.wildcardHostEndpoint)
+				m.hostIfaceToEpMap[update.Name] = m.wildcardHostEndpoint
+			}
+		} else {
+			if hostEp, hostEpConfigured := m.hostIfaceToEpMap[update.Name]; hostEpConfigured {
+				m.removeHEPFromIndexes(update.Name, &hostEp)
+				delete(m.hostIfaceToEpMap, update.Name)
+			}
+		}
 		return true // Force interface to be marked dirty in case we missed a transition during a resync.
 	})
 }
