@@ -781,6 +781,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			filterTableV4,
 			dp.reportHealth,
 			config.LookupsCache,
+			config.RulesConfig.ActionOnDrop,
 		)
 		dp.RegisterManager(bpfEndpointManager)
 

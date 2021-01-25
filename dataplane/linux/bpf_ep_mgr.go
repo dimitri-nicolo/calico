@@ -135,12 +135,15 @@ type bpfEndpointManager struct {
 	// onStillAlive is called from loops to reset the watchdog.
 	onStillAlive func()
 
-	lookupsCache *calc.LookupsCache
-
 	// HEP processing.
 	hostIfaceToEpMap     map[string]proto.HostEndpoint
 	wildcardHostEndpoint proto.HostEndpoint
 	wildcardExists       bool
+
+	// CaliEnt features below
+
+	lookupsCache *calc.LookupsCache
+	actionOnDrop string
 }
 
 type bpfAllowChainRenderer interface {
@@ -162,11 +165,23 @@ func newBPFEndpointManager(
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTable *iptables.Table,
 	livenessCallback func(),
+
+	// CaliEnt args below
+
 	lookupsCache *calc.LookupsCache,
+	actionOnDrop string,
 ) *bpfEndpointManager {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
 	}
+
+	switch actionOnDrop {
+	case "ACCEPT", "LOGandACCEPT":
+		actionOnDrop = "allow"
+	case "DROP", "LOGandDROP":
+		actionOnDrop = "deny"
+	}
+
 	return &bpfEndpointManager{
 		allWEPs:             map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		happyWEPs:           map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
@@ -197,6 +212,7 @@ func newBPFEndpointManager(
 		onStillAlive:     livenessCallback,
 		lookupsCache:     lookupsCache,
 		hostIfaceToEpMap: map[string]proto.HostEndpoint{},
+		actionOnDrop:     actionOnDrop,
 	}
 }
 
@@ -825,7 +841,9 @@ func (m *bpfEndpointManager) ifaceIsUp(ifaceName string) (up bool) {
 }
 
 func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) error {
-	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.ipSetMap.MapFD(), m.stateMap.MapFD(), jumpMapFD)
+	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.ipSetMap.MapFD(), m.stateMap.MapFD(), jumpMapFD,
+		polprog.WithActionDropOverride(m.actionOnDrop),
+	)
 	insns, err := pg.Instructions(rules)
 	if err != nil {
 		return fmt.Errorf("failed to generate policy bytecode: %w", err)
