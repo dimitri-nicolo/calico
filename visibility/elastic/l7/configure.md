@@ -67,6 +67,16 @@ In this step, you configure the Envoy log collector to gather the L7 metrics.
 | `FELIX_DIAL_TARGET`                 |                                       | Path of the socket for communication with Felix. |
 | `LOG_LEVEL`                         | `Panic`                               | Logging level. There are seven levels: `Trace`, `Debug`, `Info`, `Warning`, `Error`, `Fatal` and `Panic`. |
 
+1. Download the Envoy config.
+   ```
+   curl {{ "/manifests/envoy-config.yaml" | absolute_url }} -O
+   ```
+
+1. Create the Envoy config.
+   ```
+   kubectl create configmap envoy-config -n <application pod namespace> --from-file=envoy-config.yaml
+   ```
+
 #### Step 2: Configure Felix for log data collection
 
 In this step, you enable the Policy Sync API on Felix.
