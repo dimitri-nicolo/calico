@@ -653,9 +653,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var (
-		bpfEvnt            events.Events
-		bpfEventPoller     *bpfEventPoller
-		bpfEndpointManager *bpfEndpointManager
+		bpfEvnt               events.Events
+		bpfEventPoller        *bpfEventPoller
+		bpfEndpointManager    *bpfEndpointManager
 		eventProtoStatsV4Sink *events.EventProtoStatsV4Sink
 
 		collectorPacketInfoReader    collector.PacketInfoReader

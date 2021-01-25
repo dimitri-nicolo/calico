@@ -127,7 +127,7 @@ type bpfEndpointManager struct {
 	stateMap bpf.Map
 
 	ruleRenderer        bpfAllowChainRenderer
-	iptablesFilterTable *iptables.Table
+	iptablesFilterTable iptablesTable
 
 	startupOnce      sync.Once
 	mapCleanupRunner *ratelimited.Runner
@@ -163,7 +163,7 @@ func newBPFEndpointManager(
 	ipSetMap bpf.Map,
 	stateMap bpf.Map,
 	iptablesRuleRenderer bpfAllowChainRenderer,
-	iptablesFilterTable *iptables.Table,
+	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
 
 	// CaliEnt args below
@@ -293,6 +293,8 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 }
 
 func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
+	log.Debugf("Interface update for %v, state %v", update.Name, update.State)
+
 	// Should be safe without the lock since there shouldn't be any active background threads
 	// but taking it now makes us robust to refactoring.
 	m.ifacesLock.Lock()
@@ -305,17 +307,19 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 
 	m.withIface(update.Name, func(iface *bpfInterface) bool {
 		iface.info.ifaceIsUp = update.State == ifacemonitor.StateUp
+		// Note, only need to handle the mapping and unmapping of the host-* endpoint here.
+		// For specific host endpoints OnHEPUpdate doesn't depend on iface state, and has
+		// already stored and mapped as needed.
 		if iface.info.ifaceIsUp {
-			// Note, OnHEPUpdate doesn't gate on iface state, so there may already be a
-			// hostIfaceToEpMap entry for this interface, and in that case we've already
-			// added it to EPIndexes.  Here we handle when there isn't already an entry.
 			if _, hostEpConfigured := m.hostIfaceToEpMap[update.Name]; m.wildcardExists && !hostEpConfigured {
+				log.Debugf("Map host-* endpoint for %v", update.Name)
 				m.addHEPToIndexes(update.Name, &m.wildcardHostEndpoint)
 				m.hostIfaceToEpMap[update.Name] = m.wildcardHostEndpoint
 			}
 		} else {
-			if hostEp, hostEpConfigured := m.hostIfaceToEpMap[update.Name]; hostEpConfigured {
-				m.removeHEPFromIndexes(update.Name, &hostEp)
+			if m.wildcardExists && reflect.DeepEqual(m.hostIfaceToEpMap[update.Name], m.wildcardHostEndpoint) {
+				log.Debugf("Unmap host-* endpoint for %v", update.Name)
+				m.removeHEPFromIndexes(update.Name, &m.wildcardHostEndpoint)
 				delete(m.hostIfaceToEpMap, update.Name)
 			}
 		}
@@ -1313,6 +1317,8 @@ func (m *bpfEndpointManager) removeProfileToEPMappings(profileIds []string, id i
 }
 
 func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint) {
+	log.Debugf("HEP update from generic endpoint manager: %v", hostIfaceToEpMap)
+
 	// Pre-process the map for the host-* endpoint: if there is a host-* endpoint, any host
 	// interface without its own HEP should use the host-* endpoint's policy.
 	wildcardHostEndpoint, wildcardExists := hostIfaceToEpMap[allInterfaces]
