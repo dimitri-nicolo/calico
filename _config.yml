@@ -155,6 +155,7 @@ defaults:
         honeypod-controller: tigera/honeypod-controller
         envoy-init: tigera/envoy-init
         envoy: tigera/envoy
+        key-cert-provisioner: tigera/key-cert-provisioner
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
         alertManager: quay.io/prometheus/alertmanager
