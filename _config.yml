@@ -156,7 +156,6 @@ defaults:
         envoy-init: tigera/envoy-init
         envoy: tigera/envoy
         key-cert-provisioner: tigera/key-cert-provisioner
-        anomaly-detection-jobs: tigera/key-cert-provisioner
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
