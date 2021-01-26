@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ type AttachPoint struct {
 	ToHostDrop bool
 	DSR        bool
 	TunnelMTU  uint16
+	VXLANPort  uint16
 }
 
 var tcLock sync.RWMutex
@@ -197,6 +198,11 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 
 	b.PatchLogPrefix(ap.Iface)
 	b.PatchTunnelMTU(ap.TunnelMTU)
+	vxlanPort := ap.VXLANPort
+	if vxlanPort == 0 {
+		vxlanPort = 4789
+	}
+	b.PatchVXLANPort(vxlanPort)
 
 	err = b.WriteToFile(ofile)
 	if err != nil {
@@ -206,7 +212,7 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 	return nil
 }
 
-// ProgramName returnt the name of the program associated with this AttachPoint
+// ProgramName returns the name of the program associated with this AttachPoint
 func (ap AttachPoint) ProgramName() string {
 	return SectionName(ap.Type, ap.ToOrFrom)
 }

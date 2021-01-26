@@ -10,8 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/projectcalico/felix/collector"
 	"github.com/tigera/windows-networking/pkg/testutils"
+
+	"github.com/projectcalico/felix/collector"
 
 	log "github.com/sirupsen/logrus"
 )

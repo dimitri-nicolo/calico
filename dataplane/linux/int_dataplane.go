@@ -146,6 +146,7 @@ type Config struct {
 	RuleRendererOverride rules.RuleRenderer
 	IPIPMTU              int
 	VXLANMTU             int
+	VXLANPort            int
 
 	MaxIPSetSize                   int
 	IptablesBackend                string
@@ -653,9 +654,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var (
-		bpfEvnt            events.Events
-		bpfEventPoller     *bpfEventPoller
-		bpfEndpointManager *bpfEndpointManager
+		bpfEvnt               events.Events
+		bpfEventPoller        *bpfEventPoller
+		bpfEndpointManager    *bpfEndpointManager
 		eventProtoStatsV4Sink *events.EventProtoStatsV4Sink
 
 		collectorPacketInfoReader    collector.PacketInfoReader
@@ -775,6 +776,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			workloadIfaceRegex,
 			ipSetIDAllocator,
 			config.VXLANMTU,
+			uint16(config.VXLANPort),
 			config.BPFNodePortDSREnabled,
 			ipSetsMap,
 			stateMap,

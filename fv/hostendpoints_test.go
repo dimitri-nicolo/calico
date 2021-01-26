@@ -48,12 +48,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ all-interfaces host endpoin
 func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfaces bool) {
 	var (
 		bpfEnabled = os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
-		infra   infrastructure.DatastoreInfra
-		felixes []*infrastructure.Felix
-		client  client.Interface
-		w       [2]*workload.Workload
-		hostW   [2]*workload.Workload
-		cc      *connectivity.Checker
+		infra      infrastructure.DatastoreInfra
+		felixes    []*infrastructure.Felix
+		client     client.Interface
+		w          [2]*workload.Workload
+		hostW      [2]*workload.Workload
+		cc         *connectivity.Checker
 	)
 
 	BeforeEach(func() {

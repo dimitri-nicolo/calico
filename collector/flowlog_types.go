@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (
