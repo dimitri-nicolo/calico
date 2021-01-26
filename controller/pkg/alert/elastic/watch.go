@@ -314,7 +314,9 @@ func Input(alert v3.GlobalAlert) (*elastic.Input, error) {
 				Indices: indices,
 				Body:    body,
 				IndicesOptions: &elastic.IndicesOptions{
-					AllowNoIndices: util.BoolPtr(true),
+					AllowNoIndices:    util.BoolPtr(true),
+					IgnoreUnavailable: util.BoolPtr(false),
+					ExpandWildcards:   "all",
 				},
 			},
 		},
