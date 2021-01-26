@@ -186,7 +186,7 @@ func (p *perf) Next() (Event, error) {
 		if p.readyIdx >= p.readyCnt {
 			err := p.poll()
 			if err != nil {
-				if err != syscall.EINTR {
+				if errors.Cause(err) != syscall.EINTR {
 					return Event{}, err
 				}
 				continue // EINTR is benign a happens often, just retry the loop
