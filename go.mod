@@ -4,12 +4,12 @@ go 1.15
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210126180617-b4eebc8ef31f
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210125220919-50418ce5bfa4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210126182422-b334ce1a1d94
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210126030429-12797254566f
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210123224321-967b72dda676
-	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20210126180635-50b6a07b9230
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20210125221456-e3dae1e97662
+	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20210126183953-538d289cab56
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20210126182955-c8e061ddf68b
 
 	k8s.io/api => k8s.io/api v0.19.6
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
@@ -49,7 +49,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/apiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
 	github.com/tigera/compliance v0.0.0-20201124233520-d4b5ad65a5a6
-	github.com/tigera/lma v0.0.0-20210125221456-e3dae1e97662
+	github.com/tigera/lma v0.0.0-20210126182955-c8e061ddf68b
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.19.6
 	k8s.io/apimachinery v0.19.6
