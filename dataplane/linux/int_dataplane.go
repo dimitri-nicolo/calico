@@ -716,6 +716,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipSetsConfigV4,
 			ipSetIDAllocator,
 			ipSetsMap,
+			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
 		dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
@@ -1033,7 +1034,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	// We always create the IPsec policy table (the component that manipulates the IPsec dataplane).  That ensures
 	// that we clean up our old policies if IPsec is disabled.
 	ipsecEnabled := config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" && config.NodeIP != nil
-	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID, ipsecEnabled, config.DebugUseShortPollIntervals)
+	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID, ipsecEnabled, config.DebugUseShortPollIntervals, dp.loopSummarizer)
 	if ipsecEnabled {
 		// Set up IPsec.
 

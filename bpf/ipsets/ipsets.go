@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import (
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ipsets"
+	"github.com/projectcalico/felix/logutils"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -62,12 +64,15 @@ type bpfIPSets struct {
 
 	dirtyIPSetIDs   set.Set
 	resyncScheduled bool
+
+	opRecorder logutils.OpRecorder
 }
 
 func NewBPFIPSets(
 	ipVersionConfig *ipsets.IPVersionConfig,
 	ipSetIDAllocator *idalloc.IDAllocator,
 	ipSetsMap bpf.Map,
+	opRecorder logutils.OpRecorder,
 ) *bpfIPSets {
 	return &bpfIPSets{
 		IPVersionConfig:  ipVersionConfig,
@@ -76,6 +81,7 @@ func NewBPFIPSets(
 		bpfMap:           ipSetsMap,
 		resyncScheduled:  true,
 		ipSetIDAllocator: ipSetIDAllocator,
+		opRecorder:       opRecorder,
 	}
 }
 
@@ -209,7 +215,7 @@ func (m *bpfIPSets) RemoveMembers(setID string, removedMembers []string) {
 
 // QueueResync forces a resync with the dataplane on the next ApplyUpdates() call.
 func (m *bpfIPSets) QueueResync() {
-	log.Info("Asked to resync with the dataplane on next update.")
+	log.Debug("Asked to resync with the dataplane on next update.")
 	m.resyncScheduled = true
 }
 
@@ -242,7 +248,8 @@ func (m *bpfIPSets) ApplyUpdates() {
 
 	debug := log.GetLevel() >= log.DebugLevel
 	if m.resyncScheduled {
-		log.Info("Doing full resync of BPF IP sets map")
+		log.Debug("Doing full resync of BPF IP sets map")
+		m.opRecorder.RecordOperation("resync-bpf-ipsets")
 		m.resyncScheduled = false
 
 		m.dirtyIPSetIDs.Clear()
