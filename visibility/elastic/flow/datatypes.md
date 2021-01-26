@@ -32,12 +32,16 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `num_flows`           | long              | Number of flows aggregated into this entry during this export interval. |
 | `num_flows_completed` | long              | Number of flows that were completed during the export interval. |
 | `num_flows_started`   | long              | Number of flows that were started during the export interval. |
+| `num_process_names`   | long              | Number of unique process names aggregated into this entry during this export interval. |
+| `num_process_ids`     | long              | Number of unique process ids aggregated into this entry during this export interval. |
 | `http_requests_allowed_in` | long         | Number of allowed incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
 | `http_requests_denied_in`  | long         | Number of denied incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
 | `packets_in`          | long              | Number of incoming packets since the last export. |
 | `packets_out`         | long              | Number of outgoing packets since the last export. |
 | `proto`               | keyword           | Protocol. |
 | `policies`            | array of keywords | Policy or policies that allowed or denied this flow. Staged policy names are prefixed with "staged:". |
+| `process_name`        | keyword           | The name of the process that initiated or received the connection or connection request. A "-" indicates that the process name is not logged. A "*" indicates that the per flow process limit has exceeded and the process names are now aggregated. |
+| `process_id`          | keyword           | The process ID of the corresponding process (indicated by the `process_name` field) that initiated or received the connection or connection request. A "-" indicates that the process ID is not logged. A "*" indicates that there are more than one unique process IDs for the corresponding process name. |
 | `source_ip`           | ip                | IP address of the source pod. A null value indicates aggregation. |
 | `source_name`         | keyword           | Contains one of the following values: <br />- Name of the source pod.<br />- Name of the pod that was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated. |
 | `source_name_aggr`    | keyword           | Contains one of the following values: <br />- Aggregated name of the source pod. <br />- `pvt`: Endpoint is not a pod. Its IP address belongs to a private subnet.<br />- `pub`: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
