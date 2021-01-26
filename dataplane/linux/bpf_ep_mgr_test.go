@@ -73,8 +73,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	ruleRenderer := rules.NewRenderer(rrConfigNormal)
 	filterTableV4 := newMockTable("filter")
 	lookupsCache := calc.NewLookupsCache()
+	actionOnDrop := "DROP"
 
-	JustBeforeEach(func() {
+	BeforeEach(func() {
 		bpfEpMgr = newBPFEndpointManager(
 			"info", // config.BPFLogLevel,
 			"uthost",
@@ -91,6 +92,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			filterTableV4,
 			nil,
 			lookupsCache,
+			actionOnDrop,
 		)
 	})
 
@@ -133,10 +135,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	})
 
 	Context("with eth0 up", func() {
-		JustBeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateUp, 10))
+		BeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateUp, 10))
 
 		Context("with eth0 host endpoint", func() {
-			JustBeforeEach(genHEPUpdate("eth0", hostEp))
+			BeforeEach(genHEPUpdate("eth0", hostEp))
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
@@ -148,7 +150,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		})
 
 		Context("with host-* endpoint", func() {
-			JustBeforeEach(genHEPUpdate(allInterfaces, hostEp))
+			BeforeEach(genHEPUpdate(allInterfaces, hostEp))
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
@@ -161,10 +163,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	})
 
 	Context("with eth0 host endpoint", func() {
-		JustBeforeEach(genHEPUpdate("eth0", hostEp))
+		BeforeEach(genHEPUpdate("eth0", hostEp))
 
 		Context("with eth0 up", func() {
-			JustBeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateUp, 10))
+			BeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateUp, 10))
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
@@ -177,10 +179,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	})
 
 	Context("with host-* endpoint", func() {
-		JustBeforeEach(genHEPUpdate(allInterfaces, hostEp))
+		BeforeEach(genHEPUpdate(allInterfaces, hostEp))
 
 		Context("with eth0 up", func() {
-			JustBeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateUp, 10))
+			BeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateUp, 10))
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
@@ -191,7 +193,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			})
 
 			Context("with eth0 down", func() {
-				JustBeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateDown, 10))
+				BeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateDown, 10))
 
 				It("clears host endpoint for eth0", func() {
 					Expect(bpfEpMgr.hostIfaceToEpMap).To(BeEmpty())
