@@ -9,7 +9,7 @@ TYPHA_REPO               = github.com/tigera/typha-private
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_COMPLIANCE_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID)
+SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID) $(SEMAPHORE_FIREWALL_INTEGRATION_PROJECT_ID)
 
 build: ut
 
