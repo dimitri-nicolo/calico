@@ -236,7 +236,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	args := infra.GetDockerArgs()
 	args = append(args, "--privileged")
 
-	// Add in the environment variables.
+	// Collect the environment variables for starting this particular container.  Note: we
+	// are called concurrently with other instances of RunFelix so it's important to only
+	// read from options.*.
 	envVars := map[string]string{
 		// Enable core dumps.
 		"GOTRACEBACK": "crash",
@@ -254,8 +256,14 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 		// Disable log dropping, because it can cause flakes in tests that look for particular logs.
 		"FELIX_DEBUGDISABLELOGDROPPING": "true",
 	}
+	// Collect the volumes for this container.
+	volumes := map[string]string{
+		"/lib/modules": "/lib/modules",
+		"/tmp":         "/tmp",
+	}
 
 	containerName := containers.UniqueName(fmt.Sprintf("felix-%d", id))
+
 	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 		if !options.TestManagesBPF {
 			log.Info("FELIX_FV_ENABLE_BPF=true, enabling BPF with env var")
@@ -279,10 +287,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	// EnableCloudWatchLogs().
 	uniqueName := fmt.Sprintf("%d-%d-%d", id, os.Getpid(), int(atomic.AddUint32(&atomicCounter, 1)))
 	cwlFile := "cwl-" + uniqueName + "-felixfv.txt"
-	args = append(args,
-		"-e", "FELIX_DEBUGCLOUDWATCHLOGSFILE=/cwlogs/"+cwlFile,
-		"-v", cwLogDir+":/cwlogs",
-	)
+	envVars["FELIX_DEBUGCLOUDWATCHLOGSFILE"] = "/cwlogs/"+cwlFile
+	volumes[cwLogDir] = "/cwlogs"
+
 	cwlCallsExpected := false
 	cwlGroupName := "tigera-flowlogs-<cluster-guid>"
 	cwlStreamName := "<felix-hostname>_Flowlogs"
@@ -311,23 +318,23 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	os.MkdirAll(logDir, 0777)
 	args = append(args, "-v", logDir+":/var/log/calico/flowlogs")
 
+	for k, v := range options.ExtraEnvVars {
+		envVars[k] = v
+	}
+
 	if options.WithPrometheusPortTLS {
 		EnsureTLSCredentials()
-		options.ExtraVolumes[CertDir] = CertDir
-		options.ExtraEnvVars["FELIX_PROMETHEUSREPORTERCAFILE"] = filepath.Join(CertDir, "ca.crt")
-		options.ExtraEnvVars["FELIX_PROMETHEUSREPORTERKEYFILE"] = filepath.Join(CertDir, "server.key")
-		options.ExtraEnvVars["FELIX_PROMETHEUSREPORTERCERTFILE"] = filepath.Join(CertDir, "server.crt")
-		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSCAFILE"] = filepath.Join(CertDir, "ca.crt")
-		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSKEYFILE"] = filepath.Join(CertDir, "server.key")
-		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSCERTFILE"] = filepath.Join(CertDir, "server.crt")
+		envVars[CertDir] = CertDir
+		envVars["FELIX_PROMETHEUSREPORTERCAFILE"] = filepath.Join(CertDir, "ca.crt")
+		envVars["FELIX_PROMETHEUSREPORTERKEYFILE"] = filepath.Join(CertDir, "server.key")
+		envVars["FELIX_PROMETHEUSREPORTERCERTFILE"] = filepath.Join(CertDir, "server.crt")
+		envVars["FELIX_PROMETHEUSMETRICSCAFILE"] = filepath.Join(CertDir, "ca.crt")
+		envVars["FELIX_PROMETHEUSMETRICSKEYFILE"] = filepath.Join(CertDir, "server.key")
+		envVars["FELIX_PROMETHEUSMETRICSCERTFILE"] = filepath.Join(CertDir, "server.crt")
 	}
 
 	if options.DelayFelixStart {
-		args = append(args, "-e", "DELAY_FELIX_START=true")
-	}
-
-	for k, v := range options.ExtraEnvVars {
-		envVars[k] = v
+		envVars["DELAY_FELIX_START"] = "true"
 	}
 
 	for k, v := range envVars {
@@ -335,10 +342,6 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	}
 
 	// Add in the volumes.
-	volumes := map[string]string{
-		"/lib/modules": "/lib/modules",
-		"/tmp":         "/tmp",
-	}
 	for k, v := range options.ExtraVolumes {
 		volumes[k] = v
 	}
