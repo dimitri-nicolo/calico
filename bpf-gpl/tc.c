@@ -180,7 +180,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		ctx.state->sport = bpf_ntohs(ctx.udp_header->source);
 		ctx.state->dport = bpf_ntohs(ctx.udp_header->dest);
 		CALI_DEBUG("UDP; ports: s=%d d=%d\n", ctx.state->sport, ctx.state->dport);
-		if (ctx.state->dport == CALI_VXLAN_PORT) {
+		if (ctx.state->dport == VXLAN_PORT) {
 			/* CALI_F_FROM_HEP case is handled in vxlan_attempt_decap above since it already decoded
 			 * the header. */
 			if (CALI_F_TO_HEP) {
@@ -1119,7 +1119,7 @@ nat_encap:
 		goto  deny;
 	}
 
-	state->sport = state->dport = CALI_VXLAN_PORT;
+	state->sport = state->dport = VXLAN_PORT;
 	state->ip_proto = IPPROTO_UDP;
 
 	CALI_DEBUG("vxlan return %d ifindex_fwd %d\n",

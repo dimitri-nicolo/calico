@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/tigera/windows-networking/pkg/testutils"
+
+	"github.com/projectcalico/felix/fv/metrics"
 
 	log "github.com/sirupsen/logrus"
 

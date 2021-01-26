@@ -80,8 +80,6 @@ udp_%kprobe.ll: udp_kprobe.c udp_kprobe.d calculate-flags
 UT_CFLAGS=\
 	-D__BPFTOOL_LOADER__ \
 	-DCALI_LOG_LEVEL=CALI_LOG_LEVEL_DEBUG \
-	-DCALI_VXLAN_PORT=5665 \
-	-DCALI_NAT_TUNNEL_MTU=700 \
 	-DUNITTEST \
 	-DCALI_LOG_PFX=UNITTEST \
 	-I .

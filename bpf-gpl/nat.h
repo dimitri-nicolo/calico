@@ -28,10 +28,6 @@
 #include "routes.h"
 #include "nat_types.h"
 
-#ifndef CALI_VXLAN_PORT
-#define CALI_VXLAN_PORT 4789 /* IANA VXLAN port */
-#endif
-
 #ifndef CALI_VXLAN_VNI
 #define CALI_VXLAN_VNI 0xca11c0
 #endif
@@ -273,7 +269,7 @@ static CALI_BPF_INLINE int vxlan_v4_encap(struct cali_tc_ctx *ctx,  __be32 ip_sr
 	ctx->ip_header->check = 0;
 	ctx->ip_header->protocol = IPPROTO_UDP;
 
-	ctx->udp_header->source = ctx->udp_header->dest = bpf_htons(CALI_VXLAN_PORT);
+	ctx->udp_header->source = ctx->udp_header->dest = bpf_htons(VXLAN_PORT);
 	ctx->udp_header->len = bpf_htons(bpf_ntohs(ctx->ip_header->tot_len) - sizeof(struct iphdr));
 
 	*((__u8*)&vxlan->flags) = 1 << 3; /* set the I flag to make the VNI valid */
@@ -312,7 +308,7 @@ static CALI_BPF_INLINE int is_vxlan_tunnel(struct iphdr *ip)
 	struct udphdr *udp = (struct udphdr *)(ip +1);
 
 	return ip->protocol == IPPROTO_UDP &&
-		udp->dest == bpf_htons(CALI_VXLAN_PORT);
+		udp->dest == bpf_htons(VXLAN_PORT);
 }
 
 static CALI_BPF_INLINE bool vxlan_size_ok(struct cali_tc_ctx *ctx)
