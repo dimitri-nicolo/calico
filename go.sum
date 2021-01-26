@@ -772,8 +772,8 @@ github.com/tigera/cni-plugin-private v1.11.1-0.20210126042021-193ec8baab85 h1:no
 github.com/tigera/cni-plugin-private v1.11.1-0.20210126042021-193ec8baab85/go.mod h1:tbVrJsNZm3S3vMenkcuDFZKD7bhJrg20c+Wjir+ggXY=
 github.com/tigera/confd-private v1.0.1-0.20210126031657-5acd87d96c8c h1:CYqG2Y+z0EngV5gFAnVPbLwWZExlCSdchTtjPKi1PnA=
 github.com/tigera/confd-private v1.0.1-0.20210126031657-5acd87d96c8c/go.mod h1:jUwzxGVdQLp+diO8Tx8E9hPoJICtr/7JK12z7tAS5Aw=
-github.com/tigera/felix-private v0.0.0-20210126113738-8f4082740901 h1:HoYOXpz3m1tltUVlv5mdxFrfgx/X6abSiFCC+OThypU=
-github.com/tigera/felix-private v0.0.0-20210126113738-8f4082740901/go.mod h1:TF/9BIXjRXB9k/cB1UrsyUER/5DoIe8jcB5ut63qlmY=
+github.com/tigera/felix-private v0.0.0-20210126142141-782f0df70570 h1:WaLSCrdnFx3D8ANtWAAFCVHYk518gg294bj/UD0aDGI=
+github.com/tigera/felix-private v0.0.0-20210126142141-782f0df70570/go.mod h1:TF/9BIXjRXB9k/cB1UrsyUER/5DoIe8jcB5ut63qlmY=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210125220919-50418ce5bfa4 h1:pEOk7mJt70BMENJsnuf2QZamyJ9TV5atYZqojj4HYp8=
