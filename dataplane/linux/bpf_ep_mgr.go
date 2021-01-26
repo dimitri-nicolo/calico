@@ -894,6 +894,10 @@ func (m *bpfEndpointManager) removePolicyProgram(jumpMapFD bpf.MapFD) error {
 	k := make([]byte, 4)
 	err := bpf.DeleteMapEntry(jumpMapFD, k, 4)
 	if err != nil {
+		if err == unix.ENOENT {
+			// Delete failed because entry did not exist.
+			return nil
+		}
 		return fmt.Errorf("failed to update jump map: %w", err)
 	}
 	return nil
