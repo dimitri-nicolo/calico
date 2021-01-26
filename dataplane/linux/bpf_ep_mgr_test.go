@@ -85,6 +85,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			regexp.MustCompile(workloadIfaceRegex),
 			ipSetIDAllocator,
 			vxlanMTU,
+			uint16(rrConfigNormal.VXLANPort),
 			nodePortDSR,
 			ipSetsMap,
 			stateMap,
