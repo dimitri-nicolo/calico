@@ -8,7 +8,7 @@ show_toc: false
 ## Prerequisites
 
 Ensure that your {{site.prodname}} OpenShift cluster is running OpenShift
-version v4.2 or v4.3, and the {{site.prodname}} operator version is v1.2.4 or greater.
+version {{site.ocpMinVersion}} or {{site.ocpMaxVersion}}, and the {{site.prodname}} operator version is v1.2.4 or greater.
 
 **Note**: You can check if you are running the operator by checking for the existence of the operator namespace
 with `oc get ns tigera-operator` or issuing `oc get tigerastatus`; a successful return means your installation is
