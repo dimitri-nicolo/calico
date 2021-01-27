@@ -28,6 +28,8 @@ The eBPF dataplane mode has several advantages over standard linux networking pi
 
 To learn more and see performance metrics from our test environment, see the blog, {% include open-new-window.html text='Introducing the Calico eBPF dataplane' url='https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/' %}.
 
+### Limitations 
+
 eBPF mode currently has some limitations relative to the standard Linux pipeline mode:
 
 - eBPF mode only supports x86-64.  (The eBPF programs are not currently built for the other platforms.)
@@ -39,6 +41,7 @@ eBPF mode currently has some limitations relative to the standard Linux pipeline
 - eBPF mode does not support floating IPs.
 - eBPF mode only supports UDP, TCP and ICMP; SCTP is not supported.
 - eBPF mode requires that node  [IP autodetection]({{site.baseurl}}/networking/ip-autodetection) is enabled even in environments where {{site.prodname}} CNI and BGP are not in use.  In eBPF mode, the node IP is used to originate VXLAN packets when forwarding traffic from external sources to services.
+- eBPF mode does not support the "Log" action in policy rules. This limitation also applies to the Drop Action Override feature: `LOGandDROP` and `LOGandACCEPT` are interpreted as `DROP` and `ACCEPT`, respectively.
 
 ### Features
 
