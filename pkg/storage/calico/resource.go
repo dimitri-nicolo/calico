@@ -124,9 +124,7 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	lcObj := rs.converter.convertToLibcalico(obj)
 
 	var gvk = lcObj.GetObjectKind().GroupVersionKind().String()
-	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
-		rs.licenseCache.Store(*lcObj.(*libcalicoapi.LicenseKey))
-	} else if rs.licenseCache.IsAPIRestricted(gvk, lcObj) {
+	if rs.licenseCache.IsAPIRestricted(gvk, lcObj) {
 		msg := fmt.Sprintf("our license does not support creating resources this API (%s). Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license", gvk)
 		return aapierrors.NewUnauthorized(msg)
 	}
@@ -142,6 +140,10 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 		default:
 			return aapiError(err, key)
 		}
+	}
+
+	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
+		rs.licenseCache.Store(*lcObj.(*libcalicoapi.LicenseKey))
 	}
 	rs.converter.convertToAAPI(createdObj, out)
 	return nil
@@ -435,7 +437,6 @@ func (rs *resourceStore) GuaranteedUpdate(
 			updatedRes.(resourceObject).GetObjectMeta().SetResourceVersion(strconv.FormatInt(curState.rev, 10))
 		}
 		libcalicoObj := rs.converter.convertToLibcalico(updatedRes)
-
 		var opts options.SetOptions
 		if ttl != nil {
 			opts = options.SetOptions{TTL: time.Duration(*ttl) * time.Second}
@@ -469,6 +470,12 @@ func (rs *resourceStore) GuaranteedUpdate(
 				return e
 			}
 		}
+
+		var gvk = libcalicoObj.GetObjectKind().GroupVersionKind().String()
+		if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
+			rs.licenseCache.Store(*libcalicoObj.(*libcalicoapi.LicenseKey))
+		}
+
 		rs.converter.convertToAAPI(createdLibcalicoObj, out)
 		return nil
 	}
