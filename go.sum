@@ -770,10 +770,10 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/cni-plugin-private v1.11.1-0.20210126042021-193ec8baab85 h1:noNxls8l9VufT+2YQONOw/yZdblJ8fRmCCMsHWgvVyA=
 github.com/tigera/cni-plugin-private v1.11.1-0.20210126042021-193ec8baab85/go.mod h1:tbVrJsNZm3S3vMenkcuDFZKD7bhJrg20c+Wjir+ggXY=
-github.com/tigera/confd-private v1.0.1-0.20210126031657-5acd87d96c8c h1:CYqG2Y+z0EngV5gFAnVPbLwWZExlCSdchTtjPKi1PnA=
-github.com/tigera/confd-private v1.0.1-0.20210126031657-5acd87d96c8c/go.mod h1:jUwzxGVdQLp+diO8Tx8E9hPoJICtr/7JK12z7tAS5Aw=
-github.com/tigera/felix-private v0.0.0-20210127025221-423734d0cc1e h1:2v4xabPRt82kqqesT12aB7kqW05f8znuuVl0yiYmEbw=
-github.com/tigera/felix-private v0.0.0-20210127025221-423734d0cc1e/go.mod h1:JYwed6q40DuJvzL3zqL/yYToMEmO/3Sl95oTb6RRgrc=
+github.com/tigera/confd-private v1.0.1-0.20210127041652-c041ccac0571 h1:t4RKTe6UzCiDxicUJKaumkzhGezwoh6T7iM/5WqyOhs=
+github.com/tigera/confd-private v1.0.1-0.20210127041652-c041ccac0571/go.mod h1:OYoVQxC1aU2tuGF0gea9lahmyCsImLO+Mua1GFVa7jU=
+github.com/tigera/felix-private v0.0.0-20210127041435-5c8bd656d487 h1:f4zJgxxwx9ZpeMk5BNledLW620Iopc1SrZ2XqIWGq1w=
+github.com/tigera/felix-private v0.0.0-20210127041435-5c8bd656d487/go.mod h1:TtwWSb58MxHa93grmKcW0e4h4MNCZNnx4qDfHXUMMZM=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210126182422-b334ce1a1d94 h1:8RnhdHNYLDyZCDVuycNFKxxyms47oNzO/VhOhgfGvo0=
@@ -784,8 +784,8 @@ github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320/go.mod h1:erKr0bew1q/9lZOLYs49JrRBaUBIj/zAfJylAmcrGD0=
 github.com/tigera/nfnetlink v0.0.0-20210105181106-4ac282dc9ec8 h1:qSXMJdAXZK/2SuPiUqdpxHm9Y5rsNr7wlf68Nia8Qjc=
 github.com/tigera/nfnetlink v0.0.0-20210105181106-4ac282dc9ec8/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210126030429-12797254566f h1:RwMH3UJBXEGdFbxtm0wR0UfI2vhsH/VNf4tmbE76dWg=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210126030429-12797254566f/go.mod h1:IA3Yyt+V61Mv3wlr2pH3N6fy62WA4v+MNrUCtBFDY0I=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210127030435-99c41f61b97f h1:GrDLPHRb/l0LtyfYvJ6sptNClz1kHkl6AIe4QLMXi20=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210127030435-99c41f61b97f/go.mod h1:IWCmlHlEokUx3ufhAXkOAd0BsVm4ThAh2XrAO5v3CCc=
 github.com/tigera/windows-networking v0.0.0-20210122174114-908d3873095f h1:NgDgr8G0zu276bBKqwKSoWbUIHd6WLgDfpUamj3nTSs=
 github.com/tigera/windows-networking v0.0.0-20210122174114-908d3873095f/go.mod h1:zLPYHfMmBxMWc/BQ110LwhjFju7wlWx+ycNTMNvguSQ=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
