@@ -29,6 +29,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
+
+	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 )
 
 type resourceObject interface {
@@ -125,8 +127,10 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 
 	var gvk = lcObj.GetObjectKind().GroupVersionKind().String()
 	if rs.licenseCache.IsAPIRestricted(gvk, lcObj) {
-		msg := fmt.Sprintf("our license does not support creating resources this API (%s). Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license", gvk)
-		return aapierrors.NewUnauthorized(msg)
+		return aapierrors.NewForbidden(
+			schema.GroupResource{Group: calico.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
+			key,
+			fmt.Errorf("our license does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"))
 	}
 
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
