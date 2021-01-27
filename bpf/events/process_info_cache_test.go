@@ -14,8 +14,10 @@ import (
 )
 
 var (
-	gcInterval = time.Millisecond
-	ttl        = time.Second
+	gcInterval         = time.Millisecond
+	ttl                = time.Second
+	eventuallyTimeout  = 3 * time.Second // 3 times to TTL to avoid any flakes.
+	eventuallyInterval = 10 * time.Millisecond
 )
 
 var (
@@ -53,6 +55,14 @@ var _ = Describe("ProcessInfoCache tests", func() {
 		pic      collector.ProcessInfoCache
 		testChan chan events.EventProtoStatsV4
 	)
+
+	eventuallyCheckCache := func(tuple collector.Tuple, dir collector.TrafficDirection, expectedProcessInfo collector.ProcessInfo, infoInCache bool) {
+		Eventually(func() lookupResult {
+			processInfo, ok := pic.Lookup(tuple, dir)
+			return lookupResult{processInfo, ok}
+		}, eventuallyTimeout, eventuallyInterval).Should(Equal(lookupResult{expectedProcessInfo, infoInCache}))
+	}
+
 	BeforeEach(func() {
 		testChan = make(chan events.EventProtoStatsV4, 10)
 		pic = events.NewBPFProcessInfoCache(testChan, gcInterval, ttl)
@@ -62,10 +72,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
 		expectedProcessInfo := collector.ProcessInfo{}
 
-		Eventually(func() lookupResult {
-			processInfo, ok := pic.Lookup(tuple1, collector.TrafficDirOutbound)
-			return lookupResult{processInfo, ok}
-		}).Should(Equal(lookupResult{expectedProcessInfo, false}))
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event")
 		testChan <- processEvent1
@@ -78,10 +85,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				Pid:  12345,
 			},
 		}
-		Eventually(func() lookupResult {
-			processInfo, ok := pic.Lookup(tuple1, collector.TrafficDirOutbound)
-			return lookupResult{processInfo, ok}
-		}).Should(Equal(lookupResult{expectedProcessInfo, true}))
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 
 		By("replacing the process info event")
 		testChan <- processEvent1DifferentProcessName
@@ -94,19 +98,12 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				Pid:  54321,
 			},
 		}
-		Eventually(func() lookupResult {
-			processInfo, ok := pic.Lookup(tuple1, collector.TrafficDirOutbound)
-			return lookupResult{processInfo, ok}
-		}).Should(Equal(lookupResult{expectedProcessInfo, true}))
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 	})
 	It("Should expire cached process information", func() {
 		By("Checking that lookup cache doesn't contain the right process info")
 		expectedProcessInfo := collector.ProcessInfo{}
-
-		Eventually(func() lookupResult {
-			processInfo, ok := pic.Lookup(tuple1, collector.TrafficDirOutbound)
-			return lookupResult{processInfo, ok}
-		}).Should(Equal(lookupResult{expectedProcessInfo, false}))
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 
 		By("Sending a process info event")
 		testChan <- processEvent1
@@ -119,18 +116,12 @@ var _ = Describe("ProcessInfoCache tests", func() {
 				Pid:  12345,
 			},
 		}
-		Eventually(func() lookupResult {
-			processInfo, ok := pic.Lookup(tuple1, collector.TrafficDirOutbound)
-			return lookupResult{processInfo, ok}
-		}).Should(Equal(lookupResult{expectedProcessInfo, true}))
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
 
 		By("Checking that lookup expires process information")
 		expectedProcessInfo = collector.ProcessInfo{}
 
-		Eventually(func() lookupResult {
-			processInfo, ok := pic.Lookup(tuple1, collector.TrafficDirOutbound)
-			return lookupResult{processInfo, ok}
-		}).Should(Equal(lookupResult{expectedProcessInfo, false}))
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
 	})
 	AfterEach(func() {
 		pic.Stop()
