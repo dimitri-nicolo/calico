@@ -25,6 +25,10 @@ import (
 // handleDownloadReports sends one or multiple (via zip) reports to the client
 func (s *server) handleDownloadReports(response http.ResponseWriter, request *http.Request) {
 	clusterID := request.Header.Get(datastore.XClusterIDHeader)
+	if clusterID == "" {
+		clusterID = datastore.DefaultCluster
+	}
+
 	// Determine the download formats and if there were none set then exit immediately.
 	formats := request.URL.Query()[QueryFormat]
 	log.WithField("Formats", formats).Info("Extracted download formats from URL")

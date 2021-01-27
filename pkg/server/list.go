@@ -17,6 +17,10 @@ import (
 // handleListReports returns a json list of the reports available to the credentials
 func (s *server) handleListReports(response http.ResponseWriter, request *http.Request) {
 	clusterID := request.Header.Get(datastore.XClusterIDHeader)
+	if clusterID == "" {
+		clusterID = datastore.DefaultCluster
+	}
+
 	log.Infof("Request url %v and x-cluster-id: %v ", request.URL, clusterID)
 
 	authorizer, err := s.csFactory.RBACAuthorizerForCluster(clusterID)
