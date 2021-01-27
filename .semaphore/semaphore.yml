@@ -52,7 +52,7 @@ blocks:
       jobs:
         - name: Installer CI
           commands:
-            - cd controller
+            - cd install
             - make ci
 
   - name: 'Push Controller Images (non-PR builds only)'
