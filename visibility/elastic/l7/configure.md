@@ -91,6 +91,10 @@ FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagen
 kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent","l7LogsFileEnabled":true}}'
 ```
 
+1. (Optional) Configure L7 log aggregation, retention, and reporting. See the
+[Felix Configuration documentation]({{site.baseurl}}/reference/felix/configuration#calico-enterprise-specific-configuration)
+for more details.
+
 #### Step 3: Install the envoy log collector
 
 Now that Felix has been configured, apply the customized `patch-envoy.yaml` from Step 1.
