@@ -668,14 +668,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		var err error
 		bpfEvnt, err = events.New(bpfMapContext, events.SourcePerfEvents)
 		if err != nil {
-			log.WithError(err).Panic("Failed to create perf event")
+			log.WithError(err).Error("Failed to create perf event")
+			config.FlowLogsCollectProcessInfo = false
+		} else {
+			bpfEventPoller = newBpfEventPoller(bpfEvnt)
+
+			// Register BPF event handling for DNS events.
+			bpfEventPoller.Register(events.TypeDNSEvent, dp.domainInfoStore.DNSPacketFromBPF)
+			log.Info("BPF: Registered events sink for TypeDNSEvent")
 		}
-
-		bpfEventPoller = newBpfEventPoller(bpfEvnt)
-
-		// Register BPF event handling for DNS events.
-		bpfEventPoller.Register(events.TypeDNSEvent, dp.domainInfoStore.DNSPacketFromBPF)
-		log.Info("BPF: Registered events sink for TypeDNSEvent")
 	}
 
 	if config.FlowLogsCollectProcessInfo {
@@ -872,7 +873,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 		}
 
-		if config.Collector != nil {
+		if config.Collector != nil && bpfEventPoller != nil {
 			policyEventListener := events.NewCollectorPolicyListener(config.LookupsCache)
 			bpfEventPoller.Register(events.TypePolicyVerdict, policyEventListener.EventHandler)
 			log.Info("BPF: Registered events sink for TypePolicyVerdict")
