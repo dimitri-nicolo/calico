@@ -794,8 +794,18 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		result.ifindex_fwd = dst_to_src->ifindex;
 	}
 
-	if (!skb_seen(ct_ctx->skb)) {
-		/* Account for the src->dst leg if we haven't seen the packet yet */
+	if ((CALI_F_INGRESS && CALI_F_TUNNEL) || !skb_seen(ct_ctx->skb)) {
+		/* Account for the src->dst leg if we haven't seen the packet yet.
+		 * Since when the traffic is tunneled, BPF program on the host
+		 * iface sees it first and marks it as seen before another
+		 * program sees the packet as decaped. Only then we can account
+		 * for the bytes and packets. Unfortunately, we need to mark the
+		 * packets as seen otherwise they would get dropped as something
+		 * we missed.
+		 *
+		 * Needs to be done for tunnels that preserve the packet, like
+		 * IPIP and unlike wireguard.
+		 */
 		src_to_dst->packets++;
 		src_to_dst->bytes += ct_ctx->skb->len;
 	}
