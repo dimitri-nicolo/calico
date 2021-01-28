@@ -37,10 +37,6 @@ import (
 // managed cluster certificate that is allowed to initiate connections.
 const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
 
-var sniServiceMap = map[string]string{
-	"tigera-secure-kb-http.tigera-kibana.svc": "tigera-secure-kb-http.tigera-kibana.svc:5601",
-}
-
 type cluster struct {
 	jclust.ManagedCluster
 
@@ -56,9 +52,9 @@ type cluster struct {
 
 type clusters struct {
 	sync.RWMutex
-	clusters map[string]*cluster
-
-	k8sCLI bootstrap.K8sClient
+	clusters      map[string]*cluster
+	sniServiceMap map[string]string
+	k8sCLI        bootstrap.K8sClient
 
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool
@@ -92,7 +88,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		tlsProxy, err := vtls.NewProxy(
 			vtls.WithDefaultServiceURL(cs.defaultForwardServerName),
 			vtls.WithProxyOnSNI(true),
-			vtls.WithSNIServiceMap(sniServiceMap),
+			vtls.WithSNIServiceMap(cs.sniServiceMap),
 			vtls.WithConnectionRetryAttempts(cs.defaultForwardDialRetryAttempts),
 			vtls.WithConnectionRetryInterval(cs.defaultForwardDialRetryInterval),
 		)

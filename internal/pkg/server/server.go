@@ -79,6 +79,8 @@ type Server struct {
 	tunnelKeepAliveInterval time.Duration
 
 	publicAddress string
+
+	sniServiceMap map[string]string
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -103,6 +105,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator authenticat
 	}
 
 	srv.clusters.k8sCLI = srv.k8s
+	srv.clusters.sniServiceMap = srv.sniServiceMap
 	srv.proxyMux = http.NewServeMux()
 
 	cfg := &tls.Config{}

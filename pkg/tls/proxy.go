@@ -17,8 +17,10 @@ type Proxy interface {
 }
 
 type proxy struct {
-	defaultURL               string
-	proxyOnSNI               bool
+	defaultURL string
+	proxyOnSNI bool
+	// TODO Consider just having a list of urls and try to match the host of the incoming traffic to the host of a url in
+	// TODO in the list.
 	sniServiceMap            map[string]string
 	retryAttempts            int
 	retryInterval            time.Duration
