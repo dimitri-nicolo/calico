@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"time"
 
@@ -171,6 +172,15 @@ func main() {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
 
+		kibanaURL, err := url.Parse(cfg.KibanaEndpoint)
+		if err != nil {
+			log.WithError(err).Fatalf("failed to parse Kibana endpoint %s", cfg.KibanaEndpoint)
+		}
+
+		sniServiceMap := map[string]string{
+			kibanaURL.Hostname(): kibanaURL.Host, // Host includes the port, Hostname does not
+		}
+
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithPublicAddr(cfg.PublicIP),
@@ -178,6 +188,7 @@ func main() {
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+			server.WithSNIServiceMap(sniServiceMap),
 		)
 	}
 
