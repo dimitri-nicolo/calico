@@ -166,3 +166,4 @@ defaults:
         prometheus: quay.io/prometheus/prometheus
         elasticsearchOperator: upmcenterprises/elasticsearch-operator
         prometheusOperator: quay.io/coreos/prometheus-operator
+        anomaly-detection-jobs: tigera/anomaly_detection_jobs

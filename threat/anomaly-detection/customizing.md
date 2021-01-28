@@ -1,31 +1,89 @@
 ---
-title:  Customize anomaly detection jobs
-description: Review your options for customizing anomaly detections jobs. 
+title:  Configuration
+description: Review your options for customizing the anomaly detections jobs. 
 canonical_url: /threat/anomaly-detection/customizing
 
 ---
 
-{{site.prodname}} ships with Tigera-designed anomaly detection jobs. But you can customize the jobs
-or design new ones using the full power of Elasticsearch machine learning.
+{{site.prodname}} ships with proprietary anomaly detection jobs. 
+All proprietary anomaly detection jobs are included in one deployment manifest and work in one pod.
 
-**Important!** Always clone the predefined anomaly protection jobs before modifying them. When you reinstall or upgrade, predefined anomaly detections jobs can change; if you modify the originals, your modifications are overwritten.
+## Install Jobs
+Use these commands to deploy a pod with the anomaly detection jobs:
 
-To clone a predefined anomaly protection job:
+1. Download a manifest:
+There are two options, the anomaly detection in the **managed** cluster and in the **management/standalone** cluster.  
+   See the [Multi-cluster management] for more details.
+   
+    1.1 For the **management** or **standalone** cluster:   
+    ```bash
+    curl {{ "/manifests/threatdef/ad-jobs-deployment.yaml" | absolute_url }} -O
+    ```
+    1.2 For the **managed** cluster:   
+    ```bash
+    curl {{ "/manifests/threatdef/ad-jobs-deployment-managed.yaml" | absolute_url }} -O
+    ```
 
-1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager.
-1. Note that your Kibana credentials may not be the same as you use to access {{site.prodname}}.
-   A default user `elastic` is created and stored in the `tigera-secure-es-elastic-user` secret during installation. You can obtain the password using the following command:
+2. Optional. Configure the jobs by setting the environment variables (see below).
+   
+3. Apply the manifest
+   
+    1.1 For the **management** or **standalone** cluster:   
+    ```bash
+    kubectl apply -f ad-jobs-deployment.yaml
+    ```
+    1.2 For the **managed** cluster:   
+    ```bash
+    kubectl apply -f ad-jobs-deployment-managed.yaml
+    ```
 
-   {%- raw %}
-   ```
-   kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
-   ```
-   {% endraw %}
+## Configure Jobs
+You can configure the jobs using the environment variables.
+The recommended way to set them up is in the deployment manifest (the yaml file).
 
-1. Click "Machine Learning" in the left-hand menu.
-1. Click the gear icon to the far right of the job you wish to copy and select "Clone job"
+Example:
 
-See the [Elasticsearch machine learning documentation] for more information on the configuration
-options for machine learning jobs.
+```
+env:
+ - name: AD_max_docs
+   value: "2000000"
+ - name: AD_train_interval_minutes
+   value: "20"
+```
+   
+### Variables of the Elasticsearch: 
+-   **CLUSTER_NAME** - Default: "cluster". 
+In a multi-cluster deployment, the name of the cluster where the AD job should detect the anomalies.
+-   **ES_query_size** - Default: 10000. 
+The job reads the data in portions. This is the number of rows in each of this portion.
+-   **ES_scroll_time** - Default: "20s". 
+This is the timeout for reading each data portion.
+-   **ES_bucket_size_minutes** - Default: 5. 
+The log rows are aggregated into the buckets. This is the size of these buckets. The bucket always starts at the averaged minute. For example, for the bucket size of 5 minutes, a bucket starts on the x0th or x5th minute.
 
-[Elasticsearch machine learning documentation]: https://www.elastic.co/guide/en/elastic-stack-overview/6.4/xpack-ml.html
+### Variables of all Anomaly Detection Jobs:
+-   **AD_train_interval_minutes** - Default: 1440, a full day. It is an interval between retraining the existing models, if models should be retrained.
+-   **AD_search_interval_minutes** - Default: 30. It is an interval between the searching for the anomalies.
+-   **AD_max_docs** - Default: 500000. This is the size of the dataset used for the training. The bigger it is, the more precise are the trained models, but the more data read from the Elasticsearch storage, and the training takes more time.
+ 
+### Variables of specific Anomaly Detection Jobs:
+
+#### port_scan Job:
+-   **AD_port_scan_threshold** - Default: 500. It is a threshold for triggering an anomaly for the **port_scan** job. This is a number of unique destination ports called from the specific source_name_aggr in the same source_namespace, and the same bucket. 
+
+#### ip_sweep Job:
+-   **AD_ip_sweep_threshold** - Default: 32. It is a threshold for triggering an anomaly for the **ip_sweep** job. This is a number of unique destination IPs called from the specific source_name_aggr in the same source_namespace, and the same bucket. 
+
+#### bytes_out Job:
+-   **AD_BytesOutModel_min_size_for_train** - Default: 1000. There should be enough data samples to train models.
+    The models trained only if the number of the data samples is bigger than this threshold parameter. 
+-   **AD_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts. 
+    Decrease it if you want more alerts.
+
+#### bytes_in Job:
+-   **AD_BytesInModel_min_size_for_train** - Default: 1000. There should be enough data samples to train models.
+    The models trained only if the number of the data samples is bigger than this threshold parameter. 
+-   **AD_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts.  
+    Decrease it if you want more alerts.
+
+[Multi-cluster management]: /multicluster/index

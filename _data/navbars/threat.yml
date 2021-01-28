@@ -9,14 +9,12 @@ section:
   section:
   - title: Overview
     path: /threat/anomaly-detection/overview
-  - title: Enable anomaly detection
-    path: /threat/anomaly-detection/enabling
-  - title: View anomalies
-    path: /threat/anomaly-detection/viewing-anomalies
-  - title: Anomaly detection job descriptions
+  - title: Job descriptions
     path: /threat/anomaly-detection/job-descriptions
-  - title: Customize anomaly detection jobs
+  - title: Configuration
     path: /threat/anomaly-detection/customizing
+  - title: Monitoring
+    path: /threat/anomaly-detection/monitoring
 - title: Suspicious IPs
   path: /threat/suspicious-ips
 - title: Suspicious domains
