@@ -60,6 +60,11 @@ type nameData struct {
 	namesToNotify set.Set
 }
 
+type dnsExchangeKey struct {
+	clientIP string
+	dnsID    uint16
+}
+
 type domainInfoStore struct {
 	// Channel that we write to when we want DNS response capture to stop.
 	stopChannel chan struct{}
@@ -105,7 +110,7 @@ type domainInfoStore struct {
 	// Handling of DNS request/response timestamps, so that we can measure and report DNS
 	// latency.
 	measureLatency   bool
-	requestTimestamp map[uint16]uint64
+	requestTimestamp map[dnsExchangeKey]uint64
 
 	// Handling additional DNS mapping lifetime.
 	epoch    int
@@ -157,7 +162,7 @@ func newDomainInfoStoreWithShims(
 		gcInterval:           13 * time.Second,
 		collector:            config.Collector,
 		measureLatency:       config.DNSLogsLatency,
-		requestTimestamp:     make(map[uint16]uint64),
+		requestTimestamp:     make(map[dnsExchangeKey]uint64),
 		epoch:                config.DNSCacheEpoch,
 		extraTTL:             config.DNSExtraTTL,
 		// Capacity 1 here is to allow UT to test the use of this channel without
@@ -253,7 +258,8 @@ func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		// in the next line is clearly a v4 assumption, and some of the code inside
 		// `nfnetlink.SubscribeDNS` also looks v4-specific.
 		packet := gopacket.NewPacket(msg.Data, layers.LayerTypeIPv4, gopacket.Lazy)
-		if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+		ipv4, _ := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+		if ipv4 != nil {
 			log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
 		} else {
 			log.Debug("No IPv4 layer")
@@ -265,11 +271,11 @@ func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		dns := &layers.DNS{}
 		err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
 		if err == nil {
-			latencyIfKnown := s.processForLatency(dns, msg.Timestamp)
+			latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
 			if dns.QR == true {
 				// It's a DNS response.
 				if s.collector != nil {
-					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+					if ipv4 != nil {
 						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
 					} else {
 						log.Warning("Not logging non-IPv4 DNS packet")
@@ -758,10 +764,19 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 	return
 }
 
-func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
+func (s *domainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
 	if !s.measureLatency {
 		return
 	}
+
+	if ipv4 == nil {
+		// DNS request IDs are not globally unique; we need the IP of the client to scope
+		// them.  So, when the packet in hand does not have an IPv4 header, we can't process
+		// it for latency.
+		return
+	}
+
+	var key dnsExchangeKey
 
 	if timestamp == 0 {
 		// No timestamp on this packet.
@@ -778,31 +793,35 @@ func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp uint64) (
 	// base point as time.Time, so don't assume that.)
 	if dns.QR == false {
 		// It's a request.
-		if _, exists := s.requestTimestamp[dns.ID]; exists {
-			log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", dns.ID)
+		key.clientIP = ipv4.SrcIP.String()
+		key.dnsID = dns.ID
+		if _, exists := s.requestTimestamp[key]; exists {
+			log.Debugf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
 		} else {
-			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", dns.ID)
-			s.requestTimestamp[dns.ID] = timestamp
+			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", key)
+			s.requestTimestamp[key] = timestamp
 		}
 	} else {
 		// It's a response.
-		if requestTime, exists := s.requestTimestamp[dns.ID]; exists {
+		key.clientIP = ipv4.DstIP.String()
+		key.dnsID = dns.ID
+		if requestTime, exists := s.requestTimestamp[key]; exists {
 			latency := timestamp - requestTime
-			log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, dns.ID)
-			delete(s.requestTimestamp, dns.ID)
+			log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, key)
+			delete(s.requestTimestamp, key)
 			latencyAsDuration := time.Duration(latency)
 			latencyIfKnown = &latencyAsDuration
 		} else {
-			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", dns.ID)
+			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", key)
 		}
 	}
 
 	// Check for any request timestamps that are now more than 10 seconds old, and discard those
 	// so that our map occupancy does not increase over time.
-	for id, requestTime := range s.requestTimestamp {
+	for key, requestTime := range s.requestTimestamp {
 		if time.Duration(timestamp-requestTime) > 10*time.Second {
-			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
-			delete(s.requestTimestamp, id)
+			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", key)
+			delete(s.requestTimestamp, key)
 		}
 	}
 	return
