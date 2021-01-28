@@ -70,7 +70,7 @@ section:
       - title: Operator upgrade
         path: /maintenance/kubernetes-upgrade-tsee/operator
       - title: Helm
-        path: /maintenance/helm-upgrade-tsee
+        path: /maintenance/kubernetes-upgrade-tsee/helm
     - title: OpenShift
       path: /maintenance/openshift-upgrade
   - title: Upgrade from Calico to Calico Enterprise

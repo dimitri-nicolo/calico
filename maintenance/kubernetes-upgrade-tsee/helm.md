@@ -1,0 +1,125 @@
+---
+title: Upgrade Calico Enterprise installed with Helm
+description: Upgrade from an earlier release of Calico Enterprise with Helm.
+canonical_url: /maintenance/kubernetes-upgrade-tsee
+show_toc: false
+---
+
+## Prerequisites
+
+Verify that your Kubernetes cluster is using a version of {{site.prodname}} installed with Helm, by running
+`kubectl get tigerastatus`. If the result is successful, then your installation is using Helm.
+
+If your cluster is on a version earlier than 3.0, contact Tigera support to upgrade.
+
+If your cluster has a Calico installation, contact Tigera support to upgrade.
+
+## Prepare your cluster for the upgrade
+
+During the upgrade the controller that manages Elasticsearch is updated. Because of this, the {{site.prodname}} LogStorage 
+CR is temporarily removed during upgrade. Features that depend on LogStorage are temporarily unavailable, among which
+are the dashboards in the Manager UI. Data ingestion is temporarily paused and will continue when the LogStorage is
+up and running again.
+
+To retain data from your current installation (optional), ensure that the currently mounted persistent volumes 
+have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/){:target="_blank"}.
+Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
+the upgrade.
+
+## Upgrade from 3.0 or later
+
+**Note**: These steps differ based on your cluster type. If you are unsure of your cluster type, look at the field `clusterManagementType` when you run `kubectl get installation -o yaml` before you proceed.
+{: .alert .alert-info}
+
+1. Get the Helm chart.
+   
+   ```bash
+   curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-operator-{% include chart_version_name %}.tgz
+   ```
+
+1. Find the Helm installation name. This will be used in the following upgrade steps
+   
+   ```bash
+   helm list
+   ```
+
+   The output should look like the following
+   
+   ```bash
+   NAME                    REVISION        UPDATED                         STATUS          CHART                           APP VERSION     NAMESPACE
+   calico-enterprise       1               Tue Jan 26 17:38:07 2021        DEPLOYED        tigera-operator-v3.3.2-0        v3.3.2          default
+   ```
+
+1. Run the Helm upgrade command for `tigera-operator`
+   
+   ```bash
+   helm upgrade <helm installation name for tigera-operator> tigera-operator-{% include chart_version_name %}.tgz
+   ```
+
+1. If your cluster has OIDC login configured, follow these steps:
+   
+   a.  Save a copy of your Manager for reference.
+   ```bash
+   kubectl get manager tigera-secure -o yaml > manager.yaml
+   ```
+
+   b.  Remove the deprecated fields from your Manager resource.
+   ```bash
+   kubectl patch manager tigera-secure --type merge -p '{"spec": null}'
+   ```
+
+   c.  If you are currently using v3.2 and are using OIDC with Kibana, verify that you have the following resources in your cluster:
+   ```bash
+   kubectl get authentication tigera-secure
+   kubectl get secret tigera-oidc-credentials -n tigera-operator
+   ```
+   If both of these resources are present, you can continue with the next step. Otherwise, use the instructions to [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider) to configure OIDC.
+
+   d) Follow [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider).
+
+1. If your cluster is a management cluster using v3.1 or older, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
+   CR to your cluster.
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: ManagementCluster
+   metadata:
+     name: tigera-secure
+   EOF
+   ```
+
+1. Install the new network policies to secure {{site.prodname}} component communications.
+
+   If your cluster is a **managed** cluster, apply this manifest.
+   
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
+   ```
+   
+   For other clusters, use this manifest.
+   
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+   
+1. You can monitor progress with the following command:
+   ```bash
+   watch kubectl get tigerastatus
+   ```
+
+    **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
+    {: .alert .alert-info}
+
+1. Remove unused policies in your cluster.
+
+   If your cluster is a **managed** cluster, run this command:
+
+   ```bash
+   kubectl delete -f {{ "/manifests/default-tier-policies-managed.yaml" | absolute_url }}
+   ```
+
+   For other clusters, run this command:
+
+   ```bash
+   kubectl delete -f {{ "/manifests/default-tier-policies.yaml" | absolute_url }}
+   ```

@@ -66,13 +66,13 @@
    c.  If you are currently using v3.2 and are using OIDC with Kibana verify that you have the following resources in your cluster:
    ```bash
    kubectl get authentication tigera-secure
-   kubectl get secret -n tigera-operator
+   kubectl get secret tigera-oidc-credentials -n tigera-operator
    ```
-   Both of these resources should be present and you are ready with this step. Otherwise, use the instructions to [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider) to configure OIDC.
+   If both of these resources are present, you can continue with the next step. Otherwise, use the instructions to [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider) to configure OIDC.
 
    d) Follow [configure an identity provider]({{site.baseurl}}/getting-started/cnx/configure-identity-provider).
 
-1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
+1. If your cluster is a management cluster using v3.1 or older, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
    CR to your cluster.
    ```bash
    kubectl apply -f - <<EOF
