@@ -53,7 +53,7 @@ In this step, you configure the Envoy log collector to gather the L7 metrics.
 
 1. Download the patch file to patch-envoy.yaml.
    ```
-   curl {{ "/manifests/patch-envoy.yaml" | absolute_url }} -O
+   curl {{ "/manifests/l7/patch-envoy.yaml" | absolute_url }} -O
    ```
 
 1. In the “env” section of the envoy-collector container in `patch-envoy.yaml`, set the
@@ -69,12 +69,25 @@ In this step, you configure the Envoy log collector to gather the L7 metrics.
 
 1. Download the Envoy config.
    ```
-   curl {{ "/manifests/envoy-config.yaml" | absolute_url }} -O
+   curl {{ "/manifests/l7/envoy-config.yaml" | absolute_url }} -O
    ```
 
 1. Create the Envoy config.
    ```
    kubectl create configmap envoy-config -n <application pod namespace> --from-file=envoy-config.yaml
+   ```
+
+**OpenShift Only**
+
+1. Apply the SecurityContextConstraint.
+   ```
+   oc apply -f {{ "/manifests/l7/l7-collector-scc.yaml" | absolute_url }}
+   ```
+
+1. Add your application's service account to the SecurityContextConstraint. If no specific
+   service account is specified, it will usually default to the `default` service account.
+   ```
+   oc adm policy add-scc-to-user l7-collector -z <service account name> -n <application pod namespace>
    ```
 
 #### Step 2: Configure Felix for log data collection
