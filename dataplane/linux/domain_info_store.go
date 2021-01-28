@@ -258,8 +258,8 @@ func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		// in the next line is clearly a v4 assumption, and some of the code inside
 		// `nfnetlink.SubscribeDNS` also looks v4-specific.
 		packet := gopacket.NewPacket(msg.Data, layers.LayerTypeIPv4, gopacket.Lazy)
-		var ipv4 *layers.IPv4
-		if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+		ipv4, _ := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+		if ipv4 != nil {
 			log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
 		} else {
 			log.Debug("No IPv4 layer")
@@ -275,7 +275,7 @@ func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 			if dns.QR == true {
 				// It's a DNS response.
 				if s.collector != nil {
-					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+					if ipv4 != nil {
 						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
 					} else {
 						log.Warning("Not logging non-IPv4 DNS packet")
