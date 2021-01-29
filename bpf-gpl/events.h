@@ -65,7 +65,7 @@ static CALI_BPF_INLINE int event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 	event.isRx = isRx;
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
-		CALI_DEBUG("kprobe: perf_commit_event returns %d\n", err);
+		CALI_DEBUG("event_proto_stats_v4: perf_commit_event returns %d\n", err);
 	}
 
 	return err;
@@ -82,7 +82,7 @@ static CALI_BPF_INLINE void event_flow_log(struct __sk_buff *skb, struct cali_tc
 	int err = perf_commit_event(skb, state, state->eventhdr.len);
 
 	if (err != 0) {
-		CALI_DEBUG("flowlog: perf_commit_event returns %d\n", err);
+		CALI_DEBUG("event_flow_log: perf_commit_event returns %d\n", err);
 	}
 }
 

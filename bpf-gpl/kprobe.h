@@ -60,12 +60,12 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	struct calico_kprobe_proto_v4_key key = {};
 
 	if (!sk_cmn) {
-		goto error;
+		return 0;
 	}
 
 	bpf_probe_read(&family, 2, &sk_cmn->skc_family);
 	if (family != 2 /* AF_INET */) {
-		goto error;
+		return 0;
 	}
 
 	bpf_probe_read(&sport, 2, &sk_cmn->skc_num);
@@ -110,9 +110,6 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 		} else {
 			ret = cali_v4_rxstats_update_elem(&key, &v4_value, 0);
 		}
-		if (ret < 0) {
-			goto error;
-		}
 	} else {
 		diff = ts - val->timestamp;
 		if (diff >= SEND_DATA_INTERVAL) {
@@ -129,9 +126,6 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	}
 
 	return 0;
-
-error:
-	return -1;
 }
 
 static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u32 proto, int tx)
