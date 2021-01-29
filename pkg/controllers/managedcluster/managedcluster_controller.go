@@ -1,13 +1,14 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package managedcluster
 
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	log "github.com/sirupsen/logrus"
@@ -152,6 +153,12 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 	)
 
 	mgmtChangeWorker.AddWatch(
+		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.KibanaCertSecret))),
+		&corev1.Secret{},
+	)
+
+	mgmtChangeWorker.AddWatch(
 		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 		&corev1.ConfigMap{},
@@ -165,7 +172,7 @@ func (c *managedClusterController) Run(stop chan struct{}) {
 	// Establish connection to Es and create workers
 	esClient, workers := c.init(stop)
 
-	if esClient == nil || workers == nil  {
+	if esClient == nil || workers == nil {
 		return
 	}
 

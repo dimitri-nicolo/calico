@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package managedcluster
 
@@ -83,13 +83,18 @@ func (c *managementClusterChangeReconciler) calculateChangeHash(reqLogger *log.E
 		return "", err
 	}
 
-	certSecret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	esCertSecret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	kbCertSecret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.KibanaCertSecret, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
 
 	// This allows us to detect if Elasticsearch, the Elasticsearch cert secret, or the Elasticsearch config map have changed
-	return resource.CreateHashFromObject([]interface{}{esHash, esConfigMap.Data, certSecret.Data})
+	return resource.CreateHashFromObject([]interface{}{esHash, esConfigMap.Data, esCertSecret.Data, kbCertSecret.Data})
 }
 
 func (c *managementClusterChangeReconciler) setChangeHash(hash string) {
