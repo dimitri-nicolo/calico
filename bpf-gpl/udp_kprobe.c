@@ -29,30 +29,13 @@
 __attribute__((section("kprobe/udp_recvmsg")))
 int kprobe__udp_recvmsg(struct pt_regs *ctx)
 {
-	int bytes = 0;
-	struct sock_common *sk_cmn = NULL;
-	if (ctx) {
-		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
-		bytes = (int)PT_REGS_PARM3(ctx);
-		if (bytes < 0) {
-			return 0;
-		}
-		return kprobe_collect_stats(ctx, sk_cmn, IPPROTO_UDP, bytes, 0);
-	}
-	return -1;
+	return kprobe_stats_body(ctx, IPPROTO_UDP, 0);
 }
 
 __attribute__((section("kprobe/udp_sendmsg")))
 int kprobe__udp_sendmsg(struct pt_regs *ctx)
 {
-	int bytes = 0;
-	struct sock_common *sk_cmn = NULL;
-	if (ctx) {
-		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
-		bytes = (int)PT_REGS_PARM3(ctx);
-		return kprobe_collect_stats(ctx, sk_cmn, IPPROTO_UDP, bytes, 1);
-	}
-	return -1;
+	return kprobe_stats_body(ctx, IPPROTO_UDP, 1);
 }
 
 char ____license[] __attribute__((section("license"), used)) = "GPL";

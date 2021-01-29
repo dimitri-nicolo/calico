@@ -122,4 +122,15 @@ error:
 	return -1;
 }
 
+static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u32 proto, int tx)
+{
+	int bytes = 0;
+	struct sock_common *sk_cmn = NULL;
+
+	sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
+	bytes = (int)PT_REGS_PARM3(ctx);
+	return kprobe_collect_stats(ctx, sk_cmn, proto, bytes, tx);
+}
+
+
 #endif /* __CALI_KPROBE_H__ */

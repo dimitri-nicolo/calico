@@ -29,30 +29,13 @@
 __attribute__((section("kprobe/tcp_cleanup_rbuf")))
 int kprobe__tcp_cleanup_rbuf(struct pt_regs *ctx)
 {
-	int bytes = 0;
-	struct sock_common *sk_cmn = NULL;
-	if (ctx) {
-		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
-		bytes = (int)PT_REGS_PARM2(ctx);
-		if (bytes < 0) {
-			return 0;
-		}
-		return kprobe_collect_stats(ctx, sk_cmn, IPPROTO_TCP, bytes, 0);
-	}
-	return -1;
+	return kprobe_stats_body(ctx, IPPROTO_TCP, 0);
 }
 
 __attribute__((section("kprobe/tcp_sendmsg")))
 int kprobe__tcp_sendmsg(struct pt_regs *ctx)
 {
-	int bytes = 0;
-	struct sock_common *sk_cmn = NULL;
-	if (ctx) {
-		sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
-		bytes = (int)PT_REGS_PARM3(ctx);
-		return kprobe_collect_stats(ctx, sk_cmn, IPPROTO_TCP, bytes, 1);
-	}
-	return -1;
+	return kprobe_stats_body(ctx, IPPROTO_TCP, 1);
 }
 
 char ____license[] __attribute__((section("license"), used)) = "GPL";
