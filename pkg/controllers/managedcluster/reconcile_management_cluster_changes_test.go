@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package managedcluster_test
 
@@ -25,7 +25,8 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	Context("When the elasticsearch components exist in management cluster", func() {
-		var managementCertSecret *corev1.Secret
+		var managementESCertSecret *corev1.Secret
+		var managementKBCertSecret *corev1.Secret
 		var managementESConfigMap *corev1.ConfigMap
 		var es *esv1.Elasticsearch
 		var managementK8sCli kubernetes.Interface
@@ -35,14 +36,25 @@ var _ = Describe("Reconcile", func() {
 		var r worker.Reconciler
 
 		BeforeEach(func() {
-			managementCertSecret = &corev1.Secret{
+			managementESCertSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resource.ElasticsearchCertSecret,
 					Namespace: resource.OperatorNamespace,
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte("somecertbytes"),
-					"tls.key": []byte("somekeybytes"),
+					"tls.crt": []byte("someescertbytes"),
+					"tls.key": []byte("someeskeybytes"),
+				},
+			}
+
+			managementKBCertSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.KibanaCertSecret,
+					Namespace: resource.OperatorNamespace,
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte("somekbcertbytes"),
+					"tls.key": []byte("somekbkeybytes"),
 				},
 			}
 
@@ -62,7 +74,8 @@ var _ = Describe("Reconcile", func() {
 				Namespace:         resource.TigeraElasticsearchNamespace,
 				CreationTimestamp: metav1.Now(),
 			}}
-			managementK8sCli = k8sfake.NewSimpleClientset(managementCertSecret, managementESConfigMap)
+			managementK8sCli = k8sfake.NewSimpleClientset(managementESCertSecret, managementKBCertSecret,
+				managementESConfigMap)
 			calicoK8sCLI = tigeraapifake.NewSimpleClientset()
 
 			var err error
@@ -155,7 +168,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("doesn't notify when the elasticsearch cert Secret data isn't changed", func() {
-			cp := managementCertSecret.DeepCopy()
+			cp := managementESCertSecret.DeepCopy()
 			cp.Labels = map[string]string{
 				"foo": "bar",
 			}
