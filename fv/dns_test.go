@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -45,6 +46,21 @@ func GetLocalNameservers() (nameservers []string) {
 		log.Infof("Discovered nameservers: %v", localNameservers)
 	}
 	return localNameservers
+}
+
+func getDNSLogs(logFile string) ([]string, error) {
+	fileExists, err := BeARegularFile().Match(logFile)
+	if err != nil {
+		return nil, err
+	}
+	if !fileExists {
+		return nil, fmt.Errorf("Expected DNS log file %v does not exist", logFile)
+	}
+	logBytes, err := ioutil.ReadFile(logFile)
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(string(logBytes), "\n"), nil
 }
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
@@ -136,17 +152,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 
 	getLastMicrosoftALog := func() (lastLog string) {
-		logFile := path.Join(dnsDir, "dns.log")
-		fileExists, err := BeARegularFile().Match(logFile)
-		Expect(err).To(Succeed())
-		if fileExists {
-			logBytes, err := ioutil.ReadFile(logFile)
-			Expect(err).NotTo(HaveOccurred())
-			logs := string(logBytes)
-			for _, log := range strings.Split(logs, "\n") {
-				if strings.Contains(log, `"qname":"microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
-					lastLog = log
-				}
+		dnsLogs, err := getDNSLogs(path.Join(dnsDir, "dns.log"))
+		Expect(err).NotTo(HaveOccurred())
+		for _, log := range dnsLogs {
+			if strings.Contains(log, `"qname":"microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
+				lastLog = log
 			}
 		}
 		return
