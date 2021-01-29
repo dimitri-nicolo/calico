@@ -60,7 +60,14 @@ func getDNSLogs(logFile string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return strings.Split(string(logBytes), "\n"), nil
+	var logs []string
+	for _, log := range strings.Split(string(logBytes), "\n") {
+		// Filter out empty strings returned by strings.Split.
+		if log != "" {
+			logs = append(logs, log)
+		}
+	}
+	return logs, nil
 }
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
