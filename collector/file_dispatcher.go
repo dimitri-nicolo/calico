@@ -87,7 +87,7 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 			}
 		}
 	case []*DNSLog:
-		log.Info("Dispatching DNS logs to file")
+		log.Debug("Dispatching DNS logs to file")
 		for _, l := range fl {
 			var b []byte
 			var err error
