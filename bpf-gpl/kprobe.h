@@ -96,9 +96,15 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	}
 
 	if (val == NULL) {
-		v4_value.timestamp = ts;
 		v4_value.bytes = bytes;
-		event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.bytes, proto, !tx);
+		ret = event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.bytes, proto, !tx);
+		if (ret == 0) {
+			/* Set the timestamp only if we managed to send the event.
+			 * Otherwise zero timestamp makes the next call to try to send the
+			 * event again.
+			 */
+			v4_value.timestamp = ts;
+		}
 		if (tx) {
 			ret = cali_v4_txstats_update_elem(&key, &v4_value, 0);
 		} else {
@@ -110,8 +116,14 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	} else {
 		diff = ts - val->timestamp;
 		if (diff >= SEND_DATA_INTERVAL) {
-			event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->bytes, proto, !tx);
-			val->timestamp = ts;
+			ret = event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->bytes, proto, !tx);
+			if (ret == 0) {
+				/* Update the timestamp only if we managed to send the
+				 * event. Otherwise keep the old timestamp so that next
+				 * call will try to send the event again.
+				 */
+				val->timestamp = ts;
+			}
 		}
 		val->bytes += bytes;
 	}

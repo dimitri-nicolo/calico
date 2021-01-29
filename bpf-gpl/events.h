@@ -45,9 +45,9 @@ struct event_proto_stats_v4 {
 	__u32 isRx;
 };
 
-static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
-					__u32 saddr, __u16 sport, __u32 daddr,
-					__u16 dport, __u32 bytes, __u32 proto, __u32 isRx)
+static CALI_BPF_INLINE int event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
+					      __u32 saddr, __u16 sport, __u32 daddr,
+					      __u16 dport, __u32 bytes, __u32 proto, __u32 isRx)
 {
 	struct event_proto_stats_v4 event;
 
@@ -67,6 +67,8 @@ static CALI_BPF_INLINE void event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 	if (err != 0) {
 		CALI_DEBUG("kprobe: perf_commit_event returns %d\n", err);
 	}
+
+	return err;
 }
 
 static CALI_BPF_INLINE void event_flow_log(struct __sk_buff *skb, struct cali_tc_state *state)
