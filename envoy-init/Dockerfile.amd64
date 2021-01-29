@@ -4,6 +4,13 @@ RUN apk update && apk upgrade && apk add iptables
 ADD init_iptables.sh init_iptables.sh
 RUN chmod u+x init_iptables.sh
 
+# Set permissions specifically for OpenShift
+RUN chgrp -R 0 /sbin/iptables && \
+    chmod -R g=u /sbin/iptables
+
+RUN chgrp -R 0 /usr/lib/xtables && \
+    chmod -R g=u /usr/lib/xtables
+
 FROM scratch
 
 COPY --from=base /sbin/iptables /sbin/iptables
