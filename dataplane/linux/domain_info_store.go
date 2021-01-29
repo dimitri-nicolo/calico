@@ -796,7 +796,7 @@ func (s *domainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, 
 		key.clientIP = ipv4.SrcIP.String()
 		key.dnsID = dns.ID
 		if _, exists := s.requestTimestamp[key]; exists {
-			log.Debugf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
+			log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
 		} else {
 			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", key)
 			s.requestTimestamp[key] = timestamp
