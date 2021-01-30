@@ -630,6 +630,11 @@ func (d *Data) AddRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) R
 	}
 
 	if ru == RuleMatchSet {
+		// The rule has just been set, update the last rule update time. This provides a window during which we can
+		// gather any remaining rule hits.
+		d.ruleUpdatedAt = monotime.Now()
+
+		// And make sure we update the lastUpdated time so that we don't expire the flow.
 		d.touch()
 		d.setDirtyFlag()
 	}
@@ -644,6 +649,11 @@ func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes in
 		d.EgressRuleTrace.replaceRuleID(ruleID, matchIdx, numPkts, numBytes)
 	}
 
+	// The rule has just been set, update the last rule update time. This provides a window during which we can
+	// gather any remaining rule hits.
+	d.ruleUpdatedAt = monotime.Now()
+
+	// And make sure we update the lastUpdated time so that we don't expire the flow.
 	d.touch()
 	d.setDirtyFlag()
 }
