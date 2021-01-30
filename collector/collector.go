@@ -263,10 +263,6 @@ func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchI
 		c.handleDataEndpointOrRulesChanged(data)
 		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
 	}
-
-	// The rule has just been set, update the last rule update time. This provides a window during which we can
-	// gather any remaining rule hits.
-	data.ruleUpdatedAt = monotime.Now()
 }
 
 func (c *collector) handleDataEndpointOrRulesChanged(data *Data) {
