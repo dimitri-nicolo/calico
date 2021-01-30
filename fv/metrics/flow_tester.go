@@ -123,19 +123,8 @@ func (t *FlowTester) PopulateFromFlowLogs(flowLogsOutput string) error {
 			}
 
 			// Accumulate flow and packet counts for this FlowMeta.
-			if _, ok := t.flowsStarted[ii][fl.FlowMeta]; !ok {
-				t.flowsStarted[ii][fl.FlowMeta] = 0
-			}
 			t.flowsStarted[ii][fl.FlowMeta] += fl.NumFlowsStarted
-
-			if _, ok := t.flowsCompleted[ii][fl.FlowMeta]; !ok {
-				t.flowsCompleted[ii][fl.FlowMeta] = 0
-			}
 			t.flowsCompleted[ii][fl.FlowMeta] += fl.NumFlowsCompleted
-
-			if _, ok := t.packets[ii][fl.FlowMeta]; !ok {
-				t.packets[ii][fl.FlowMeta] = 0
-			}
 			t.packets[ii][fl.FlowMeta] += fl.PacketsIn + fl.PacketsOut
 		}
 		for meta, count := range t.flowsStarted[ii] {

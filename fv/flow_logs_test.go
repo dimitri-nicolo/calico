@@ -249,6 +249,26 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			}
 			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected HostEndpoint iptables rules to appear")
+
+			// Wait for felix to see and program some expected nflog entries.
+			rulesProgrammed := func() bool {
+				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				out1, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				if strings.Count(out0, "ARE0|default") == 0 {
+					return false
+				}
+				if strings.Count(out1, "default.gnp-1") == 0 {
+					return false
+				}
+				if !applyOnForwardSupported && strings.Count(out1, "default.np-1") == 0 {
+					return false
+				}
+				return true
+			}
+			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected iptables rules to appear on the correct felix instances")
 		} else {
 			time.Sleep(3 * time.Second)
 		}
@@ -268,8 +288,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 		// Do 3 rounds of connectivity checking.
 		cc.CheckConnectivity()
+		for ii := range felixes {
+			felixes[ii].Exec("conntrack", "-L")
+		}
 		cc.CheckConnectivity()
+		for ii := range felixes {
+			felixes[ii].Exec("conntrack", "-L")
+		}
 		cc.CheckConnectivity()
+		for ii := range felixes {
+			felixes[ii].Exec("conntrack", "-L")
+		}
 
 		if bpfEnabled {
 			// Make sure that conntrack scanning ticks at least once
@@ -285,6 +314,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		for ii := range felixes {
 			felixes[ii].Exec("conntrack", "-F")
 		}
+		for ii := range felixes {
+			felixes[ii].Exec("conntrack", "-L")
+		}
 
 		flowLogsReaders = []metrics.FlowLogReader{}
 		for _, f := range felixes {
@@ -293,7 +325,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	})
 
 	checkFlowLogs := func(flowLogsOutput string) {
-		// Here, by way of illustrating what we need to check for, are the allow
+		// Here, by way of illustrating what we need to check for, are the allowed
 		// flow logs that we actually see for this test, as grouped and logged by
 		// the code below that includes "started:" and "completed:".
 		//
@@ -712,7 +744,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 		BeforeEach(func() {
 			opts.EnableCloudWatchLogs()
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "1"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 
 			// Defaults for how we expect flow logs to be generated.
@@ -771,7 +803,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	cloudAndFile := func(flowLogsOutput string) {
 		BeforeEach(func() {
 			opts.EnableCloudWatchLogs()
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 
 			// Defaults for how we expect flow logs to be generated.
@@ -904,7 +936,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			expectation.aggregationForDenied = AggrBySourcePort
 			opts.EnableFlowLogsFile()
 
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		})
 
