@@ -44,5 +44,99 @@ CALI_MAP_V1(cali_v4_rxstats,
 		BPF_MAP_TYPE_LRU_HASH,
 		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
 		511000, 0, MAP_PIN_GLOBAL)
-#endif /* __CALI_KPROBE_H__ */
 
+static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
+						struct sock_common *sk_cmn,
+						__u32 proto,
+						int bytes,
+						int tx)
+{
+	__u32 saddr = 0, daddr = 0, pid = 0;
+	__u16 family = 0, sport = 0, dport = 0;
+	__u64 ts = 0; __u64 diff = 0;
+	int ret = 0;
+	struct calico_kprobe_proto_v4_value v4_value = {};
+	struct calico_kprobe_proto_v4_value *val = NULL;
+	struct calico_kprobe_proto_v4_key key = {};
+
+	if (!sk_cmn) {
+		return 0;
+	}
+
+	bpf_probe_read(&family, 2, &sk_cmn->skc_family);
+	if (family != 2 /* AF_INET */) {
+		return 0;
+	}
+
+	bpf_probe_read(&sport, 2, &sk_cmn->skc_num);
+	bpf_probe_read(&dport, 2, &sk_cmn->skc_dport);
+	bpf_probe_read(&saddr, 4, &sk_cmn->skc_rcv_saddr);
+	bpf_probe_read(&daddr, 4, &sk_cmn->skc_daddr);
+
+	/* Do not send data when any of src ip,src port, dst ip, dst port is 0.
+	 * This being the socket data, value of 0 indicates a socket in listening
+	 * state. Further data cannot be correlated in felix.
+	 */
+	if (!sport || !dport || !saddr || !daddr) {
+		return 0;
+	}
+
+	pid = bpf_get_current_pid_tgid() >> 32;
+	ts = bpf_ktime_get_ns();
+	key.pid = pid;
+	key.saddr = saddr;
+	key.sport = sport;
+	key.daddr = daddr;
+	key.dport = dport;
+
+	if (tx) {
+		val = cali_v4_txstats_lookup_elem(&key);
+	} else {
+		val = cali_v4_rxstats_lookup_elem(&key);
+	}
+
+	if (val == NULL) {
+		v4_value.bytes = bytes;
+		ret = event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.bytes, proto, !tx);
+		if (ret == 0) {
+			/* Set the timestamp only if we managed to send the event.
+			 * Otherwise zero timestamp makes the next call to try to send the
+			 * event again.
+			 */
+			v4_value.timestamp = ts;
+		}
+		if (tx) {
+			ret = cali_v4_txstats_update_elem(&key, &v4_value, 0);
+		} else {
+			ret = cali_v4_rxstats_update_elem(&key, &v4_value, 0);
+		}
+	} else {
+		diff = ts - val->timestamp;
+		if (diff >= SEND_DATA_INTERVAL) {
+			ret = event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->bytes, proto, !tx);
+			if (ret == 0) {
+				/* Update the timestamp only if we managed to send the
+				 * event. Otherwise keep the old timestamp so that next
+				 * call will try to send the event again.
+				 */
+				val->timestamp = ts;
+			}
+		}
+		val->bytes += bytes;
+	}
+
+	return 0;
+}
+
+static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u32 proto, int tx)
+{
+	int bytes = 0;
+	struct sock_common *sk_cmn = NULL;
+
+	sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
+	bytes = (int)PT_REGS_PARM3(ctx);
+	return kprobe_collect_stats(ctx, sk_cmn, proto, bytes, tx);
+}
+
+
+#endif /* __CALI_KPROBE_H__ */
