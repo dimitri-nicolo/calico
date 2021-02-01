@@ -4,8 +4,6 @@ package events
 
 import (
 	"bytes"
-	"encoding/binary"
-	"net"
 	"sync"
 	"time"
 
@@ -128,8 +126,8 @@ func (r *BPFProcessInfoCache) expireCacheEntries() {
 }
 
 func convertProtoEventToProcessInfoV4(event EventProtoStatsV4) collector.ProcessInfo {
-	srcIP := intToIPv4(event.Saddr)
-	dstIP := intToIPv4(event.Daddr)
+	srcIP := event.Saddr
+	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
 	tuple := collector.MakeTuple(srcIP, dstIP, int(event.Proto), sport, dport)
@@ -141,12 +139,4 @@ func convertProtoEventToProcessInfoV4(event EventProtoStatsV4) collector.Process
 			Pid:  int(event.Pid),
 		},
 	}
-}
-
-func intToIPv4(addr uint32) [16]byte {
-	ipv4 := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ipv4, addr)
-	var ipAddr [16]byte
-	copy(ipAddr[:], ipv4.To16())
-	return ipAddr
 }

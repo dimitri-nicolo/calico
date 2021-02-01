@@ -22,28 +22,49 @@
 #include "tracing.h"
 
 #define SEND_DATA_INTERVAL 10000000000
-struct __attribute__((__packed__)) calico_kprobe_proto_v4_key {
+struct __attribute__((__packed__)) calico_kprobe_stats_key {
 	__u32 pid;
-	__u32 saddr;
+	__u8  saddr[16];
 	__u16 sport;
-	__u32 daddr;
+	__u8  daddr[16];
 	__u16 dport;
 };
 
-struct calico_kprobe_proto_v4_value {
+struct calico_kprobe_stats_value {
 	__u32 bytes;
 	__u64	timestamp;
 };
 
-CALI_MAP_V1(cali_v4_txstats,
+CALI_MAP(cali_txstats, 2,
 		BPF_MAP_TYPE_LRU_HASH,
-		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
+		struct calico_kprobe_stats_key, struct calico_kprobe_stats_value,
 		511000, 0, MAP_PIN_GLOBAL)
 
-CALI_MAP_V1(cali_v4_rxstats,
+CALI_MAP(cali_rxstats, 2,
 		BPF_MAP_TYPE_LRU_HASH,
-		struct calico_kprobe_proto_v4_key, struct calico_kprobe_proto_v4_value,
+		struct calico_kprobe_stats_key, struct calico_kprobe_stats_value,
 		511000, 0, MAP_PIN_GLOBAL)
+
+static int CALI_BPF_INLINE IpAddrIsZero(__u8 *addr, __u16 family) {
+	__u32 zeroV4Addr = 0;
+	int result = 0;
+
+	if (family == 2) {
+		result = __builtin_memcmp(addr, &zeroV4Addr, sizeof(zeroV4Addr));
+	} else {
+		/* Check if IPv6 address is 0 */
+		if ((__builtin_memcmp(addr, &zeroV4Addr, sizeof(zeroV4Addr)) == 0) &&
+			(__builtin_memcmp(&addr[4], &zeroV4Addr, sizeof(zeroV4Addr)) == 0) &&
+			(__builtin_memcmp(&addr[8], &zeroV4Addr, sizeof(zeroV4Addr)) == 0) &&
+			(__builtin_memcmp(&addr[12], &zeroV4Addr, sizeof(zeroV4Addr)) == 0)) {
+			result = 0;
+		}
+	}
+	if (result == 0) {
+		return 1;
+	}
+	return 0;
+}
 
 static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 						struct sock_common *sk_cmn,
@@ -51,13 +72,14 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 						int bytes,
 						int tx)
 {
-	__u32 saddr = 0, daddr = 0, pid = 0;
+	__u8 saddr[16] = {0}, daddr[16] = {0};
+	__u32 pid = 0;
 	__u16 family = 0, sport = 0, dport = 0;
 	__u64 ts = 0; __u64 diff = 0;
 	int ret = 0;
-	struct calico_kprobe_proto_v4_value v4_value = {};
-	struct calico_kprobe_proto_v4_value *val = NULL;
-	struct calico_kprobe_proto_v4_key key = {};
+	struct calico_kprobe_stats_value v4_value = {};
+	struct calico_kprobe_stats_value *val = NULL;
+	struct calico_kprobe_stats_key key = {};
 
 	if (!sk_cmn) {
 		return 0;
@@ -70,34 +92,38 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 
 	bpf_probe_read(&sport, 2, &sk_cmn->skc_num);
 	bpf_probe_read(&dport, 2, &sk_cmn->skc_dport);
-	bpf_probe_read(&saddr, 4, &sk_cmn->skc_rcv_saddr);
-	bpf_probe_read(&daddr, 4, &sk_cmn->skc_daddr);
+	bpf_probe_read(saddr, 4, &sk_cmn->skc_rcv_saddr);
+	bpf_probe_read(daddr, 4, &sk_cmn->skc_daddr);
 
 	/* Do not send data when any of src ip,src port, dst ip, dst port is 0.
 	 * This being the socket data, value of 0 indicates a socket in listening
 	 * state. Further data cannot be correlated in felix.
 	 */
-	if (!sport || !dport || !saddr || !daddr) {
+
+	if (!sport || !dport || IpAddrIsZero(saddr, family) || IpAddrIsZero(daddr, family)) {
 		return 0;
 	}
 
 	pid = bpf_get_current_pid_tgid() >> 32;
 	ts = bpf_ktime_get_ns();
 	key.pid = pid;
-	key.saddr = saddr;
+	// v4Inv6Prefix {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff}
+	key.saddr[10] = key.saddr[11] = key.daddr[10] = key.daddr[11] = 0xff;
+	__builtin_memcpy(&key.saddr[12], saddr, 4);
+	__builtin_memcpy(&key.daddr[12], daddr, 4);
+
 	key.sport = sport;
-	key.daddr = daddr;
 	key.dport = dport;
 
 	if (tx) {
-		val = cali_v4_txstats_lookup_elem(&key);
+		val = cali_txstats_lookup_elem(&key);
 	} else {
-		val = cali_v4_rxstats_lookup_elem(&key);
+		val = cali_rxstats_lookup_elem(&key);
 	}
 
 	if (val == NULL) {
 		v4_value.bytes = bytes;
-		ret = event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, v4_value.bytes, proto, !tx);
+		ret = event_bpf_v4stats(ctx, pid, key.saddr, sport, key.daddr, dport, v4_value.bytes, proto, !tx);
 		if (ret == 0) {
 			/* Set the timestamp only if we managed to send the event.
 			 * Otherwise zero timestamp makes the next call to try to send the
@@ -106,14 +132,14 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 			v4_value.timestamp = ts;
 		}
 		if (tx) {
-			ret = cali_v4_txstats_update_elem(&key, &v4_value, 0);
+			ret = cali_txstats_update_elem(&key, &v4_value, 0);
 		} else {
-			ret = cali_v4_rxstats_update_elem(&key, &v4_value, 0);
+			ret = cali_rxstats_update_elem(&key, &v4_value, 0);
 		}
 	} else {
 		diff = ts - val->timestamp;
 		if (diff >= SEND_DATA_INTERVAL) {
-			ret = event_bpf_v4stats(ctx, pid, saddr, sport, daddr, dport, val->bytes, proto, !tx);
+			ret = event_bpf_v4stats(ctx, pid, key.saddr, sport, key.daddr, dport, val->bytes, proto, !tx);
 			if (ret == 0) {
 				/* Update the timestamp only if we managed to send the
 				 * event. Otherwise keep the old timestamp so that next
@@ -134,7 +160,14 @@ static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u32 proto, i
 	struct sock_common *sk_cmn = NULL;
 
 	sk_cmn = (struct sock_common*)PT_REGS_PARM1(ctx);
-	bytes = (int)PT_REGS_PARM3(ctx);
+	/* In case tcp_cleanup_rbuf, second argument is the number of bytes copied
+	 * to user space
+	 */
+	if (proto == IPPROTO_TCP && !tx) {
+		bytes = (int)PT_REGS_PARM2(ctx);
+	} else {
+		bytes = (int)PT_REGS_PARM3(ctx);
+	}
 	return kprobe_collect_stats(ctx, sk_cmn, proto, bytes, tx);
 }
 

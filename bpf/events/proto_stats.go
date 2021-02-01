@@ -17,8 +17,8 @@ const (
 type EventProtoStatsV4 struct {
 	Pid         uint32
 	Proto       uint32
-	Saddr       uint32
-	Daddr       uint32
+	Saddr       [16]byte
+	Daddr       [16]byte
 	Sport       uint16
 	Dport       uint16
 	Bytes       uint32
