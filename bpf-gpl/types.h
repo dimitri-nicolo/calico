@@ -92,7 +92,7 @@ struct cali_tc_state {
 
 	/* Result of the conntrack lookup. */
 	struct calico_ct_result ct_result;
-	__u32 _pad32;
+
 	/* Result of the NAT calculation.  Zeroed if there is no DNAT. */
 	struct calico_nat_dest nat_dest;
 	__u64 prog_start_time;
