@@ -9,7 +9,10 @@ Install an older patch release of {{site.prodname}}.
 
 ### Concepts
 
-Installing a patch release is easy. Just 1) untar a patch release to a local directory, 2) find the patch you need, and 3) apply the manifests by pointing to the URL of your local patch release. 
+Installing a patch release is easy:
+
+1. Download and "un-tar" a patch release to a local directory.
+1. Apply the downloaded manifests.
 
 ### Before you begin
 
