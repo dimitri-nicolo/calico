@@ -226,7 +226,7 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ## Update dependency pin
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+update-pins: guard-ssh-forwarding-bug proto/felixbackend.pb.go replace-libcalico-pin
 
 ###############################################################################
 ## Perform static checks
