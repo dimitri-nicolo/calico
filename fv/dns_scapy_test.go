@@ -44,6 +44,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+var bpfEnabled = (os.Getenv("FELIX_FV_ENABLE_BPF") == "true")
+
 var dnsDir string
 
 type mapping struct {
@@ -837,24 +839,27 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 		<-felix.WatchStdoutFor(regexp.MustCompile("Felix starting up"))
 		log.Info("Felix has restarted")
 
-		// Wait for trusted DNS servers ipset to be populated.
-		Eventually(func() bool {
-			out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
-			Expect(err).NotTo(HaveOccurred())
-			return (strings.Contains(out, w[1].IP+":53 (proto 17)") &&
-				strings.Contains(out, felix.IP+":53 (proto 17)") &&
-				strings.Contains(out, server.IP+":53 (proto 17)"))
-		}, "5s", "0.5s").Should(BeTrue())
+		if bpfEnabled {
+			// Wait for trusted DNS servers ipset to be populated.
+			Eventually(func() bool {
+				out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
+				Expect(err).NotTo(HaveOccurred())
+				return (strings.Contains(out, w[1].IP+":53 (proto 17)") &&
+					strings.Contains(out, felix.IP+":53 (proto 17)") &&
+					strings.Contains(out, server.IP+":53 (proto 17)"))
+			}, "5s", "0.5s").Should(BeTrue())
 
-		// Ensure workloads are set up.
-		for ii := range w {
-			Eventually(func() int {
-				return felix.NumTCBPFProgs(w[ii].InterfaceName)
-			}, "5s", "0.5s").Should(Equal(2))
-			Consistently(func() int {
-				return felix.NumTCBPFProgs(w[ii].InterfaceName)
-			}, "5s", "0.5s").Should(Equal(2))
+			// Ensure workloads are set up.
+			for ii := range w {
+				Eventually(func() int {
+					return felix.NumTCBPFProgs(w[ii].InterfaceName)
+				}, "5s", "0.5s").Should(Equal(2))
+				Consistently(func() int {
+					return felix.NumTCBPFProgs(w[ii].InterfaceName)
+				}, "5s", "0.5s").Should(Equal(2))
+			}
 		}
+		time.Sleep(5 * time.Second)
 
 		// Ensure that workload policy programs are in place.
 		cc = &connectivity.Checker{}
