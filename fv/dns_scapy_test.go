@@ -931,11 +931,18 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 		return pkt.Bytes()
 	}
 
-	checkSingleDNSLogWithLatencyAndNoWarnings := func(dnsLogC chan struct{}) func() (errs []error) {
+	checkSingleDNSLogWithLatencyAndNoWarnings := func(dnsLogC chan struct{}, allowHostLatencyBug bool) func() (errs []error) {
 		return func() (errs []error) {
 			select {
 			case <-dnsLogC:
-				errs = append(errs, errors.New("DNS warning logs were emitted"))
+				if !allowHostLatencyBug {
+					// In iptables mode a warning log can be emitted because
+					// we're missing timestamps on DNS packets sent from a
+					// host-networked client or server.  In turn this means we
+					// can't measure latency for exchanges involving a
+					// host-networked client or server.
+					errs = append(errs, errors.New("DNS warning logs were emitted"))
+				}
 			default:
 			}
 			dnsLogs, err := getDNSLogs(path.Join(dnsDir, "dns.log"))
@@ -947,7 +954,8 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 				if !strings.Contains(dnsLogs[0], `"count":1`) {
 					errs = append(errs, fmt.Errorf("Unexpected count in DNS log: %v", dnsLogs[0]))
 				}
-				if !strings.Contains(dnsLogs[0], `"latency_count":1`) {
+				if !allowHostLatencyBug && !strings.Contains(dnsLogs[0], `"latency_count":1`) {
+					// See just above for why we sometimes can't verify latency_count here.
 					errs = append(errs, fmt.Errorf("Unexpected latency_count in DNS log: %v", dnsLogs[0]))
 				}
 			}
@@ -960,6 +968,7 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 			clientContainer, serverContainer *containers.Container
 			clientIP, serverIP               string
 			clientNamespace, serverNamespace string
+			allowHostLatencyBug              bool
 		)
 		switch c := client.(type) {
 		case *workload.Workload:
@@ -972,6 +981,7 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 			clientContainer = c.Container
 			clientIP = c.IP
 			clientNamespace = "-"
+			allowHostLatencyBug = !bpfEnabled
 		}
 		switch s := server.(type) {
 		case *workload.Workload:
@@ -984,6 +994,7 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 			serverContainer = s.Container
 			serverIP = s.IP
 			serverNamespace = "-"
+			allowHostLatencyBug = !bpfEnabled
 		}
 		dnsLogC := felix.WatchStdoutFor(regexp.MustCompile("WARNING.*DNS"))
 		clientContainer.ExecWithInput(dnsRequestBytes(1), "/test-connection",
@@ -1002,7 +1013,7 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 			"--source-port=53",
 			"--protocol=udp-noconn",
 			"--stdin")
-		Eventually(checkSingleDNSLogWithLatencyAndNoWarnings(dnsLogC), "5s", "0.5s").Should(BeEmpty())
+		Eventually(checkSingleDNSLogWithLatencyAndNoWarnings(dnsLogC, allowHostLatencyBug), "5s", "0.5s").Should(BeEmpty())
 	}
 
 	It("logs correctly for (1) DNS from local workload client to local workload server", func() {
