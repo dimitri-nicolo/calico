@@ -280,7 +280,7 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
-update-pins: replace-libcalico-pin
+update-pins: proto/felixbackend.pb.go proto/healthz.pb.go replace-libcalico-pin
 
 ## Update dependency pins to their latest changeset, committing and pushing it.
 commit-pin-updates: update-pins git-status ci git-config git-commit git-push

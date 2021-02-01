@@ -21,6 +21,6 @@ replace (
 	// supply the go code.
 	github.com/envoyproxy/data-plane-api => github.com/projectcalico/data-plane-api v0.0.0-20210121211707-a620ff3c8f7e
 
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210123054027-5f6d58602b33
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210126182422-b334ce1a1d94
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
