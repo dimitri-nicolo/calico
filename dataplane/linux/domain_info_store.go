@@ -785,7 +785,6 @@ func (s *domainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, 
 			msgType = "response"
 		}
 		log.Warnf("DNS-LATENCY: Missing timestamp on DNS %v with ID %v", msgType, dns.ID)
-		return
 	}
 
 	// From here on we know we have a timestamp for the packet in hand.  It's a number of
@@ -805,14 +804,20 @@ func (s *domainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, 
 		// It's a response.
 		key.clientIP = ipv4.DstIP.String()
 		key.dnsID = dns.ID
-		if requestTime, exists := s.requestTimestamp[key]; exists {
-			latency := timestamp - requestTime
-			log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, key)
-			delete(s.requestTimestamp, key)
-			latencyAsDuration := time.Duration(latency)
-			latencyIfKnown = &latencyAsDuration
-		} else {
+		if requestTime, exists := s.requestTimestamp[key]; !exists {
 			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", key)
+		} else {
+			delete(s.requestTimestamp, key)
+			if requestTime == 0 {
+				log.Debug("DNS-LATENCY: Can't calculate latency because timestamp was missing on request")
+			} else if timestamp == 0 {
+				log.Debug("DNS-LATENCY: Can't calculate latency because timestamp is missing on response")
+			} else {
+				latency := timestamp - requestTime
+				log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, key)
+				latencyAsDuration := time.Duration(latency)
+				latencyIfKnown = &latencyAsDuration
+			}
 		}
 	}
 
