@@ -26,8 +26,8 @@ var (
 	tuple1        = collector.MakeTuple(ip1, ip2, 6, 40000, 80)
 	processEvent1 = events.EventProtoStatsV4{
 		Proto:       uint32(6),
-		Saddr:       uint32(176160782), // 10.128.0.14
-		Daddr:       uint32(176160775), // 10.128.0.7
+		Saddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 14}, // 10.128.0.14
+		Daddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 7},  // 10.128.0.7
 		Sport:       uint16(40000),
 		Dport:       uint16(80),
 		ProcessName: [events.ProcessNameLen]byte{99, 117, 114, 108, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -36,8 +36,8 @@ var (
 
 	processEvent1DifferentProcessName = events.EventProtoStatsV4{
 		Proto:       uint32(6),
-		Saddr:       uint32(176160782), // 10.128.0.14
-		Daddr:       uint32(176160775), // 10.128.0.7
+		Saddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 14}, // 10.128.0.14
+		Daddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 7},  // 10.128.0.7
 		Sport:       uint16(40000),
 		Dport:       uint16(80),
 		ProcessName: [events.ProcessNameLen]byte{119, 103, 101, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
