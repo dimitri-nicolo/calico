@@ -36,12 +36,12 @@ enum cali_ct_type {
 					 */
 };
 
-#define CALI_CT_FLAG_NAT_OUT	(1 << 0)
-#define CALI_CT_FLAG_DSR_FWD	(1 << 1) /* marks entry into the tunnel on the fwd node when dsr */
-#define CALI_CT_FLAG_NP_FWD	(1 << 2) /* marks entry into the tunnel on the fwd node */
-#define CALI_CT_FLAG_SKIP_FIB	(1 << 3) /* marks traffic that should pass through host IP stack */
-#define CALI_CT_FLAG_TRUST_DNS	(1 << 4) /* marks connection to a trusted DNS server */
-#define CALI_CT_FLAG_WORKLOAD	(1 << 5) /* marks a flow that was originated from a workload */
+#define CALI_CT_FLAG_NAT_OUT	0x01
+#define CALI_CT_FLAG_DSR_FWD	0x02 /* marks entry into the tunnel on the fwd node when dsr */
+#define CALI_CT_FLAG_NP_FWD	0x04 /* marks entry into the tunnel on the fwd node */
+#define CALI_CT_FLAG_SKIP_FIB	0x08 /* marks traffic that should pass through host IP stack */
+#define CALI_CT_FLAG_TRUST_DNS	0x10 /* marks connection to a trusted DNS server */
+#define CALI_CT_FLAG_WORKLOAD	0x20 /* marks a flow that was originated from a workload */
 
 struct calico_ct_leg {
 	__u64 bytes;
