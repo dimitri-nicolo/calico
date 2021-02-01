@@ -1005,23 +1005,23 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 		Eventually(checkSingleDNSLogWithLatencyAndNoWarnings(dnsLogC), "5s", "0.5s").Should(BeEmpty())
 	}
 
-	It("logs correctly for DNS from local workload client to local workload server", func() {
+	It("logs correctly for (1) DNS from local workload client to local workload server", func() {
 		testDNSExchange(w[0], w[1])
 	})
 
-	It("logs correctly for DNS from local workload client to server on host", func() {
+	It("logs correctly for (2) DNS from local workload client to server on host", func() {
 		testDNSExchange(w[0], felix)
 	})
 
-	It("logs correctly for DNS from client on host to local workload server", func() {
+	It("logs correctly for (3) DNS from client on host to local workload server", func() {
 		testDNSExchange(felix, w[1])
 	})
 
-	It("logs correctly for DNS from local workload client to server elsewhere", func() {
+	It("logs correctly for (4) DNS from local workload client to server elsewhere", func() {
 		testDNSExchange(w[0], server)
 	})
 
-	It("logs correctly for DNS from client on host to server elsewhere", func() {
+	It("logs correctly for (5) DNS from client on host to server elsewhere", func() {
 		testDNSExchange(felix, server)
 	})
 })
