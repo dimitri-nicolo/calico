@@ -6,7 +6,7 @@ canonical_url: '/getting-started/kubernetes/rancher'
 
 ### Big picture
 
-Install {{side.prodname}} as the required CNI for networking and/or network policy on Rancher-deployed clusters.
+Install {{site.prodname}} as the required CNI for networking and/or network policy on Rancher-deployed clusters.
 
 ### Before you begin
 
