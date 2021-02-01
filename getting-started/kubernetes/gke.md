@@ -19,7 +19,7 @@ Install {{site.prodname}} on a GKE managed Kubernetes cluster.
 
 Ensure that your GKE cluster that meets the following requirements:
 
-  - *Version `1.15.x` or newer
+  - *Version `1.18.x` or newer
 
   - *{% include open-new-window.html text='Intranode visibility' url='https://cloud.google.com/kubernetes-engine/docs/how-to/intranode-visibility' %} is enabled*.  This setting configures GKE to use the GKE CNI plugin, which is required.
 
