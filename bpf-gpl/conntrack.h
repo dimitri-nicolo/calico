@@ -168,14 +168,12 @@ create:
 
 	dump_ct_key(k);
 
-	__u32 ifindex = skb_ingress_ifindex(ct_ctx->skb);
-
 	src_to_dst->seqno = seq;
 	src_to_dst->syn_seen = syn;
 	src_to_dst->opener = 1;
 	src_to_dst->packets = 1;
 	src_to_dst->bytes = ct_ctx->skb->len;
-	src_to_dst->ifindex = ifindex;
+	src_to_dst->ifindex = ct_ctx->skb->ifindex;
 	CALI_DEBUG("NEW src_to_dst->ifindex %d\n", src_to_dst->ifindex);
 	dst_to_src->ifindex = CT_INVALID_IFINDEX;
 
