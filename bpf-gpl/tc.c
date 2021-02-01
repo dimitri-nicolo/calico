@@ -285,10 +285,13 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			// same at the WEP and the HEP.
 			CALI_DEBUG("report packet on trusted DNS connection\n");
 			calico_report_dns(&ctx);
-		} else if ((CALI_F_FROM_WEP || CALI_F_TO_HEP) &&
+		} else if ((CALI_F_FROM_WEP || CALI_F_TO_WEP || CALI_F_TO_HEP) &&
 			   (ct_result_rc(ctx.state->ct_result.rc) == CALI_CT_NEW) &&
 			   !skb_seen(skb)) {
-			// New outbound connection: check if it's to a trusted DNS server.
+			// New connection: check if it's to a trusted DNS server.
+			// Connection can be outbound, from a local workload or from a
+			// host-networked client, or from a host-networked client _to_ a
+			// local workload server.
 			//
 			// We use `skb_seen` here to avoid reporting the same outbound DNS
 			// request up to Felix twice, and to avoid marking the CT state at
