@@ -231,11 +231,15 @@ guard-ssh-forwarding-bug:
 
 LMA_REPO=github.com/tigera/lma
 LMA_BRANCH=$(PIN_BRANCH)
+LICENSING_REPO=github.com/tigera/licensing
+LICENSING_BRANCH=$(PIN_BRANCH)
 
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
+update-licensing-pin:
+	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin update-licensing-pin
 ###############################################################################
 
 ###############################################################################
