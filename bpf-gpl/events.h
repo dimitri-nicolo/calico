@@ -30,7 +30,7 @@
 #define EVENT_DNS		2
 #define EVENT_POLICY_VERDICT	3
 
-struct event_proto_stats_v4 {
+struct event_proto_stats {
 	struct perf_event_header hdr;
 	__u32 pid;
 	__u32 proto;
@@ -45,14 +45,14 @@ struct event_proto_stats_v4 {
 	__u32 isRx;
 };
 
-static CALI_BPF_INLINE int event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
+static CALI_BPF_INLINE int event_bpf_stats (struct pt_regs *ctx, __u32 pid,
 					      __u8 *saddr, __u16 sport, __u8 *daddr,
 					      __u16 dport, __u32 bytes, __u32 proto, __u32 isRx)
 {
-	struct event_proto_stats_v4 event;
+	struct event_proto_stats event;
 
 	__builtin_memset(&event, 0, sizeof(event));
-	event.hdr.len = sizeof(struct event_proto_stats_v4);
+	event.hdr.len = sizeof(struct event_proto_stats);
 	event.hdr.type = EVENT_PROTO_STATS_V4;
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
 	event.pid = pid;
@@ -65,7 +65,7 @@ static CALI_BPF_INLINE int event_bpf_v4stats (struct pt_regs *ctx, __u32 pid,
 	event.isRx = isRx;
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
-		CALI_DEBUG("event_proto_stats_v4: perf_commit_event returns %d\n", err);
+		CALI_DEBUG("event_proto_stats: perf_commit_event returns %d\n", err);
 	}
 
 	return err;

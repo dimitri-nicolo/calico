@@ -38,5 +38,17 @@ int kprobe__udp_sendmsg(struct pt_regs *ctx)
 	return kprobe_stats_body(ctx, IPPROTO_UDP, 1);
 }
 
+__attribute__((section("kprobe/udpv6_recvmsg")))
+int kprobe__udpv6_recvmsg(struct pt_regs *ctx)
+{
+        return kprobe_stats_body(ctx, IPPROTO_UDP, 0);
+}
+
+__attribute__((section("kprobe/udpv6_sendmsg")))
+int kprobe__udpv6_sendmsg(struct pt_regs *ctx)
+{
+        return kprobe_stats_body(ctx, IPPROTO_UDP, 1);
+}
+
 char ____license[] __attribute__((section("license"), used)) = "GPL";
 

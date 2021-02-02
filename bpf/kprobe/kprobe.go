@@ -32,7 +32,7 @@ const (
 )
 
 var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
-var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
+var udpFns = []string{"udp_sendmsg", "udp_recvmsg", "udpv6_sendmsg", "udpv6_recvmsg"}
 
 type kprobeFDs struct {
 	progFD       bpf.ProgFD
