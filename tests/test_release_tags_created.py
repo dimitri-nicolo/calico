@@ -23,6 +23,7 @@ MAPPED_COMPONENTS = {
     'cnx-node': 'node-private',
     'dikastes': 'app-policy-private',
     'fluentd': 'fluentd-docker',
+    'fluentd-windows': 'fluentd-docker',
     'es-proxy': 'es-proxy-image',
     'kibana': 'kibana-docker',
     'elasticsearch': 'elasticsearch-docker',
@@ -46,6 +47,8 @@ MAPPED_COMPONENTS = {
     'guardian': 'voltron',
     'dex': 'dexidp-docker',
     'honeypod-controller': 'honeypod-controller',
+    'key-cert-provisioner': 'key-cert-provisioner',
+    'anomaly_detection_jobs': 'anomaly_detection_jobs',
 }
 
 # Honeypod images aren't part of the release process.

@@ -46,6 +46,7 @@ EXCLUDED_IMAGES = [
     'voltron',
     'es-proxy',
     'fluentd',
+    'fluentd-windows',
     'es-curator',
     'elastic-tsee-installer',
     'compliance-controller',
@@ -66,6 +67,8 @@ EXCLUDED_IMAGES = [
     'honeypod-exp-service',
     'envoy-init',
     'envoy',
+    'anomaly_detection_jobs',
+    'key-cert-provisioner',
 
     # third party images
     'elasticsearch',
