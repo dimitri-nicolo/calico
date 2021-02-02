@@ -805,7 +805,7 @@ func (s *domainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, 
 		key.clientIP = ipv4.DstIP.String()
 		key.dnsID = dns.ID
 		if requestTime, exists := s.requestTimestamp[key]; !exists {
-			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", key)
+			log.Warnf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
 		} else {
 			delete(s.requestTimestamp, key)
 			if requestTime == 0 {
