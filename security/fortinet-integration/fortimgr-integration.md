@@ -44,7 +44,7 @@ The basic workflow is:
 - All
 
 **Supported version**
-- FortiManager v6.3
+- FortiManager v6.4
 
 **Note**: Other versions may work, but are not actively tested.
 

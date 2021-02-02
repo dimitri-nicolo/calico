@@ -41,7 +41,7 @@ The basic workflow is:
 **Supported version**
 
 - FortiGate v6.2
-- FortiManager v6.3
+- FortiManager v6.4
 
 **Note**: Other versions may work, but are not actively tested.
 
