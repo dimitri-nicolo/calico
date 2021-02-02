@@ -110,8 +110,8 @@ func fileHasMapping(lname, rname string) func() bool {
 	return fileHasMappings([]mapping{{lhs: lname, rhs: rname}})
 }
 
-func makeBPFConntrackEntry(aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
-	a2bLeg := conntrack.Leg{Opener: true}
+func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
+	a2bLeg := conntrack.Leg{Opener: true, Ifindex: uint32(ifIndex)}
 	b2aLeg := conntrack.Leg{Opener: false}
 
 	// BPF conntrack map convention is for the first IP to be the smaller one.  Bizarrely, the
@@ -207,7 +207,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 
 		// Same thing with calico-bpf.
-		key, val := makeBPFConntrackEntry(net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
+		key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
 		felix.Exec("calico-bpf", "conntrack", "write",
 			base64.StdEncoding.EncodeToString(key[:]),
 			base64.StdEncoding.EncodeToString(val[:]))
@@ -744,7 +744,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 
 		// Same thing with calico-bpf.
-		key, val := makeBPFConntrackEntry(net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
+		key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
 		felix.Exec("calico-bpf", "conntrack", "write",
 			base64.StdEncoding.EncodeToString(key[:]),
 			base64.StdEncoding.EncodeToString(val[:]))
