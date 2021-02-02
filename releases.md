@@ -9,7 +9,7 @@ version.
 {%- if site.archive %}
 - [latest](/) (currently {{site.data.versions.first.title}})
 - [nightly](/master/){: data-proofer-ignore=""} (master)
-- [{{site.data.versions.first.title}}](/archive/{{page.version}})
+- [{{site.data.versions.first.title}}](/{{page.version}})
 {%- for version in site.data.archives %}
 {%- if version.first %}
     {%- for v in version["legacy"] %}
