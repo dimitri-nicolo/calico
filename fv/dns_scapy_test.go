@@ -56,12 +56,13 @@ func mappingMatchesLine(m *mapping, line string) bool {
 	return strings.Contains(line, "\""+m.lhs+"\"") && strings.Contains(line, "\""+m.rhs+"\"")
 }
 
-func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() bool {
+func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() error {
 	mset := set.FromArray(mappings)
 	notset := set.FromArray(notMappings)
-	return func() bool {
+	return func() error {
 		f, err := os.Open(path.Join(dnsDir, "dnsinfo.txt"))
 		if err == nil {
+			var problems []string
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := scanner.Text()
@@ -72,41 +73,39 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() boo
 					}
 					return nil
 				})
-				foundWrongMapping := false
 				notset.Iter(func(item interface{}) error {
 					m := item.(mapping)
 					if mappingMatchesLine(&m, line) {
 						log.Infof("Found wrong mapping: %v", m)
-						foundWrongMapping = true
+						problems = append(problems, fmt.Sprintf("Found wrong mapping: %v", m))
 					}
 					return nil
 				})
-				if foundWrongMapping {
-					return false
-				}
 			}
 			if mset.Len() == 0 {
 				log.Info("All expected mappings found")
-				return true
 			} else {
 				log.Infof("Missing %v expected mappings", mset.Len())
 				mset.Iter(func(item interface{}) error {
 					m := item.(mapping)
 					log.Infof("Missed mapping: %v", m)
+					problems = append(problems, fmt.Sprintf("Missed mapping: %v", m))
 					return nil
 				})
 			}
+			if len(problems) > 0 {
+				return errors.New(strings.Join(problems, "\n"))
+			}
 		}
-		log.Info("Returning false by default")
-		return false
+		return err
 	}
 }
 
-func fileHasMappings(mappings []mapping) func() bool {
+func fileHasMappings(mappings []mapping) func() error {
 	return fileHasMappingsAndNot(mappings, nil)
 }
 
-func fileHasMapping(lname, rname string) func() bool {
+func fileHasMapping(lname, rname string) func() error {
 	return fileHasMappings([]mapping{{lhs: lname, rhs: rname}})
 }
 
@@ -229,11 +228,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	DescribeTable("DNS response processing",
-		func(dnsSpecs []string, check func() bool) {
+		func(dnsSpecs []string, check func() error) {
 			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
-			Eventually(check, "10s", "2s").Should(BeTrue())
+			Eventually(check, "10s", "2s").Should(Succeed())
 		},
 
 		Entry("A record", []string{
@@ -322,7 +321,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			Eventually(fileHasMappings([]mapping{
 				{lhs: "bankofsteve.com", rhs: "192.168.56.1"},
 				{lhs: "fidget.com", rhs: "2.3.4.5"},
-			}), "10s", "2s").Should(BeTrue())
+			}), "10s", "2s").Should(Succeed())
 		},
 		Entry("MX",
 			"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='MX'),an=(DNSRR(rrname='bankofsteve.com',type='MX',ttl=36000,rdata='mail.bankofsteve.com')))",
@@ -401,7 +400,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				{lhs: "alice.com", rhs: "10.10.10.2"},
 				{lhs: "alice.com", rhs: "10.10.10.4"},
 				{lhs: "alice.com", rhs: "10.10.10.6"},
-			}), "10s", "2s").Should(BeTrue())
+			}), "10s", "2s").Should(Succeed())
 		})
 	})
 
@@ -772,19 +771,17 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	}
 
 	DescribeTable("DNS response processing",
-		func(dnsSpecs []string, check func() bool) {
+		func(dnsSpecs []string, check func() error) {
 			dnsServerSetup(scapyTrusted)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
-			Eventually(check, "10s", "2s").Should(BeTrue())
+			Eventually(check, "10s", "2s").Should(Succeed())
 		},
 
 		Entry("A record", []string{
 			"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='A'),an=(DNSRR(rrname='bankofsteve.com',type='A',ttl=36000,rdata='192.168.56.1')))",
 		},
-			func() bool {
-				return fileHasMapping("bankofsteve.com", "192.168.56.1")()
-			},
+			fileHasMapping("bankofsteve.com", "192.168.56.1"),
 		),
 	)
 })
