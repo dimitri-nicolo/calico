@@ -4,6 +4,9 @@ description: L7 data that Calico Enterprise sends to Elasticsearch.
 canonical_url: /visibility/elastic/l7/datatypes
 ---
 
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
+
 ### Big picture
 
 {{site.prodname}} sends the following data to Elasticsearch. 

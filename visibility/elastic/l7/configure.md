@@ -4,6 +4,9 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
+
 ## Big Picture
 
 Use {{site.prodname}} L7 logs to monitor application activity.
