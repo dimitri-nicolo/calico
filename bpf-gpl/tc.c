@@ -268,6 +268,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		// state for an existing (and trusted) UDP connection.
 		if ((ctx.state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS) &&
 		    ((ctx.state->ct_result.ifindex_created == skb->ifindex) ||
+		     (ctx.state->ct_result.ifindex_created == CT_INVALID_IFINDEX) ||
 		     (ct_result_rc(ctx.state->ct_result.rc) == CALI_CT_ESTABLISHED_BYPASS))) {
 			// This is either an inbound response, or an outbound request, on
 			// an existing connection that is trusted for DNS information.  A
