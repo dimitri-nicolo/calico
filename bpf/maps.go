@@ -339,10 +339,9 @@ func (b *PinnedMap) EnsureExists() error {
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		// sometimes, map create returns EINVAL when we specify the
-		// "name" argument. Retry with empty map name. one such
-		// platform is eks with amazon linux2.
-		logrus.Debug("Try recreating map with empty name ")
+		// In older kernels, map create returns EINVAL when we specify the
+		// "name" argument. Retry with empty map name.
+		logrus.WithField("name", b.versionedName()).Warn("Try recreating map with empty name ")
 		cmd = exec.Command("bpftool", "map", "create", b.versionedFilename(),
 			"type", b.Type,
 			"key", fmt.Sprint(b.KeySize),
