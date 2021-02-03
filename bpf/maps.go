@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -339,8 +339,20 @@ func (b *PinnedMap) EnsureExists() error {
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		logrus.WithField("out", string(out)).Error("Failed to run bpftool")
-		return err
+		logrus.Info("Retrying map creation with empty name ")
+		cmd = exec.Command("bpftool", "map", "create", b.versionedFilename(),
+			"type", b.Type,
+			"key", fmt.Sprint(b.KeySize),
+			"value", fmt.Sprint(b.ValueSize),
+			"entries", fmt.Sprint(b.MaxEntries),
+			"name", "",
+			"flags", fmt.Sprint(b.Flags),
+		)
+		out, err = cmd.CombinedOutput()
+		if err != nil {
+			logrus.WithField("out", string(out)).Error("Failed to run bpftool")
+			return err
+		}
 	}
 	b.fd, err = GetMapFDByPin(b.versionedFilename())
 	if err == nil {
