@@ -59,11 +59,6 @@
 typedef __u32 __bitwise __portpair;
 typedef __u64 __bitwise __addrpair;
 
-#if 0
-struct in6_addr {
-           __u8  s6_addr[16];  /* IPv6 address */
-   };
-#endif
 struct hlist_node {
 	struct hlist_node *next, **pprev;
 };
@@ -76,28 +71,28 @@ struct sock_common {
         /* skc_daddr and skc_rcv_saddr must be grouped on a 8 bytes aligned
          * address on 64bit arches : cf INET_MATCH()
          */
-        union {
-                __addrpair      skc_addrpair;
-                struct {
-                        __be32  skc_daddr;
-                        __be32  skc_rcv_saddr;
-                };
-        };
-        union  {
-                unsigned int    skc_hash;
-                __u16           skc_u16hashes[2];
-        };
-        /* skc_dport && skc_num must be grouped as well */
-        union {
-                __portpair      skc_portpair;
-                struct {
-                        __be16  skc_dport;
-                        __u16   skc_num;
-                };
-        };
+	union {
+		__addrpair      skc_addrpair;
+		struct {
+			__be32  skc_daddr;
+			__be32  skc_rcv_saddr;
+		};
+	};
+	union  {
+		unsigned int    skc_hash;
+		__u16           skc_u16hashes[2];
+	};
+	/* skc_dport && skc_num must be grouped as well */
+	union {
+		__portpair      skc_portpair;
+		struct {
+			__be16  skc_dport;
+			__u16   skc_num;
+		};
+	};
 
-        unsigned short          skc_family;
-        volatile unsigned char  skc_state;
+	unsigned short          skc_family;
+	volatile unsigned char  skc_state;
 	unsigned char		skc_reuse:4;
 	unsigned char		skc_reuseport:1;
 	unsigned char		skc_ipv6only:1;
@@ -112,7 +107,6 @@ struct sock_common {
 
 	struct in6_addr		skc_v6_daddr;
 	struct in6_addr		skc_v6_rcv_saddr;
-
 };
 
 #endif
