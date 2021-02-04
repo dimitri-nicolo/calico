@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,16 +17,20 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf/conntrack"
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
@@ -38,6 +43,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+var bpfEnabled = (os.Getenv("FELIX_FV_ENABLE_BPF") == "true")
+
 var dnsDir string
 
 type mapping struct {
@@ -48,12 +55,13 @@ func mappingMatchesLine(m *mapping, line string) bool {
 	return strings.Contains(line, "\""+m.lhs+"\"") && strings.Contains(line, "\""+m.rhs+"\"")
 }
 
-func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() bool {
+func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() error {
 	mset := set.FromArray(mappings)
 	notset := set.FromArray(notMappings)
-	return func() bool {
+	return func() error {
 		f, err := os.Open(path.Join(dnsDir, "dnsinfo.txt"))
 		if err == nil {
+			var problems []string
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := scanner.Text()
@@ -64,46 +72,44 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() boo
 					}
 					return nil
 				})
-				foundWrongMapping := false
 				notset.Iter(func(item interface{}) error {
 					m := item.(mapping)
 					if mappingMatchesLine(&m, line) {
 						log.Infof("Found wrong mapping: %v", m)
-						foundWrongMapping = true
+						problems = append(problems, fmt.Sprintf("Found wrong mapping: %v", m))
 					}
 					return nil
 				})
-				if foundWrongMapping {
-					return false
-				}
 			}
 			if mset.Len() == 0 {
 				log.Info("All expected mappings found")
-				return true
 			} else {
 				log.Infof("Missing %v expected mappings", mset.Len())
 				mset.Iter(func(item interface{}) error {
 					m := item.(mapping)
 					log.Infof("Missed mapping: %v", m)
+					problems = append(problems, fmt.Sprintf("Missed mapping: %v", m))
 					return nil
 				})
 			}
+			if len(problems) > 0 {
+				return errors.New(strings.Join(problems, "\n"))
+			}
 		}
-		log.Info("Returning false by default")
-		return false
+		return err
 	}
 }
 
-func fileHasMappings(mappings []mapping) func() bool {
+func fileHasMappings(mappings []mapping) func() error {
 	return fileHasMappingsAndNot(mappings, nil)
 }
 
-func fileHasMapping(lname, rname string) func() bool {
+func fileHasMapping(lname, rname string) func() error {
 	return fileHasMappings([]mapping{{lhs: lname, rhs: rname}})
 }
 
-func makeBPFConntrackEntry(aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
-	a2bLeg := conntrack.Leg{Opener: true}
+func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
+	a2bLeg := conntrack.Leg{Opener: true, Ifindex: uint32(ifIndex)}
 	b2aLeg := conntrack.Leg{Opener: false}
 
 	// BPF conntrack map convention is for the first IP to be the smaller one.  Bizarrely, the
@@ -199,7 +205,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 
 		// Same thing with calico-bpf.
-		key, val := makeBPFConntrackEntry(net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
+		key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
 		felix.Exec("calico-bpf", "conntrack", "write",
 			base64.StdEncoding.EncodeToString(key[:]),
 			base64.StdEncoding.EncodeToString(val[:]))
@@ -221,11 +227,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	DescribeTable("DNS response processing",
-		func(dnsSpecs []string, check func() bool) {
+		func(dnsSpecs []string, check func() error) {
 			dnsServerSetup(scapyTrusted, true)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
-			Eventually(check, "10s", "2s").Should(BeTrue())
+			Eventually(check, "10s", "2s").Should(Succeed())
 		},
 
 		Entry("A record", []string{
@@ -314,7 +320,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			Eventually(fileHasMappings([]mapping{
 				{lhs: "bankofsteve.com", rhs: "192.168.56.1"},
 				{lhs: "fidget.com", rhs: "2.3.4.5"},
-			}), "10s", "2s").Should(BeTrue())
+			}), "10s", "2s").Should(Succeed())
 		},
 		Entry("MX",
 			"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='MX'),an=(DNSRR(rrname='bankofsteve.com',type='MX',ttl=36000,rdata='mail.bankofsteve.com')))",
@@ -393,7 +399,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				{lhs: "alice.com", rhs: "10.10.10.2"},
 				{lhs: "alice.com", rhs: "10.10.10.4"},
 				{lhs: "alice.com", rhs: "10.10.10.6"},
-			}), "10s", "2s").Should(BeTrue())
+			}), "10s", "2s").Should(Succeed())
 		})
 	})
 
@@ -736,7 +742,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 
 		// Same thing with calico-bpf.
-		key, val := makeBPFConntrackEntry(net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
+		key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
 		felix.Exec("calico-bpf", "conntrack", "write",
 			base64.StdEncoding.EncodeToString(key[:]),
 			base64.StdEncoding.EncodeToString(val[:]))
@@ -764,19 +770,261 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	}
 
 	DescribeTable("DNS response processing",
-		func(dnsSpecs []string, check func() bool) {
+		func(dnsSpecs []string, check func() error) {
 			dnsServerSetup(scapyTrusted)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
-			Eventually(check, "10s", "2s").Should(BeTrue())
+			Eventually(check, "10s", "2s").Should(Succeed())
 		},
 
 		Entry("A record", []string{
 			"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='A'),an=(DNSRR(rrname='bankofsteve.com',type='A',ttl=36000,rdata='192.168.56.1')))",
 		},
-			func() bool {
-				return fileHasMapping("bankofsteve.com", "192.168.56.1")()
-			},
+			fileHasMapping("bankofsteve.com", "192.168.56.1"),
 		),
 	)
+})
+
+var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
+
+	var (
+		etcd    *containers.Container
+		felixes []*infrastructure.Felix
+		felix   *infrastructure.Felix
+		server  *infrastructure.Felix
+		client  client.Interface
+		infra   infrastructure.DatastoreInfra
+		w       [2]*workload.Workload
+		cc      *connectivity.Checker
+	)
+
+	BeforeEach(func() {
+		opts := infrastructure.DefaultTopologyOptions()
+		var err error
+		dnsDir, err = ioutil.TempDir("", "dnsinfo")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Start etcd and Felix, with no trusted DNS server IPs yet.
+		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
+		opts.ExtraVolumes["/var/run/netns"] = "/var/run/netns"
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
+		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "ACCEPT"
+		opts.IPIPEnabled = false
+		felixes, etcd, client, infra = infrastructure.StartNNodeEtcdTopology(2, opts)
+		felix = felixes[0]
+		server = felixes[1]
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
+
+		// Create a workload, using that profile.
+		for ii := range w {
+			iiStr := strconv.Itoa(ii)
+			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii].Configure(client)
+		}
+
+		// Configure Felix to trust itself, the other Felix, and w[1] as DNS servers.
+		utils.UpdateFelixConfig(client, func(fc *api.FelixConfiguration) {
+			fc.Spec.DNSTrustedServers = &[]string{felix.IP, server.IP, w[1].IP}
+		})
+		log.Info("Wait for Felix to restart")
+		<-felix.WatchStdoutFor(regexp.MustCompile("Felix starting up"))
+		log.Info("Felix has restarted")
+
+		if bpfEnabled {
+			// Wait for trusted DNS servers ipset to be populated.
+			Eventually(func() bool {
+				out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
+				Expect(err).NotTo(HaveOccurred())
+				return (strings.Contains(out, w[1].IP+":53 (proto 17)") &&
+					strings.Contains(out, felix.IP+":53 (proto 17)") &&
+					strings.Contains(out, server.IP+":53 (proto 17)"))
+			}, "5s", "0.5s").Should(BeTrue())
+
+			// Ensure workloads are set up.
+			for ii := range w {
+				Eventually(func() int {
+					return felix.NumTCBPFProgs(w[ii].InterfaceName)
+				}, "5s", "0.5s").Should(Equal(2))
+				Consistently(func() int {
+					return felix.NumTCBPFProgs(w[ii].InterfaceName)
+				}, "5s", "0.5s").Should(Equal(2))
+			}
+		}
+		time.Sleep(5 * time.Second)
+
+		// Ensure that workload policy programs are in place.
+		cc = &connectivity.Checker{}
+		cc.ExpectSome(w[0], w[1])
+		cc.ExpectSome(w[1], w[0])
+		cc.CheckConnectivity()
+	})
+
+	// Stop etcd and workloads, collecting some state if anything failed.
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("calico-bpf", "ipsets", "dump", "--debug")
+		}
+
+		for ii := range w {
+			w[ii].Stop()
+		}
+		felix.Stop()
+		server.Stop()
+		etcd.Stop()
+		infra.Stop()
+	})
+
+	dnsRequestBytes := func(id uint16) []byte {
+		pkt := gopacket.NewSerializeBuffer()
+		dns := &layers.DNS{
+			ID:      id,
+			QR:      false,
+			OpCode:  layers.DNSOpCodeQuery,
+			QDCount: 1,
+			Questions: []layers.DNSQuestion{{
+				Name:  []byte("example.com"),
+				Type:  layers.DNSTypeA,
+				Class: layers.DNSClassIN,
+			}},
+		}
+		err := dns.SerializeTo(pkt, gopacket.SerializeOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		return pkt.Bytes()
+	}
+
+	dnsResponseBytes := func(id uint16) []byte {
+		pkt := gopacket.NewSerializeBuffer()
+		dns := &layers.DNS{
+			ID:      id,
+			QR:      true,
+			OpCode:  layers.DNSOpCodeQuery,
+			QDCount: 1,
+			Questions: []layers.DNSQuestion{{
+				Name:  []byte("example.com"),
+				Type:  layers.DNSTypeA,
+				Class: layers.DNSClassIN,
+			}},
+			ANCount: 1,
+			Answers: []layers.DNSResourceRecord{{
+				Name:  []byte("example.com"),
+				Type:  layers.DNSTypeA,
+				Class: layers.DNSClassIN,
+				TTL:   3600,
+				IP:    net.ParseIP("1.2.3.4"),
+			}},
+		}
+		err := dns.SerializeTo(pkt, gopacket.SerializeOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		return pkt.Bytes()
+	}
+
+	checkSingleDNSLogWithLatencyAndNoWarnings := func(dnsLogC chan struct{}, allowHostLatencyBug bool) func() (errs []error) {
+		return func() (errs []error) {
+			select {
+			case <-dnsLogC:
+				if !allowHostLatencyBug {
+					// In iptables mode a warning log can be emitted because
+					// we're missing timestamps on DNS packets sent from a
+					// host-networked client or server.  In turn this means we
+					// can't measure latency for exchanges involving a
+					// host-networked client or server.
+					errs = append(errs, errors.New("DNS warning logs were emitted"))
+				}
+			default:
+			}
+			dnsLogs, err := getDNSLogs(path.Join(dnsDir, "dns.log"))
+			if err != nil {
+				errs = append(errs, err)
+			} else if len(dnsLogs) != 1 {
+				errs = append(errs, fmt.Errorf("Unexpected number of DNS logs: %v", len(dnsLogs)))
+			} else {
+				if !strings.Contains(dnsLogs[0], `"count":1`) {
+					errs = append(errs, fmt.Errorf("Unexpected count in DNS log: %v", dnsLogs[0]))
+				}
+				if !allowHostLatencyBug && !strings.Contains(dnsLogs[0], `"latency_count":1`) {
+					// See just above for why we sometimes can't verify latency_count here.
+					errs = append(errs, fmt.Errorf("Unexpected latency_count in DNS log: %v", dnsLogs[0]))
+				}
+			}
+			return
+		}
+	}
+
+	testDNSExchange := func(client, server interface{}) {
+		var (
+			clientContainer, serverContainer *containers.Container
+			clientIP, serverIP               string
+			clientNamespace, serverNamespace string
+			allowHostLatencyBug              bool
+		)
+		switch c := client.(type) {
+		case *workload.Workload:
+			// Client is a workload.
+			clientContainer = c.C
+			clientIP = c.IP
+			clientNamespace = c.NamespacePath()
+		case *infrastructure.Felix:
+			// Client is a host (Felix).
+			clientContainer = c.Container
+			clientIP = c.IP
+			clientNamespace = "-"
+			allowHostLatencyBug = !bpfEnabled
+		}
+		switch s := server.(type) {
+		case *workload.Workload:
+			// Server is a workload.
+			serverContainer = s.C
+			serverIP = s.IP
+			serverNamespace = s.NamespacePath()
+		case *infrastructure.Felix:
+			// Server is a host (Felix).
+			serverContainer = s.Container
+			serverIP = s.IP
+			serverNamespace = "-"
+			allowHostLatencyBug = !bpfEnabled
+		}
+		dnsLogC := felix.WatchStdoutFor(regexp.MustCompile("WARNING.*DNS"))
+		clientContainer.ExecWithInput(dnsRequestBytes(1), "/test-connection",
+			clientNamespace,
+			serverIP,
+			"53",
+			"--source-ip="+clientIP,
+			"--source-port=53",
+			"--protocol=udp-noconn",
+			"--stdin")
+		serverContainer.ExecWithInput(dnsResponseBytes(1), "/test-connection",
+			serverNamespace,
+			clientIP,
+			"53",
+			"--source-ip="+serverIP,
+			"--source-port=53",
+			"--protocol=udp-noconn",
+			"--stdin")
+		Eventually(checkSingleDNSLogWithLatencyAndNoWarnings(dnsLogC, allowHostLatencyBug), "5s", "0.5s").Should(BeEmpty())
+	}
+
+	It("logs correctly for (1) DNS from local workload client to local workload server", func() {
+		testDNSExchange(w[0], w[1])
+	})
+
+	It("logs correctly for (2) DNS from local workload client to server on host", func() {
+		testDNSExchange(w[0], felix)
+	})
+
+	It("logs correctly for (3) DNS from client on host to local workload server", func() {
+		testDNSExchange(felix, w[1])
+	})
+
+	It("logs correctly for (4) DNS from local workload client to server elsewhere", func() {
+		testDNSExchange(w[0], server)
+	})
+
+	It("logs correctly for (5) DNS from client on host to server elsewhere", func() {
+		testDNSExchange(felix, server)
+	})
 })

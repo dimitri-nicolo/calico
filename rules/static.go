@@ -717,6 +717,9 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		)
 	}
 
+	// Add rules to snoop DNS requests from a host-networked client workload.
+	rules = append(rules, r.dnsRequestSnoopingRules("", ipVersion)...)
+
 	// We don't currently police host -> endpoint according to the endpoint's ingress policy.
 	// That decision is based on pragmatism; it's generally very useful to be able to contact
 	// any local workload from the host and policing the traffic doesn't really protect
@@ -736,9 +739,6 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 			},
 		)
 	}
-
-	// Add rules to snoop DNS requests from a host-networked client workload.
-	rules = append(rules, r.dnsRequestSnoopingRules("", ipVersion)...)
 
 	// If we reach here, the packet is not going to a workload so it must be going to a
 	// host endpoint. It also has no endpoint mark so it must be going from a process.

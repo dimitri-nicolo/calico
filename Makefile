@@ -134,7 +134,8 @@ LDFLAGS=-ldflags "\
 GENERATED_FILES:=proto/felixbackend.pb.go bpf/asm/opcode_string.go
 
 # All Felix go files.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
+SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
+FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
 
 # Files to include in the Windows ZIP archive.
 WINDOWS_ARCHIVE_FILES := bin/tigera-felix.exe windows-packaging/README.txt windows-packaging/*.ps1
@@ -477,7 +478,7 @@ ut combined.coverprofile: $(SRC_FILES) build-bpf
 ###############################################################################
 # FV Tests
 ###############################################################################
-fv/fv.test: $(SRC_FILES)
+fv/fv.test: $(SRC_FILES) $(FV_SRC_FILES)
 	# We pre-build the FV test binaries so that we can run them
 	# outside a container and allow them to interact with docker.
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@'
@@ -623,7 +624,7 @@ bin/calico-bpf: $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
 
-bin/pktgen: $(SRC_FILES) $(LOCAL_BUILD_DEP)
+bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES) $(LOCAL_BUILD_DEP)
 	@echo Building pktgen...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \

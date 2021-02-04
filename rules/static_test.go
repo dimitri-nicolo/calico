@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -375,16 +375,16 @@ var _ = Describe("Static", func() {
 										Action: GotoAction{Target: ChainForwardEndpointMark},
 									},
 
+									// DNS request capture.
+									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+
 									// DNS response capture.
 									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
-
-									// DNS request capture.
-									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// Non-workload traffic, send to host chains.
 									{Action: ClearMarkAction{Mark: 0xf0}},
@@ -408,16 +408,16 @@ var _ = Describe("Static", func() {
 										Action: AcceptAction{},
 									},
 
+									// DNS request capture.
+									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+
 									// DNS response capture.
 									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
-
-									// DNS request capture.
-									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// Non-workload traffic, send to host chains.
 									{Action: ClearMarkAction{Mark: 0xf0}},
