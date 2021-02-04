@@ -1198,8 +1198,8 @@ each of the indicated key-value pairs as labels as well as access to the specifi
 <td>
 <code>componentResources</code><br>
 <em>
-<a href="#operator.tigera.io/v1.ComponentResource">
-[]ComponentResource
+<a href="#operator.tigera.io/v1.LogStorageComponentResource">
+[]LogStorageComponentResource
 </a>
 </em>
 </td>
@@ -2514,8 +2514,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
-<a href="#operator.tigera.io/v1.LogStorageSpec">LogStorageSpec</a>)
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
 </p>
 <p>The ComponentResource struct associates a ResourceRequirements with a component by name</p>
 <table>
@@ -3373,6 +3372,56 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.LogStorageComponentName">LogStorageComponentName
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.LogStorageComponentResource">LogStorageComponentResource</a>)
+</p>
+<p>LogStorageComponentName CRD enum</p>
+<h3 id="operator.tigera.io/v1.LogStorageComponentResource">LogStorageComponentResource
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.LogStorageSpec">LogStorageSpec</a>)
+</p>
+<p>The ComponentResource struct associates a ResourceRequirements with a component by name</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>componentName</code><br>
+<em>
+<a href="#operator.tigera.io/v1.LogStorageComponentName">
+LogStorageComponentName
+</a>
+</em>
+</td>
+<td>
+<p>ComponentName is an enum which identifies the component</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceRequirements</code><br>
+<em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<p>ResourceRequirements allows customization of limits and requests for compute resources such as cpu and memory.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.LogStorageSpec">LogStorageSpec
 </h3>
 <p>
@@ -3463,8 +3512,8 @@ each of the indicated key-value pairs as labels as well as access to the specifi
 <td>
 <code>componentResources</code><br>
 <em>
-<a href="#operator.tigera.io/v1.ComponentResource">
-[]ComponentResource
+<a href="#operator.tigera.io/v1.LogStorageComponentResource">
+[]LogStorageComponentResource
 </a>
 </em>
 </td>
