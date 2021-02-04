@@ -46,80 +46,7 @@ EKS is Amazon's managed Kubernetes offering.
 #### Create an eBPF compatible EKS cluster
 
 By default, EKS uses Amazon Linux 2 as its base image for EKS, which does not meet the kernel version requirement for
-eBPF mode.  Below, we give a couple of options for how to get the cluster running with a suitable kernel:
-
-
-{% tabs tab-group:grp1 %}
-<label:Bottlerocket,active:true>
-<%
-
-#### Option 1: Bottlerocket
-
-The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's
-[Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a
-container-optimised OS with an emphasis on security; it has a version of the kernel which is compatible with eBPF mode.
-
-* To create a 2-node test cluster with a Bottlerocket node group, run the command below.  It is important to use the config-file
-  approach to creating a cluster in order to set the additional IAM permissions for Bottlerocket.
-
-  ```
-  eksctl create cluster --config-file - <<EOF
-  apiVersion: eksctl.io/v1alpha5
-  kind: ClusterConfig
-  metadata:
-    name: my-calico-cluster
-    region: us-west-2
-    version: '1.18'
-  nodeGroups:
-    - name: ng-my-calico-cluster
-      instanceType: t3.medium
-      minSize: 0
-      maxSize: 2
-      desiredCapacity: 2
-      amiFamily: Bottlerocket
-      iam:
-        attachPolicyARNs:
-        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
-        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
-        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-  EOF
-  ```
-
-* Install {{site.prodname}} using the following manifest from the AWS VPC CNI project:
-  ```bash
-  kubectl apply -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/ae02a103b091f38b0aafd0ff6dd0e8f611cf9e67/config/master/calico.yaml
-  ```
-
-  > **Note**: Due to Bottlerocket's read-only file system, it is not possible to install {{site.prodname}} in
-  > {{site.prodname}} CNI mode at present.
-  {: .alert .alert-info}
-
-* [Install `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/install); it is needed for the following step.
-
-* Create a {{site.prodname}} IP pool that matches your VPC subnet and has the `natOutgoing` flag set.
-  The IP pool will not be used for IPAM since AWS VPC CNI has its own IPAM, but it will tell {{site.prodname}}
-  to SNAT traffic that is leaving the confines of your VPC.
-
-  ```
-  calicoctl apply -f - <<EOF
-  apiVersion: projectcalico.org/v3
-  kind: IPPool
-  metadata:
-    name: vpc-subnet
-  spec:
-    cidr: <your VPC subnet>
-    natOutgoing: true
-    nodeSelector: !all()
-  EOF
-  ```
-
-%>
-<label:Custom AMI>
-<%
-
-If you are familiar with the AMI creation process, it is also possible to create a custom AMI based on Ubuntu 20.04,
-which is suitable:
+eBPF mode.  Here's how to get the cluster running with a suitable image based on Ubuntu 20.04:
 
 * Create an EKS cluster with a nodeGroup that uses `amiFamily=Ubuntu1804`
 
@@ -198,9 +125,6 @@ which is suitable:
       --node-ami-family Ubuntu1804 \
       --node-ami <AMI ID>
     ```
-
-%>
-{% endtabs %}
 
 #### Configure {{site.prodname}} to connect directly to the API server
 * When configuring {{site.prodname}} to connect to the API server, we need to use the load balanced domain name
