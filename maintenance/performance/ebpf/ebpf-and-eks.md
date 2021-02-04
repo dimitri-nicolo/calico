@@ -49,7 +49,7 @@ EKS is Amazon's managed Kubernetes offering.
 #### Create an eBPF compatible EKS cluster
 
 By default, EKS uses Amazon Linux 2 as its base image for EKS, which does not meet the kernel version requirement for
-eBPF mode.  Unfortunately, {{site.prodname}} does not work on Amazon's Bottlerocket OS due to in incompatibility with 
+eBPF mode.  Unfortunately, {{site.prodname}} does not work on Amazon's Bottlerocket OS due to an incompatibility with 
 its read only file system. Here's how to get the cluster running with a suitable image based on Ubuntu 20.04:
 
 * Create an EKS cluster with a nodeGroup that uses `amiFamily=Ubuntu1804`
