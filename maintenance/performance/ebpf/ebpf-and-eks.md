@@ -3,7 +3,10 @@ title: Create an EKS cluster for eBPF mode
 description: Create an EKS cluster with a newer kernel, suitable for eBPF mode.
 ---
 
->**Note**: The eBPF dataplane does not currently support Calico Enterprise features. This guide is provided for preview only.
+>**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production 
+> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This 
+> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward 
+> policy); flow logs; and DNS policy.
 {: .alert .alert-info}
 
 ### Big picture
@@ -46,7 +49,8 @@ EKS is Amazon's managed Kubernetes offering.
 #### Create an eBPF compatible EKS cluster
 
 By default, EKS uses Amazon Linux 2 as its base image for EKS, which does not meet the kernel version requirement for
-eBPF mode.  Here's how to get the cluster running with a suitable image based on Ubuntu 20.04:
+eBPF mode.  Unfortunately, Calico Enterprise does not work on Amazon's Bottlerocket OS due to in incompatibility with 
+its read only file system. Here's how to get the cluster running with a suitable image based on Ubuntu 20.04:
 
 * Create an EKS cluster with a nodeGroup that uses `amiFamily=Ubuntu1804`
 
