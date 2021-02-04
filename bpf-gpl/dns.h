@@ -108,4 +108,63 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 	return;
 }
 
+static CALI_BPF_INLINE void calico_dns_check(struct cali_tc_ctx *ctx)
+{
+	if (ctx->state->ip_proto == IPPROTO_UDP) {
+		// UDP.  We need to recheck this, even when we know that the connection is
+		// trusted for DNS, because an ICMP packet can also match the conntrack
+		// state for an existing (and trusted) UDP connection.
+		if ((ctx->state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS) &&
+		    ((ctx->state->ct_result.ifindex_created == ctx->skb->ifindex) ||
+		     (ctx->state->ct_result.ifindex_created == CT_INVALID_IFINDEX) ||
+		     (ct_result_rc(ctx->state->ct_result.rc) == CALI_CT_ESTABLISHED_BYPASS))) {
+			// This is either an inbound response, or an outbound request, on
+			// an existing connection that is trusted for DNS information.  A
+			// common pattern appears to be for a DNS client to send A and
+			// AAAA lookups on (what we perceive as) the same UDP connection,
+			// and we want to report both; otherwise when Felix handles the
+			// AAAA response it won't be able to calculate a latency.
+			//
+			// Instead of checking CALI_F_TO/FROM_WEP/HEP, the principle here
+			// is to report any packet on a trusted DNS connection when it is
+			// passing through the same interface as that where the trusted
+			// DNS connection CT state was first created.  Note that this
+			// logic works both for responses and subsequent requests.
+			//
+			// Except... if a response comes through _another_ HEP/WEP
+			// interface first, that interface's TC program can set the
+			// CALI_SKB_MARK_BYPASS mark on the packet, when it knows that the
+			// packet could safely - from a policy perspective - skip all
+			// further TC programs.  So if we're in a TC program that's about
+			// to do that, we have to report now, as we won't have a chance in
+			// the TC program for the interface where the CT state was
+			// created.  CALI_SKB_MARK_BYPASS is only used when there is no
+			// NAT in the data path (on this host), so we _can_ correctly
+			// report the DNS packet from here, as we know the IPs and ports
+			// are the same as they would be at the interface that created the
+			// CT state.
+			CALI_DEBUG("report packet on trusted DNS connection\n");
+			calico_report_dns(ctx);
+		} else if ((CALI_F_FROM_WEP || CALI_F_TO_WEP || CALI_F_TO_HEP) &&
+			   (ct_result_rc(ctx->state->ct_result.rc) == CALI_CT_NEW) &&
+			   !skb_seen(ctx->skb)) {
+			// New connection: check if it's to a trusted DNS server.
+			// Connection can be outbound, from a local workload or from a
+			// host-networked client, or from a host-networked client _to_ a
+			// local workload server.
+			//
+			// We use `skb_seen` here to avoid reporting the same outbound DNS
+			// request up to Felix twice, and to avoid marking the CT state at
+			// the HEP - if different from the CT state at the WEP - as
+			// trusted for DNS.  The CT states _will_ be different if the node
+			// is doing an SNAT for outgoing traffic, and in that case, for a
+			// DNS lookup from a workload, we only want to handle the packets
+			// with the WEP CT state, so that we only get one DNS log per
+			// exchange, and with the correct workload details.
+			calico_check_for_dns(ctx);
+		}
+	}
+	return;
+}
+
 #endif /* __CALI_DNS_H__ */

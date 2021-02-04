@@ -38,7 +38,6 @@ import (
 	"github.com/projectcalico/felix/timeshim"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -786,7 +785,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	)
 })
 
-var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
+var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 
 	var (
 		etcd    *containers.Container
@@ -829,7 +828,7 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 		}
 
 		// Configure Felix to trust itself, the other Felix, and w[1] as DNS servers.
-		UpdateFelixConfig(client, func(fc *api.FelixConfiguration) {
+		utils.UpdateFelixConfig(client, func(fc *api.FelixConfiguration) {
 			fc.Spec.DNSTrustedServers = &[]string{felix.IP, server.IP, w[1].IP}
 		})
 		log.Info("Wait for Felix to restart")
@@ -876,10 +875,6 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 		}
 		felix.Stop()
 		server.Stop()
-
-		//if CurrentGinkgoTestDescription().Failed {
-		//	etcd.Exec("etcdctl", "ls", "--recursive", "/")
-		//}
 		etcd.Stop()
 		infra.Stop()
 	})
@@ -1033,21 +1028,3 @@ var _ = Describe("_BPF-SAFE_ BPF DNS logging", func() {
 		testDNSExchange(felix, server)
 	})
 })
-
-func UpdateFelixConfig(client client.Interface, deltaFn func(*api.FelixConfiguration)) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	cfg, err := client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
-	if _, doesNotExist := err.(cerrors.ErrorResourceDoesNotExist); doesNotExist {
-		cfg = api.NewFelixConfiguration()
-		cfg.Name = "default"
-		deltaFn(cfg)
-		_, err = client.FelixConfigurations().Create(ctx, cfg, options.SetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-	} else {
-		Expect(err).NotTo(HaveOccurred())
-		deltaFn(cfg)
-		_, err = client.FelixConfigurations().Update(ctx, cfg, options.SetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-	}
-}
