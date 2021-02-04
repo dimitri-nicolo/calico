@@ -157,15 +157,11 @@ func TestBPFLoaderWithTcpKprobe(t *testing.T) {
 	perfMap := perf.Map(mc, "perf_evnt", events.MaxCPUs)
 	err := perfMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
-	txStatMap := kprobe.MapProtov4Tx(mc)
-	err = txStatMap.EnsureExists()
+	kpStatMap := kprobe.MapKpStats(mc)
+	err = kpStatMap.EnsureExists()
 	Expect(err).NotTo(HaveOccurred())
 
-	rxStatMap := kprobe.MapProtov4Rx(mc)
-	err = rxStatMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-
-	loader, err := elf.NewLoaderFromFile(fileName, perfMap, txStatMap, rxStatMap)
+	loader, err := elf.NewLoaderFromFile(fileName, perfMap, kpStatMap)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(loader).NotTo(BeNil())
 
