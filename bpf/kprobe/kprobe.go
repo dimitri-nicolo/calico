@@ -32,7 +32,7 @@ const (
 )
 
 var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
-var udpFns = []string{"udp_sendmsg", "udp_recvmsg"}
+var udpFns = []string{"udp_sendmsg", "udp_recvmsg", "udpv6_sendmsg", "udpv6_recvmsg"}
 
 type kprobeFDs struct {
 	progFD       bpf.ProgFD
@@ -40,31 +40,24 @@ type kprobeFDs struct {
 }
 
 type bpfKprobe struct {
-	logLevel     string
-	protov4TxMap bpf.Map
-	protov4RxMap bpf.Map
-	evnt         events.Events
-	fdMap        map[string]kprobeFDs
+	logLevel   string
+	kpStatsMap bpf.Map
+	evnt       events.Events
+	fdMap      map[string]kprobeFDs
 }
 
 func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
-	v4TxMap := MapProtov4Tx(mc)
-	err := v4TxMap.EnsureExists()
-	if err != nil {
-		return nil
-	}
-	v4RxMap := MapProtov4Rx(mc)
-	err = v4RxMap.EnsureExists()
+	kpStatsMap := MapKpStats(mc)
+	err := kpStatsMap.EnsureExists()
 	if err != nil {
 		return nil
 	}
 
 	return &bpfKprobe{
-		logLevel:     logLevel,
-		evnt:         evnt,
-		protov4TxMap: v4TxMap,
-		protov4RxMap: v4RxMap,
-		fdMap:        make(map[string]kprobeFDs),
+		logLevel:   logLevel,
+		evnt:       evnt,
+		kpStatsMap: kpStatsMap,
+		fdMap:      make(map[string]kprobeFDs),
 	}
 }
 
@@ -94,7 +87,7 @@ func (k *bpfKprobe) AttachUDPv4() error {
 
 func (k *bpfKprobe) installKprobe(protocol string, fns []string) error {
 	filename := path.Join(bpf.ObjectDir, progFileName(protocol, k.logLevel))
-	loader, err := elf.NewLoaderFromFile(filename, k.evnt.Map(), k.protov4TxMap, k.protov4RxMap)
+	loader, err := elf.NewLoaderFromFile(filename, k.evnt.Map(), k.kpStatsMap)
 	if err != nil {
 		fmt.Errorf("error reading elf file")
 	}

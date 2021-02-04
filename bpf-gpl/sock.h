@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -55,35 +55,58 @@
 #ifndef _SOCK_H
 #define _SOCK_H
 
+#include <linux/in6.h>
 typedef __u32 __bitwise __portpair;
 typedef __u64 __bitwise __addrpair;
+
+struct hlist_node {
+	struct hlist_node *next, **pprev;
+};
+
+typedef struct {
+	void *net;
+} possible_net_t;
 
 struct sock_common {
         /* skc_daddr and skc_rcv_saddr must be grouped on a 8 bytes aligned
          * address on 64bit arches : cf INET_MATCH()
          */
-        union {
-                __addrpair      skc_addrpair;
-                struct {
-                        __be32  skc_daddr;
-                        __be32  skc_rcv_saddr;
-                };
-        };
-        union  {
-                unsigned int    skc_hash;
-                __u16           skc_u16hashes[2];
-        };
-        /* skc_dport && skc_num must be grouped as well */
-        union {
-                __portpair      skc_portpair;
-                struct {
-                        __be16  skc_dport;
-                        __u16   skc_num;
-                };
-        };
+	union {
+		__addrpair      skc_addrpair;
+		struct {
+			__be32  skc_daddr;
+			__be32  skc_rcv_saddr;
+		};
+	};
+	union  {
+		unsigned int    skc_hash;
+		__u16           skc_u16hashes[2];
+	};
+	/* skc_dport && skc_num must be grouped as well */
+	union {
+		__portpair      skc_portpair;
+		struct {
+			__be16  skc_dport;
+			__u16   skc_num;
+		};
+	};
 
-        unsigned short          skc_family;
-        volatile unsigned char  skc_state;
+	unsigned short          skc_family;
+	volatile unsigned char  skc_state;
+	unsigned char		skc_reuse:4;
+	unsigned char		skc_reuseport:1;
+	unsigned char		skc_ipv6only:1;
+	unsigned char		skc_net_refcnt:1;
+	int			skc_bound_dev_if;
+	union {
+		struct hlist_node	skc_bind_node;
+		struct hlist_node	skc_portaddr_node;
+	};
+	struct proto		*skc_prot;
+	possible_net_t		skc_net;
+
+	struct in6_addr		skc_v6_daddr;
+	struct in6_addr		skc_v6_rcv_saddr;
 };
 
 #endif

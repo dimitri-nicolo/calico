@@ -4,8 +4,6 @@ package events
 
 import (
 	"bytes"
-	"encoding/binary"
-	"net"
 	"sync"
 	"time"
 
@@ -35,15 +33,15 @@ type BPFProcessInfoCache struct {
 	stopOnce     sync.Once
 	wg           sync.WaitGroup
 	stopC        chan struct{}
-	eventV4C     <-chan EventProtoStatsV4
+	eventC       <-chan EventProtoStats
 	processInfoC chan collector.ProcessInfo
 }
 
 // NewBPFProcessInfoCache returns a new BPFProcessInfoCache
-func NewBPFProcessInfoCache(eventV4Chan <-chan EventProtoStatsV4, gcInterval time.Duration, entryTTL time.Duration) *BPFProcessInfoCache {
+func NewBPFProcessInfoCache(eventChan <-chan EventProtoStats, gcInterval time.Duration, entryTTL time.Duration) *BPFProcessInfoCache {
 	return &BPFProcessInfoCache{
 		stopC:        make(chan struct{}),
-		eventV4C:     eventV4Chan,
+		eventC:       eventChan,
 		expireTicker: jitter.NewTicker(gcInterval, gcInterval/10),
 		entryTTL:     entryTTL,
 		cache:        make(map[collector.Tuple]ProcessEntry),
@@ -67,8 +65,8 @@ func (r *BPFProcessInfoCache) run() {
 		select {
 		case <-r.stopC:
 			return
-		case event := <-r.eventV4C:
-			info := convertProtoEventToProcessInfoV4(event)
+		case event := <-r.eventC:
+			info := convertProtoEventToProcessInfo(event)
 			log.Debugf("Converted event %+v to process info %+v", event, info)
 			r.updateCache(info)
 		case <-r.expireTicker.Channel():
@@ -127,9 +125,9 @@ func (r *BPFProcessInfoCache) expireCacheEntries() {
 	}
 }
 
-func convertProtoEventToProcessInfoV4(event EventProtoStatsV4) collector.ProcessInfo {
-	srcIP := intToIPv4(event.Saddr)
-	dstIP := intToIPv4(event.Daddr)
+func convertProtoEventToProcessInfo(event EventProtoStats) collector.ProcessInfo {
+	srcIP := event.Saddr
+	dstIP := event.Daddr
 	sport := int(event.Sport)
 	dport := int(event.Dport)
 	tuple := collector.MakeTuple(srcIP, dstIP, int(event.Proto), sport, dport)
@@ -141,12 +139,4 @@ func convertProtoEventToProcessInfoV4(event EventProtoStatsV4) collector.Process
 			Pid:  int(event.Pid),
 		},
 	}
-}
-
-func intToIPv4(addr uint32) [16]byte {
-	ipv4 := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ipv4, addr)
-	var ipAddr [16]byte
-	copy(ipAddr[:], ipv4.To16())
-	return ipAddr
 }

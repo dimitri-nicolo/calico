@@ -20,31 +20,19 @@ import (
 	"github.com/projectcalico/felix/bpf"
 )
 
-const protoV4KeySize = 16
-const protoV4ValueSize = 16
+const statsKeySize = 44
+const statsValueSize = 16
 
-var Protov4TxMapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_txstats",
+var KpStatsMapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_kpstats",
 	Type:       "lru_hash",
-	KeySize:    protoV4KeySize,
-	ValueSize:  protoV4ValueSize,
+	KeySize:    statsKeySize,
+	ValueSize:  statsValueSize,
 	MaxEntries: 511000,
-	Name:       "cali_v4_txstats",
+	Name:       "cali_kpstats",
+	Version:    2,
 }
 
-func MapProtov4Tx(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(Protov4TxMapParameters)
-}
-
-var Protov4RxMapParameters = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_rxstats",
-	Type:       "lru_hash",
-	KeySize:    protoV4KeySize,
-	ValueSize:  protoV4ValueSize,
-	MaxEntries: 511000,
-	Name:       "cali_v4_rxstats",
-}
-
-func MapProtov4Rx(mc *bpf.MapContext) bpf.Map {
-	return mc.NewPinnedMap(Protov4RxMapParameters)
+func MapKpStats(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(KpStatsMapParameters)
 }

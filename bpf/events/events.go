@@ -25,8 +25,8 @@ const (
 
 	// TypeLostEvents does not carry any other information except the number of lost events.
 	TypeLostEvents Type = 0
-	//TypeProtoStatsV4 protocol v4 stats
-	TypeProtoStatsV4 Type = 1
+	//TypeProtoStats protocol v4 stats
+	TypeProtoStats Type = 1
 	// TypeDNSEvent reports information on DNS packets
 	TypeDNSEvent Type = 2
 	// TypePolicyVerdict is emitted when a policy program reaches a verdict

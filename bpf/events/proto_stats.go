@@ -13,12 +13,12 @@ const (
 	ProcessNameLen = 16
 )
 
-// EventProtoStatsV4 represets common stats that we can collect for protocols.
-type EventProtoStatsV4 struct {
+// EventProtoStats represets common stats that we can collect for protocols.
+type EventProtoStats struct {
 	Pid         uint32
 	Proto       uint32
-	Saddr       uint32
-	Daddr       uint32
+	Saddr       [16]byte
+	Daddr       [16]byte
 	Sport       uint16
 	Dport       uint16
 	Bytes       uint32
@@ -28,25 +28,25 @@ type EventProtoStatsV4 struct {
 	IsRx        uint32
 }
 
-func parseEventProtov4Stats(raw []byte) EventProtoStatsV4 {
-	var e EventProtoStatsV4
+func parseEventProtov4Stats(raw []byte) EventProtoStats {
+	var e EventProtoStats
 	eptr := (unsafe.Pointer)(&e)
-	bytes := (*[unsafe.Sizeof(EventProtoStatsV4{})]byte)(eptr)
+	bytes := (*[unsafe.Sizeof(EventProtoStats{})]byte)(eptr)
 	copy(bytes[:], raw)
 	return e
 }
 
-type EventProtoStatsV4Sink struct {
-	outChan chan EventProtoStatsV4
+type EventProtoStatsSink struct {
+	outChan chan EventProtoStats
 }
 
-func NewEventProtoStatsV4Sink() *EventProtoStatsV4Sink {
-	return &EventProtoStatsV4Sink{
-		outChan: make(chan EventProtoStatsV4, 1000),
+func NewEventProtoStatsSink() *EventProtoStatsSink {
+	return &EventProtoStatsSink{
+		outChan: make(chan EventProtoStats, 1000),
 	}
 }
 
-func (sink *EventProtoStatsV4Sink) HandleEvent(e Event) {
+func (sink *EventProtoStatsSink) HandleEvent(e Event) {
 	parsedEvent := parseEventProtov4Stats(e.Data())
 	if log.GetLevel() == log.DebugLevel {
 		log.WithField("event", parsedEvent).Debug("Received Protocol stats")
@@ -54,6 +54,6 @@ func (sink *EventProtoStatsV4Sink) HandleEvent(e Event) {
 	sink.outChan <- parsedEvent
 }
 
-func (sink *EventProtoStatsV4Sink) EventProtoStatsV4Chan() <-chan EventProtoStatsV4 {
+func (sink *EventProtoStatsSink) EventProtoStatsChan() <-chan EventProtoStats {
 	return sink.outChan
 }
