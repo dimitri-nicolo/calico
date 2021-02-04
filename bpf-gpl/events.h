@@ -26,7 +26,7 @@
 
 #define TASK_COMM_LEN 16
 
-#define EVENT_PROTO_STATS_V4	1
+#define EVENT_PROTO_STATS	1
 #define EVENT_DNS		2
 #define EVENT_POLICY_VERDICT	3
 
@@ -51,7 +51,7 @@ static CALI_BPF_INLINE int event_bpf_stats (struct pt_regs *ctx, __u32 pid,
 {
 	struct event_proto_stats event = {
 		.hdr.len = sizeof(struct event_proto_stats),
-		.hdr.type = EVENT_PROTO_STATS_V4,
+		.hdr.type = EVENT_PROTO_STATS,
 		.pid = pid,
 		.proto = proto,
 		.sport = sport,

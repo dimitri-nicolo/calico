@@ -654,10 +654,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var (
-		bpfEvnt               events.Events
-		bpfEventPoller        *bpfEventPoller
-		bpfEndpointManager    *bpfEndpointManager
-		eventProtoStatsV4Sink *events.EventProtoStatsV4Sink
+		bpfEvnt             events.Events
+		bpfEventPoller      *bpfEventPoller
+		bpfEndpointManager  *bpfEndpointManager
+		eventProtoStatsSink *events.EventProtoStatsSink
 
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
@@ -697,9 +697,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
 		}
 
-		log.Info("BPF: Registered events sink for TypeProtoStatsV4")
-		eventProtoStatsV4Sink = events.NewEventProtoStatsV4Sink()
-		bpfEventPoller.Register(events.TypeProtoStatsV4, eventProtoStatsV4Sink.HandleEvent)
+		log.Info("BPF: Registered events sink for TypeProtoStats")
+		eventProtoStatsSink = events.NewEventProtoStatsSink()
+		bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
 	}
 
 	if config.BPFEnabled {
@@ -1104,7 +1104,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Debug("Process stats collection is required, create process info cache")
 			gcInterval := time.Second * 1
 			entryTTL := time.Second * 10
-			prd := events.NewBPFProcessInfoCache(eventProtoStatsV4Sink.EventProtoStatsV4Chan(), gcInterval, entryTTL)
+			prd := events.NewBPFProcessInfoCache(eventProtoStatsSink.EventProtoStatsChan(), gcInterval, entryTTL)
 			processInfoCache = prd
 		}
 
