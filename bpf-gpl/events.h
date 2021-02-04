@@ -49,20 +49,20 @@ static CALI_BPF_INLINE int event_bpf_stats (struct pt_regs *ctx, __u32 pid,
 					      __u8 *saddr, __u16 sport, __u8 *daddr,
 					      __u16 dport, __u32 bytes, __u32 proto, __u32 isRx)
 {
-	struct event_proto_stats event;
+	struct event_proto_stats event = {
+		.hdr.len = sizeof(struct event_proto_stats),
+		.hdr.type = EVENT_PROTO_STATS_V4,
+		.pid = pid,
+		.proto = proto,
+		.sport = sport,
+		.dport = bpf_ntohs(dport),
+		.bytes = bytes,
+		.isRx = isRx,
+	};
 
-	__builtin_memset(&event, 0, sizeof(event));
-	event.hdr.len = sizeof(struct event_proto_stats);
-	event.hdr.type = EVENT_PROTO_STATS_V4;
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
-	event.pid = pid;
-	event.proto = proto;
 	__builtin_memcpy(&event.saddr, saddr, 16);
 	__builtin_memcpy(&event.daddr, daddr, 16);
-	event.sport = sport;
-	event.dport = bpf_ntohs(dport);
-	event.bytes = bytes;
-	event.isRx = isRx;
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
 		CALI_DEBUG("event_proto_stats: perf_commit_event returns %d\n", err);
