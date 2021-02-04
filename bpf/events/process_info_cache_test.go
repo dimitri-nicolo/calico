@@ -24,7 +24,7 @@ var (
 	ip1           = ipStrTo16Byte("10.128.0.14")
 	ip2           = ipStrTo16Byte("10.128.0.7")
 	tuple1        = collector.MakeTuple(ip1, ip2, 6, 40000, 80)
-	processEvent1 = events.EventProtoStatsV4{
+	processEvent1 = events.EventProtoStats{
 		Proto:       uint32(6),
 		Saddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 14}, // 10.128.0.14
 		Daddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 7},  // 10.128.0.7
@@ -34,7 +34,7 @@ var (
 		Pid:         uint32(12345),
 	}
 
-	processEvent1DifferentProcessName = events.EventProtoStatsV4{
+	processEvent1DifferentProcessName = events.EventProtoStats{
 		Proto:       uint32(6),
 		Saddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 14}, // 10.128.0.14
 		Daddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 7},  // 10.128.0.7
@@ -53,7 +53,7 @@ type lookupResult struct {
 var _ = Describe("ProcessInfoCache tests", func() {
 	var (
 		pic      collector.ProcessInfoCache
-		testChan chan events.EventProtoStatsV4
+		testChan chan events.EventProtoStats
 	)
 
 	eventuallyCheckCache := func(tuple collector.Tuple, dir collector.TrafficDirection, expectedProcessInfo collector.ProcessInfo, infoInCache bool) {
@@ -64,7 +64,7 @@ var _ = Describe("ProcessInfoCache tests", func() {
 	}
 
 	BeforeEach(func() {
-		testChan = make(chan events.EventProtoStatsV4, 10)
+		testChan = make(chan events.EventProtoStats, 10)
 		pic = events.NewBPFProcessInfoCache(testChan, gcInterval, ttl)
 		pic.Start()
 	})
