@@ -189,8 +189,8 @@ type TierEndAction string
 
 const (
 	TierEndUndef TierEndAction = ""
-	TierEndDeny                = "deny"
-	TierEndPass                = "pass"
+	TierEndDeny  TierEndAction = "deny"
+	TierEndPass  TierEndAction = "pass"
 )
 
 func (p *Builder) Instructions(rules Rules) (Insns, error) {
@@ -669,9 +669,9 @@ func (p *Builder) writeICMPTypeMatch(negate bool, icmpType uint8) {
 func (p *Builder) writeICMPTypeCodeMatch(negate bool, icmpType, icmpCode uint8) {
 	p.b.Load16(R1, R9, stateOffICMPType)
 	if negate {
-		p.b.JumpEqImm64(R1, ((int32(icmpCode) << 8) | int32(icmpType)), p.endOfRuleLabel())
+		p.b.JumpEqImm64(R1, (int32(icmpCode)<<8)|int32(icmpType), p.endOfRuleLabel())
 	} else {
-		p.b.JumpNEImm64(R1, ((int32(icmpCode) << 8) | int32(icmpType)), p.endOfRuleLabel())
+		p.b.JumpNEImm64(R1, (int32(icmpCode)<<8)|int32(icmpType), p.endOfRuleLabel())
 	}
 }
 func (p *Builder) writeCIDRSMatch(negate bool, leg matchLeg, cidrs []string) {

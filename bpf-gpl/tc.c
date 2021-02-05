@@ -257,11 +257,6 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	ctx.state->ct_result = calico_ct_v4_lookup(&ctx);
 	CALI_DEBUG("conntrack entry flags 0x%x\n", ctx.state->ct_result.flags);
 
-	if (CALI_F_FROM_WEP && (ct_result_rc(ctx.state->ct_result.rc) == CALI_CT_NEW)) {
-		// Record that this flow was originated from a workload.
-		ctx.state->ct_result.flags |= CALI_CT_FLAG_WORKLOAD;
-	}
-
 	/* Handle reporting DNS packets up to Felix userspace. */
 	calico_dns_check(&ctx);
 
