@@ -150,8 +150,6 @@ func GetK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 }
 
 func (kds *K8sDatastoreInfra) PerTestSetup() {
-	kds.runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
-
 	// In BPF mode, start BPF logging.
 	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 		kds.bpfLog = containers.Run("bpf-log", containers.RunOpts{AutoRemove: true}, "--privileged",
