@@ -65,6 +65,15 @@ var _ = Describe("L7 log type tests", func() {
 		}
 		data := L7Data{meta, spec}
 
+		specDurationRounding := L7Spec{
+			Duration:      50,
+			DurationMax:   2,
+			BytesReceived: 109,
+			BytesSent:     100,
+			Count:         100,
+		}
+		dataDurationRounding := L7Data{meta, specDurationRounding}
+
 		It("Should create an appropriate L7 Log", func() {
 			now := time.Now()
 			end := now.Add(3 * time.Second)
@@ -88,6 +97,34 @@ var _ = Describe("L7 log type tests", func() {
 			Expect(log.BytesIn).To(Equal(109))
 			Expect(log.BytesOut).To(Equal(100))
 			Expect(log.Count).To(Equal(4))
+			Expect(log.ServiceName).To(Equal("svc1"))
+			Expect(log.ServiceNamespace).To(Equal("namespace1"))
+			Expect(log.ServicePort).To(Equal(80))
+		})
+
+		It("Should round the duration mean properly", func() {
+			now := time.Now()
+			end := now.Add(3 * time.Second)
+			log := dataDurationRounding.ToL7Log(now, end)
+
+			Expect(log.StartTime).To(Equal(now.Unix()))
+			Expect(log.EndTime).To(Equal(end.Unix()))
+			Expect(log.SrcNameAggr).To(Equal(meta.SrcNameAggr))
+			Expect(log.SrcNamespace).To(Equal(meta.SrcNamespace))
+			Expect(log.SrcType).To(Equal(meta.SrcType))
+			Expect(log.DstNameAggr).To(Equal(meta.DstNameAggr))
+			Expect(log.DstNamespace).To(Equal(meta.DstNamespace))
+			Expect(log.DstType).To(Equal(meta.DstType))
+			Expect(log.ResponseCode).To(Equal(meta.ResponseCode))
+			Expect(log.Method).To(Equal(meta.Method))
+			Expect(log.URL).To(Equal("www.server.com/test/path"))
+			Expect(log.UserAgent).To(Equal(meta.UserAgent))
+			Expect(log.Type).To(Equal(meta.Type))
+			Expect(log.DurationMean).To(Equal(500 * time.Microsecond))
+			Expect(log.DurationMax).To(Equal(2 * time.Millisecond))
+			Expect(log.BytesIn).To(Equal(109))
+			Expect(log.BytesOut).To(Equal(100))
+			Expect(log.Count).To(Equal(100))
 			Expect(log.ServiceName).To(Equal("svc1"))
 			Expect(log.ServiceNamespace).To(Equal("namespace1"))
 			Expect(log.ServicePort).To(Equal(80))
