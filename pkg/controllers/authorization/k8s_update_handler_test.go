@@ -443,6 +443,7 @@ var _ = Describe("role mapping listenAndSynchronize", func() {
 })
 
 var _ = Describe("native user listenAndSynchronize", func() {
+
 	Context("Update ConfigMap", func() {
 		It("deletes elasticsearch native users if ClusterRole doesn't exist", func() {
 			configMap := &corev1.ConfigMap{
@@ -500,6 +501,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			mockESCLI.AssertExpectations(GinkgoT())
 
 		})
+
 		It("creates/updates elasticsearch native users", func() {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersConfigMapName, Namespace: resource.TigeraElasticsearchNamespace},
@@ -780,8 +782,8 @@ var _ = Describe("native user listenAndSynchronize", func() {
 		})
 	})
 
-	Context("Delete CongigMap", func() {
-		It("deletes user from elasticsearch", func() {
+	Context("Delete ConfigMap", func() {
+		It("deletes user from elasticsearch and also deletes Secret", func() {
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("DeleteUser", elasticsearch.User{Username: "tigera-k8s-subId1"}).Return(nil)
 			mockESCLI.On("DeleteUser", elasticsearch.User{Username: "tigera-k8s-subId2"}).Return(nil)
@@ -826,9 +828,79 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			close(resourceUpdates)
 			wg.Wait()
 
+			_, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).Should(HaveOccurred())
+
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
+	})
+
+	Context("Delete Secret", func() {
+		It("re-creates the Secret and populates the password for users in cache", func() {
+			configMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersConfigMapName, Namespace: resource.TigeraElasticsearchNamespace},
+				Data: map[string]string{
+					"randomSubjectId1": "{\"username\":\"testuser1\", \"groups\":[\"group1\",\"group2\"]}",
+				},
+			}
+
+			rules := []rbacv1.PolicyRule{{
+				APIGroups:     []string{"lma.tigera.io"},
+				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
+				Resources:     []string{"*"},
+			}}
+			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("UpdateUser", mock.Anything).Return(nil)
+			mockESCLI.On("GetUsers").Return([]elasticsearch.User{
+				{Username: "tigera-k8s-randomSubjectId1"},
+			}, nil)
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group2").Return([]string{"test-cluster-role-1"})
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group1").Return([]string{})
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "testuser1").Return([]string{"test-cluster-role-2"})
+			mockClusterRoleCache.On("ClusterRoleRules", "test-cluster-role-1").Return(rules)
+			mockClusterRoleCache.On("ClusterRoleRules", "test-cluster-role-2").Return([]rbacv1.PolicyRule{})
+
+			mockUserCache := userscache.NewMockOIDCUserCache()
+			data, err := configMapDataToOIDCUsers(configMap.Data)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockUserCache.On("UpdateOIDCUsers", data).Return([]string{"randomSubjectId1"})
+			mockUserCache.On("Exists", "randomSubjectId1").Return(true)
+			mockUserCache.On("SubjectIDs").Return([]string{"randomSubjectId1"})
+			mockUserCache.On("SubjectIDToUserOrGroups", "randomSubjectId1").Return([]string{"group1", "group2", "testuser1"})
+
+			fakeK8CLI := k8sfake.NewSimpleClientset()
+
+			resourceUpdates := make(chan resourceUpdate)
+			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
+
+			updateHandler := k8sUpdateHandler{
+				resourceUpdates: resourceUpdates,
+				synchronizer:    synchronizer,
+			}
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				updateHandler.listenAndSynchronize()
+			}()
+
+			resourceUpdates <- resourceUpdate{
+				typ:  resourceDeleted,
+				name: resource.OIDCUsersEsSecreteName,
+				resource: &corev1.Secret{
+					TypeMeta: metav1.TypeMeta{Kind: "Secret"},
+				},
+			}
+
+			close(resourceUpdates)
+			wg.Wait()
+
 			secret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(secret.Data).Should(BeEquivalentTo(map[string][]byte{}))
+			Expect(secret.Data["randomSubjectId1"]).ShouldNot(BeNil())
 
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
@@ -891,6 +963,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
+
 		It("updates elasticsearch user", func() {
 			clusterRoleName := "test-cluster-role"
 
@@ -955,7 +1028,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 	})
 
 	Context("Delete ClusterRoleBinding", func() {
-		It("deletes elsticserach native users if there are no roles", func() {
+		It("deletes elsticserach native users if there are no roles and deletes password from Secret", func() {
 			clusterRoleBindingName := "test-cluster-role-binding"
 			clusterRoleName := "test-cluster-role"
 
@@ -982,7 +1055,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 				Data: map[string][]byte{
-					"randomSubjectId1": []byte("Hello"),
+					"subId1": []byte("Hello"),
 				},
 			}
 			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
@@ -1012,8 +1085,67 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			close(resourceUpdates)
 			wg.Wait()
 
+			secret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(secret.Data["subId1"]).Should(BeNil())
+
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
+
+		It("deletes elsticserach native users if there are no roles and ignore deleting password if Secret doesn't exist", func() {
+			clusterRoleBindingName := "test-cluster-role-binding"
+			clusterRoleName := "test-cluster-role"
+
+			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("DeleteUser", mock.Anything).Return(nil)
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("RemoveClusterRoleBinding", clusterRoleBindingName).Return(true)
+			mockClusterRoleCache.On("ClusterRoleNameForBinding", clusterRoleBindingName).Return(clusterRoleName)
+			mockClusterRoleCache.On("ClusterRoleBindingsForClusterRole", clusterRoleName).Return([]string{clusterRoleBindingName})
+			mockClusterRoleCache.On("SubjectNamesForBinding", clusterRoleBindingName).Return([]string{"group1"})
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group1").Return([]string{})
+
+			mockClusterRoleCache.On("ClusterRoleSubjects", clusterRoleName, rbacv1.UserKind).Return([]rbacv1.Subject{})
+			mockClusterRoleCache.On("ClusterRoleSubjects", clusterRoleName, rbacv1.GroupKind).Return([]rbacv1.Subject{})
+			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{})
+
+			mockUserCache := userscache.NewMockOIDCUserCache()
+			mockUserCache.On("Exists", mock.Anything).Return(true)
+			mockUserCache.On("UserOrGroupToSubjectIDs", "group1").Return([]string{"subId1"})
+			mockUserCache.On("SubjectIDToUserOrGroups", "subId1").Return([]string{"group1"})
+			mockUserCache.On("DeleteOIDCUser", "subId1").Return(true)
+
+			fakeK8CLI := k8sfake.NewSimpleClientset()
+
+			resourceUpdates := make(chan resourceUpdate)
+			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
+
+			updateHandler := k8sUpdateHandler{
+				resourceUpdates: resourceUpdates,
+				synchronizer:    synchronizer,
+			}
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				updateHandler.listenAndSynchronize()
+			}()
+
+			var clusterRoleBinding *rbacv1.ClusterRoleBinding
+			resourceUpdates <- resourceUpdate{
+				typ:      resourceDeleted,
+				name:     clusterRoleBindingName,
+				resource: clusterRoleBinding,
+			}
+
+			close(resourceUpdates)
+			wg.Wait()
+
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
+
 		It("updates elsticserach native users", func() {
 			clusterRoleBindingName := "test-cluster-role-binding"
 			clusterRoleName := "test-cluster-role"

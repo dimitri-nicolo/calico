@@ -7,6 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	retryr "k8s.io/client-go/util/retry"
+
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,8 +90,7 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 }
 
 // initializeRolesCache creates and fills the rbaccache.ClusterRoleCache with the available ClusterRoles and ClusterRoleBindings.
-func initializeRolesCache(k8sCLI kubernetes.Interface) (rbaccache.ClusterRoleCache, error) {
-	ctx := context.Background()
+func initializeRolesCache(ctx context.Context, k8sCLI kubernetes.Interface) (rbaccache.ClusterRoleCache, error) {
 
 	clusterRolesCache := rbaccache.NewClusterRoleCache([]string{rbacv1.UserKind, rbacv1.GroupKind}, []string{"lma.tigera.io"})
 
@@ -112,9 +116,7 @@ func initializeRolesCache(k8sCLI kubernetes.Interface) (rbaccache.ClusterRoleCac
 }
 
 // initializeOIDCUserCache creates and fills the userscache.OIDCUserCache with available data in ConfigMap.
-func initializeOIDCUserCache(k8sCLI kubernetes.Interface) (userscache.OIDCUserCache, error) {
-	ctx := context.Background()
-
+func initializeOIDCUserCache(ctx context.Context, k8sCLI kubernetes.Interface) (userscache.OIDCUserCache, error) {
 	configMap, err := k8sCLI.CoreV1().ConfigMaps(resource.TigeraElasticsearchNamespace).Get(ctx, resource.OIDCUsersConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -131,6 +133,68 @@ func initializeOIDCUserCache(k8sCLI kubernetes.Interface) (userscache.OIDCUserCa
 	return userCache, nil
 }
 
+// createOIDCUserConfigMap create resource.OIDCUsersConfigMapName if it doesn't exists.
+func createOIDCUserConfigMap(ctx context.Context, k8sCLI kubernetes.Interface) error {
+	var err error
+	if _, err = k8sCLI.CoreV1().ConfigMaps(resource.TigeraElasticsearchNamespace).Get(ctx, resource.OIDCUsersConfigMapName, metav1.GetOptions{}); err != nil {
+		if kerrors.IsNotFound(err) {
+			cm := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.OIDCUsersConfigMapName,
+					Namespace: resource.TigeraElasticsearchNamespace,
+				},
+			}
+			if _, err = k8sCLI.CoreV1().ConfigMaps(resource.TigeraElasticsearchNamespace).Create(ctx, cm, metav1.CreateOptions{}); err == nil {
+				return nil
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// deleteOIDCUserConfigMap deletes resource.OIDCUsersConfigMapName if it exists.
+func deleteOIDCUserConfigMap(ctx context.Context, k8sCLI kubernetes.Interface) error {
+	if err := k8sCLI.CoreV1().ConfigMaps(resource.TigeraElasticsearchNamespace).Delete(ctx, resource.OIDCUsersConfigMapName, metav1.DeleteOptions{}); err != nil {
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// createOIDCUsersEsSecret create resource.OIDCUsersEsSecreteName if it doesn't exists.
+func createOIDCUsersEsSecret(ctx context.Context, k8sCLI kubernetes.Interface) error {
+	var err error
+	if _, err = k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(ctx, resource.OIDCUsersEsSecreteName, metav1.GetOptions{}); err != nil {
+		if kerrors.IsNotFound(err) {
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.OIDCUsersEsSecreteName,
+					Namespace: resource.TigeraElasticsearchNamespace,
+				},
+			}
+			if _, err = k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Create(ctx, secret, metav1.CreateOptions{}); err == nil {
+				return nil
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// deleteOIDCUsersEsSecret deletes resource.OIDCUsersEsSecreteName if it exists.
+func deleteOIDCUsersEsSecret(ctx context.Context, k8sCLI kubernetes.Interface) error {
+	if err := k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Delete(ctx, resource.OIDCUsersEsSecreteName, metav1.DeleteOptions{}); err != nil {
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
 // configMapDataToOIDCUsers extracts and returns the userscache.OIDCUser from ConfigMap Data.
 func configMapDataToOIDCUsers(data map[string]string) (map[string]userscache.OIDCUser, error) {
 	var users = make(map[string]userscache.OIDCUser)
@@ -142,4 +206,18 @@ func configMapDataToOIDCUsers(data map[string]string) (map[string]userscache.OID
 		users[subjectID] = user
 	}
 	return users, nil
+}
+
+// retryUntilNotFound retries the given func f based on the DefaultRetry values, stops when f returns nil or NotFound error.
+func retryUntilNotFound(f func() error) error {
+	return retryr.OnError(retryr.DefaultRetry, func(err error) bool {
+		return !kerrors.IsNotFound(err)
+	}, func() error { return f() })
+}
+
+// retryUntilExists retries the given func f based on the DefaultRetry values, stops retrying if f returns either nil or AlreadyExists error.
+func retryUntilExists(f func() error) error {
+	return retryr.OnError(retryr.DefaultRetry, func(err error) bool {
+		return !kerrors.IsAlreadyExists(err)
+	}, func() error { return f() })
 }

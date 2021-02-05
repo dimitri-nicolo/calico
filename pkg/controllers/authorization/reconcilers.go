@@ -28,6 +28,11 @@ type configMapReconciler struct {
 	resourceUpdates chan resourceUpdate
 }
 
+type secretReconciler struct {
+	k8sCLI          kubernetes.Interface
+	resourceUpdates chan resourceUpdate
+}
+
 func (r *clusterRoleReconciler) Reconcile(namespacedName types.NamespacedName) error {
 	typ := resourceUpdated
 	clusterRoleName := namespacedName.Name
@@ -88,6 +93,27 @@ func (r *configMapReconciler) Reconcile(namespacedName types.NamespacedName) err
 		typ:      typ,
 		name:     configMapName,
 		resource: cm,
+	}
+
+	return nil
+}
+
+func (r *secretReconciler) Reconcile(namespacedName types.NamespacedName) error {
+	typ := resourceUpdated
+	secretName := namespacedName.Name
+	secret, err := r.k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+
+		typ = resourceDeleted
+	}
+
+	r.resourceUpdates <- resourceUpdate{
+		typ:      typ,
+		name:     secretName,
+		resource: secret,
 	}
 
 	return nil

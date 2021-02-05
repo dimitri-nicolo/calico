@@ -3,9 +3,12 @@
 package authorization
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -27,11 +30,23 @@ type roleMappingSynchronizer struct {
 func newRoleMappingSynchronizer(stop chan struct{}, esCLI elasticsearch.Client, k8sCLI kubernetes.Interface, usernamePrefix string, groupPrefix string) k8sRBACSynchronizer {
 	var clusterRoleCache rbaccache.ClusterRoleCache
 	var err error
+	ctx := context.Background()
+
+	log.Debug("Deleting ConfigMap and Secret for OIDC Elasticsearch native users.")
+	if err := retryUntilNotFound(func() error { return deleteOIDCUserConfigMap(context.Background(), k8sCLI) }); err != nil {
+		log.WithError(err).Errorf("failed to delete %s ConfigMap", resource.OIDCUsersConfigMapName)
+		return nil
+	}
+
+	if err := retryUntilNotFound(func() error { return deleteOIDCUsersEsSecret(context.Background(), k8sCLI) }); err != nil {
+		log.WithError(err).Errorf("failed to delete %s Secret", resource.OIDCUsersEsSecreteName)
+		return nil
+	}
 
 	log.Debug("Initializing ClusterRole cache.")
 	// Initialize the cache so resync can calculate what Elasticsearch role mappings or native users should be removed and created/overwritten.
 	stopped := retry(stop, 5*time.Second, "failed to initialize cache", func() error {
-		clusterRoleCache, err = initializeRolesCache(k8sCLI)
+		clusterRoleCache, err = initializeRolesCache(ctx, k8sCLI)
 		return err
 	})
 	if stopped {

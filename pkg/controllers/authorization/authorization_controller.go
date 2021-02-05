@@ -115,22 +115,31 @@ func (c *authorizationController) Run(stop chan struct{}) {
 	go clusterRoleBindingWorker.Run(c.numWorkers, stop)
 
 	if c.esLicenseType == ElasticsearchLicenseTypeBasic {
+
 		configMapWorker := worker.New(&configMapReconciler{
 			k8sCLI:          c.k8sCLI,
 			resourceUpdates: resourceUpdatesChan,
 		})
-		selector, err := fields.ParseSelector(fmt.Sprintf("metadata.name=%s", resource.OIDCUsersConfigMapName))
-		if err != nil {
-			log.WithError(err).Error("failed to parse selector")
-			return
-		}
 		configMapWorker.AddWatch(
-			cache.NewListWatchFromClient(c.k8sCLI.CoreV1().RESTClient(), "configmaps", resource.TigeraElasticsearchNamespace, selector),
+			cache.NewListWatchFromClient(c.k8sCLI.CoreV1().RESTClient(), "configmaps", resource.TigeraElasticsearchNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.OIDCUsersConfigMapName))),
 			&corev1.ConfigMap{},
 		)
 
-		log.Debug("Starting ConfigMap workers.")
+		secretWorker := worker.New(&secretReconciler{
+			k8sCLI:          c.k8sCLI,
+			resourceUpdates: resourceUpdatesChan,
+		})
+
+		secretWorker.AddWatch(
+			cache.NewListWatchFromClient(c.k8sCLI.CoreV1().RESTClient(), "secrets", resource.TigeraElasticsearchNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.OIDCUsersEsSecreteName))),
+			&corev1.Secret{},
+		)
+
+		log.Debug("Starting ConfigMap & Secret workers.")
 		go configMapWorker.Run(c.numWorkers, stop)
+		go secretWorker.Run(c.numWorkers, stop)
 	}
 
 	updateHandler := c.initializeK8sUpdateHandler(stop, esCLI, resourceUpdatesChan)

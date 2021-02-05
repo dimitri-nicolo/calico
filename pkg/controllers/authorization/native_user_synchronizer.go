@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -33,11 +35,23 @@ func newNativeUserSynchronizer(stop chan struct{}, esCLI elasticsearch.Client, k
 	var clusterRoleCache rbaccache.ClusterRoleCache
 	var oidcUserCache userscache.OIDCUserCache
 	var err error
+	ctx := context.Background()
+
+	log.Debug("Creating ConfigMap and Secret for OIDC Elasticsearch native users.")
+	if err := retryUntilExists(func() error { return createOIDCUserConfigMap(context.Background(), k8sCLI) }); err != nil {
+		log.WithError(err).Errorf("failed to create %s ConfigMap", resource.OIDCUsersConfigMapName)
+		return nil
+	}
+
+	if err := retryUntilExists(func() error { return createOIDCUsersEsSecret(context.Background(), k8sCLI) }); err != nil {
+		log.WithError(err).Errorf("failed to create %s Secret", resource.OIDCUsersEsSecreteName)
+		return nil
+	}
 
 	log.Debug("Initializing ClusterRole cache.")
 	// Initialize the cache so resync can calculate what Elasticsearch role mappings or native users should be removed and created/overwritten.
 	stopped := retry(stop, 5*time.Second, "failed to initialize cache", func() error {
-		clusterRoleCache, err = initializeRolesCache(k8sCLI)
+		clusterRoleCache, err = initializeRolesCache(ctx, k8sCLI)
 		return err
 	})
 	if stopped {
@@ -46,7 +60,7 @@ func newNativeUserSynchronizer(stop chan struct{}, esCLI elasticsearch.Client, k
 
 	log.Debug("Initializing OIDCUserCache cache.")
 	stopped = retry(stop, 5*time.Second, "failed to initialize cache", func() error {
-		oidcUserCache, err = initializeOIDCUserCache(k8sCLI)
+		oidcUserCache, err = initializeOIDCUserCache(ctx, k8sCLI)
 		return err
 	})
 	if stopped {
@@ -150,14 +164,45 @@ func (n *nativeUserSynchronizer) synchronize(update resourceUpdate) error {
 			}
 			oidcUsersUpdated = n.userCache.UpdateOIDCUsers(oidcUsers)
 		case resourceDeleted:
+			// If ConfigMap is deleted, clear the user cache and delete the users from elasticsearch,
+			// delete the Secret which is no longer valid (this will trigger reconciler also recreate Secret) and re-create ConfigMap.
 			oidcUsersUpdated = n.userCache.SubjectIDs()
 			n.userCache = userscache.NewOIDCUserCache()
+
+			if err := retryUntilNotFound(func() error { return deleteOIDCUsersEsSecret(context.Background(), n.k8sCLI) }); err != nil {
+				return err
+			}
+
+			if err := retryUntilExists(func() error { return createOIDCUserConfigMap(context.Background(), n.k8sCLI) }); err != nil {
+				return err
+			}
+
 		default:
 			log.Errorf("unknown resource update type %s", update.typ)
 		}
+
+	case *corev1.Secret:
+		switch update.typ {
+		case resourceDeleted:
+			if err := retryUntilExists(func() error { return createOIDCUsersEsSecret(context.Background(), n.k8sCLI) }); err != nil {
+				return err
+			}
+
+			// resync and generate new passwords based on cached OIDC users
+			if err := n.resync(); err != nil {
+				log.WithError(err).Errorf("error re-syncing OIDC Elasticsearch users %s", resource.OIDCUsersEsSecreteName)
+				return err
+			}
+		case resourceUpdated:
+			log.Debugf("Ignoring updates to Secret %s", resource.OIDCUsersEsSecreteName)
+		default:
+			log.Errorf("unknown resource update type %s", update.typ)
+		}
+
 	default:
 		log.Errorf("unknown resource update type %s", update.typ)
 	}
+
 	if len(oidcUsersUpdated) != 0 {
 		if err := n.synchronizeOIDCUsers(oidcUsersUpdated); err != nil {
 			log.WithError(err).Errorf("failed to listenAndSynchronize %#v", oidcUsersUpdated)
@@ -236,11 +281,13 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 		}
 	}
 
-	err = retryr.RetryOnConflict(retryr.DefaultRetry, func() error {
-		return n.setOIDCUsersPassword(context.Background(), updateEsUsers, deleteEsUsers)
-	})
-	if err != nil {
-		return err
+	if len(deleteEsUsers) != 0 || len(updateEsUsers) != 0 {
+		err = retryr.RetryOnConflict(retryr.DefaultRetry, func() error {
+			return n.setOIDCUsersPassword(context.Background(), updateEsUsers, deleteEsUsers)
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -248,8 +295,13 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 
 // setOIDCUsersPassword updates and deletes the data in k8s Secret with the given elasticsearch user password.
 func (n *nativeUserSynchronizer) setOIDCUsersPassword(ctx context.Context, updateEsUsers map[string]elasticsearch.User, deleteEsUsers map[string]elasticsearch.User) error {
+
 	secret, err := n.k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(ctx, resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
 	if err != nil {
+		if kerrors.IsNotFound(err) && len(updateEsUsers) == 0 {
+			// nothing to delete or update
+			return nil
+		}
 		return err
 	}
 	if secret.Data == nil {
