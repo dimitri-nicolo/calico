@@ -1,27 +1,31 @@
-# Handle old CALICO_NETWORKING environment by converting to the new config.
-if [ -n "$CALICO_NETWORKING" ]; then
+if [ -z "$CALICO_DUAL_TOR_INIT" ]; then
+
+    # Handle old CALICO_NETWORKING environment by converting to the new config.
+    if [ -n "$CALICO_NETWORKING" ]; then
 	echo "WARNING: $CALICO_NETWORKING will be deprecated: use $CALICO_NETWORKING_BACKEND instead"
 	if [ "$CALICO_NETWORKING" = "false" ]; then
 		export CALICO_NETWORKING_BACKEND=none
 	else
 		export CALICO_NETWORKING_BACKEND=bird
 	fi
-fi
+    fi
 
-# Run the startup initialisation script.
-# These ensure the node is correctly configured to run.
-calico-node -startup || exit 1
+    # Run the startup initialisation script.
+    # These ensure the node is correctly configured to run.
+    calico-node -startup || exit 1
 
-# Set the nodename based on the value picked by the startup procedure.
-if [ ! -f "/var/lib/calico/nodename" ]; then
+    # Set the nodename based on the value picked by the startup procedure.
+    if [ ! -f "/var/lib/calico/nodename" ]; then
 	echo "/var/lib/calico/nodename does not exist, exiting"
 	exit 1
-fi
-NODENAME=$(cat /var/lib/calico/nodename)
-export NODENAME
+    fi
+    NODENAME=$(cat /var/lib/calico/nodename)
+    export NODENAME
 
-# If possible pre-allocate any tunnel addresses.
-calico-node -allocate-tunnel-addrs -allocate-tunnel-addrs-run-once || exit 1
+    # If possible pre-allocate any tunnel addresses.
+    calico-node -allocate-tunnel-addrs -allocate-tunnel-addrs-run-once || exit 1
+
+fi
 
 # Create a directly to put enabled service files
 mkdir /etc/service/enabled
@@ -30,19 +34,21 @@ mkdir /etc/service/enabled
 # dirs contained in Docker image. This is due to bug in Docker with graphdriver
 # overlay on CentOS 7.X kernels (https://github.com/docker/docker/issues/15314)
 
-# Allow felix to be disabled, for example, if the user is running Felix
-# outside the container.
-if [ -z "$CALICO_DISABLE_FELIX" ]; then
+if [ -z "$CALICO_DUAL_TOR_INIT" ]; then
+
+    # Allow felix to be disabled, for example, if the user is running Felix
+    # outside the container.
+    if [ -z "$CALICO_DISABLE_FELIX" ]; then
   cp -a /etc/service/available/felix /etc/service/enabled/
-fi
+    fi
 
-# Monitor change in node IP addresses and subnets.
-cp -a /etc/service/available/monitor-addresses  /etc/service/enabled/
+    # Monitor change in node IP addresses and subnets.
+    cp -a /etc/service/available/monitor-addresses  /etc/service/enabled/
 
-# Enable the allocate tunnel IP service
-cp -a /etc/service/available/allocate-tunnel-addrs  /etc/service/enabled/
+    # Enable the allocate tunnel IP service
+    cp -a /etc/service/available/allocate-tunnel-addrs  /etc/service/enabled/
 
-case "$CALICO_NETWORKING_BACKEND" in
+    case "$CALICO_NETWORKING_BACKEND" in
 	"none" )
 	# If running in policy only mode, we don't need to run BIRD / Confd.
 	echo "CALICO_NETWORKING_BACKEND is none - no BGP daemon running"
@@ -66,14 +72,14 @@ case "$CALICO_NETWORKING_BACKEND" in
 	cp -a /etc/service/available/confd /etc/service/enabled/
 	cp -a /etc/service/available/bgp-metrics /etc/service/enabled/
 	;;
-esac
+    esac
 
-if [ "$CALICO_MANAGE_CNI" = "true" ]; then
+    if [ "$CALICO_MANAGE_CNI" = "true" ]; then
 	# Enable management of the CNI configuration.
 	cp -a /etc/service/available/cni  /etc/service/enabled/
-fi
+    fi
 
-if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
+    if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
 	rm -rf /etc/service/enabled/allocate-tunnel-addrs/log
 	rm -rf /etc/service/enabled/bgp-metrics/log
 	rm -rf /etc/service/enabled/calico-bgp-daemon/log
@@ -81,6 +87,17 @@ if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
 	rm -rf /etc/service/enabled/confd/log
 	rm -rf /etc/service/enabled/felix/log
 	rm -rf /etc/service/enabled/monitor-addresses/log
+    fi
+
+else
+
+    # Enable BIRD IPv4 service.
+    cp -a /etc/service/available/bird  /etc/service/enabled/
+
+    # Perform dual ToR setup, including generating early BIRD config
+    # and starting the early BIRD service.
+    SVDIR=/etc/service/enabled /sbin/dual-tor.sh
+
 fi
 
 echo "CNX Version: $CNXVERSION"
