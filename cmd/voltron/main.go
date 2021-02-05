@@ -61,6 +61,7 @@ type config struct {
 	ComplianceEndpoint           string `default:"https://compliance.tigera-compliance.svc.cluster.local" split_words:"true"`
 	ComplianceCABundlePath       string `default:"/certs/compliance/tls.crt" split_words:"true"`
 	ComplianceInsecureTLS        bool   `default:"false" split_words:"true"`
+	EnableCompliance             bool   `default:"true" split_words:"true"`
 	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
@@ -211,12 +212,6 @@ func main() {
 			AllowInsecureTLS: true,
 		},
 		{
-			Path:             "/compliance/",
-			Dest:             cfg.ComplianceEndpoint,
-			CABundlePath:     cfg.ComplianceCABundlePath,
-			AllowInsecureTLS: cfg.ComplianceInsecureTLS,
-		},
-		{
 			Path:         cfg.KibanaBasePath,
 			Dest:         cfg.KibanaEndpoint,
 			CABundlePath: cfg.KibanaCABundlePath,
@@ -226,6 +221,15 @@ func main() {
 			Dest:             cfg.NginxEndpoint,
 			AllowInsecureTLS: true,
 		},
+	}
+
+	if cfg.EnableCompliance {
+		targetList = append(targetList, bootstrap.Target{
+			Path:             "/compliance/",
+			Dest:             cfg.ComplianceEndpoint,
+			CABundlePath:     cfg.ComplianceCABundlePath,
+			AllowInsecureTLS: cfg.ComplianceInsecureTLS,
+		})
 	}
 
 	if cfg.DexEnabled {
