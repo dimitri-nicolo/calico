@@ -67,8 +67,8 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 
 	bpf_probe_read(&family, 2, &sk_cmn->skc_family);
 	if (family == 2 /* AF_INET */) {
-		bpf_probe_read(key.saddr, 4, &sk_cmn->skc_rcv_saddr);
-		bpf_probe_read(key.daddr, 4, &sk_cmn->skc_daddr);
+		bpf_probe_read(&key.saddr[12], 4, &sk_cmn->skc_rcv_saddr);
+		bpf_probe_read(&key.daddr[12], 4, &sk_cmn->skc_daddr);
 	} else if (family == 10 /* AF_INET6 */) {
 		bpf_probe_read(key.saddr, 16, sk_cmn->skc_v6_rcv_saddr.in6_u.u6_addr8);
 		bpf_probe_read(key.daddr, 16, sk_cmn->skc_v6_daddr.in6_u.u6_addr8);
