@@ -65,11 +65,12 @@ type State struct {
 	Flags               uint8
 	RulesHit            uint32
 	RuleIDs             [MaxRuleIDs]uint64
-	ConntrackResultType uint32
-	pad32               uint32
-	ConntrackData       uint64
-	ConntrackDataTun    uint32
-	Pad2                uint32
+	ConntrackRCFlags    uint32
+	ConntrackNATIP      uint32
+	ConntrackNATPort    uint32
+	ConntrackTunIP      uint32
+	ConntrackIfIndexFwd uint32
+	ConntrackIfIndexCtd uint32
 	NATData             uint64
 	ProgStartTime       uint64
 }

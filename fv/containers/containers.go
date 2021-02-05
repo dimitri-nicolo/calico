@@ -727,7 +727,7 @@ func (c *Container) BPFNATDump() map[string][]string {
 		log.WithError(err).Error("Failed to run calico-bpf")
 	}
 
-	feMatch := regexp.MustCompile("(.* port \\d+ proto \\d+) id (\\d+) count.*")
+	feMatch := regexp.MustCompile(`(.* port \d+ proto \d+) id (\d+) count.*`)
 
 	lines := strings.Split(out, "\n")
 	front := ""

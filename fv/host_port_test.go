@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,7 +33,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-func MetricsPortReachable(felix *infrastructure.Felix) bool {
+func MetricsPortReachable(felix *infrastructure.Felix, bpf bool) bool {
+	if bpf {
+		felix.Exec("calico-bpf", "conntrack", "clean")
+	}
+
 	// Delete existing conntrack state for the metrics port.
 	felix.Exec("conntrack", "-L")
 	felix.Exec("conntrack", "-L", "-p", "tcp", "--dport", metrics.PortString())
@@ -84,7 +88,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ host-port tests", []apiconf
 		felix, client = infrastructure.StartSingleNodeTopology(options, infra)
 
 		metricsPortReachable = func() bool {
-			return MetricsPortReachable(felix)
+			return MetricsPortReachable(felix, bpfEnabled)
+		}
+
+		if bpfEnabled {
+			Eventually(felix.NumTCBPFProgsEth0, "5s", "200ms").Should(Equal(2))
 		}
 
 		if bpfEnabled {

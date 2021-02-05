@@ -287,7 +287,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	// EnableCloudWatchLogs().
 	uniqueName := fmt.Sprintf("%d-%d-%d", id, os.Getpid(), int(atomic.AddUint32(&atomicCounter, 1)))
 	cwlFile := "cwl-" + uniqueName + "-felixfv.txt"
-	envVars["FELIX_DEBUGCLOUDWATCHLOGSFILE"] = "/cwlogs/"+cwlFile
+	envVars["FELIX_DEBUGCLOUDWATCHLOGSFILE"] = "/cwlogs/" + cwlFile
 	volumes[cwLogDir] = "/cwlogs"
 
 	cwlCallsExpected := false
