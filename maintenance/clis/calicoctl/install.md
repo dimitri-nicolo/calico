@@ -22,10 +22,13 @@ corresponds to your desired deployment.
 
 - [As a binary on a single host](#install-calicoctl-as-a-binary-on-a-single-host)
 - [As a container on a single host](#install-calicoctl-as-a-container-on-a-single-host)
+- [As a Kubernetes pod](#install-calicoctl-as-a-kubernetes-pod)
 - [As a kubectl plugin on a single host](#install-calicoctl-as-a-kubectl-plugin-on-a-single-host)
 
 {% include content/ctl-binary-install.md cli="calicoctl" codepath="/calicoctl" %}
 
 {% include content/ctl-container-install.md cli="calicoctl" codepath="/calicoctl" %}
+
+{% include content/ctl-kubernetes-pod-install.md cli="calicoctl" codepath="/calicoctl" %}
 
 {% include content/ctl-kubectl-plugin-install.md cli="calicoctl" codepath="/calicoctl" %}
