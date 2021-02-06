@@ -122,7 +122,7 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 	}
 
 	// Calculate and convert durations
-	res.DurationMean = time.Duration(ld.Duration/ld.Count) * time.Millisecond
+	res.DurationMean = (time.Duration(ld.Duration) * time.Millisecond) / time.Duration(ld.Count)
 	res.DurationMax = time.Duration(ld.DurationMax) * time.Millisecond
 
 	// Create the URL from the domain and path
