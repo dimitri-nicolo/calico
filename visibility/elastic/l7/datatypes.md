@@ -20,8 +20,8 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `end_time`               | date              | End time of log collection in UNIX timestamp format. |
 | `bytes_in`               | long              | Number of incoming bytes since the last export. |
 | `bytes_out`              | long              | Number of outgoing bytes since the last export. |
-| `duration_mean`          | long              | Mean duration time of all the requests that match this combination of L7 data. |
-| `duration_max`           | long              | Max duration time of all the requests that match this combination of L7 data. |
+| `duration_mean`          | long              | Mean duration time of all the requests that match this combination of L7 data in nanoseconds. |
+| `duration_max`           | long              | Max duration time of all the requests that match this combination of L7 data in nanoseconds. |
 | `count`                  | long              | Number of requests that match this combination of L7 data. |
 | `src_name_aggr`          | keyword           | Contains one of the following values:<br />- Aggregated name of the source pod. <br />- `pvt`: endpoint is not a pod. Its IP address belongs to a private subnet. <br />- `pub`: endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
 | `src_namespace`          | keyword           | Namespace of the source endpoint. |
