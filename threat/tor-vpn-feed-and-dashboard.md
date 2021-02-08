@@ -57,11 +57,11 @@ In this section we will look at how to add Tor and VPN feeds to {{site.prodname}
 1. Add threat feed to the cluster.
    For EJR VPN,
    ```shell
-   kubectl apply -f {{ "/manifests/threat/def/ejr-vpn.yaml" | absolute_url }}
+   kubectl apply -f {{ "/manifests/threatdef/ejr-vpn.yaml" | absolute_url }}
    ```
    For Tor Bulk Exit Feed,
    ```shell
-   kubectl apply -f {{ "/manifests/threat/def/tor-exit-feed.yaml" | absolute_url }}
+   kubectl apply -f {{ "/manifests/threatdef/tor-exit-feed.yaml" | absolute_url }}
    ```
 2. Now, you can monitor the Dashboard for any malicious activity. The dashboard can be found at {{site.prodname}} Manager, go to "kibana" and then go to "Dashboard". Select "Tor-VPN Dashboard".
 3. Additionally, feeds can be checked using following command:

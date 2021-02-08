@@ -76,8 +76,8 @@ This feature is:
    In this example, we apply a patch release for the threat defense feature.
 
    ```
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/threat/def && kubectl create -f ejr-vpn.yaml.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/threat/def && kubectl create -f tor-exit-feed.yaml
+   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/threatdef && kubectl create -f ejr-vpn.yaml.yaml
+   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/threatdef && kubectl create -f tor-exit-feed.yaml
    ```
 
    **Managed cloud provider**
