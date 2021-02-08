@@ -42,7 +42,7 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/licensing v1.0.1-0.20210123223002-53d994486b81
+	github.com/tigera/licensing v1.0.1-0.20210208225242-c586047f6f54
 	github.com/tigera/nfnetlink v0.0.0-20210105181106-4ac282dc9ec8
 	github.com/tigera/windows-networking v0.0.0-20210122174114-908d3873095f
 	github.com/vishvananda/netlink v1.1.0
