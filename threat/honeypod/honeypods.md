@@ -43,7 +43,7 @@ Honeypods can be configured on a per-cluster basis using "template" honeypod man
 Apply the following manifest to create a namespace and RBAC for the honeypods: 
 
 ```bash
-kubectl apply -f {{ "/manifests/threat/def/honeypod/common.yaml" | absolute_url }} 
+kubectl apply -f {{ "/manifests/threatdef/honeypod/common.yaml" | absolute_url }} 
 ```
 
 Add `tigera-pull-secret` into the namespace `tigera-internal`:
@@ -63,7 +63,7 @@ Use one of the following sample honeypods manifests or customize them for your i
   Expose a empty pod that can only be reached via PodIP, we can see when the attacker is probing the pod network:
 
 ```bash
-kubectl apply -f {{ "/manifests/threat/def/honeypod/ip-enum.yaml" | absolute_url }} 
+kubectl apply -f {{ "/manifests/threatdef/honeypod/ip-enum.yaml" | absolute_url }} 
 ```
 
 - **Exposed service (nginx)**
@@ -71,7 +71,7 @@ kubectl apply -f {{ "/manifests/threat/def/honeypod/ip-enum.yaml" | absolute_url
   Expose a nginx service that serves a generic page. The pod can be discovered via ClusterIP or DNS lookup. An unreachable service `tigera-dashboard-internal-service` is created to entice the attacker to find and reach, `tigera-dashboard-internal-debug`:
 
 ```bash
-kubectl apply -f {{ "/manifests/threat/def/honeypod/expose-svc.yaml" | absolute_url }} 
+kubectl apply -f {{ "/manifests/threatdef/honeypod/expose-svc.yaml" | absolute_url }} 
 ```
 
 - **Vulnerable Service (MySQL)**
@@ -79,7 +79,7 @@ kubectl apply -f {{ "/manifests/threat/def/honeypod/expose-svc.yaml" | absolute_
   Expose a SQL service that contains an empty database with easy access. The pod can be discovered via ClusterIP or DNS lookup:
 
 ```bash
-kubectl apply -f {{ "/manifests/threat/def/honeypod/vuln-svc.yaml" | absolute_url }} 
+kubectl apply -f {{ "/manifests/threatdef/honeypod/vuln-svc.yaml" | absolute_url }} 
 ```
 
 #### Verify honeypods deployment
