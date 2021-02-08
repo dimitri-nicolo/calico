@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/l7-collector
-GO_BUILD_VER    ?= v0.38
+GO_BUILD_VER    ?= v0.50
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
@@ -358,7 +358,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --abbrev=12) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
