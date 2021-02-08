@@ -146,3 +146,6 @@ var EnterpriseAPIs = merge(CloudProAPIs, set{
 	api.NewGlobalThreatFeed().GetObjectKind().GroupVersionKind().String():     true,
 	api.NewGlobalThreatFeedList().GetObjectKind().GroupVersionKind().String(): true,
 })
+
+// EnterpriseFeatures package contains all available features
+var EnterpriseFeatures = merge(CloudProFeatures, set{ComplianceReports: true, ThreatDefense: true})
