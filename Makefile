@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.49
+GO_BUILD_VER    ?= v0.50
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
