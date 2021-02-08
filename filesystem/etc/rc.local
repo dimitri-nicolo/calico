@@ -4,9 +4,9 @@ if [ -z "$CALICO_DUAL_TOR_INIT" ]; then
     if [ -n "$CALICO_NETWORKING" ]; then
 	echo "WARNING: $CALICO_NETWORKING will be deprecated: use $CALICO_NETWORKING_BACKEND instead"
 	if [ "$CALICO_NETWORKING" = "false" ]; then
-		export CALICO_NETWORKING_BACKEND=none
+	    export CALICO_NETWORKING_BACKEND=none
 	else
-		export CALICO_NETWORKING_BACKEND=bird
+	    export CALICO_NETWORKING_BACKEND=bird
 	fi
     fi
 
@@ -39,7 +39,7 @@ if [ -z "$CALICO_DUAL_TOR_INIT" ]; then
     # Allow felix to be disabled, for example, if the user is running Felix
     # outside the container.
     if [ -z "$CALICO_DISABLE_FELIX" ]; then
-  cp -a /etc/service/available/felix /etc/service/enabled/
+	cp -a /etc/service/available/felix /etc/service/enabled/
     fi
 
     # Monitor change in node IP addresses and subnets.
@@ -50,28 +50,28 @@ if [ -z "$CALICO_DUAL_TOR_INIT" ]; then
 
     case "$CALICO_NETWORKING_BACKEND" in
 	"none" )
-	# If running in policy only mode, we don't need to run BIRD / Confd.
-	echo "CALICO_NETWORKING_BACKEND is none - no BGP daemon running"
-	;;
+	    # If running in policy only mode, we don't need to run BIRD / Confd.
+	    echo "CALICO_NETWORKING_BACKEND is none - no BGP daemon running"
+	    ;;
 	"vxlan" )
-	# If running in VXLAN-only mode, we don't need to run BIRD / Confd.
-	echo "CALICO_NETWORKING_BACKEND is vxlan - no need to run a BGP daemon"
-	;;
+	    # If running in VXLAN-only mode, we don't need to run BIRD / Confd.
+	    echo "CALICO_NETWORKING_BACKEND is vxlan - no need to run a BGP daemon"
+	    ;;
 	"gobgp" )
-	# Run calico-bgp-daemon instead of BIRD / Confd.
-	echo "CALICO_NETWORKING_BACKEND is gobgp - run calico-bgp-daemon"
-	cp -a /etc/service/available/calico-bgp-daemon /etc/service/enabled/
-	sh -c 'for file in `find /etc/calico/confd/conf.d/ -not -name 'tunl-ip.toml' -type f`; do rm $file; done'
-	cp -a /etc/service/available/confd /etc/service/enabled/
-	;;
+	    # Run calico-bgp-daemon instead of BIRD / Confd.
+	    echo "CALICO_NETWORKING_BACKEND is gobgp - run calico-bgp-daemon"
+	    cp -a /etc/service/available/calico-bgp-daemon /etc/service/enabled/
+	    sh -c 'for file in `find /etc/calico/confd/conf.d/ -not -name 'tunl-ip.toml' -type f`; do rm $file; done'
+	    cp -a /etc/service/available/confd /etc/service/enabled/
+	    ;;
 	* )
 
-	# Enable the confd and BIRD services (as well as BGP metrics that rely on BIRD)
-	cp -a /etc/service/available/bird  /etc/service/enabled/
-	cp -a /etc/service/available/bird6 /etc/service/enabled/
-	cp -a /etc/service/available/confd /etc/service/enabled/
-	cp -a /etc/service/available/bgp-metrics /etc/service/enabled/
-	;;
+	    # Enable the confd and BIRD services (as well as BGP metrics that rely on BIRD)
+	    cp -a /etc/service/available/bird  /etc/service/enabled/
+	    cp -a /etc/service/available/bird6 /etc/service/enabled/
+	    cp -a /etc/service/available/confd /etc/service/enabled/
+	    cp -a /etc/service/available/bgp-metrics /etc/service/enabled/
+	    ;;
     esac
 
     if [ "$CALICO_MANAGE_CNI" = "true" ]; then
