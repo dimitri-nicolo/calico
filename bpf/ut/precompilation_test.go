@@ -75,31 +75,34 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 								log.Debug("DSR only affects from WEP and HEP")
 								continue
 							}
+							for _, enableTcpStats := range []uint8{0, 1} {
 
-							ap := tc.AttachPoint{
-								Type:       epType,
-								ToOrFrom:   toOrFrom,
-								Hook:       tc.HookIngress,
-								ToHostDrop: epToHostDrop,
-								FIB:        fibEnabled,
-								DSR:        dsr,
-								LogLevel:   logLevel,
-								HostIP:     net.ParseIP("10.0.0.1"),
+								ap := tc.AttachPoint{
+									Type:           epType,
+									ToOrFrom:       toOrFrom,
+									Hook:           tc.HookIngress,
+									ToHostDrop:     epToHostDrop,
+									FIB:            fibEnabled,
+									DSR:            dsr,
+									LogLevel:       logLevel,
+									HostIP:         net.ParseIP("10.0.0.1"),
+									EnableTCPStats: enableTcpStats,
+								}
+
+								t.Run(ap.FileName(), func(t *testing.T) {
+									RegisterTestingT(t)
+									logCxt.Debugf("Testing %v in %v", ap.ProgramName(), ap.FileName())
+
+									vethName, veth := createVeth()
+									defer deleteLink(veth)
+
+									ap.Iface = vethName
+									err := tc.EnsureQdisc(ap.Iface)
+									Expect(err).NotTo(HaveOccurred())
+									err = ap.AttachProgram()
+									Expect(err).NotTo(HaveOccurred())
+								})
 							}
-
-							t.Run(ap.FileName(), func(t *testing.T) {
-								RegisterTestingT(t)
-								logCxt.Debugf("Testing %v in %v", ap.ProgramName(), ap.FileName())
-
-								vethName, veth := createVeth()
-								defer deleteLink(veth)
-
-								ap.Iface = vethName
-								err := tc.EnsureQdisc(ap.Iface)
-								Expect(err).NotTo(HaveOccurred())
-								err = ap.AttachProgram()
-								Expect(err).NotTo(HaveOccurred())
-							})
 						}
 					}
 				}

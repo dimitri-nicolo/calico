@@ -42,19 +42,19 @@ import (
 )
 
 type AttachPoint struct {
-	Type       EndpointType
-	ToOrFrom   ToOrFromEp
-	Hook       Hook
-	Iface      string
-	LogLevel   string
-	HostIP     net.IP
-	FIB        bool
-	ToHostDrop bool
-	DSR        bool
-	TunnelMTU  uint16
-	VXLANPort  uint16
-	VethNS     uint16
-	TcpStats   uint8
+	Type           EndpointType
+	ToOrFrom       ToOrFromEp
+	Hook           Hook
+	Iface          string
+	LogLevel       string
+	HostIP         net.IP
+	FIB            bool
+	ToHostDrop     bool
+	DSR            bool
+	TunnelMTU      uint16
+	VXLANPort      uint16
+	VethNS         uint16
+	EnableTCPStats uint8
 }
 
 var tcLock sync.RWMutex
@@ -206,7 +206,7 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 	}
 	b.PatchVXLANPort(vxlanPort)
 	b.PatchIfNS(ap.VethNS)
-	b.PatchTcpStats(uint8(ap.TcpStats))
+	b.PatchTcpStats(ap.EnableTCPStats)
 
 	err = b.WriteToFile(ofile)
 	if err != nil {
