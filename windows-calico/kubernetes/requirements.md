@@ -36,10 +36,6 @@ The following table summarizes the networking options and considerations.
 > **Note**: If Calico CNI with VXLAN is used, BGP must be disabled. See the [installation reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.BGPOption).
 {: .alert .alert-info}
 
-#### Datastores
-
-Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Windows node/Kubernetes cluster must be the same as the datastore for the Linux control node. (You cannot mix datastores in a {{site.prodnameWindows}} implementation.)
-
 #### Kubernetes version 
 
 - Versions 1.19, 1.18, 1.17
