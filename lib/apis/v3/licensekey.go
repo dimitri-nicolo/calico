@@ -64,6 +64,8 @@ type LicenseKeyStatus struct {
 	MaxNodes int `json:"maxnodes,omitempty" yaml:"maxnodes" validate:"omitempty"`
 	// License package defines type of Calico license that is being enforced
 	Package LicensePackageType `json:"package,omitempty" yaml:"package" validate:"omitempty"`
+	// List of features that are available via the applied license
+	Features []string `json:"features,omitempty" yaml:"features" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

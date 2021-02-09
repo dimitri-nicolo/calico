@@ -3557,6 +3557,11 @@ func (in *LicenseKeySpec) DeepCopy() *LicenseKeySpec {
 func (in *LicenseKeyStatus) DeepCopyInto(out *LicenseKeyStatus) {
 	*out = *in
 	in.Expiry.DeepCopyInto(&out.Expiry)
+	if in.Features != nil {
+		in, out := &in.Features, &out.Features
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
