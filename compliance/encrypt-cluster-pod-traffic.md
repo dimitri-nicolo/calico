@@ -24,7 +24,6 @@ This how-to guide uses the following {{site.prodname}} features:
 
 The following platforms using only IPv4:
 - Kubernetes, on-premises
-- OpenShift, v4.3 and later
 - EKS using Calico CNI only
 
 **Required**
