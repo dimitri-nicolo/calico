@@ -45,7 +45,6 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 	if (!sk) {
 		tuple.ipv6.saddr[0] = tuple.ipv6.saddr[1] = tuple.ipv6.daddr[0] = tuple.ipv6.daddr[1] = 0;
 		tuple.ipv6.saddr[2] = tuple.ipv6.daddr[2] = 0x0000ffff;
-		CALI_DEBUG("Sridharv6:\n");
 		if (CALI_F_FROM_WEP) {
 			tuple.ipv6.saddr[3] = ctx->ip_header->daddr;
 			tuple.ipv6.daddr[3] = ctx->ip_header->saddr;
@@ -58,9 +57,6 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 			tuple.ipv6.dport = ctx->tcp_header->dest;
 		}
 		sk = bpf_sk_lookup_tcp(ctx->skb, &tuple, sizeof(tuple.ipv6), IF_NS, 0);
-		if (sk && sk->family == 10) {
-			CALI_DEBUG("Socketv6 addr 0x%x 0x%x\n", sk->src_ip6[3], sk->dst_ip6[3]);
-		}
 	}
 	if (sk && ((sk->state == BPF_TCP_ESTABLISHED) || (sk->state >= BPF_TCP_FIN_WAIT1 && sk->state <= BPF_TCP_LAST_ACK))) {
 		tsk = bpf_tcp_sock(sk);
@@ -76,10 +72,6 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 				}
 				v = cali_v4_ct_lookup_elem(&k);
 				if (!v) {
-					if (sk->family == 10) {
-					CALI_DEBUG("Socketv6 ct lookup miss\n");} else {
-						CALI_DEBUG("Socketv4 ct lookup miss 0x%x 0x%x\n", sk->src_ip4, sk->dst_ip4);
-					}
 					goto release;
 				} else {
 					if (bpf_ktime_get_ns() - v->last_seen <= SEND_TCP_STATS_INTERVAL) {
@@ -109,12 +101,8 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 			} else {
 				__builtin_memcpy(event.saddr, sk->src_ip6, 16);
 				__builtin_memcpy(event.daddr, sk->dst_ip6, 16);
-				CALI_DEBUG("Sridhar ipv6 0x%x 0x%x 0x%x\n",event.saddr[13], event.saddr[14], event.saddr[15]);
-				CALI_DEBUG("Sridhar ipv6 0x%x 0x%x 0x%x\n",event.daddr[13], event.daddr[14], event.daddr[15]);
-				CALI_DEBUG("Sridhar ipv6 0x%x 0x%x\n",sk->src_ip4, sk->dst_ip4);
 			}
 			event_tcp_stats(ctx->skb, &event);
-			//event_tcp_stats(ctx->skb, v6_saddr, v6_daddr, sk->src_port, sk_dport, tsk);
 		}
 	}
 release:
