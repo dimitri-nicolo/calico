@@ -31,6 +31,8 @@ const (
 	TypeDNSEvent Type = 2
 	// TypePolicyVerdict is emitted when a policy program reaches a verdict
 	TypePolicyVerdict Type = 3
+	// TypeTcpStats reports L4 TCP socket information
+	TypeTcpStats Type = 4
 )
 
 // Event represents the common denominator of all events
@@ -162,7 +164,6 @@ func parseEvent(raw eventRaw) (Event, error) {
 	if int(hdr.Len) > l {
 		return Event{}, errors.Errorf("mismatched length %d vs data length %d", hdr.Len, l)
 	}
-
 	return Event{
 		typ:  Type(hdr.Type),
 		data: data[consumed:hdr.Len],

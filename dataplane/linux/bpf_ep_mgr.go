@@ -34,6 +34,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
 
@@ -123,6 +124,7 @@ type bpfEndpointManager struct {
 	vxlanMTU           int
 	vxlanPort          uint16
 	dsrEnabled         bool
+	enableTcpStats     bool
 
 	ipSetMap bpf.Map
 	stateMap bpf.Map
@@ -172,6 +174,7 @@ func newBPFEndpointManager(
 
 	lookupsCache *calc.LookupsCache,
 	actionOnDrop string,
+	enableTcpStats bool,
 ) *bpfEndpointManager {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
@@ -183,7 +186,6 @@ func newBPFEndpointManager(
 	case "DROP", "LOGandDROP":
 		actionOnDrop = "deny"
 	}
-
 	return &bpfEndpointManager{
 		allWEPs:             map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		happyWEPs:           map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
@@ -216,6 +218,7 @@ func newBPFEndpointManager(
 		lookupsCache:     lookupsCache,
 		hostIfaceToEpMap: map[string]proto.HostEndpoint{},
 		actionOnDrop:     actionOnDrop,
+		enableTcpStats:   enableTcpStats,
 	}
 }
 
@@ -739,6 +742,16 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	//   for resizing the packet, so we have to reduce the apparent MTU by another 50 bytes
 	//   when we cannot encap the packet - non-GSO & too close to veth MTU
 	ap.TunnelMTU = uint16(m.vxlanMTU - 50)
+
+	l, err := netlink.LinkByName(ifaceName)
+	if err != nil {
+		return err
+	}
+	ap.VethNS = uint16(l.Attrs().NetNsID)
+	ap.TcpStats = 0
+	if m.enableTcpStats {
+		ap.TcpStats = 1
+	}
 
 	jumpMapFD, err := m.ensureProgramAttached(&ap, polDirection)
 	if err != nil {

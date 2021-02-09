@@ -53,6 +53,8 @@ type AttachPoint struct {
 	DSR        bool
 	TunnelMTU  uint16
 	VXLANPort  uint16
+	VethNS     uint16
+	TcpStats   uint8
 }
 
 var tcLock sync.RWMutex
@@ -203,6 +205,8 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 		vxlanPort = 4789
 	}
 	b.PatchVXLANPort(vxlanPort)
+	b.PatchIfNS(ap.VethNS)
+	b.PatchTcpStats(uint8(ap.TcpStats))
 
 	err = b.WriteToFile(ofile)
 	if err != nil {
