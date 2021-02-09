@@ -29,7 +29,7 @@
 #define EVENT_PROTO_STATS	1
 #define EVENT_DNS		2
 #define EVENT_POLICY_VERDICT	3
-#define EVENT_TCP_STATS		4
+#define EVENT_TCP_STATS	4
 
 struct event_proto_stats {
 	struct perf_event_header hdr;
