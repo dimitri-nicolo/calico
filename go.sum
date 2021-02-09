@@ -754,6 +754,12 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20210212224648-d1636500d28f h1:iB
 github.com/tigera/typha-private v0.6.0-beta1.0.20210212224648-d1636500d28f/go.mod h1:NUA+4VwqzOvY9563FwcqhMvWWGNG0Lo1oApJjyUbTkA=
 github.com/tigera/windows-networking v0.0.0-20210122174114-908d3873095f h1:NgDgr8G0zu276bBKqwKSoWbUIHd6WLgDfpUamj3nTSs=
 github.com/tigera/windows-networking v0.0.0-20210122174114-908d3873095f/go.mod h1:zLPYHfMmBxMWc/BQ110LwhjFju7wlWx+ycNTMNvguSQ=
+github.com/tigera/windows-networking v0.0.0-20210208164917-ee0595b71667 h1:TPwkjjW8stdjP3gJNvnx6BsdcYDMLC7hcztnzp1sPUw=
+github.com/tigera/windows-networking v0.0.0-20210208164917-ee0595b71667/go.mod h1:zLPYHfMmBxMWc/BQ110LwhjFju7wlWx+ycNTMNvguSQ=
+github.com/tigera/windows-networking v0.0.0-20210209110110-584f961d7093 h1:ToW2Z/D7YLNDBpRM1Gg7ioZ0zLMPaseHDTX7cEeF1pk=
+github.com/tigera/windows-networking v0.0.0-20210209110110-584f961d7093/go.mod h1:zLPYHfMmBxMWc/BQ110LwhjFju7wlWx+ycNTMNvguSQ=
+github.com/tigera/windows-networking v0.0.0-20210209112440-96d20c122d69 h1:uQX8wqeeLnmU4z8FRgFfItjzrIyNzPgP0vSfYznYjRs=
+github.com/tigera/windows-networking v0.0.0-20210209112440-96d20c122d69/go.mod h1:zLPYHfMmBxMWc/BQ110LwhjFju7wlWx+ycNTMNvguSQ=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
