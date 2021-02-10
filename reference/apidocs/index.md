@@ -1,5 +1,5 @@
 ---
-title: Calico Enterprise API reference
+title: REST API Reference
 description: Calico Enterprise API reference
 canonical_url: "/reference/apidocs/index"
 show_read_time: false
