@@ -385,6 +385,8 @@ type FelixConfigurationSpec struct {
 	FlowLogsMaxOriginalIPsIncluded *int `json:"flowLogsMaxOriginalIPsIncluded,omitempty"`
 	// FlowLogsCollectProcessInfo, if enabled Felix will load the kprobe BPF programs to collect process info. [Default: false]
 	FlowLogsCollectProcessInfo *bool `json:"flowLogsCollectProcessInfo,omitempty" validate:"omitempty"`
+	// FlowLogsCollectTcpStats enables flow logs reporting TCP socket stats
+	FlowLogsCollectTcpStats *bool `json:"flowLogsCollectTcpStats,omitempty" validate:"omitempty"`
 
 	// Enable Flow logs reporting to AWS CloudWatch.
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
