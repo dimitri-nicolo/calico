@@ -58,7 +58,7 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 		tsk = bpf_tcp_sock(sk);
 		if (tsk) {
 			if (BPF_TCP_ESTABLISHED == sk->state) {
-				if (bpf_ktime_get_ns() - ctx->state->ct_result.ts <= SEND_TCP_STATS_INTERVAL) {
+				if (bpf_ktime_get_ns() - ctx->state->ct_result.prev_ts <= SEND_TCP_STATS_INTERVAL) {
 					goto release;
 				}
 			}
