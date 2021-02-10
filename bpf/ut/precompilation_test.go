@@ -75,7 +75,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 								log.Debug("DSR only affects from WEP and HEP")
 								continue
 							}
-							for _, enableTcpStats := range []uint8{0, 1} {
+							for _, enableTcpStats := range []bool{false, true} {
 
 								ap := tc.AttachPoint{
 									Type:           epType,

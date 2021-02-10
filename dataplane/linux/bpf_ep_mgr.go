@@ -748,9 +748,9 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		return err
 	}
 	ap.VethNS = uint16(l.Attrs().NetNsID)
-	ap.EnableTCPStats = 0
+	ap.EnableTCPStats = false
 	if m.enableTcpStats {
-		ap.EnableTCPStats = 1
+		ap.EnableTCPStats = true
 	}
 
 	jumpMapFD, err := m.ensureProgramAttached(&ap, polDirection)

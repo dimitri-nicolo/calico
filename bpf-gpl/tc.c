@@ -65,6 +65,13 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 #endif
 	CALI_DEBUG("New packet at ifindex=%d; mark=%x\n", skb->ifindex, skb->mark);
 
+	/* Optimisation: if another BPF program has already pre-approved the packet,
+	 * skip all processing. */
+	if (!CALI_F_TO_HOST && skb->mark == CALI_SKB_MARK_BYPASS) {
+		CALI_INFO("Final result=ALLOW (%d). Bypass mark bit set.\n", CALI_REASON_BYPASS);
+		return TC_ACT_UNSPEC;
+	}
+
 	/* Initialise the context, which is stored on the stack, and the state, which
 	 * we use to pass data from one program to the next via tail calls. */
 	struct cali_tc_ctx ctx = {
@@ -83,27 +90,6 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_INFO) {
 		ctx.state->prog_start_time = bpf_ktime_get_ns();
-	}
-	if (ENABLE_TCP_STATS && CALI_F_WEP) {
-		if (parse_packet_ip(&ctx)) {
-			// Either a problem or a packet that we automatically let through.
-			goto finalize;
-		}
-
-		tc_state_fill_from_iphdr(ctx.state, ctx.ip_header);
-		/* Parse the packet as far as the IP header; as a side-effect this validates the packet size
-		 * is large enough for UDP. */
-		if (IPPROTO_TCP == ctx.state->ip_proto) {
-			socket_lookup(&ctx);
-		}
-		// Reset the ctx back for normal flow */
-		__builtin_memset(ctx.state, 0, sizeof(*ctx.state));
-	}
-	/* Optimisation: if another BPF program has already pre-approved the packet,
-	 * skip all processing. */
-	if (!CALI_F_TO_HOST && skb->mark == CALI_SKB_MARK_BYPASS) {
-		CALI_INFO("Final result=ALLOW (%d). Bypass mark bit set.\n", CALI_REASON_BYPASS);
-		return TC_ACT_UNSPEC;
 	}
 
 	/* We only try a FIB lookup and redirect for packets that are towards the host.
@@ -158,6 +144,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		// Either a problem or a packet that we automatically let through.
 		goto finalize;
 	}
+
 	/* Now we've got as far as the UDP header, check if this is one of our VXLAN packets, which we
 	 * use to forward traffic for node ports. */
 	if (dnat_should_decap() /* Compile time: is this a BPF program that should decap packets? */ &&
@@ -501,6 +488,12 @@ skip_policy:
 		ctx.fwd.reason = CALI_REASON_SHORT;
 		CALI_DEBUG("Too short\n");
 		goto deny;
+	}
+
+	if (ENABLE_TCP_STATS && CALI_F_FROM_WEP) {
+		if (IPPROTO_TCP == ctx.state->ip_proto) {
+			socket_lookup(&ctx);
+		}
 	}
 
 	ctx.fwd = calico_tc_skb_accepted(&ctx, ctx.nat_dest);
@@ -1102,13 +1095,6 @@ nat_encap:
 
 allow:
 	{
-		if (ENABLE_TCP_STATS && CALI_F_WEP) {
-			if (IPPROTO_TCP == ctx->state->ip_proto) {
-				if (!skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
-					socket_lookup(ctx);
-				}
-			}
-		}
 		struct fwd fwd = {
 			.res = rc,
 			.mark = seen_mark,

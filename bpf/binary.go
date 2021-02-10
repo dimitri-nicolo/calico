@@ -136,8 +136,12 @@ func (b *Binary) PatchIfNS(ns uint16) {
 	b.replaceAllLoadImm32([]byte("IFNS"), bytes)
 }
 
-func (b *Binary) PatchTcpStats(tcpStats uint8) {
+func (b *Binary) PatchTcpStats(tcpStats bool) {
 	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(tcpStats))
+	enableTcpStats := 0
+	if tcpStats {
+		enableTcpStats = 1
+	}
+	binary.LittleEndian.PutUint32(bytes, uint32(enableTcpStats))
 	b.replaceAllLoadImm32([]byte("TCPS"), bytes)
 }

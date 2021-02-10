@@ -24,10 +24,6 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 	struct bpf_sock *sk = NULL;
 	struct bpf_sock_tuple tuple={};
 	struct bpf_tcp_sock *tsk = NULL;
-	__u16 sk_dport = 0;
-	bool srcLTDest = 0;
-	struct calico_ct_key k = {};
-	struct calico_ct_value *v = NULL;
 	
 	if (CALI_F_FROM_WEP) {
 		tuple.ipv4.saddr = ctx->ip_header->daddr;
@@ -60,28 +56,15 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 	}
 	if (sk && ((sk->state == BPF_TCP_ESTABLISHED) || (sk->state >= BPF_TCP_FIN_WAIT1 && sk->state <= BPF_TCP_LAST_ACK))) {
 		tsk = bpf_tcp_sock(sk);
-		sk_dport = bpf_ntohs(sk->dst_port);
 		if (tsk) {
 			if (BPF_TCP_ESTABLISHED == sk->state) {
-				if (sk->family == 2) {
-					srcLTDest = src_lt_dest(sk->src_ip4, sk->dst_ip4, sk->src_port, sk_dport);
-					k = ct_make_key(srcLTDest, IPPROTO_TCP, sk->src_ip4, sk->dst_ip4, sk->src_port, sk_dport);
-				} else {
-					srcLTDest = src_lt_dest(sk->src_ip6[3], sk->dst_ip6[3], sk->src_port, sk_dport);
-					k = ct_make_key(srcLTDest, IPPROTO_TCP, sk->src_ip6[3], sk->dst_ip6[3], sk->src_port, sk_dport);
-				}
-				v = cali_v4_ct_lookup_elem(&k);
-				if (!v) {
+				if (bpf_ktime_get_ns() - ctx->state->ct_result.ts <= SEND_TCP_STATS_INTERVAL) {
 					goto release;
-				} else {
-					if (bpf_ktime_get_ns() - v->last_seen <= SEND_TCP_STATS_INTERVAL) {
-						goto release;
-					}
 				}
 			}
 			struct event_tcp_stats event = {
 				.sport = sk->src_port,
-				.dport = sk_dport,
+				.dport = bpf_ntohs(sk->dst_port),
 				.hdr.len = sizeof(struct event_tcp_stats),
 				.hdr.type = EVENT_TCP_STATS,
 				.snd_cwnd = tsk->snd_cwnd,
@@ -109,7 +92,6 @@ release:
 	if (sk) {
 		bpf_sk_release(sk);
 	}
-	return;
 }
 
 #endif /* __CALI_LOOKUP_H__ */

@@ -193,6 +193,7 @@ struct calico_ct_result {
 				* ingress interface index.  For a CT state created by a
 				* packet _from_ the host, it's CT_INVALID_IFINDEX (0).
 				*/
+	__u64 ts;
 };
 
 #endif /* __CALI_CONNTRAC_TYPESK_H__ */

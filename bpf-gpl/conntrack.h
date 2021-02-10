@@ -536,6 +536,8 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		tcp_header = ct_ctx->tcp;
 
 		related = true;
+	} else {
+		result.ts = v->last_seen;
 	}
 
 	__u64 now = bpf_ktime_get_ns();

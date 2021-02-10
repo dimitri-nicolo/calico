@@ -54,7 +54,7 @@ type AttachPoint struct {
 	TunnelMTU      uint16
 	VXLANPort      uint16
 	VethNS         uint16
-	EnableTCPStats uint8
+	EnableTCPStats bool
 }
 
 var tcLock sync.RWMutex
