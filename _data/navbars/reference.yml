@@ -87,9 +87,7 @@ section:
       path: /reference/calicoq/policy
     - title: Version
       path: /reference/calicoq/version
-- title: Calico Enterprise API
-  path: /reference/apidocs/
-- title: Networking and policy resource definitions
+- title: Resource definitions
   path: /reference/resources/
   section:
   - title: Overview
@@ -243,5 +241,7 @@ section:
       path: /reference/architecture/design/l2-interconnect-fabric
     - title: Calico over IP fabrics
       path: /reference/architecture/design/l3-interconnect-fabric
+- title: REST API
+  path: /reference/apidocs/
 - title: Frequently asked questions
   path: /reference/faq
