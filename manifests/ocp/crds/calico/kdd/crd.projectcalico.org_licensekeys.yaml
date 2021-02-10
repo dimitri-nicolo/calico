@@ -50,6 +50,11 @@ spec:
                 format: date-time
                 nullable: true
                 type: string
+              features:
+                description: List of features that are available via the applied license
+                items:
+                  type: string
+                type: array
               maxnodes:
                 description: Maximum Number of Allowed Nodes
                 type: integer
