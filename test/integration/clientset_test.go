@@ -47,8 +47,10 @@ import (
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/apiserver/pkg/apiserver"
 	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/apiserver/pkg/helpers"
 	"github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/tigera/apiserver/pkg/registry/projectcalico/authorizationreview"
+	licFeatures "github.com/tigera/licensing/client/features"
 )
 
 // TestGroupVersion is trivial.
@@ -915,9 +917,9 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	} else if err.Error() != "LicenseKey.projectcalico.org \"default\" is invalid: LicenseKeySpec.token: Internal error: the license you're trying to create expired on 2019-02-08 07:59:59 +0000 UTC" {
 		fmt.Printf("Incorrect error: %+v\n", err)
 	}
-	// Valid License with Maximum supported Nodes 100
-	validLicenseKey := getValidLicenseKey(name)
-	lic, err := licenseKeyClient.Create(ctx, validLicenseKey, metav1.CreateOptions{})
+	// Valid Enterprise License with Maximum supported Nodes 100
+	enterpriseValidLicenseKey := getLicenseKey(name, validLicenseCertificate, enterpriseToken)
+	lic, err := licenseKeyClient.Create(ctx, enterpriseValidLicenseKey, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Check for License Expiry date %v\n", err)
 		return err
@@ -937,6 +939,45 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	if lic.Status.Package != "Enterprise" {
 		fmt.Printf("License's package type does not match :%v\n", lic.Status.Package)
 		return fmt.Errorf("License Package Type does not match")
+	}
+
+	if !reflect.DeepEqual(lic.Status.Features, helpers.SortedKeys(licFeatures.EnterpriseFeatures)) {
+		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, helpers.SortedKeys(licFeatures.EnterpriseFeatures))
+		return fmt.Errorf("License features do not match")
+	}
+
+	// Valid CloudPro License with Maximum supported Nodes 100
+	cloudProLicenseKey := getLicenseKey(name, validLicenseCertificate, cloudProToken)
+	licenseKeyClient.Delete(ctx, "default", metav1.DeleteOptions{})
+	if err != nil {
+		fmt.Printf("Could not delete license %v\n", err)
+		return err
+	}
+	lic, err = licenseKeyClient.Create(ctx, cloudProLicenseKey, metav1.CreateOptions{})
+	if err != nil {
+		fmt.Printf("Check for License Expiry date %v\n", err)
+		return err
+	}
+	//Check for Maxiumum nodes
+	if lic.Status.MaxNodes != 100 {
+		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
+		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
+	}
+
+	//Check for Certificate Expiry date
+	if lic.Status.Expiry.Time.String() != "2021-12-31 23:59:59 +0000 UTC" {
+		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
+		return fmt.Errorf("License Expiry date don't match")
+	}
+
+	if lic.Status.Package != "CloudPro" {
+		fmt.Printf("License's package type does not match :%v\n", lic.Status.Package)
+		return fmt.Errorf("License Package Type does not match")
+	}
+
+	if !reflect.DeepEqual(lic.Status.Features, helpers.SortedKeys(licFeatures.CloudProFeatures)) {
+		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, helpers.SortedKeys(licFeatures.CloudProFeatures))
+		return fmt.Errorf("License features do not match")
 	}
 
 	return nil

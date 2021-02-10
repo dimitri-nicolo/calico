@@ -80,7 +80,10 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 	if licClaims.Validate() == licClient.Valid {
 		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
+			MaxNodes: *licClaims.Nodes,
+			Package:  helpers.ConvertToPackageType(*&licClaims.Features),
+			Features: helpers.ExpandFeatureNames(*&licClaims.Features),
+		}
 	}
 }
 
@@ -120,7 +123,10 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	newLicenseKey := obj.(*calico.LicenseKey)
 	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-		MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
+		MaxNodes: *licClaims.Nodes,
+		Package:  helpers.ConvertToPackageType(*&licClaims.Features),
+		Features: helpers.ExpandFeatureNames(*&licClaims.Features),
+	}
 }
 
 // ValidateUpdate is the default update validation for an end user updating status

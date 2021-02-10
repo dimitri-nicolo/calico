@@ -8717,6 +8717,20 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"features": {
+						SchemaProps: spec.SchemaProps{
+							Description: "List of features that are available via the applied license",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

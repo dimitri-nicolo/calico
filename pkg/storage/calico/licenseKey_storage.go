@@ -102,7 +102,9 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 		if licClaims.Validate() == licClient.Valid {
 			aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 				Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-				MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
+				MaxNodes: *licClaims.Nodes,
+				Package:  helpers.ConvertToPackageType(*&licClaims.Features),
+				Features: helpers.ExpandFeatureNames(*&licClaims.Features)}
 		}
 	}
 }
