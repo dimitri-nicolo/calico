@@ -70,11 +70,11 @@ try_update_nic_addr()
     fi
 }
 
-# CALICO_DUAL_TOR_INIT must be the URL of a shell include defining a
-# `get_dual_tor_details` function.  Given one of the NIC-specific
-# addresses for this node, this function must output variable settings
-# for this node's stable address and AS number, and for the ToR
-# addresses to peer with, for example like this:
+# There must be a file mapped in at /etc/calico-dual-tor/details.sh
+# that defines a `get_dual_tor_details` function.  Given one of the
+# NIC-specific addresses for this node, this function must output
+# variable settings for this node's stable address and AS number, and
+# for the ToR addresses to peer with, for example like this:
 #
 # DUAL_TOR_STABLE_ADDRESS=172.31.20.3
 # DUAL_TOR_AS_NUMBER=65002
@@ -83,8 +83,7 @@ try_update_nic_addr()
 #
 # Note, the shell include code should not have any effects other than
 # defining the required `get_dual_tor_details` function.
-wget -O details.sh "$CALICO_DUAL_TOR_INIT"
-. ./details.sh
+. /etc/calico-dual-tor/details.sh
 
 echo "NIC-specific address is $ROUTER_ID"
 eval `get_dual_tor_details $ROUTER_ID`
