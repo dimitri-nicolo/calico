@@ -168,7 +168,8 @@ func New(
 		aggKind := getL7AggregationKindFromConfigParams(configParams)
 		l7LogReporter.AddAggregator(
 			NewL7LogAggregator().
-				AggregateOver(aggKind),
+				AggregateOver(aggKind).
+				PerNodeLimit(configParams.L7LogsFilePerNodeLimit),
 			[]string{L7LogsFileDispatcherName},
 		)
 		statsCollector.SetL7LogReporter(l7LogReporter)
