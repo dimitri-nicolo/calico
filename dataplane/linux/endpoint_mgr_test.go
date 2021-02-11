@@ -180,6 +180,13 @@ func wlChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper ru
 	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, false, "normal", false, iptables.AcceptAction{})
 }
 
+func tierToPolicyName(tierName string) string {
+	if strings.HasPrefix(tierName, "tier") {
+		return "pol" + strings.TrimPrefix(tierName, "tier")
+	}
+	return "a"
+}
+
 func chainsForIfaces(ipVersion uint8,
 	ifaceTierNames []string,
 	epMarkMapper rules.EndpointMarkMapper,
@@ -261,7 +268,7 @@ func chainsForIfaces(ipVersion uint8,
 				polName = "/" + nameParts[1]
 			} else {
 				tierName = nameParts[1]
-				polName = "/a"
+				polName = "/" + tierToPolicyName(tierName)
 			}
 			ifaceKind = "normal"
 		} else {
@@ -274,7 +281,7 @@ func chainsForIfaces(ipVersion uint8,
 				polName = "/" + nameParts[1]
 			} else {
 				tierName = nameParts[1]
-				polName = "/a"
+				polName = "/" + tierToPolicyName(tierName)
 			}
 			switch nameParts[2] {
 			case "ingress":
@@ -769,6 +776,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 			mockProcSys     *testProcSys
 			statusReportRec *statusReportRecorder
 			nlDataplane     *mocknetlink.MockNetlinkDataplane
+			hepListener     *testHEPListener
 		)
 
 		BeforeEach(func() {
@@ -815,6 +823,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 			nlDataplane = mocknetlink.New()
 			nlHandle, err := nlDataplane.NewMockNetlink()
 			Expect(err).NotTo(HaveOccurred())
+			hepListener = &testHEPListener{}
 			epMgr = newEndpointManagerWithShims(
 				rawTable,
 				mangleTable,
@@ -829,7 +838,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				mockProcSys.write,
 				mockProcSys.stat,
 				false,
-				nil,
+				hepListener,
 				newCallbacks(),
 				nlHandle,
 			)
@@ -854,7 +863,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{parts[0]}
 					} else {
 						tierName = parts[0]
-						policies = []string{"a"}
+						policies = []string{tierToPolicyName(tierName)}
 					}
 					tiers = append(tiers, &proto.TierInfo{
 						Name:            tierName,
@@ -867,7 +876,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{parts[0]}
 					} else {
 						tierName = parts[0]
-						policies = []string{"a"}
+						policies = []string{tierToPolicyName(tierName)}
 					}
 					untrackedTiers = append(untrackedTiers, &proto.TierInfo{
 						Name:            tierName,
@@ -880,7 +889,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{parts[0]}
 					} else {
 						tierName = parts[0]
-						policies = []string{"a"}
+						policies = []string{tierToPolicyName(tierName)}
 					}
 					preDNATTiers = append(preDNATTiers, &proto.TierInfo{
 						Name:            tierName,
@@ -898,7 +907,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{parts[0]}
 					} else {
 						tierName = parts[0]
-						policies = []string{"a"}
+						policies = []string{tierToPolicyName(tierName)}
 					}
 					tiers = append(tiers, &proto.TierInfo{
 						Name:            tierName,
@@ -910,7 +919,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{parts[0]}
 					} else {
 						tierName = parts[0]
-						policies = []string{"a"}
+						policies = []string{tierToPolicyName(tierName)}
 					}
 					tiers = append(tiers, &proto.TierInfo{
 						Name:           tierName,
@@ -1019,6 +1028,26 @@ func endpointManagerTests(ipVersion uint8) func() {
 				Expect(statusReportRec.currentState).To(BeEmpty())
 			})
 
+			Describe("with * host endpoint", func() {
+				JustBeforeEach(configureHostEp(&hostEpSpec{
+					id:       "id1",
+					name:     "*",
+					tierName: "polA",
+				}))
+
+				It("should report id1 up", func() {
+					Expect(statusReportRec.currentState).To(Equal(map[interface{}]string{
+						proto.HostEndpointID{EndpointId: "id1"}: "up",
+					}))
+				})
+
+				It("should define host endpoints", func() {
+					Expect(hepListener.state).To(Equal(map[string]string{
+						"any-interface-at-all": "profiles=,normal=I=polA,E=polA,untracked=,preDNAT=,AoF=",
+					}))
+				})
+			})
+
 			// Configure host endpoints with tier names here, so we can check which of
 			// the host endpoints gets used in the programming for a particular host
 			// interface.  When more than one host endpoint matches a given interface,
@@ -1036,6 +1065,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 					}))
 				})
 
+				It("should define host endpoints", func() {
+					Expect(hepListener.state).To(Equal(map[string]string{
+						"eth0": "profiles=,normal=I=polA,E=polA,untracked=,preDNAT=,AoF=",
+					}))
+				})
+
 				Context("with another host ep (>ID) that matches the IPv4 address", func() {
 					JustBeforeEach(configureHostEp(&hostEpSpec{
 						id:        "id2",
@@ -1050,6 +1085,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						}))
 					})
 
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=I=polA,E=polA,untracked=,preDNAT=,AoF=",
+						}))
+					})
+
 					Context("with the first host ep removed", func() {
 						JustBeforeEach(removeHostEp("id1"))
 						It("should have expected chains", expectChainsFor(ipVersion, "eth0_tierB"))
@@ -1058,9 +1099,20 @@ func endpointManagerTests(ipVersion uint8) func() {
 								proto.HostEndpointID{EndpointId: "id2"}: "up",
 							}))
 						})
+
+						It("should define host endpoints", func() {
+							Expect(hepListener.state).To(Equal(map[string]string{
+								"eth0": "profiles=,normal=I=polB,E=polB,untracked=,preDNAT=,AoF=",
+							}))
+						})
+
 						Context("with both host eps removed", func() {
 							JustBeforeEach(removeHostEp("id2"))
 							It("should have empty dispatch chains", expectEmptyChains(ipVersion))
+
+							It("should define host endpoints", func() {
+								Expect(hepListener.state).To(BeEmpty())
+							})
 						})
 					})
 				})
@@ -1079,6 +1131,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						}))
 					})
 
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=I=polB,E=polB,untracked=,preDNAT=,AoF=",
+						}))
+					})
+
 					Context("with the first host ep removed", func() {
 						JustBeforeEach(removeHostEp("id1"))
 						It("should have expected chains", expectChainsFor(ipVersion, "eth0_tierB"))
@@ -1088,12 +1146,22 @@ func endpointManagerTests(ipVersion uint8) func() {
 							}))
 						})
 
+						It("should define host endpoints", func() {
+							Expect(hepListener.state).To(Equal(map[string]string{
+								"eth0": "profiles=,normal=I=polB,E=polB,untracked=,preDNAT=,AoF=",
+							}))
+						})
+
 						Context("with both host eps removed", func() {
 							JustBeforeEach(removeHostEp("id0"))
 							It("should have empty dispatch chains", expectEmptyChains(ipVersion))
 
 							It("should remove all status reports", func() {
 								Expect(statusReportRec.currentState).To(BeEmpty())
+							})
+
+							It("should define host endpoints", func() {
+								Expect(hepListener.state).To(BeEmpty())
 							})
 						})
 					})
@@ -1106,6 +1174,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						tierName: "tierA_untracked",
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, "eth0_tierA_untracked"))
+
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=,untracked=I=polA,E=polA,preDNAT=,AoF=",
+						}))
+					})
 				})
 
 				Describe("replaced with applyOnForward version", func() {
@@ -1115,6 +1189,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						tierName: "polA_applyOnForward",
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, "eth0_polA_applyOnForward"))
+
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=,untracked=,preDNAT=,AoF=I=polA,E=polA",
+						}))
+					})
 				})
 
 				Describe("replaced with pre-DNAT version", func() {
@@ -1124,6 +1204,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						tierName: "polA_preDNAT",
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, "eth0_polA_preDNAT"))
+
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=,untracked=,preDNAT=I=polA,E=,AoF=",
+						}))
+					})
 				})
 
 				Describe("replaced with ingress-only version", func() {
@@ -1133,6 +1219,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						tierName: "polA_ingress",
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, "eth0_polA_ingress"))
+
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=I=polA,E=,untracked=,preDNAT=,AoF=",
+						}))
+					})
 				})
 
 				Describe("replaced with egress-only version", func() {
@@ -1142,6 +1234,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						tierName: "polA_egress",
 					}))
 					It("should have expected chains", expectChainsFor(ipVersion, "eth0_polA_egress"))
+
+					It("should define host endpoints", func() {
+						Expect(hepListener.state).To(Equal(map[string]string{
+							"eth0": "profiles=,normal=I=,E=polA,untracked=,preDNAT=,AoF=",
+						}))
+					})
 				})
 			})
 
@@ -2258,4 +2356,29 @@ func (t *testProcSys) stat(path string) (os.FileInfo, error) {
 
 func (t *testProcSys) checkState(expected map[string]string) {
 	Expect(t.state).To(Equal(expected))
+}
+
+type testHEPListener struct {
+	state map[string]string
+}
+
+func (t *testHEPListener) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint) {
+	log.Infof("OnHEPUpdate: %v", hostIfaceToEpMap)
+	t.state = map[string]string{}
+	stringify := func(tiers []*proto.TierInfo) string {
+		var tierStrings []string
+		for _, tier := range tiers {
+			tierStrings = append(tierStrings,
+				"I="+strings.Join(tier.IngressPolicies, ",")+
+					",E="+strings.Join(tier.EgressPolicies, ","))
+		}
+		return strings.Join(tierStrings, "/")
+	}
+	for ifaceName, hep := range hostIfaceToEpMap {
+		t.state[ifaceName] = "profiles=" + strings.Join(hep.ProfileIds, ",") +
+			",normal=" + stringify(hep.Tiers) +
+			",untracked=" + stringify(hep.UntrackedTiers) +
+			",preDNAT=" + stringify(hep.PreDnatTiers) +
+			",AoF=" + stringify(hep.ForwardTiers)
+	}
 }

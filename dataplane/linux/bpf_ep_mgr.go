@@ -77,6 +77,14 @@ func init() {
 	prometheus.MustRegister(bpfHappyEndpointsGauge)
 }
 
+type bpfDataplane interface {
+	ensureProgramAttached(ap *tc.AttachPoint, polDirection PolDirection) (bpf.MapFD, error)
+	ensureQdisc(iface string) error
+	updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) error
+	removePolicyProgram(jumpMapFD bpf.MapFD) error
+	setAcceptLocal(iface string, val bool) error
+}
+
 type bpfInterface struct {
 	// info contains the information about the interface sent to us from external sources. For example,
 	// the ID of the controlling workload interface and our current expectation of its "oper state".
@@ -143,6 +151,9 @@ type bpfEndpointManager struct {
 	wildcardHostEndpoint proto.HostEndpoint
 	wildcardExists       bool
 
+	// UT-able BPF dataplane interface.
+	dp bpfDataplane
+
 	// CaliEnt features below
 
 	lookupsCache *calc.LookupsCache
@@ -186,7 +197,7 @@ func newBPFEndpointManager(
 	case "DROP", "LOGandDROP":
 		actionOnDrop = "deny"
 	}
-	return &bpfEndpointManager{
+	m := &bpfEndpointManager{
 		allWEPs:             map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		happyWEPs:           map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		happyWEPsDirty:      true,
@@ -220,6 +231,11 @@ func newBPFEndpointManager(
 		actionOnDrop:     actionOnDrop,
 		enableTcpStats:   enableTcpStats,
 	}
+
+	// Normally this endpoint manager uses its own dataplane implementation, but we have an
+	// indirection here so that UT can simulate the dataplane and test how it's called.
+	m.dp = m
+	return m
 }
 
 // withIface handles the bookkeeping for working with a particular bpfInterface value.  It
@@ -485,6 +501,10 @@ func (m *bpfEndpointManager) ensureStarted() {
 	})
 }
 
+func (m *bpfEndpointManager) ensureQdisc(iface string) error {
+	return tc.EnsureQdisc(iface)
+}
+
 func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 	var mutex sync.Mutex
 	errs := map[string]error{}
@@ -506,7 +526,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			defer wg.Done()
 
 			// Attach the qdisc first; it is shared between the directions.
-			err := tc.EnsureQdisc(iface)
+			err := m.dp.ensureQdisc(iface)
 			if err != nil {
 				mutex.Lock()
 				errs[iface] = err
@@ -534,7 +554,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			if err == nil {
 				// This is required to allow NodePort forwarding with
 				// encapsulation with the host's IP as the source address
-				err = m.setAcceptLocal(iface, true)
+				err = m.dp.setAcceptLocal(iface, true)
 			}
 			mutex.Lock()
 			errs[iface] = err
@@ -689,7 +709,7 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	// get the jump map ready to insert the policy if the endpoint shows up.
 
 	// Attach the qdisc first; it is shared between the directions.
-	err := tc.EnsureQdisc(ifaceName)
+	err := m.dp.ensureQdisc(ifaceName)
 	if err != nil {
 		if errors.Is(err, tc.ErrDeviceNotFound) {
 			// Interface is gone, nothing to do.
@@ -743,17 +763,9 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	//   when we cannot encap the packet - non-GSO & too close to veth MTU
 	ap.TunnelMTU = uint16(m.vxlanMTU - 50)
 
-	l, err := netlink.LinkByName(ifaceName)
-	if err != nil {
-		return err
-	}
-	ap.VethNS = uint16(l.Attrs().NetNsID)
-	ap.EnableTCPStats = false
-	if m.enableTcpStats {
-		ap.EnableTCPStats = true
-	}
+	ap.EnableTCPStats = m.enableTcpStats
 
-	jumpMapFD, err := m.ensureProgramAttached(&ap, polDirection)
+	jumpMapFD, err := m.dp.ensureProgramAttached(&ap, polDirection)
 	if err != nil {
 		return err
 	}
@@ -788,11 +800,20 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		rules.SuppressNormalHostPolicy = true
 	}
 
-	return m.updatePolicyProgram(jumpMapFD, rules)
+	return m.dp.updatePolicyProgram(jumpMapFD, rules)
 }
 
 // Ensure TC program is attached to the specified interface and return its jump map FD.
 func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirection PolDirection) (bpf.MapFD, error) {
+
+	if ap.Type == tc.EpTypeWorkload {
+		l, err := netlink.LinkByName(ap.Iface)
+		if err != nil {
+			return 0, err
+		}
+		ap.VethNS = uint16(l.Attrs().NetNsID)
+	}
+
 	jumpMapFD := m.getJumpMapFD(ap.Iface, polDirection)
 	if jumpMapFD != 0 {
 		if attached, err := ap.IsAttached(); err != nil {
@@ -980,7 +1001,7 @@ func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.
 	ap.HostIP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)
 
-	jumpMapFD, err := m.ensureProgramAttached(&ap, polDirection)
+	jumpMapFD, err := m.dp.ensureProgramAttached(&ap, polDirection)
 	if err != nil {
 		return err
 	}
@@ -991,10 +1012,10 @@ func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.
 			NoProfileMatchID: m.profileNoMatchID(polDirection.RuleDir()),
 		}
 		m.addHostPolicy(&rules, ep, polDirection)
-		return m.updatePolicyProgram(jumpMapFD, rules)
+		return m.dp.updatePolicyProgram(jumpMapFD, rules)
 	}
 
-	return m.removePolicyProgram(jumpMapFD)
+	return m.dp.removePolicyProgram(jumpMapFD)
 }
 
 // PolDirection is the Calico datamodel direction of policy.  On a host endpoint, ingress is towards the host.
@@ -1334,6 +1355,10 @@ func (m *bpfEndpointManager) removeProfileToEPMappings(profileIds []string, id i
 }
 
 func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint) {
+	if m == nil {
+		return
+	}
+
 	log.Debugf("HEP update from generic endpoint manager: %v", hostIfaceToEpMap)
 
 	// Pre-process the map for the host-* endpoint: if there is a host-* endpoint, any host
