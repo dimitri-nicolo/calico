@@ -166,8 +166,8 @@ ip -4 -o address | while read num intf inet addr rest; do
 done
 
 # Use multiple ECMP paths based on hashing 5-tuple.
-sysctl -w net.ipv4.fib_multipath_hash_policy=1
-sysctl -w net.ipv4.fib_multipath_use_neigh=1
+echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+echo 1 > /proc/sys/net/ipv4/fib_multipath_use_neigh
 
 # Loop deciding whether to run early BIRD or not.
 early_bird_running=false
