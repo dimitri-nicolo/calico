@@ -95,6 +95,7 @@ echo "ToR addresses are $DUAL_TOR_PEERING_ADDRESS_1 and $DUAL_TOR_PEERING_ADDRES
 ip address add ${DUAL_TOR_STABLE_ADDRESS}/32 dev lo
 
 # Generate BIRD peering config.
+mkdir -p ${bird_cfg}/bird
 cat >${bird_cfg}/bird/peers.conf <<EOF
 filter stable_address_only {
   if ( net = ${DUAL_TOR_STABLE_ADDRESS}/32 ) then { accept; }
