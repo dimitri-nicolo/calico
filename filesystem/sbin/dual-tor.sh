@@ -166,24 +166,15 @@ echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
 echo 1 > /proc/sys/net/ipv4/fib_multipath_use_neigh
 
 # Loop deciding whether to run early BIRD or not.
-sv down bird
-early_bird_running=false
 while true; do
     # /proc/net/tcp shows TCP listens and connections, and 00000000:00B3, if
     # present, indicates a process listening on port 179.  (179 = 0xB3)
     if grep 00000000:00B3 /proc/net/tcp; then
-	# Calico BIRD is running.
-	if $early_bird_running; then
-	    sv down bird
-	    early_bird_running=false
-	fi
+	# Calico BIRD is running, so early BIRD should not be.
+	sv down bird
     else
-	# Calico BIRD is not running.
-	if ! $early_bird_running; then
-	    # Start early bird service
-	    sv up bird
-	    early_bird_running=true
-	fi
+	# Calico BIRD is not running, so early BIRD should be.
+	sv up bird
     fi
     # Ensure subnet routes are present.
     ip -4 -o address | while read num intf inet addr rest; do
