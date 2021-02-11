@@ -94,9 +94,8 @@ else
     # Enable BIRD IPv4 service.
     cp -a /etc/service/available/bird  /etc/service/enabled/
 
-    # Perform dual ToR setup, including generating early BIRD config
-    # and starting the early BIRD service.
-    SVDIR=/etc/service/enabled /sbin/dual-tor.sh
+    # Enable dual ToR service.
+    cp -a /etc/service/available/dual-tor  /etc/service/enabled/
 
 fi
 

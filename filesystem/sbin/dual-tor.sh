@@ -170,6 +170,7 @@ echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
 echo 1 > /proc/sys/net/ipv4/fib_multipath_use_neigh
 
 # Loop deciding whether to run early BIRD or not.
+sv down bird
 early_bird_running=false
 while true; do
     # /proc/net/tcp shows TCP listens and connections, and 00000000:00B3, if
