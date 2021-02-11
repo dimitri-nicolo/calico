@@ -53,6 +53,10 @@ type routeTable interface {
 	QueueResyncIface(ifaceName string)
 }
 
+type hepListener interface {
+	OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint)
+}
+
 type endpointManagerCallbacks struct {
 	addInterface           *AddInterfaceFuncs
 	removeInterface        *RemoveInterfaceFuncs
@@ -204,7 +208,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
-	bpfEndpointManager     *bpfEndpointManager
+	bpfEndpointManager     hepListener
 	nlHandle               netlinkHandle
 }
 
@@ -224,7 +228,7 @@ func newEndpointManager(
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 	bpfEnabled bool,
-	bpfEndpointManager *bpfEndpointManager,
+	bpfEndpointManager hepListener,
 	callbacks *callbacks,
 ) *endpointManager {
 	nlHandle, _ := netlink.NewHandle()
@@ -263,7 +267,7 @@ func newEndpointManagerWithShims(
 	procSysWriter procSysWriter,
 	osStat func(name string) (os.FileInfo, error),
 	bpfEnabled bool,
-	bpfEndpointManager *bpfEndpointManager,
+	bpfEndpointManager hepListener,
 	callbacks *callbacks,
 	nlHandle netlinkHandle,
 ) *endpointManager {
@@ -878,7 +882,7 @@ func (m *endpointManager) resolveHostEndpoints() map[string]proto.HostEndpointID
 		newIfaceNameToHostEpID[allInterfaces] = bestHostEpId
 	}
 
-	if m.bpfEnabled && m.bpfEndpointManager != nil {
+	if m.bpfEndpointManager != nil {
 		// Construct map of interface names to host endpoints, and pass to the BPF endpoint
 		// manager.
 		hostIfaceToEpMap := map[string]proto.HostEndpoint{}
