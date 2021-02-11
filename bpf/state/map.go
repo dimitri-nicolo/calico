@@ -71,11 +71,12 @@ type State struct {
 	ConntrackTunIP      uint32
 	ConntrackIfIndexFwd uint32
 	ConntrackIfIndexCtd uint32
+	TimeStamp           uint64
 	NATData             uint64
 	ProgStartTime       uint64
 }
 
-const expectedSize = 8 /*eventhdr*/ + 336
+const expectedSize = 8 /*eventhdr*/ + 344
 
 func (s *State) AsBytes() []byte {
 	size := unsafe.Sizeof(State{})
@@ -103,7 +104,7 @@ func Map(mc *bpf.MapContext) bpf.Map {
 		ValueSize:  expectedSize,
 		MaxEntries: 1,
 		Name:       "cali_v4_state",
-		Version:    3,
+		Version:    4,
 	})
 }
 

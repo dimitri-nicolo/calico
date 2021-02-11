@@ -29,6 +29,7 @@
 #define EVENT_PROTO_STATS	1
 #define EVENT_DNS		2
 #define EVENT_POLICY_VERDICT	3
+#define EVENT_TCP_STATS	4
 
 struct event_proto_stats {
 	struct perf_event_header hdr;
@@ -44,6 +45,30 @@ struct event_proto_stats {
 	char taskName[TASK_COMM_LEN];
 	__u32 isRx;
 };
+
+struct event_tcp_stats {
+	struct perf_event_header hdr;
+	__u8 saddr[16];
+	__u8 daddr[16];
+	__u16 sport;
+	__u16 dport;
+	__u32 snd_cwnd;
+	__u32 srtt_us;
+	__u32 rtt_min;
+	__u32 snd_ssthresh;
+	__u32 mss_cache;
+	__u32 ecn_flags;
+	__u32 total_retrans;
+	__u32 lost_out;
+	__u32 icsk_retransmits;
+};
+
+static CALI_BPF_INLINE void event_tcp_stats (struct __sk_buff *skb, struct event_tcp_stats *event) {
+	int err = perf_commit_event(skb, event, sizeof(struct event_tcp_stats));
+	if (err != 0) {
+		CALI_DEBUG("tcp stats: perf_commit_event returns %d\n", err);
+	}
+}
 
 static CALI_BPF_INLINE int event_bpf_stats (struct pt_regs *ctx, __u32 pid,
 					      __u8 *saddr, __u16 sport, __u8 *daddr,
@@ -61,8 +86,8 @@ static CALI_BPF_INLINE int event_bpf_stats (struct pt_regs *ctx, __u32 pid,
 	};
 
 	bpf_get_current_comm(&event.taskName, sizeof(event.taskName));
-	__builtin_memcpy(&event.saddr, saddr, 16);
-	__builtin_memcpy(&event.daddr, daddr, 16);
+	__builtin_memcpy(event.saddr, saddr, 16);
+	__builtin_memcpy(event.daddr, daddr, 16);
 	int err = perf_commit_event(ctx, &event, sizeof(event));
 	if (err != 0) {
 		CALI_DEBUG("event_proto_stats: perf_commit_event returns %d\n", err);

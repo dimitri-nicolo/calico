@@ -129,3 +129,19 @@ func (b *Binary) patchU32Placeholder(from string, to uint32) {
 	binary.LittleEndian.PutUint32(toBytes, to)
 	b.replaceAllLoadImm32([]byte(from), toBytes)
 }
+
+func (b *Binary) PatchIfNS(ns uint16) {
+	bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, uint32(ns))
+	b.replaceAllLoadImm32([]byte("IFNS"), bytes)
+}
+
+func (b *Binary) PatchTcpStats(tcpStats bool) {
+	bytes := make([]byte, 4)
+	enableTcpStats := 0
+	if tcpStats {
+		enableTcpStats = 1
+	}
+	binary.LittleEndian.PutUint32(bytes, uint32(enableTcpStats))
+	b.replaceAllLoadImm32([]byte("TCPS"), bytes)
+}

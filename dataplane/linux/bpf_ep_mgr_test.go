@@ -21,6 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/bpf"
 	bpfipsets "github.com/projectcalico/felix/bpf/ipsets"
 	"github.com/projectcalico/felix/bpf/state"
@@ -30,7 +32,6 @@ import (
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
-	log "github.com/sirupsen/logrus"
 )
 
 var _ = Describe("BPF Endpoint Manager", func() {
@@ -74,6 +75,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	filterTableV4 := newMockTable("filter")
 	lookupsCache := calc.NewLookupsCache()
 	actionOnDrop := "DROP"
+	enableTcpStats := false
 
 	BeforeEach(func() {
 		bpfEpMgr = newBPFEndpointManager(
@@ -94,6 +96,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			nil,
 			lookupsCache,
 			actionOnDrop,
+			enableTcpStats,
 		)
 	})
 

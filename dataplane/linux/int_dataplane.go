@@ -198,6 +198,7 @@ type Config struct {
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
+	FlowLogsCollectTcpStats            bool
 	FlowLogsFileIncludeService         bool
 	NfNetlinkBufSize                   int
 
@@ -658,13 +659,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		bpfEventPoller      *bpfEventPoller
 		bpfEndpointManager  *bpfEndpointManager
 		eventProtoStatsSink *events.EventProtoStatsSink
+		eventTcpStatsSink   *events.EventTcpStatsSink
 
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
 		processInfoCache             collector.ProcessInfoCache
 	)
-
-	if config.BPFEnabled || config.FlowLogsCollectProcessInfo {
+	if config.BPFEnabled || config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 		var err error
 		bpfEvnt, err = events.New(bpfMapContext, events.SourcePerfEvents)
 		if err != nil {
@@ -700,6 +701,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("BPF: Registered events sink for TypeProtoStats")
 		eventProtoStatsSink = events.NewEventProtoStatsSink()
 		bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
+	}
+
+	if config.FlowLogsCollectTcpStats {
+		eventTcpStatsSink = events.NewEventTcpStatsSink()
+		bpfEventPoller.Register(events.TypeTcpStats, eventTcpStatsSink.HandleEvent)
 	}
 
 	if config.BPFEnabled {
@@ -786,6 +792,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.reportHealth,
 			config.LookupsCache,
 			config.RulesConfig.ActionOnDrop,
+			config.FlowLogsCollectTcpStats,
 		)
 		dp.RegisterManager(bpfEndpointManager)
 

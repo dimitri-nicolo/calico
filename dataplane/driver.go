@@ -374,6 +374,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			RouteTableManager:                  routeTableIndexAllocator,
 			MTUIfacePattern:                    configParams.MTUIfacePattern,
 			FlowLogsCollectProcessInfo:         configParams.FlowLogsCollectProcessInfo,
+			FlowLogsCollectTcpStats:            configParams.FlowLogsCollectTcpStats,
 			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 

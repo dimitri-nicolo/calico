@@ -49,6 +49,7 @@
 #include "tc.h"
 #include "policy_program.h"
 #include "parsing.h"
+#include "socket_lookup.h"
 #include "failsafe.h"
 
 /* calico_tc is the main function used in all of the tc programs.  It is specialised
@@ -487,6 +488,12 @@ skip_policy:
 		ctx.fwd.reason = CALI_REASON_SHORT;
 		CALI_DEBUG("Too short\n");
 		goto deny;
+	}
+
+	if (ENABLE_TCP_STATS && CALI_F_FROM_WEP) {
+		if (IPPROTO_TCP == ctx.state->ip_proto) {
+			socket_lookup(&ctx);
+		}
 	}
 
 	ctx.fwd = calico_tc_skb_accepted(&ctx, ctx.nat_dest);
