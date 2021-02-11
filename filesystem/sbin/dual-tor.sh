@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Do setup for a dual ToR node, then run as the "early BGP" daemon
 # until calico-node's BIRD can take over.
@@ -30,6 +30,39 @@ sed "s/BIRD_ROUTERID/${ROUTER_ID}/g" ${dual_tor}/bird6.conf > ${bird_cfg}/bird6.
 # will be) exists.
 mkdir -p /var/run/calico
 
+# Shell implementaton of `ipcalc -n`...
+ipcalc_n()
+{
+    prefix_len=${1#*/}
+    addr=${1%/*}
+    b1=${addr%%.*}
+    r1=${addr#*.}
+    b2=${r1%%.*}
+    r2=${r1#*.}
+    b3=${r2%%.*}
+    b4=${r2#*.}
+    if [ $prefix_len -lt 8 ]; then
+	shft=$(( 8 - prefix_len ))
+	b1=$(( (b1 >> shft) << shft ))
+	b2=0
+	b3=0
+	b4=0
+    elif [ $prefix_len -lt 16 ]; then
+	shft=$(( 16 - prefix_len ))
+	b2=$(( (b2 >> shft) << shft ))
+	b3=0
+	b4=0
+    elif [ $prefix_len -lt 24 ]; then
+	shft=$(( 24 - prefix_len ))
+	b3=$(( (b3 >> shft) << shft ))
+	b4=0
+    elif [ $prefix_len -lt 32 ]; then
+	shft=$(( 32 - prefix_len ))
+	b4=$(( (b4 >> shft) << shft ))
+    fi
+    echo ${b1}.${b2}.${b3}.${b4}
+}
+
 # Given an address and interface in the same subnet as a ToR address/prefix,
 # update the address in the ways that we need for dual ToR operation, and ensure
 # that we still have the routes that we'd expect through that interface.
@@ -42,13 +75,11 @@ try_update_nic_addr()
 
     # Calculate the prefix length and IP network of the given address.
     subnet_prefix_len=${addr#*/}
-    eval `ipcalc -n ${addr}`
-    subnet_network=$NETWORK
+    subnet_network=`ipcalc_n ${addr}`
 
     # Calculate the IP network of the subnet that $tor_addr is in (assuming the
     # same prefix length as for the given NIC address).
-    eval `ipcalc -n ${tor_addr}/${subnet_prefix_len}`
-    tor_network=$NETWORK
+    tor_network=`ipcalc_n ${tor_addr}/${subnet_prefix_len}`
 
     # If the networks are the same...
     if [ "$subnet_network" = "$tor_network" ]; then
