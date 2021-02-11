@@ -26,10 +26,6 @@ bird_cfg=/etc/calico/confd/config
 sed "s/BIRD_ROUTERID/${ROUTER_ID}/g" ${dual_tor}/bird.conf > ${bird_cfg}/bird.cfg
 sed "s/BIRD_ROUTERID/${ROUTER_ID}/g" ${dual_tor}/bird6.conf > ${bird_cfg}/bird6.cfg
 
-# Ensure that /var/run/calico (which is where the control socket file
-# will be) exists.
-mkdir -p /var/run/calico
-
 # Shell implementaton of `ipcalc -n`...
 ipcalc_n()
 {
