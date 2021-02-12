@@ -130,6 +130,20 @@ func (_m *MockClient) GetBenchmarks(ctx context.Context, id string) (*api.Benchm
 	return r0, r1
 }
 
+// IndexTemplateName provides a mock function with given fields: index
+func (_m *MockClient) IndexTemplateName(index string) string {
+	ret := _m.Called(index)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string) string); ok {
+		r0 = rf(index)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // RetrieveArchivedReport provides a mock function with given fields: id
 func (_m *MockClient) RetrieveArchivedReport(id string) (*api.ArchivedReportData, error) {
 	ret := _m.Called(id)

@@ -204,4 +204,45 @@ var _ = Describe("Benchmark elastic tests", func() {
 			},
 		})
 	})
+
+	It("should create an index template and update it on change", func() {
+		cfg := MustLoadConfig()
+		deleteIndex(cfg, BenchmarksIndex)
+		cfg.ElasticReplicas = 2
+		cfg.ElasticShards = 7
+
+		elasticClient, err := NewFromConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		_ = elasticClient.StoreBenchmarks(context.Background(), b1)
+
+		index := elasticClient.ClusterAlias(BenchmarksIndex)
+		templateName := elasticClient.IndexTemplateName(BenchmarksIndex)
+		testIndexTemplateSettings(cfg, templateName, map[string]interface{}{
+			"index": map[string]interface{}{
+				"number_of_replicas": "2",
+				"number_of_shards":   "7",
+				"lifecycle": map[string]interface{}{
+					"name":           BenchmarksIndex + "_policy",
+					"rollover_alias": index,
+				},
+			},
+		})
+
+		// Change the settings value and check template is updated with new setting values
+		cfg.ElasticShards = 3
+		elasticClient, err = NewFromConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		_ = elasticClient.StoreBenchmarks(context.Background(), b1)
+
+		testIndexTemplateSettings(cfg, templateName, map[string]interface{}{
+			"index": map[string]interface{}{
+				"number_of_replicas": "2",
+				"number_of_shards":   "3",
+				"lifecycle": map[string]interface{}{
+					"name":           BenchmarksIndex + "_policy",
+					"rollover_alias": index,
+				},
+			},
+		})
+	})
 })

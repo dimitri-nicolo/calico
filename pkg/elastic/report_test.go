@@ -79,7 +79,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
 		Expect(err).NotTo(HaveOccurred())
 		elasticClient = MustGetElasticClient()
-		deleteIndex(MustLoadConfig(),ReportsIndex)
+		deleteIndex(MustLoadConfig(), ReportsIndex)
 		elasticClient.(Resetable).Reset()
 		numReports = 0
 	})
@@ -371,6 +371,57 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			"lifecycle": map[string]interface{}{
 				"name":           ReportsIndex + "_policy",
 				"rollover_alias": index,
+			},
+		})
+	})
+
+	It("should create an index template and update it on change", func() {
+		cfg := MustLoadConfig()
+		cfg.ElasticReplicas = 2
+		cfg.ElasticShards = 7
+		t := ts.Add(72 * time.Hour)
+		rep := &api.ArchivedReportData{
+			ReportData: &apiv3.ReportData{
+				ReportTypeName: "testindexsettings",
+				ReportName:     "testindexsettings",
+				StartTime:      metav1.Time{Time: t},
+				EndTime:        metav1.Time{Time: t.Add(2 * time.Minute)},
+				GenerationTime: metav1.Time{Time: t.Add(-time.Minute)},
+			},
+		}
+
+		elasticClient, err := NewFromConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep)).ToNot(HaveOccurred())
+
+		index := elasticClient.ClusterAlias(ReportsIndex)
+		templateName := elasticClient.IndexTemplateName(ReportsIndex)
+
+		testIndexTemplateSettings(cfg, templateName, map[string]interface{}{
+			"index": map[string]interface{}{
+				"number_of_replicas": "2",
+				"number_of_shards":   "7",
+				"lifecycle": map[string]interface{}{
+					"name":           ReportsIndex + "_policy",
+					"rollover_alias": index,
+				},
+			},
+		})
+
+		// Change the settings value and check template is updated with new setting values
+		cfg.ElasticShards = 3
+		elasticClient, err = NewFromConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep)).ToNot(HaveOccurred())
+
+		testIndexTemplateSettings(cfg, templateName, map[string]interface{}{
+			"index": map[string]interface{}{
+				"number_of_replicas": "2",
+				"number_of_shards":   "3",
+				"lifecycle": map[string]interface{}{
+					"name":           ReportsIndex + "_policy",
+					"rollover_alias": index,
+				},
 			},
 		})
 	})

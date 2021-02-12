@@ -31,13 +31,13 @@ replace (
 require (
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/olivere/elastic/v7 v7.0.6
+	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/tigera/apiserver v0.0.0-20210210015746-704cd55c0131
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	k8s.io/api v0.19.6

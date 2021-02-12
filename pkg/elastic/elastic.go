@@ -12,6 +12,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/olivere/elastic/v7"
@@ -26,15 +28,21 @@ const (
 	applicationName          = "lma"
 )
 
+type IndexTemplate struct {
+	IndexPatterns []string               `json:"index_patterns,omitempty"`
+	Settings      map[string]interface{} `json:"settings,omitempty"`
+	Mappings      map[string]interface{} `json:"mappings,omitempty"`
+}
+
 type IndexSettings struct {
-	Replicas int `json:"number_of_replicas"`
-	Shards   int `json:"number_of_shards"`
-	LifeCycle LifeCycle `json:"lifecycle"`
+	Replicas  string    `json:"number_of_replicas,omitempty"`
+	Shards    string    `json:"number_of_shards,omitempty"`
+	LifeCycle LifeCycle `json:"lifecycle,omitempty"`
 }
 
 type LifeCycle struct {
-	Name string `json:"name"`
-	RolloverAlias string `json:"rollover_alias"`
+	Name          string `json:"name,omitempty"`
+	RolloverAlias string `json:"rollover_alias,omitempty"`
 }
 
 type Client interface {
@@ -52,6 +60,7 @@ type Client interface {
 	api.EventFetcher
 	ClusterIndex(string, string) string
 	ClusterAlias(string) string
+	IndexTemplateName(index string) string
 	Backend() *elastic.Client
 
 	SearchCompositeAggregations(
@@ -141,7 +150,7 @@ func New(
 	for i := 0; i < retries; i++ {
 		log.Info("Connecting to elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
-			return &client{c, indexSuffix, IndexSettings{replicas, shards, LifeCycle{}}}, nil
+			return &client{c, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
 		}
 		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
@@ -150,13 +159,13 @@ func New(
 	return nil, err
 }
 
-func (c *client) ensureIndexExistsWithRetry(index, mapping string) error {
+func (c *client) ensureIndexExistsWithRetry(index string, template IndexTemplate) error {
 	// If multiple threads attempt to create the index at the same time we can end up with errors during the creation
 	// which don't seem to match sensible error codes. Let's just add a retry mechanism and retry the creation a few
 	// times.
 	var err error
 	for i := 0; i < createIndexMaxRetries; i++ {
-		if err = c.ensureIndexExists(index, mapping); err == nil {
+		if err = c.ensureIndexExists(index, template); err == nil {
 			break
 		}
 		time.Sleep(createIndexRetryInterval)
@@ -169,13 +178,40 @@ func (c *client) ensureIndexExistsWithRetry(index, mapping string) error {
 	return err
 }
 
-func (c *client) ensureIndexExists(indexPrefix, mapping string) error {
+func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate) error {
+	ctx := context.Background()
 	aliasName := c.ClusterAlias(indexPrefix)
+	templateName := c.IndexTemplateName(indexPrefix)
 	clog := log.WithField("indexPrefix", indexPrefix)
 
-	indexName := fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
+	// If current template in Elasticsearch doesn't match with expected template or if there is no existing template,
+	// create/update the template. ILM performs rollover to create new index with updated mapping if there is an existing index.
+	currentTemplate, err := c.IndexGetTemplate(templateName).Do(ctx)
+	if err != nil {
+		if er, ok := err.(*elastic.Error); ok {
+			if er.Status != 404 {
+				clog.Warnf("failed to get index template %#v", err)
+				return err
+			}
+		} else {
+			clog.WithError(err).Warn("failed to parse elasticsearch error")
+			return err
+		}
+	}
+
+	if currentTemplate == nil ||
+		!reflect.DeepEqual(currentTemplate[templateName].Settings, template.Settings) ||
+		!reflect.DeepEqual(currentTemplate[templateName].Mappings, template.Mappings) {
+		clog.Debug("creating or updating index template")
+		_, err := c.IndexPutTemplate(templateName).BodyJson(template).Do(ctx)
+		if err != nil {
+			clog.WithError(err).Warn("failed to update index template")
+			return err
+		}
+	}
+
 	// Check if index exists.
-	exists, err := c.IndexExists(aliasName).Do(context.Background())
+	exists, err := c.IndexExists(aliasName).Do(ctx)
 	if err != nil {
 		clog.WithError(err).Warn("failed to check if index exists")
 		return err
@@ -189,19 +225,14 @@ func (c *client) ensureIndexExists(indexPrefix, mapping string) error {
 
 	// Create index.
 	clog.Info("index doesn't exist, creating...")
-	aliasJson := "{\""+ aliasName +"\": {} }"
-	ilmPolicyName := indexPrefix + "_policy"
-	indexSettingCp := c.indexSettings
-	indexSettingCp.LifeCycle = LifeCycle{Name: ilmPolicyName, RolloverAlias: aliasName}
+	indexName := fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
+	aliasJson := "{\"" + aliasName + "\": { \"is_write_index\": true } }"
 	createIndex, err := c.
 		CreateIndex(indexName).
 		BodyJson(map[string]interface{}{
-			"mappings": json.RawMessage(mapping),
-			"settings": indexSettingCp,
-			"aliases" : json.RawMessage(aliasJson),
-
+			"aliases": json.RawMessage(aliasJson),
 		}).
-		Do(context.Background())
+		Do(ctx)
 	if err != nil {
 		if elastic.IsConflict(err) {
 			clog.Info("indexPrefix already exists")
@@ -223,12 +254,55 @@ func (c *client) ClusterAlias(index string) string {
 	return fmt.Sprintf("%s.%s.", index, c.indexSuffix)
 }
 
+func (c *client) IndexTemplateName(index string) string {
+	return fmt.Sprintf("%s.%s", index, c.indexSuffix)
+}
+
 func (c *client) ClusterIndex(index, postfix string) string {
 	if postfix != "" {
 		return fmt.Sprintf("%s.%s.%s", index, c.indexSuffix, postfix)
 	} else {
 		return fmt.Sprintf("%s.%s", index, c.indexSuffix)
 	}
+}
+
+// IndexTemplate populates and returns IndexTemplate object
+func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string) (IndexTemplate, error) {
+	var indexSettings map[string]interface{}
+	c.indexSettings.LifeCycle = LifeCycle{Name: fmt.Sprintf("%s_policy", indexPrefix), RolloverAlias: indexAlias}
+
+	// Convert c.indexSettings into map[string]interface{} that can represent:
+	// "settings": {
+	//   "index": {
+	//   "number_of_shards": "<shards>",
+	//   "number_of_replicas": "<replicas>"
+	//   "lifecycle": {
+	//      "name": "<policy name>",
+	//      "rollover_alias": "<index alias>"
+	//    }
+	//   }
+	//  }
+	s, err := json.Marshal(map[string]interface{}{
+		"index": c.indexSettings,
+	})
+	if err != nil {
+		return IndexTemplate{}, err
+	}
+	if err := json.Unmarshal(s, &indexSettings); err != nil {
+		return IndexTemplate{}, err
+	}
+
+	// Convert mapping to map[string]interface{}
+	var indexMappings map[string]interface{}
+	if err := json.Unmarshal([]byte(mapping), &indexMappings); err != nil {
+		return IndexTemplate{}, err
+	}
+
+	return IndexTemplate{
+		IndexPatterns: []string{fmt.Sprintf("%s*", indexPrefix)},
+		Settings:      indexSettings,
+		Mappings:      indexMappings,
+	}, nil
 }
 
 func (c *client) Backend() *elastic.Client {

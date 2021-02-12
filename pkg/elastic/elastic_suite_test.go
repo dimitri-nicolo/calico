@@ -30,6 +30,16 @@ func testIndexSettings(cfg *Config, index string, settings map[string]interface{
 	}
 }
 
+func testIndexTemplateSettings(cfg *Config, index string, templateSettings map[string]interface{}) {
+	c, err := getESClient(cfg)
+	Expect(err).ToNot(HaveOccurred())
+
+	tpl, err := c.IndexGetTemplate(index).Do(context.Background())
+	Expect(err).ShouldNot(HaveOccurred())
+
+	Expect(tpl[index].Settings).To(BeEquivalentTo(templateSettings))
+}
+
 func deleteIndex(cfg *Config, index string) {
 	client, err := getESClient(cfg)
 	Expect(err).ToNot(HaveOccurred())

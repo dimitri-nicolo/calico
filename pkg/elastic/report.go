@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -71,8 +72,13 @@ func (c *client) RetrieveArchivedReport(id string) (*api.ArchivedReportData, err
 // RetrieveArchivedReport implements the api.ReportStorer interface
 func (c *client) StoreArchivedReport(r *api.ArchivedReportData) error {
 	index := c.ClusterAlias(ReportsIndex)
+	reportsTemplate, err := c.IndexTemplate(index, ReportsIndex, reportsMapping)
+	if err != nil {
+		log.WithError(err).Error("failed to build index template")
+		return err
+	}
 
-	if err := c.ensureIndexExistsWithRetry(ReportsIndex, reportsMapping); err != nil {
+	if err := c.ensureIndexExistsWithRetry(ReportsIndex, reportsTemplate); err != nil {
 		return err
 	}
 	res, err := c.Index().

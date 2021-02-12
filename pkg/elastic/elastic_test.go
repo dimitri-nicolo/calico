@@ -35,7 +35,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
 		Expect(err).NotTo(HaveOccurred())
 		elasticClient = MustGetElasticClient()
-		deleteIndex(MustLoadConfig(),ReportsIndex)
+		deleteIndex(MustLoadConfig(), ReportsIndex)
 		elasticClient.(Resetable).Reset()
 	})
 

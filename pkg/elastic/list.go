@@ -75,7 +75,13 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 
 func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
 	index := c.ClusterAlias(SnapshotsIndex)
-	if err := c.ensureIndexExistsWithRetry(SnapshotsIndex, snapshotsMapping); err != nil {
+	snapshotsTemplate, err := c.IndexTemplate(index, SnapshotsIndex, snapshotsMapping)
+	if err != nil {
+		log.WithError(err).Error("failed to build index template")
+		return err
+	}
+
+	if err := c.ensureIndexExistsWithRetry(SnapshotsIndex, snapshotsTemplate); err != nil {
 		return err
 	}
 	res, err := c.Index().
