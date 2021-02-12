@@ -24,7 +24,11 @@ There are two options, the anomaly detection in the **managed** cluster and in t
     curl {{ "/manifests/threatdef/ad-jobs-deployment-managed.yaml" | absolute_url }} -O
     ```
 
-2. Optional. Configure the jobs by setting the environment variables (see below).
+2. Configure the jobs by setting the environment variables (see below).
+   
+   If it is a managed cluster, you have to set up the **CLUSTER_NAME** environment variable.
+   
+   All other settings are optional.
    
 3. Apply the manifest
    
