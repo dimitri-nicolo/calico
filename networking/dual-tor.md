@@ -1,13 +1,13 @@
 ---
 title: Deploy a dual ToR cluster
-description: Configure a dual plane cluster for redundant connectivity between workloads. 
+description: Configure a dual plane cluster for redundant connectivity between workloads.
 ---
 
 ### Big picture
 
 Deploy a dual plane cluster to provide redundant connectivity between your workloads for on-premises deployments.
 
->**Note**: Dual ToR is not supported if you are using BGP with encapsulation (VXLAN or IP-in-IP). 
+>**Note**: Dual ToR is not supported if you are using BGP with encapsulation (VXLAN or IP-in-IP).
 {: .alert .alert-info}
 
 ### Value
@@ -103,151 +103,220 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
 
 ### How to
 
-Here are the steps you will need to successfully deploy a Kubernetes cluster with
-{{site.prodname}} across multiple racks with dual plane connectivity:
-  
-1. [Decide your IP addressing scheme](#decide-your-ip-addressing-scheme)
-1. [Decide your ECMP usage policy](#decide-your-ecmp-usage-policy)
-1. [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
-1. [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
-1. [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-calico-enterprise)
-1. [Configure {{site.prodname}} to peer with ToR routers](#configure-calico-enterprise-to-peer-with-tor-routers)
-1. [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
-1. [Complete {{site.prodname}} installation](#complete-calico-enterprise-installation)
-1. [Configure {{site.prodname}} to advertise loopback addresses](#configure-calico-enterprise-to-advertise-loopback-addresses)
-1. [Verify the deployment](#verify-the-deployment)
+#### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
 
-The precise details will likely differ for any specific deployment.  For example, you may
-use a Kubernetes installer that insists on booting and provisioning all the nodes as part
-of a single overall "install Kubernetes" step; in that case you will need to work out how
-to instruct the installer to provision the node addresses and bootstrap routes at the
-right time.  But the steps presented here should be a complete and accurate description of
-what is needed in principle.
+{{site.prodname}}'s {{site.nodecontainer}} image normally runs as a Kubernetes pod, but
+for dual ToR setup it should also run as a container after each boot of a dual-homed node.
+For example:
 
-#### Decide your IP addressing scheme
+```
+podman run --privileged --net=host \
+    -v /calico-dual-tor:/calico-dual-tor -e CALICO_DUAL_TOR=/calico-dual-tor/details.sh \
+    {{page.registry}}{{site.imageNames["node"]}}:latest
+```
 
-You will need an IP addressing scheme for the cluster nodes' IP addresses, including
+When a dual-homed node first boots (and then each time it reboots) this container does the
+pre-Kubernetes setup needed for dual ToR operation, namely:
 
--  their interface-specific addresses, for each connectivity plane
+- provisioning a stable loopback address, and ensuring that this address is used for all
+  connections to and from the node
 
--  their loopback addresses;
+- starting BGP, with peerings to the node's ToRs, to advertise the stable address to the
+  network, so that other nodes can route to this one.
 
-and also for the ToR IP addresses.
-
-For the example here, we use 172.31.X.Y, where:
-
--  X = 10 * `RACK_NUMBER` + `PLANE_NUMBER`
-
--  Y = `NODE_NUMBER` (within rack)
-
--  Loopback addresses have `PLANE_NUMBER` = 0.
-
--  For the ToR router in each plane, we use `NODE_NUMBER` = 250.
-
-So for the first node in rack A, for example,
-
--  its loopback address is 172.31.10.1
-
--  its interface-address on the NIC attached to plane 1 is 172.31.11.1, with default
-   gateway 172.31.11.250
-
--  its interface-address on the NIC attached to plane 2 is 172.31.12.1, with default
-   gateway 172.31.12.250.
-
-#### Decide your ECMP usage policy
-
-The details and available options for how Linux uses ECMP routes have [historically varied
-with kernel version](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/){:target="_blank"}.
-
-We recommend using a 4.17 or later kernel with `fib_multipath_hash_policy = 1`.  That
-gives load-balancing per-flow for both IPv4 and IPv6, based on a hash of the source and
-destination IPs and port numbers; which for general traffic patterns should give roughly
-even usage of the available connectivity planes.
-
-#### Boot cluster nodes with those addresses
-
-Your address provisioning will be deployment-dependent - for example, you might use DHCP
-to provision the interface-specific addresses - but there are some key rules for the
-loopback addresses to work correctly:
-
--  The interface-specific addresses should be defined as `scope link`.  For example:
-
-       ip address add 172.31.41.1/24 dev eth0 scope link
-
--  The loopback address should be defined on the "lo" device.  For example:
-
-       ip address add 172.31.40.1/32 dev lo
-
-It can also work to define the loopback address on a Linux dummy device, but only if there
-are no other "scope global" addresses anywhere.
-
-The effect of following those rules is that when Linux has to choose the source IP for an
-outgoing connection, it will choose the loopback address.
-
-#### Define bootstrap routes for reaching other loopback addresses
-
-Once the cluster is fully installed and operating normally, {{site.prodname}} itself will
-dynamically advertise each node's loopback address to the other nodes in the cluster.
-However we also need those addresses to be reachable *during* the cluster installation,
-and later when cluster nodes are restarted or down for maintenance.  Therefore, on each
-node, you should program a static route like this to reach the loopback addresses of other
-nodes in the same rack:
-
-    ip route add 172.31.10.0/24 nexthop dev eth0 nexthop dev eth1
-
-and static routes like this for the loopback addresses of nodes in each other rack (here,
-rack B):
-
-    ip route add 172.31.20.0/24 nexthop via 172.31.11.250 nexthop via 172.31.12.250
-
-You should also configure loopback address routes on the ToR routers, and on any
-intermediate infrastructure routers; details for that will be deployment-dependent.
-
-Once that is done, each node should be able to ping the loopback address of any other
-node, and `ip route` should show two ECMP routes to any other loopback address.  If you
-somehow break one of the connectivity planes, the ping should still work by using the
-other plane.
-
-#### Install Kubernetes and {{site.prodname}}
-
-1. Follow your preferred method for deploying Kubernetes, and [installing {{site.prodname}} on-premises]({{site.baseurl}}/getting-started).
-
-1. During {{site.prodname}} installation, disable the default encapsulation setting, IP-in-IP.
-
-   Encapsulation is not supported and must be disabled. Set `encapsulation: None`. For help, see the [Installation reference]({{site.baseurl}}/reference/installation/api).
-
-When you reach the point of configuring a Tigera-specific resource - typically, the license key - you may see that fail.  If that happens, the explanation is that the various components of {{site.prodname}} have been scheduled to nodes that are split across different racks, and we don't yet have a working data path between pods running in different racks.
-
-> **Note**: To be more precise: at this point, we have a working data path between any
-> components that are running on the nodes with host networking - i.e. using the nodes'
-> loopback addresses - but not yet where the source or destination is a non-host-networked
-> pod - i.e. using an IP from the pod CIDR range.  In particular, the Tigera API server
-> runs as a non-host-networked pod, and we do not yet have connectivity between it and the
-> Kubernetes API server, if those have been scheduled to nodes in different racks.
+> **Note**: This must happen *before* any Kubernetes components start running on the node,
+> because we want Kubernetes connections to use the stable address.
 {: .alert .alert-info}
 
-If you see this problem, the solution is to defer the rest of the {{site.prodname}}
-installation for now and move on to the next two steps here, which will establish the
-missing connectivity.
+The container needs a **custom file** - describing deployment-specific IP addressing and
+AS numbering - to be mapped into the container and identified by the `CALICO_DUAL_TOR`
+environment variable.  The requirements for this file are described in the next section.
 
-If you do not see this problem, that's OK too; it means the relevant {{site.prodname}}
-components have not been scheduled in a problematic way.  Continue on to the next two
-steps here, which are still needed for the cluster to provide connectivity between all
-future pods.
+Exactly **how** to arrange for this container to run will depend on your platform's
+workflow for adding a node to the cluster.
 
-#### Configure {{site.prodname}} to peer with ToR routers
+-  If the workflow allows intervention before Kubernetes starts installing on the new
+   node, you can create a service to run the container, enabled to run on subsequent
+   boots.  For example, as a systemd unit:
 
-Configure each {{site.prodname}} node to peer with the ToR routers using the BGPPeer
-resource.  The following settings are recommended for dual ToR configurations.
+   ```
+   [Service]
+   ExecStartPre=-/bin/podman rm -f calico-dual-tor
+   ExecStartPre=/bin/mkdir -p /etc/calico-dual-tor
+   ExecStartPre=/bin/curl -o /etc/calico-dual-tor/details.sh http://172.31.1.1:8080/calico-dual-tor/details-map.sh
+   ExecStart=/bin/podman run --rm --privileged --net=host --name=calico-dual-tor -v /etc/calico-dual-tor:/etc/calico-dual-tor -e CALICO_DUAL_TOR=/etc/calico-dual-tor/details.sh {{page.registry}}{{site.imageNames["node"]}}:latest
+   [Install]
+   WantedBy=multi-user.target
+   ```
 
--  `sourceAddress: None` to allow Linux to choose different interface-specific source
-   addresses for the BGP sessions to the two ToRs.
+   This example also shows how you could download the custom file for your deployment from
+   a central location.
 
-   > **Note**: If there is a loss of connectivity between the node and a ToR router, we
-   > specifically *want* the corresponding BGP session to fail, because that will trigger
-   > removing or deprioritising the routes that were learnt over that BGP
-   > session.
-   {: .alert .alert-info}
+   Then reboot, so that the dual ToR setup happens, and then allow Kubernetes installation
+   to continue.
+
+-  If the workflow does not allow, the platform may have an abstraction for achieving the
+   same thing.  For example, OpenShift's `MachineConfig` API can be used to specify files
+   and a systemd unit (as above) to be installed and enabled on each new node.
+
+#### Describe your IP addressing and AS numbering
+
+On each boot, the available information for the node is its per-interface IP addresses
+(either statically configured, or obtained from DHCP), and based on those
+{{site.nodecontainer}} needs to be told:
+
+- what stable address to provision for the node
+
+- the IP addresses of the ToRs to peer with
+
+- the AS number for the node and its ToRs.
+
+You must provide this information in the form of shell code like this:
+
+```
+details_are()
+{
+    echo "DUAL_TOR_STABLE_ADDRESS=$1"
+    echo "DUAL_TOR_AS_NUMBER=$2"
+    echo "DUAL_TOR_PEERING_ADDRESS_1=$3"
+    echo "DUAL_TOR_PEERING_ADDRESS_2=$4"
+}
+
+get_dual_tor_details()
+{
+    case $1 in
+
+    172.31.21.1 | 172.31.22.1 )
+        details_are 172.31.20.1 65002 172.31.21.100 172.31.22.100
+        ;;
+    172.31.21.2 | 172.31.22.2 )
+        details_are 172.31.20.2 65002 172.31.21.100 172.31.22.100
+        ;;
+    172.31.21.3 | 172.31.22.3 )
+        details_are 172.31.20.3 65002 172.31.21.100 172.31.22.100
+        ;;
+    172.31.21.4 | 172.31.22.4 )
+        details_are 172.31.20.4 65002 172.31.21.100 172.31.22.100
+        ;;
+    172.31.21.5 | 172.31.22.5 )
+        details_are 172.31.20.5 65002 172.31.21.100 172.31.22.100
+        ;;
+    172.31.11.1 | 172.31.12.1 )
+        details_are 172.31.10.1 65001 172.31.11.100 172.31.12.100
+        ;;
+    172.31.11.2 | 172.31.12.2 )
+        details_are 172.31.10.2 65001 172.31.11.100 172.31.12.100
+        ;;
+    172.31.11.3 | 172.31.12.3 )
+        details_are 172.31.10.3 65001 172.31.11.100 172.31.12.100
+        ;;
+    172.31.11.4 | 172.31.12.4 )
+        details_are 172.31.10.4 65001 172.31.11.100 172.31.12.100
+        ;;
+    172.31.11.5 | 172.31.12.5 )
+        details_are 172.31.10.5 65001 172.31.11.100 172.31.12.100
+        ;;
+
+    esac
+}
+```
+
+{{site.nodecontainer}} calls `get_dual_tor_details <IP>`, with `<IP>` being one of the
+interface-specific addresses, and the function must print the needed information in the
+form:
+
+```
+DUAL_TOR_STABLE_ADDRESS=172.31.10.5
+DUAL_TOR_AS_NUMBER=65001
+DUAL_TOR_PEERING_ADDRESS_1=172.31.11.100
+DUAL_TOR_PEERING_ADDRESS_2=172.31.12.100
+```
+
+Therefore you need to decide upfront how your dual-homed nodes will split across the racks
+in your deployment, and hence which ToRs they will peer with.  Or alternatively, devise an
+algorithmic scheme such that the correct AS number, stable address and ToRs addresses can
+be computed mathematically, for any dual-homed node, from either of its interface-specific
+addresses.  Then encode that information in your version of `get_dual_tor_details`, and
+host that somewhere that is accessible from each new node as it boots, so that it can be
+fed into the {{site.nodecontainer}} container, as illustrated by the example in the
+previous section.
+
+#### Prepare BGP configuration for dual- and single-homed nodes
+
+This step is not strictly specific to dual ToR deployment.  Any multi-rack deployment
+needs to peer cluster nodes with the ToR or ToRs for their rack, so that pods hosted by
+those nodes can be reached from elsewhere.  But the timing of the configuration is more
+critical here, because dual ToR relies on BGP to advertise stable **node** addresses - for
+dual-homed nodes - as well as pod IPs.  It's also more complex because of dual-homed nodes
+having two ToR peers.  We recommend the following approach to ensure that BGP
+configuration is in place at the right time.
+
+Suppose a rack has two ToRs with IPs 172.31.11.100 and 172.31.12.100, and the rack AS
+number is 65001.  Dual-homed nodes should peer with both, and single-homed nodes with only
+the first.  That is generically expressed by these BGPPeer resources:
+
+```
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: ra1
+spec:
+  nodeSelector: "rack == 'ra' || rack == 'ra_single'"
+  peerIP: 172.31.11.100
+  asNumber: 65001
+  sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: ra2
+spec:
+  nodeSelector: "rack == 'ra'"
+  peerIP: 172.31.12.100
+  asNumber: 65001
+  sourceAddress: None
+EOF
+```
+
+Then each dual-homed node in the rack should be labelled with `rack: ra`, and each
+single-homed node with `rack: ra_single`.  Also every node in the rack must have a
+`projectcalico.org/ASNumber: 65001` annotation so that it knows its own AS number.
+
+Then repeat all that for further racks: with `rb`, `rb_single`, `65002`, `rc`,
+`rc_single`, `65003`, and so on.
+
+Timing-wise, the configuration relevant to any given dual-homed node should be defined
+before that node is added to the cluster, and this is easily achieved in most Kubernetes
+platforms because they allow a Node object to exist in advance.  Therefore, as soon as the
+Kubernetes API is available, but before installing Calico:
+
+-  use [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install) to create all
+   BGPPeer resources, following the pattern above
+
+-  use `kubectl` to create a Node resource for each node that will be added to cluster,
+   labelled and annotated with its rack and AS number; for example:
+
+   ```
+   kubectl create -f - <<EOF
+   apiVersion: v1
+   kind: Node
+   metadata:
+     name: worker1
+     labels:
+       rack: ra
+     annotations:
+       projectcalico.org/ASNumber: "65001"
+   EOF
+   ```
+
+Once BGPPeer resources have been configured, you should [disable the full node-to-node
+mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
+
+```
+calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
+```
+
+Depending on what your ToR supports, consider also setting these fields in each BGPPeer:
 
 -  `failureDetectionMode: BFDIfDirectlyConnected` to enable BFD, when possible, for fast
    failure detection.
@@ -279,118 +348,6 @@ resource.  The following settings are recommended for dual ToR configurations.
    > effect the “gateway direct” applies a “next hop self” when needed, but otherwise not.
    {: .alert .alert-info}
 
-To do that, you will need to:
-
-1. Install and configure
-   [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install).
-
-2. Set the correct AS number on each {{site.prodname}} node.
-
-3. Label each {{site.prodname}} node, if your BGPPeer configuration uses labels.
-
-4. Configure BGPPeer resources for the desired BGP peerings between each {{site.prodname}}
-   node and its ToR routers.
-
-Your details will be deployment-specific, but here we show those steps for our example
-cluster and addressing scheme, following an [AS per
-rack]({{site.baseurl}}/reference/architecture/design/l3-interconnect-fabric#the-as-per-rack-model)
-model with AS 65001 for the first rack, 65002 for the second, and so on.
-
-To set the correct AS number of each {{site.prodname}} node:
-
-```
-# For nodes in rack A:
-calicoctl patch node <name> -p '{"spec":{"bgp": {"asNumber": "65001"}}}'
-...
-# For nodes in rack B:
-calicoctl patch node <name> -p '{"spec":{"bgp": {"asNumber": "65002"}}}'
-...
-```
-
-To give each {{site.prodname}} node a label for its rack:
-
-```
-# For nodes in rack A:
-kubectl label node <name> rack=ra
-...
-# For nodes in rack B:
-kubectl label node <name> rack=rb
-...
-```
-
-To configure the node to ToR peerings for rack A:
-
-```
-kubectl apply -f - <<EOF
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: ra1
-spec:
-  nodeSelector: "rack == 'ra'"
-  peerIP: 172.31.11.250
-  asNumber: 65001
-  sourceAddress: None
-  failureDetectionMode: BFDIfDirectlyConnected
-  restartMode: LongLivedGracefulRestart
-  birdGatewayMode: DirectIfDirectlyConnected
----
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: ra2
-spec:
-  nodeSelector: "rack == 'ra'"
-  peerIP: 172.31.12.250
-  asNumber: 65001
-  sourceAddress: None
-  failureDetectionMode: BFDIfDirectlyConnected
-  restartMode: LongLivedGracefulRestart
-  birdGatewayMode: DirectIfDirectlyConnected
-EOF
-```
-
-Similarly for rack B:
-
-```
-kubectl apply -f - <<EOF
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: rb1
-spec:
-  nodeSelector: "rack == 'rb'"
-  peerIP: 172.31.21.250
-  asNumber: 65002
-  sourceAddress: None
-  failureDetectionMode: BFDIfDirectlyConnected
-  restartMode: LongLivedGracefulRestart
-  birdGatewayMode: DirectIfDirectlyConnected
----
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: rb2
-spec:
-  nodeSelector: "rack == 'rb'"
-  peerIP: 172.31.22.250
-  asNumber: 65002
-  sourceAddress: None
-  failureDetectionMode: BFDIfDirectlyConnected
-  restartMode: LongLivedGracefulRestart
-  birdGatewayMode: DirectIfDirectlyConnected
-EOF
-```
-
-And so on for the other racks.
-
-Once BGPPeer resources have been configured, you should [disable the full node-to-node
-mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
-
-```
-kubectl patch bgpconfigurations default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
-```
-
 #### Configure your ToR routers and infrastructure
 
 You should configure your ToR routers to accept all the BGP peerings from
@@ -408,11 +365,13 @@ LLGR should be enabled if possible on all BGP sessions - again, both to the
 graceful restart should not be used, because this will delay the cluster's response to a
 break in one of the connectivity planes.
 
-#### Complete {{site.prodname}} installation
+#### Install Kubernetes and {{site.prodname}}
 
-If you didn't complete the {{site.prodname}} installation above, return to that and retry
-the step that failed.  It should now succeed.  Then do any remaining steps of the
-installation.
+1. Follow your preferred method for deploying Kubernetes, and [installing {{site.prodname}} on-premises]({{site.baseurl}}/getting-started).
+
+1. During {{site.prodname}} installation, disable the default encapsulation setting, IP-in-IP.
+
+   Encapsulation is not supported and must be disabled. Set `encapsulation: None`. For help, see the [Installation reference]({{site.baseurl}}/reference/installation/api).
 
 #### Configure {{site.prodname}} to advertise loopback addresses
 
