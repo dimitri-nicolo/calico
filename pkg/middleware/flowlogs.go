@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tigera/es-proxy/pkg/timeutils"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -156,7 +158,7 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 
 		user, ok := k8srequest.UserFrom(req.Context())
 		if !ok {
-			log.WithError(err).Error("user not found in context")
+			log.Error("user not found in context")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -239,12 +241,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	}
 
 	now := time.Now()
-	startDateTime, startDateTimeESParm, err := ParseElasticsearchTime(now, &startDateTimeString)
+	startDateTime, startDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, errParseRequest
 	}
-	endDateTime, endDateTimeESParm, err := ParseElasticsearchTime(now, &endDateTimeString)
+	endDateTime, endDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, errParseRequest
@@ -331,6 +333,7 @@ func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
 		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
 		filters = append(filters, destLabelsFilter)
 	}
+	//TODO(rlb): Should this be a filter?  Filters are cached an
 	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
 		filter := elastic.NewRangeQuery("end_time")
 		if params.startDateTimeESParm != nil {

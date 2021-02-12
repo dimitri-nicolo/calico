@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 package server
 
 import (
@@ -9,29 +9,45 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/es-proxy/pkg/kibana"
+	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 
-	"github.com/tigera/lma/pkg/list"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/datastore"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	celastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/list"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"github.com/tigera/es-proxy/pkg/handler"
+	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/middleware/authorization"
+	"github.com/tigera/es-proxy/pkg/middleware/k8s"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	celastic "github.com/tigera/lma/pkg/elastic"
 )
 
 var (
 	server *http.Server
 	wg     sync.WaitGroup
+
+	authReviewAttrListEndpoints = []apiv3.AuthorizationReviewResourceAttributes{{
+		APIGroup: "projectcalico.org",
+		Resources: []string{
+			"hostendpoints", "networksets", "globalnetworksets",
+		},
+		Verbs: []string{"list"},
+	}, {
+		APIGroup:  "",
+		Resources: []string{"pods"},
+		Verbs:     []string{"list"},
+	}}
 )
 
 // Some constants that we pass to our elastic client library.
@@ -125,6 +141,13 @@ func Start(cfg *Config) error {
 	}
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
+	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetHandlers provide
+	// cluster and user aware k8s clients, adding the client to the request context for subsequent chained handlers.
+	k8sClientSetHandlers := k8s.NewClientSetHandlers(cfg.VoltronCAPath, voltronServiceURL)
+
+	// Create a service graph handler.
+	serviceGraph := servicegraph.NewServiceGraph(esClient)
+
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
 
@@ -133,6 +156,12 @@ func Start(cfg *Config) error {
 	}, cfg.ElasticKibanaEndpoint, cfg.ElasticVersion)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
+	sm.Handle("/serviceGraph",
+		// Add k8s clientset tied to the user.
+		k8sClientSetHandlers.AddClientSetForUser(
+			// Perform an authorization review.
+			authorization.AuthorizationReviewHandler(authReviewAttrListEndpoints,
+				serviceGraph.Handler())))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,

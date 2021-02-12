@@ -1,4 +1,5 @@
-package middleware_test
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+package timeutils_test
 
 import (
 	"time"
@@ -6,14 +7,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/timeutils"
 )
 
 var _ = Describe("Time parsing works", func() {
 	It("Parses now without error", func() {
 		now := time.Now()
 		s := "now"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(BeZero())
@@ -24,7 +25,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now - 0 without error", func() {
 		now := time.Now()
 		s := "now - 0"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(BeZero())
@@ -35,7 +36,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now - 15m without error", func() {
 		now := time.Now()
 		s := "now - 15m"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(Equal(15 * time.Minute))
@@ -46,7 +47,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now-10m without error", func() {
 		now := time.Now()
 		s := "now-10m"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(Equal(10 * time.Minute))
@@ -57,7 +58,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now-100h without error", func() {
 		now := time.Now()
 		s := "now-100h"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(Equal(100 * time.Hour))
@@ -68,7 +69,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now-3d without error", func() {
 		now := time.Now()
 		s := "now-3d"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(Equal(3 * 24 * time.Hour))
@@ -79,7 +80,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Does not parse now-32", func() {
 		now := time.Now()
 		s := "now-32"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).To(HaveOccurred())
 		Expect(t).To(BeNil())
 		Expect(p).To(BeNil())
@@ -88,7 +89,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Does not parse now-xxx", func() {
 		now := time.Now()
 		s := "now-xxx"
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).To(HaveOccurred())
 		Expect(t).To(BeNil())
 		Expect(p).To(BeNil())
@@ -97,7 +98,7 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses an RFC3339 format time and returns it as epoch seconds", func() {
 		now := time.Now().UTC()
 		s := now.Add(-5 * time.Second).UTC().Format(time.RFC3339)
-		t, p, err := middleware.ParseElasticsearchTime(now, &s)
+		t, p, err := timeutils.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t) / time.Second).To(BeEquivalentTo(5)) // Avoids ms accuracy in `now` but not in `t`.

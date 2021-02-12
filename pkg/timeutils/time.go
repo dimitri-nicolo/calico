@@ -1,4 +1,5 @@
-package middleware
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+package timeutils
 
 import (
 	"errors"
