@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -98,6 +98,10 @@ type L7Data struct {
 	L7Meta
 	L7Spec
 }
+
+const (
+	L7LogTypeUnLogged string = "unlogged"
+)
 
 func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 	res := &L7Log{

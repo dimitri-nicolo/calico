@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -115,6 +115,8 @@ type l7LogAggregator struct {
 	l7Store              map[L7Meta]L7Spec
 	l7Mutex              sync.Mutex
 	aggregationStartTime time.Time
+	perNodeLimit         int
+	numUnLoggedUpdates   int
 }
 
 // New L7LogAggregator constructs a L7LogAggregator
@@ -128,6 +130,11 @@ func NewL7LogAggregator() L7LogAggregator {
 
 func (la *l7LogAggregator) AggregateOver(ak L7AggregationKind) L7LogAggregator {
 	la.kind = ak
+	return la
+}
+
+func (la *l7LogAggregator) PerNodeLimit(l int) L7LogAggregator {
+	la.perNodeLimit = l
 	return la
 }
 
@@ -146,9 +153,10 @@ func (la *l7LogAggregator) FeedUpdate(update L7Update) error {
 		existing := la.l7Store[meta]
 		existing.Merge(spec)
 		la.l7Store[meta] = existing
-	} else {
-		// TODO MattL: Do we need to add in a log limit of some sort for rate limiting?
+	} else if (la.perNodeLimit == 0) || (len(la.l7Store) < la.perNodeLimit) {
 		la.l7Store[meta] = spec
+	} else {
+		la.numUnLoggedUpdates++
 	}
 
 	return nil
@@ -169,6 +177,23 @@ func (la *l7LogAggregator) Get() []*L7Log {
 			la.aggregationStartTime,
 			aggregationEndTime,
 		))
+	}
+	if la.numUnLoggedUpdates > 0 {
+		log.Warningf(
+			"%v L7 logs were not logged, because of perNodeLimit being set to %v",
+			la.numUnLoggedUpdates,
+			la.perNodeLimit,
+		)
+		// Emit an Elastic log to alert about the un logged updates.  This log has no content
+		// except for the time period and the number of updates that could not be fully
+		// logged.
+		excessLog := &L7Log{
+			StartTime: la.aggregationStartTime.Unix(),
+			EndTime:   aggregationEndTime.Unix(),
+			Count:     la.numUnLoggedUpdates,
+			Type:      L7LogTypeUnLogged, // Type is otherwise the protocol tcp, tls, http1.1 etc
+		}
+		l7Logs = append(l7Logs, excessLog)
 	}
 
 	la.l7Store = make(map[L7Meta]L7Spec)
