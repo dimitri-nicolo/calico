@@ -5837,6 +5837,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"l7LogsFileAggregationURLCharLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limit on the length of the URL collected in L7 logs. When a URL length reaches this limit it is sliced off, and the sliced URL is sent to log storage. [Default: 250]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"l7LogsFilePerNodeLimit": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Limit on the number of L7 logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs.  [Default: 0, meaning no limit]",

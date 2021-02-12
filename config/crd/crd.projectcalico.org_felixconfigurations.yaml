@@ -732,6 +732,11 @@ spec:
                   and the base URL only. ExcludeL7URL - Aggregate over all other fields
                   ignoring the URL entirely.'
                 type: string
+              l7LogsFileAggregationURLCharLimit:
+                description: 'Limit on the length of the URL collected in L7 logs.
+                  When a URL length reaches this limit it is sliced off, and the sliced
+                  URL is sent to log storage. [Default: 250]'
+                type: integer
               l7LogsFileDirectory:
                 description: 'L7LogsFileDirectory sets the directory where L7 log
                   files are stored. [Default: /var/log/calico/l7logs]'

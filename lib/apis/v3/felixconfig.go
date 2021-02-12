@@ -612,6 +612,9 @@ type FelixConfigurationSpec struct {
 	// to negative will allow all parts of the path to be displayed.
 	// [Default: 5].
 	L7LogsFileAggregationNumURLPath *int `json:"l7LogsFileAggregationNumURLPath,omitempty"`
+	// Limit on the length of the URL collected in L7 logs. When a URL length reaches this limit
+	// it is sliced off, and the sliced URL is sent to log storage. [Default: 250]
+	L7LogsFileAggregationURLCharLimit *int `json:"l7LogsFileAggregationURLCharLimit,omitempty"`
 	// Limit on the number of L7 logs that can be emitted within each flush interval.  When
 	// this limit has been reached, Felix counts the number of unloggable L7 responses within
 	// the flush interval, and emits a WARNING log with that count at the same time as it

@@ -2039,6 +2039,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.L7LogsFileAggregationURLCharLimit != nil {
+		in, out := &in.L7LogsFileAggregationURLCharLimit, &out.L7LogsFileAggregationURLCharLimit
+		*out = new(int)
+		**out = **in
+	}
 	if in.L7LogsFilePerNodeLimit != nil {
 		in, out := &in.L7LogsFilePerNodeLimit, &out.L7LogsFilePerNodeLimit
 		*out = new(int)
