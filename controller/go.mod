@@ -3,9 +3,9 @@ module github.com/tigera/intrusion-detection/controller
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210126182422-b334ce1a1d94
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210208195530-0e064ed381ef
-	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210123223002-53d994486b81
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210210042154-750d5f150776
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210212203636-50d1eb8471c9
+	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210208225242-c586047f6f54
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.19.6
@@ -47,7 +47,7 @@ require (
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tigera/apiserver v0.0.0-20200602183955-40e8ca4efae0
-	github.com/tigera/licensing v1.0.1-0.20210123223002-53d994486b81
+	github.com/tigera/licensing v1.0.1-0.20210208225242-c586047f6f54
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
