@@ -2,15 +2,24 @@
 # From https://github.com/faisyl/alpine-runit
 env > /etc/envvars
 
-/etc/rc.local
-retval=$?
-if [ $retval -ne 0 ];
-then
-    echo >&2 "Calico node failed to start"
-    exit $retval
+if [ "$CALICO_DUAL_TOR_INIT" ]; then
+    # Pre-Kubernetes dual ToR setup: enable BIRD IPv4 and Dual ToR
+    # services; then those will do what's needed.
+    mkdir /etc/service/enabled
+    cp -a /etc/service/available/bird /etc/service/enabled/
+    cp -a /etc/service/available/dual-tor /etc/service/enabled/
+else
+    # Regular Calico Node startup.
+    /etc/rc.local
+    retval=$?
+    if [ $retval -ne 0 ];
+    then
+	echo >&2 "Calico node failed to start"
+	exit $retval
+    fi
 fi
 
-# Export the nodename set by the startup procedure. 
+# Export the nodename set by the startup procedure.
 export NODENAME=$(cat /var/lib/calico/nodename)
 
 RUNSVDIR=$(/usr/bin/which runsvdir)
