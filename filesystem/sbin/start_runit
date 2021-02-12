@@ -17,10 +17,10 @@ else
 	echo >&2 "Calico node failed to start"
 	exit $retval
     fi
-fi
 
-# Export the nodename set by the startup procedure.
-export NODENAME=$(cat /var/lib/calico/nodename)
+    # Export the nodename set by the startup procedure.
+    export NODENAME=$(cat /var/lib/calico/nodename)
+fi
 
 RUNSVDIR=$(/usr/bin/which runsvdir)
 exec ${RUNSVDIR} -P /etc/service/enabled
