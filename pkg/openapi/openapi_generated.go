@@ -5730,6 +5730,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"flowLogsCollectTcpStats": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsCollectTcpStats enables flow logs reporting TCP socket stats",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"cloudWatchLogsReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Enable Flow logs reporting to AWS CloudWatch.",
