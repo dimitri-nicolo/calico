@@ -21,6 +21,8 @@ operate normally.
 
 This how-to guide uses the following features:
 
+**{{site.nodecontainer}}** run as a container, pre-Kubernetes
+
 **BGPPeer** resource with these fields:
 - sourceAddress
 - failureDetectionMode
@@ -102,6 +104,46 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
    routes to that node persist in the rest of the network.
 
 ### How to
+
+Non-OpenShift
+
+- Dual-ToR network environment + BGP config on ToRs and core routers.
+- Empty nodes.
+- Describe IP addressing and AS numbering.  Copy onto nodes or host where this will be accessible to nodes.
+
+- Arrange cnx-node run on each node.  Reboot.
+
+- kubeadm init and join
+
+- Define Nodes with correct AS number and rack
+
+- Prepare Calico resources, place in operator's calico-resources configmap
+  - BGPPeers
+  - IPPools for stable addresses
+
+- Run Tigera operator
+
+OpenShift
+
+- Dual-ToR network environment + BGP config on ToRs and core routers.
+- Empty nodes.
+- Describe IP addressing and AS numbering.  Host where this will be accessible to nodes.
+
+- Add MachineConfig to arrange cnx-node run on each node.
+- Add manifests to define Nodes with correct AS number and rack
+
+- Prepare Calico resources, place in operator's calico-resources configmap
+  - BGPPeers
+  - IPPools for stable addresses
+
+- Run OpenShift install
+
+So inputs:
+
+- YAML
+- Nodes: { node name, rack label (or IPs to peer to), AS number }
+- BGPPeers
+- IPPools
 
 #### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
 
