@@ -142,7 +142,12 @@ while ($True)
                 .\calico-node.exe -startup
                 if ($LastExitCode -EQ 0)
                 {
-                    Write-Host "Calico node initialisation succeeded; monitoring kubelet for restarts..."
+                    Write-Host "Calico node initialisation succeeded."
+                    if (($env:CALICO_NETWORKING_BACKEND -NE "none") -AND (-NOT(Test-Path $env:CNI_CONF_FILENAME)))
+                    {
+                        Install-CNIPlugin
+                    }
+                    Write-Host "Monitoring kubelet for restarts..."
                     break
                 }
 

@@ -41,12 +41,10 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan")
         Write-Host "Windows does not support VXLANVNI < 4096."
         exit 1
     }
-    Install-CNIPlugin
 }
 elseif ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
 {
     Install-ConfdService
-    Install-CNIPlugin
 }
 else
 {
