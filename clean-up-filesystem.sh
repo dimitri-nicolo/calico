@@ -42,7 +42,6 @@ bin_allow_list_patterns=(
   calico
   bird
   versions
-  dual-tor
 
   # Init daemon.
   runit

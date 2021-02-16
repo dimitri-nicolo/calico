@@ -3,6 +3,7 @@ module github.com/projectcalico/node
 go 1.15
 
 require (
+	github.com/Workiva/go-datastructures v1.0.50
 	github.com/kelseyhightower/confd v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
@@ -17,6 +18,7 @@ require (
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.6
 	k8s.io/apimachinery v0.19.6
 	k8s.io/client-go v0.19.6

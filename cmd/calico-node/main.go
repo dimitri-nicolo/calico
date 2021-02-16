@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/node/cmd/calico-node/bpf"
 	"github.com/projectcalico/node/pkg/allocateip"
 	"github.com/projectcalico/node/pkg/cni"
+	"github.com/projectcalico/node/pkg/earlynetworking"
 	"github.com/projectcalico/node/pkg/health"
 	"github.com/projectcalico/node/pkg/metrics"
 	"github.com/projectcalico/node/pkg/startup"
@@ -72,6 +73,9 @@ var confdRunOnce = flagSet.Bool("confd-run-once", false, "Run confd in oneshot m
 var confdKeep = flagSet.Bool("confd-keep-stage-file", false, "Keep stage file when running confd")
 var confdConfDir = flagSet.String("confd-confdir", "/etc/calico/confd", "Confd configuration directory.")
 var confdCalicoConfig = flagSet.String("confd-calicoconfig", "", "Calico configuration file.")
+
+// Early networking flags
+var runEarlyNetworking = flagSet.Bool("early", false, "Do early networking setup (e.g. for a dual-homed node)")
 
 func main() {
 	// Log to stdout.  this prevents our logs from being interpreted as errors by, for example,
@@ -154,6 +158,9 @@ func main() {
 		// To halt the metrics process, close the signal
 		signal := make(chan struct{})
 		metrics.Run(signal)
+	} else if *runEarlyNetworking {
+		logrus.SetFormatter(&logutils.Formatter{Component: "early-networking"})
+		earlynetworking.Run()
 	} else {
 		fmt.Println("No valid options provided. Usage:")
 		flagSet.PrintDefaults()
