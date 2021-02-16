@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -89,6 +89,7 @@ type L7AggregationKind struct {
 	TrimURL         L7URLAggregationKind
 	ResponseCode    L7ResponseCodeAggregationKind
 	NumURLPathParts int
+	URLCharLimit    int
 }
 
 // Sets the default L7 Aggregation levels. By default, everything is allowed
@@ -103,6 +104,7 @@ func DefaultL7AggregationKind() L7AggregationKind {
 		TrimURL:         L7FullURL,
 		ResponseCode:    L7ResponseCode,
 		NumURLPathParts: 5,
+		URLCharLimit:    250,
 	}
 }
 
@@ -230,6 +232,7 @@ func getL7AggregationKindFromConfigParams(cfg *config.Config) L7AggregationKind 
 		agg.TrimURL = L7URLAggregationKind(urlLevel)
 	}
 	agg.NumURLPathParts = cfg.L7LogsFileAggregationNumURLPath
+	agg.URLCharLimit = cfg.L7LogsFileAggregationURLCharLimit
 
 	return agg
 }

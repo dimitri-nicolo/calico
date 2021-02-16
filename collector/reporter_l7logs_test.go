@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -65,6 +65,7 @@ var _ = Describe("L7 Log Reporter", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    100,
 		}
 		reporter = NewL7LogReporterWithShims(dispatcherMap, flushTrigger, nil)
 		reporter.AddAggregator(NewL7LogAggregator().AggregateOver(agg), []string{"testL7"})

@@ -338,6 +338,7 @@ type Config struct {
 	L7LogsFileAggregationResponseCode    string        `config:"string;IncludeL7ResponseCode"`
 	L7LogsFileAggregationTrimURL         string        `config:"string;IncludeL7FullURL"`
 	L7LogsFileAggregationNumURLPath      int           `config:"int;5"`
+	L7LogsFileAggregationURLCharLimit    int           `config:"int;250"`
 	L7LogsFilePerNodeLimit               int           `config:"int;0"`
 
 	WindowsFlowLogsFileDirectory    string `config:"string;c:\\TigeraCalico\\flowlogs"`
