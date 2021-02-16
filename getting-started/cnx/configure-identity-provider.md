@@ -176,6 +176,76 @@ When configuring your cluster, you may be asked for the following inputs:
    ```
    
 %>
+
+  '<label:LDAP>'
+
+<%
+
+1. Apply the Authentication CR to your cluster to let the operator configure your login. 
+
+
+   ```
+   apiVersion: operator.tigera.io/v1
+   kind: Authentication
+   metadata:
+     name: tigera-secure
+   spec:
+     managerDomain: https://<manager-host>:<port>
+     ldap:
+       # The host and port of the LDAP server. Example: ad.example.com:636.
+       host: <ldap-host>:<ldap-port>
+       # (optional) StartTLS whether to enable the startTLS feature for establishing TLS on an existing LDAP session.
+       # If true, the ldap protocol is used and then issues a StartTLS command, otherwise, connections will use
+       # the ldaps: protocol.
+       startTLS: true
+
+       # User entry search configuration.   
+       userSearch: 
+         # To start the user search from. Example: "cn=users,dc=example,dc=com".
+         baseDN: <base-dn>
+
+         # Optional filter to apply when searching the directory. Example: "(objectClass=posixAccount)"
+         filter: <filter>
+
+         # A mapping of attributes to the username. This value can be used for applying RBAC to a user.
+         # Default: uid
+         nameAttribute: <name-attribute>
+
+       # (Optional) Group search configuration. This value can be used to apply RBAC to a user group.
+       groupSearch:
+
+         # BaseDN to start the search from. Example: "cn=groups,dc=example,dc=com".
+         baseDN: <base-dn>
+
+         # Optional filter to apply when searching the directory. Example: "(objectClass=posixGroup)"
+         filter: <filter>
+
+         # A mapping of attributes to the group name. This value can be used for applying RBAC to a user group. Example: "cn".
+         nameAttribute: <name-attribute>
+
+         # Following list contains field pairs that are used to match a user to a group. It adds an additional
+         # requirement to the filter that an attribute in the group must match the user's attribute value.
+         userMatchers:
+           - userAttribute: <user-attribute>
+             groupAttribute: <group-attribute>
+   ```
+
+1. Apply the secret to your cluster with your LDAP credentials. To obtain the values, consult the documentation of your provider.
+
+   ```
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: tigera-ldap-credentials
+     namespace: tigera-operator
+   data:
+     bindDN: <your-base64-bind-dn>
+     bindPW: <your-base64-bind-password>
+     rootCA: <your-base64-ca-cert-pem>
+   ```
+   
+%>
+
 {% endtabs %}
 
 #### Grant user login privileges
