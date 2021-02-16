@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -21,6 +21,7 @@ type L7LogAggregator interface {
 	L7LogGetter
 	AggregateOver(L7AggregationKind) L7LogAggregator
 	FeedUpdate(L7Update) error
+	PerNodeLimit(int) L7LogAggregator
 }
 
 type l7AggregatorRef struct {
