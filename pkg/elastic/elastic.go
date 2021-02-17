@@ -299,7 +299,7 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string) (IndexTe
 	}
 
 	return IndexTemplate{
-		IndexPatterns: []string{fmt.Sprintf("%s*", indexPrefix)},
+		IndexPatterns: []string{fmt.Sprintf("%s*", indexAlias)},
 		Settings:      indexSettings,
 		Mappings:      indexMappings,
 	}, nil
