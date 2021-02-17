@@ -26,6 +26,9 @@ The following platforms using only IPv4:
 - Kubernetes, on-premises
 - EKS using Calico CNI only
 
+> Note: WireGuard encryption is not currently compatible with egress gateway functionality.
+{: .alert .alert-info }
+
 **Required**
 
 - Operating system(s) of nodes running in the cluster must {% include open-new-window.html text='support WireGuard' url='https://www.wireguard.com/install/' %}
