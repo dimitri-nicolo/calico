@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -149,6 +149,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -180,6 +181,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -211,6 +213,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -242,6 +245,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -273,6 +277,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -304,6 +309,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCode,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -335,6 +341,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			TrimURL:         L7FullURL,
 			ResponseCode:    L7ResponseCodeNone,
 			NumURLPathParts: -1,
+			URLCharLimit:    28,
 		}
 
 		meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -367,6 +374,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 				TrimURL:         L7URLNone,
 				ResponseCode:    L7ResponseCode,
 				NumURLPathParts: -1,
+				URLCharLimit:    28,
 			}
 
 			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -398,6 +406,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 				TrimURL:         L7URLWithoutQuery,
 				ResponseCode:    L7ResponseCode,
 				NumURLPathParts: -1,
+				URLCharLimit:    28,
 			}
 
 			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -429,6 +438,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 				TrimURL:         L7BaseURL,
 				ResponseCode:    L7ResponseCode,
 				NumURLPathParts: -1,
+				URLCharLimit:    28,
 			}
 
 			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -460,6 +470,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 				TrimURL:         L7FullURL,
 				ResponseCode:    L7ResponseCode,
 				NumURLPathParts: 1,
+				URLCharLimit:    28,
 			}
 
 			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -491,6 +502,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 				TrimURL:         L7FullURL,
 				ResponseCode:    L7ResponseCode,
 				NumURLPathParts: 0,
+				URLCharLimit:    28,
 			}
 
 			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
@@ -499,6 +511,198 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Method).To(Equal(update.Method))
 			Expect(meta.Domain).To(Equal(update.Domain))
 			Expect(meta.Path).To(Equal(""))
+			Expect(meta.UserAgent).To(Equal(update.UserAgent))
+			Expect(meta.Type).To(Equal(update.Type))
+			Expect(meta.ServiceName).To(Equal(update.ServiceName))
+			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
+			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(meta.SrcNamespace).To(Equal("default"))
+			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DstNamespace).To(Equal("default"))
+			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		})
+
+		It("Should output full url with query params when URLCharLimit is more than length of the URL", func() {
+			agg := L7AggregationKind{
+				HTTPHeader:      L7HTTPHeaderInfo,
+				HTTPMethod:      L7HTTPMethod,
+				Service:         L7ServiceInfo,
+				Destination:     L7DestinationInfo,
+				Source:          L7SourceInfo,
+				TrimURL:         L7FullURL,
+				ResponseCode:    L7ResponseCode,
+				NumURLPathParts: -1,
+				URLCharLimit:    40,
+			}
+
+			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
+			Expect(err).To(BeNil())
+			Expect(meta.ResponseCode).To(Equal(update.ResponseCode))
+			Expect(meta.Method).To(Equal(update.Method))
+			Expect(meta.Domain).To(Equal(update.Domain))
+			Expect(meta.Path).To(Equal(update.Path))
+			Expect(meta.UserAgent).To(Equal(update.UserAgent))
+			Expect(meta.Type).To(Equal(update.Type))
+			Expect(meta.ServiceName).To(Equal(update.ServiceName))
+			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
+			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(meta.SrcNamespace).To(Equal("default"))
+			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DstNamespace).To(Equal("default"))
+			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		})
+
+		It("Should output truncated domain, empty path when URLCharLimit is less than length of domain", func() {
+			agg := L7AggregationKind{
+				HTTPHeader:      L7HTTPHeaderInfo,
+				HTTPMethod:      L7HTTPMethod,
+				Service:         L7ServiceInfo,
+				Destination:     L7DestinationInfo,
+				Source:          L7SourceInfo,
+				TrimURL:         L7FullURL,
+				ResponseCode:    L7ResponseCode,
+				NumURLPathParts: -1,
+				URLCharLimit:    10,
+			}
+
+			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
+			Expect(err).To(BeNil())
+			Expect(meta.ResponseCode).To(Equal(update.ResponseCode))
+			Expect(meta.Method).To(Equal(update.Method))
+			Expect(meta.Domain).To(Equal("www.test.c"))
+			Expect(meta.Path).To(Equal(flowLogFieldNotIncluded))
+			Expect(meta.UserAgent).To(Equal(update.UserAgent))
+			Expect(meta.Type).To(Equal(update.Type))
+			Expect(meta.ServiceName).To(Equal(update.ServiceName))
+			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
+			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(meta.SrcNamespace).To(Equal("default"))
+			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DstNamespace).To(Equal("default"))
+			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		})
+
+		It("Should output full domain, parts of path when URLCharLimit is more than domain length but less than full path url", func() {
+			agg := L7AggregationKind{
+				HTTPHeader:      L7HTTPHeaderInfo,
+				HTTPMethod:      L7HTTPMethod,
+				Service:         L7ServiceInfo,
+				Destination:     L7DestinationInfo,
+				Source:          L7SourceInfo,
+				TrimURL:         L7FullURL,
+				ResponseCode:    L7ResponseCode,
+				NumURLPathParts: 5,
+				URLCharLimit:    15,
+			}
+
+			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
+			Expect(err).To(BeNil())
+			Expect(meta.ResponseCode).To(Equal(update.ResponseCode))
+			Expect(meta.Method).To(Equal(update.Method))
+			Expect(meta.Domain).To(Equal(update.Domain))
+			Expect(meta.Path).To(Equal("/te"))
+			Expect(meta.UserAgent).To(Equal(update.UserAgent))
+			Expect(meta.Type).To(Equal(update.Type))
+			Expect(meta.ServiceName).To(Equal(update.ServiceName))
+			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
+			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(meta.SrcNamespace).To(Equal("default"))
+			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DstNamespace).To(Equal("default"))
+			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		})
+
+		It("Should output empty domain and path for L7URLNone case no matter what URLCharLimit is passed", func() {
+			agg := L7AggregationKind{
+				HTTPHeader:      L7HTTPHeaderInfo,
+				HTTPMethod:      L7HTTPMethod,
+				Service:         L7ServiceInfo,
+				Destination:     L7DestinationInfo,
+				Source:          L7SourceInfo,
+				TrimURL:         L7URLNone,
+				ResponseCode:    L7ResponseCode,
+				NumURLPathParts: 5,
+				URLCharLimit:    15,
+			}
+
+			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
+			Expect(err).To(BeNil())
+			Expect(meta.ResponseCode).To(Equal(update.ResponseCode))
+			Expect(meta.Method).To(Equal(update.Method))
+			Expect(meta.Domain).To(Equal(flowLogFieldNotIncluded))
+			Expect(meta.Path).To(Equal(flowLogFieldNotIncluded))
+			Expect(meta.UserAgent).To(Equal(update.UserAgent))
+			Expect(meta.Type).To(Equal(update.Type))
+			Expect(meta.ServiceName).To(Equal(update.ServiceName))
+			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
+			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(meta.SrcNamespace).To(Equal("default"))
+			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DstNamespace).To(Equal("default"))
+			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		})
+
+		It("Should output full domain and empty path for L7BaseURL case when URLCharLimit is more than domain length", func() {
+			agg := L7AggregationKind{
+				HTTPHeader:      L7HTTPHeaderInfo,
+				HTTPMethod:      L7HTTPMethod,
+				Service:         L7ServiceInfo,
+				Destination:     L7DestinationInfo,
+				Source:          L7SourceInfo,
+				TrimURL:         L7BaseURL,
+				ResponseCode:    L7ResponseCode,
+				NumURLPathParts: 5,
+				URLCharLimit:    20,
+			}
+
+			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
+			Expect(err).To(BeNil())
+			Expect(meta.ResponseCode).To(Equal(update.ResponseCode))
+			Expect(meta.Method).To(Equal(update.Method))
+			Expect(meta.Domain).To(Equal(update.Domain))
+			Expect(meta.Path).To(Equal(flowLogFieldNotIncluded))
+			Expect(meta.UserAgent).To(Equal(update.UserAgent))
+			Expect(meta.Type).To(Equal(update.Type))
+			Expect(meta.ServiceName).To(Equal(update.ServiceName))
+			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
+			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(meta.SrcNamespace).To(Equal("default"))
+			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DstNamespace).To(Equal("default"))
+			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		})
+
+		It("Should output full domain and max path for L7URLWithoutQuery case when URLCharLimit is between domain length and full url length", func() {
+			agg := L7AggregationKind{
+				HTTPHeader:      L7HTTPHeaderInfo,
+				HTTPMethod:      L7HTTPMethod,
+				Service:         L7ServiceInfo,
+				Destination:     L7DestinationInfo,
+				Source:          L7SourceInfo,
+				TrimURL:         L7URLWithoutQuery,
+				ResponseCode:    L7ResponseCode,
+				NumURLPathParts: 5,
+				URLCharLimit:    20,
+			}
+
+			meta, _, err := NewL7MetaSpecFromUpdate(update, agg)
+			Expect(err).To(BeNil())
+			Expect(meta.ResponseCode).To(Equal(update.ResponseCode))
+			Expect(meta.Method).To(Equal(update.Method))
+			Expect(meta.Domain).To(Equal(update.Domain))
+			Expect(meta.Path).To(Equal("/test/pa"))
 			Expect(meta.UserAgent).To(Equal(update.UserAgent))
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))

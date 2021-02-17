@@ -23,6 +23,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind := DefaultL7AggregationKind()
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -35,6 +36,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.HTTPHeader = L7HTTPHeaderInfo
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -47,6 +49,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.HTTPMethod = L7HTTPMethodNone
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -59,6 +62,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.Service = L7ServiceInfoNone
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -71,6 +75,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.Destination = L7DestinationInfoNone
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -83,6 +88,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.Source = L7SourceInfoNone
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -95,6 +101,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.ResponseCode = L7ResponseCodeNone
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -107,6 +114,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.TrimURL = L7URLNone
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 
 			cfg = &config.Config{
@@ -117,6 +125,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.TrimURL = L7BaseURL
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 
 			cfg = &config.Config{
@@ -127,6 +136,7 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			expectedKind.TrimURL = L7FullURL
 			// Path parts will be 0 because nothing has been set for this test
 			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 0
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 
@@ -137,6 +147,18 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			aggKind := getL7AggregationKindFromConfigParams(cfg)
 			expectedKind := DefaultL7AggregationKind()
 			expectedKind.NumURLPathParts = 2
+			expectedKind.URLCharLimit = 0
+			Expect(aggKind).To(Equal(expectedKind))
+		})
+
+		It("Should accurately modify URL path part setting", func() {
+			cfg := &config.Config{
+				L7LogsFileAggregationURLCharLimit: 2,
+			}
+			aggKind := getL7AggregationKindFromConfigParams(cfg)
+			expectedKind := DefaultL7AggregationKind()
+			expectedKind.NumURLPathParts = 0
+			expectedKind.URLCharLimit = 2
 			Expect(aggKind).To(Equal(expectedKind))
 		})
 	})

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -111,7 +111,8 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 		meta.Domain = flowLogFieldNotIncluded
 		meta.Path = flowLogFieldNotIncluded
 	}
-
+	// once the processing is done eventually make sure URL length is manageable
+	limitURLLength(&meta, ak.URLCharLimit)
 	spec := L7Spec{
 		Duration:      update.Duration,
 		DurationMax:   update.DurationMax,
@@ -121,6 +122,21 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 	}
 
 	return meta, spec, nil
+}
+
+func limitURLLength(meta *L7Meta, limit int) {
+	// when the URL exceeds a configured limit, trim it down to manageable length
+	if len(meta.Domain)+len(meta.Path) > limit {
+		// path length that is permissible
+		maxPath := limit - len(meta.Domain)
+		if maxPath < 0 {
+			// in this case we don't send the path at all and we limit domain to limit
+			meta.Domain = meta.Domain[0:limit]
+			meta.Path = flowLogFieldNotIncluded
+		} else {
+			meta.Path = meta.Path[0:maxPath]
+		}
+	}
 }
 
 func getAddressAndPort(domain string) (string, int) {
