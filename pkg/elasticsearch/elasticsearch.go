@@ -31,6 +31,7 @@ type Client interface {
 	CreateRoleMapping(roleMapping RoleMapping) error
 	GetRoleMappings() ([]RoleMapping, error)
 	DeleteRoleMapping(name string) (bool, error)
+	SetUserPassword(user User) error
 }
 
 // User represents an Elasticsearch user, which may or may not have roles attached to it
@@ -257,8 +258,8 @@ func (cli *client) DeleteUser(user User) error {
 	return nil
 }
 
-// UpdateUser will update the Elasticsearch users password and roles (if an roles are defined for the user). If the roles
-// don't exist they will be created.
+// UpdateUser will update the Elasticsearch users password (if password is set for the User) and roles (if roles are defined for the user).
+// If the roles don't exist they will be created.
 func (cli *client) UpdateUser(user User) error {
 	var rolesToCreate []Role
 	for _, role := range user.Roles {
@@ -273,10 +274,15 @@ func (cli *client) UpdateUser(user User) error {
 		}
 	}
 
-	j, err := json.Marshal(map[string]interface{}{
-		"password": user.Password,
-		"roles":    user.RoleNames(),
-	})
+	reqBody := map[string]interface{}{
+		"roles": user.RoleNames(),
+	}
+
+	if user.Password != "" {
+		reqBody["password"] = user.Password
+	}
+
+	j, err := json.Marshal(reqBody)
 	if err != nil {
 		return err
 	}
@@ -366,6 +372,36 @@ func (cli *client) GetUsers() ([]User, error) {
 	}
 
 	return users, nil
+}
+
+// SetUserPassword sets the password on an existing user.
+func (cli *client) SetUserPassword(user User) error {
+	j, err := json.Marshal(map[string]interface{}{
+		"password": user.Password,
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", fmt.Sprintf("/_security/user/%s/_password", user.Username), bytes.NewBuffer(j))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	response, err := cli.Perform(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf(string(body))
+	}
+
+	return nil
 }
 
 // CreateRoleMapping creates the given RoleMapping in Elasticsearch. The Name field in the RoleMapping is used as the role

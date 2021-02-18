@@ -46,6 +46,11 @@ func (o *MockClient) GetUsers() ([]es.User, error) {
 	return args.Get(0).([]es.User), args.Error(1)
 }
 
+func (o *MockClient) SetUserPassword(user es.User) error {
+	args := o.Called(user)
+	return args.Error(0)
+}
+
 func (o *MockClient) UserExists(username string) (bool, error) {
 	args := o.Called(username)
 	return args.Get(0).(bool), args.Error(1)

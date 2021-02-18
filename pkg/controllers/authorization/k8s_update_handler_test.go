@@ -454,6 +454,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			}
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("DeleteUser", mock.Anything).Return(nil)
+			mockESCLI.On("UserExists", "tigera-k8s-randomSubjectId1").Return(false, fmt.Errorf("random error"))
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
 			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", mock.Anything).Return([]string{})
@@ -498,6 +499,10 @@ var _ = Describe("native user listenAndSynchronize", func() {
 
 			wg.Wait()
 
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data["randomSubjectId1"]).Should(BeNil())
+
 			mockESCLI.AssertExpectations(GinkgoT())
 
 		})
@@ -516,6 +521,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 				Resources:     []string{"*"},
 			}}
 			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("UserExists", "tigera-k8s-randomSubjectId1").Return(false, fmt.Errorf("random error"))
 			mockESCLI.On("UpdateUser", mock.Anything).Return(nil)
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
@@ -599,6 +605,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 				{Name: "kibana_admin"}, {Name: "superuser"},
 			}
 
+			mockESCLI.On("UserExists", "tigera-k8s-randomSubjectId1").Return(false, fmt.Errorf("random error"))
 			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
 				arg := args.Get(0).(elasticsearch.User)
 				for _, c := range mockESCLI.ExpectedCalls {
@@ -674,6 +681,10 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(secret.Data["randomSubjectId1"]).ShouldNot(BeNil())
 
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data).ShouldNot(BeNil())
+
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
 	})
@@ -703,6 +714,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 				{Name: "audit_kube_viewer"},
 			}
 
+			mockESCLI.On("UserExists", "tigera-k8s-randomSubjectId1").Return(false, nil)
 			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
 				arg := args.Get(0).(elasticsearch.User)
 				for _, c := range mockESCLI.ExpectedCalls {
@@ -778,12 +790,16 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(secret.Data["randomSubjectId1"]).ShouldNot(BeNil())
 
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data).ShouldNot(BeNil())
+
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
 	})
 
 	Context("Delete ConfigMap", func() {
-		It("deletes user from elasticsearch and also deletes Secret", func() {
+		It("deletes user from elasticsearch and also deletes k8s Secret", func() {
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("DeleteUser", elasticsearch.User{Username: "tigera-k8s-subId1"}).Return(nil)
 			mockESCLI.On("DeleteUser", elasticsearch.User{Username: "tigera-k8s-subId2"}).Return(nil)
@@ -851,6 +867,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			}}
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("UpdateUser", mock.Anything).Return(nil)
+			mockESCLI.On("UserExists", "tigera-k8s-randomSubjectId1").Return(false, nil)
 			mockESCLI.On("GetUsers").Return([]elasticsearch.User{
 				{Username: "tigera-k8s-randomSubjectId1"},
 			}, nil)
@@ -912,6 +929,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("DeleteUser", mock.Anything).Return(nil)
+			mockESCLI.On("UserExists", "tigera-k8s-subId1").Return(false, fmt.Errorf("random error"))
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
 			mockClusterRoleCache.On("RemoveClusterRole", clusterRoleName).Return(true)
@@ -931,7 +949,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			oidcSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
 				Data: map[string][]byte{
-					"randomSubjectId1": []byte("Hello"),
+					"subId1": []byte("Hello"),
 				},
 			}
 			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
@@ -961,6 +979,10 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			close(resourceUpdates)
 			wg.Wait()
 
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data["subId1"]).Should(BeNil())
+
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
 
@@ -968,6 +990,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			clusterRoleName := "test-cluster-role"
 
 			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("UserExists", mock.Anything).Return(false, nil)
 			mockESCLI.On("UpdateUser", mock.Anything).Return(nil)
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
@@ -1034,6 +1057,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("DeleteUser", mock.Anything).Return(nil)
+			mockESCLI.On("UserExists", mock.Anything).Return(false, nil)
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
 			mockClusterRoleCache.On("RemoveClusterRoleBinding", clusterRoleBindingName).Return(true)
@@ -1098,6 +1122,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 
 			mockESCLI := elasticsearch.NewMockClient()
 			mockESCLI.On("DeleteUser", mock.Anything).Return(nil)
+			mockESCLI.On("UserExists", mock.Anything).Return(false, nil)
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
 			mockClusterRoleCache.On("RemoveClusterRoleBinding", clusterRoleBindingName).Return(true)
@@ -1143,6 +1168,9 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			close(resourceUpdates)
 			wg.Wait()
 
+			_, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).Should(HaveOccurred())
+
 			mockESCLI.AssertExpectations(GinkgoT())
 		})
 
@@ -1151,6 +1179,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			clusterRoleName := "test-cluster-role"
 
 			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("UserExists", mock.Anything).Return(false, nil)
 			mockESCLI.On("UpdateUser", mock.Anything).Return(nil)
 
 			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
@@ -1217,6 +1246,7 @@ var _ = Describe("native user listenAndSynchronize", func() {
 				{Username: "tigera-k8s-xyz-2"},
 			}, nil)
 			mockESCLI.On("DeleteUser", elasticsearch.User{Username: "tigera-k8s-xyz-1"}).Return(nil)
+			mockESCLI.On("UserExists", mock.Anything).Return(false, nil)
 			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
 				arg := args.Get(0).(elasticsearch.User)
 				for _, c := range mockESCLI.ExpectedCalls {
@@ -1259,6 +1289,214 @@ var _ = Describe("native user listenAndSynchronize", func() {
 			}
 
 			Expect(updateHandler.synchronizer.resync()).ShouldNot(HaveOccurred())
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data["xyz-2"]).ShouldNot(BeNil())
+			Expect(actualOidcSecret.Data["xyz-3"]).ShouldNot(BeNil())
+
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
+
+		It("If user exists in elasticsearch and password exists in k8s Secret, do not recreate password", func() {
+			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("GetUsers").Return([]elasticsearch.User{
+				{Username: "tigera-k8s-xyz-1", Roles: []elasticsearch.Role{{Name: "kibana_viewer"}, {Name: "superuser"}, {Name: "flows_viewer"}}},
+			}, nil)
+			mockESCLI.On("UserExists", "tigera-k8s-xyz-1").Return(true, nil)
+			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
+				arg := args.Get(0).(elasticsearch.User)
+				for _, c := range mockESCLI.ExpectedCalls {
+					if c.Method == "UpdateUser" {
+						Expect(arg.Password).Should(BeEmpty())
+						c.ReturnArguments = mock.Arguments{nil}
+					}
+				}
+			})
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group1").Return([]string{"role-1"})
+			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
+				APIGroups:     []string{"lma.tigera.io"},
+				ResourceNames: []string{"flows", "kibana_login", "elasticsearch_superuser"},
+				Resources:     []string{"*"},
+			}})
+
+			mockUserCache := userscache.NewMockOIDCUserCache()
+			mockUserCache.On("Exists", "xyz-1").Return(true)
+			mockUserCache.On("SubjectIDs").Return([]string{"xyz-1"})
+			mockUserCache.On("SubjectIDToUserOrGroups", mock.Anything).Return([]string{"group1"})
+
+			oidcSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
+				Data: map[string][]byte{
+					"xyz-1": []byte("Hello"),
+				},
+			}
+			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+
+			resourceUpdates := make(chan resourceUpdate)
+			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
+
+			updateHandler := k8sUpdateHandler{
+				resourceUpdates: resourceUpdates,
+				synchronizer:    synchronizer,
+			}
+
+			Expect(updateHandler.synchronizer.resync()).ShouldNot(HaveOccurred())
+
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data).Should(BeEquivalentTo(oidcSecret.Data))
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
+
+		It("If user exists in elasticsearch and password does not exist in k8s Secret, recreate password", func() {
+			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("GetUsers").Return([]elasticsearch.User{
+				{Username: "tigera-k8s-xyz-1", Roles: []elasticsearch.Role{{Name: "kibana_viewer"}, {Name: "superuser"}, {Name: "flows_viewer"}}},
+			}, nil)
+			mockESCLI.On("UserExists", "tigera-k8s-xyz-1").Return(true, nil)
+			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
+				arg := args.Get(0).(elasticsearch.User)
+				for _, c := range mockESCLI.ExpectedCalls {
+					if c.Method == "UpdateUser" {
+						Expect(arg.Password).Should(BeEmpty())
+						c.ReturnArguments = mock.Arguments{nil}
+					}
+				}
+			})
+			mockESCLI.On("SetUserPassword", mock.Anything).Return(nil)
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group1").Return([]string{"role-1"})
+			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
+				APIGroups:     []string{"lma.tigera.io"},
+				ResourceNames: []string{"flows", "kibana_login", "elasticsearch_superuser"},
+				Resources:     []string{"*"},
+			}})
+
+			mockUserCache := userscache.NewMockOIDCUserCache()
+			mockUserCache.On("Exists", "xyz-1").Return(true)
+			mockUserCache.On("SubjectIDs").Return([]string{"xyz-1"})
+			mockUserCache.On("SubjectIDToUserOrGroups", mock.Anything).Return([]string{"group1"})
+
+			oidcSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
+			}
+			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+
+			resourceUpdates := make(chan resourceUpdate)
+			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
+
+			updateHandler := k8sUpdateHandler{
+				resourceUpdates: resourceUpdates,
+				synchronizer:    synchronizer,
+			}
+
+			Expect(updateHandler.synchronizer.resync()).ShouldNot(HaveOccurred())
+
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data["xyz-1"]).ShouldNot(BeNil())
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
+
+		It("If user does not exists in elasticsearch and password does not exist in k8s Secret, recreate password", func() {
+			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("GetUsers").Return([]elasticsearch.User{}, nil)
+			mockESCLI.On("UserExists", "tigera-k8s-xyz-1").Return(false, nil)
+			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
+				arg := args.Get(0).(elasticsearch.User)
+				for _, c := range mockESCLI.ExpectedCalls {
+					if c.Method == "UpdateUser" {
+						Expect(arg.Password).ShouldNot(BeEmpty())
+						c.ReturnArguments = mock.Arguments{nil}
+					}
+				}
+			})
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group1").Return([]string{"role-1"})
+			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
+				APIGroups:     []string{"lma.tigera.io"},
+				ResourceNames: []string{"flows", "kibana_login", "elasticsearch_superuser"},
+				Resources:     []string{"*"},
+			}})
+
+			mockUserCache := userscache.NewMockOIDCUserCache()
+			mockUserCache.On("Exists", "xyz-1").Return(true)
+			mockUserCache.On("SubjectIDs").Return([]string{"xyz-1"})
+			mockUserCache.On("SubjectIDToUserOrGroups", mock.Anything).Return([]string{"group1"})
+
+			oidcSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
+			}
+			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+
+			resourceUpdates := make(chan resourceUpdate)
+			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
+
+			updateHandler := k8sUpdateHandler{
+				resourceUpdates: resourceUpdates,
+				synchronizer:    synchronizer,
+			}
+
+			Expect(updateHandler.synchronizer.resync()).ShouldNot(HaveOccurred())
+
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data["xyz-1"]).ShouldNot(BeNil())
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
+
+		It("If user does not exists in elasticsearch and password exist in k8s Secret, recreate password", func() {
+			mockESCLI := elasticsearch.NewMockClient()
+			mockESCLI.On("GetUsers").Return([]elasticsearch.User{}, nil)
+			mockESCLI.On("UserExists", "tigera-k8s-xyz-1").Return(false, nil)
+			mockESCLI.On("UpdateUser", mock.Anything).Run(func(args mock.Arguments) {
+				arg := args.Get(0).(elasticsearch.User)
+				for _, c := range mockESCLI.ExpectedCalls {
+					if c.Method == "UpdateUser" {
+						Expect(arg.Password).ShouldNot(BeEmpty())
+						c.ReturnArguments = mock.Arguments{nil}
+					}
+				}
+			})
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("ClusterRoleNamesForSubjectName", "group1").Return([]string{"role-1"})
+			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
+				APIGroups:     []string{"lma.tigera.io"},
+				ResourceNames: []string{"flows", "kibana_login", "elasticsearch_superuser"},
+				Resources:     []string{"*"},
+			}})
+
+			mockUserCache := userscache.NewMockOIDCUserCache()
+			mockUserCache.On("Exists", "xyz-1").Return(true)
+			mockUserCache.On("SubjectIDs").Return([]string{"xyz-1"})
+			mockUserCache.On("SubjectIDToUserOrGroups", mock.Anything).Return([]string{"group1"})
+
+			oidcSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: resource.OIDCUsersEsSecreteName, Namespace: resource.TigeraElasticsearchNamespace},
+				Data: map[string][]byte{
+					"xyz-1": []byte("Hello"),
+				},
+			}
+			fakeK8CLI := k8sfake.NewSimpleClientset(oidcSecret)
+
+			resourceUpdates := make(chan resourceUpdate)
+			synchronizer := createNativeUserSynchronizer(mockClusterRoleCache, mockUserCache, fakeK8CLI, mockESCLI)
+
+			updateHandler := k8sUpdateHandler{
+				resourceUpdates: resourceUpdates,
+				synchronizer:    synchronizer,
+			}
+
+			Expect(updateHandler.synchronizer.resync()).ShouldNot(HaveOccurred())
+
+			actualOidcSecret, err := fakeK8CLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(context.Background(), resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(actualOidcSecret.Data["xyz-1"]).ShouldNot(BeEquivalentTo(oidcSecret.Data["xyz-1"]))
 
 			mockESCLI.AssertExpectations(GinkgoT())
 		})

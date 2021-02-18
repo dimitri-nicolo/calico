@@ -224,10 +224,13 @@ func (n *nativeUserSynchronizer) getOIDCUsersForClusterRole(clusterRoleName stri
 	return oidcSubjectIDs
 }
 
-// synchronizeOIDCUsers updates or deletes Elasticsearch native users based on cache
-// If oidc user doesn't exist in the OIDCUserCache, delete the corresponding Elasticsearch native user
-// If oidc user exists in the OIDCUserCache, generate password and save it in tigera-known-oidc-users-credentials secret,
-// get roles for the user based on the ClusterRoleBindings that the oidc user belongs to and create Elasticsearch native user.
+// synchronizeOIDCUsers updates or deletes Elasticsearch native users based on cache.
+// If oidc user doesn't exist in the OIDCUserCache, delete the corresponding Elasticsearch native user.
+// If oidc user exists in the OIDCUserCache,
+//   - Get roles for the user based on the ClusterRoleBindings that the oidc user belongs to and create/update roles for Elasticsearch native user.
+//   - If the Elasticsearch native user does not exist, generate password and update Elasticsearch native user and data in k8s Secret.
+//   - If the Elasticsearch native user exist and also password for the user exists in the data of k8s Secret, do not update the password.
+//   - If the Elasticsearch native user exist and password for the user does not exists in the data of k8s Secret, recreate password and update both Elasticsearch native user and data in k8s Secret.
 func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string) error {
 	var err error
 	var updateEsUsers = make(map[string]elasticsearch.User)
@@ -243,9 +246,13 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 
 		esUser := elasticsearch.User{Username: esUsername}
 
-		esUser.Password, err = resource.CreateHashFromObject([]interface{}{time.Now(), esUsername})
-		if err != nil {
-			return err
+		// Password is a mandatory field while creating new elasticsearch native user.
+		// If user does not exists in elasticsearch generate and set password, else update the user without changing the password.
+		if exists, _ := n.esCLI.UserExists(esUsername); !exists {
+			esUser.Password, err = resource.CreateHashFromObject([]interface{}{time.Now(), oidcSubjectID})
+			if err != nil {
+				return err
+			}
 		}
 
 		esUser.Roles = n.getEsRoleForOIDCSubjectID(oidcSubjectID)
@@ -293,9 +300,12 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 	return nil
 }
 
-// setOIDCUsersPassword updates and deletes the data in k8s Secret with the given elasticsearch user password.
+// setOIDCUsersPassword updates and deletes the data in k8s Secret with the given Elasticsearch user password.
+// For an existing Elasticsearch user,
+//   - If password is not available in the data of k8s Secret, generate password and update both the Elasticsearch native user and data of k8s Secret
+//   - Else do noting [use existing password].
+// For new Elasticsearch user, add/update the password in the data of k8s Secret.
 func (n *nativeUserSynchronizer) setOIDCUsersPassword(ctx context.Context, updateEsUsers map[string]elasticsearch.User, deleteEsUsers map[string]elasticsearch.User) error {
-
 	secret, err := n.k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Get(ctx, resource.OIDCUsersEsSecreteName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) && len(updateEsUsers) == 0 {
@@ -307,11 +317,23 @@ func (n *nativeUserSynchronizer) setOIDCUsersPassword(ctx context.Context, updat
 	if secret.Data == nil {
 		secret.Data = make(map[string][]byte)
 	}
-	for subejectID, esUser := range updateEsUsers {
-		secret.Data[subejectID] = []byte(esUser.Password)
+	for subjectID, esUser := range updateEsUsers {
+		if "" != esUser.Password {
+			// New Elasticsearch user
+			secret.Data[subjectID] = []byte(esUser.Password)
+		} else if _, ok := secret.Data[subjectID]; !ok {
+			esUser.Password, err = resource.CreateHashFromObject([]interface{}{time.Now(), subjectID})
+			if err != nil {
+				return err
+			}
+			if err := n.esCLI.SetUserPassword(esUser); err != nil {
+				return err
+			}
+			secret.Data[subjectID] = []byte(esUser.Password)
+		}
 	}
-	for subejectID := range deleteEsUsers {
-		delete(secret.Data, subejectID)
+	for subjectID := range deleteEsUsers {
+		delete(secret.Data, subjectID)
 	}
 	_, err = n.k8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
