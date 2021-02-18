@@ -105,36 +105,139 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
 
 ### How to
 
-Non-OpenShift
+#### Prepare YAML resources describing the layout of your cluster
+
+Prepare BGPPeer resources to specify how each node in your cluster should peer with the
+ToR routers in its rack.  For example, if your rack 'A' has ToRs with IPs 172.31.11.100
+and 172.31.12.100 and the rack AS number is 65001:
+
+
+This step is not strictly specific to dual ToR deployment.  Any multi-rack deployment
+needs to peer cluster nodes with the ToR or ToRs for their rack, so that pods hosted by
+those nodes can be reached from elsewhere.  But the timing of the configuration is more
+critical here, because dual ToR relies on BGP to advertise stable **node** addresses - for
+dual-homed nodes - as well as pod IPs.  It's also more complex because of dual-homed nodes
+having two ToR peers.  We recommend the following approach to ensure that BGP
+configuration is in place at the right time.
+
+Suppose a rack has two ToRs with IPs .  Dual-homed nodes should peer with both, and single-homed nodes with only
+the first.  That is generically expressed by these BGPPeer resources:
+
+```
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: ra1
+spec:
+  nodeSelector: "rack == 'ra' || rack == 'ra_single'"
+  peerIP: 172.31.11.100
+  asNumber: 65001
+  sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: ra2
+spec:
+  nodeSelector: "rack == 'ra'"
+  peerIP: 172.31.12.100
+  asNumber: 65001
+  sourceAddress: None
+EOF
+```
+
+Then each dual-homed node in the rack should be labelled with `rack: ra`, and each
+single-homed node with `rack: ra_single`.  Also every node in the rack must have a
+`projectcalico.org/ASNumber: 65001` annotation so that it knows its own AS number.
+
+Then repeat all that for further racks: with `rb`, `rb_single`, `65002`, `rc`,
+`rc_single`, `65003`, and so on.
+
+Timing-wise, the configuration relevant to any given dual-homed node should be defined
+before that node is added to the cluster, and this is easily achieved in most Kubernetes
+platforms because they allow a Node object to exist in advance.  Therefore, as soon as the
+Kubernetes API is available, but before installing Calico:
+
+-  use [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install) to create all
+   BGPPeer resources, following the pattern above
+
+-  use `kubectl` to create a Node resource for each node that will be added to cluster,
+   labelled and annotated with its rack and AS number; for example:
+
+   ```
+   kubectl create -f - <<EOF
+   apiVersion: v1
+   kind: Node
+   metadata:
+     name: worker1
+     labels:
+       rack: ra
+     annotations:
+       projectcalico.org/ASNumber: "65001"
+   EOF
+   ```
+
+Once BGPPeer resources have been configured, you should [disable the full node-to-node
+mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
+
+```
+calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
+```
+
+Depending on what your ToR supports, consider also setting these fields in each BGPPeer:
+
+-  `failureDetectionMode: BFDIfDirectlyConnected` to enable BFD, when possible, for fast
+   failure detection.
+
+   > **Note**: {{site.prodname}} only supports BFD on directly connected peerings, but in
+   > practice nodes are normally directly connected to their ToRs.
+   {: .alert .alert-info}
+
+-  `restartMode: LongLivedGracefulRestart` to enable LLGR handling when the node needs to
+   be restarted, if your ToR routers support LLGR.  If not, we recommend instead
+   `maxRestartTime: 10s`.
+
+-  `birdGatewayMode: DirectIfDirectlyConnected` to enable the "direct" next hop algorithm,
+   if that is helpful for optimal interworking with your ToR routers.
+
+   > **Note**: For directly connected BGP peerings, BIRD provides two gateway computation
+   > modes, ["direct" and
+   > "recursive"](https://bird.network.cz/?get_doc&v=16&f=bird-6.html#ss6.3){:target="_blank"}.  "recursive"
+   > is the default, but "direct" can give better results when the ToR also acts as the
+   > route reflector (RR) for the rack.
+   >
+   > Specifically, a combined ToR/RR should ideally keep the BGP next hop intact (aka
+   > "next hop keep") when reflecting routes from other nodes in the same rack, but add
+   > itself as the BGP next hop (aka "next hop self") when forwarding routes from outside
+   > the rack.  If your ToRs can be configured to do that, fine.
+   >
+   > If they cannot, an effective workaround is to configure the ToRs to do "next hop
+   > keep" for all routes, with "gateway direct" on the {{site.prodname}} nodes.  In
+   > effect the “gateway direct” applies a “next hop self” when needed, but otherwise not.
+   {: .alert .alert-info}
+
+
+
+
+  - Nodes: AS number, label to select BGPPeers
+  - BGPPeers: peerings from nodes to ToRs
+  - BGPConfiguration: disable full mesh
+  - IPPools: stable addresses, the default IP pool for pods
+  - EarlyNetworkConfiguration: peerings from nodes to ToRs, stable addresses
 
 - Dual-ToR network environment + BGP config on ToRs and core routers.
-- Empty nodes.
-- Describe IP addressing and AS numbering.  Copy onto nodes or host where this will be accessible to nodes.
+
+Non-OpenShift
 
 - Arrange cnx-node run on each node.  Reboot.
 
 - kubeadm init and join
 
-- Define Nodes with correct AS number and rack
-
-- Prepare Calico resources, place in operator's calico-resources configmap
-  - BGPPeers
-  - IPPools for stable addresses
-
 - Run Tigera operator
 
 OpenShift
 
-- Dual-ToR network environment + BGP config on ToRs and core routers.
-- Empty nodes.
-- Describe IP addressing and AS numbering.  Host where this will be accessible to nodes.
-
 - Add MachineConfig to arrange cnx-node run on each node.
-- Add manifests to define Nodes with correct AS number and rack
-
-- Prepare Calico resources, place in operator's calico-resources configmap
-  - BGPPeers
-  - IPPools for stable addresses
 
 - Run OpenShift install
 
@@ -282,113 +385,6 @@ addresses.  Then encode that information in your version of `get_dual_tor_detail
 host that somewhere that is accessible from each new node as it boots, so that it can be
 fed into the {{site.nodecontainer}} container, as illustrated by the example in the
 previous section.
-
-#### Prepare BGP configuration for dual- and single-homed nodes
-
-This step is not strictly specific to dual ToR deployment.  Any multi-rack deployment
-needs to peer cluster nodes with the ToR or ToRs for their rack, so that pods hosted by
-those nodes can be reached from elsewhere.  But the timing of the configuration is more
-critical here, because dual ToR relies on BGP to advertise stable **node** addresses - for
-dual-homed nodes - as well as pod IPs.  It's also more complex because of dual-homed nodes
-having two ToR peers.  We recommend the following approach to ensure that BGP
-configuration is in place at the right time.
-
-Suppose a rack has two ToRs with IPs 172.31.11.100 and 172.31.12.100, and the rack AS
-number is 65001.  Dual-homed nodes should peer with both, and single-homed nodes with only
-the first.  That is generically expressed by these BGPPeer resources:
-
-```
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: ra1
-spec:
-  nodeSelector: "rack == 'ra' || rack == 'ra_single'"
-  peerIP: 172.31.11.100
-  asNumber: 65001
-  sourceAddress: None
----
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: ra2
-spec:
-  nodeSelector: "rack == 'ra'"
-  peerIP: 172.31.12.100
-  asNumber: 65001
-  sourceAddress: None
-EOF
-```
-
-Then each dual-homed node in the rack should be labelled with `rack: ra`, and each
-single-homed node with `rack: ra_single`.  Also every node in the rack must have a
-`projectcalico.org/ASNumber: 65001` annotation so that it knows its own AS number.
-
-Then repeat all that for further racks: with `rb`, `rb_single`, `65002`, `rc`,
-`rc_single`, `65003`, and so on.
-
-Timing-wise, the configuration relevant to any given dual-homed node should be defined
-before that node is added to the cluster, and this is easily achieved in most Kubernetes
-platforms because they allow a Node object to exist in advance.  Therefore, as soon as the
-Kubernetes API is available, but before installing Calico:
-
--  use [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install) to create all
-   BGPPeer resources, following the pattern above
-
--  use `kubectl` to create a Node resource for each node that will be added to cluster,
-   labelled and annotated with its rack and AS number; for example:
-
-   ```
-   kubectl create -f - <<EOF
-   apiVersion: v1
-   kind: Node
-   metadata:
-     name: worker1
-     labels:
-       rack: ra
-     annotations:
-       projectcalico.org/ASNumber: "65001"
-   EOF
-   ```
-
-Once BGPPeer resources have been configured, you should [disable the full node-to-node
-mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
-
-```
-calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
-```
-
-Depending on what your ToR supports, consider also setting these fields in each BGPPeer:
-
--  `failureDetectionMode: BFDIfDirectlyConnected` to enable BFD, when possible, for fast
-   failure detection.
-
-   > **Note**: {{site.prodname}} only supports BFD on directly connected peerings, but in
-   > practice nodes are normally directly connected to their ToRs.
-   {: .alert .alert-info}
-
--  `restartMode: LongLivedGracefulRestart` to enable LLGR handling when the node needs to
-   be restarted, if your ToR routers support LLGR.  If not, we recommend instead
-   `maxRestartTime: 10s`.
-
--  `birdGatewayMode: DirectIfDirectlyConnected` to enable the "direct" next hop algorithm,
-   if that is helpful for optimal interworking with your ToR routers.
-
-   > **Note**: For directly connected BGP peerings, BIRD provides two gateway computation
-   > modes, ["direct" and
-   > "recursive"](https://bird.network.cz/?get_doc&v=16&f=bird-6.html#ss6.3){:target="_blank"}.  "recursive"
-   > is the default, but "direct" can give better results when the ToR also acts as the
-   > route reflector (RR) for the rack.
-   >
-   > Specifically, a combined ToR/RR should ideally keep the BGP next hop intact (aka
-   > "next hop keep") when reflecting routes from other nodes in the same rack, but add
-   > itself as the BGP next hop (aka "next hop self") when forwarding routes from outside
-   > the rack.  If your ToRs can be configured to do that, fine.
-   >
-   > If they cannot, an effective workaround is to configure the ToRs to do "next hop
-   > keep" for all routes, with "gateway direct" on the {{site.prodname}} nodes.  In
-   > effect the “gateway direct” applies a “next hop self” when needed, but otherwise not.
-   {: .alert .alert-info}
 
 #### Configure your ToR routers and infrastructure
 
