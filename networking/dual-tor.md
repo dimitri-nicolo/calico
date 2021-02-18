@@ -105,6 +105,12 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
 
 ### How to
 
+-  [Prepare YAML resources describing the layout of your cluster](#prepare-yaml-resources-describing-the-layout-of-your-cluster)
+-  [Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot](#arrange-for-dual-homed-nodes-to-run-cnx-node-on-each-boot)
+-  [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
+-  [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-calico-enterprise)
+-  [Verify the deployment](#verify-the-deployment)
+
 #### Prepare YAML resources describing the layout of your cluster
 
 1.  Prepare BGPPeer resources to specify how each node in your cluster should peer with
