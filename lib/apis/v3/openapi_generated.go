@@ -8204,6 +8204,13 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"prometheusMetricsPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrometheusMetricsPort is the TCP port that the Prometheus metrics server should bind to. Set to 0 to disable. [Default: 9094]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"controllers": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Controllers enables and configures individual Kubernetes controllers",
