@@ -82,7 +82,7 @@ In this step, you configure the Envoy log collector to gather the L7 metrics.
 
 **OpenShift Only**
 
-1. Apply the SecurityContextConstraint.
+1. Apply the SecurityContextConstraint. This contains the minimum required SecurityContextConstraint for l7 logs. You may add additional constraints if your application requires them. 
    ```
    oc apply -f {{ "/manifests/l7/l7-collector-scc.yaml" | absolute_url }}
    ```
