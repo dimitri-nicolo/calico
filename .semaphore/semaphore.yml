@@ -128,5 +128,5 @@ blocks:
             - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
             - >-
               if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
-                make push-windows-manifest CONFIRM=true
+                make cd-windows-manifest CONFIRM=true
               fi

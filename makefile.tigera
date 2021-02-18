@@ -32,11 +32,12 @@ push: imagetag confirm
 # Push manifest for Windows images. We need to use a template spec file because there is no way to
 # differentiate Windows 10 version tags with manifest-tool's spec args.
 #
-# We override BUILD_IMAGE since we invoke this target from Linux.
-push-windows-manifest: confirm
+# We override BUILD_IMAGE since we invoke this target from Linux but we're
+# pushing the manifest image for Windows.
+push-windows-manifest: imagetag confirm
 	rm .manifest.yaml || true
 	$(eval BUILD_IMAGE:=$(BUILD_IMAGE)-windows)
-	sed -e "s|VERSION|$(shell git describe --tags --dirty --always --long --abbrev=12)|g" \
+	sed -e "s|VERSION|$(VERSION)|g" \
 		-e "s|PUSH_IMAGE|$(PUSH_IMAGE)|g" .manifest.yaml.tpl > .manifest.yaml
 	docker run --rm -t \
 		--entrypoint /bin/sh \

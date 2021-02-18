@@ -63,7 +63,15 @@ clean: clean-eks-log-forwarder-startup
 ## build fluentd image, tagged to IMAGETAG
 ci: eks-log-forwarder-startup test image
 
-## push fluentd image to GCR_REPO
+## push fluentd image to GCR_REPO.
+#  Note: this is called from both Linux and Windows so ARCH_TAG is required.
 cd: eks-log-forwarder-startup image
 	$(MAKE) push VERSION=$(IMAGETAG)$(ARCH_TAG)
 	$(MAKE) push VERSION=$(shell git describe --tags --dirty --always --long --abbrev=12)$(ARCH_TAG)
+
+## push fluentd-windows image manifest to GCR_REPO
+#  Note: this should only be invoked after 'make cd' is run for all supported
+#  Windows versions
+cd-windows-manifest:
+	$(MAKE) push-windows-manifest VERSION=$(IMAGETAG)
+	$(MAKE) push-windows-manifest VERSION=$(shell git describe --tags --dirty --always --long --abbrev=12)
