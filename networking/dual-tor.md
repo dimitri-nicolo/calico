@@ -107,175 +107,246 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
 
 #### Prepare YAML resources describing the layout of your cluster
 
-Prepare BGPPeer resources to specify how each node in your cluster should peer with the
-ToR routers in its rack.  For example, if your rack 'A' has ToRs with IPs 172.31.11.100
-and 172.31.12.100 and the rack AS number is 65001:
+1.  Prepare BGPPeer resources to specify how each node in your cluster should peer with
+	the ToR routers in its rack.  For example, if your rack 'A' has ToRs with IPs
+	172.31.11.100 and 172.31.12.100 and the rack AS number is 65001:
 
+	```
+	apiVersion: projectcalico.org/v3
+	kind: BGPPeer
+	metadata:
+	  name: ra1
+	spec:
+	  nodeSelector: "rack == 'ra' || rack == 'ra_single'"
+	  peerIP: 172.31.11.100
+	  asNumber: 65001
+	  sourceAddress: None
+	---
+	apiVersion: projectcalico.org/v3
+	kind: BGPPeer
+	metadata:
+	  name: ra2
+	spec:
+	  nodeSelector: "rack == 'ra'"
+	  peerIP: 172.31.12.100
+	  asNumber: 65001
+	  sourceAddress: None
+	EOF
+	```
 
-This step is not strictly specific to dual ToR deployment.  Any multi-rack deployment
-needs to peer cluster nodes with the ToR or ToRs for their rack, so that pods hosted by
-those nodes can be reached from elsewhere.  But the timing of the configuration is more
-critical here, because dual ToR relies on BGP to advertise stable **node** addresses - for
-dual-homed nodes - as well as pod IPs.  It's also more complex because of dual-homed nodes
-having two ToR peers.  We recommend the following approach to ensure that BGP
-configuration is in place at the right time.
+	> **Note**: The effect of the `nodeSelector` fields here is that any node with label
+	> `rack: ra` will peer with both these ToRs, while any node with label `rack:
+	> ra_single` will peer with only the first ToR.  For optimal dual ToR function and
+	> resilience, nodes in rack 'A' should be labelled `rack: ra`, but `rack: ra_single`
+	> can be used instead on any nodes which cannot be dual-homed.
+	{: .alert .alert-info}
 
-Suppose a rack has two ToRs with IPs .  Dual-homed nodes should peer with both, and single-homed nodes with only
-the first.  That is generically expressed by these BGPPeer resources:
+	Repeat for as many racks as there are in your cluster.  Each rack needs a new pair of
+	BGPPeer resources with its own ToR addresses and AS number, and `nodeSelector` fields
+	matching the nodes that should peer with its ToR routers.
 
-```
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: ra1
-spec:
-  nodeSelector: "rack == 'ra' || rack == 'ra_single'"
-  peerIP: 172.31.11.100
-  asNumber: 65001
-  sourceAddress: None
----
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: ra2
-spec:
-  nodeSelector: "rack == 'ra'"
-  peerIP: 172.31.12.100
-  asNumber: 65001
-  sourceAddress: None
-EOF
-```
+	Depending on what your ToR supports, consider also setting these fields in each
+    BGPPeer:
 
-Then each dual-homed node in the rack should be labelled with `rack: ra`, and each
-single-homed node with `rack: ra_single`.  Also every node in the rack must have a
-`projectcalico.org/ASNumber: 65001` annotation so that it knows its own AS number.
+    -  `failureDetectionMode: BFDIfDirectlyConnected` to enable BFD, when possible, for
+       fast failure detection.
 
-Then repeat all that for further racks: with `rb`, `rb_single`, `65002`, `rc`,
-`rc_single`, `65003`, and so on.
+       > **Note**: {{site.prodname}} only supports BFD on directly connected peerings, but
+       > in practice nodes are normally directly connected to their ToRs.
+       {: .alert .alert-info}
 
-Timing-wise, the configuration relevant to any given dual-homed node should be defined
-before that node is added to the cluster, and this is easily achieved in most Kubernetes
-platforms because they allow a Node object to exist in advance.  Therefore, as soon as the
-Kubernetes API is available, but before installing Calico:
+    -  `restartMode: LongLivedGracefulRestart` to enable LLGR handling when the node needs
+       to be restarted, if your ToR routers support LLGR.  If not, we recommend instead
+       `maxRestartTime: 10s`.
 
--  use [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install) to create all
-   BGPPeer resources, following the pattern above
+    -  `birdGatewayMode: DirectIfDirectlyConnected` to enable the "direct" next hop
+       algorithm, if that is helpful for optimal interworking with your ToR routers.
 
--  use `kubectl` to create a Node resource for each node that will be added to cluster,
-   labelled and annotated with its rack and AS number; for example:
+       > **Note**: For directly connected BGP peerings, BIRD provides two gateway
+       > computation modes, ["direct" and
+       > "recursive"](https://bird.network.cz/?get_doc&v=16&f=bird-6.html#ss6.3){:target="_blank"}.
+       > "recursive" is the default, but "direct" can give better results when the ToR
+       > also acts as the route reflector (RR) for the rack.
+       >
+       > Specifically, a combined ToR/RR should ideally keep the BGP next hop intact (aka
+       > "next hop keep") when reflecting routes from other nodes in the same rack, but
+       > add itself as the BGP next hop (aka "next hop self") when forwarding routes from
+       > outside the rack.  If your ToRs can be configured to do that, fine.
+       >
+       > If they cannot, an effective workaround is to configure the ToRs to do "next hop
+       > keep" for all routes, with "gateway direct" on the {{site.prodname}} nodes.  In
+       > effect the “gateway direct” applies a “next hop self” when needed, but otherwise
+       > not.
+       {: .alert .alert-info}
 
-   ```
-   kubectl create -f - <<EOF
-   apiVersion: v1
-   kind: Node
-   metadata:
-     name: worker1
-     labels:
-       rack: ra
-     annotations:
-       projectcalico.org/ASNumber: "65001"
-   EOF
-   ```
+1.  Prepare Node resources to specify each node's AS number and `rack` peering label.  For
+    example:
 
-Once BGPPeer resources have been configured, you should [disable the full node-to-node
-mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
+	```
+	apiVersion: v1
+    kind: Node
+    metadata:
+      name: worker1
+      labels:
+        rack: ra
+      annotations:
+        projectcalico.org/ASNumber: "65001"
+    ---
+    apiVersion: v1
+    kind: Node
+    metadata:
+      name: worker2
+      labels:
+        rack: rb
+      annotations:
+        projectcalico.org/ASNumber: "65002"
+    ```
 
-```
-calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
-```
+	and so on.
 
-Depending on what your ToR supports, consider also setting these fields in each BGPPeer:
+    > **Note**: The `rack` label values here must match those in the BGPPeer resources, so
+    > that each node peers with the right ToR routers.
+	{: .alert .alert-info}
 
--  `failureDetectionMode: BFDIfDirectlyConnected` to enable BFD, when possible, for fast
-   failure detection.
+1.  Prepare this BGPConfiguration resource to [disable the full node-to-node
+	mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
 
-   > **Note**: {{site.prodname}} only supports BFD on directly connected peerings, but in
-   > practice nodes are normally directly connected to their ToRs.
-   {: .alert .alert-info}
+	```
+	apiVersion: projectcalico.org/v3
+    kind: BGPConfiguration
+    metadata:
+      name: default
+    spec:
+      nodeToNodeMeshEnabled: false
+    ```
 
--  `restartMode: LongLivedGracefulRestart` to enable LLGR handling when the node needs to
-   be restarted, if your ToR routers support LLGR.  If not, we recommend instead
-   `maxRestartTime: 10s`.
+1.  Prepare disabled IPPool resources for the CIDRs from which you will allocate stable
+    addresses for dual-homed nodes.  For example, if the nodes in rack 'A' will have
+    stable addresses from 172.31.10.0/24:
 
--  `birdGatewayMode: DirectIfDirectlyConnected` to enable the "direct" next hop algorithm,
-   if that is helpful for optimal interworking with your ToR routers.
+	```
+	apiVersion: projectcalico.org/v3
+    kind: IPPool
+    metadata:
+      name: ra-stable
+    spec:
+      cidr: 172.31.10.0/24
+      disabled: true
+      nodeSelector: all()
+    ```
 
-   > **Note**: For directly connected BGP peerings, BIRD provides two gateway computation
-   > modes, ["direct" and
-   > "recursive"](https://bird.network.cz/?get_doc&v=16&f=bird-6.html#ss6.3){:target="_blank"}.  "recursive"
-   > is the default, but "direct" can give better results when the ToR also acts as the
-   > route reflector (RR) for the rack.
-   >
-   > Specifically, a combined ToR/RR should ideally keep the BGP next hop intact (aka
-   > "next hop keep") when reflecting routes from other nodes in the same rack, but add
-   > itself as the BGP next hop (aka "next hop self") when forwarding routes from outside
-   > the rack.  If your ToRs can be configured to do that, fine.
-   >
-   > If they cannot, an effective workaround is to configure the ToRs to do "next hop
-   > keep" for all routes, with "gateway direct" on the {{site.prodname}} nodes.  In
-   > effect the “gateway direct” applies a “next hop self” when needed, but otherwise not.
-   {: .alert .alert-info}
+    If the next rack uses a different CIDR, define a similar IPPool for that rack, and so
+    on.
 
+    > **Note**: These IPPool definitions tell {{site.prodname}}'s BGP component to export
+    > routes within the given CIDRs, which is essential for the core BGP infrastructure to
+    > learn how to route to each stable address.  `disabled: true` tells {{site.prodname}}
+    > *not* to use these CIDRs for pod IPs.
+	{: .alert .alert-info}
 
+1.  Prepare an enabled IPPool resource for your default CIDR for pod IPs.  For example:
 
+	```
+	apiVersion: projectcalico.org/v3
+    kind: IPPool
+    metadata:
+      name: default-ipv4
+    spec:
+      cidr: 10.244.0.0/16
+      nodeSelector: all()
+    ```
 
-  - Nodes: AS number, label to select BGPPeers
-  - BGPPeers: peerings from nodes to ToRs
-  - BGPConfiguration: disable full mesh
-  - IPPools: stable addresses, the default IP pool for pods
-  - EarlyNetworkConfiguration: peerings from nodes to ToRs, stable addresses
+    > **Note**: The CIDR must match what you specify elsewhere in the Kubernetes
+    > installation.  For example, `networking.clusterNetwork.cidr` in OpenShift's install
+    > config, or `--pod-network-cidr` with kubeadm.  You should not specify `ipipMode` or
+    > `vxlanMode`, as these are incompatible with dual ToR operation.  `natOutgoing` can
+    > be omitted, as here, if your core infrastructure will perform an SNAT for traffic
+    > from pods to the Internet.
+	{: .alert .alert-info}
 
-- Dual-ToR network environment + BGP config on ToRs and core routers.
+1.  Combine the preceding `projectcalico/v3` resources - i.e. the BGPPeers,
+    BGPConfiguration and IPPools - into a `calico-resources` ConfigMap for the Tigera
+    operator.
 
-Non-OpenShift
+1.  Prepare an EarlyNetworkConfiguration resource to provide the information that
+    dual-homed nodes need for bootstrapping, each time that they boot.  For example, with
+    IP addresses and AS numbers similar as for other resources above:
 
-- Arrange cnx-node run on each node.  Reboot.
+	```
+	apiVersion: projectcalico.org/v3
+    kind: EarlyNetworkConfiguration
+    spec:
+      nodes:
+        # worker1
+        - interfaceAddresses:
+            - 172.31.11.3
+            - 172.31.12.3
+          stableAddress:
+            address: 172.31.10.3
+          asNumber: 65001
+          peerings:
+            - peerIP: 172.31.11.100
+            - peerIP: 172.31.12.100
+        # worker2
+        - interfaceAddresses:
+            - 172.31.21.4
+            - 172.31.22.4
+          stableAddress:
+            address: 172.31.20.4
+          asNumber: 65002
+          peerings:
+            - peerIP: 172.31.21.100
+            - peerIP: 172.31.22.100
+        ...
+    ```
 
-- kubeadm init and join
+    > **Note**: Despite apparent similarity, this resource differs from all the others in
+    > that it will be provided as a file on each newly provisioned node (whereas the other
+    > resources are all served from the Kubernetes API).  It specifies the stable address
+    > for each node.  It also repeats information that could be inferred from the
+    > preceding resources, but that is because the information is needed for post-boot
+    > setup on each node, at a point where the node cannot access the Kubernetes API.
+	{: .alert .alert-info}
 
-- Run Tigera operator
+In summary you should now have:
 
-OpenShift
+-  Node resource YAML, specifying the AS number and `rack` peering label for each node
 
-- Add MachineConfig to arrange cnx-node run on each node.
+-  a `calico-resources` ConfigMap containing {{site.prodname}} BGPPeers, BGPConfiguration
+   and IPPools
 
-- Run OpenShift install
-
-So inputs:
-
-- YAML
-- Nodes: { node name, rack label (or IPs to peer to), AS number }
-- BGPPeers
-- IPPools
+-  an EarlyNetworkConfiguration YAML.
 
 #### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
 
 {{site.prodname}}'s {{site.nodecontainer}} image normally runs as a Kubernetes pod, but
-for dual ToR setup it should also run as a container after each boot of a dual-homed node.
+for dual ToR setup it must also run as a container after each boot of a dual-homed node.
 For example:
 
 ```
 podman run --privileged --net=host \
-    -v /calico-dual-tor:/calico-dual-tor -e CALICO_DUAL_TOR=/calico-dual-tor/details.sh \
+    -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml \
     {{page.registry}}{{site.imageNames["node"]}}:latest
 ```
 
-When a dual-homed node first boots (and then each time it reboots) this container does the
-pre-Kubernetes setup needed for dual ToR operation, namely:
+The environment variable `CALICO_EARLY_NETWORKING` must point to the
+EarlyNetworkConfiguration prepared above, so that EarlyNetworkConfiguration YAML must be
+copied into a file on the node (here, `/calico-early/cfg.yaml`) and mapped into the
+{{site.nodecontainer}} container.
 
-- provisioning a stable loopback address, and ensuring that this address is used for all
-  connections to and from the node
-
-- starting BGP, with peerings to the node's ToRs, to advertise the stable address to the
-  network, so that other nodes can route to this one.
-
-> **Note**: This must happen *before* any Kubernetes components start running on the node,
-> because we want Kubernetes connections to use the stable address.
+> **Note**: Based on the EarlyNetworkConfiguration YAML, this container will:
+>
+> - identify the right part of the YAML for *this* node
+>
+> - provision the stable address for the node, and ensure that the stable address is used
+>   for all subsequent connections to and from the node
+>
+> - start BGP, with peerings to the node's ToRs, to advertise the stable address to the
+>   network, so that other nodes can route to this one.
+>
+> It's important that this all happens *before* any Kubernetes components start running on
+> the node, because we want Kubernetes connections to use the stable address.
 {: .alert .alert-info}
-
-The container needs a **custom file** - describing deployment-specific IP addressing and
-AS numbering - to be mapped into the container and identified by the `CALICO_DUAL_TOR`
-environment variable.  The requirements for this file are described in the next section.
 
 Exactly **how** to arrange for this container to run will depend on your platform's
 workflow for adding a node to the cluster.
@@ -286,16 +357,16 @@ workflow for adding a node to the cluster.
 
    ```
    [Service]
-   ExecStartPre=-/bin/podman rm -f calico-dual-tor
-   ExecStartPre=/bin/mkdir -p /etc/calico-dual-tor
-   ExecStartPre=/bin/curl -o /etc/calico-dual-tor/details.sh http://172.31.1.1:8080/calico-dual-tor/details-map.sh
-   ExecStart=/bin/podman run --rm --privileged --net=host --name=calico-dual-tor -v /etc/calico-dual-tor:/etc/calico-dual-tor -e CALICO_DUAL_TOR=/etc/calico-dual-tor/details.sh {{page.registry}}{{site.imageNames["node"]}}:latest
+   ExecStartPre=-/bin/podman rm -f calico-early
+   ExecStartPre=/bin/mkdir -p /calico-early
+   ExecStartPre=/bin/curl -o /calico-early/cfg.yaml http://172.31.1.1:8080/calico-early/cfg.yaml
+   ExecStart=/bin/podman run --privileged --net=host --name=calico-early -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml {{page.registry}}{{site.imageNames["node"]}}:latest
    [Install]
    WantedBy=multi-user.target
    ```
 
-   This example also shows how you could download the custom file for your deployment from
-   a central location.
+   This example also shows how you could serve the EarlyNetworkConfiguration for your
+   deployment from a central location.
 
    Then reboot, so that the dual ToR setup happens, and then allow Kubernetes installation
    to continue.
@@ -303,88 +374,6 @@ workflow for adding a node to the cluster.
 -  If the workflow does not allow, the platform may have an abstraction for achieving the
    same thing.  For example, OpenShift's `MachineConfig` API can be used to specify files
    and a systemd unit (as above) to be installed and enabled on each new node.
-
-#### Describe your IP addressing and AS numbering
-
-On each boot, the available information for the node is its per-interface IP addresses
-(either statically configured, or obtained from DHCP), and based on those
-{{site.nodecontainer}} needs to be told:
-
-- what stable address to provision for the node
-
-- the IP addresses of the ToRs to peer with
-
-- the AS number for the node and its ToRs.
-
-You must provide this information in the form of shell code like this:
-
-```
-details_are()
-{
-    echo "DUAL_TOR_STABLE_ADDRESS=$1"
-    echo "DUAL_TOR_AS_NUMBER=$2"
-    echo "DUAL_TOR_PEERING_ADDRESS_1=$3"
-    echo "DUAL_TOR_PEERING_ADDRESS_2=$4"
-}
-
-get_dual_tor_details()
-{
-    case $1 in
-
-    172.31.21.1 | 172.31.22.1 )
-        details_are 172.31.20.1 65002 172.31.21.100 172.31.22.100
-        ;;
-    172.31.21.2 | 172.31.22.2 )
-        details_are 172.31.20.2 65002 172.31.21.100 172.31.22.100
-        ;;
-    172.31.21.3 | 172.31.22.3 )
-        details_are 172.31.20.3 65002 172.31.21.100 172.31.22.100
-        ;;
-    172.31.21.4 | 172.31.22.4 )
-        details_are 172.31.20.4 65002 172.31.21.100 172.31.22.100
-        ;;
-    172.31.21.5 | 172.31.22.5 )
-        details_are 172.31.20.5 65002 172.31.21.100 172.31.22.100
-        ;;
-    172.31.11.1 | 172.31.12.1 )
-        details_are 172.31.10.1 65001 172.31.11.100 172.31.12.100
-        ;;
-    172.31.11.2 | 172.31.12.2 )
-        details_are 172.31.10.2 65001 172.31.11.100 172.31.12.100
-        ;;
-    172.31.11.3 | 172.31.12.3 )
-        details_are 172.31.10.3 65001 172.31.11.100 172.31.12.100
-        ;;
-    172.31.11.4 | 172.31.12.4 )
-        details_are 172.31.10.4 65001 172.31.11.100 172.31.12.100
-        ;;
-    172.31.11.5 | 172.31.12.5 )
-        details_are 172.31.10.5 65001 172.31.11.100 172.31.12.100
-        ;;
-
-    esac
-}
-```
-
-{{site.nodecontainer}} calls `get_dual_tor_details <IP>`, with `<IP>` being one of the
-interface-specific addresses, and the function must print the needed information in the
-form:
-
-```
-DUAL_TOR_STABLE_ADDRESS=172.31.10.5
-DUAL_TOR_AS_NUMBER=65001
-DUAL_TOR_PEERING_ADDRESS_1=172.31.11.100
-DUAL_TOR_PEERING_ADDRESS_2=172.31.12.100
-```
-
-Therefore you need to decide upfront how your dual-homed nodes will split across the racks
-in your deployment, and hence which ToRs they will peer with.  Or alternatively, devise an
-algorithmic scheme such that the correct AS number, stable address and ToRs addresses can
-be computed mathematically, for any dual-homed node, from either of its interface-specific
-addresses.  Then encode that information in your version of `get_dual_tor_details`, and
-host that somewhere that is accessible from each new node as it boots, so that it can be
-fed into the {{site.nodecontainer}} container, as illustrated by the example in the
-previous section.
 
 #### Configure your ToR routers and infrastructure
 
@@ -405,55 +394,42 @@ break in one of the connectivity planes.
 
 #### Install Kubernetes and {{site.prodname}}
 
-1. Follow your preferred method for deploying Kubernetes, and [installing {{site.prodname}} on-premises]({{site.baseurl}}/getting-started).
+For your planned Kubernetes installer, work out:
 
-1. During {{site.prodname}} installation, disable the default encapsulation setting, IP-in-IP.
+-  how to inject the Node resources (prepared above) as soon as possible after the
+   Kubernetes API is first available
 
-   Encapsulation is not supported and must be disabled. Set `encapsulation: None`. For help, see the [Installation reference]({{site.baseurl}}/reference/installation/api).
+-  how to inject the `calico-resources` ConfigMap when the installer is about to start the
+   Tigera operator (if the installer does this automatically).
 
-#### Configure {{site.prodname}} to advertise loopback addresses
+By way of example:
 
-Although we already configured static /24 routes for the loopback address, for
-bootstrapping, we want BGP to advertise, dynamically, the true reachability of each
-loopback address.  For example, if one of the connectivity planes is broken, the static
-routing may still - wrongly - show ECMP routes to a loopback address via both planes.
+-  With [OpenShift]({{site.baseurl}}/getting-started/openshift), simply add all the Node
+   resources - with one Node resource per file - and the `calico-resources` ConfigMap into
+   the manifests directory just before running `openshift-install create
+   ignition-configs`.
 
-To get the correct dynamic advertisement, configure the loopback address CIDRs as disabled
-{{site.prodname}} IP pools.  For example, for the loopback CIDRs for racks A and B:
+   > **Note**: The prepared `calico-resources` ConfigMap should replace [our default empty
+   > one]({{site.baseurl}}/manifests/ocp/tigera-operator/02-configmap-calico-resources.yaml).
+   {: .alert .alert-info}
 
-```
-kubectl create -f -<<EOF
-apiVersion: projectcalico.org/v3
-kind: IPPool
-metadata:
-  name: loopbacks-rack-a
-spec:
-  cidr: 172.31.10.0/24
-  disabled: True
----
-apiVersion: projectcalico.org/v3
-kind: IPPool
-metadata:
-  name: loopbacks-rack-b
-spec:
-  cidr: 172.31.20.0/24
-  disabled: True
-EOF
-```
+-  With kubeadm, `kubeadm init` will necessarily create the first node at the same time as
+   bringing up the Kubernetes API.  In this case, therefore, you should add the
+   appropriate `rack` label and AS number to the first node, and reboot it so that those
+   can take effect.
 
-What happens then is:
+   > **Note**: As already covered above, you should by now have arranged for the
+   > {{site.nodecontainer}} image to run on each boot, on each node.
+   {: .alert .alert-info}
 
--  {{site.prodname}}, on each node, advertises a /32 route for that node's loopback
-   address.
+   Then create the other Node resources, and continue with `kubeadm join` for those other
+   nodes.
 
--  That /32 route is propagated dynamically through the BGP network, according as the dual
-   connectivity planes are or are not working.
+   Then, just before creating the Installation resource to kick off installing
+   {{site.prodname}}, use `kubectl apply` to apply the `calico-resources` ConfigMap.
 
--  On each other cluster node, the result is a /32 route that is - correctly - ECMP if
-   both planes are working, or a single path route if one of the planes is broken.
-
--  The static /24 routes are still present as well, but are ignored because of the /32
-   routes being more specific.
+Now proceed with the installation, and the required dual ToR setup will be performed
+automatically based on the above resources.
 
 #### Verify the deployment
 
