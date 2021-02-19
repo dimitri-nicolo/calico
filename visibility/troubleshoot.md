@@ -127,3 +127,19 @@ intrusiondetection.operator.tigera.io "tigera-secure" deleted
 $ kubectl apply -f intrusiondetection.yaml 
 intrusiondetection.operator.tigera.io/tigera-secure created
 ```
+
+#### Elastic Operator OOM killed
+
+**Solution/workaround**: Increase the memory requests/limits for the Elastic Operator in the LogStorage Custom Resource.
+
+```
+$ kubectl edit logstorage tigera-secure
+```
+
+Find the `ECKOperator` Component Resource in the `spec` section. Increase the limits and requests memory amounts as needed. Verify that the pod has restarted with the new settings:
+
+```
+$ kubectl descibe pod elastic-operator -n tigera-eck-operator   
+```
+
+Check the `Container.Limits` and `Container.Requests` fields to confirm the values have propagated correctly.
