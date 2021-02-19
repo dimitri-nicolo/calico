@@ -289,16 +289,30 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (*collector.ConntrackInfo, error) {
 	// conntrack entry.
 	entryExpired := fe.ConnectionClosed()
 
+	// Work out counters and reply counters based on flow direction.
+	var pktCounters, bytesCounters, pktReplyCounters, bytesReplyCounters int
+	if fe.IsInbound() {
+		pktCounters = fe.PktsIn
+		bytesCounters = fe.BytesIn
+		pktReplyCounters = fe.PktsOut
+		bytesReplyCounters = fe.BytesOut
+	} else {
+		pktCounters = fe.PktsOut
+		bytesCounters = fe.BytesOut
+		pktReplyCounters = fe.PktsIn
+		bytesReplyCounters = fe.BytesIn
+	}
+
 	ctInfo := collector.ConntrackInfo{
 		Tuple:   *tuple,
 		Expired: entryExpired,
 		Counters: collector.ConntrackCounters{
-			Packets: fe.PktsOut,
-			Bytes:   fe.BytesOut,
+			Packets: pktCounters,
+			Bytes:   bytesCounters,
 		},
 		ReplyCounters: collector.ConntrackCounters{
-			Packets: fe.PktsIn,
-			Bytes:   fe.BytesIn,
+			Packets: pktReplyCounters,
+			Bytes:   bytesReplyCounters,
 		},
 	}
 
@@ -345,7 +359,7 @@ func extractTupleFromEventAggr(ea *etw.EventAggregate) (*collector.Tuple, error)
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4DstPort, tuple.L4DstPort), nil
+	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
 }
 
 func extractTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) {
@@ -353,7 +367,7 @@ func extractTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) 
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4DstPort, tuple.L4DstPort), nil
+	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
 }
 
 func extractPreDNATTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, error) {
@@ -361,5 +375,5 @@ func extractPreDNATTupleFromFlowEntry(fe *vfpctrl.FlowEntry) (*collector.Tuple, 
 	if err != nil {
 		return nil, err
 	}
-	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4DstPort, tuple.L4DstPort), nil
+	return collector.NewTuple(tuple.Src, tuple.Dst, tuple.Proto, tuple.L4SrcPort, tuple.L4DstPort), nil
 }
