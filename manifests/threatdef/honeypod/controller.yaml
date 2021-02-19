@@ -22,7 +22,7 @@ rules:
     verbs: ["list","get"]
   - apiGroups: ["crd.projectcalico.org"]
     resources: ["licensekeys"]
-    verbs: ["list","watch"]
+    verbs: ["list","watch", "get"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
