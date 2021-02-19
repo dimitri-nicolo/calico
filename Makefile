@@ -300,7 +300,7 @@ ut: proto bin/envoy-collector-$(ARCH)
 .PHONY: fv
 fv: proto bin/envoy-collector-$(ARCH)
 	mkdir -p report
-	$(DOCKER_RUN_RO) \
+	$(DOCKER_RUN) \
 	    $(LOCAL_BUILD_MOUNTS) \
 	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
 	    ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
