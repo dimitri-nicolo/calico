@@ -493,7 +493,7 @@ class TestRestartCalicoNodes(TestBase):
 
     def get_restart_node_pod_name(self):
         self.restart_pod_name = kubectl(
-            "get po -n kube-system" +
+            "get po -n calico-system" +
             " -l k8s-app=calico-node" +
             " --field-selector status.podIP=" + self.restart_node_ip +
             " -o jsonpath='{.items[*].metadata.name}'")
@@ -511,13 +511,13 @@ class TestRestartCalicoNodes(TestBase):
             self.get_restart_node_pod_name()
 
             # Delete it.
-            kubectl("delete po %s -n kube-system" % self.restart_pod_name)
+            kubectl("delete po %s -n calico-system" % self.restart_pod_name)
 
             # Wait until a replacement calico-node pod has been created.
             retry_until_success(self.get_restart_node_pod_name, retries=10, wait_time=1)
 
             # Wait until it is ready, before returning.
-            kubectl("wait po %s -n kube-system --timeout=2m --for=condition=ready" %
+            kubectl("wait po %s -n calico-system --timeout=2m --for=condition=ready" %
                 self.restart_pod_name)
 
             # Wait another 2s before moving on.
