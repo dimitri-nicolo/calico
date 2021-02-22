@@ -3,19 +3,17 @@ module github.com/projectcalico/libcalico-go
 go 1.15
 
 require (
-	github.com/Masterminds/goutils v1.1.0 // indirect
-	github.com/Masterminds/semver v0.0.0-20180807142431-c84ddcca87bf // indirect
-	github.com/Masterminds/sprig v2.19.0+incompatible
-	github.com/alecthomas/participle v0.3.0
+	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/alecthomas/participle v0.7.1
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/go-openapi/spec v0.19.3
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.0.0-20170327191703-71201497bace // indirect
 	github.com/google/gopacket v1.1.17
 	github.com/gorilla/websocket v1.4.1 // indirect
-	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.1 // indirect
 	github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 // indirect
@@ -23,6 +21,7 @@ require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.0
 	github.com/kelseyhightower/envconfig v0.0.0-20180517194557-dd1402a4d99d
 	github.com/leodido/go-urn v0.0.0-20181204092800-a67a23e1c1af // indirect
+	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
@@ -31,13 +30,12 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0
-	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
+	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	gonum.org/v1/netlib v0.0.0-20190331212654-76723241ea4e // indirect
 	google.golang.org/grpc v1.27.0
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
