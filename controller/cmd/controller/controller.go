@@ -30,7 +30,6 @@ import (
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	alertElastic "github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
 	alertWatcher "github.com/tigera/intrusion-detection/controller/pkg/alert/watcher"
-	anomalyWatcher "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/rbac"
@@ -253,8 +252,7 @@ func main() {
 		edn,
 		&http.Client{},
 		e, e, sIP, sDN, e)
-	a := anomalyWatcher.NewWatcher(e, e, e)
-	a2 := alertWatcher.NewWatcher(
+	a := alertWatcher.NewWatcher(
 		calicoClient.ProjectcalicoV3().GlobalAlerts(),
 		ean,
 		e,
@@ -263,12 +261,11 @@ func main() {
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 	var enableForwarding = (err == nil && valueEnableForwarding)
 	var enableFeeds = (os.Getenv("DISABLE_FEEDS") != "yes")
-	var enableAnomaly = (os.Getenv("DISABLE_ANOMALY") != "yes")
 	var enableAlerts = (os.Getenv("DISABLE_ALERTS") != "yes")
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)
 
-	hs := health.NewServer(health.Pingers{s, a, a2}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
+	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {
@@ -288,14 +285,9 @@ func main() {
 				defer s.Close()
 			}
 
-			if enableAnomaly {
+			if enableAlerts {
 				a.Run(ctx)
 				defer a.Close()
-			}
-
-			if enableAlerts {
-				a2.Run(ctx)
-				defer a2.Close()
 			}
 
 			if enableForwarding {
@@ -311,12 +303,8 @@ func main() {
 				s.Close()
 			}
 
-			if enableAnomaly {
-				a.Close()
-			}
-
 			if enableAlerts {
-				a2.Close()
+				a.Close()
 			}
 
 			if enableForwarding {
