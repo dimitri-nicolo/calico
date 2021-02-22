@@ -376,6 +376,7 @@ stop-k8s-apiserver:
 # Pull calicoctl and CNI plugin binaries with versions as per XXX_VER
 # variables.  These are used for the STs.
 dist/calicoctl:
+	mkdir -p dist
 	-docker rm -f calicoctl
 	docker pull $(CTL_CONTAINER_NAME)
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
@@ -385,6 +386,7 @@ dist/calicoctl:
 	-docker rm -f calicoctl
 
 dist/calico dist/calico-ipam:
+	mkdir -p dist
 	-docker rm -f calico-cni
 	docker pull $(CNX_REPOSITORY)/tigera/cni:$(CNI_VERSION)
 	docker create --name calico-cni $(CNX_REPOSITORY)/tigera/cni:$(CNI_VERSION)
