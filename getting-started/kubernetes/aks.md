@@ -25,11 +25,11 @@ This is required for applying manifests. The easiest way to grant permissions is
 
 Ensure that your AKS cluster meets the following requirements.
 
-  - Azure CNI networking plugin is used with transparent mode.
+  - Azure CNI networking plugin is used with {% include open-new-window.html text='transparent mode' url='https://docs.microsoft.com/en-us/azure/aks/faq#what-is-azure-cni-transparent-mode-vs-bridge-mode' %}
   - Network policy is not set.
     This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
 
-##### Using Azure CLI
+**Using Azure CLI**
 
 AKS cluster created using the {% include open-new-window.html text='Azure CLI' url='https://docs.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest' %} are created with transparent mode by default. Ensure cluster is started with the option `--network-plugin azure`
 
