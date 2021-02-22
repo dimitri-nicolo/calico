@@ -538,7 +538,7 @@ EOF
 }
 
 function do_cleanup {
-    ${KIND} delete cluster
+    ${KIND} delete cluster || true
     docker rm -f `docker ps -a -q` || true
     docker network rm ra2 rb2 uplink2 || true
     docker network rm ra1 rb1 uplink || true
