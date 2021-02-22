@@ -3,15 +3,11 @@ module github.com/tigera/calicoq
 go 1.15
 
 require (
-	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/go-ini/ini v1.49.0 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
-	github.com/mitchellh/copystructure v1.0.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
 	github.com/projectcalico/felix v3.8.9+incompatible
@@ -23,10 +19,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210219195103-e7b99fb630a2
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210212223417-27c85309f19e
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210222211831-1898143814ce
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210222195540-e3d1322af529
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210212224648-d1636500d28f
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210222200938-191f079bbfa1
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.19.6
