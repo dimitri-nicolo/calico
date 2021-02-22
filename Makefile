@@ -441,7 +441,7 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 dual-tor-test: cnx-node.tar calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
 .PHONY: dual-tor-setup
-dual-tor-setup: cnx-node.tar calico_test.created
+dual-tor-setup: dual-tor-cleanup cnx-node.tar calico_test.created
 	git submodule update --init
 	cd tests/kind && make
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
