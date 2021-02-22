@@ -465,8 +465,8 @@ dual-tor-run-test:
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
-	STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
-	rm ./kubectl
+	-STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
+	-rm ./kubectl
 
 ## k8st: STs in a real Kubernetes cluster provisioned by KIND
 ##
