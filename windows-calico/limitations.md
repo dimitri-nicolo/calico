@@ -95,7 +95,7 @@ Because of differences between the Linux and Windows dataplane feature sets, the
 
 If you create a Windows host with a cloud provider (AWS for example), the creation of the vSwitch at {{site.prodname}} install time can remove the cloud provider's metadata route. If your application relies on the metadata service, you may need to examine the routing table before and after installing {{site.prodname}} in order to reinstate any lost routes.
 
-**VXLAN limitations**
+### VXLAN limitations
 
 **VXLAN support**
 
