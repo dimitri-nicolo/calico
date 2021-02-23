@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -144,6 +144,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		topologyOptions.IPIPEnabled = false
 		topologyOptions.IPIPRoutesEnabled = false
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = supportLevel
+		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		felix, client = infrastructure.StartSingleNodeTopology(topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
