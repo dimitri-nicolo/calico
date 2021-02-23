@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package elasticsearchconfiguration
 
@@ -16,7 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
@@ -89,7 +88,10 @@ func New(
 		esK8sCLI:         esK8sCLI,
 		management:       management,
 	}
-	w := worker.New(r)
+
+	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a
+	// reconcile, meaning a temporary service disruption could lead to Elasticsearch credentials not being propagated.
+	w := worker.New(r, worker.WithMaxRequeueAttempts(20))
 
 	w.AddWatch(
 		cache.NewFilteredListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace, func(options *metav1.ListOptions) {
@@ -99,12 +101,7 @@ func New(
 		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 	)
 
-	notifications := []worker.ResourceWatch{worker.ResourceWatchUpdate, worker.ResourceWatchDelete}
-	// if this is for a managed cluster this controller adds the public cert secret and the config map so we don't need
-	// to be notified when it's added
-	if management {
-		notifications = append(notifications, worker.ResourceWatchAdd)
-	}
+	notifications := []worker.ResourceWatch{worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd}
 
 	w.AddWatch(
 		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
@@ -152,12 +149,7 @@ func New(
 }
 
 func (c *esConfigController) Run(stop chan struct{}) {
-	logger := log.WithField("cluster", c.clusterName)
-	logger.Info("Starting Elasticsearch configuration controller")
-	// kick off the reconciler so we know all the es credentials are created
-	if err := c.r.Reconcile(types.NamespacedName{}); err != nil {
-		logger.WithError(err).Error("failed initial reconcile")
-	}
+	log.WithField("cluster", c.clusterName).Info("Starting Elasticsearch configuration controller")
 
 	go c.worker.Run(c.cfg.NumberOfWorkers, stop)
 
