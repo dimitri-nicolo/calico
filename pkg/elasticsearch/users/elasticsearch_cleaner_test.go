@@ -96,7 +96,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"tigera-ee-compliance-controller-anyCluster",
 					"tigera-ee-compliance-reporter-anyCluster",
 					"tigera-ee-compliance-snapshotter-anyCluster",
-					"tigera-ee-installer-anyCluster",
 					"tigera-ee-ad-job-anyCluster",
 					"tigera-ee-intrusion-detection-anyCluster",
 					"tigera-eks-log-forwarder-anyCluster",
@@ -106,7 +105,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 					"tigera-ee-compliance-controller-anyCluster",
 					"tigera-ee-compliance-reporter-anyCluster",
 					"tigera-ee-compliance-snapshotter-anyCluster",
-					"tigera-ee-installer-anyCluster",
 					"tigera-ee-ad-job-anyCluster",
 					"tigera-ee-intrusion-detection-anyCluster",
 					"tigera-eks-log-forwarder-anyCluster",
@@ -121,7 +119,6 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 		"tigera-ee-compliance-reporter-old-cluster",
 		"tigera-ee-compliance-snapshotter-old-cluster",
 		"tigera-ee-ad-job-old-cluster",
-		"tigera-ee-installer-old-cluster",
 		"tigera-ee-intrusion-detection-old-cluster",
 		"tigera-eks-log-forwarder-old-cluster",
 		"tigera-fluentd-old-cluster",
@@ -147,12 +144,12 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-installer-old-cluster",
-					Roles:    roles("tigera-ee-installer-role-old-cluster"),
+					Username: "tigera-ee-ad-job-old-cluster",
+					Roles:    roles("tigera-ee-ad-job-role-old-cluster"),
 				},
 				{
-					Username: "tigera-ee-installer",
-					Roles:    roles("tigera-ee-installer-role"),
+					Username: "tigera-ee-ad-job",
+					Roles:    roles("tigera-ee-ad-job-role"),
 				},
 			},
 			expectedValuesOldCluster,
@@ -161,12 +158,12 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-installer-new-cluster",
-					Roles:    roles("tigera-ee-installer-role-new-cluster"),
+					Username: "tigera-ee-ad-job-new-cluster",
+					Roles:    roles("tigera-ee-ad-job-role-new-cluster"),
 				},
 				{
-					Username: "tigera-ee-installer",
-					Roles:    roles("tigera-ee-installer-role"),
+					Username: "tigera-ee-ad-job",
+					Roles:    roles("tigera-ee-ad-job-role"),
 				},
 			},
 			nil,
@@ -180,12 +177,12 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{},
 			[]es.User{
 				{
-					Username: "tigera-ee-installer-old-cluster",
-					Roles:    roles("tigera-ee-installer-role-old-cluster"),
+					Username: "tigera-ee-ad-job-old-cluster",
+					Roles:    roles("tigera-ee-ad-job-role-old-cluster"),
 				},
 				{
-					Username: "tigera-ee-installer",
-					Roles:    roles("tigera-ee-installer-role"),
+					Username: "tigera-ee-ad-job",
+					Roles:    roles("tigera-ee-ad-job-role"),
 				},
 			},
 			expectedValuesOldCluster,
@@ -204,11 +201,11 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-installer-old-cluster",
+					Username: "tigera-ee-ad-job-old-cluster",
 					Roles:    roles("watcher_admin"),
 				},
 				{
-					Username: "tigera-ee-installer",
+					Username: "tigera-ee-ad-job",
 					Roles:    roles("watcher_admin"),
 				},
 			},
