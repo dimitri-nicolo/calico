@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -396,6 +396,11 @@ func (p *Processor) handleNamespaceRemove(update *proto.NamespaceRemove) {
 
 func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
 	if update.GetType() == proto.IPSetUpdate_DOMAIN {
+		return
+	}
+	if update.GetType() == proto.IPSetUpdate_EGRESS_IP {
+		// Egress gateway is a networking feature, and so not relevant to the additional
+		// security layer provided by ALP.
 		return
 	}
 	id := update.Id
