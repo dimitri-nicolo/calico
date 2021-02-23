@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,9 +24,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+
 	"github.com/projectcalico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
@@ -153,6 +154,9 @@ func main() {
 		log.WithError(err).Fatal("Failed to start")
 	}
 
+	esURL := fmt.Sprintf("https://%s:%s", cfg.ElasticHost, cfg.ElasticPort)
+	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA)
+
 	stop := make(chan struct{})
 
 	// Create the context.
@@ -210,7 +214,7 @@ func main() {
 
 		// any subsequent changes trigger a restart
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
-		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient)
+		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder)
 	}
 
 	// Create the status file. We will only update it if we have healthchecks enabled.
@@ -451,7 +455,8 @@ type controllerState struct {
 	licenseFeature string
 }
 
-func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig, k8sClientset *kubernetes.Clientset, calicoClient client.Interface) {
+func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig,
+	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
 	if cfg.Controllers.WorkloadEndpoint != nil {
@@ -490,7 +495,6 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.needLicenseMonitoring = true
 	}
 	if cfg.Controllers.ElasticsearchConfiguration != nil {
-
 		esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
 		if err != nil {
 			log.WithError(err).Fatal("failed to build elasticsearch rest client")
@@ -499,10 +503,10 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.controllerStates["ElasticsearchConfiguration"] = &controllerState{
 			controller: elasticsearchconfiguration.New(
 				"cluster",
-				resource.ElasticsearchServiceURL,
 				k8sClientset,
 				k8sClientset,
 				esK8sREST,
+				esClientBuilder,
 				true,
 				*cfg.Controllers.ElasticsearchConfiguration),
 		}
@@ -534,10 +538,10 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 					}
 					return kubernetes.NewForConfig(kubeconfig)
 				},
-				resource.ElasticsearchServiceURL,
 				k8sClientset,
 				calicoV3Client,
 				esK8sREST,
+				esClientBuilder,
 				*cfg.Controllers.ManagedCluster),
 		}
 	}
@@ -546,7 +550,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.controllerStates["Authorization"] = &controllerState{
 			controller: authorization.New(
 				k8sClientset,
-				resource.ElasticsearchServiceURL,
+				esClientBuilder,
 				cfg.Controllers.AuthorizationConfiguration,
 			),
 		}

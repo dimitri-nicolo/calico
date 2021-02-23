@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/kube-controllers
-GO_BUILD_VER=v0.49
+GO_BUILD_VER=v0.50
 
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID)
 
@@ -41,6 +41,10 @@ endif
 include Makefile.common
 
 ###############################################################################
+
+# Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
+MOCKERY_FILE_PATHS= \
+	pkg/elasticsearch/ClientBuilder \
 
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // This package is responsible for the communicating with elasticsearch, mainly transferring objects to requests to send
 // to elasticsearch and parsing the responses from elasticsearch
@@ -90,6 +90,44 @@ type RoleMapping struct {
 	Roles   []string          `json:"roles"`
 	Rules   map[string][]Rule `json:"rules"`
 	Enabled bool              `json:"enabled"`
+}
+
+// ClientBuild is used to build an Elasticsearch client. The main benefit of this builder in the context of this project
+// is that it allows us to create the builder and share it among all the controllers that need access to Elasticsearch
+// but delay creating the client because it requires Elasticsearch to be available.
+type ClientBuilder interface {
+	Build() (Client, error)
+}
+
+func NewClientBuilder(url, username, password string, certPath string) ClientBuilder {
+	return &clientBuilder{
+		url:      url,
+		username: username,
+		password: password,
+		certPath: certPath,
+	}
+}
+
+type clientBuilder struct {
+	url      string
+	username string
+	password string
+	certPath string
+}
+
+func (builder *clientBuilder) Build() (Client, error) {
+	cert, err := ioutil.ReadFile(builder.certPath)
+	if err != nil {
+		return nil, err
+	}
+
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(cert)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse root certificate")
+	}
+
+	return NewClient(builder.url, builder.username, builder.password, certPool)
 }
 
 func NewClient(url, username, password string, roots *x509.CertPool) (Client, error) {

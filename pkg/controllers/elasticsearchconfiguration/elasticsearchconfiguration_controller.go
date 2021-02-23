@@ -5,6 +5,8 @@ package elasticsearchconfiguration
 import (
 	"fmt"
 
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+
 	"github.com/projectcalico/kube-controllers/pkg/config"
 
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
@@ -74,18 +76,19 @@ type esConfigController struct {
 
 func New(
 	clusterName string,
-	esServiceURL string,
 	managedK8sCLI kubernetes.Interface,
 	managementK8sCLI kubernetes.Interface,
 	esK8sCLI relasticsearch.RESTClient,
+	esClientBuilder elasticsearch.ClientBuilder,
 	management bool,
 	cfg config.ElasticsearchCfgControllerCfg) controller.Controller {
+
 	r := &reconciler{
 		clusterName:      clusterName,
-		esServiceURL:     esServiceURL,
 		managementK8sCLI: managementK8sCLI,
 		managedK8sCLI:    managedK8sCLI,
 		esK8sCLI:         esK8sCLI,
+		esClientBuilder:  esClientBuilder,
 		management:       management,
 	}
 
@@ -131,12 +134,6 @@ func New(
 			cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
 			&esv1.Elasticsearch{},
-		)
-
-		w.AddWatch(
-			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.TigeraElasticsearchNamespace,
-				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchUserSecret))),
-			&corev1.Secret{},
 		)
 	}
 

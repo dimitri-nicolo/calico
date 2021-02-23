@@ -1,13 +1,14 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package managedcluster
 
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
-	"sync"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
 
@@ -27,7 +28,6 @@ import (
 type managedClusterESControllerReconciler struct {
 	sync.Mutex
 	createManagedK8sCLI func(string) (kubernetes.Interface, error)
-	esServiceURL        string
 	managementK8sCLI    kubernetes.Interface
 	calicoCLI           tigeraapi.Interface
 	esK8sCLI            relasticsearch.RESTClient
@@ -36,6 +36,7 @@ type managedClusterESControllerReconciler struct {
 	// want to take on one is to stop it
 	managedClustersStopChans map[string]chan struct{}
 	cfg                      config.ElasticsearchCfgControllerCfg
+	esClientBuilder          elasticsearch.ClientBuilder
 	esClient                 elasticsearch.Client
 }
 
@@ -118,7 +119,8 @@ func (c *managedClusterESControllerReconciler) addManagedClusterWatch(name strin
 		panic(fmt.Sprintf("a watch for managed cluster %s already exists", name))
 	}
 
-	esCredsController := elasticsearchconfiguration.New(name, c.esServiceURL, managedK8sCLI, c.managementK8sCLI, c.esK8sCLI, false, c.cfg)
+	esCredsController := elasticsearchconfiguration.New(name, managedK8sCLI, c.managementK8sCLI, c.esK8sCLI,
+		c.esClientBuilder, false, c.cfg)
 
 	stop := make(chan struct{})
 	go esCredsController.Run(stop)
