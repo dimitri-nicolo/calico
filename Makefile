@@ -444,8 +444,6 @@ dual-tor-test: cnx-node.tar calico_test.created dual-tor-setup dual-tor-run-test
 
 .PHONY: dual-tor-setup
 dual-tor-setup: dual-tor-cleanup cnx-node.tar calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
-	git submodule update --init
-	cd tests/kind && make
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc

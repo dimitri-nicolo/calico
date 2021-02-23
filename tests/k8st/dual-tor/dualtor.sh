@@ -1,5 +1,8 @@
 #!/bin/bash -ex
 
+# test directory.
+TEST_DIR=./tests/k8st
+
 # gcr.io pull secrect credential file.
 : ${GCR_IO_PULL_SECRET:=./docker_auth.json}
 
@@ -7,10 +10,11 @@
 : ${kubectl:=./kubectl}
 
 # kind binary.
-: ${KIND:=./tests/kind/bin/kind}
+: ${KIND:=$TEST_DIR/kind}
 
-# Use locally built e2e.test.
-E2E_TEST=~/go/src/github.com/tigera/k8s-e2e/bin/e2e.test
+echo "Download kind executable with multiple networks support"
+curl -L https://github.com/projectcalico/kind/releases/download/kind-multiple-networks-0.1/kind -o ${KIND}
+chmod +x ${KIND}
 
 # Set config variables needed for ${kubectl} and calicoctl.
 export KUBECONFIG=~/.kube/kind-config-kind
@@ -541,6 +545,7 @@ EOF
 
 function do_cleanup {
     ${KIND} delete cluster || true
+    rm -f ${KIND}
     docker rm -f `docker ps -a -q` || true
     docker network rm ra2 rb2 uplink2 || true
     docker network rm ra1 rb1 uplink || true
