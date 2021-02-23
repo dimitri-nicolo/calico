@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +18,33 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/jitter"
 )
+
+var (
+	conntrackCounterSweeps = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_bpf_conntrack_sweeps",
+		Help: "Number of contrack table sweeps made so far",
+	})
+	conntrackGaugeUsed = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_conntrack_used",
+		Help: "Number of used entries visited during a conntrack table sweep",
+	})
+	conntrackGaugeCleaned = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_conntrack_cleaned",
+		Help: "Number of entries cleaned during a conntrack table sweep",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(conntrackCounterSweeps)
+	prometheus.MustRegister(conntrackGaugeUsed)
+	prometheus.MustRegister(conntrackGaugeCleaned)
+}
 
 // ScanVerdict represents the set of values returned by EntryScan
 type ScanVerdict int
@@ -89,9 +111,14 @@ func (s *Scanner) Scan() {
 	var ctKey Key
 	var ctVal Value
 
+	used := 0
+	cleaned := 0
+
 	err := s.ctMap.Iter(func(k, v []byte) bpf.IteratorAction {
 		copy(ctKey[:], k[:])
 		copy(ctVal[:], v[:])
+
+		used++
 
 		if debug {
 			log.WithFields(log.Fields{
@@ -105,11 +132,16 @@ func (s *Scanner) Scan() {
 				if debug {
 					log.Debug("Deleting conntrack entry.")
 				}
+				cleaned++
 				return bpf.IterDelete
 			}
 		}
 		return bpf.IterNone
 	})
+
+	conntrackCounterSweeps.Inc()
+	conntrackGaugeUsed.Set(float64(used))
+	conntrackGaugeCleaned.Set(float64(cleaned))
 
 	if err != nil {
 		log.WithError(err).Warn("Failed to iterate over conntrack map")
