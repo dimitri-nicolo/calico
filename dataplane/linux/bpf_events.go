@@ -43,9 +43,17 @@ func newBpfEventPoller(e events.Events) *bpfEventPoller {
 		sinks:  make(map[events.Type]bpfEventSink),
 	}
 
+	var err error
+
 	// We ignore the errors as this can happen only if there is label mismatch
-	p.prometheusLostCounter, _ = bpfEventsCounters.GetMetricWithLabelValues("lost")
-	p.prometheusNoSinkCounter, _ = bpfEventsCounters.GetMetricWithLabelValues("no_sink")
+	p.prometheusLostCounter, err = bpfEventsCounters.GetMetricWithLabelValues("lost")
+	if err != nil {
+		log.WithError(err).Panic("Failed to create prometheus bpf events lost counter")
+	}
+	p.prometheusNoSinkCounter, err = bpfEventsCounters.GetMetricWithLabelValues("no_sink")
+	if err != nil {
+		log.WithError(err).Panic("Failed to create prometheus bpf events no sink counter")
+	}
 
 	return p
 }
@@ -53,7 +61,11 @@ func newBpfEventPoller(e events.Events) *bpfEventPoller {
 func (p *bpfEventPoller) Register(t events.Type, handler bpfEventHandler) {
 	sink, ok := p.sinks[t]
 	if !ok {
-		sink.counter, _ = bpfEventsCounters.GetMetricWithLabelValues(t.String())
+		var err error
+		sink.counter, err = bpfEventsCounters.GetMetricWithLabelValues(t.String())
+		if err != nil {
+			log.WithError(err).Panicf("Failed to create prometheus bpf events %q counter", t.String())
+		}
 	}
 	sink.handlers = append(sink.handlers, handler)
 	p.sinks[t] = sink
