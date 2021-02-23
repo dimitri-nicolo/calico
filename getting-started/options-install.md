@@ -121,6 +121,5 @@ The following table shows the conceptual stages of a {{site.prodname}} install.
 
 ### Next steps
 
-- To get started with on-premises installation, see [Self-managed on-premises]({{site.baseurl}}/getting-started/kubernetes/self-managed-on-prem/)
-- To get started with managed public cloud installation, see [Managed public cloud]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/)
-- To upgrade from a non-operator installation method, see [Upgrade]({{site.baseurl}}/maintenance/upgrading)
+- To get started with installation, see [Install on clusters]({{site.baseurl}}/getting-started/install-on-clusters/)
+- To upgrade from a non-operator installation method, see [Upgrade]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee/operator)
