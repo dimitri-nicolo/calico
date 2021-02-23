@@ -321,7 +321,7 @@ kubectl label node <name> rack=rb
 To configure the node to ToR peerings for rack A:
 
 ```
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
@@ -353,7 +353,7 @@ EOF
 Similarly for rack B:
 
 ```
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
@@ -388,7 +388,7 @@ Once BGPPeer resources have been configured, you should [disable the full node-t
 mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
 
 ```
-calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
+kubectl patch bgpconfigurations default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
 ```
 
 #### Configure your ToR routers and infrastructure

@@ -166,7 +166,7 @@ Apply the changes.
 Remember, disabling a pool only affects new IP allocations; networking for existing pods is not affected.
 
 ```bash
-calicoctl apply -f pool.yaml
+kubectl apply -f pool.yaml
 
 ```
 
@@ -227,7 +227,7 @@ kubectl delete pod -n kube-system coredns-6f4fd4bdf-8q7zp
 Now that you've verified that pods are getting IPs from the new range, you can safely delete the old pool.
 
 ```bash
-calicoctl delete pool default-ipv4-ippool
+kubectl delete ippool default-ipv4-ippool
 
 ```
 

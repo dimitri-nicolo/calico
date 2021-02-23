@@ -91,7 +91,7 @@ spec:
 Apply the changes.
 
 ```
-calicoctl apply -f temporary-pool.yaml
+kubectl apply -f temporary-pool.yaml
 ```
 
 Let’s verify the temporary IP pool.
@@ -111,7 +111,7 @@ temporary-pool        10.0.0.0/16      true   Always     false
 Disable allocations in the default pool.
 
 ```
-calicoctl patch ippool default-ipv4-ippool -p '{"spec": {"disabled": "true"}}'
+kubectl patch ippool default-ipv4-ippool -p '{"spec": {"disabled": "true"}}'
 ```
 
 Verify the changes.
@@ -147,7 +147,7 @@ kubectl delete pod -A --all
 Now that you’ve verified that pods are getting IPs from the new range, you can safely delete the existing pool.
 
 ```
-calicoctl delete ippool default-ipv4-ippool
+kubectl delete ippool default-ipv4-ippool
 ```
 
 #### Create a new IP pool with the desired block size
@@ -169,13 +169,13 @@ spec:
 Apply the changes.
 
 ```
-calicoctl apply -f pool.yaml
+kubectl apply -f pool.yaml
 ```
 
 #### Disable the temporary IP pool
 
 ```
-calicoctl patch ippool temporary-pool -p '{"spec": {"disabled": "true"}}'
+kubectl patch ippool temporary-pool -p '{"spec": {"disabled": "true"}}'
 ```
 
 #### Delete pods from the temporary IP pool
@@ -205,5 +205,5 @@ calicoctl ipam show --show-blocks
 Clean up the IP pools by deleting the temporary IP pool.
 
 ```
-calicoctl delete pool temporary-pool
+kubectl delete pool temporary-pool
 ```
