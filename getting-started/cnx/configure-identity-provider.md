@@ -270,6 +270,11 @@ Most IdPs require redirect URIs to be allowed to redirect users at the end of th
 **Authorized redirect URIs**
 - `https://<host><port>/dex/callback`
 
+### Troubleshooting
+- ManagerDomain `localhost` and `127.0.0.1` are not the same. If you configure `localhost:9443` as your managerDomain, while navigating to `https://127.0.0.1:9443`, the OIDC security checks will deny you access.
+- When your `usernameClaim` is not `email` and `usernamePrefix` is omitted, we have implemented a default prefix identical to how Kubernetes has for their kube-apiserver, see the [oidc-username-claim documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver).
+- When you encounter problems while configuring your IdP, we encourage you to use the network tab of the browser dev tools to inspect requests with error codes and to decode authorization headers of the HTTP requests.
+
 ### Above and beyond
 
 - [Configure user roles and permissions]({{site.baseurl}}/getting-started/cnx/roles-and-permissions)
