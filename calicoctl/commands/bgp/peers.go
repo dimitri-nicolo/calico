@@ -113,7 +113,7 @@ func showPeers(input string) error {
 		fmt.Sprintf("kubectl exec %s -n %s -- %s", podName, common.CalicoNamespace, birdCmd),
 	)
 	if err != nil {
-		return fmt.Errorf("Could not retrieve info for BPG peers: %s", err)
+		return fmt.Errorf("Could not retrieve info for BGP peers: %s", err)
 	}
 
 	// Since BGP peers could be either Mesh, Node or Global we want to filter out all other pseudo-protocols
