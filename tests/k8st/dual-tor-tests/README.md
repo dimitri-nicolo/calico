@@ -1,7 +1,7 @@
 
 # Manual setup equivalent to what the tests do
 
-Start of day: create client and server pods:
+Start of day: create client and server pods and services:
 
 ```
 kubectl create ns dualtor
@@ -13,6 +13,36 @@ kubectl wait --timeout=1m --for=condition=ready pod/client -n dualtor
 kubectl wait --timeout=1m --for=condition=ready pod/client-host -n dualtor
 kubectl wait --timeout=1m --for=condition=ready pod/ra-server -n dualtor
 kubectl wait --timeout=1m --for=condition=ready pod/rb-server -n dualtor
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dualtor
+  name: ra-server
+  labels:
+    name: ra-server
+spec:
+  ports:
+    - port: 8090
+  selector:
+    pod-name: ra-server
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dualtor
+  name: rb-server
+  labels:
+    name: rb-server
+spec:
+  ports:
+    - port: 8090
+  selector:
+    pod-name: rb-server
+  type: NodePort
+EOF
 ```
 
 Per test case: start servers:
@@ -22,8 +52,30 @@ kubectl exec -n dualtor ra-server -- nc -l -p 8090 >ra.log 2>&1 &
 kubectl exec -n dualtor rb-server -- nc -l -p 8090 >rb.log 2>&1 &
 ```
 
-Per test case: start clients:
+Client for host access test case
 
 ```
-kubectl exec -n dualtor -t client-host -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep 1; done | nc -w 1 10.244.195.197 8090' &
+rb_pod_ip=10.244.195.198
+kubectl exec -n dualtor -t client-host -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 $rb_pod_ip 8090' &
+```
+
+Client for pod IP test case
+
+```
+kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 $rb_pod_ip 8090' &
+```
+
+Client for node port test case
+
+```
+worker2_ip=172.31.20.4
+rb_node_port=31535
+kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 172.31.20.4 31535' &
+```
+
+Client for service IP test case
+
+```
+rb_svc_ip=10.96.215.109
+kubectl exec -n dualtor -t client -- /bin/sh -c 'for i in `seq 1 3000`; do echo $i -- ; sleep .5; done | nc -w 1 $rb_svc_ip 8090' &
 ```
