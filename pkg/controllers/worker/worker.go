@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package worker
 
@@ -27,6 +27,8 @@ const (
 	ResourceWatchAdd    ResourceWatch = "ADD"
 	ResourceWatchUpdate ResourceWatch = "UPDATE"
 	ResourceWatchDelete ResourceWatch = "DELETE"
+
+	DefaultMaxRequeueAttempts = 5
 )
 
 // Reconciler is the interface that is used to react to changes to the resources that the worker is watching. When a change
@@ -42,9 +44,11 @@ type Worker interface {
 }
 
 type worker struct {
-	reconciler Reconciler
 	workqueue.RateLimitingInterface
-	watches []watch
+
+	reconciler         Reconciler
+	watches            []watch
+	maxRequeueAttempts int
 }
 
 // watch contains the information needed to create a resource watch
@@ -55,11 +59,18 @@ type watch struct {
 }
 
 // New creates a new Worker implementation
-func New(reconciler Reconciler) Worker {
-	return &worker{
-		reconciler:            reconciler,
+func New(reconciler Reconciler, options ...Option) Worker {
+	w := &worker{
 		RateLimitingInterface: workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		reconciler:            reconciler,
+		maxRequeueAttempts:    DefaultMaxRequeueAttempts,
 	}
+
+	for _, option := range options {
+		option(w)
+	}
+
+	return w
 }
 
 // AddWatch registers a resource to watch and run the reconciler on changes to that resource
@@ -160,13 +171,13 @@ func (w *worker) processNextItem() bool {
 
 	if err := w.reconciler.Reconcile(key.(types.NamespacedName)); err != nil {
 		reqLogger.WithError(err).Error("An error occurred while processing the next item")
-		if w.NumRequeues(key) < 5 {
-			reqLogger.Debug("Rate limiting key")
+		if w.NumRequeues(key) < w.maxRequeueAttempts {
+			reqLogger.Debug("Rate limiting requeue of key")
 			w.AddRateLimited(key)
 			return true
 		}
 
-		reqLogger.Debug("Rate limiting retries reached, forgetting key")
+		reqLogger.Debug("Max number or retries for key reached, forgetting key")
 		w.Forget(key)
 		uruntime.HandleError(err)
 	}
