@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,6 +90,11 @@ type Config struct {
 	OIDCAuthGroupPrefix    string `default:"" split_words:"true"`
 
 	ElasticLicenseType string `default:"" split_words:"true"`
+	ElasticUsername    string `default:"" split_words:"true"`
+	ElasticPassword    string `default:"" split_words:"true"`
+	ElasticHost        string `default:"" split_words:"true"`
+	ElasticPort        string `default:"9200" split_words:"true"`
+	ElasticCA          string `default:"" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct

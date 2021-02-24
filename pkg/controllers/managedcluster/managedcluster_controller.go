@@ -43,16 +43,16 @@ type managedClusterController struct {
 	calicoCLI           *tigeraapi.Clientset
 	cfg                 config.ManagedClusterControllerConfig
 	managementK8sCLI    *kubernetes.Clientset
-	esServiceURL        string
 	esk8sCLI            relasticsearch.RESTClient
+	esClientBuilder     elasticsearch.ClientBuilder
 }
 
 func New(
 	createManagedk8sCLI func(string) (kubernetes.Interface, error),
-	esServiceURL string,
 	managementK8sCLI *kubernetes.Clientset,
 	calicok8sCLI *tigeraapi.Clientset,
 	esk8sCLI relasticsearch.RESTClient,
+	esClientBuilder elasticsearch.ClientBuilder,
 	cfg config.ManagedClusterControllerConfig) controller.Controller {
 
 	return &managedClusterController{
@@ -60,18 +60,9 @@ func New(
 		calicoCLI:           calicok8sCLI,
 		cfg:                 cfg,
 		managementK8sCLI:    managementK8sCLI,
-		esServiceURL:        esServiceURL,
+		esClientBuilder:     esClientBuilder,
 		esk8sCLI:            esk8sCLI,
 	}
-}
-
-func (c *managedClusterController) initEsClient() (elasticsearch.Client, error) {
-	user, password, roots, err := relasticsearch.ClientCredentialsFromK8sCLI(c.managementK8sCLI)
-	if err != nil {
-		return nil, err
-	}
-
-	return elasticsearch.NewClient(c.esServiceURL, user, password, roots)
 }
 
 // fetchRegisteredManagedClustersNames returns the name for the managed cluster as set or an error
@@ -105,7 +96,7 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 		case <-stop:
 			return nil, nil
 		default:
-			if client, err = c.initEsClient(); err != nil {
+			if client, err = c.esClientBuilder.Build(); err != nil {
 				log.WithError(err).Error("Failed to connect to Elasticsearch")
 				time.Sleep(waitTime)
 				continue
@@ -117,12 +108,12 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 	// create the workers
 	mcReconciler := &managedClusterESControllerReconciler{
 		createManagedK8sCLI:      c.createManagedk8sCLI,
-		esServiceURL:             c.esServiceURL,
 		managementK8sCLI:         c.managementK8sCLI,
 		calicoCLI:                c.calicoCLI,
 		esK8sCLI:                 c.esk8sCLI,
 		managedClustersStopChans: make(map[string]chan struct{}),
 		cfg:                      c.cfg.ElasticConfig,
+		esClientBuilder:          c.esClientBuilder,
 		esClient:                 client,
 	}
 	mgmtChangeReconciler := newManagementClusterChangeReconciler(c.managementK8sCLI, c.calicoCLI, c.esk8sCLI, mcReconciler.listenForRebootNotify())
@@ -143,12 +134,6 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 	mgmtChangeWorker.AddWatch(
 		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
-		&corev1.Secret{},
-	)
-
-	mgmtChangeWorker.AddWatch(
-		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.TigeraElasticsearchNamespace,
-			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchUserSecret))),
 		&corev1.Secret{},
 	)
 

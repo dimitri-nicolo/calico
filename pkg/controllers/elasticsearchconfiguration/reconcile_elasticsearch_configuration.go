@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package elasticsearchconfiguration
 
@@ -23,12 +23,12 @@ import (
 
 type reconciler struct {
 	clusterName      string
-	esServiceURL     string
 	management       bool
 	managementK8sCLI kubernetes.Interface
 	managedK8sCLI    kubernetes.Interface
 	esK8sCLI         relasticsearch.RESTClient
 	esHash           string
+	esClientBuilder  elasticsearch.ClientBuilder
 	esCLI            elasticsearch.Client
 }
 
@@ -206,12 +206,9 @@ func calculateUserChangeHash(elasticsearchHash string, user elasticsearch.User) 
 
 func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {
 	if c.esCLI == nil {
-		user, password, roots, err := relasticsearch.ClientCredentialsFromK8sCLI(c.managementK8sCLI)
-		if err != nil {
-			return nil, err
-		}
+		var err error
 
-		c.esCLI, err = elasticsearch.NewClient(c.esServiceURL, user, password, roots)
+		c.esCLI, err = c.esClientBuilder.Build()
 		if err != nil {
 			return nil, err
 		}

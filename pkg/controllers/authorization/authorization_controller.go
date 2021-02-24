@@ -21,8 +21,6 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,20 +29,20 @@ import (
 // creates the appropriate role mappings in Elasticsearch so that an authenticated Elasticsearch user will have the permissions
 // designated to them through kubernetes RBAC.
 type authorizationController struct {
-	k8sCLI         kubernetes.Interface
-	esServiceURL   string
-	numWorkers     int
-	resyncPeriod   time.Duration
-	usernamePrefix string
-	groupPrefix    string
-	esLicenseType  string
+	k8sCLI          kubernetes.Interface
+	esClientBuilder elasticsearch.ClientBuilder
+	numWorkers      int
+	resyncPeriod    time.Duration
+	usernamePrefix  string
+	groupPrefix     string
+	esLicenseType   string
 }
 
 const (
 	ElasticsearchLicenseTypeBasic = "basic"
 )
 
-func New(k8sCLI kubernetes.Interface, esServiceURL string, config *config.AuthorizationControllerCfg) controller.Controller {
+func New(k8sCLI kubernetes.Interface, esClientBuilder elasticsearch.ClientBuilder, config *config.AuthorizationControllerCfg) controller.Controller {
 	// TODO remove this default when this is properly hooked up to using KubeControllerConfiguration
 	resyncPeriod := config.ReconcilerPeriod
 	if config.ReconcilerPeriod == 0 {
@@ -52,13 +50,13 @@ func New(k8sCLI kubernetes.Interface, esServiceURL string, config *config.Author
 	}
 
 	return &authorizationController{
-		k8sCLI:         k8sCLI,
-		esServiceURL:   esServiceURL,
-		numWorkers:     config.NumberOfWorkers,
-		resyncPeriod:   resyncPeriod,
-		usernamePrefix: config.OIDCAuthUsernamePrefix,
-		groupPrefix:    config.OIDCAuthGroupPrefix,
-		esLicenseType:  config.ElasticsearchLicenseType,
+		k8sCLI:          k8sCLI,
+		esClientBuilder: esClientBuilder,
+		numWorkers:      config.NumberOfWorkers,
+		resyncPeriod:    resyncPeriod,
+		usernamePrefix:  config.OIDCAuthUsernamePrefix,
+		groupPrefix:     config.OIDCAuthGroupPrefix,
+		esLicenseType:   config.ElasticsearchLicenseType,
 	}
 }
 
@@ -75,7 +73,7 @@ func (c *authorizationController) Run(stop chan struct{}) {
 	// in the event Elasticsearch is not yet running
 	log.Debug("Initializing Elasticsearch client.")
 	stopped := retry(stop, 5*time.Second, "Waiting for Elasticsearch to initialize", func() error {
-		esCLI, err = getESClient(c.k8sCLI)
+		esCLI, err = c.esClientBuilder.Build()
 		return err
 	})
 	if stopped {
@@ -217,18 +215,4 @@ func retry(stop chan struct{}, waitTime time.Duration, message string, f func() 
 	}
 
 	return false
-}
-
-func getESClient(k8sCLI kubernetes.Interface) (elasticsearch.Client, error) {
-	user, password, roots, err := relasticsearch.ClientCredentialsFromK8sCLI(k8sCLI)
-	if err != nil {
-		return nil, err
-	}
-
-	esCli, err := elasticsearch.NewClient(resource.ElasticsearchServiceURL, user, password, roots)
-	if err != nil {
-		return nil, err
-	}
-
-	return esCli, nil
 }

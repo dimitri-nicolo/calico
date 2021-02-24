@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package elasticsearchconfiguration_test
 
@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -133,18 +135,8 @@ var _ = Describe("Reconcile", func() {
 				},
 			}
 
-			esUserSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      resource.ElasticsearchUserSecret,
-					Namespace: resource.TigeraElasticsearchNamespace,
-				},
-				Data: map[string][]byte{
-					"elastic": []byte("password"),
-				},
-			}
-
 			managedK8sCli := k8sfake.NewSimpleClientset()
-			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap, esUserSecret)
+			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap)
 
 			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
@@ -162,7 +154,12 @@ var _ = Describe("Reconcile", func() {
 
 			Expect(err).ShouldNot(HaveOccurred())
 
-			r := elasticsearchconfiguration.NewReconciler("managed-1", ts.URL, false, managementK8sCli, managedK8sCli, esK8sCli)
+			mockESClientBuild := new(elasticsearch.MockClientBuilder)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockESClientBuild.On("Build").Return(esClient, err)
+
+			r := elasticsearchconfiguration.NewReconciler("managed-1", mockESClientBuild, false, managementK8sCli, managedK8sCli, esK8sCli)
 
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -206,18 +203,8 @@ var _ = Describe("Reconcile", func() {
 				},
 			}
 
-			esUserSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      resource.ElasticsearchUserSecret,
-					Namespace: resource.TigeraElasticsearchNamespace,
-				},
-				Data: map[string][]byte{
-					"elastic": []byte("password"),
-				},
-			}
-
 			managedK8sCli := k8sfake.NewSimpleClientset()
-			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap, esUserSecret)
+			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap)
 
 			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
@@ -229,7 +216,12 @@ var _ = Describe("Reconcile", func() {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			}))
 
-			r := elasticsearchconfiguration.NewReconciler("managed-1", ts.URL, false, managementK8sCli, managedK8sCli, esK8sCli)
+			mockESClientBuild := new(elasticsearch.MockClientBuilder)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockESClientBuild.On("Build").Return(esClient, err)
+
+			r := elasticsearchconfiguration.NewReconciler("managed-1", mockESClientBuild, false, managementK8sCli, managedK8sCli, esK8sCli)
 
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
