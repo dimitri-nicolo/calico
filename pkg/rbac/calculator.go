@@ -138,7 +138,7 @@ func NewCalculator(clusterRoleGetter ClusterRoleGetter, clusterRoleBindingLister
 	// Split out the cluster and namespaced rule resolvers - this allows us to perform namespace queries without
 	// checking cluster rules every time. For cluster specific rule resolver, use a "no-op" RuleBindingLister - this
 	// is a lister that returns no RuleBindings, the upshot is that only ClusterRoleBindings are discovered by the
-	// RuleResolver meaning only cluster-scoped rules will be considered.  Similarly,for the namespaced rule resolver,
+	// RuleResolver meaning only cluster-scoped rules will be considered.  Similarly, for the namespaced rule resolver,
 	// use a no-op ClusterRuleBindingLister - this is a lister that returns no ClusterRuleBindings and so the
 	// RuleResolver will only discover namespaced rules (and no cluster-scoped rules).
 	clusterRuleResolver := validation.NewDefaultRuleResolver(

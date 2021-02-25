@@ -331,10 +331,10 @@ var (
 `
 
 	compositeSources = []pelastic.AggCompositeSourceInfo{
-		{"source_type", "source_type"},
-		{"dest_type", "dest_type"},
-		{"source_port", "source_port"},
-		{"dest_port", "dest_port"},
+		{Name: "source_type", Field: "source_type"},
+		{Name: "dest_type", Field: "dest_type"},
+		{Name: "source_port", Field: "source_port"},
+		{Name: "dest_port", Field: "dest_port"},
 	}
 
 	aggTerms = []pelastic.AggNestedTermInfo{

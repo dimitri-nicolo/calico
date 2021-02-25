@@ -25,14 +25,14 @@ const (
 var (
 	// This is the set of composite sources requested by the UI.
 	FlowCompositeSources = []AggCompositeSourceInfo{
-		{"source_type", "source_type"},
-		{"source_namespace", "source_namespace"},
-		{"source_name", "source_name_aggr"},
-		{"dest_type", "dest_type"},
-		{"dest_namespace", "dest_namespace"},
-		{"dest_name", "dest_name_aggr"},
-		{"action", "action"},
-		{"reporter", "reporter"},
+		{Name: "source_type", Field: "source_type"},
+		{Name: "source_namespace", Field: "source_namespace"},
+		{Name: "source_name", Field: "source_name_aggr"},
+		{Name: "dest_type", Field: "dest_type"},
+		{Name: "dest_namespace", Field: "dest_namespace"},
+		{Name: "dest_name", Field: "dest_name_aggr"},
+		{Name: "action", Field: "action"},
+		{Name: "reporter", Field: "reporter"},
 	}
 )
 
