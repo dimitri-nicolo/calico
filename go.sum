@@ -783,8 +783,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/cni-plugin-private v1.11.1-0.20210225010214-522ba6088e2e h1:h7WcrWuj/GsAqGMOD7IYwR9KFQSrUfT08i/yLcvu/0Q=
 github.com/tigera/cni-plugin-private v1.11.1-0.20210225010214-522ba6088e2e/go.mod h1:8sIRcDjorhSR+tkuUfwm0A+X2BmU5GpYgrj2aki/+VE=
-github.com/tigera/confd-private v1.0.1-0.20210225001624-d2ced37b1774 h1:2Kej0hRj0G1FIuyIOlyh3kR34CUZs+XqpD36+LaiQxI=
-github.com/tigera/confd-private v1.0.1-0.20210225001624-d2ced37b1774/go.mod h1:Tp9HG7ZSV8GedVWaGjendWOXGpWQrPWeT81mHjL0v7I=
+github.com/tigera/confd-private v1.0.1-0.20210225031020-afb45817f8ba h1:CdWw2HUu0WXZHP0qjIqOQ5fHz5zcTBqDEUhUHB8Ou1U=
+github.com/tigera/confd-private v1.0.1-0.20210225031020-afb45817f8ba/go.mod h1:TZinnD/5R/d/u2iTSp1Oydd/1vRLnX8NFhi4TYoxPIU=
 github.com/tigera/felix-private v0.0.0-20210225005443-eab321608d57 h1:Wah4Pa6PH/jv9iVsj/QkoM4Iwi5Akk5DwVAx7Z923X8=
 github.com/tigera/felix-private v0.0.0-20210225005443-eab321608d57/go.mod h1:QqiaMHJNvPAmEe3uoG9vs+vIsMrzVdTPEFWLFRiuDtM=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
