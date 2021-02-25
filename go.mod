@@ -17,6 +17,7 @@ require (
 	github.com/projectcalico/felix v3.8.9+incompatible
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.7.3-0.20201007232318-2dba00d728ad
+	github.com/prometheus/client_golang v1.7.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/pflag v1.0.5
