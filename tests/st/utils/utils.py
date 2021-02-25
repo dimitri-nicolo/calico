@@ -535,7 +535,6 @@ def name(data):
     """
     return data['metadata']['name']
 
-
 def kind(data):
     """
     Returns the kind of the resource in the supplied data
@@ -546,12 +545,11 @@ def kind(data):
     """
     return data['kind']
 
-
 def namespace(data):
     """
     Returns the namespace of the resource in the supplied data
     Args:
-        data: A dictionary containing the resource.
+       data: A dictionary containing the resource.
 
     Returns: The resource namespace.
     """

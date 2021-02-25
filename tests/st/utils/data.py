@@ -952,6 +952,52 @@ globalnetworkpolicy_os_name1_rev1 = {
     }
 }
 
+networkpolicy_name3_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'NetworkPolicy',
+    'metadata': {
+        'name': 'policy-mypolicy3',
+        'namespace': 'test',
+    },
+    'spec': {
+        'order': 100,
+        'selector': "type=='database'",
+        'types': ['Ingress', 'Egress'],
+        'egress': [
+            {
+                'action': 'Allow',
+                'source': {
+                    'selector': "type=='application'"},
+            },
+        ],
+        'ingress': [
+            {
+                'ipVersion': 4,
+                'action': 'Deny',
+                'destination': {
+                    'notNets': ['10.3.0.0/16'],
+                    'notPorts': ['110:1050'],
+                    'notSelector': "type=='apples'",
+                    'nets': ['10.2.0.0/16'],
+                    'ports': ['100:200'],
+                    'selector': "type=='application'",
+                },
+                'protocol': 'TCP',
+                'source': {
+                    'notNets': ['10.1.0.0/16'],
+                    'notPorts': [1050],
+                    'notSelector': "type=='database'",
+                    'nets': ['10.0.0.0/16'],
+                    'ports': [1234, '10:1024'],
+                    'selector': "type=='application'",
+                    'namespaceSelector': 'has(role)',
+                }
+            }
+        ],
+    }
+}
+
+
 #
 # Staged Global Network Policy
 #
@@ -1159,6 +1205,23 @@ networkset_name1_rev1 = {
     'kind': 'NetworkSet',
     'metadata': {
         'name': 'net-set1'
+    },
+    'spec': {
+        'nets': [
+            "10.0.0.1",
+            "11.0.0.0/16",
+            "feed:beef::1",
+            "dead:beef::96",
+        ]
+    }
+}
+
+networkset_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'NetworkSet',
+    'metadata': {
+        'name': 'net-set2',
+        'namespace': 'test',
     },
     'spec': {
         'nets': [
@@ -1873,9 +1936,9 @@ globalthreatfeed_name0 = {
 }
 
 # Note: whitespace matters!  Be careful editing.
-globalthreatfeed_get_table_output = """NAME    PERIOD   URL                                         
-name0                                                        
-name1   13.5h    https://notreal.tigera.io/threatfeed        
+globalthreatfeed_get_table_output = """NAME    PERIOD   URL
+name0
+name1   13.5h    https://notreal.tigera.io/threatfeed
 name2   24h      https://notreal.tigera.io/threatfeed/rev2"""
 
 #

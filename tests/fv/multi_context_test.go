@@ -16,11 +16,13 @@ package fv_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/onsi/gomega"
+
 	. "github.com/projectcalico/calicoctl/v3/tests/fv/utils"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 )
@@ -33,7 +35,10 @@ func init() {
 func TestMultiCluster(t *testing.T) {
 	RegisterTestingT(t)
 
-	os.Setenv("KUBECONFIG", "/go/src/github.com/projectcalico/calicoctl/test-data/kubectl-config.yaml")
+	os.Setenv("KUBECONFIG", strings.Join([]string{
+		"/go/src/github.com/projectcalico/calicoctl/test-data/kubectl-config.yaml",
+		"/go/src/github.com/projectcalico/calicoctl/test-data/kubectl-config-second.yaml",
+	}, ":"))
 
 	// Setup the license
 	out := Calicoctl(true, "create", "-f", "/go/src/github.com/projectcalico/calicoctl/test-data/licenses/license.yaml", "--context", "main")
@@ -47,6 +52,9 @@ func TestMultiCluster(t *testing.T) {
 	// This check should Pass
 	out = Calicoctl(true, "get", "node", "--context", "main")
 	Expect(out).To(ContainSubstring("node4"))
+
+	out = Calicoctl(true, "get", "node", "--context", "second")
+	Expect(out).To(ContainSubstring("node8"))
 
 	// This check should Pass proving --context works regardless of its position
 	out = Calicoctl(true, "--context", "main", "get", "node")
