@@ -143,7 +143,7 @@ After defining host endpoints for each node, you should find that internal
 cluster communications are all still working as normal—for example, that you
 can successfully execute commands like `kubectl get hostendpoints.p` and `kubectl get
 globalnetworkpolicy.p`—but that it is impossible to connect into the cluster from outside
-(except for any [failsafe rules]({{site.baseurl}}/reference/host-endpoints/failsafe).  
+(except for any [failsafe rules]({{site.baseurl}}/reference/host-endpoints/failsafe).
 For example, if the
 cluster includes a Kubernetes Service that is exposed as NodePort 31852, you
 should find, at this point, that that NodePort works from within the cluster,

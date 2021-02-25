@@ -3,9 +3,9 @@ title: Enable the eBPF dataplane
 description: Step-by-step instructions for enabling the eBPF dataplane.
 ---
 
->**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production 
-> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This 
-> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward 
+>**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production
+> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This
+> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward
 > policy); flow logs; and DNS policy.
 {: .alert .alert-info}
 
@@ -21,14 +21,14 @@ The eBPF dataplane mode has several advantages over standard linux networking pi
 * It uses less CPU per GBit.
 * It has native support for Kubernetes services (without needing kube-proxy) that:
 
-  * Reduces first packet latency for packets to services.
-  * Preserves external client source IP addresses all the way to the pod.
-  * Supports DSR (Direct Server Return) for more efficient service routing.
-  * Uses less CPU than kube-proxy to keep the dataplane in sync.
+    * Reduces first packet latency for packets to services.
+    * Preserves external client source IP addresses all the way to the pod.
+    * Supports DSR (Direct Server Return) for more efficient service routing.
+    * Uses less CPU than kube-proxy to keep the dataplane in sync.
 
 To learn more and see performance metrics from our test environment, see the blog, {% include open-new-window.html text='Introducing the Calico eBPF dataplane' url='https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/' %}.
 
-### Limitations 
+### Limitations
 
 eBPF mode currently has some limitations relative to the standard Linux pipeline mode:
 
@@ -39,7 +39,7 @@ eBPF mode currently has some limitations relative to the standard Linux pipeline
 - Disabling eBPF mode _is_ disruptive; connections that were handled through the eBPF dataplane may be broken and services that do not detect and recover may need to be restarted.
 - Hybrid clusters (with some eBPF nodes and some standard dataplane nodes) are not supported.  (In such a cluster, NodePort traffic from eBPF nodes to non-eBPF nodes will be dropped.)  This includes clusters with Windows nodes.
 - eBPF mode does not support floating IPs.
-- eBPF mode only supports UDP, TCP and ICMP; SCTP is not supported.
+- eBPF mode does not support SCTP, either for policy or services.
 - eBPF mode requires that node  [IP autodetection]({{site.baseurl}}/networking/ip-autodetection) is enabled even in environments where {{site.prodname}} CNI and BGP are not in use.  In eBPF mode, the node IP is used to originate VXLAN packets when forwarding traffic from external sources to services.
 - eBPF mode does not support the "Log" action in policy rules. This limitation also applies to the Drop Action Override feature: `LOGandDROP` and `LOGandACCEPT` are interpreted as `DROP` and `ACCEPT`, respectively.
 
@@ -70,7 +70,7 @@ eBPF mode has the following pre-requisites:
 
 - On each node, the BPF filesystem must be mounted at `/sys/fs/bpf`.  This is required so that the BPF filesystem persists
   when {{site.prodname}} is restarted.  If the filesystem does not persist then pods will temporarily lose connectivity when
-  {{site.prodname}} is restarted and host endpoints may be left unsecured (because their attached policy program will be 
+  {{site.prodname}} is restarted and host endpoints may be left unsecured (because their attached policy program will be
   discarded).
 - For best pod-to-pod performance, an underlying network that doesn't require Calico to use an overlay.  For example:
 
@@ -80,11 +80,11 @@ eBPF mode has the following pre-requisites:
 
   If you must use an overlay, we recommend that you use VXLAN, not IPIP.  VXLAN has much better performance than IPIP in
   eBPF mode due to various kernel optimisations.
-  
-- The underlying network must be configured to allow VXLAN packets between {{site.prodname}} hosts (even if you normally 
-  use IPIP or non-overlay for Calico traffic).  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic, 
+
+- The underlying network must be configured to allow VXLAN packets between {{site.prodname}} hosts (even if you normally
+  use IPIP or non-overlay for Calico traffic).  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic,
   while preserving source IP.  eBPF mode honours the Felix `VXLANMTU` setting (see [Configuring MTU]({{ site.baseurl }}/networking/mtu)).
-- A stable way to address the Kubernetes API server. Since eBPF mode takes over from kube-proxy, {{site.prodname}} 
+- A stable way to address the Kubernetes API server. Since eBPF mode takes over from kube-proxy, {{site.prodname}}
   needs a way to reach the API server directly.
 - The base [requirements]({{site.baseurl}}/getting-started/kubernetes/requirements) also apply.
 
@@ -202,7 +202,7 @@ If you do not see the pods restart then it's possible that the `ConfigMap` wasn'
 
 #### Configure kube-proxy
 
-In eBPF mode {{site.prodname}} replaces `kube-proxy` so it wastes resources to run both.  This section explains how 
+In eBPF mode {{site.prodname}} replaces `kube-proxy` so it wastes resources to run both.  This section explains how
 to disable `kube-proxy` in some common environments.
 
 ##### Clusters that run `kube-proxy` with a `DaemonSet` (such as `kubeadm`)
@@ -250,8 +250,19 @@ workload pods in order for them to restart connections.  In particular, it's a g
 since its connection to the API server can be disrupted:
 
 ```
-kubectl delete pod -n kube-system -l k8s-app=kube-dns
+kubectl patch networks.operator.openshift.io cluster --type merge -p '{"spec":{"deployKubeProxy": true}}'
 ```
+
+#### Enable eBPF mode
+
+To enable eBPF mode, change Felix configuration parameter  `BPFEnabled` to `true`.  This can be done with `calicoctl`, as follows:
+
+```
+calicoctl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": true}}'
+```
+
+Enabling eBPF mode should not disrupt existing connections but existing connections will continue to use the standard
+Linux datapath. You may wish to restart pods to ensure that they start new connections using the BPF dataplane.
 
 #### Try out DSR mode
 
