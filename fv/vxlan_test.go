@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 	for _, vxlanM := range []api.VXLANMode{api.VXLANModeCrossSubnet} {
 		vxlanMode := vxlanM
 		for _, routeSource := range []string{"CalicoIPAM", "WorkloadIPs"} {
+			routeSource := routeSource
 			Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s", vxlanMode, routeSource), func() {
 				var (
 					infra   infrastructure.DatastoreInfra

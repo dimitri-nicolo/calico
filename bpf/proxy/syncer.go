@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -567,6 +567,9 @@ func (s *Syncer) applyDerived(
 
 	skey = getSvcKey(sname, getSvcKeyExtra(t, sinfo.ClusterIP().String()))
 	switch t {
+	case svcTypeLoadBalancer:
+		// Handle LB services the same as NodePort type.
+		fallthrough
 	case svcTypeNodePort:
 		if sinfo.OnlyNodeLocalEndpoints() {
 			count = local // use only local eps
