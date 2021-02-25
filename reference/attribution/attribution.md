@@ -6,7 +6,7 @@ canonical_url: '/reference/attribution/attribution'
 
 ### {{site.prodname}} attribution report
 
-12 May 2020
+24 Feb 2021
 
 {{site.prodname}} incorporates various open source softwares. The following open source components and their respective licenses used in the product are provided for your informational purposes.
 In the table below, you can look at the details of each project and license associated with it.
@@ -25,13 +25,58 @@ In the table below, you can look at the details of each project and license asso
 		<td>ISC</td>
 	</tr>
 	<tr>
+		<td>lkarlslund</td>
+		<td>adalanche-r20201225</td>
+		<td>GPL 3.0</td>
+	</tr>
+	<tr>
+		<td>algoliasearch</td>
+		<td>algoliasearch.umd-4.2.0.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>ansi-regex</td>
+		<td>ansi-regex-2.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>ansi-styles</td>
+		<td>ansi-styles-3.2.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@types/anymatch</td>
+		<td>anymatch-1.3.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>app-policy</td>
-		<td>app-policy-v3.15.0-0.dev</td>
-		<td>Apache 2.0</td>
+		<td>app-policy-v3.16.6</td>
+		<td>Tigera Proprietory</td>
 	</tr>
 	<tr>
 		<td>argparse</td>
 		<td>argparse-1.0.9.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>arr-diff</td>
+		<td>arr-diff-4.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>arr-flatten</td>
+		<td>arr-flatten-1.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>arr-union</td>
+		<td>arr-union-3.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>array-unique</td>
+		<td>array-unique-0.3.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -40,9 +85,14 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>asn1crypto</td>
-		<td>asn1crypto-1.3.0-py2.py3-none-any.whl</td>
+		<td>assign-symbols</td>
+		<td>assign-symbols-1.0.0.tgz</td>
 		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>atob</td>
+		<td>atob-2.1.2.tgz</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>atomicwrites</td>
@@ -51,12 +101,27 @@ In the table below, you can look at the details of each project and license asso
 	</tr>
 	<tr>
 		<td>attrs</td>
-		<td>attrs-19.3.0-py2.py3-none-any.whl</td>
+		<td>attrs-20.3.0-py2.py3-none-any.whl</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>babel</td>
+		<td>avsdf-base</td>
+		<td>avsdf-base-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>babel-standalone</td>
 		<td>babel-6.26.0.min.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>babel-runtime</td>
+		<td>babel-runtime-6.26.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>backports.functools-lru-cache</td>
+		<td>backports.functools_lru_cache-1.6.1-py2.py3-none-any.whl</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -65,19 +130,64 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>bootstrap</td>
+		<td>balanced-match</td>
+		<td>balanced-match-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>base</td>
+		<td>base-0.11.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>beautifulsoup4</td>
+		<td>beautifulsoup4-4.9.3-py2-none-any.whl</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>big.js</td>
+		<td>big.js-5.2.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>boolbase</td>
+		<td>boolbase-1.0.0.tgz</td>
+		<td>ISC</td>
+	</tr>
+	<tr>
+		<td>twitter-bootstrap</td>
 		<td>bootstrap-3.3.7.min.js</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>boto3</td>
-		<td>boto3-1.9.142-py2.py3-none-any.whl</td>
-		<td>Apache 2.0</td>
+		<td>bootstrap</td>
+		<td>bootstrap-3.4.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>botocore</td>
-		<td>botocore-1.12.244-py2.py3-none-any.whl</td>
-		<td>Apache 2.0</td>
+		<td>brace-expansion</td>
+		<td>brace-expansion-1.1.11.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>braces</td>
+		<td>braces-2.3.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>bs4</td>
+		<td>bs4-0.0.1.tar.gz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>buffer-from</td>
+		<td>buffer-from-1.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cache-base</td>
+		<td>cache-base-1.0.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>cachetools</td>
@@ -85,28 +195,33 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>calicoctl</td>
-		<td>calicoctl-v3.14.0-0.dev</td>
+		<td>projectcalico</td>
+		<td>calico-v3.17.1</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>calico</td>
-		<td>calico-v2.6.10</td>
+		<td>projectcalico</td>
+		<td>calicoctl-v3.17.1</td>
 		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>camel-case</td>
+		<td>camel-case-4.1.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>certifi</td>
-		<td>certifi-2019.9.11-py2.py3-none-any.whl</td>
+		<td>certifi-2020.12.5-py2.py3-none-any.whl</td>
 		<td>Mozilla 2.0</td>
-	</tr>
-	<tr>
-		<td>cffi</td>
-		<td>cffi-1.14.0-cp27-cp27mu-manylinux1_x86_64.whl</td>
-		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>chain-function</td>
 		<td>chain-function-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>chalk</td>
+		<td>chalk-2.4.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -115,18 +230,28 @@ In the table below, you can look at the details of each project and license asso
 		<td>LGPL 3.0</td>
 	</tr>
 	<tr>
+		<td>chardet</td>
+		<td>chardet-4.0.0-py2.py3-none-any.whl</td>
+		<td>LGPL 3.0</td>
+	</tr>
+	<tr>
 		<td>chevrotain</td>
 		<td>chevrotain-6.5.0.tgz</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>classnames</td>
-		<td>classnames-2.2.5.tgz</td>
-		<td>MIT</td>
+		<td>cidr-regex</td>
+		<td>cidr-regex-2.0.10.tgz</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
 		<td>class-transformer</td>
-		<td>class-transformer-0.2.0.tgz</td>
+		<td>class-transformer-0.3.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>class-utils</td>
+		<td>class-utils-0.3.6.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -135,13 +260,83 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>click</td>
-		<td>click-6.7-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>classnames</td>
+		<td>classnames-2.2.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>classnames</td>
+		<td>classnames-2.2.6.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>clean-css</td>
+		<td>clean-css-4.2.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>clipboard.js</td>
+		<td>clipboard-2.0.0.min.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cni-plugin</td>
+		<td>cni-plugin-v3.16.6</td>
+		<td>Tigera Proprietory</td>
+	</tr>
+	<tr>
+		<td>@babel/code-frame</td>
+		<td>code-frame-7.10.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>codemirror</td>
+		<td>codemirror-5.57.0.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>codemirror</td>
+		<td>codemirror-5.57.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>collection-visit</td>
+		<td>collection-visit-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>color-convert</td>
+		<td>color-convert-1.9.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>color-name</td>
+		<td>color-name-1.1.3.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>commander</td>
 		<td>commander-2.13.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>commander</td>
+		<td>commander-2.20.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>commander</td>
+		<td>commander-4.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>component-emitter</td>
+		<td>component-emitter-1.3.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>concat-map</td>
+		<td>concat-map-0.0.1.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -160,13 +355,38 @@ In the table below, you can look at the details of each project and license asso
 		<td>Python 2.0</td>
 	</tr>
 	<tr>
-		<td>contrib.go.opencensus.io/exporter/ocagent</td>
-		<td>ocagent-v0.4.12</td>
-		<td>Apache 2.0</td>
+		<td>copy-descriptor</td>
+		<td>copy-descriptor-0.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@popperjs/core</td>
+		<td>core-2.4.4.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>core-js</td>
 		<td>core-js-1.2.7.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>core-js</td>
+		<td>core-js-2.5.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>core-js</td>
+		<td>core-js-2.5.7.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>core-js</td>
+		<td>core-js-3.6.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cose-base</td>
+		<td>cose-base-1.0.3.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -175,188 +395,308 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>cryptography</td>
-		<td>cryptography-2.1.4-cp27-cp27mu-manylinux1_x86_64.whl</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
 		<td>css-box-model</td>
 		<td>css-box-model-1.1.1.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>css-select</td>
+		<td>css-select-1.2.0.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>css-what</td>
+		<td>css-what-2.1.3.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>@ungap/custom-elements</td>
+		<td>custom-elements-0.1.12.tgz</td>
+		<td>ISC</td>
+	</tr>
+	<tr>
+		<td>cytoscape</td>
+		<td>cytoscape-3.15.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape</td>
+		<td>cytoscape-3.18.0.min.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-avsdf</td>
+		<td>cytoscape-avsdf-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-cise</td>
+		<td>cytoscape-cise-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-context-menus</td>
+		<td>cytoscape-context-menus-4.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-cose-bilkent</td>
+		<td>cytoscape-cose-bilkent-4.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-dagre-cluster-fix</td>
+		<td>cytoscape-dagre-cluster-fix-2.2.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-expand-collapse</td>
+		<td>cytoscape-expand-collapse-4.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-fcose</td>
+		<td>cytoscape-fcose-1.2.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-layers</td>
+		<td>cytoscape-layers-2.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-navigator</td>
+		<td>cytoscape-navigator-2.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-popper</td>
+		<td>cytoscape-popper-1.0.7.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>cytoscape-popper</td>
+		<td>cytoscape-popper-1.0.7.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>d3</td>
 		<td>d3-5.5.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-array</td>
 		<td>d3-array-1.2.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-array</td>
+		<td>d3-array-1.2.4.tgz</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-axis</td>
 		<td>d3-axis-1.0.8.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-brush</td>
 		<td>d3-brush-1.0.4.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-chord</td>
 		<td>d3-chord-1.0.4.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-collection</td>
 		<td>d3-collection-1.0.4.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-collection</td>
+		<td>d3-collection-1.0.7.tgz</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-color</td>
 		<td>d3-color-1.0.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-contour</td>
 		<td>d3-contour-1.2.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-dispatch</td>
 		<td>d3-dispatch-1.0.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-drag</td>
 		<td>d3-drag-1.2.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-dsv</td>
 		<td>d3-dsv-1.0.8.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-ease</td>
 		<td>d3-ease-1.0.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-fetch</td>
 		<td>d3-fetch-1.1.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-force</td>
 		<td>d3-force-1.1.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-format</td>
 		<td>d3-format-1.2.2.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-geo</td>
 		<td>d3-geo-1.10.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-hierarchy</td>
 		<td>d3-hierarchy-1.1.6.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-interpolate</td>
 		<td>d3-interpolate-1.1.6.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-interpolate</td>
+		<td>d3-interpolate-1.3.2.tgz</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-path</td>
 		<td>d3-path-1.0.5.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-polygon</td>
 		<td>d3-polygon-1.0.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-quadtree</td>
 		<td>d3-quadtree-1.0.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-random</td>
 		<td>d3-random-1.1.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-sankey-circular</td>
+		<td>d3-sankey-circular-0.34.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>d3-scale</td>
 		<td>d3-scale-2.0.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-scale</td>
+		<td>d3-scale-2.1.2.tgz</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-scale-chromatic</td>
 		<td>d3-scale-chromatic-1.3.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-selection</td>
 		<td>d3-selection-1.3.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-shape</td>
 		<td>d3-shape-1.2.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-shape</td>
+		<td>d3-shape-1.2.3.tgz</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>d3-shape</td>
+		<td>d3-shape-1.3.7.tgz</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-time</td>
 		<td>d3-time-1.0.8.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-time-format</td>
 		<td>d3-time-format-2.1.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-timer</td>
 		<td>d3-timer-1.0.7.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-transition</td>
 		<td>d3-transition-1.1.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-voronoi</td>
 		<td>d3-voronoi-1.1.2.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>d3-zoom</td>
 		<td>d3-zoom-1.7.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>dashboard</td>
-		<td>dashboard-v1.10.1</td>
-		<td>Apache 2.0</td>
+		<td>dagre</td>
+		<td>dagre-0.7.4.js</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>data-plane-api</td>
-		<td>data-plane-api</td>
-		<td>Apache 2.0</td>
+		<td>dagre-cluster-fix</td>
+		<td>dagre-cluster-fix-0.9.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>debug</td>
+		<td>debug-2.6.9.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>decimal.js-light</td>
 		<td>decimal.js-light-2.5.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>decode-uri-component</td>
+		<td>decode-uri-component-0.2.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -370,18 +710,93 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>diff2html</td>
-		<td>diff2html-2.4.0.tgz</td>
+		<td>define-properties</td>
+		<td>define-properties-1.1.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>define-properties</td>
+		<td>define-properties-1.1.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>define-property</td>
+		<td>define-property-0.2.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>define-property</td>
+		<td>define-property-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>define-property</td>
+		<td>define-property-2.0.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>diff</td>
 		<td>diff-3.5.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>diff2html</td>
+		<td>diff2html-2.4.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>dom-converter</td>
+		<td>dom-converter-0.2.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>dom-helpers</td>
 		<td>dom-helpers-3.3.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>dom-helpers</td>
+		<td>dom-helpers-3.4.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>dom-serializer</td>
+		<td>dom-serializer-0.2.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>dom-walk</td>
+		<td>dom-walk-0.1.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>domelementtype</td>
+		<td>domelementtype-1.3.1.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>domelementtype</td>
+		<td>domelementtype-2.0.1.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>domhandler</td>
+		<td>domhandler-2.4.2.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>domutils</td>
+		<td>domutils-1.5.1.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>domutils</td>
+		<td>domutils-1.7.0.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>dot-case</td>
+		<td>dot-case-3.0.3.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -390,9 +805,14 @@ In the table below, you can look at the details of each project and license asso
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>elasticsearch-curator</td>
-		<td>elasticsearch-curator-5.7.6.tar.gz</td>
-		<td>Apache 2.0</td>
+		<td>elementary-circuits-directed-graph</td>
+		<td>elementary-circuits-directed-graph-1.2.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>emojis-list</td>
+		<td>emojis-list-3.0.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>encoding</td>
@@ -400,14 +820,64 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>enum34</td>
-		<td>enum34-1.1.10-py2-none-any.whl</td>
-		<td>BSD</td>
+		<td>entities</td>
+		<td>entities-1.1.2.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>entities</td>
+		<td>entities-2.0.3.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>es-abstract</td>
+		<td>es-abstract-1.17.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>es-to-primitive</td>
+		<td>es-to-primitive-1.2.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>es5-shim</td>
+		<td>es5-shim-4.3.1.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>escape-string-regexp</td>
+		<td>escape-string-regexp-1.0.5.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>esprima</td>
 		<td>esprima-4.0.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>expand-brackets</td>
+		<td>expand-brackets-2.1.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>extend-shallow</td>
+		<td>extend-shallow-2.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>extend-shallow</td>
+		<td>extend-shallow-3.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>extglob</td>
+		<td>extglob-2.0.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>fast-levenshtein</td>
+		<td>fast-levenshtein-2.0.6.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>fbjs</td>
@@ -416,8 +886,8 @@ In the table below, you can look at the details of each project and license asso
 	</tr>
 	<tr>
 		<td>felix</td>
-		<td>felix-v3.13.1</td>
-		<td>GPL 2.0</td>
+		<td>felix-v3.17.2</td>
+		<td>Tigera Proprietory</td>
 	</tr>
 	<tr>
 		<td>file-saver</td>
@@ -425,19 +895,34 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>fontawesome-common-types</td>
-		<td>fontawesome-common-types-0.2.10.tgz</td>
+		<td>fill-range</td>
+		<td>fill-range-4.0.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>fontawesome-svg-core</td>
+		<td>@fortawesome/fontawesome-common-types</td>
+		<td>fontawesome-common-types-0.2.32.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@fortawesome/fontawesome-svg-core</td>
 		<td>fontawesome-svg-core-1.2.10.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>forge</td>
-		<td>forge-0.6.49</td>
-		<td>GPL 2.0</td>
+		<td>for-in</td>
+		<td>for-in-1.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>foreach</td>
+		<td>foreach-2.0.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>fork-ts-checker-webpack-plugin</td>
+		<td>fork-ts-checker-webpack-plugin-4.1.6.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>formik</td>
@@ -445,988 +930,639 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>fortawesome/free-brands-svg-icons</td>
-		<td>fortawesome/free-brands-svg-icons</td>
+		<td>fragment-cache</td>
+		<td>fragment-cache-0.2.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@fortawesome/free-brands-svg-icons</td>
+		<td>free-brands-svg-icons-5.6.1.tgz</td>
 		<td>CC BY 4.0</td>
 	</tr>
 	<tr>
-		<td>fortawesome/free-regular-svg-icons</td>
-		<td>fortawesome/free-regular-svg-icons</td>
+		<td>@fortawesome/free-regular-svg-icons</td>
+		<td>free-regular-svg-icons-5.15.1.tgz</td>
 		<td>CC BY 4.0</td>
 	</tr>
 	<tr>
-		<td>fortawesome/free-solid-svg-icons</td>
-		<td>fortawesome/free-solid-svg-icons</td>
+		<td>@fortawesome/free-solid-svg-icons</td>
+		<td>free-solid-svg-icons-5.6.1.tgz</td>
 		<td>CC BY 4.0</td>
 	</tr>
 	<tr>
 		<td>funcsigs</td>
 		<td>funcsigs-1.0.2-py2.py3-none-any.whl</td>
-		<td>
-			<div>
-				<div>Amazon Software</div>
-			</div>
-		</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>futures</td>
-		<td>futures-3.3.0-py2-none-any.whl</td>
-		<td>Python 2.0</td>
+		<td>function-bind</td>
+		<td>function-bind-1.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>get-value</td>
+		<td>get-value-2.0.6.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/alecthomas/participle</td>
-		<td>participle-v0.3.0</td>
+		<td>github.com/alecthomas/participle-v0.3.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/apparentlymart/go-cidr</td>
-		<td>go-cidr-v1.0.1</td>
+		<td>github.com/apparentlymart/go-cidr/cidr</td>
+		<td>github.com/apparentlymart/go-cidr/cidr-v1.0.1</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/aquasecurity/kube-bench</td>
-		<td>kube-bench-v0.0.34</td>
+		<td>github.com/aquasecurity/kube-bench/check</td>
+		<td>github.com/aquasecurity/kube-bench/check-v0.0.34</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/araddon/dateparse</td>
-		<td>dateparse</td>
+		<td>github.com/araddon/dateparse-262228af701ebf3932b8b8488da6781b9d585c88</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/aws/aws-sdk-go</td>
-		<td>aws-sdk-go-v1.16.26</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/Azure/go-autorest</td>
-		<td>tracing-v11.7.0+incompatible</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/beorn7/perks</td>
-		<td>quantile-v1.0.0</td>
+		<td>github.com/avast/retry-go</td>
+		<td>github.com/avast/retry-go-v2.2.0</td>
 		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>github.com/aws/aws-lambda-go/events</td>
+		<td>github.com/aws/aws-lambda-go/events-v1.13.3</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>github.com/aws/aws-sdk-go/aws</td>
+		<td>github.com/aws/aws-sdk-go/aws-v1.25.8</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/bmizerany/pat</td>
-		<td>pat</td>
+		<td>github.com/bmizerany/pat-6226ea591a40176dd3ff9cd8eff81ed6ca721a00</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>github.com/bronze1man/gostrongswanvici</td>
+		<td>github.com/bronze1man/gostrongswanvici-27d02f80ba4008de552efb746b3f6eaa7718b518</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/buger/jsonparser</td>
-		<td>jsonparser</td>
+		<td>github.com/buger/jsonparser-v1.0.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/burntsushi/toml</td>
-		<td>toml-v0.3.1</td>
+		<td>github.com/burntsushi/toml-v0.3.1</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/caimeo/iniflags</td>
-		<td>iniflags</td>
-		<td>BSD</td>
+		<td>github.com/caimeo/iniflags-ef4ae6c5cd79d20db0b18bc5ebd8657fac7260e5</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
-		<td>github.com/census-instrumentation/opencensus-proto/</td>
-		<td>v1-v0.2.0</td>
+		<td>github.com/cloudflare/cfssl/log</td>
+		<td>github.com/cloudflare/cfssl/log-v1.4.1</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>github.com/containernetworking/cni/libcni</td>
+		<td>github.com/containernetworking/cni/libcni-v0.8.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/cloudflare/cfssl</td>
-		<td>cfssl-1.3.3</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/containernetworking</td>
-		<td>cni-v0.7.0-rc1</td>
+		<td>github.com/containernetworking/plugins/pkg/hns</td>
+		<td>github.com/containernetworking/plugins/pkg/hns-v0.8.5</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/coreos/rkt</td>
-		<td>rkt-v1.30.0</td>
+		<td>github.com/coreos/go-oidc</td>
+		<td>github.com/coreos/go-oidc-v2.1.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/davecgh/go-spew</td>
-		<td>go-spew-v1.1.1</td>
+		<td>github.com/coreos/go-semver/semver</td>
+		<td>github.com/coreos/go-semver/semver-v0.3.0</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>github.com/davecgh/go-spew/spew</td>
+		<td>github.com/davecgh/go-spew/spew-v1.1.1</td>
 		<td>ISC</td>
 	</tr>
 	<tr>
-		<td>github.com/dgrijalva/jwt-go</td>
-		<td>jwt-go-v3.2.0+incompatible</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/docker/docker</td>
-		<td>docker-v1.13.1</td>
+		<td>github.com/docker/docker/api/types</td>
+		<td>github.com/docker/docker/api/types-v1.13.1</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/docker/go-connections</td>
-		<td>go-connections-v0.4.0</td>
+		<td>github.com/docker/docker/client</td>
+		<td>github.com/docker/docker/client-v1.13.1</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>github.com/docker/go-connections/nat</td>
+		<td>github.com/docker/go-connections/nat-v0.4.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/docopt/docopt-go</td>
-		<td>docopt-go-0.6.2</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/eapache/channels</td>
-		<td>channels-v1.1.0</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/eapache/queue</td>
-		<td>queue</td>
+		<td>github.com/docopt/docopt-go-ee0de3bc6815ee19d4a46c7eb90f829db0e014b1</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/elastic/go-elasticsearch/v7</td>
-		<td>v7-v7.3.0</td>
+		<td>github.com/elastic/go-elasticsearch/v7-v7.3.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/elastic/go-ucfg</td>
-		<td>diff-v0.7.0</td>
+		<td>github.com/envoyproxy/data-plane-api/envoy/api/v2/core</td>
+		<td>github.com/envoyproxy/data-plane-api/envoy/api/v2/core-ffd420ef8a9ad148642236aa6d89e2855b41c821</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/emicklei/go-restful</td>
-		<td>log-2.0.0</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/envoyproxy/data-plane-api</td>
-		<td>data-plane-api</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/evanphx/json-patch</td>
-		<td>json-patch-v4.5.0+incompatible</td>
-		<td>BSD</td>
+		<td>github.com/fsnotify/fsnotify</td>
+		<td>github.com/fsnotify/fsnotify-v1.4.9</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>github.com/gavv/monotime</td>
-		<td>monotime</td>
+		<td>github.com/gavv/monotime-30dba43534243e3484a34676a0f068d12b989f84</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/getlantern/deepcopy</td>
-		<td>deepcopy-v1</td>
+		<td>github.com/getlantern/deepcopy-v1</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/ghodss/yaml</td>
-		<td>yaml-v1.0.0</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/godbus/dbus</td>
-		<td>dbus-v4.1.0+incompatible</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/gogo/googleapis</td>
-		<td>googleapis-v1.0.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/gogo/protobuf</td>
-		<td>protobuf-v1.3.1</td>
-		<td>BSD</td>
+		<td>github.com/ghodss/yaml-v1.0.0</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>github.com/go-ini/ini</td>
-		<td>ini-v1.43.0</td>
+		<td>github.com/go-ini/ini-v1.43.0</td>
 		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/golang/glog</td>
-		<td>glog</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/golang/groupcache</td>
-		<td>lru</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/golang/mock</td>
-		<td>mock-v1.3.1</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/golang/protobuf</td>
-		<td>protobuf-v1.3.2</td>
-		<td>BSD</td>
 	</tr>
 	<tr>
 		<td>github.com/go-logr/logr</td>
-		<td>logr-v0.1.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/go-logr/zapr</td>
-		<td>zapr-v0.1.1</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/google/certificate-transparency-go</td>
-		<td>certificate-transparency-go-v1.0.21</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/google/go-cmp</td>
-		<td>go-cmp-v0.3.1</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/google/gofuzz</td>
-		<td>gofuzz-v1.0.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/google/gopacket/layers</td>
-		<td>layers-v1.1.17</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/google/gopacket</td>
-		<td>gopacket-v1.1.17</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/google/uuid</td>
-		<td>uuid-v1.1.1</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/googleapis/gnostic/compiler</td>
-		<td>compiler-v0.2.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/googleapis/gnostic/extensions</td>
-		<td>extensions-v0.2.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/googleapis/gnostic/OpenAPIv2</td>
-		<td>OpenAPIv2-v0.2.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/googleapis/gnostic</td>
-		<td>gnostic-v0.2.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/go-ole/go-ole</td>
-		<td>go-ole-v1.2.4</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/go-openapi/jsonpointer</td>
-		<td>jsonpointer-0.15.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/go-openapi/jsonreference</td>
-		<td>jsonreference-0.15.0</td>
+		<td>github.com/go-logr/logr-v0.3.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/go-openapi/spec</td>
-		<td>spec-0.15.0</td>
+		<td>github.com/go-openapi/spec-v0.19.3</td>
 		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/go-openapi/swag</td>
-		<td>swag-0.15.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/gophercloud/gophercloud</td>
-		<td>gophercloud-v0.1.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/gopherjs/gopherjs</td>
-		<td>gopherjs</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/go-playground</td>
-		<td>locales-v0.12.1</td>
-		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/go-sql-driver/mysql</td>
-		<td>mysql-v1.4.1</td>
+		<td>github.com/go-sql-driver/mysql-v1.4.1</td>
 		<td>Mozilla 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/grpc-ecosystem/grpc-gateway</td>
-		<td>internal-v1.9.0</td>
-		<td>BSD</td>
+		<td>github.com/gofrs/flock</td>
+		<td>github.com/gofrs/flock-v0.8.0</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>github.com/hashicorp/errwrap</td>
-		<td>errwrap-v1.0.0</td>
-		<td>Mozilla 2.0</td>
+		<td>github.com/gogo/googleapis/google/rpc</td>
+		<td>github.com/gogo/googleapis/google/rpc-v1.2.0</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/hashicorp/golang-lru/simplelru</td>
-		<td>simplelru-v0.5.1</td>
+		<td>github.com/gogo/protobuf/proto</td>
+		<td>github.com/gogo/protobuf/proto-v1.3.1</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>github.com/golang-collections/collections/stack</td>
+		<td>github.com/golang-collections/collections/stack-604e922904d35e97f98a774db7881f049cd8d970</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>github.com/google/go-cmp/cmp</td>
+		<td>github.com/google/go-cmp/cmp-v0.4.0</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>github.com/google/gofuzz</td>
+		<td>github.com/google/gofuzz-v1.1.0</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>github.com/google/gopacket</td>
+		<td>github.com/google/gopacket-v1.1.18</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>github.com/google/netstack/tcpip/header</td>
+		<td>github.com/google/netstack/tcpip/header-55fcc16cd0eb096d8418f7bc5162483c31a4e82b</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>github.com/hashicorp/go-version</td>
+		<td>github.com/hashicorp/go-version-v1.2.1</td>
 		<td>Mozilla 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/hashicorp/golang-lru</td>
-		<td>golang-lru-v0.5.1</td>
-		<td>Mozilla 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/hashicorp/go-multierror</td>
-		<td>go-multierror-v1.0.0</td>
-		<td>Mozilla 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/hashicorp/go-version</td>
-		<td>go-version-v1.2.0</td>
+		<td>github.com/hashicorp/golang-lru-v0.5.1</td>
 		<td>Mozilla 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/hashicorp/yamux</td>
-		<td>yamux</td>
+		<td>github.com/hashicorp/yamux-2f1d1f20f75d5404f53b9edf6b53ed5505508675</td>
 		<td>Mozilla 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/heketi/rest</td>
-		<td>rest</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/heketi/utils</td>
-		<td>utils</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/howeyc/gopass</td>
-		<td>gopass</td>
-		<td>ISC</td>
+		<td>github.com/howeyc/fsnotify</td>
+		<td>github.com/howeyc/fsnotify-v0.9.0</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>github.com/hpcloud/tail</td>
-		<td>tail-v1.0.0</td>
+		<td>github.com/hpcloud/tail-v1.0.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/huandu/xstrings</td>
-		<td>xstrings-v1.2.0</td>
-		<td>MIT</td>
+		<td>github.com/ishidawataru/sctp</td>
+		<td>github.com/ishidawataru/sctp-00ab2ac2db07a138417639ef3f39672c65dbb9a0</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>github.com/imdario/mergo</td>
-		<td>mergo-0.1.4</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/influxdata/influxdb</td>
-		<td>influxdb-v1.6.5</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/influxdata/platform</td>
-		<td>platform</td>
+		<td>github.com/jarcoal/httpmock</td>
+		<td>github.com/jarcoal/httpmock-v1.0.5</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/jinzhu/copier</td>
-		<td>copier</td>
+		<td>github.com/jinzhu/copier-v0.1.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/jmespath/go-jmespath</td>
-		<td>go-jmespath-0.3.0</td>
+		<td>github.com/jmespath/go-jmespath-0.3.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/joho/godotenv</td>
-		<td>godotenv-v1.3.0</td>
+		<td>github.com/joho/godotenv-v1.3.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/jonboulle/clockwork</td>
-		<td>clockwork-v0.1.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
 		<td>github.com/jpillora/backoff</td>
-		<td>backoff-1.0.0</td>
+		<td>github.com/jpillora/backoff-v1.0.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/json-iterator/go</td>
-		<td>go-v1.1.7</td>
+		<td>github.com/json-iterator/go-v1.1.10</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/juju/clock</td>
-		<td>clock</td>
-		<td>GPL 2.0</td>
+		<td>github.com/juju/clock-9c5c9712527c7986f012361e7d13756b4d99543d</td>
+		<td>LGPL 3.0</td>
+	</tr>
+	<tr>
+		<td>github.com/juju/errors</td>
+		<td>github.com/juju/errors-3fe23663418fc1d724868c84f21b7519bbac7441</td>
+		<td>LGPL 3.0</td>
 	</tr>
 	<tr>
 		<td>github.com/juju/mutex</td>
-		<td>mutex</td>
-		<td>GPL 2.0</td>
+		<td>github.com/juju/mutex-d21b13acf4bfd8a8b0482a3a78e44d98880b40d3</td>
+		<td>LGPL 3.0</td>
 	</tr>
 	<tr>
-		<td>github.com/juju/ratelimit</td>
-		<td>ratelimit-1.0</td>
-		<td>GPL 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/juju/retry</td>
-		<td>retry</td>
-		<td>GPL 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/juju/testing</td>
-		<td>testing</td>
-		<td>GPL 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/juju/version</td>
-		<td>version</td>
-		<td>GPL 2.0</td>
+		<td>github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils</td>
+		<td>github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils-v1.1.0</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/kardianos/osext</td>
-		<td>osext</td>
-		<td>BSD</td>
+		<td>github.com/kardianos/osext-2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>github.com/kelseyhightower/envconfig</td>
-		<td>envconfig-v1.2.0</td>
+		<td>github.com/kelseyhightower/envconfig-v1.4.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/kelseyhightower/memkv</td>
-		<td>memkv-v0.1.1</td>
+		<td>github.com/kelseyhightower/memkv-v0.1.1</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/konsorten/go-windows-terminal-sequences</td>
-		<td>go-windows-terminal-sequences-v1.0.1</td>
+		<td>github.com/konsorten/go-windows-terminal-sequences-v1.0.1</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/leodido/go-urn</td>
-		<td>go-urn-v1.1.0</td>
+		<td>github.com/lestrrat-go/file-rotatelogs</td>
+		<td>github.com/lestrrat-go/file-rotatelogs-v2.4.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/libp2p/go-reuseport</td>
-		<td>go-reuseport-v0.0.1</td>
+		<td>github.com/libp2p/go-reuseport-v0.0.1</td>
 		<td>ISC</td>
 	</tr>
 	<tr>
 		<td>github.com/lithammer/dedent</td>
-		<td>dedent-v1.1.0</td>
+		<td>github.com/lithammer/dedent-v1.1.0</td>
 		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/lyft/protoc-gen-star</td>
-		<td>protoc-gen-star-v0.4.14</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/lyft/protoc-gen-validate</td>
-		<td>protoc-gen-validate-v0.0.6</td>
-		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/mailru/easyjson</td>
-		<td>easyjson-v0.7.0</td>
+		<td>github.com/mailru/easyjson-v0.7.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/masterminds/goutils</td>
-		<td>goutils-v1.1.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/masterminds/semver</td>
-		<td>semver-v1.2.2</td>
+		<td>github.com/masterminds/sprig</td>
+		<td>github.com/masterminds/sprig-v2.19.0</td>
 		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/mattn/go-colorable</td>
-		<td>go-colorable-v0.1.4</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/mattn/go-isatty</td>
-		<td>go-isatty-v0.0.10</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/matttproud/golang_protobuf_extensions/pbutil</td>
-		<td>pbutil-v1.0.1</td>
-		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/mcuadros/go-version</td>
-		<td>go-version</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/mgutz/ansi</td>
-		<td>ansi</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/microsoft/go-winio</td>
-		<td>go-winio-v0.4.11</td>
+		<td>github.com/mcuadros/go-version-92cdf37c5b7579ebaf7a036da94b40995972088d</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/microsoft/hcsshim</td>
-		<td>hcsshim-v0.8.6</td>
+		<td>github.com/microsoft/hcsshim-v0.8.6</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/mitchellh/copystructure</td>
-		<td>copystructure-v1.0.0</td>
+		<td>github.com/mipearson/rfw</td>
+		<td>github.com/mipearson/rfw-6f0a6f3266ba1058df9ef0c94cda1cecd2e62852</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/mitchellh/go-homedir</td>
-		<td>go-homedir-v1.1.0</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/mitchellh/reflectwalk</td>
-		<td>reflectwalk-v1.0.1</td>
+		<td>github.com/mitchellh/go-homedir-v1.1.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/modern-go/concurrent</td>
-		<td>concurrent-1.0.3</td>
+		<td>github.com/modern-go/concurrent-1.0.3</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/modern-go/reflect2</td>
-		<td>reflect2-v1.0.1</td>
+		<td>github.com/modern-go/reflect2-v1.0.1</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/natefinch/atomic</td>
-		<td>atomic</td>
+		<td>github.com/natefinch/atomic-a62ce929ffcc871a51e98c6eba7b20321e3ed62d</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>github.com/nmrshll/go-cp</td>
+		<td>github.com/nmrshll/go-cp-61436d3b7cfa1bc1e8e455c35d8f60b8e51ccc2e</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>github.com/nxadm/tail</td>
+		<td>github.com/nxadm/tail-v1.4.4</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/olekukonko/tablewriter</td>
-		<td>tablewriter-v0.0.2</td>
+		<td>github.com/olekukonko/tablewriter-v0.0.2</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/olivere/elastic/</td>
-		<td>v7-v7.0.6</td>
+		<td>github.com/olivere/elastic/v7</td>
+		<td>github.com/olivere/elastic/v7-v7.0.6</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/onsi/ginkgo</td>
-		<td>ginkgo-v1.10.1</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/onsi/gomega/format</td>
-		<td>format-v1.10.0</td>
+		<td>github.com/onsi/ginkgo-v1.15.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/onsi/gomega</td>
-		<td>gomega-v1.10.0</td>
+		<td>github.com/onsi/gomega-v1.7.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/openshift/library-go/</td>
-		<td>crypto</td>
+		<td>github.com/openshift/api/config/v1</td>
+		<td>github.com/openshift/api/config/v1-d0822898eabb929c40c5146116252477abab8d18</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/osrg/gobgp</td>
-		<td>gobgp-v1.22</td>
+		<td>github.com/openshift/library-go/pkg/crypto</td>
+		<td>github.com/openshift/library-go/pkg/crypto-9350cd67a9110bcaf9a85d391fa264afbbff1342</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>github.com/osrg/gobgp/client</td>
+		<td>github.com/osrg/gobgp/client-v1.22</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/paloaltonetworks/pango</td>
-		<td>pango-v0.1.1</td>
+		<td>github.com/paloaltonetworks/pango-v0.1.1</td>
 		<td>ISC</td>
 	</tr>
 	<tr>
 		<td>github.com/patrickmn/go-cache</td>
-		<td>go-cache</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/pborman/uuid</td>
-		<td>uuid-v1.2.0</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/philhofer/fwd</td>
-		<td>fwd-v1.0.0</td>
+		<td>github.com/patrickmn/go-cache-v2.1.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/pkg/errors</td>
-		<td>errors-v0.8.1</td>
-		<td>BSD</td>
+		<td>github.com/pkg/errors-v0.8.1</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
-		<td>github.com/pmezard/go-difflib/difflib</td>
-		<td>difflib-v1.0.0</td>
-		<td>BSD</td>
+		<td>github.com/projectcalico/cni-plugin</td>
+		<td>github.com/projectcalico/cni-plugin</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/pquerna/ffjson</td>
-		<td>ffjson</td>
+		<td>github.com/projectcalico/felix</td>
+		<td>github.com/projectcalico/felix</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/projectcalico/go-json</td>
-		<td>go-json</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/projectcalico/go-yaml</td>
-		<td>go-yaml</td>
-		<td>Apache 2.0</td>
+		<td>github.com/projectcalico/go-json/json-6219dc7339ba20ee4c57df0a8baac62317d19cb1</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
 		<td>github.com/projectcalico/go-yaml-wrapper</td>
-		<td>go-yaml-wrapper</td>
-		<td>MIT</td>
+		<td>github.com/projectcalico/go-yaml-wrapper-090425220c545f6d179db17af395f5aac30b6926</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>github.com/projectcalico/kube-controllers</td>
-		<td>kube-controllers-v3.13.0-0.dev</td>
-		<td>Apache 2.0</td>
+		<td>kube-controllers</td>
+		<td>kube-controllers</td>
+		<td>Tigera Proprietory</td>
 	</tr>
 	<tr>
 		<td>github.com/projectcalico/libcalico-go</td>
-		<td>libcalico-go-v1.7.2</td>
+		<td>github.com/projectcalico/libcalico-go/lib</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/projectcalico/pod2daemon</td>
-		<td>pod2daemon-v3.12.1</td>
+		<td>github.com/projectcalico/pod2daemon</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/prometheus/client_golang</td>
-		<td>client_golang-v1.0.0</td>
+		<td>typha</td>
+		<td>typha</td>
+		<td>Tigera Proprietory</td>
+	</tr>
+	<tr>
+		<td>github.com/prometheus/client_golang/</td>
+		<td>github.com/prometheus/client_golang/prometheus-v1.7.1</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/prometheus/client_model</td>
-		<td>client_model-v0.1.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/prometheus/common</td>
-		<td>common-v0.7.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/prometheus/procfs</td>
-		<td>procfs-v0.0.1</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/puerkitobio/purell</td>
-		<td>purell-v1.0.0</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/puerkitobio/urlesc</td>
-		<td>urlesc</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>github.com/rakelkar/gonetsh</td>
-		<td>gonetsh</td>
+		<td>github.com/rakelkar/gonetsh/netsh</td>
+		<td>github.com/rakelkar/gonetsh/netsh-e5c5ffe4bdf04bc060fc45ff4aca2349f51c94a7</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/robfig/cron</td>
-		<td>cron-v1.2.0</td>
+		<td>github.com/robfig/cron-v1.2.0</td>
 		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/safchain/ethtool</td>
-		<td>ethtool</td>
-		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/satori/go.uuid</td>
-		<td>go.uuid-v1.2.0</td>
+		<td>github.com/satori/go.uuid-v1.2.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/shirou/gopsutil</td>
-		<td>gopsutil-v2.19.03</td>
-		<td>BSD</td>
+		<td>github.com/shirou/gopsutil/process</td>
+		<td>github.com/shirou/gopsutil/process-v2.19.03</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>github.com/simplereach/timeutils</td>
-		<td>timeutils-v1.2.0</td>
+		<td>github.com/sirupsen/logrus</td>
+		<td>github.com/sirupsen/logrus-v1.4.2</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/sirupsen/logrus</td>
-		<td>logrus-v0.11.5</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/smartystreets/assertions</td>
-		<td>assertions-v1.0.1</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/smartystreets/goconvey</td>
-		<td>goconvey-v1.6.4</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/spf13/cast</td>
-		<td>cast-v1.3.0</td>
+		<td>github.com/sirupsen/logrus-v1.6.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/spf13/cobra</td>
-		<td>cobra-v0.0.3</td>
+		<td>github.com/spf13/cobra-v0.0.3</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/spf13/jwalterweatherman</td>
-		<td>jwalterweatherman-v1.1.0</td>
-		<td>MIT</td>
+		<td>github.com/spf13/cobra</td>
+		<td>github.com/spf13/cobra-v1.0.0</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/spf13/pflag</td>
-		<td>pflag-v1.0.0</td>
-		<td>BSD</td>
+		<td>github.com/spf13/pflag-v1.0.5</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>github.com/spf13/viper</td>
-		<td>viper-v1.4.0</td>
+		<td>github.com/spf13/viper-v1.6.1</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>github.com/stackexchange/wmi</td>
-		<td>wmi-1.1.0</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/stretchr/objx</td>
-		<td>objx-v0.1.1</td>
+		<td>github.com/stretchr/testify</td>
+		<td>github.com/stretchr/testify/mock-v1.4.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/termie/go-shutil</td>
-		<td>go-shutil</td>
+		<td>github.com/termie/go-shutil-bcacb06fecaeec8dc42af03c87c6949f4a05c74c</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/tigera/api</td>
-		<td>api</td>
+		<td>github.com/tigera/api/</td>
 		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>github.com/tinylib/msgp</td>
-		<td>msgp-v1.1.0</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>github.com/ugorji/go</td>
-		<td>go-v.1.1-beta</td>
-		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/vishvananda/netlink</td>
-		<td>netlink-v1.0.0</td>
+		<td>github.com/vishvananda/netlink-v1.1.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>github.com/vishvananda/netns</td>
-		<td>netns</td>
-		<td>Apache 2.0</td>
+		<td>github.com/willf/bitset</td>
+		<td>github.com/willf/bitset-v1.1.11</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>github.com/workiva/go-datastructures</td>
-		<td>go-datastructures-v1.0.50</td>
+		<td>github.com/workiva/go-datastructures/trie/ctrie</td>
+		<td>github.com/workiva/go-datastructures/trie/ctrie-v1.0.50</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>github.com/x-cray/logrus-prefixed-formatter</td>
-		<td>logrus-prefixed-formatter-v0.5.2</td>
+		<td>github.com/x-cray/logrus-prefixed-formatter-v0.5.2</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>github.com/yalp/jsonpath</td>
-		<td>jsonpath</td>
-		<td>BSD</td>
+		<td>github.com/yalp/jsonpath-5cc68e5049a040829faef3a44c00ec4332f6dec7</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>go.etcd.io/etcd</td>
-		<td>etcd-v3.4.3</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/internal</td>
-		<td>internal-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/metric</td>
-		<td>metricdata-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/plugin/ocgrpc</td>
-		<td>ocgrpc-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/plugin/ochttp</td>
-		<td>ochttp-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/resource</td>
-		<td>resource-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/stats</td>
-		<td>stats-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/tag</td>
-		<td>tag-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.opencensus.io/trace</td>
-		<td>trace-v0.20.2</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>go.uber.org/atomic</td>
-		<td>atomic-v1.5.0</td>
+		<td>global</td>
+		<td>global-4.4.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>go.uber.org/multierr</td>
-		<td>multierr-v1.3.0</td>
-		<td>MIT</td>
+		<td>go.etcd.io/etcd/</td>
+		<td>go.etcd.io/etcd/client-v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>go.uber.org/zap</td>
-		<td>zap-v1.12.0</td>
+		<td>go.uber.org/zap-v1.15.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>golang.org/x/crypto</td>
-		<td>golang.org/x/crypto</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>golang.org/x/lint</td>
-		<td>golang.org/x/lint</td>
-		<td>BSD</td>
+		<td>golang.org/x/crypto/</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>golang.org/x/net</td>
-		<td>golang.org/x/net</td>
-		<td>BSD</td>
+		<td>golang.org/x/net/</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>golang.org/x/oauth2</td>
-		<td>golang.org/x/oauth3</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>golang.org/x/sync/semaphore</td>
-		<td>golang.org/x/sync/semaphore</td>
-		<td>BSD</td>
+		<td>golang.org/x/sync/</td>
+		<td>golang.org/x/sync/</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>golang.org/x/sys</td>
 		<td>golang.org/x/sys</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
+		<td>github.com/golang/text</td>
 		<td>golang.org/x/text</td>
-		<td>golang.org/x/text</td>
-		<td>BSD</td>
+		<td>Golang BSD + Patents</td>
 	</tr>
 	<tr>
-		<td>golang.org/x/time</td>
-		<td>golang.org/x/time</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>golang.org/x/tools</td>
-		<td>golang.org/x/tools</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>golang.org/x/xerrors</td>
-		<td>golang.org/x/xerrors</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>gonum.org/v1/gonum</td>
-		<td>gonum.org/v1/gonum</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>google.golang.org/api/support/bundler</td>
-		<td>bundler-v0.3.2</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>google.golang.org/appengine</td>
-		<td>appengine-v1.0.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>google.golang.org/genproto</td>
-		<td>status</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>google.golang.org/grpc</td>
-		<td>grpc-v1.22.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>google_auth</td>
-		<td>google_auth-1.14.2-py2.py3-none-any.whl</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>googleapis</td>
-		<td>googleapis-v1.0.0</td>
-		<td>Apache 2.0</td>
+		<td>golang.zx2c4.com/wireguard/</td>
+		<td>golang.zx2c4.com/wireguard/</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>google-libphonenumber</td>
@@ -1434,58 +1570,118 @@ In the table below, you can look at the details of each project and license asso
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>gopkg.in/check.v1</td>
-		<td>check.v1</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>gopkg.in/fsnotify.v1</td>
-		<td>fsnotify.v1-v1.4.7</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>gopkg.in/go-playground/validator.v8</td>
-		<td>validator.v8-v8.18.1</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>gopkg.in/ini.v1</td>
-		<td>ini.v1-v1.44.0</td>
+		<td>google.golang.org/grpc</td>
+		<td>google.golang.org/grpc-v1.27.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>gopkg.in/mgo.v2</td>
-		<td>mgo.v2</td>
-		<td>BSD</td>
+		<td>google-auth</td>
+		<td>google_auth-1.26.1-py2.py3-none-any.whl</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>gopkg.in/fsnotify/fsnotify.v1</td>
+		<td>gopkg.in/fsnotify/fsnotify.v1-v1.4.7</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>gopkg.in/go-playground/validator.v9</td>
+		<td>gopkg.in/go-playground/validator.v9-v9.30.2</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>gopkg.in/inf.v0</td>
+		<td>gopkg.in/inf.v0-v0.9.0</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>gopkg.in/natefinch/lumberjack.v2</td>
-		<td>lumberjack.v2-v2.0.0</td>
+		<td>gopkg.in/natefinch/lumberjack.v2-v2.0.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>gopkg.in/square/go-jose.v2</td>
-		<td>go-jose.v2-v2.3.1</td>
+		<td>gopkg.in/square/go-jose.v2-v2.2.3</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>gopkg.in/tchap/go-patricia.v2</td>
-		<td>go-patricia.v2-v2.3.0</td>
+		<td>gopkg.in/tchap/go-patricia.v2/patricia</td>
+		<td>gopkg.in/tchap/go-patricia.v2/patricia-v2.3.0</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>gopkg.in/tomb.v1</td>
-		<td>tomb.v1</td>
-		<td>BSD</td>
+		<td>gopkg.in/tomb.v1-dd632973f1e7218eb1089048e0798ec9ae7dceb8</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>gopkg.in/yaml.v2</td>
-		<td>yaml.v2-v2.2.4</td>
+		<td>gopkg.in/yaml.v2-v2.4.0</td>
 		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>graphlib</td>
+		<td>graphlib-2.1.8.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>gud</td>
 		<td>gud-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has</td>
+		<td>has-1.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has-flag</td>
+		<td>has-flag-3.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has-symbols</td>
+		<td>has-symbols-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has-value</td>
+		<td>has-value-0.3.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has-value</td>
+		<td>has-value-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has-values</td>
+		<td>has-values-0.1.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>has-values</td>
+		<td>has-values-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>he</td>
+		<td>he-1.2.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>heap</td>
+		<td>heap-0.2.6.tgz</td>
+		<td>Python 2.0</td>
+	</tr>
+	<tr>
+		<td>@babel/helper-validator-identifier</td>
+		<td>helper-validator-identifier-7.10.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@babel/highlight</td>
+		<td>highlight-7.10.1.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1494,14 +1690,44 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>twitter</td>
 		<td>hogan.js</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
 		<td>hogan.js</td>
+		<td>hogan.js-3.0.2.tgz</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>hoist-non-react-statics</td>
 		<td>hoist-non-react-statics-3.1.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>hoist-non-react-statics</td>
+		<td>hoist-non-react-statics-3.3.0.tgz</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>@types/html-minifier-terser</td>
+		<td>html-minifier-terser-5.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>html-minifier-terser</td>
+		<td>html-minifier-terser-5.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>html-webpack-plugin</td>
+		<td>html-webpack-plugin-4.3.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>htmlparser2</td>
+		<td>htmlparser2-3.10.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>humps</td>
@@ -1520,8 +1746,13 @@ In the table below, you can look at the details of each project and license asso
 	</tr>
 	<tr>
 		<td>idna</td>
-		<td>idna-2.9-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>idna-2.10-py2.py3-none-any.whl</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>idna</td>
+		<td>idna-2.7-py2.py3-none-any.whl</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
 		<td>immutable</td>
@@ -1529,24 +1760,39 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>importlib_metadata</td>
-		<td>importlib_metadata-1.6.0-py2.py3-none-any.whl</td>
+		<td>importlib-metadata</td>
+		<td>importlib_metadata-2.1.1-py2.py3-none-any.whl</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>index</td>
-		<td>index-0.3.1.js</td>
+		<td>inherits</td>
+		<td>inherits-2.0.4.tgz</td>
+		<td>ISC</td>
+	</tr>
+	<tr>
+		<td>instantsearch.js</td>
+		<td>instantsearch.production-4.4.1.min.js</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>invariant</td>
 		<td>invariant-2.2.2.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>io.js</td>
-		<td>io.js</td>
-		<td>MIT X11</td>
+		<td>invariant</td>
+		<td>invariant-2.2.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>ip-regex</td>
+		<td>ip-regex-2.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>ip-regex</td>
+		<td>ip-regex-4.1.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>ipaddr.js</td>
@@ -1559,13 +1805,83 @@ In the table below, you can look at the details of each project and license asso
 		<td>Python 2.0</td>
 	</tr>
 	<tr>
-		<td>isarray</td>
-		<td>isarray-0.0.1.tgz</td>
+		<td>is-accessor-descriptor</td>
+		<td>is-accessor-descriptor-0.1.6.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>isomorphic-fetch</td>
-		<td>isomorphic-fetch-2.2.1.tgz</td>
+		<td>is-accessor-descriptor</td>
+		<td>is-accessor-descriptor-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-buffer</td>
+		<td>is-buffer-1.1.6.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-callable</td>
+		<td>is-callable-1.1.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-cidr</td>
+		<td>is-cidr-3.1.0.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>is-data-descriptor</td>
+		<td>is-data-descriptor-0.1.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-data-descriptor</td>
+		<td>is-data-descriptor-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-date-object</td>
+		<td>is-date-object-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-descriptor</td>
+		<td>is-descriptor-0.1.6.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-descriptor</td>
+		<td>is-descriptor-1.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-extendable</td>
+		<td>is-extendable-0.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-extendable</td>
+		<td>is-extendable-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-ip</td>
+		<td>is-ip-3.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-number</td>
+		<td>is-number-3.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-plain-object</td>
+		<td>is-plain-object-2.0.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-regex</td>
+		<td>is-regex-1.0.5.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1574,33 +1890,53 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>jmespath</td>
-		<td>jmespath-0.9.3-py2.py3-none-any.whl</td>
+		<td>is-symbol</td>
+		<td>is-symbol-1.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>is-windows</td>
+		<td>is-windows-1.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>isarray</td>
+		<td>isarray-0.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>isarray</td>
+		<td>isarray-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>isobject</td>
+		<td>isobject-2.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>isobject</td>
+		<td>isobject-3.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>isomorphic-fetch</td>
+		<td>isomorphic-fetch-2.2.1.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>jquery</td>
-		<td>jquery-1.4.2.min.js</td>
+		<td>jquery-2.2.0.min.js</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>jsan</td>
-		<td>jsan-3.1.13.tgz</td>
+		<td>jquery</td>
+		<td>jquery-3.4.0.min.js</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>js-base64</td>
-		<td>js-base64-2.4.2</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>jsonpickle</td>
-		<td>jsonpickle-1.4.1-py2.py3-none-any.whl</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>jsrsasign</td>
-		<td>jsrsasign-5.1.0.tgz</td>
+		<td>js-cookie</td>
+		<td>js-cookie-2.2.1.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1609,58 +1945,88 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>js-yaml</td>
-		<td>js-yaml-3.10.0.tgz</td>
+		<td>js-tokens</td>
+		<td>js-tokens-4.0.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>k8s.io/apiextensions-apiserver</td>
-		<td>features-kubernetes-1.14.1</td>
+		<td>js-yaml</td>
+		<td>js-yaml-3.14.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>jsan</td>
+		<td>jsan-3.1.13.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>json5</td>
+		<td>json5-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>jsonpickle</td>
+		<td>jsonpickle-2.0.0-py2.py3-none-any.whl</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>jsrsasign</td>
+		<td>jsrsasign-5.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>k8s.io/api</td>
+		<td>k8s.io/api</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>k8s.io/apiextensions-apiserver/</td>
+		<td>k8s.io/apiextensions-apiserver/</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>k8s.io/apimachinery</td>
-		<td>equality-kubernetes-1.14.1</td>
+		<td>k8s.io/apimachinery/</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>k8s.io/apiserver/</td>
-		<td>features-kubernetes-1.14.1</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>k8s.io/api</td>
-		<td>api-v0.17.2</td>
+		<td>k8s.io/apiserver</td>
+		<td>k8s.io/apiserver</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>k8s.io/client-go</td>
-		<td>client-go-v11.0.0+incompatible</td>
+		<td>k8s.io/client-go/</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>k8s.io/gengo</td>
-		<td>args</td>
+		<td>k8s.io/component-base/</td>
+		<td>k8s.io/component-base/</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>k8s.io/klog</td>
-		<td>klog-v1.0.0</td>
+		<td>k8s.io/klog-v1.0.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>k8s.io/kube-openapi/pkg/common</td>
-		<td>common</td>
+		<td>k8s.io/kube-aggregator/</td>
+		<td>k8s.io/kube-aggregator/</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>k8s.io/kubernetes/pkg/kubelet/apis/config</td>
-		<td>config-v1.14.1</td>
+		<td>k8s.io/kube-openapi/</td>
+		<td>k8s.io/kube-openapi</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>k8s.io/utils</td>
-		<td>k8s.io/utils</td>
+		<td>k8s.io/kubernetes/</td>
+		<td>k8s.io/kubernetes/</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>k8s.io/utils/strings</td>
+		<td>k8s.io/utils/strings</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
@@ -1669,19 +2035,74 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>kind-of</td>
+		<td>kind-of-3.2.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>kind-of</td>
+		<td>kind-of-4.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>kind-of</td>
+		<td>kind-of-5.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>kind-of</td>
+		<td>kind-of-6.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>kube-controllers</td>
 		<td>kube-controllers-v3.0.11</td>
-		<td>Apache 2.0</td>
+		<td>Tigera Proprietory</td>
+	</tr>
+	<tr>
+		<td>kube-controllers</td>
+		<td>kube-controllers-v3.16.6</td>
+		<td>Tigera Proprietory</td>
 	</tr>
 	<tr>
 		<td>kubernetes</td>
-		<td>kubernetes-11.0.0.tar.gz</td>
+		<td>kubernetes-12.0.1-py2.py3-none-any.whl</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>libcalico-go</td>
-		<td>libcalico-go-v3.14.0-0.dev</td>
+		<td>layout-base</td>
+		<td>layout-base-1.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>projectcalico</td>
+		<td>libcalico-go-v3.18.0-0.dev</td>
 		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>gnu</td>
+		<td>librejs-librejs-7.20.2</td>
+		<td>GPL 3.0</td>
+	</tr>
+	<tr>
+		<td>loader-utils</td>
+		<td>loader-utils-1.4.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>lodash</td>
+		<td>lodash-4.17.19.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>lodash</td>
+		<td>lodash-4.17.20.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>lodash-es</td>
+		<td>lodash-es-4.17.15.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>lodash.debounce</td>
@@ -1709,18 +2130,8 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>lodash</td>
-		<td>lodash-4.17.10.tgz</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>lodash-es</td>
-		<td>lodash-es-4.17.15.tgz</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>loglevel</td>
-		<td>loglevel-v1.6.4</td>
+		<td>pimterry</td>
+		<td>loglevel-v1.6.8</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1729,14 +2140,34 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>loose-envify</td>
+		<td>loose-envify-1.4.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>lower-case</td>
+		<td>lower-case-2.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>map-cache</td>
+		<td>map-cache-0.2.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>map-visit</td>
+		<td>map-visit-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>math-expression-evaluator</td>
 		<td>math-expression-evaluator-1.2.17.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>medkey-medkey_v1.0.0.a_build201912011216</td>
-		<td>medkey-medkey_v1.0.0.a_build201912011216</td>
-		<td>GPL 3.0</td>
+		<td>megacubo</td>
+		<td>megacubo-br-Megacubo_15.4.7_linux_ia32</td>
+		<td>LGPL 2.1</td>
 	</tr>
 	<tr>
 		<td>memoize-one</td>
@@ -1744,8 +2175,38 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>microevent.ts</td>
+		<td>microevent.ts-0.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>micromatch</td>
+		<td>micromatch-3.1.10.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>min-document</td>
+		<td>min-document-2.19.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>mini-create-react-context</td>
 		<td>mini-create-react-context-0.3.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>minimatch</td>
+		<td>minimatch-3.0.4.tgz</td>
+		<td>ISC</td>
+	</tr>
+	<tr>
+		<td>minimist</td>
+		<td>minimist-1.2.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>mixin-deep</td>
+		<td>mixin-deep-1.3.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1764,8 +2225,13 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>more_itertools</td>
+		<td>more-itertools</td>
 		<td>more_itertools-5.0.0-py2-none-any.whl</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>ms</td>
+		<td>ms-2.0.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1774,9 +2240,24 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>nanomatch</td>
+		<td>nanomatch-1.2.13.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>netaddr</td>
 		<td>netaddr-0.7.19-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>no-case</td>
+		<td>no-case-3.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@types/node</td>
+		<td>node-9.3.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>node-fetch</td>
@@ -1784,19 +2265,19 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>nodejs</td>
+		<td>node-v10.23.1</td>
+		<td>Node.js</td>
+	</tr>
+	<tr>
+		<td>node</td>
+		<td>node-v3.17.2</td>
+		<td>Tigera Proprietory</td>
+	</tr>
+	<tr>
 		<td>nopt</td>
 		<td>nopt-1.0.10.tgz</td>
 		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>nose_parameterized</td>
-		<td>nose_parameterized-0.6.0-py2.py3-none-any.whl</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>nose</td>
-		<td>nose-1.3.7-py2-none-any.whl</td>
-		<td>LGPL 3.0</td>
 	</tr>
 	<tr>
 		<td>nose-timer</td>
@@ -1804,13 +2285,63 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>nose-parameterized</td>
+		<td>nose_parameterized-0.6.0-py2.py3-none-any.whl</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>nth-check</td>
+		<td>nth-check-1.0.2.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
 		<td>oauthlib</td>
 		<td>oauthlib-3.1.0-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>object-assign</td>
 		<td>object-assign-4.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object-copy</td>
+		<td>object-copy-0.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object-inspect</td>
+		<td>object-inspect-1.7.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object-keys</td>
+		<td>object-keys-1.0.11.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object-keys</td>
+		<td>object-keys-1.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object-visit</td>
+		<td>object-visit-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object.assign</td>
+		<td>object.assign-4.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object.getownpropertydescriptors</td>
+		<td>object.getownpropertydescriptors-2.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>object.pick</td>
+		<td>object.pick-1.3.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1819,19 +2350,39 @@ In the table below, you can look at the details of each project and license asso
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>operator</td>
-		<td>operator-0.12.0</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>origin</td>
+		<td>openshift</td>
 		<td>origin-v3.6.1</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>packaging</td>
-		<td>packaging-20.3-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>packaging-20.9-py2.py3-none-any.whl</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
+		<td>param-case</td>
+		<td>param-case-3.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>parse-duration</td>
+		<td>parse-duration-0.4.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>pascal-case</td>
+		<td>pascal-case-3.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>pascalcase</td>
+		<td>pascalcase-0.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>path-to-regexp</td>
+		<td>path-to-regexp-1.7.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>pathlib2</td>
@@ -1839,8 +2390,8 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>path-to-regexp</td>
-		<td>path-to-regexp-1.7.0.tgz</td>
+		<td>pegjs</td>
+		<td>pegjs-0.10.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1854,6 +2405,31 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>popper.js</td>
+		<td>popper-1.16.0.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>popper.js</td>
+		<td>popper.js-1.16.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>posix-character-classes</td>
+		<td>posix-character-classes-0.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>pretty-error</td>
+		<td>pretty-error-2.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>process</td>
+		<td>process-0.11.10.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>promise</td>
 		<td>promise-7.3.1.tgz</td>
 		<td>MIT</td>
@@ -1861,7 +2437,27 @@ In the table below, you can look at the details of each project and license asso
 	<tr>
 		<td>prop-types</td>
 		<td>prop-types-15.5.10.js</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>prop-types</td>
+		<td>prop-types-15.6.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>prop-types</td>
+		<td>prop-types-15.6.2.js</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>prop-types</td>
+		<td>prop-types-15.6.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>prop-types</td>
+		<td>prop-types-15.7.2.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>prop-types-extra</td>
@@ -1869,34 +2465,19 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>protobuf</td>
-		<td>protobuf-v0.4</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
-		<td>protoc-gen-validate</td>
-		<td>protoc-gen-validate-v0.0.6</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
 		<td>py</td>
-		<td>py-1.8.1-py2.py3-none-any.whl</td>
+		<td>py-1.10.0-py2.py3-none-any.whl</td>
 		<td>MIT</td>
-	</tr>
-	<tr>
-		<td>pyasn1_modules</td>
-		<td>pyasn1_modules-0.2.8-py2.py3-none-any.whl</td>
-		<td>BSD</td>
 	</tr>
 	<tr>
 		<td>pyasn1</td>
 		<td>pyasn1-0.4.8-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
-		<td>pycparser</td>
-		<td>pycparser-2.20-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>pyasn1-modules</td>
+		<td>pyasn1_modules-0.2.8-py2.py3-none-any.whl</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
 		<td>pyparsing</td>
@@ -1905,17 +2486,17 @@ In the table below, you can look at the details of each project and license asso
 	</tr>
 	<tr>
 		<td>pytest</td>
-		<td>pytest-4.6.10-py2.py3-none-any.whl</td>
+		<td>pytest-4.6.11-py2.py3-none-any.whl</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>python_dateutil</td>
-		<td>python_dateutil-2.7.5-py2.py3-none-any.whl</td>
-		<td>Apache 2.0</td>
+		<td>python-dateutil</td>
+		<td>python_dateutil-2.8.1-py2.py3-none-any.whl</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>PyYAML</td>
-		<td>PyYAML-3.12.tar.gz</td>
+		<td>PyYAML-5.4.1-cp27-cp27mu-manylinux1_x86_64.whl</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1931,11 +2512,21 @@ In the table below, you can look at the details of each project and license asso
 	<tr>
 		<td>raven-js</td>
 		<td>raven-js-3.22.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 2</td>
 	</tr>
 	<tr>
 		<td>react</td>
 		<td>react-15.6.1.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react</td>
+		<td>react-16.13.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react</td>
+		<td>react-16.8.6.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1949,18 +2540,43 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>react-codemirror2</td>
+		<td>react-codemirror2-5.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>react-confirm</td>
 		<td>react-confirm-0.1.16.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>react-cytoscapejs</td>
+		<td>react-cytoscapejs-1.2.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>plotly</td>
+		<td>react-cytoscapejs-v1.2.1</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>react-day-picker</td>
-		<td>react-day-picker-7.4.0.tgz</td>
+		<td>react-day-picker-7.4.8.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>react-dom</td>
 		<td>react-dom-15.6.1.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-dom</td>
+		<td>react-dom-16.13.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-dom</td>
+		<td>react-dom-16.8.6.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -1974,7 +2590,12 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>react-fontawesome</td>
+		<td>react-filter-box</td>
+		<td>react-filter-box-3.4.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@fortawesome/react-fontawesome</td>
 		<td>react-fontawesome-0.1.3.tgz</td>
 		<td>MIT</td>
 	</tr>
@@ -1984,13 +2605,38 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>react-hot-loader</td>
+		<td>react-hot-loader-4.12.21.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>react-input-autosize</td>
-		<td>react-input-autosize-2.2.1.tgz</td>
+		<td>react-input-autosize-2.1.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>JedWatson</td>
+		<td>react-input-autosize-v2.1.2</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>react-is</td>
 		<td>react-is-16.6.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-is</td>
+		<td>react-is-16.8.6.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-is</td>
+		<td>react-is-16.9.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-json-pretty</td>
+		<td>react-json-pretty-2.2.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2001,6 +2647,11 @@ In the table below, you can look at the details of each project and license asso
 	<tr>
 		<td>react-native-segmented-control-tab</td>
 		<td>react-native-segmented-control-tab-3.2.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-new-window</td>
+		<td>react-new-window-0.1.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2029,6 +2680,11 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>react-redux</td>
+		<td>react-redux-7.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>react-redux-form</td>
 		<td>react-redux-form-1.16.5.tgz</td>
 		<td>MIT</td>
@@ -2054,11 +2710,6 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>react-select</td>
-		<td>react-select-1.2.1.tgz</td>
-		<td>MIT</td>
-	</tr>
-	<tr>
 		<td>react-show</td>
 		<td>react-show-2.0.4.tgz</td>
 		<td>MIT</td>
@@ -2069,19 +2720,49 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>react-split-pane</td>
+		<td>react-split-pane-0.1.92.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-style-proptype</td>
+		<td>react-style-proptype-3.2.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>react-switch</td>
 		<td>react-switch-5.0.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>react-table-6</td>
+		<td>react-table-6-6.11.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>react-table</td>
-		<td>react-table-6.7.6.tgz</td>
+		<td>react-table-7.5.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>react-tooltip</td>
+		<td>react-tooltip-4.2.11.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>react-transition-group</td>
 		<td>react-transition-group-2.2.1.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>react-transition-group</td>
+		<td>react-transition-group-2.7.1.tgz</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>readable-stream</td>
+		<td>readable-stream-3.6.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>recharts</td>
@@ -2109,9 +2790,14 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>redux</td>
+		<td>redux-4.0.4.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>redux-immutable</td>
 		<td>redux-immutable-4.0.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>redux-merge-immutable-reducers</td>
@@ -2130,7 +2816,27 @@ In the table below, you can look at the details of each project and license asso
 	</tr>
 	<tr>
 		<td>regenerator-runtime</td>
+		<td>regenerator-runtime-0.11.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>regenerator-runtime</td>
 		<td>regenerator-runtime-0.12.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>regenerator-runtime</td>
+		<td>regenerator-runtime-0.13.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>regenerator-runtime</td>
+		<td>regenerator-runtime-0.13.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>regex-not</td>
+		<td>regex-not-1.0.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2139,34 +2845,54 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>relateurl</td>
+		<td>relateurl-0.2.7.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>remotedev-serialize</td>
 		<td>remotedev-serialize-0.1.8.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>requests_aws4auth</td>
-		<td>requests_aws4auth-0.9-py2.py3-none-any.whl</td>
+		<td>renderkid</td>
+		<td>renderkid-2.0.3.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>requests_oauthlib</td>
-		<td>requests_oauthlib-1.3.0-py2.py3-none-any.whl</td>
-		<td>ISC</td>
+		<td>repeat-element</td>
+		<td>repeat-element-1.1.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>repeat-string</td>
+		<td>repeat-string-1.6.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>requests</td>
-		<td>requests-2.22.0-py2.py3-none-any.whl</td>
+		<td>requests-2.20.1-py2.py3-none-any.whl</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
-		<td>require</td>
-		<td>require-2.1.5.min.js</td>
-		<td>MIT</td>
+		<td>requests</td>
+		<td>requests-2.25.1-py2.py3-none-any.whl</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>requests-oauthlib</td>
+		<td>requests_oauthlib-1.3.0-py2.py3-none-any.whl</td>
+		<td>ISC</td>
 	</tr>
 	<tr>
 		<td>reselect</td>
 		<td>reselect-2.5.4.tgz</td>
 		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@juggle/resize-observer</td>
+		<td>resize-observer-3.2.0.tgz</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>resize-observer-polyfill</td>
@@ -2179,33 +2905,49 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>rsa</td>
-		<td>rsa-4.0-py2.py3-none-any.whl</td>
-		<td>
-			<div>
-				<div>Amazon Software</div>
-			</div>
-		</td>
+		<td>resolve-url</td>
+		<td>resolve-url-0.2.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>runtime</td>
+		<td>ret</td>
+		<td>ret-0.1.15.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>rsa</td>
+		<td>rsa-4.5-py2.py3-none-any.whl</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>@babel/runtime</td>
 		<td>runtime-7.1.5.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>runtime-corejs2</td>
+		<td>@babel/runtime</td>
+		<td>runtime-7.5.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@babel/runtime-corejs2</td>
 		<td>runtime-corejs2-7.1.5.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>rw</td>
 		<td>rw-1.3.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>s3transfer</td>
-		<td>s3transfer-0.2.1-py2.py3-none-any.whl</td>
-		<td>Apache 2.0</td>
+		<td>safe-buffer</td>
+		<td>safe-buffer-5.2.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>safe-regex</td>
+		<td>safe-regex-1.1.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>safer-buffer</td>
@@ -2215,7 +2957,7 @@ In the table below, you can look at the details of each project and license asso
 	<tr>
 		<td>scandir</td>
 		<td>scandir-1.10.0.tar.gz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>scheduler</td>
@@ -2223,9 +2965,29 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>scheduler</td>
+		<td>scheduler-0.18.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>scheduler</td>
+		<td>scheduler-0.19.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>seamless-immutable</td>
 		<td>seamless-immutable-7.1.4.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>semver</td>
+		<td>semver-5.7.1.tgz</td>
+		<td>ISC</td>
+	</tr>
+	<tr>
+		<td>set-value</td>
+		<td>set-value-2.0.1.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>setimmediate</td>
@@ -2234,7 +2996,7 @@ In the table below, you can look at the details of each project and license asso
 	</tr>
 	<tr>
 		<td>setuptools</td>
-		<td>setuptools-44.1.0-py2.py3-none-any.whl</td>
+		<td>setuptools-44.1.1-py2.py3-none-any.whl</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2243,23 +3005,93 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>shallowequal</td>
+		<td>shallowequal-1.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>sigs.k8s.io/controller-runtime</td>
-		<td>controller-runtime-v0.2.0</td>
+		<td>sigs.k8s.io/controller-runtime-v0.7.0</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>sigs.k8s.io/kind/pkg/errors</td>
+		<td>sigs.k8s.io/kind/pkg/errors-v0.9.0</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>sigs.k8s.io/yaml</td>
-		<td>yaml-v1.1.0</td>
-		<td>MIT</td>
+		<td>sigs.k8s.io/yaml-v1.2.0</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>simplejson</td>
 		<td>simplejson-3.13.2.tar.gz</td>
-		<td>MIT</td>
+		<td>Academic 2.1</td>
 	</tr>
 	<tr>
 		<td>six</td>
-		<td>six-1.12.0-py2.py3-none-any.whl</td>
+		<td>six-1.15.0-py2.py3-none-any.whl</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>snapdragon</td>
+		<td>snapdragon-0.8.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>snapdragon-node</td>
+		<td>snapdragon-node-2.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>snapdragon-util</td>
+		<td>snapdragon-util-3.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>soupsieve</td>
+		<td>soupsieve-1.9.6-py2.py3-none-any.whl</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@types/source-list-map</td>
+		<td>source-list-map-0.1.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>source-map</td>
+		<td>source-map-0.5.7.tgz</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>source-map</td>
+		<td>source-map-0.6.1.tgz</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>source-map</td>
+		<td>source-map-0.7.3.tgz</td>
+		<td>BSD 3</td>
+	</tr>
+	<tr>
+		<td>source-map-resolve</td>
+		<td>source-map-resolve-0.5.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>source-map-support</td>
+		<td>source-map-support-0.5.19.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>source-map-url</td>
+		<td>source-map-url-0.4.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>split-string</td>
+		<td>split-string-3.1.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2270,12 +3102,62 @@ In the table below, you can look at the details of each project and license asso
 	<tr>
 		<td>sprintf-js</td>
 		<td>sprintf-js-1.0.3.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
-		<td>swfobject</td>
-		<td>swfobject-2.2.js</td>
+		<td>static-extend</td>
+		<td>static-extend-0.1.2.tgz</td>
 		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>string.prototype.trimend</td>
+		<td>string.prototype.trimend-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>string.prototype.trimleft</td>
+		<td>string.prototype.trimleft-2.1.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>string.prototype.trimright</td>
+		<td>string.prototype.trimright-2.1.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>string.prototype.trimstart</td>
+		<td>string.prototype.trimstart-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>string_decoder</td>
+		<td>string_decoder-1.3.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>strip-ansi</td>
+		<td>strip-ansi-3.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>strongly-connected-components</td>
+		<td>strongly-connected-components-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>supports-color</td>
+		<td>supports-color-5.5.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>swagger-ui</td>
+		<td>swagger-ui-bundle-3.37.0.js</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>swagger-ui</td>
+		<td>swagger-ui-standalone-preset-3.37.0.js</td>
+		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>symbol-observable</td>
@@ -2283,13 +3165,38 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>@types/tapable</td>
+		<td>tapable-1.0.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>tapable</td>
+		<td>tapable-1.1.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>Jstarfish</td>
+		<td>Technical-Learning-609d9d75ca68e30aee8757b26f52bf132c644be7</td>
+		<td>ISC</td>
+	</tr>
+	<tr>
 		<td>termcolor</td>
 		<td>termcolor-1.1.0.tar.gz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>terser</td>
+		<td>terser-4.7.0.tgz</td>
+		<td>BSD 2</td>
+	</tr>
+	<tr>
 		<td>tiny-invariant</td>
 		<td>tiny-invariant-1.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>tiny-invariant</td>
+		<td>tiny-invariant-1.0.6.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2298,13 +3205,58 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>tslib.es6</td>
+		<td>tiny-warning</td>
+		<td>tiny-warning-1.0.3.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>tippy.js</td>
+		<td>tippy-bundle.iife-5.2.1.min.js</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>tippy.js</td>
+		<td>tippy.js-6.2.5.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>to-object-path</td>
+		<td>to-object-path-0.3.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>to-regex</td>
+		<td>to-regex-3.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>to-regex-range</td>
+		<td>to-regex-range-2.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>tslib</td>
+		<td>tslib-1.10.0.js</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>tslib</td>
+		<td>tslib-1.10.0.tgz</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>tslib</td>
+		<td>tslib-1.13.0.js</td>
+		<td>Apache 2.0</td>
+	</tr>
+	<tr>
+		<td>tslib</td>
 		<td>tslib.es6-1.10.0.js</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
 		<td>tslib</td>
-		<td>tslib-1.10.0.js</td>
+		<td>tslib.es6-1.13.0.js</td>
 		<td>Apache 2.0</td>
 	</tr>
 	<tr>
@@ -2318,13 +3270,13 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>typha</td>
-		<td>typha-v3.12.1</td>
-		<td>Apache 2.0</td>
-	</tr>
-	<tr>
 		<td>ua-parser-js</td>
 		<td>ua-parser-js-0.7.18.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@types/uglify-js</td>
+		<td>uglify-js-3.9.2.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2333,13 +3285,53 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>union-value</td>
+		<td>union-value-1.0.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>unset-value</td>
+		<td>unset-value-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>urix</td>
+		<td>urix-0.1.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>urllib3</td>
-		<td>urllib3-1.24.2-py2.py3-none-any.whl</td>
+		<td>urllib3-1.24.3-py2.py3-none-any.whl</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>urllib3</td>
+		<td>urllib3-1.26.3-py2.py3-none-any.whl</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>use</td>
+		<td>use-3.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>util-deprecate</td>
+		<td>util-deprecate-1.0.2.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>util.promisify</td>
+		<td>util.promisify-1.0.0.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>utila</td>
+		<td>utila-0.4.0.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>uuid</td>
-		<td>uuid-3.2.1.tgz</td>
+		<td>uuid-7.0.3.tgz</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
@@ -2353,29 +3345,29 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>voluptuous</td>
-		<td>voluptuous-0.11.7.tar.gz</td>
-		<td>BSD</td>
-	</tr>
-	<tr>
 		<td>warning</td>
 		<td>warning-3.0.0.tgz</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>wcwidth</td>
-		<td>wcwidth-0.1.9-py2.py3-none-any.whl</td>
+		<td>wcwidth-0.2.5-py2.py3-none-any.whl</td>
 		<td>MIT</td>
 	</tr>
 	<tr>
-		<td>WebDriverAgent</td>
-		<td>WebDriverAgent</td>
-		<td>BSD</td>
+		<td>@types/webpack</td>
+		<td>webpack-4.41.17.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
+		<td>@types/webpack-sources</td>
+		<td>webpack-sources-1.4.0.tgz</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>websocket_client</td>
 		<td>websocket_client-0.57.0-py2.py3-none-any.whl</td>
-		<td>BSD</td>
+		<td>BSD 3</td>
 	</tr>
 	<tr>
 		<td>whatwg-fetch</td>
@@ -2383,19 +3375,24 @@ In the table below, you can look at the details of each project and license asso
 		<td>MIT</td>
 	</tr>
 	<tr>
+		<td>worker-rpc</td>
+		<td>worker-rpc-0.1.1.tgz</td>
+		<td>MIT</td>
+	</tr>
+	<tr>
 		<td>zipp</td>
 		<td>zipp-1.2.0-py2.py3-none-any.whl</td>
 		<td>MIT</td>
 	</tr>
-        <tr>
+	<tr>
 		<td>github.com/projectcalico/bird</td>
 		<td>github.com/projectcalico/bird/blob/v0.3.3</td>
 		<td>GPL</td>
 	</tr>
-        <tr>
-                <td>egress-gateway</td>
-                <td>egress-gateway-v3.0.0</td>
-                <td>Apache 2.0</td>
-        </tr>
+	<tr>
+		<td>egress-gateway</td>
+		<td>egress-gateway</td>
+		<td>Tigera Proprietory</td>
+	</tr>
 </tbody>
 </table>
