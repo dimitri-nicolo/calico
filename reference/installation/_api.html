@@ -34,90 +34,7 @@ Resource Types:
 </li><li>
 <a href="#operator.tigera.io/v1.TigeraStatus">TigeraStatus</a>
 </li></ul>
-<<<<<<< HEAD
 <h3 id="operator.tigera.io/v1.APIServer">APIServer
-=======
-<h3 id="operator.tigera.io/v1.ImageSet">ImageSet
-</h3>
-<p>ImageSet is used to specify image digests for the images that the operator deploys.
-The name of the ImageSet is expected to be in the format <code>&lt;variang&gt;-&lt;release&gt;</code>.
-The <code>variant</code> used is <code>enterprise</code> if the InstallationSpec Variant is
-<code>TigeraSecureEnterprise</code> otherwise it is <code>calico</code>.
-The <code>release</code> must match the version of the variant that the operator is built to deploy,
-this version can be obtained by passing the <code>--version</code> flag to the operator binary.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>apiVersion</code><br>
-string</td>
-<td>
-<code>
-operator.tigera.io/v1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code><br>
-string
-</td>
-<td><code>ImageSet</code></td>
-</tr>
-<tr>
-<td>
-<code>metadata</code><br>
-<em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code><br>
-<em>
-<a href="#operator.tigera.io/v1.ImageSetSpec">
-ImageSetSpec
-</a>
-</em>
-</td>
-<td>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>images</code><br>
-<em>
-<a href="#operator.tigera.io/v1.Image">
-[]Image
-</a>
-</em>
-</td>
-<td>
-<p>Images is the list of images to use digests. All images that the operator will deploy
-must be specified.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.Installation">Installation
->>>>>>> open-source/master
 </h3>
 <p>APIServer installs the Tigera API server and related resources. At most one instance
 of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
@@ -224,13 +141,8 @@ string
 <td>
 <code>metadata</code><br>
 <em>
-<<<<<<< HEAD
 <a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
-=======
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#localobjectreference-v1-core">
-[]Kubernetes core/v1.LocalObjectReference
->>>>>>> open-source/master
 </a>
 </em>
 </td>
@@ -282,53 +194,14 @@ will be in.</p>
 </tr>
 <tr>
 <td>
-<<<<<<< HEAD
 <code>podSecurityGroupID</code><br>
-=======
-<code>typhaAffinity</code><br>
-<em>
-<a href="#operator.tigera.io/v1.TyphaAffinity">
-TyphaAffinity
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>TyphaAffinity allows configuration of node affinity characteristics for Typha pods.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>controlPlaneNodeSelector</code><br>
->>>>>>> open-source/master
 <em>
 string
 </em>
 </td>
 <td>
-<<<<<<< HEAD
 <p>PodSecurityGroupID is the ID of the Security Group which all pods should be placed
 in by default.</p>
-=======
-<em>(Optional)</em>
-<p>ControlPlaneNodeSelector is used to select control plane nodes on which to run Calico
-components. This is globally applied to all resources created by the operator excluding daemonsets.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>controlPlaneTolerations</code><br>
-<em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#toleration-v1-core">
-[]Kubernetes core/v1.Toleration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ControlPlaneTolerations specify tolerations which are then globally applied to all resources
-created by the operator.</p>
->>>>>>> open-source/master
 </td>
 </tr>
 <tr>
@@ -357,13 +230,7 @@ string
 <td>
 <code>awsRegion</code><br>
 <em>
-<<<<<<< HEAD
 string
-=======
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#daemonsetupdatestrategy-v1-apps">
-Kubernetes apps/v1.DaemonSetUpdateStrategy
-</a>
->>>>>>> open-source/master
 </em>
 </td>
 <td>
@@ -3692,14 +3559,8 @@ string
 </em>
 </td>
 <td>
-<<<<<<< HEAD
 <p>ElasticsearchHash represents the current revision and configuration of the installed Elasticsearch cluster. This
 is an opaque string which can be monitored for changes to perform actions when Elasticsearch is modified.</p>
-=======
-<p>When a CSR is issued to the certificates.k8s.io API, the signerName is added to the request in order to accommodate for clusters
-with multiple signers.
-Must be formatted as: &ldquo;<my-domain>/<my-signername>&rdquo;.</p>
->>>>>>> open-source/master
 </td>
 </tr>
 <tr>
@@ -3841,13 +3702,7 @@ Auth
 <td>
 <code>state</code><br>
 <em>
-<<<<<<< HEAD
 string
-=======
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core">
-Kubernetes core/v1.ResourceRequirements
-</a>
->>>>>>> open-source/master
 </em>
 </td>
 <td>
@@ -3958,94 +3813,11 @@ one of the provided CIDRs.</p>
 </tr>
 </tbody>
 </table>
-<<<<<<< HEAD
 <h3 id="operator.tigera.io/v1.NodeSet">NodeSet
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.Nodes">Nodes</a>)
-=======
-<h3 id="operator.tigera.io/v1.Image">Image
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ImageSetSpec">ImageSetSpec</a>)
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>image</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Image is an image that the operator deploys and instead of using the built in tag
-the operator will use the Digest for the image identifier.
-The value should be the image name without registry or tag or digest.
-For the image <code>docker.io/calico/node:v3.17.1</code> it should be represented as <code>calico/node</code></p>
-</td>
-</tr>
-<tr>
-<td>
-<code>digest</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Digest is the image identifier that will be used for the Image.
-The field should not include a leading <code>@</code> and must be prefixed with <code>sha256:</code>, if other
-digest prefixes are needed please submit a feature request.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.ImageSetSpec">ImageSetSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ImageSet">ImageSet</a>)
-</p>
-<p>ImageSetSpec defines the desired state of ImageSet.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>images</code><br>
-<em>
-<a href="#operator.tigera.io/v1.Image">
-[]Image
-</a>
-</em>
-</td>
-<td>
-<p>Images is the list of images to use digests. All images that the operator will deploy
-must be specified.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.InstallationSpec">InstallationSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.Installation">Installation</a>, 
-<a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
->>>>>>> open-source/master
 </p>
 <p>NodeSets defines configuration specific to each Elasticsearch Node Set</p>
 <table>
@@ -4114,13 +3886,7 @@ string
 <td>
 <code>value</code><br>
 <em>
-<<<<<<< HEAD
 string
-=======
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#localobjectreference-v1-core">
-[]Kubernetes core/v1.LocalObjectReference
-</a>
->>>>>>> open-source/master
 </em>
 </td>
 <td>
@@ -4202,25 +3968,7 @@ which ensures a pod will still be scheduled even when all the nodes it matches a
 <tbody>
 <tr>
 <td>
-<<<<<<< HEAD
 <code>preferredDuringSchedulingIgnoredDuringExecution</code><br>
-=======
-<code>typhaAffinity</code><br>
-<em>
-<a href="#operator.tigera.io/v1.TyphaAffinity">
-TyphaAffinity
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>TyphaAffinity allows configuration of node affinity characteristics for Typha pods.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>controlPlaneNodeSelector</code><br>
->>>>>>> open-source/master
 <em>
 <a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#preferredschedulingterm-v1-core">
 []Kubernetes core/v1.PreferredSchedulingTerm
@@ -4229,29 +3977,9 @@ TyphaAffinity
 </td>
 <td>
 <em>(Optional)</em>
-<<<<<<< HEAD
 <p>The scheduler will prefer to schedule pods to nodes that satisfy
 the affinity expressions specified by this field, but it may choose
 a node that violates one or more of the expressions.</p>
-=======
-<p>ControlPlaneNodeSelector is used to select control plane nodes on which to run Calico
-components. This is globally applied to all resources created by the operator excluding daemonsets.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>controlPlaneTolerations</code><br>
-<em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#toleration-v1-core">
-[]Kubernetes core/v1.Toleration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ControlPlaneTolerations specify tolerations which are then globally applied to all resources
-created by the operator.</p>
->>>>>>> open-source/master
 </td>
 </tr>
 </tbody>
@@ -4305,13 +4033,7 @@ Default: 8</p>
 <td>
 <code>auditReports</code><br>
 <em>
-<<<<<<< HEAD
 int32
-=======
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#daemonsetupdatestrategy-v1-apps">
-Kubernetes apps/v1.DaemonSetUpdateStrategy
-</a>
->>>>>>> open-source/master
 </em>
 </td>
 <td>
@@ -4396,24 +4118,7 @@ string
 </tr>
 <tr>
 <td>
-<<<<<<< HEAD
 <code>bucketPath</code><br>
-=======
-<code>imageSet</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ImageSet is the name of the ImageSet being used, if there is an ImageSet
-that is being used. If an ImageSet is not being used then this will not be set.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>computed</code><br>
->>>>>>> open-source/master
 <em>
 string
 </em>
@@ -4527,66 +4232,6 @@ omitted, it will be set to include all possible values.</p>
 </tr>
 </tbody>
 </table>
-<<<<<<< HEAD
-=======
-<h3 id="operator.tigera.io/v1.PreferredNodeAffinity">PreferredNodeAffinity
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.TyphaAffinity">TyphaAffinity</a>)
-</p>
-<p>PreferredNodeAffinity is similar to an affinity except it only exposes the Preferred scheduling option,
-which ensures a pod will still be scheduled even when all the nodes it matches are unschedulable.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>preferredDuringSchedulingIgnoredDuringExecution</code><br>
-<em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#preferredschedulingterm-v1-core">
-[]Kubernetes core/v1.PreferredSchedulingTerm
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>The scheduler will prefer to schedule pods to nodes that satisfy
-the affinity expressions specified by this field, but it may choose
-a node that violates one or more of the expressions.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.ProductVariant">ProductVariant
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
-<a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
-</p>
-<p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
-<h3 id="operator.tigera.io/v1.Provider">Provider
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
-</p>
-<p>Provider represents a particular provider or flavor of Kubernetes. Valid options
-are: EKS, GKE, AKS, OpenShift, DockerEnterprise.</p>
-<h3 id="operator.tigera.io/v1.StatusConditionType">StatusConditionType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.TigeraStatusCondition">TigeraStatusCondition</a>)
-</p>
-<p>StatusConditionType is a type of condition that may apply to a particular component.</p>
->>>>>>> open-source/master
 <h3 id="operator.tigera.io/v1.TigeraStatusCondition">TigeraStatusCondition
 </h3>
 <p>
@@ -4734,7 +4379,6 @@ PreferredNodeAffinity
 </tr>
 </tbody>
 </table>
-<<<<<<< HEAD
 <h3 id="operator.tigera.io/v1.UserMatch">UserMatch
 </h3>
 <p>
@@ -4827,6 +4471,4 @@ Default: uid</p>
 </tr>
 </tbody>
 </table>
-=======
->>>>>>> open-source/master
 <hr/>
