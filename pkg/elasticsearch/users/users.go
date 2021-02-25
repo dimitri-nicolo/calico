@@ -155,26 +155,6 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 				},
 			},
 		},
-		ElasticsearchUserNameInstaller: {
-			Username: formatName(ElasticsearchUserNameInstaller, clusterName, management),
-			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameInstaller, clusterName, management),
-				Definition: &elasticsearch.RoleDefinition{
-					Cluster: []string{"manage_ml", "manage_watcher", "manage"},
-					Indices: []elasticsearch.RoleIndex{
-						{
-							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*"), indexPattern("tigera_secure_ee_events", clusterName, "")},
-							Privileges: []string{"read", "write"},
-						},
-					},
-					Applications: []elasticsearch.Application{{
-						Application: "kibana-.kibana",
-						Privileges:  []string{"all"},
-						Resources:   []string{"*"},
-					}},
-				},
-			}},
-		},
 		ElasticsearchUserNameADJob: {
 			Username: formatName(ElasticsearchUserNameADJob, clusterName, management),
 			Roles: []elasticsearch.Role{
@@ -292,6 +272,26 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{"tigera_secure_ee_*"},
 						Privileges: []string{"all"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameInstaller: {
+			Username: formatName(ElasticsearchUserNameInstaller, clusterName, true),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameInstaller, clusterName, true),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"manage_watcher", "manage"},
+					Indices: []elasticsearch.RoleIndex{
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*"), indexPattern("tigera_secure_ee_events", clusterName, "")},
+							Privileges: []string{"read", "write"},
+						},
+					},
+					Applications: []elasticsearch.Application{{
+						Application: "kibana-.kibana",
+						Privileges:  []string{"all"},
+						Resources:   []string{"*"},
 					}},
 				},
 			}},

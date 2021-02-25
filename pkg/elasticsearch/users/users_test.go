@@ -140,26 +140,6 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						},
 					},
-					"tigera-ee-installer": {
-						Username: "tigera-ee-installer-managed-cluster",
-						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-installer-managed-cluster",
-							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"manage_ml", "manage_watcher", "manage"},
-								Indices: []elasticsearch.RoleIndex{
-									{
-										Names:      []string{"tigera_secure_ee_*.managed-cluster.*", "tigera_secure_ee_events.managed-cluster"},
-										Privileges: []string{"read", "write"},
-									},
-								},
-								Applications: []elasticsearch.Application{{
-									Application: "kibana-.kibana",
-									Privileges:  []string{"all"},
-									Resources:   []string{"*"},
-								}},
-							},
-						}},
-					},
 					"tigera-ee-ad-job": {
 						Username: "tigera-ee-ad-job-managed-cluster",
 						Roles: []elasticsearch.Role{{
@@ -317,7 +297,7 @@ var _ = Describe("ElasticseachUsers", func() {
 						Roles: []elasticsearch.Role{{
 							Name: "tigera-ee-installer",
 							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"manage_ml", "manage_watcher", "manage"},
+								Cluster: []string{"manage_watcher", "manage"},
 								Indices: []elasticsearch.RoleIndex{
 									{
 										Names:      []string{"tigera_secure_ee_*.cluster.*", "tigera_secure_ee_events.cluster"},
