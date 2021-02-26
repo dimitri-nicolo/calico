@@ -385,10 +385,18 @@ class FailoverCluster(object):
         kubectl("wait --timeout=1m --for=condition=ready" +
                 " pod/rb-server -n dualtor")
 
-
         # Create service
         self.create_service("ra-server")
         self.create_service("rb-server")
+
+        # Check we can now exec into all the pods.
+        def check_exec():
+            kubectl("exec client -n dualtor -- date")
+            kubectl("exec client-host -n dualtor -- date")
+            kubectl("exec ra-server -n dualtor -- date")
+            kubectl("exec rb-server -n dualtor -- date")
+
+        retry_until_success(check_exec, retries=5, wait_time=1)
 
     def cleanup(self):
         kubectl("delete ns dualtor")
