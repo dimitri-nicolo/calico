@@ -38,12 +38,23 @@ var (
 		Name: "felix_bpf_conntrack_cleaned",
 		Help: "Number of entries cleaned during a conntrack table sweep",
 	})
+	conntrackCounterCleaned = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_conntrack_cleaned_total",
+		Help: "Total number of entries cleaned during conntrack table sweeps, " +
+			"incremented for each clean individualy",
+	})
+	conntrackGaugeSweepDuration = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_conntrack_sweep_duration",
+		Help: "Conntrack sweep execution time (ns)",
+	})
 )
 
 func init() {
 	prometheus.MustRegister(conntrackCounterSweeps)
 	prometheus.MustRegister(conntrackGaugeUsed)
 	prometheus.MustRegister(conntrackGaugeCleaned)
+	prometheus.MustRegister(conntrackCounterCleaned)
+	prometheus.MustRegister(conntrackGaugeSweepDuration)
 }
 
 // ScanVerdict represents the set of values returned by EntryScan
@@ -106,6 +117,8 @@ func (s *Scanner) Scan() {
 	s.iterStart()
 	defer s.iterEnd()
 
+	start := time.Now()
+
 	debug := log.GetLevel() >= log.DebugLevel
 
 	var ctKey Key
@@ -119,6 +132,7 @@ func (s *Scanner) Scan() {
 		copy(ctVal[:], v[:])
 
 		used++
+		conntrackCounterCleaned.Inc()
 
 		if debug {
 			log.WithFields(log.Fields{
@@ -142,6 +156,7 @@ func (s *Scanner) Scan() {
 	conntrackCounterSweeps.Inc()
 	conntrackGaugeUsed.Set(float64(used))
 	conntrackGaugeCleaned.Set(float64(cleaned))
+	conntrackGaugeSweepDuration.Set(float64(time.Since(start)))
 
 	if err != nil {
 		log.WithError(err).Warn("Failed to iterate over conntrack map")
