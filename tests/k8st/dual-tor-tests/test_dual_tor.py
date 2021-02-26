@@ -47,12 +47,6 @@ class Flow(object):
         self.client_ip = get_pod_ip("pod-name", self.client_pod)
         self.server_ip = get_pod_ip("pod-name", self.server_pod)
 
-        # Calculate plane used from client towards server IP.
-        self.client_plane = get_plane(self.client_pod, self.server_ip)
-
-        # Calculate plane used from server towards client IP.
-        self.server_plane = get_plane(self.server_pod, self.client_ip)
-
 
 def get_pod_ip(key, value):
     cmd="kubectl get pods -n dualtor --selector=\"" + key + "=" + value + "\"" + " -o json 2> /dev/null " + " | jq -r '.items[] | \"\(.metadata.name) \(.status.podIP)\"'"
@@ -114,7 +108,6 @@ def get_plane(src_pod_name, dst_ip):
     m = re.search('172\.31\..(\d)', output)
     if m:
         found = m.group(1)
-        print "Flow using plane %s" % found
         return found
     else:
         print "something wrong"
@@ -134,7 +127,14 @@ class FailoverTestConfig(object):
         self.timeout = total_packets/100 + 10 # expect receiving 100 packets per seconds plus 10 seconds buffer.
         self.flows = flows
 
+    def resolve_flows(self):
         for f in self.flows:
+            # Calculate plane used from client towards server IP.
+            f.client_plane = get_plane(f.client_pod, f.server_ip)
+
+            # Calculate plane used from server towards client IP.
+            f.server_plane = get_plane(f.server_pod, f.client_ip)
+
             _log.info("Testing flow: %s <%s> -> %s:%s -> %s <%s>", f.client_pod, f.client_ip, f.target_ip, f.target_port, f.server_pod, f.server_ip)
             _log.info("\tOutward path uses plane %s", f.client_plane)
             _log.info("\tReturn path uses plane %s", f.server_plane)
@@ -146,27 +146,31 @@ class FailoverTestConfig(object):
                 self.rb_server_dev = get_dev(f.server_plane)
 
 
-class FailoverTest(object):
-    def __init__(self, config):
-        self.config = config
+class _FailoverTest(TestBase):
+    @classmethod
+    def setUpClass(cls):
+        cluster = FailoverCluster()
+        cluster.setup()
+
+    @classmethod
+    def tearDownClass(cls):
+        cluster = FailoverCluster()
+        cluster.cleanup()
+
+    def setUp(self):
+        super(_FailoverTest, self).setUp()
+
+        # Before starting each test case, wait until all pod block routes are correctly
+        # ECMP again, as they may need a little time to repair after being broken in the
+        # previous test case.
+        retry_until_success(self.routes_all_ecmp, retries=10, wait_time=3)
 
     def start_client(self, client_pod, ip, port):
         name = "from %s to %s:%s" % (client_pod, ip, port)
         script="for i in `seq 1 " + str(self.config.total_packets) + "`; do echo $i -- " + name + "; sleep 0.01; done | nc -w 1 " + ip +  " " + port
         cmd = "kubectl exec -n dualtor -t " + client_pod + " -- /bin/sh -c \"" + script + "\""
         _log.info("run: %s", cmd)
-        proc1 = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    def print_diag(self, name):
-        cmd="docker exec -t kind-worker3 ip r"
-        server_output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-        print server_output
-
-        cmd="kubectl exec -t " + name + " -n dualtor -- timeout 5s traceroute -n " + self.config.client_ip
-        print cmd
-        server_output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-        print server_output
-
+        proc1 = subprocess.Popen(shlex.split(cmd))
 
     def packets_received(self, name, server_log, count, previous_seq):
         error = 0
@@ -218,11 +222,8 @@ class FailoverTest(object):
                     raise Exception("Non-ECMP /26 route on %s: %s", node, line)
         _log.info("All /26 routes are ECMP")
 
-    def run_single_test(self, case_name, break_func, restore_func):
-        # Before starting this test case, wait until all pod block routes are correctly
-        # ECMP again, as they may need a little time to repair after being broken in the
-        # previous test case.
-        retry_until_success(self.routes_all_ecmp, retries=10, wait_time=3)
+    def _run_single_test(self, case_name, break_func, restore_func):
+        self.config.resolve_flows()
 
         for f in self.config.flows:
             f.server_log = Log()
@@ -313,19 +314,19 @@ class FailoverTest(object):
         pass
 
     def test_failover_tor2tor(self):
-        self.run_single_test("failover_tor2tor", self.link_func_break_tor2tor, self.link_func_restore_tor2tor)
+        self._run_single_test("failover_tor2tor", self.link_func_break_tor2tor, self.link_func_restore_tor2tor)
 
     def test_failover_tor2node(self):
-        self.run_single_test("failover_tor2node", self.link_func_break_tor2node, self.link_func_restore_tor2node)
+        self._run_single_test("failover_tor2node", self.link_func_break_tor2node, self.link_func_restore_tor2node)
 
     def test_failover_drop_client(self):
-        self.run_single_test("failover_drop_client", self.link_func_drop_client_node, self.link_func_restore_client_node)
+        self._run_single_test("failover_drop_client", self.link_func_drop_client_node, self.link_func_restore_client_node)
 
     def test_failover_drop_server(self):
-        self.run_single_test("failover_drop_server", self.link_func_drop_server_node, self.link_func_restore_server_node)
+        self._run_single_test("failover_drop_server", self.link_func_drop_server_node, self.link_func_restore_server_node)
 
     def test_basic_connection(self):
-        self.run_single_test("basic_connection", self.do_nothing, self.do_nothing)
+        self._run_single_test("basic_connection", self.do_nothing, self.do_nothing)
 
 
 # FailoverCluster holds methods to setup/cleanup testing enviroment.
@@ -411,80 +412,24 @@ class FailoverCluster(object):
         )
 
 
-class TestFailoverPodIP(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        cluster = FailoverCluster()
-        cluster.setup()
-
-    @classmethod
-    def tearDownClass(cls):
-        cluster = FailoverCluster()
-        cluster.cleanup()
+class TestFailoverPodIP(_FailoverTest):
 
     def setUp(self):
-        TestBase.setUp(self)
-        config = FailoverTestConfig(2000, 10, [
+        super(TestFailoverPodIP, self).setUp()
+        self.config = FailoverTestConfig(2000, 10, [
             Flow("client", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090"),
             Flow("client", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090"),
         ])
-        self.test = FailoverTest(config)
-
-    def tearDown(self):
-        pass
-
-    def test_basic_connection(self):
-        self.test.test_basic_connection()
-
-    def test_failover_tor2tor(self):
-        self.test.test_failover_tor2tor()
-
-    def test_failover_tor2node(self):
-        self.test.test_failover_tor2node()
-
-    def test_failover_drop_client(self):
-        self.test.test_failover_drop_client()
-
-    def test_failover_drop_server(self):
-        self.test.test_failover_drop_server()
 
 
-class TestFailoverServiceIP(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        cluster = FailoverCluster()
-        cluster.setup()
-
-    @classmethod
-    def tearDownClass(cls):
-        cluster = FailoverCluster()
-        cluster.cleanup()
+class TestFailoverServiceIP(_FailoverTest):
 
     def setUp(self):
-        TestBase.setUp(self)
-        config = FailoverTestConfig(2000, 10, [
+        super(TestFailoverServiceIP, self).setUp()
+        self.config = FailoverTestConfig(2000, 10, [
             Flow("client", "ra-server", get_service_ip("ra-server"), "8090"),
             Flow("client", "rb-server", get_service_ip("rb-server"), "8090"),
         ])
-        self.test = FailoverTest(config)
-
-    def tearDown(self):
-        pass
-
-    def test_basic_connection(self):
-        self.test.test_basic_connection()
-
-    def test_failover_tor2tor(self):
-        self.test.test_failover_tor2tor()
-
-    def test_failover_tor2node(self):
-        self.test.test_failover_tor2node()
-
-    def test_failover_drop_client(self):
-        self.test.test_failover_drop_client()
-
-    def test_failover_drop_server(self):
-        self.test.test_failover_drop_server()
 
     def test_z_deploy_daemonset(self):
         # make it last test case to run.
@@ -498,83 +443,27 @@ class TestFailoverServiceIP(TestBase):
                 " pod/" + node + " -n dualtor")
 
 
-class TestFailoverNodePort(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        cluster = FailoverCluster()
-        cluster.setup()
-
-    @classmethod
-    def tearDownClass(cls):
-        cluster = FailoverCluster()
-        cluster.cleanup()
+class TestFailoverNodePort(_FailoverTest):
 
     def setUp(self):
-        TestBase.setUp(self)
+        super(TestFailoverNodePort, self).setUp()
         # Find node loopback address for kind-worker2.
         cmd='''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
         node_port_ip=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).strip()
-        config = FailoverTestConfig(2000, 10, [
+        self.config = FailoverTestConfig(2000, 10, [
             Flow("client", "ra-server", node_port_ip, get_node_port("ra-server")),
             Flow("client", "rb-server", node_port_ip, get_node_port("rb-server")),
         ])
-        self.test = FailoverTest(config)
-
-    def tearDown(self):
-        pass
-
-    def test_basic_connection(self):
-        self.test.test_basic_connection()
-
-    def test_failover_tor2tor(self):
-        self.test.test_failover_tor2tor()
-
-    def test_failover_tor2node(self):
-        self.test.test_failover_tor2node()
-
-    def test_failover_drop_client(self):
-        self.test.test_failover_drop_client()
-
-    def test_failover_drop_server(self):
-        self.test.test_failover_drop_server()
 
 
-class TestFailoverHostAccess(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        cluster = FailoverCluster()
-        cluster.setup()
-
-    @classmethod
-    def tearDownClass(cls):
-        cluster = FailoverCluster()
-        cluster.cleanup()
+class TestFailoverHostAccess(_FailoverTest):
 
     def setUp(self):
-        TestBase.setUp(self)
-        config = FailoverTestConfig(2000, 10, [
+        super(TestFailoverHostAccess, self).setUp()
+        self.config = FailoverTestConfig(2000, 10, [
             Flow("client-host", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090"),
             Flow("client-host", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090"),
         ])
-        self.test = FailoverTest(config)
-
-    def tearDown(self):
-        pass
-
-    def test_basic_connection(self):
-        self.test.test_basic_connection()
-
-    def test_failover_tor2tor(self):
-        self.test.test_failover_tor2tor()
-
-    def test_failover_tor2node(self):
-        self.test.test_failover_tor2node()
-
-    def test_failover_drop_client(self):
-        self.test.test_failover_drop_client()
-
-    def test_failover_drop_server(self):
-        self.test.test_failover_drop_server()
 
 
 class TestRestartCalicoNodes(TestBase):
