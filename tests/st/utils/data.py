@@ -1941,6 +1941,11 @@ name0
 name1   13.5h    https://notreal.tigera.io/threatfeed
 name2   24h      https://notreal.tigera.io/threatfeed/rev2"""
 
+globalthreatfeed_get_table_output = """NAME    PERIOD   URL                                         
+name0                                                        
+name1   13.5h    https://notreal.tigera.io/threatfeed        
+name2   24h      https://notreal.tigera.io/threatfeed/rev2"""
+
 #
 # KubeControllersConfiguration
 #
