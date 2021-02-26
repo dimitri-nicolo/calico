@@ -1,13 +1,26 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package events
 
 import (
 	"net"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 )
+
+var (
+	eventsCollectorBlocksCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_bpf_events_collector_blocks",
+		Help: "CollectorPolicyListener blocks",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(eventsCollectorBlocksCounter)
+}
 
 // CollectorPolicyListener is a backend plugin for the Collector to consume
 // events from BPF policy programs and turn them into the common format.
@@ -86,7 +99,13 @@ func (c *CollectorPolicyListener) run() {
 			}
 		}
 
-		c.outC <- pktInfo
+		select {
+		case c.outC <- pktInfo:
+			// nothing, all good
+		default:
+			eventsCollectorBlocksCounter.Inc()
+			c.outC <- pktInfo
+		}
 	}
 }
 

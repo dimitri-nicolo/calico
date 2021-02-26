@@ -6,9 +6,22 @@ import (
 	"net"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/timeshim"
 )
+
+var (
+	conntrackInfoReaderBlocks = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_bpf_conntrack_inforeader_blocks",
+		Help: "Conntrack InfoReader blocks",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(conntrackInfoReaderBlocks)
+}
 
 // InfoReader is an EntryScannerSynced that provides information to Collector as
 // collector.ConntrackInfo.
@@ -122,7 +135,13 @@ func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
 	// XXX we may want to make this non-blocking and what cannot go out now,
 	// should be deffered until the end of iteration not to block iterating over
 	// the conntrack table.
-	r.outC <- i
+	select {
+	case r.outC <- i:
+		// nothing, all good
+	default:
+		conntrackInfoReaderBlocks.Inc()
+		r.outC <- i
+	}
 }
 
 // IterationStart is called and Scanner starts iterating over the conntrack table.
