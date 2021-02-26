@@ -43,6 +43,7 @@ func main() {
     label                    Add or update labels of resources.
     convert                  Convert config files between different API versions.
     ipam                     IP address management.
+    datastore                Calico datastore management.
     cluster                  Access cluster information.
     bgp                      Access BGP related information.
     node                     Calico node management.
@@ -133,6 +134,8 @@ Description:
 			err = commands.Validate(args)
 		case "captured-packets":
 			err = commands.Capture(args)
+		case "datastore":
+			err = commands.Datastore(args)
 		default:
 			err = fmt.Errorf("Unknown command: %q\n%s", command, doc)
 		}

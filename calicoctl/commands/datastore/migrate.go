@@ -31,8 +31,6 @@ func Migrate(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
   <BINARY_NAME> datastore migrate <command> [<args>...]
 
-    export  Export the contents of the etcdv3 datastore to yaml.
-    import  Store and convert yaml of resources into the Kubernetes datastore.
     lock    Lock the datastore to prevent changes from occurring during datastore migration.
     unlock  Unlock the datastore to allow changes once the migration is completed.
 
@@ -65,10 +63,6 @@ Description:
 	args = append([]string{"datastore", "migrate", command}, arguments["<args>"].([]string)...)
 
 	switch command {
-	case "export":
-		return migrate.Export(args)
-	case "import":
-		return migrate.Import(args)
 	case "lock":
 		return migrate.Lock(args)
 	case "unlock":
