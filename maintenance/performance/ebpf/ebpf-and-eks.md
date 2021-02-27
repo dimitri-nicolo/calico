@@ -82,14 +82,14 @@ its read only file system. Here's how to get the cluster running with a suitable
     > that is too old and only has partial support for eBPF mode.
     {: .alert .alert-info}
 
-  * [Install `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/install); it is needed for the following step.
+  * [Install `kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl); it is needed for the following step.
 
   * Create a {{site.prodname}} IP pool that matches your VPC subnet and has the `natOutgoing` flag set.
     The IP pool will now be used for IPAM since AWS VPC CNI has its own IPAM, but it will tell {{site.prodname}}
     to SNAT traffic that is leaving the confines of your VPC.
 
     ```
-    calicoctl apply -f - <<EOF
+    kubectl apply -f - <<EOF
     apiVersion: projectcalico.org/v3
     kind: IPPool
     metadata:
@@ -215,10 +215,10 @@ Then, should you want to start `kube-proxy` again, you can simply remove the nod
 
 #### Enable eBPF mode
 
-To enable eBPF mode, change the Felix configuration parameter `BPFEnabled` to `true`.  This can be done with `calicoctl`, as follows:
+To enable eBPF mode, change the Felix configuration parameter `BPFEnabled` to `true`.  This can be done with `kubectl`, as follows:
 
 ```
-calicoctl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": true}}'
+kubectl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": true}}'
 ```
 
 Enabling eBPF node can disrupt existing workload connections.  After enabling eBPF mode you may need to restart
@@ -236,7 +236,7 @@ Follow these steps if you want to switch from Calico's eBPF dataplane back to st
 1. Disable Calico eBPF mode:
 
    ```
-   calicoctl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": false}}'
+   kubectl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": false}}'
    ```
 
 1. If you disabled `kube-proxy`, re-enable it (for example, by removing the node selector added above).

@@ -140,7 +140,7 @@ EOF
 
 After defining host endpoints for each node, you should find that internal
 cluster communications are all still working as normal—for example, that you
-can successfully execute commands like `calicoctl get hep` and `calicoctl get
+can successfully execute commands like `kubectl get hostEndpoint` and `calicoctl get
 pol`—but that it is impossible to connect into the cluster from outside
 (except for any [failsafe ports](failsafe)).  For example, if the
 cluster includes a Kubernetes Service that is exposed as NodePort 31852, you
