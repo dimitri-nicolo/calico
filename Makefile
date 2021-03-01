@@ -343,7 +343,7 @@ endif
 ###############################################################################
 
 ## Tags and builds a release from start to finish.
-release: release-prereqs	
+release: release-prereqs
 	$(MAKE) RELEASE_CHART=true release-tag
 	$(MAKE) RELEASE_CHART=true release-build
 	$(MAKE) RELEASE_CHART=true release-verify

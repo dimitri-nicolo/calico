@@ -286,7 +286,7 @@ spec:
 Then, use `calicoctl` to apply this policy.
 
 ```bash
-calicoctl apply -f kube-controllers-prometheus-policy.yaml
+kubectl apply -f kube-controllers-prometheus-policy.yaml
 ```
 
 ## Using an allow-list approach
@@ -500,8 +500,8 @@ spec:
       ports:
       - 9094
 ```
-Then, use `calicoctl` to apply this policy.
+Then, use `kubectl` to apply this policy.
 
 ```bash
-calicoctl apply -f kube-controllers-prometheus-policy.yaml
+kubectl apply -f kube-controllers-prometheus-policy.yaml
 ```

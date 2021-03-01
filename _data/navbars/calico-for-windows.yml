@@ -1,6 +1,6 @@
-title: Windows
+title: "Windows"
 path: /windows-calico/
-order: 5
+order: 9
 section:
 - title: Limitations and known issues
   path: /windows-calico/limitations
@@ -13,19 +13,15 @@ section:
   section:
   - title: Requirements
     path: /windows-calico/kubernetes/requirements
-  - title: Install Calico for Windows
+  - title: Install Calico Enterprise for Windows
     path: /windows-calico/kubernetes/standard
-  - title: Install Calico for Windows on Rancher RKE
+  - title: Install Calico Enterprise for Windows on Rancher RKE
     path: /windows-calico/kubernetes/rancher
-- title: OpenShift
-  path: /windows-calico/openshift/
-  section:
-  - title: Install Calico for Windows on OpenShift
-    path: /windows-calico/openshift/installation
+- title: Flow logs for Windows workloads
+  path: /windows-calico/flowlogs
 - title: Create kubeconfig for Windows nodes
   path: /windows-calico/kubeconfig
-- title: Start and stop Calico for Windows services
+- title: Start and stop Calico Enterprise for Windows services
   path: /windows-calico/maintain
-- title: Troubleshoot Calico for Windows
-  path: /windows-calico/troubleshoot  
-  
+- title: Troubleshoot Calico Enterprise for Windows
+  path: /windows-calico/troubleshoot
