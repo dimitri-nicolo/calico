@@ -8,10 +8,10 @@ canonical_url: '/getting-started/openshift/requirements'
 
 ## OpenShift requirements
 
-{{site.prodname}} {{page.version}} supports:
+{{site.prodname}} {{page.version}} supports these OpenShift Container Platform versions:
 
-- OpenShift Container Platform {{site.ocpMinVersion}}
-- OpenShift Container Platform {{site.ocpMaxVersion}}
+- {{site.ocpMinVersion}}
+- {{site.ocpMaxVersion}}
 
 Refer to the OpenShift documentation for additional requirements.
 
