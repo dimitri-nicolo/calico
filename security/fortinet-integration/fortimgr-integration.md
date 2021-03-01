@@ -119,7 +119,7 @@ Create a [{{site.prodname}} tier]({{site.baseurl}}/security/tiered-policy) in th
 1. Apply the manifest.
 
    ```bash
-   kubectl apply -f {{ "/manifests/fortmgr-device-configmap.yaml" | absolute_url }}
+   kubectl apply -f {{ "/manifests/fortimanager-device-configmap.yaml" | absolute_url }}
    ```
 
 ### Install FortiManager password as secrets
