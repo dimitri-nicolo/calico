@@ -50,7 +50,7 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
   ```
 
 - You have installed [{{site.prodname}} for EKS]({{site.baseurl}}/getting-started/kubernetes/eks)
-  on your cluster, or kubeadm.
+  on your cluster, or kubeadm/kops. 
 
   Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
 
@@ -111,6 +111,33 @@ The following commands gather the required information of a particular EKS clust
    CONTROL_PLANE_SG=$(aws ec2 describe-security-groups --filters Name=tag:aws:cloudformation:logical-id,Values=ControlPlaneSecurityGroup Name=vpc-id,Values=${VPC_ID} --query "SecurityGroups[0].GroupId" --output text)
    ```
   >**Note**: Commands above apply only to EKS clusters with unmanaged nodegroups i.e. {% include open-new-window.html text='eksctl without --managed' url='https://eksctl.io/usage/eks-managed-nodes/' %} option.
+
+**kops cluster**
+
+The following commands gather the required information of a particular kops cluster with name `$KOPS_CLUSTER_NAME`:
+
+   ```
+   VPC_ID=$(aws ec2 describe-instances \
+       --filters "Name=tag-value,Values=${KOPS_CLUSTER_NAME}" \
+       --output json \
+       | jq -r '.Reservations[].Instances[].VpcId' \
+       | grep -v null \
+       | head -1)
+
+   CONTROL_PLANE_SG=$(aws ec2 describe-instances \
+       --filters "Name=tag-value,Values=${KOPS_CLUSTER_NAME}" \
+       --output json \
+       | jq -r '.Reservations[].Instances[].SecurityGroups[] | select(.GroupName |startswith("master")) |.GroupId')
+
+   K8S_NODE_SGS=$(aws ec2 describe-instances \
+       --filters "Name=tag-value,Values=${KOPS_CLUSTER_NAME}" \
+       --output json \
+       | jq -r '.Reservations[].Instances[].SecurityGroups[] | select(.GroupName |startswith("nodes")) |.GroupId' \
+       | head -1)
+   ```
+
+   >**Note**: Because `KOPS_CLUSTER_NAMES` are FQDNs, you must to choose a `CLUSTER_NAME` that does not contain any dot separators for use in the remainder of this guide. See [before you begin](#before-you-begin) for more information.
+{: .alert .alert-warn}
 
 #### Install AWS resources
 
