@@ -188,8 +188,10 @@ class _FailoverTest(TestBase):
 
         last_log = server_log[-1]
         if last_log.find("--") == -1:
-            _log.exception("failed to parse server log of %s at %d seconds", name, count)
-            raise Exception("error parsing server log")
+            last_log = server_log[-2]
+            if last_log.find("--") == -1:
+                _log.exception("failed to parse server log of %s at %d seconds", name, count)
+                raise Exception("error parsing server log")
 
         seq_string = last_log.split("--")[0]
         seq = int(seq_string)
@@ -211,7 +213,7 @@ class _FailoverTest(TestBase):
         for name in names:
             cmd_prefix="kubectl exec -n dualtor -t " + name + " -- "
             output=subprocess.check_output(cmd_prefix + "ps -a", shell=True, stderr=subprocess.STDOUT)
-            if output.find("nc -l") != -1:
+            if output.find("/reliable-nc 8090") != -1:
                 subprocess.call(cmd_prefix + "killall nc", shell=True, stderr=subprocess.STDOUT)
 
     def routes_all_ecmp(self):
@@ -234,7 +236,7 @@ class _FailoverTest(TestBase):
 
         for f in self.config.flows:
             f.server_log = Log()
-            run_with_log("kubectl exec -n dualtor " + f.server_pod + " -- nc -l -p 8090", f.server_log)
+            run_with_log("kubectl exec -n dualtor " + f.server_pod + " -- /reliable-nc 8090", f.server_log)
             f.previous_seq = 0
             f.errors = 0
 
@@ -263,6 +265,9 @@ class _FailoverTest(TestBase):
 
         # cleanup servers
         self.clean_up()
+
+        for f in self.config.flows:
+            _log.info("%s: %s", f.server_pod, f.server_log.logs[-1].strip())
 
         for f in self.config.flows:
             if f.errors > self.config.max_errors:
