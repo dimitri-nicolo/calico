@@ -5,6 +5,8 @@ package elasticsearchconfiguration
 import (
 	"fmt"
 
+	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
+
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
@@ -23,8 +25,6 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
-
-	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 )
 
 const (
@@ -82,7 +82,7 @@ func New(
 	esClientBuilder elasticsearch.ClientBuilder,
 	management bool,
 	cfg config.ElasticsearchCfgControllerCfg) controller.Controller {
-
+	logCtx := log.WithField("cluster", clusterName)
 	r := &reconciler{
 		clusterName:      clusterName,
 		managementK8sCLI: managementK8sCLI,
@@ -127,13 +127,36 @@ func New(
 		notifications...,
 	)
 
-	if management {
-		// if this is a management cluster then we need to watch elasticsearch for changes. The manage cluster controller
-		// does that in the case the this isn't for a management cluster
+	w.AddWatch(
+		cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
+		&esv1.Elasticsearch{},
+	)
+
+	// This is a managed cluster and we need to watch some Elasticsearch secrets and config maps we know when to copy
+	// them over to the managed clusters.
+	if !management {
+		logCtx.Info("Watching for management cluster configuration changes.")
+
 		w.AddWatch(
-			cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
-				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
-			&esv1.Elasticsearch{},
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
+			&corev1.ConfigMap{},
+			notifications...,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
+			&corev1.Secret{},
+			notifications...,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.KibanaCertSecret))),
+			&corev1.Secret{},
+			notifications...,
 		)
 	}
 

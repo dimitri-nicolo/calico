@@ -36,7 +36,10 @@ type reconciler struct {
 // to access elasticsearch. If the managed cluster this is running for is actually a management cluster, then the secret
 // for the elasticsearch public certificate and the ConfigMap containing elasticsearch configuration are not copied over
 func (c *reconciler) Reconcile(name types.NamespacedName) error {
-	reqLogger := log.WithField("cluster", c.clusterName)
+	reqLogger := log.WithFields(map[string]interface{}{
+		"cluster": c.clusterName,
+		"key":     name,
+	})
 	reqLogger.Info("Reconciling Elasticsearch credentials")
 
 	currentESHash, err := c.esK8sCLI.CalculateTigeraElasticsearchHash()
@@ -67,6 +70,8 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 			return err
 		}
 	}
+
+	reqLogger.Info("Finished reconciling Elasticsearch credentials")
 
 	return nil
 }
