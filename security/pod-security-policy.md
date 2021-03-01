@@ -43,6 +43,18 @@ Admission controllers in Kubernetes intercept requests to the Kubernetes API and
     ```bash
     curl -O {{ "/manifests/psp-guardian.yaml" | absolute_url }}
     ```
+
+    **PSPs if using [L7 log collection](https://docs.tigera.io/visibility/elastic/l7/configure){:target="_blank"}** . 
+    > **Note:** Please edit this file to include the namespace and service account referencing the application pod you are monitoring. 
+    > This will need to be done for every application pod with a different namespace and service account you want to monitor.
+    {: .alert .alert-info}
+
+    > **Note:** You may need to add additional privileges to the pod security policy depending on the needs of your application pod.
+    {: .alert .alert-info}
+    
+   ```bash
+    curl -O {{ "/manifests/psp-l7-collector.yaml" | absolute_url }}
+    ```
     
     **PSPs for the third-party [ingress controller](https://docs.tigera.io/security/advanced-policy){:target="_blank"}**
     ```bash
@@ -76,7 +88,9 @@ Admission controllers in Kubernetes intercept requests to the Kubernetes API and
     |typha   				|  -  		|  - 						| - 		|  true			| -  		| -  					| -  	|
     |tigera-namager   		|  -  		|  - 						| - 		|  -			| -  		| -  					| -  	|
     |voltron   				|  -  		|  - 						| - 		|  -			| -  		| -  					| -  	|
-    
+    |l7-collector			|  -  		|  - 						|flexVolume |  -			| -  		| -  					| -  	|
+    |envoy-init 			|  -  		|  - 						|-          |  -			|root  		|NET_ADMIN, NET_RAW		| -  	|
+
     ``*`` on all platforms for {{site.prodname}} v3.0.0, only on OpenShift platform for {{site.prodname}} v3.0.1 and above
 
 4. Create or update your PSPs to control access to {{site.prodname}} components. Pod security policies will take effect only after pods are created or updated
