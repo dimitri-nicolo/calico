@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"strconv"
 	"unsafe"
 
 	"github.com/pkg/errors"
@@ -34,6 +35,10 @@ const (
 	// TypeTcpStats reports L4 TCP socket information
 	TypeTcpStats Type = 4
 )
+
+func (t Type) String() string {
+	return strconv.Itoa(int(t))
+}
 
 // Event represents the common denominator of all events
 type Event struct {

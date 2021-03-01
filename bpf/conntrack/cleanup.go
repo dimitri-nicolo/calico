@@ -18,11 +18,38 @@ import (
 	"net"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/timeshim"
 )
+
+var (
+	conntrackGaugeExpired = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_conntrack_expired",
+		Help: "Number of entries cleaned during a conntrack table sweep due to expiration",
+	})
+	conntrackCountersExpired = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_bpf_conntrack_expired_total",
+		Help: "Total number of entries cleaned during conntrack table sweep due to expiration - by reason",
+	}, []string{"reason"})
+	conntrackGaugeStaleNAT = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_conntrack_stale_nat",
+		Help: "Number of entries cleaned during a conntrack table sweep due to stale NAT",
+	})
+	conntrackCounterStaleNAT = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_bpf_conntrack_stale_nat_total",
+		Help: "Total number of entries cleaned during conntrack table sweeps due to stale NAT",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(conntrackGaugeExpired)
+	prometheus.MustRegister(conntrackCountersExpired)
+	prometheus.MustRegister(conntrackGaugeStaleNAT)
+	prometheus.MustRegister(conntrackCounterStaleNAT)
+}
 
 type Timeouts struct {
 	CreationGracePeriod time.Duration
@@ -63,13 +90,17 @@ type LivenessScanner struct {
 	goTimeOfLastKTimeLookup time.Time
 	// cachedKTime is the most recent kernel time.
 	cachedKTime int64
+	cleaned     int
+
+	reasonCounters map[string]prometheus.Counter
 }
 
 func NewLivenessScanner(timeouts Timeouts, dsr bool, opts ...LivenessScannerOpt) *LivenessScanner {
 	ls := &LivenessScanner{
-		timeouts: timeouts,
-		dsr:      dsr,
-		time:     timeshim.RealTime(),
+		timeouts:       timeouts,
+		dsr:            dsr,
+		time:           timeshim.RealTime(),
+		reasonCounters: make(map[string]prometheus.Counter),
 	}
 	for _, opt := range opts {
 		opt(ls)
@@ -83,6 +114,20 @@ func WithTimeShim(shim timeshim.Interface) LivenessScannerOpt {
 	return func(ls *LivenessScanner) {
 		ls.time = shim
 	}
+}
+
+func (l *LivenessScanner) reasonCounterInc(reason string) {
+	c, ok := l.reasonCounters[reason]
+	if !ok {
+		var err error
+		c, err = conntrackCountersExpired.GetMetricWithLabelValues(reason)
+		if err != nil {
+			log.WithError(err).Panicf("Failed to get conntrackCountersExpired counter for reason%q", reason)
+		}
+		l.reasonCounters[reason] = c
+	}
+	c.Inc()
+	l.cleaned++
 }
 
 func (l *LivenessScanner) Check(ctKey Key, ctVal Value, get EntryGet) ScanVerdict {
@@ -107,6 +152,9 @@ func (l *LivenessScanner) Check(ctKey Key, ctVal Value, get EntryGet) ScanVerdic
 			// removed the entry or there is some external inconsistency. In either case, the
 			// FWD entry should be removed.
 			log.Debug("Found a forward NAT conntrack entry with no reverse entry, removing...")
+			// We account for this reason only for completeness, does not carry
+			// much information on its own.
+			l.reasonCounterInc("no reverse for forward")
 			return ScanVerdictDelete
 		} else if err != nil {
 			log.WithError(err).Warn("Failed to look up conntrack entry.")
@@ -116,6 +164,7 @@ func (l *LivenessScanner) Check(ctKey Key, ctVal Value, get EntryGet) ScanVerdic
 			if debug {
 				log.WithField("reason", reason).Debug("Deleting expired conntrack forward-NAT entry")
 			}
+			l.reasonCounterInc(reason)
 			return ScanVerdictDelete
 			// do not delete the reverse entry yet to avoid breaking the iterating
 			// over the map.  We must not delete other than the current key. We remove
@@ -126,6 +175,7 @@ func (l *LivenessScanner) Check(ctKey Key, ctVal Value, get EntryGet) ScanVerdic
 			if debug {
 				log.WithField("reason", reason).Debug("Deleting expired conntrack reverse-NAT entry")
 			}
+			l.reasonCounterInc(reason)
 			return ScanVerdictDelete
 		}
 	case TypeNormal:
@@ -133,6 +183,7 @@ func (l *LivenessScanner) Check(ctKey Key, ctVal Value, get EntryGet) ScanVerdic
 			if debug {
 				log.WithField("reason", reason).Debug("Deleting expired normal conntrack entry")
 			}
+			l.reasonCounterInc(reason)
 			return ScanVerdictDelete
 		}
 	default:
@@ -140,6 +191,16 @@ func (l *LivenessScanner) Check(ctKey Key, ctVal Value, get EntryGet) ScanVerdic
 	}
 
 	return ScanVerdictOK
+}
+
+// IterationStart satisfies EntryScannerSynced
+func (l *LivenessScanner) IterationStart() {
+}
+
+// IterationEnd satisfies EntryScannerSynced
+func (l *LivenessScanner) IterationEnd() {
+	conntrackGaugeExpired.Set(float64(l.cleaned))
+	l.cleaned = 0
 }
 
 // EntryExpired checks whether a given conntrack table entry for a given
@@ -200,6 +261,7 @@ type NATChecker interface {
 // StaleNATScanner removes any entries to frontend that do not have the backend anymore.
 type StaleNATScanner struct {
 	natChecker NATChecker
+	cleaned    int
 }
 
 // NewStaleNATScanner returns an EntryScanner that checks if entries have
@@ -238,6 +300,8 @@ func (sns *StaleNATScanner) Check(k Key, v Value, _ EntryGet) ScanVerdict {
 			if debug {
 				log.WithField("key", k).Debugf("TypeNATReverse is stale")
 			}
+			sns.cleaned++
+			conntrackCounterStaleNAT.Inc()
 			return ScanVerdictDelete
 		}
 		if debug {
@@ -293,6 +357,8 @@ func (sns *StaleNATScanner) Check(k Key, v Value, _ EntryGet) ScanVerdict {
 			if debug {
 				log.WithField("key", k).Debugf("TypeNATForward is stale")
 			}
+			sns.cleaned++
+			conntrackCounterStaleNAT.Inc()
 			return ScanVerdictDelete
 		}
 		if debug {
@@ -314,4 +380,6 @@ func (sns *StaleNATScanner) IterationStart() {
 // IterationEnd satisfies EntryScannerSynced
 func (sns *StaleNATScanner) IterationEnd() {
 	sns.natChecker.ConntrackScanEnd()
+	conntrackGaugeStaleNAT.Set(float64(sns.cleaned))
+	sns.cleaned = 0
 }
