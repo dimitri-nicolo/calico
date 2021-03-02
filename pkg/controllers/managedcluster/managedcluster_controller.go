@@ -4,17 +4,14 @@ package managedcluster
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -24,7 +21,6 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 )
 
@@ -116,7 +112,7 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 		esClientBuilder:          c.esClientBuilder,
 		esClient:                 client,
 	}
-	mgmtChangeReconciler := newManagementClusterChangeReconciler(c.managementK8sCLI, c.calicoCLI, c.esk8sCLI, mcReconciler.listenForRebootNotify())
+
 	// Watch the ManagedCluster resources for changes
 	managedClusterWorker := worker.New(mcReconciler)
 	managedClusterWorker.AddWatch(
@@ -124,32 +120,7 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 		&v3.ManagedCluster{},
 	)
 
-	mgmtChangeWorker := worker.New(mgmtChangeReconciler)
-	mgmtChangeWorker.AddWatch(
-		cache.NewListWatchFromClient(c.esk8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
-			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
-		&esv1.Elasticsearch{},
-	)
-
-	mgmtChangeWorker.AddWatch(
-		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
-			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
-		&corev1.Secret{},
-	)
-
-	mgmtChangeWorker.AddWatch(
-		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
-			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.KibanaCertSecret))),
-		&corev1.Secret{},
-	)
-
-	mgmtChangeWorker.AddWatch(
-		cache.NewListWatchFromClient(c.managementK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
-			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
-		&corev1.ConfigMap{},
-	)
-
-	return client, []worker.Worker{managedClusterWorker, mgmtChangeWorker}
+	return client, []worker.Worker{managedClusterWorker}
 }
 
 func (c *managedClusterController) Run(stop chan struct{}) {

@@ -126,25 +126,3 @@ func (c *managedClusterESControllerReconciler) addManagedClusterWatch(name strin
 	go esCredsController.Run(stop)
 	c.managedClustersStopChans[name] = stop
 }
-
-func (c *managedClusterESControllerReconciler) listenForRebootNotify() chan bool {
-	listener := make(chan bool)
-	go func() {
-		for range listener {
-			log.Info("Notified of management cluster changes, recreated managed cluster elasticsearch controllers")
-			managedClusterList, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(context.Background(), metav1.ListOptions{})
-			if err != nil {
-				log.WithError(err).Error("failed to list the managed clusters, skipping requeue of ManagedCluster watches")
-				continue
-			}
-
-			for _, mc := range managedClusterList.Items {
-				if err := c.startManagedClusterWatch(mc.Name); err != nil {
-					log.WithError(err).Error("couldn't reboot managed cluster watch")
-				}
-			}
-		}
-	}()
-
-	return listener
-}
