@@ -40,6 +40,13 @@ def run_with_log(cmd, log):
 
 class Flow(object):
     def __init__(self, client_pod, server_pod, target_ip, target_port):
+        # A Flow object represents a single connection from a client pod to a target IP
+        # and port.  The target IP and port will always resolve to a server pod; sometimes
+        # directly (pod IP), sometimes via a cluster IP and sometimes via a NodePort.
+        # `server_pod` is the name of the expected server pod; we use this for logging and
+        # for calculating the expected path back from the server to the client.
+        # `server_ip` is the pod IP of the expected server pod; we use this for
+        # calculating the expected path back from the client to the server.
         self.client_pod = client_pod
         self.server_pod = server_pod
         self.target_ip = target_ip
