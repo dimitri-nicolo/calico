@@ -61,6 +61,7 @@ POD2DAEMON_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].compone
 DIKASTES_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/dikastes.version')
 FLANNEL_MIGRATION_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/flannel-migration-controller.version')
 TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.typha.version')
+CHART_RELEASE := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].chart.version')
 
 ##############################################################################
 
@@ -343,9 +344,9 @@ endif
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs
-	$(MAKE) release-tag
-	$(MAKE) release-build
-	$(MAKE) release-verify
+	$(MAKE) RELEASE_CHART=true release-tag
+	$(MAKE) RELEASE_CHART=true release-build
+	$(MAKE) RELEASE_CHART=true release-verify
 
 	@echo ""
 	@echo "Release build complete. Next, push the release."
@@ -411,7 +412,7 @@ endif
 		bash -c 'pip install pygithub && /usr/local/bin/python /code/release-scripts/get-contributors.py >> /code/AUTHORS.md'
 
 # release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
+release-prereqs: charts
 	@if [ $(CALICO_VER) != $(NODE_VER) ]; then \
 		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
 		exit 1; fi
@@ -599,5 +600,5 @@ build-operator-reference:
 	           git clone --depth=1 -b $(API_GEN_BRANCH) https://github.com/$(API_GEN_REPO) api-gen && cd api-gen && \
 	           go mod edit -replace github.com/tigera/operator=github.com/$(OPERATOR_REPO)@$(OPERATOR_VERSION) && \
 	           go mod download && go build && \
-	           ./gen-crd-api-reference-docs -config ./example-config.json \
+	           ./gen-crd-api-reference-docs -config /go/src/$(PACKAGE_NAME)/reference/installation/config.json \
 	                   -api-dir github.com/tigera/operator/api -out-file /go/src/$(PACKAGE_NAME)/reference/installation/_api.html'

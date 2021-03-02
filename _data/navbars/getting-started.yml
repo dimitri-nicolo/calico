@@ -11,7 +11,7 @@ section:
     - title: System requirements
       path: /getting-started/openshift/requirements
     - title: Installation
-      path: /getting-started/openshift/installation/ 
+      path: /getting-started/openshift/installation
   - title: Kubernetes
     path: /getting-started/kubernetes/
     section:

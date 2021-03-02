@@ -400,20 +400,6 @@ AuthenticationOpenshift
 <p>Openshift contains the configuration needed to setup Openshift OAuth authentication.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>ldap</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthenticationLDAP">
-AuthenticationLDAP
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LDAP contains the configuration needed to setup LDAP authentication.</p>
-</td>
-</tr>
 </table>
 </td>
 </tr>
@@ -848,8 +834,7 @@ field.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ComponentResources can be used to customize the resource requirements for each component.
-Node, Typha, and KubeControllers are supported for installations.</p>
+<p>ComponentResources can be used to customize the resource requirements for each component.</p>
 </td>
 </tr>
 <tr>
@@ -1192,21 +1177,6 @@ map[string]string
 <p>DataNodeSelector gives you more control over the node that Elasticsearch will run on. The contents of DataNodeSelector will
 be added to the PodSpec of the Elasticsearch nodes. For the pod to be eligible to run on a node, the node must have
 each of the indicated key-value pairs as labels as well as access to the specified StorageClassName.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>componentResources</code><br>
-<em>
-<a href="#operator.tigera.io/v1.LogStorageComponentResource">
-[]LogStorageComponentResource
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ComponentResources can be used to customize the resource requirements for each component.
-Only ECKOperator is supported for this spec.</p>
 </td>
 </tr>
 </table>
@@ -1869,75 +1839,6 @@ string
 </p>
 <p>AuthType represents the type of authentication to use. Valid
 options are: Token, Basic, OIDC, OAuth</p>
-<h3 id="operator.tigera.io/v1.AuthenticationLDAP">AuthenticationLDAP
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.AuthenticationSpec">AuthenticationSpec</a>)
-</p>
-<p>AuthenticationLDAP is the configuration needed to setup LDAP.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>host</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>The host and port of the LDAP server. Example: ad.example.com:636</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>startTLS</code><br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>StartTLS whether to enable the startTLS feature for establishing TLS on an existing LDAP session.
-If true, the ldap:// protocol is used and then issues a StartTLS command, otherwise, connections will use
-the ldaps:// protocol.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>userSearch</code><br>
-<em>
-<a href="#operator.tigera.io/v1.UserSearch">
-UserSearch
-</a>
-</em>
-</td>
-<td>
-<p>User entry search configuration to match the credentials with a user.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>groupSearch</code><br>
-<em>
-<a href="#operator.tigera.io/v1.GroupSearch">
-GroupSearch
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Group search configuration to find the groups that a user is in.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.tigera.io/v1.AuthenticationOIDC">AuthenticationOIDC
 </h3>
 <p>
@@ -1983,7 +1884,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>RequestedScopes is a list of scopes to request from the OIDC provider. If not provided, the following scopes are
 requested: [&ldquo;openid&rdquo;, &ldquo;email&rdquo;, &ldquo;profile&rdquo;, &ldquo;groups&rdquo;, &ldquo;offline_access&rdquo;].</p>
 </td>
@@ -2151,20 +2051,6 @@ AuthenticationOpenshift
 <td>
 <em>(Optional)</em>
 <p>Openshift contains the configuration needed to setup Openshift OAuth authentication.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ldap</code><br>
-<em>
-<a href="#operator.tigera.io/v1.AuthenticationLDAP">
-AuthenticationLDAP
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LDAP contains the configuration needed to setup LDAP authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -2437,7 +2323,7 @@ string
 <td>
 <p>When a CSR is issued to the certificates.k8s.io API, the signerName is added to the request in order to accommodate for clusters
 with multiple signers.
-Must be formatted as: <code>&lt;my-domain&gt;/&lt;my-signername&gt;</code>.</p>
+Must be formatted as: &ldquo;<my-domain>/<my-signername>&rdquo;.</p>
 </td>
 </tr>
 <tr>
@@ -2646,73 +2532,6 @@ Default: 60</p>
 </p>
 <p>EncapsulationType is the type of encapsulation to use on an IP pool. Valid
 options are: IPIP, VXLAN, IPIPCrossSubnet, VXLANCrossSubnet, None.</p>
-<h3 id="operator.tigera.io/v1.GroupSearch">GroupSearch
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.AuthenticationLDAP">AuthenticationLDAP</a>)
-</p>
-<p>Group search configuration to find the groups that a user is in.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>baseDN</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>BaseDN to start the search from. For example &ldquo;cn=groups,dc=example,dc=com&rdquo;</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>filter</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Optional filter to apply when searching the directory.
-For example &ldquo;(objectClass=posixGroup)&rdquo;</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>nameAttribute</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>The attribute of the group that represents its name. This attribute can be used to apply RBAC to a user group.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>userMatchers</code><br>
-<em>
-<a href="#operator.tigera.io/v1.UserMatch">
-[]UserMatch
-</a>
-</em>
-</td>
-<td>
-<p>Following list contains field pairs that are used to match a user to a group. It adds an additional
-requirement to the filter that an attribute in the group must match the user&rsquo;s
-attribute value.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.tigera.io/v1.HostPortsType">HostPortsType
 (<code>string</code> alias)</h3>
 <p>
@@ -3173,8 +2992,7 @@ field.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ComponentResources can be used to customize the resource requirements for each component.
-Node, Typha, and KubeControllers are supported for installations.</p>
+<p>ComponentResources can be used to customize the resource requirements for each component.</p>
 </td>
 </tr>
 <tr>
@@ -3372,56 +3190,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="operator.tigera.io/v1.LogStorageComponentName">LogStorageComponentName
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.LogStorageComponentResource">LogStorageComponentResource</a>)
-</p>
-<p>LogStorageComponentName CRD enum</p>
-<h3 id="operator.tigera.io/v1.LogStorageComponentResource">LogStorageComponentResource
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.LogStorageSpec">LogStorageSpec</a>)
-</p>
-<p>The ComponentResource struct associates a ResourceRequirements with a component by name</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>componentName</code><br>
-<em>
-<a href="#operator.tigera.io/v1.LogStorageComponentName">
-LogStorageComponentName
-</a>
-</em>
-</td>
-<td>
-<p>ComponentName is an enum which identifies the component</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resourceRequirements</code><br>
-<em>
-<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core">
-Kubernetes core/v1.ResourceRequirements
-</a>
-</em>
-</td>
-<td>
-<p>ResourceRequirements allows customization of limits and requests for compute resources such as cpu and memory.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.tigera.io/v1.LogStorageSpec">LogStorageSpec
 </h3>
 <p>
@@ -3506,21 +3274,6 @@ map[string]string
 <p>DataNodeSelector gives you more control over the node that Elasticsearch will run on. The contents of DataNodeSelector will
 be added to the PodSpec of the Elasticsearch nodes. For the pod to be eligible to run on a node, the node must have
 each of the indicated key-value pairs as labels as well as access to the specified StorageClassName.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>componentResources</code><br>
-<em>
-<a href="#operator.tigera.io/v1.LogStorageComponentResource">
-[]LogStorageComponentResource
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ComponentResources can be used to customize the resource requirements for each component.
-Only ECKOperator is supported for this spec.</p>
 </td>
 </tr>
 </tbody>
@@ -4375,98 +4128,6 @@ PreferredNodeAffinity
 <td>
 <em>(Optional)</em>
 <p>NodeAffinity describes node affinity scheduling rules for typha.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.UserMatch">UserMatch
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.GroupSearch">GroupSearch</a>)
-</p>
-<p>UserMatch when the value of a UserAttribute and a GroupAttribute match, a user belongs to the group.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>userAttribute</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>The attribute of a user that links it to a group.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>groupAttribute</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>The attribute of a group that links it to a user.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1.UserSearch">UserSearch
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.AuthenticationLDAP">AuthenticationLDAP</a>)
-</p>
-<p>User entry search configuration to match the credentials with a user.</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>baseDN</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>BaseDN to start the search from. For example &ldquo;cn=users,dc=example,dc=com&rdquo;</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>filter</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Optional filter to apply when searching the directory. For example &ldquo;(objectClass=person)&rdquo;</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>nameAttribute</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>A mapping of the attribute that is used as the username. This attribute can be used to apply RBAC to a user.
-Default: uid</p>
 </td>
 </tr>
 </tbody>
