@@ -170,7 +170,7 @@ class _FailoverTest(TestBase):
         # Before starting each test case, wait until all pod block routes are correctly
         # ECMP again, as they may need a little time to repair after being broken in the
         # previous test case.
-        retry_until_success(self.routes_all_ecmp, retries=10, wait_time=3)
+        retry_until_success(self.routes_all_ecmp, retries=10, wait_time=6)
 
     def start_client(self, client_pod, ip, port):
         name = "from %s to %s:%s" % (client_pod, ip, port)
