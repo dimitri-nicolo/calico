@@ -91,6 +91,18 @@ def get_dev(output):
     return dev
 
 
+def traceroute(src_pod_name, dst_ip, timeout):
+    cmd = "kubectl exec -t " + src_pod_name + " -n dualtor -- timeout " + timeout + " traceroute -n " + dst_ip
+    _log.info("run: %s", cmd)
+    try:
+        output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        _log.info("output:\n%s", output)
+    except subprocess.CalledProcessError as e:
+        _log.info("rc %s output:\n%s", e.returncode, e.output)
+        raise
+    return output.splitlines()
+
+
 def get_plane(src_pod_name, dst_ip):
 
     # Normally, starting from a pod, we're interested in the second traceroute hop.
@@ -99,32 +111,21 @@ def get_plane(src_pod_name, dst_ip):
         # But from a host-networked pod it's the first hop.
         route_order = 1
 
-    # traceroute src --> dst and get the route with route_order
-    cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 5s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
-    print cmd
+    # traceroute src --> dst
     try:
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        trlines = traceroute(src_pod_name, dst_ip, "5s")
     except Exception:
         print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
-        subprocess.call("kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip, shell=True)
-        cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        trlines = traceroute(src_pod_name, dst_ip, "25s")
 
-    print output
+    marker = str(route_order) + "  172"
+    for l in trlines:
+        if marker in l:
+            m = re.search('172\.31\..(\d)', l)
+            if m:
+                return m.group(1)
 
-    m = re.search('172\.31\..(\d)', output)
-    if m:
-        found = m.group(1)
-        return found
-    else:
-        print "something wrong"
-        cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 5s traceroute -n " + dst_ip
-        print cmd
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-        print output
-
-        _log.exception("failed to match route info to plane. output %s", output)
-        raise Exception("error match route info")
+    raise Exception("error match route info")
 
 
 class FailoverTestConfig(object):
