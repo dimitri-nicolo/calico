@@ -13,7 +13,7 @@ TEST_DIR=./tests/k8st
 : ${KIND:=$TEST_DIR/kind}
 
 echo "Download kind executable with multiple networks support"
-curl -L https://github.com/projectcalico/kind/releases/download/kind-multiple-networks-0.1/kind -o ${KIND}
+curl -L https://github.com/projectcalico/kind/releases/download/kind-multiple-networks-0.5/kind -o ${KIND}
 chmod +x ${KIND}
 
 # Set config variables needed for ${kubectl} and calicoctl.
@@ -234,7 +234,7 @@ EOF
     fi
     ${KIND} create cluster --config - <<EOF
 kind: Cluster
-apiVersion: kind.sigs.k8s.io/v1alpha3
+apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   disableDefaultCNI: true
 nodes:
