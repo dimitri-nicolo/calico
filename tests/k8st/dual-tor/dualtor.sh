@@ -260,6 +260,8 @@ nodes:
   - "172.31.10.0/23 src 172.31.20.4 nexthop via 172.31.21.1 nexthop via 172.31.22.1"
 EOF
 
+    ${KIND} load docker-image calico-test/busybox-with-reliable-nc
+
     # Fix rp_filter in each node.
     ${KIND} get nodes | xargs -n1 -I {} docker exec {} sysctl -w net.ipv4.conf.all.rp_filter=1
 
@@ -538,7 +540,7 @@ EOF
 }
 
 function do_cleanup {
-    ${KIND} delete cluster
+    ${KIND} delete cluster || true
     docker rm -f `docker ps -a -q` || true
     docker network rm ra2 rb2 uplink2 || true
     docker network rm ra1 rb1 uplink || true

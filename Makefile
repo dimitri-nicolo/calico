@@ -376,6 +376,7 @@ stop-k8s-apiserver:
 # Pull calicoctl and CNI plugin binaries with versions as per XXX_VER
 # variables.  These are used for the STs.
 dist/calicoctl:
+	mkdir -p dist
 	-docker rm -f calicoctl
 	docker pull $(CTL_CONTAINER_NAME)
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
@@ -385,6 +386,7 @@ dist/calicoctl:
 	-docker rm -f calicoctl
 
 dist/calico dist/calico-ipam:
+	mkdir -p dist
 	-docker rm -f calico-cni
 	docker pull $(CNX_REPOSITORY)/tigera/cni:$(CNI_VERSION)
 	docker create --name calico-cni $(CNX_REPOSITORY)/tigera/cni:$(CNI_VERSION)
@@ -441,11 +443,12 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 dual-tor-test: cnx-node.tar calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
 .PHONY: dual-tor-setup
-dual-tor-setup: cnx-node.tar calico_test.created
+dual-tor-setup: dual-tor-cleanup cnx-node.tar calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	git submodule update --init
 	cd tests/kind && make
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
+	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_IMAGE) tests/k8st/dual-tor/dualtor.sh
 
@@ -465,8 +468,13 @@ dual-tor-run-test:
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
-	STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
-	rm ./kubectl
+	-STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
+	-rm ./kubectl
+
+tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
+	mkdir -p dist
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/tests/k8st/reliable-nc"'
 
 ## k8st: STs in a real Kubernetes cluster provisioned by KIND
 ##
