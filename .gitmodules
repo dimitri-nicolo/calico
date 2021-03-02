@@ -1,4 +1,0 @@
-[submodule "tests/kind"]
-	path = tests/kind
-	url = git@github.com:projectcalico/kind.git
-	branch = kind-multiple-networks
