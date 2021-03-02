@@ -23,6 +23,10 @@ func init() {
 	prometheus.MustRegister(conntrackInfoReaderBlocks)
 }
 
+const (
+	conntrackInfoReaderBatchSize = 1024
+)
+
 // InfoReader is an EntryScannerSynced that provides information to Collector as
 // collector.ConntrackInfo.
 type InfoReader struct {
@@ -36,7 +40,9 @@ type InfoReader struct {
 	// cachedKTime is the most recent kernel time.
 	cachedKTime int64
 
-	outC chan collector.ConntrackInfo
+	outC chan []collector.ConntrackInfo
+
+	bufferedConntrackInfo []collector.ConntrackInfo
 }
 
 // NewInfoReader returns a new instance of InfoReader that can be used as a
@@ -48,7 +54,7 @@ func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface) *InfoRe
 		dsr:      dsr,
 		time:     time,
 
-		outC: make(chan collector.ConntrackInfo, 1000),
+		outC: make(chan []collector.ConntrackInfo, 1000),
 	}
 
 	if r.time == nil {
@@ -132,15 +138,15 @@ func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.
 }
 
 func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
-	// XXX we may want to make this non-blocking and what cannot go out now,
-	// should be deffered until the end of iteration not to block iterating over
-	// the conntrack table.
-	select {
-	case r.outC <- i:
-		// nothing, all good
-	default:
-		conntrackInfoReaderBlocks.Inc()
-		r.outC <- i
+	r.bufferedConntrackInfo = append(r.bufferedConntrackInfo, i)
+	if len(r.bufferedConntrackInfo) >= conntrackInfoReaderBatchSize {
+		select {
+		case r.outC <- r.bufferedConntrackInfo:
+			r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, conntrackInfoReaderBatchSize)
+		default:
+			conntrackInfoReaderBlocks.Inc()
+			// keep buffering
+		}
 	}
 }
 
@@ -150,16 +156,21 @@ func (r *InfoReader) IterationStart() {
 		r.cachedKTime = r.time.KTimeNanos()
 		r.goTimeOfLastKTimeLookup = r.time.Now()
 	}
+
+	r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, conntrackInfoReaderBatchSize)
 }
 
 // IterationEnd is called and Scanner ends iterating over the conntrack table.
 func (r *InfoReader) IterationEnd() {
+	if len(r.bufferedConntrackInfo) > 0 {
+		r.outC <- r.bufferedConntrackInfo
+	}
 }
 
 // Start is called by collector to start consuming data.
 func (r *InfoReader) Start() error { return nil }
 
 // ConntrackInfoChan returns a channel for collector to consume data.
-func (r *InfoReader) ConntrackInfoChan() <-chan collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
 	return r.outC
 }

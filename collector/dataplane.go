@@ -66,7 +66,7 @@ func (ct ConntrackInfo) String() string {
 // ConntrackInfoReader is an interafce that provides information from conntrack.
 type ConntrackInfoReader interface {
 	Start() error
-	ConntrackInfoChan() <-chan ConntrackInfo
+	ConntrackInfoChan() <-chan []ConntrackInfo
 }
 
 type TcpStatsData struct {

@@ -96,8 +96,8 @@ type InfoReader struct {
 	bufferedEvents []*collector.PacketInfo
 
 	ticker             jitter.JitterTicker
-	conntrackInfoC     chan collector.ConntrackInfo
-	bufferedConntracks []*collector.ConntrackInfo
+	conntrackInfoC     chan []collector.ConntrackInfo
+	bufferedConntracks []collector.ConntrackInfo
 
 	epEventHandler *EndpointEventHandler
 }
@@ -119,9 +119,9 @@ func NewInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *InfoR
 		eventDoneC:         make(chan struct{}, 1),
 		packetInfoC:        make(chan collector.PacketInfo, 1000),
 		ticker:             jitter.NewTicker(period, period/10),
-		conntrackInfoC:     make(chan collector.ConntrackInfo, 1000),
+		conntrackInfoC:     make(chan []collector.ConntrackInfo, 1000),
 		bufferedEvents:     []*collector.PacketInfo{},
-		bufferedConntracks: []*collector.ConntrackInfo{},
+		bufferedConntracks: []collector.ConntrackInfo{},
 		epEventHandler: &EndpointEventHandler{
 			endpoints:             []string{},
 			epSetWithPolicyUpdate: set.New(),
@@ -160,7 +160,7 @@ func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
 }
 
 // ConntrackInfoChan returns the channel with converted ConntrackInfo.
-func (r *InfoReader) ConntrackInfoChan() <-chan collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
 	return r.conntrackInfoC
 }
 
@@ -177,9 +177,8 @@ func (r *InfoReader) run() {
 
 	var (
 		packetInfoC    chan collector.PacketInfo
-		conntrackInfoC chan collector.ConntrackInfo
+		conntrackInfoC chan []collector.ConntrackInfo
 		nextPktToSend  collector.PacketInfo
-		nextCTToSend   collector.ConntrackInfo
 	)
 
 	for {
@@ -204,18 +203,13 @@ func (r *InfoReader) run() {
 				nextPktToSend = *r.bufferedEvents[0] // Make sure value is updated.
 				packetInfoC = r.packetInfoC          // Make sure the packetInfoC case is enabled.
 			}
-		case conntrackInfoC <- nextCTToSend:
-			r.bufferedConntracks = r.bufferedConntracks[1:]
-			if len(r.bufferedConntracks) == 0 {
-				conntrackInfoC = nil // Disable this case until we have conntrack info to send.
-			} else {
-				nextCTToSend = *r.bufferedConntracks[0] // Make sure value is updated.
-			}
+		case conntrackInfoC <- r.bufferedConntracks:
+			r.bufferedConntracks = nil
+			conntrackInfoC = nil // Disable this case until we have conntrack info to send.
 		case <-r.ticker.Channel():
 			r.vfpOps.ListFlows(r.handleFlowEntry)
 			if len(r.bufferedConntracks) > 0 {
-				nextCTToSend = *r.bufferedConntracks[0] // Make sure value is updated.
-				conntrackInfoC = r.conntrackInfoC       // Make sure the conntrackInfoC is enabled.
+				conntrackInfoC = r.conntrackInfoC // Make sure the conntrackInfoC is enabled.
 			}
 		}
 
@@ -278,10 +272,10 @@ func (r *InfoReader) convertEventAggrPkt(ea *etw.EventAggregate) (*collector.Pac
 	return &info, nil
 }
 
-func convertFlowEntry(fe *vfpctrl.FlowEntry) (*collector.ConntrackInfo, error) {
+func convertFlowEntry(fe *vfpctrl.FlowEntry) (collector.ConntrackInfo, error) {
 	tuple, err := extractTupleFromFlowEntry(fe)
 	if err != nil {
-		return nil, err
+		return collector.ConntrackInfo{}, err
 	}
 
 	// In the case of TCP, check if we can expire the entry early. We try to expire
@@ -319,17 +313,17 @@ func convertFlowEntry(fe *vfpctrl.FlowEntry) (*collector.ConntrackInfo, error) {
 	if fe.IsDNAT() {
 		vTuple, err := extractPreDNATTupleFromFlowEntry(fe)
 		if err != nil {
-			return nil, err
+			return collector.ConntrackInfo{}, err
 		}
 		ctInfo.IsDNAT = true
 		ctInfo.PreDNATTuple = *vTuple
 	}
 
-	return &ctInfo, nil
+	return ctInfo, nil
 }
 
 func (r *InfoReader) handleFlowEntry(fe *vfpctrl.FlowEntry) {
-	ctInfoPointer, err := convertFlowEntry(fe)
+	ctInfo, err := convertFlowEntry(fe)
 	if err != nil {
 		log.WithError(err).Warnf("failed to convert flow entry")
 		return
@@ -342,7 +336,7 @@ func (r *InfoReader) handleFlowEntry(fe *vfpctrl.FlowEntry) {
 		log.Warnf("VFP info reader reaches maximum number of buffered conntracks.")
 		return
 	}
-	r.bufferedConntracks = append(r.bufferedConntracks, ctInfoPointer)
+	r.bufferedConntracks = append(r.bufferedConntracks, ctInfo)
 }
 
 func extractPrefixStrFromRuleName(name string) string {
