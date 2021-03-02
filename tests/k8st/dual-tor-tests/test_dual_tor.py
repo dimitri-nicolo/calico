@@ -99,6 +99,8 @@ def traceroute(src_pod_name, dst_ip, timeout):
         _log.info("output:\n%s", output)
     except subprocess.CalledProcessError as e:
         _log.info("rc %s output:\n%s", e.returncode, e.output)
+        run("kubectl get po -A -o wide")
+        run("kubectl describe po " + src_pod_name + " -n dualtor")
         raise
     return output.splitlines()
 
