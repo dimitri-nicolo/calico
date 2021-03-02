@@ -17,7 +17,7 @@ csp.rules:
 tigera.enabled: true
 tigera.pluginEnabled: ${GTM_INTEGRATION}
 tigera.container: "GTM-TCNXTCJ"
-tigera.licenseEdition: ${LICENSE_EDITION: -enterpriseEdition}
+tigera.licenseEdition: ${LICENSE_EDITION:-enterpriseEdition}
 
 EOF
 
