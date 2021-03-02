@@ -92,7 +92,7 @@ def get_dev(output):
 
 
 def traceroute(src_pod_name, dst_ip, timeout):
-    cmd = "kubectl exec -t " + src_pod_name + " -n dualtor -- timeout " + timeout + " traceroute -n " + dst_ip
+    cmd = "kubectl exec " + src_pod_name + " -n dualtor -- timeout " + timeout + " traceroute -n " + dst_ip
     _log.info("run: %s", cmd)
     try:
         output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -176,7 +176,7 @@ class _FailoverTest(TestBase):
     def start_client(self, client_pod, ip, port):
         name = "from %s to %s:%s" % (client_pod, ip, port)
         script="for i in `seq 1 " + str(self.config.total_packets) + "`; do echo $i -- " + name + "; sleep 0.01; done | /reliable-nc " + ip + ":" + port
-        cmd = "kubectl exec -n dualtor -t " + client_pod + " -- /bin/sh -c \"" + script + "\""
+        cmd = "kubectl exec -n dualtor " + client_pod + " -- /bin/sh -c \"" + script + "\""
         _log.info("run: %s", cmd)
         proc1 = subprocess.Popen(shlex.split(cmd))
 
