@@ -509,6 +509,83 @@ func init() {
 			},
 			false,
 		),
+		Entry("should accept NetworkSet with non-wild domain names",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"microsoft.com", "www.microsoft.com"},
+				},
+			},
+			true,
+		),
+		Entry("should accept NetworkSet with uppercase domain names",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"MICROSOFT.COM", "WWW.MICROSOFT.COM"},
+				},
+			},
+			true,
+		),
+		Entry("should accept NetworkSet with wildcard domain names",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"microsoft.*", "*.microsoft.com"},
+				},
+			},
+			true,
+		),
+		Entry("should reject NetworkSet with invalid wildcard use",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"*example.com"},
+				},
+			},
+			false,
+		),
+		Entry("should reject NetworkSet with multiple wildcards in a single name",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"www.*.*.uk"},
+				},
+			},
+			false,
+		),
+		Entry("should reject NetworkSet with invalid char following valid wildcard",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"www.*._uk"},
+				},
+			},
+			false,
+		),
+		Entry("should reject NetworkSet with invalid wildcard usage",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.NetworkSetSpec{
+					AllowedEgressDomains: []string{"www.*_uk"},
+				},
+			},
+			false,
+		),
 
 		Entry("should accept a valid BGP logging level: Info", api.BGPConfigurationSpec{LogSeverityScreen: "Info"}, true),
 		Entry("should reject an invalid BGP logging level: info", api.BGPConfigurationSpec{LogSeverityScreen: "info"}, false),

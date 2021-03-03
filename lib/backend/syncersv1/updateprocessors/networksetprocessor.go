@@ -77,6 +77,7 @@ func convertNetworkSetV2ToV1Value(val interface{}) (interface{}, error) {
 		ProfileIDs: []string{
 			conversion.NamespaceProfileNamePrefix + v3res.Namespace,
 		},
+		AllowedEgressDomains: v3res.Spec.AllowedEgressDomains,
 	}
 
 	return v1value, nil

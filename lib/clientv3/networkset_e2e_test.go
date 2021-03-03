@@ -52,6 +52,10 @@ var _ = testutils.E2eDatastoreDescribe("NetworkSet tests", testutils.DatastoreAl
 		Nets: []string{
 			"12.0.0.0/16",
 		},
+		AllowedEgressDomains: []string{
+			"bob.example.co.uk",
+			"api.twilio.com",
+		},
 	}
 
 	DescribeTable("NetworkSet e2e CRUD tests",

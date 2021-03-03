@@ -39,6 +39,11 @@ type NetworkSet struct {
 type NetworkSetSpec struct {
 	// The list of IP networks that belong to this set.
 	Nets []string `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
+	// The list of domain names that belong to this set and are honored in egress allow rules
+	// only.  Domain names specified here only work to allow egress traffic from the cluster to
+	// external destinations.  They don't work to _deny_ traffic to destinations specified by
+	// domain name, or to allow ingress traffic from _sources_ specified by domain name.
+	AllowedEgressDomains []string `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,wildname"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

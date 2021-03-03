@@ -3914,6 +3914,11 @@ func (in *NetworkSetSpec) DeepCopyInto(out *NetworkSetSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.AllowedEgressDomains != nil {
+		in, out := &in.AllowedEgressDomains, &out.AllowedEgressDomains
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
