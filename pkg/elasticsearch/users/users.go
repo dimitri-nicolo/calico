@@ -27,6 +27,7 @@ const (
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
 	ElasticsearchUserNameOperator              ElasticsearchUserName = "tigera-ee-operator"
+	ElasticsearchUserNameElasticsearchMetrics  ElasticsearchUserName = "tigera-ee-elasticsearch-metrics"
 )
 
 // ElasticsearchUsers returns a map of ElasticsearchUserNames as keys and elasticsearch.Users as values. The clusterName
@@ -292,6 +293,19 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 						Application: "kibana-.kibana",
 						Privileges:  []string{"all"},
 						Resources:   []string{"*"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameElasticsearchMetrics: {
+			Username: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{"*"},
+						Privileges: []string{"monitor"},
 					}},
 				},
 			}},
