@@ -56,7 +56,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management),
 				Definition: &elasticsearch.RoleDefinition{
-					Cluster: []string{"monitor", "manage_index_templates"},
+					Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{indexPattern("tigera_secure_ee_audit_kube", clusterName, ".*")},
 						Privileges: []string{"create_index", "read", "write", "manage"},

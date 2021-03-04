@@ -33,7 +33,7 @@ var _ = Describe("ElasticseachUsers", func() {
 						Roles: []elasticsearch.Role{{
 							Name: "tigera-eks-log-forwarder-managed-cluster",
 							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"monitor", "manage_index_templates"},
+								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_audit_kube.managed-cluster.*"},
 									Privileges: []string{"create_index", "read", "write", "manage"},
@@ -185,7 +185,7 @@ var _ = Describe("ElasticseachUsers", func() {
 						Roles: []elasticsearch.Role{{
 							Name: "tigera-eks-log-forwarder",
 							Definition: &elasticsearch.RoleDefinition{
-								Cluster: []string{"monitor", "manage_index_templates"},
+								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
 									Names:      []string{"tigera_secure_ee_audit_kube.cluster.*"},
 									Privileges: []string{"create_index", "read", "write", "manage"},
