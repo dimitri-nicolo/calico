@@ -461,6 +461,10 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			ns.Spec.Nets = []string{
 				"11.0.0.0/16",
 			}
+			ns.Spec.AllowedEgressDomains = []string{
+				"direct.gov.uk",
+				"cam.ac.uk",
+			}
 			ns, err = c.NetworkSets().Create(
 				ctx,
 				ns,
@@ -479,6 +483,10 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					},
 					Nets: []net.IPNet{
 						*expNet,
+					},
+					AllowedEgressDomains: []string{
+						"direct.gov.uk",
+						"cam.ac.uk",
 					},
 					ProfileIDs: []string{
 						"kns.namespace-1",
