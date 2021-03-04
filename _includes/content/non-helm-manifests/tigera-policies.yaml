@@ -578,6 +578,13 @@ spec:
     destination:
       ports: [9200]
     protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-elasticsearch-metrics'
+      namespaceSelector: name == 'tigera-elasticsearch'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
     # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
@@ -634,6 +641,57 @@ spec:
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
       selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
       ports: [9300]
+---
+
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.elasticsearch-metrics
+  namespace: tigera-elasticsearch
+spec:
+  tier: allow-tigera
+  order: 1
+  selector: k8s-app == "tigera-elasticsearch-metrics"
+  serviceAccountSelector: ''
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+      namespaceSelector: projectcalico.org/name == "tigera-prometheus"
+    destination:
+      ports:
+      - '9081'
+  egress:
+  - action: Allow
+    protocol: TCP
+    source: {}
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == "tigera-secure"
+      namespaceSelector: projectcalico.org/name == "tigera-elasticsearch"
+      ports:
+      - '9200'
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == "kube-system"
+      selector: k8s-app == "kube-dns"
+      ports: [53]
+{%- endif %}
+
 ---
 
 # Allow access to Kibana
@@ -765,6 +823,15 @@ spec:
   types:
     - Ingress
     - Egress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+      namespaceSelector: projectcalico.org/name == "tigera-prometheus"
+    destination:
+      ports:
+      - '9081'
   egress:
   - action: Deny
     protocol: TCP
