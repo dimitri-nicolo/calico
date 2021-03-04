@@ -35,8 +35,13 @@ This how-to guide uses the following features:
 #### Dual plane connectivity, aka "dual ToR"
 
 Large on-prem Kubernetes clusters, split across multiple server racks, can use two or more
-independent planes of connectivity between all the racks, so that the cluster can still
-function if there is a single break in connectivity somewhere.
+independent planes of connectivity between all the racks,
+
+-  so that the cluster can still function if there is a single break in connectivity
+   somewhere;
+
+-  and so that the cluster can load balance across the bandwidth of *both* planes, when
+   both planes are available.
 
 The redundant approach can be applied within each rack as well, such that each node has
 two or more independent connections to those connectivity planes.  Typically each rack has
@@ -52,6 +57,98 @@ paradigm.
 
 Because of the two ToRs per rack, the whole setup is often referred to as "dual ToR".
 
+#### Network design for a dual ToR cluster
+
+For a dual ToR cluster to operate seamlessly when there is a break on one of the planes,
+several things are needed.
+
+1. Each node should have a stable IP address that is independent of its per-interface
+   addresses and remains valid if the connectivity through *one* of those interfaces goes
+   down.
+
+2. Each node must somehow know or learn the stable IP address of every other node.
+
+3. Wherever a connection (other than BGP) is to or from a *node* (as opposed to a
+   non-host-networked pod), that connection should use the node's stable address as its
+   destination or source IP (respectively), so that the connection can continue working if
+   one of the planes has an outage.
+
+4. Importantly, this includes connections that Kubernetes uses as part of its own control
+   plane, such as between the Kubernetes API server and kubelet on each node.  Ideally,
+   therefore, the stable IP address setup on each node should happen before Kubernetes
+   starts running.
+
+5. BGP is an exception to the previous points - in fact, the *only* exception - because we
+   want each node's BGP peerings to be interface-specific and to reflect what is actually
+   reachable, moment by moment, over that interface.  The Linux routing table then
+   automatically adjusts so that the route to each remote destination is either ECMP -
+   when both planes are up - or non-ECMP when it can only be reached over one of the
+   planes.
+
+6. BGP peerings should be configured to detect any outages, and to propagate their
+   consequences, as quickly as possible, so that the routing can quickly respond on each
+   node.  Note that this is quite different from the reasoning for a single connectivity
+   plane, where it's better to delay any network churn, on the assumption that an outage
+   will be quickly fixed.
+
+Finally, to spread load evenly and maximise use of both planes, when both available, the
+routers and Linux kernel need to be configured for efficient ECMP.
+
+#### Calico's early networking architecture
+
+{{site.prodname}}'s {{site.nodecontainer}} image can be run in an "early networking" mode,
+on each node, to perform all of the above points that are needed before Kubernetes starts
+running.  That means that it:
+
+-  provisions the stable IP address
+
+-  makes the changes needed to ensure that the stable address will be used as the source
+   IP for any outgoing connections from the node
+
+-  starts running BGP, peering with the node's ToRs, in order to advertise the node's
+   stable address to other nodes
+
+-  configures efficient ECMP in the Linux kernel (with `fib_multipath_hash_policy=1` and
+   `fib_multipath_use_neigh=1`).
+
+More detail is given below on how to run this early networking image.  A key point is that
+it must run as soon as possible after each node boot, and before Kubernetes starts on the
+node, so is typically run as a Docker or podman container.
+
+After its start-of-day provisioning, the early networking container keeps running so that
+it can tag-team the BGP role with Calico's regular BGP service running inside the
+{{site.nodecontainer}} *pod*:
+
+-  Initially the {{site.nodecontainer}} pod does not yet exist, so the early networking
+   BGP runs to advertise out the node's stable address.
+
+-  After Kubernetes has started on the node, and Calico has been installed in Kubernetes,
+   the {{site.nodecontainer}} pod runs and starts its own BGP service.  The early
+   networking container spots that the regular BGP service is now running and so shuts
+   down its own BGP.  Now the regular BGP service handles the advertisement of the stable
+   address, as well as pod IPs and so on.
+
+-  Later, the {{site.nodecontainer}} pod might be shut down, e.g. for restart or upgrade.
+   The early networking container spots this and restarts its own BGP, to ensure that the
+   node's stable IP address continues to be advertised to other nodes.  The cycle can now
+   repeat from the "Initially" state above.
+
+#### BGP configuration for rapid outage detection
+
+A dual ToR cluster needs Calico BGPPeer resources to specify how each node should peer
+with its ToRs.  The remaining parts of the dual ToR network design are implemented as
+properties of those BGP peerings, and as corresponding properties on the BGP configuration
+between and within the ToRs and core infrastructure.
+
+Specifically, on Calico's BGPPeer resource,
+
+-  the `failureDetectionMode` field is used to enable BFD
+
+-  the `restartMode` field can be used to enable long-lived graceful restart (LLGR).
+
+See below for more on the benefits of these settings.  When they are used, consistent
+settings are needed on the ToRs and core infrastructure.
+
 #### ECMP routing
 
 An "Equal Cost Multiple Path" (ECMP) route is one that has multiple possible ways to reach
@@ -65,15 +162,6 @@ destination IP addresses, whether the decision is made per-packet, per-connectio
 some other way, and so on; and the details here have varied with Linux kernel version.
 For a clear account of the exact options and behaviors for different kernel versions,
 please see [this blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/){:target="_blank"}.
-
-#### Loopback IP addresses
-
-Loopback IP addresses are IP addresses which are assigned to a loopback interface on the
-node.  Despite what the name might suggest, loopback IP addresses can be used for sending
-and receiving data to and from other nodes.  They help to provide redundant networking,
-because using a loopback address avoids tying traffic to a particular interface and, in a
-dual ToR setup, allows that traffic to continue flowing even if a particular interface
-goes down.
 
 #### BFD
 
@@ -102,6 +190,46 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
 
 -  If a node is restarted, we still get the traditional Graceful Restart behaviour whereby
    routes to that node persist in the rest of the network.
+
+#### Default routing and "nearly default" routes
+
+Calico's early networking architecture - and more generally, the considerations for dual
+ToR that are presented on this page - is compatible with many possible [L3 fabric
+designs]({{site.baseurl}}/reference/architecture/design/l3-interconnect-fabric).  One of
+the options in such designs is "downward default", which means that each ToR only
+advertises the default route to its directly connected nodes, even when it has much more
+detailed routing information.  "Downward default" works because the ToR should indeed be
+the node's next hop for all destinations, except for directly connected nodes in the same
+rack.
+
+In a dual ToR cluster, each node has two ToRs, and "downward default" should result in the
+node having an ECMP default route like this:
+
+```
+default proto bird
+        nexthop via 172.31.11.100 dev eth0
+        nexthop via 172.31.12.100 dev eth0
+```
+
+If one of the planes is broken, BGP detects and propagates the outage and that route
+automatically changes to a non-ECMP route via the working plane:
+
+```
+default via 172.31.12.100 dev eth0 proto bird
+```
+
+That is exactly the behaviour that is wanted in a dual ToR cluster.  The snag with it is
+that there can be other procedures in the node's operating system that also update the
+default route - in particular, DHCP - and that can interfere with this desired behaviour.
+For example, if a DHCP lease renewal occurs for one of the node's interfaces, the node may
+then replace the default route as non-ECMP via that interface.
+
+A simple way to avoid such interference is to export the "nearly default" routes 0.0.0.0/1
+and 128.0.0.0/1 from the ToRs, instead of the true default route 0.0.0.0/0.  0.0.0.0/1 and
+128.0.0.0/1 together cover the entire IPv4 address space and so provide correct dual ToR
+routing for any destination outside the local rack.  They also mask the true default route
+0.0.0.0/0, by virtue of having longer prefixes (1 bit instead of 0 bits), and so it no
+longer matters if there is any other programming of the true default route on the node.
 
 ### How to
 
@@ -306,10 +434,10 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr){:target="_blank"}, becaus
         ...
     ```
 
-    > **Note**: Despite apparent similarity, this resource differs from all the others in
-    > that it will be provided as a file on each newly provisioned node (whereas the other
-    > resources are all served from the Kubernetes API).  It specifies the stable address
-    > for each node.  It also repeats information that could be inferred from the
+    > **Note**: Despite the apparent similarity, this resource differs from all the others
+    > in that it will be provided as a file on each newly provisioned node (whereas the
+    > other resources are all served from the Kubernetes API).  It specifies the stable
+    > address for each node.  It also repeats information that could be inferred from the
     > preceding resources, but that is because the information is needed for post-boot
     > setup on each node, at a point where the node cannot access the Kubernetes API.
 	{: .alert .alert-info}
