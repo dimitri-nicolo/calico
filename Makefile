@@ -61,7 +61,6 @@ POD2DAEMON_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].compone
 DIKASTES_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/dikastes.version')
 FLANNEL_MIGRATION_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/flannel-migration-controller.version')
 TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.typha.version')
-CHART_RELEASE := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].chart.version')
 
 ##############################################################################
 
@@ -344,9 +343,9 @@ endif
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs
-	$(MAKE) RELEASE_CHART=true release-tag
-	$(MAKE) RELEASE_CHART=true release-build
-	$(MAKE) RELEASE_CHART=true release-verify
+	$(MAKE) release-tag
+	$(MAKE) release-build
+	$(MAKE) release-verify
 
 	@echo ""
 	@echo "Release build complete. Next, push the release."
@@ -412,7 +411,7 @@ endif
 		bash -c 'pip install pygithub && /usr/local/bin/python /code/release-scripts/get-contributors.py >> /code/AUTHORS.md'
 
 # release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs: charts
+release-prereqs:
 	@if [ $(CALICO_VER) != $(NODE_VER) ]; then \
 		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
 		exit 1; fi
