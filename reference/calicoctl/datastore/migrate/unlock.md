@@ -6,7 +6,7 @@ canonical_url: '/reference/calicoctl/datastore/migrate/unlock'
 
 This sections describes the `calicoctl datastore migrate lock` command.
 
-Read the [calicoctl Overview]({{ site.baseurl }}/reference/calicoctl/overview)
+Read the [calicoctl Overview]({{site.baseurl}}/reference/calicoctl/overview)
 for a full list of calicoctl commands.
 
 ## Display the help text for 'calicoctl datastore migrate unlock' command
@@ -50,6 +50,6 @@ calicoctl datastore migrate unlock
 
 ## See also
 
--  [Install calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
--  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
+-  [Install calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
+-  [Resources]({{site.baseurl}}/reference/resources/overview) for details on all valid resources, including file format
    and schema

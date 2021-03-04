@@ -20,10 +20,10 @@ As a binary on a single host, you can also run it as a kubectl plugin.
 For step-by-step instructions, refer to the section that
 corresponds to your desired deployment.
 
-- [As a binary on a single host](#install-calicoctl-as-a-binary-on-a-single-host)
-- [As a kubectl plugin on a single host](#install-calicoctl-as-a-kubectl-plugin-on-a-single-host)
-- [As a container on a single host](#install-calicoctl-as-a-container-on-a-single-host)
-- [As a Kubernetes pod](#install-calicoctl-as-a-kubernetes-pod)
+- [Install calicoctl as a binary on a single host](#install-calicoctl-as-a-binary-on-a-single-host)
+- [Install calicoctl as a kubectl plugin on a single host](#install-calicoctl-as-a-kubectl-plugin-on-a-single-host)
+- [Install calicoctl as a container on a single host](#install-calicoctl-as-a-container-on-a-single-host)
+- [Install calicoctl as a Kubernetes pod](#install-calicoctl-as-a-kubernetes-pod)
 
 <!--- Change download URL to latest release if user browsing master branch.  --->
 {%- if page.version == "master" -%}
@@ -301,7 +301,7 @@ You can now run any `calicoctl` subcommands through `kubectl calico`.
 {: .alert .alert-info}
 
 
-## Install {{include.cli}} as a container on a single host
+## Install calicoctl as a container on a single host
 
 1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
@@ -350,9 +350,9 @@ You can now run any `calicoctl` subcommands through `kubectl calico`.
 
 **Next step**:
 
-[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/maintenance/clis/{{include.cli}}/configure/).
+[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/maintenance/clis/calicoctl/configure/).
 
-## Install {{include.cli}} as a Kubernetes pod
+## Install calicoctl as a Kubernetes pod
 
 Run the following to deploy the `calicoctl` container to your nodes.
 

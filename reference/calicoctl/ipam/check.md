@@ -6,7 +6,7 @@ canonical_url: '/reference/calicoctl/ipam/check'
 
 This section describes the `calicoctl ipam check` command.
 
-Read the [calicoctl overview]({{ site.baseurl }}/reference/calicoctl/overview) for a full list of calicoctl commands.
+Read the [calicoctl overview]({{site.baseurl}}/reference/calicoctl/overview) for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl ipam check' command
 
@@ -63,4 +63,4 @@ calicoctl datastore migrate unlock
 
 ## See also
 
--  [Installing calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
+-  [Installing calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
