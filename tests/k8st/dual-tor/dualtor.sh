@@ -488,6 +488,7 @@ EOF
 	    # This happens when no matching resources exist yet,
 	    # i.e. immediately after application of the Calico YAML.
 	    sleep 5
+	    ${kubectl} get po -A -o wide || true
 	done
     done
     ${kubectl} get po -A -o wide
