@@ -23,10 +23,6 @@ func init() {
 	prometheus.MustRegister(conntrackInfoReaderBlocks)
 }
 
-const (
-	conntrackInfoReaderBatchSize = 1024
-)
-
 // InfoReader is an EntryScannerSynced that provides information to Collector as
 // collector.ConntrackInfo.
 type InfoReader struct {
@@ -139,10 +135,10 @@ func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.
 
 func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
 	r.bufferedConntrackInfo = append(r.bufferedConntrackInfo, i)
-	if len(r.bufferedConntrackInfo) >= conntrackInfoReaderBatchSize {
+	if len(r.bufferedConntrackInfo) >= collector.ConntrackInfoBatchSize {
 		select {
 		case r.outC <- r.bufferedConntrackInfo:
-			r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, conntrackInfoReaderBatchSize)
+			r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
 		default:
 			conntrackInfoReaderBlocks.Inc()
 			// keep buffering
@@ -157,7 +153,7 @@ func (r *InfoReader) IterationStart() {
 		r.goTimeOfLastKTimeLookup = r.time.Now()
 	}
 
-	r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, conntrackInfoReaderBatchSize)
+	r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
 }
 
 // IterationEnd is called and Scanner ends iterating over the conntrack table.

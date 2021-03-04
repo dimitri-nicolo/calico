@@ -176,10 +176,12 @@ func (r *InfoReader) subscribe() error {
 func (r *InfoReader) run() {
 
 	var (
-		packetInfoC    chan collector.PacketInfo
-		conntrackInfoC chan []collector.ConntrackInfo
-		nextPktToSend  collector.PacketInfo
+		packetInfoC   chan collector.PacketInfo
+		nextPktToSend collector.PacketInfo
 	)
+
+	// Kick off the conntrack scanning loop, it executes periodically.
+	go r.conntrackScanner()
 
 	for {
 		select {
@@ -203,17 +205,40 @@ func (r *InfoReader) run() {
 				nextPktToSend = *r.bufferedEvents[0] // Make sure value is updated.
 				packetInfoC = r.packetInfoC          // Make sure the packetInfoC case is enabled.
 			}
-		case conntrackInfoC <- r.bufferedConntracks:
-			r.bufferedConntracks = nil
-			conntrackInfoC = nil // Disable this case until we have conntrack info to send.
-		case <-r.ticker.Channel():
-			r.vfpOps.ListFlows(r.handleFlowEntry)
-			if len(r.bufferedConntracks) > 0 {
-				conntrackInfoC = r.conntrackInfoC // Make sure the conntrackInfoC is enabled.
-			}
 		}
 
 		r.epEventHandler.processUpdates(r.vfpOps)
+	}
+}
+
+func (r *InfoReader) conntrackScanner() {
+	for {
+		select {
+		case <-r.stopC:
+			return
+		case <-r.ticker.Channel():
+			r.bufferedConntracks = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+			r.vfpOps.ListFlows(func(fe *vfpctrl.FlowEntry) {
+				r.handleFlowEntry(fe)
+				if len(r.bufferedConntracks) > collector.ConntrackInfoBatchSize {
+					select {
+					case <-r.stopC:
+						return
+					case r.conntrackInfoC <- r.bufferedConntracks:
+						r.bufferedConntracks = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+					default:
+						// Keep buffering
+					}
+				}
+			})
+			if len(r.bufferedConntracks) > 0 {
+				select {
+				case <-r.stopC:
+					return
+				case r.conntrackInfoC <- r.bufferedConntracks:
+				}
+			}
+		}
 	}
 }
 

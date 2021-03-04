@@ -69,6 +69,9 @@ type ConntrackInfoReader interface {
 	ConntrackInfoChan() <-chan []ConntrackInfo
 }
 
+// ConntrackInfoBatchSize is a recommended batch size to be used by InfoReaders
+const ConntrackInfoBatchSize = 1024
+
 type TcpStatsData struct {
 	SendCongestionWnd int
 	SmoothRtt         int

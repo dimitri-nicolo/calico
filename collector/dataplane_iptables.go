@@ -235,7 +235,7 @@ func (r *NetLinkConntrackReader) run() {
 		case <-r.stopC:
 			return
 		case <-r.ticker.Channel():
-			ctInfos := make([]ConntrackInfo, 0, 64)
+			ctInfos := make([]ConntrackInfo, 0, ConntrackInfoBatchSize)
 			_ = nfnetlink.ConntrackList(func(ctEntry nfnetlink.CtEntry) {
 				ci, err := convertCtEntryToConntrackInfo(ctEntry)
 				if err != nil {
@@ -243,9 +243,23 @@ func (r *NetLinkConntrackReader) run() {
 					return
 				}
 				ctInfos = append(ctInfos, ci)
+				if len(ctInfos) > ConntrackInfoBatchSize {
+					select {
+					case <-r.stopC:
+						return
+					case r.outC <- ctInfos:
+						ctInfos = make([]ConntrackInfo, 0, ConntrackInfoBatchSize)
+					default:
+						// Keep buffering
+					}
+				}
 			})
 			if len(ctInfos) > 0 {
-				r.outC <- ctInfos
+				select {
+				case <-r.stopC:
+					return
+				case r.outC <- ctInfos:
+				}
 			}
 		}
 	}
