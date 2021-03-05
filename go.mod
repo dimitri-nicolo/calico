@@ -55,8 +55,8 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/apiserver v0.0.0-20210304234138-1bef7cf653bc
-	github.com/tigera/lma v0.0.0-20210304234745-ff12014a6d3e
+	github.com/tigera/apiserver v0.0.0-20210305163939-5088de0fbab0
+	github.com/tigera/lma v0.0.0-20210305164614-738f9cd1087a
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
