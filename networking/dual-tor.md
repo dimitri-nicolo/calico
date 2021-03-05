@@ -437,20 +437,6 @@ EarlyNetworkConfiguration prepared above, so that EarlyNetworkConfiguration YAML
 copied into a file on the node (here, `/calico-early/cfg.yaml`) and mapped into the
 {{site.nodecontainer}} container.
 
-> **Note**: Based on the EarlyNetworkConfiguration YAML, this container will:
->
-> - identify the right part of the YAML for *this* node
->
-> - provision the stable address for the node, and ensure that the stable address is used
->   for all subsequent connections to and from the node
->
-> - start BGP, with peerings to the node's ToRs, to advertise the stable address to the
->   network, so that other nodes can route to this one.
->
-> It's important that this all happens *before* any Kubernetes components start running on
-> the node, because we want Kubernetes connections to use the stable address.
-{: .alert .alert-info}
-
 Exactly **how** to arrange for this container to run will depend on your platform's
 workflow for adding a node to the cluster.
 
