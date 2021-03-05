@@ -313,34 +313,16 @@ longer matters if there is any other programming of the true default route on th
        > not.
        {: .alert .alert-info}
 
-1.  Prepare Node resources to specify each node's AS number and `rack` peering label.  For
-    example:
+1.  Keep a note of what each node's AS number and `rack` label should be so as to fit
+    correctly with the BGPPeer resources.  This doesn't have to be in any particular
+    format, it's just a note for later.  For example:
 
 	```
-	apiVersion: v1
-    kind: Node
-    metadata:
-      name: worker1
-      labels:
-        rack: ra
-      annotations:
-        projectcalico.org/ASNumber: "65001"
-    ---
-    apiVersion: v1
-    kind: Node
-    metadata:
-      name: worker2
-      labels:
-        rack: rb
-      annotations:
-        projectcalico.org/ASNumber: "65002"
+    worker1: ra, 65001
+    worker2: rb, 65002
     ```
 
 	and so on.
-
-    > **Note**: The `rack` label values here must match those in the BGPPeer resources, so
-    > that each node peers with the right ToR routers.
-	{: .alert .alert-info}
 
 1.  Prepare this BGPConfiguration resource to [disable the full node-to-node
 	mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
@@ -398,10 +380,6 @@ longer matters if there is any other programming of the true default route on th
     > from pods to the Internet.
 	{: .alert .alert-info}
 
-1.  Combine the preceding `projectcalico/v3` resources - i.e. the BGPPeers,
-    BGPConfiguration and IPPools - into a `calico-resources` ConfigMap for the Tigera
-    operator.
-
 1.  Prepare an EarlyNetworkConfiguration resource to provide the information that
     dual-homed nodes need for bootstrapping, each time that they boot.  For example, with
     IP addresses and AS numbers similar as for other resources above:
@@ -441,15 +419,6 @@ longer matters if there is any other programming of the true default route on th
     > preceding resources, but that is because the information is needed for post-boot
     > setup on each node, at a point where the node cannot access the Kubernetes API.
 	{: .alert .alert-info}
-
-In summary you should now have:
-
--  Node resource YAML, specifying the AS number and `rack` peering label for each node
-
--  a `calico-resources` ConfigMap containing {{site.prodname}} BGPPeers, BGPConfiguration
-   and IPPools
-
--  an EarlyNetworkConfiguration YAML.
 
 #### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
 
@@ -528,42 +497,59 @@ break in one of the connectivity planes.
 
 #### Install Kubernetes and {{site.prodname}}
 
-For your planned Kubernetes installer, work out:
+Details here vary, depending on **when** your Kubernetes installer gives an opportunity
+for you to define custom resources, but fundamentally what is needed here is to perform
+the installation as usual, except that all of the Calico resources prepared above, except
+the EarlyNetworkConfiguration, must be added into the datastore, and all of the nodes
+annotated with their AS number and rack label, **before** the {{site.nodecontainer}} pods
+start running on any node.  We can illustrate this by looking at two examples: with
+OpenShift, and when adding Calico to an existing Kubernetes cluster.
 
--  how to inject the Node resources (prepared above) as soon as possible after the
-   Kubernetes API is first available
+**OpenShift**
 
--  how to inject the `calico-resources` ConfigMap when the installer is about to start the
-   Tigera operator (if the installer does this automatically).
+With OpenShift, follow [our documentation]({{site.baseurl}}/getting-started/openshift) as
+far as the option to [provide additional
+configuration]({{site.baseurl}}/getting-started/openshift/installation#provide-additional-configuration).
+Then use `kubectl create configmap ...`, as that documentation says, to combine the
+prepared BGPPeer, BGPConfiguration and IPPool resources into a `calico-resources`
+ConfigMap.  Place the generated file in the manifests directory for the OpenShift install.
 
-By way of example:
+Also prepare a Node resource for each node, with one Node resource per file, to specify
+that node's rack label and AS number, like this:
 
--  With [OpenShift]({{site.baseurl}}/getting-started/openshift), simply add all the Node
-   resources - with one Node resource per file - and the `calico-resources` ConfigMap into
-   the manifests directory just before running `openshift-install create
-   ignition-configs`.
+```
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker2                          	 # Replace with the correct node name
+  labels:
+    rack: rb                             	 # Replace with the correct rack label
+  annotations:
+    projectcalico.org/ASNumber: "65002"  	 # Replace with the correct AS number
+```
 
-   > **Note**: The prepared `calico-resources` ConfigMap should replace [our default empty
-   > one]({{site.baseurl}}/manifests/ocp/tigera-operator/02-configmap-calico-resources.yaml).
-   {: .alert .alert-info}
+Place those files also in the manifests directory.
 
--  With kubeadm, `kubeadm init` will necessarily create the first node at the same time as
-   bringing up the Kubernetes API.  In this case, therefore, you should add the
-   appropriate `rack` label and AS number to the first node, and reboot it so that those
-   can take effect.
+Now continue with the OpenShift install process, and it will take care of adding those
+resources into the datastore as early as possible.
 
-   > **Note**: As already covered above, you should by now have arranged for the
-   > {{site.nodecontainer}} image to run on each boot, on each node.
-   {: .alert .alert-info}
+**Adding to an existing Kubernetes cluster**
 
-   Then create the other Node resources, and continue with `kubeadm join` for those other
-   nodes.
+Follow [our documentation]({{site.baseurl}}/getting-started/kubernetes/generic-install) as
+far as the option for installing any custom Calico resources.  Then use `calicoctl`, as
+that documentation says, to install the prepared BGPPeer, BGPConfiguration and IPPool
+resources.
 
-   Then, just before creating the Installation resource to kick off installing
-   {{site.prodname}}, use `kubectl apply` to apply the `calico-resources` ConfigMap.
+Then use `kubectl label` to label each node with its correct rack label, and `kubectl
+annotate` to annotate each node with its correct AS number, like this:
 
-Now proceed with the installation, and the required dual ToR setup will be performed
-automatically based on the above resources.
+```
+kubectl label <node name> rack=<rack label>
+kubectl annotate <node name> projectcalico.org/ASNumber="<AS number>"
+```
+
+Now continue with the {{site.prodname}} install process, and you should observe each node
+establishing BGP sessions with its ToRs.
 
 #### Verify the deployment
 
