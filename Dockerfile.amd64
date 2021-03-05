@@ -1,0 +1,6 @@
+FROM scratch
+
+COPY bin/elasticsearch_exporter  /bin/elasticsearch_exporter
+
+EXPOSE      9081
+ENTRYPOINT  ["sh", "/bin/elasticsearch_exporter"]
