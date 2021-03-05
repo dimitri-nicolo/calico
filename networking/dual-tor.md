@@ -100,20 +100,20 @@ routers and Linux kernel need to be configured for efficient ECMP.
 on each node, to perform all of the above points that are needed before Kubernetes starts
 running.  That means that it:
 
--  provisions the stable IP address
+-  Provisions the stable IP address.
 
--  makes the changes needed to ensure that the stable address will be used as the source
-   IP for any outgoing connections from the node
+-  Makes the changes needed to ensure that the stable address will be used as the source
+   IP for any outgoing connections from the node.
 
--  starts running BGP, peering with the node's ToRs, in order to advertise the node's
-   stable address to other nodes
+-  Starts running BGP, peering with the node's ToRs, in order to advertise the node's
+   stable address to other nodes.
 
--  configures efficient ECMP in the Linux kernel (with `fib_multipath_hash_policy=1` and
+-  Configures efficient ECMP in the Linux kernel (with `fib_multipath_hash_policy=1` and
    `fib_multipath_use_neigh=1`).
 
 More detail is given below on how to run this early networking image.  A key point is that
 it must run as soon as possible after each node boot, and before Kubernetes starts on the
-node, so is typically run as a Docker or podman container.
+node, so it is typically run as a Docker or podman container.
 
 After its start-of-day provisioning, the early networking container keeps running so that
 it can tag-team the BGP role with Calico's regular BGP service running inside the
