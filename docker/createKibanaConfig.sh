@@ -14,7 +14,11 @@ csp.rules:
     - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
     - "img-src www.googletagmanager.com 'self' data:"
 
-tigera_customization.gtm: ${GTM_INTEGRATION}
+tigera.enabled: true
+tigera.pluginEnabled: ${GTM_INTEGRATION}
+tigera.container: "GTM-TCNXTCJ"
+tigera.licenseEdition: ${LICENSE_EDITION:-enterpriseEdition}
+
 EOF
 
 # remove this script from fs
