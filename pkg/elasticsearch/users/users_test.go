@@ -384,6 +384,19 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-elasticsearch-metrics": {
+						Username: "tigera-ee-elasticsearch-metrics",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-elasticsearch-metrics",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor"},
+								Indices: []elasticsearch.RoleIndex{{
+									Names:      []string{"*"},
+									Privileges: []string{"monitor"},
+								}},
+							},
+						}},
+					},
 				},
 			)
 		})
