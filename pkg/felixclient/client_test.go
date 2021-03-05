@@ -22,7 +22,7 @@ var (
 		RequestMethod: "GET",
 		RequestId:     "e23c0019-36b7-4142-8e86",
 
-		DSRemoteAddress: "192.168.138.208:34368",
+		DSRemoteAddress: "192.168.138.2:34368",
 		DSLocalAddress:  "192.168.35.210:80",
 		// 5 tuple data
 		Type:    "HTTP/1.1",
@@ -43,8 +43,29 @@ var (
 		RequestMethod: "GET",
 		RequestId:     "e23c0019-36b7-4142-8e860019-36b7-4142",
 
-		DSRemoteAddress: "192.168.138.208:34368",
-		DSLocalAddress:  "192.168.35.210:80",
+		DSRemoteAddress: "193.16.18.264:56748",
+		DSLocalAddress:  "192.168.35.210:8080",
+		// 5 tuple data
+		Type:    "HTTP/1.1",
+		SrcIp:   "193.16.18.264",
+		DstIp:   "192.168.35.210",
+		SrcPort: int32(56748),
+		DstPort: int32(8080),
+	}
+	httpLog2 = collector.EnvoyLog{
+		Reporter:      "destination",
+		StartTime:     "2020-11-24T22:24:29.237Z",
+		Duration:      3,
+		ResponseCode:  501,
+		BytesSent:     33,
+		BytesReceived: 0,
+		UserAgent:     "curl/7.68.0",
+		RequestPath:   "/ip",
+		RequestMethod: "POST",
+		RequestId:     "e23c0019-36b7-4142-8e860019-36b7-4142",
+
+		DSRemoteAddress: "193.16.18.264:56748",
+		DSLocalAddress:  "192.168.35.210:8080",
 		// 5 tuple data
 		Type:    "HTTP/1.1",
 		SrcIp:   "193.16.18.264",
@@ -80,8 +101,11 @@ var _ = Describe("Felix Client Converting single EnvoyLog to DataplaneStats test
 
 var _ = Describe("Felix Client batching multiple EnvoyLogs to DataplaneStats", func() {
 	testClient := &felixClient{}
+	logKey := collector.GetEnvoyLogKey(httpLog)
+	logKey1 := collector.GetEnvoyLogKey(httpLog1)
+	logKey2 := collector.GetEnvoyLogKey(httpLog2)
 	Context("when same 5 tuple EnvoyLogs are passed in envoy collector", func() {
-		logs := map[string]collector.EnvoyLog{"log1": httpLog, "log2": httpLog}
+		logs := map[collector.EnvoyLogKey]collector.EnvoyLog{logKey: httpLog, logKey1: httpLog}
 		info := collector.EnvoyInfo{
 			Logs: logs,
 		}
@@ -100,7 +124,7 @@ var _ = Describe("Felix Client batching multiple EnvoyLogs to DataplaneStats", f
 		})
 	})
 	Context("when distinct 5 tuple EnvoyLogs are passed in envoy collector", func() {
-		logs := map[string]collector.EnvoyLog{"log1": httpLog, "log2": httpLog1, "log3": httpLog1}
+		logs := map[collector.EnvoyLogKey]collector.EnvoyLog{logKey: httpLog, logKey1: httpLog1, logKey2: httpLog2}
 		info := collector.EnvoyInfo{
 			Logs: logs,
 		}

@@ -46,7 +46,7 @@ var _ = Describe("Envoy Collector FV Test", func() {
 			Expect(result).To(Equal(httpStat))
 		})
 	})
-	Context("With logs with same 5-tuple data with same request id below the batch limit", func() {
+	Context("With logs with same EnvoyLogKey data but with different bytes received, bytes sent, duration below the batch limit", func() {
 		It("Should receive single log, with one http data object. bytes_sent, bytes_received, duration, count should be summed up", func() {
 			// Write the logs
 			WriteAndCollect([]string{httpLog, httpLog, httpLog})
@@ -64,10 +64,11 @@ var _ = Describe("Envoy Collector FV Test", func() {
 			Expect(result).To(Equal(httpStatSummation))
 		})
 	})
-	Context("With logs with same 5-tuple data with different request id below the batch limit", func() {
+
+	Context("With logs with same 5-tuple data but with different EnvoyLogKey data below the batch limit", func() {
 		It("Should receive single log, with as many http data object as the logs sent", func() {
 			// Write the logs
-			WriteAndCollect([]string{httpLog, httpLog2, httpLog3})
+			WriteAndCollect([]string{httpLog, httpPostLog, httpDeleteLog})
 
 			// Validate the result
 			var result *proto.DataplaneStats
@@ -78,8 +79,8 @@ var _ = Describe("Envoy Collector FV Test", func() {
 		})
 	})
 
-	Context("With logs with same 5-tuple data with different request id exceeding 5 batch limit", func() {
-		It("Should receive the log, http data objects are capped to batch size, Stats count equal to the logs passed", func() {
+	Context("With logs with same EnvoyLogKey data exceeding 5 batch limit", func() {
+		It("Should receive the log, http data objects should be 1, stats count equal to the logs passed", func() {
 			// Write the logs
 			WriteAndCollect([]string{httpLog, httpLog2, httpLog3, httpLog4, httpLog5, httpLog6, httpLog7})
 
@@ -90,12 +91,12 @@ var _ = Describe("Envoy Collector FV Test", func() {
 			found := DeepCopyDpsWithoutHttpData(result)
 			Expect(found).To(Equal(expected))
 			// http data length will be limited by the batch size, stats count will be the total number of logs
-			Expect(len(result.HttpData)).To(Equal(5))
+			Expect(len(result.HttpData)).To(Equal(1))
 			Expect(result.Stats[0].Value).To(Equal(int64(7)))
 		})
 	})
 
-	Context("With tcp logs with same 5-tuple data exceeding 5 batch limit", func() {
+	Context("With tcp logs with same EnvoyLogKey data exceeding 5 batch limit", func() {
 		It("Should receive a single log, with single http data object, bytes sent, bytes received, duration should be summed up for all logs", func() {
 			// Write the logs
 			WriteAndCollect([]string{tcpLog, tcpLog, tcpLog, tcpLog, tcpLog, tcpLog})
@@ -112,7 +113,7 @@ var _ = Describe("Envoy Collector FV Test", func() {
 		})
 	})
 
-	Context("With tcp logs with same 5-tuple multiple durations", func() {
+	Context("With tcp logs with same EnvoyLogKey multiple durations", func() {
 		It("Should receive a single log, with single http data object, bytes sent, bytes received, duration should be summed up, max duration should be set", func() {
 			// Write the logs
 			WriteAndCollect([]string{tcpLog, tcpLog2, tcpLog3})
