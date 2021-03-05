@@ -6164,6 +6164,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"l7LogsFileAggregationURLCharLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limit on the length of the URL collected in L7 logs. When a URL length reaches this limit it is sliced off, and the sliced URL is sent to log storage. [Default: 250]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"l7LogsFilePerNodeLimit": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Limit on the number of L7 logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs.  [Default: 0, meaning no limit]",
@@ -8524,6 +8531,13 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"prometheusMetricsPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrometheusMetricsPort is the TCP port that the Prometheus metrics server should bind to. Set to 0 to disable. [Default: 9094]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"controllers": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Controllers enables and configures individual Kubernetes controllers",
@@ -9247,6 +9261,20 @@ func schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref common.ReferenceCallback
 					"nets": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The list of IP networks that belong to this set.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"allowedEgressDomains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
