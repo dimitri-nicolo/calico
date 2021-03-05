@@ -18,7 +18,9 @@ var (
 	tcpLog2  = "{\"duration\":4,\"downstream_local_address\":\"192.168.138.227:6379\",\"response_code\":0,\"user_agent\":null,\"start_time\":\"2020-12-08T23:05:04.119Z\",\"request_id\":null,\"bytes_received\":4, \"request_path\":null,\"type\":\"tcp\",\"reporter\":\"destination\",\"bytes_sent\":3, \"request_method\":null,\"downstream_remote_address\":\"192.168.7.147:38600\"}\n"
 	tcpLog3  = "{\"duration\":8,\"downstream_local_address\":\"192.168.138.227:6379\",\"response_code\":0,\"user_agent\":null,\"start_time\":\"2020-12-08T23:05:04.119Z\",\"request_id\":null,\"bytes_received\":4, \"request_path\":null,\"type\":\"tcp\",\"reporter\":\"destination\",\"bytes_sent\":10,\"request_method\":null,\"downstream_remote_address\":\"192.168.7.147:38600\"}\n"
 
-	sourceLog = "{\"downstream_remote_address\":\"192.168.138.208:34368\",\"downstream_local_address\":\"192.168.35.210:80\",\"type\":\"HTTP/1.1\",\"duration\":3,\"user_agent\":\"curl/7.68.0\",\"response_code\":200,\"request_id\":\"96536b7-4142-8e86-39d15-b00cce236b7d\",\"bytes_received\":0,\"request_path\":\"/ip\",\"reporter\":\"source\",\"bytes_sent\":33,\"request_method\":\"GET\",\"domain\":\"http-service\"}\n"
+	httpPostLog   = "{\"downstream_remote_address\":\"192.168.138.208:34368\",\"downstream_local_address\":\"192.168.35.210:80\",\"type\":\"HTTP/1.1\",\"duration\":3,\"user_agent\":\"curl/7.68.0\",\"response_code\":200,\"request_id\":\"96536b7-4142-8e86-39d15-b00cce236b7d\",\"bytes_received\":1,\"request_path\":\"/ip\",\"reporter\":\"destination\",\"bytes_sent\":33,\"request_method\":\"POST\",\"domain\":\"http-service\"}\n"
+	httpDeleteLog = "{\"downstream_remote_address\":\"192.168.138.208:34368\",\"downstream_local_address\":\"192.168.35.210:80\",\"type\":\"HTTP/1.1\",\"duration\":3,\"user_agent\":\"curl/7.68.0\",\"response_code\":200,\"request_id\":\"96536b7-4142-8e86-39d15-b00cce236b7d\",\"bytes_received\":1,\"request_path\":\"/ip\",\"reporter\":\"destination\",\"bytes_sent\":33,\"request_method\":\"DELETE\",\"domain\":\"http-service\"}\n"
+	sourceLog     = "{\"downstream_remote_address\":\"192.168.138.208:34368\",\"downstream_local_address\":\"192.168.35.210:80\",\"type\":\"HTTP/1.1\",\"duration\":3,\"user_agent\":\"curl/7.68.0\",\"response_code\":200,\"request_id\":\"96536b7-4142-8e86-39d15-b00cce236b7d\",\"bytes_received\":1,\"request_path\":\"/ip\",\"reporter\":\"source\",\"bytes_sent\":33,\"request_method\":\"GET\",\"domain\":\"http-service\"}\n"
 
 	httpStat = &proto.DataplaneStats{
 		SrcIp:    "192.168.138.208",
@@ -111,7 +113,7 @@ var (
 				BytesReceived: 1,
 				UserAgent:     "curl/7.68.0",
 				RequestPath:   "/ip",
-				RequestMethod: "GET",
+				RequestMethod: "POST",
 				Type:          "HTTP/1.1",
 				Count:         1,
 				Domain:        "http-service",
@@ -124,7 +126,7 @@ var (
 				BytesReceived: 1,
 				UserAgent:     "curl/7.68.0",
 				RequestPath:   "/ip",
-				RequestMethod: "GET",
+				RequestMethod: "DELETE",
 				Type:          "HTTP/1.1",
 				Count:         1,
 				Domain:        "http-service",

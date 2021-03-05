@@ -4,7 +4,6 @@ package collector
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/tigera/l7-collector/pkg/config"
 )
@@ -32,7 +31,7 @@ func NewEnvoyCollector(cfg *config.Config) EnvoyCollector {
 }
 
 type EnvoyInfo struct {
-	Logs        map[string]EnvoyLog
+	Logs        map[EnvoyLogKey]EnvoyLog
 	Connections map[TupleKey]int
 }
 
@@ -75,23 +74,35 @@ type TupleKey struct {
 	Type    string
 }
 
+// EnvoyLogKey is an object that contains all the distinct information we get from logs
+// used as a key for de-duplication for http and tcp logs
+type EnvoyLogKey struct {
+	TupleKey TupleKey
+
+	UserAgent     string
+	RequestPath   string
+	RequestMethod string
+	ResponseCode  int32
+	Domain        string
+}
+
 type BatchEnvoyLog struct {
-	logs map[string]EnvoyLog
+	logs map[EnvoyLogKey]EnvoyLog
 	size int
 }
 
 func NewBatchEnvoyLog(size int) *BatchEnvoyLog {
 	return &BatchEnvoyLog{
-		logs: make(map[string]EnvoyLog),
+		logs: make(map[EnvoyLogKey]EnvoyLog),
 		size: size,
 	}
 }
 
 func (b BatchEnvoyLog) Insert(log EnvoyLog) {
-	// http logs will have one log for each unique request id
-	logKey := EnvoyLogKey(log)
+	logKey := GetEnvoyLogKey(log)
 	// for tcp and tls types we don't get much information so we treat this as a single connection and
-	// add the duration, bytes_sent, bytes_received. (same for rare cases when multiple http log comes with same request_id)
+	// add the duration, bytes_sent, bytes_received.
+	// same goes for cases where http logs comes with same EnvoyLogKey (same l7 fields) for multiple requests
 	// this happens even when the batch is full
 	if val, ok := b.logs[logKey]; ok {
 		// set max duration per request level
@@ -114,13 +125,17 @@ func (b BatchEnvoyLog) Insert(log EnvoyLog) {
 	}
 }
 
-func EnvoyLogKey(log EnvoyLog) string {
-	// RequestId is unique for each http request. Where as for tcp type logs RequestId would be null
-	// so here we create a key using the 5 tuple information and use that as a key
-	if log.Type == LogTypeTCP || log.Type == LogTypeTLS {
-		return fmt.Sprintf("%v-%v-%v-%v-%v", log.SrcIp, log.SrcPort, log.DstIp, log.DstPort, log.Type)
+func GetEnvoyLogKey(log EnvoyLog) EnvoyLogKey {
+	// We create a key using all the distinct values we get for each type
+	// for TCP it's just the 5 tuple information, for http we include all the other l7 info fields
+	return EnvoyLogKey{
+		TupleKey:      TupleKeyFromEnvoyLog(log),
+		UserAgent:     log.UserAgent,
+		RequestPath:   log.RequestPath,
+		RequestMethod: log.RequestMethod,
+		ResponseCode:  log.ResponseCode,
+		Domain:        log.Domain,
 	}
-	return log.RequestId
 }
 
 func (b BatchEnvoyLog) Full() bool {
