@@ -16,7 +16,7 @@ Providing these certificates also ensures the user's browser will trust the Kiba
 
 By default, the {{site.prodname}} API server uses self-signed certificates on connections. To provide TLS certificates,
 get the certificate and key pair for the {{site.prodname}} Kibana using any X.509-compatible tool or from your organization's 
-Certificate Authority. The certificate must have a Subject Alternate Name of `calico-enterprise-kb-http.tigera-kibana.svc`.
+Certificate Authority. The certificate must include the Subject Alternate Name or DNS name `tigera-secure-kb-http.tigera-kibana.svc`.
 
 ### How to
 
