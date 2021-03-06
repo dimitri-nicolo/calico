@@ -486,7 +486,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'fluentd-node'
+      selector: k8s-app == 'fluentd-node' || k8s-app == 'fluentd-node-windows'
       namespaceSelector: name == 'tigera-fluentd'
     destination:
       ports: [9200]
