@@ -899,6 +899,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			conntrackScanner.AddFirstUnlocked(conntrackInfoReader)
 			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
 			collectorConntrackInfoReader = conntrackInfoReader
+
+			if config.FlowLogsCollectTcpStats {
+				//tcpV4StatsEventListener := events.NewCollectorTcpV4StatsListener()
+				//bpfEventPoller.Register(events.TypeTcpStatsV4, tcpV4StatsEventListener.EventHandler)
+				//collectorTcpSocketInfoReader = tcpV4StatsEventListener
+			}
+
 		}
 
 		conntrackScanner.Start()
@@ -1108,11 +1115,19 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			collectorConntrackInfoReader = ctrd
 		}
 
-		if config.FlowLogsCollectProcessInfo {
-			log.Debug("Process stats collection is required, create process info cache")
+		if config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
+			log.Debug("Process/TCP stats collection is required, create process info cache")
 			gcInterval := time.Second * 1
 			entryTTL := time.Second * 10
-			prd := events.NewBPFProcessInfoCache(eventProtoStatsSink.EventProtoStatsChan(), gcInterval, entryTTL)
+			var eventProcessC <-chan events.EventProtoStats
+			var eventTcpC <-chan events.EventTcpStats
+			if config.FlowLogsCollectProcessInfo {
+				eventProcessC = eventProtoStatsSink.EventProtoStatsChan()
+			}
+			if config.FlowLogsCollectTcpStats {
+				eventTcpC = eventTcpStatsSink.EventTcpStatsChan()
+			}
+			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, gcInterval, entryTTL)
 			processInfoCache = prd
 		}
 
@@ -1122,6 +1137,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("ConntrackInfoReader added to collector")
 		config.Collector.SetProcessInfoCache(processInfoCache)
 		log.Info("ProcessInfoCache added to collector")
+		//config.Collector.SetTcpSocketInfoReader(collectorTcpSocketInfoReader)
 	}
 
 	if bpfEventPoller != nil {

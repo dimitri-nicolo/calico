@@ -75,6 +75,28 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					HTTPRequestsAllowedIn: 8,
 					HTTPRequestsDeniedIn:  9,
 				},
+				FlowReportedTCPStats: FlowReportedTCPStats{
+					SendCongestionWnd: TCPWnd{
+						Mean: 2,
+						Min:  3,
+					},
+					SmoothRtt: TCPRtt{
+						Mean: 2,
+						Max:  3,
+					},
+					MinRtt: TCPRtt{
+						Mean: 2,
+						Max:  3,
+					},
+					Mss: TCPMss{
+						Mean: 2,
+						Min:  3,
+					},
+					TotalRetrans:   7,
+					LostOut:        8,
+					UnrecoveredRTO: 9,
+					Count:          1,
+				},
 			},
 		}
 
@@ -143,6 +165,28 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					NumFlows:              7,
 					HTTPRequestsAllowedIn: 8,
 					HTTPRequestsDeniedIn:  9,
+				},
+				FlowReportedTCPStats: FlowReportedTCPStats{
+					SendCongestionWnd: TCPWnd{
+						Mean: 2,
+						Min:  3,
+					},
+					SmoothRtt: TCPRtt{
+						Mean: 2,
+						Max:  3,
+					},
+					MinRtt: TCPRtt{
+						Mean: 2,
+						Max:  3,
+					},
+					Mss: TCPMss{
+						Mean: 2,
+						Min:  3,
+					},
+					TotalRetrans:   7,
+					LostOut:        8,
+					UnrecoveredRTO: 9,
+					Count:          1,
 				},
 			},
 		}
@@ -234,6 +278,28 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					NumFlows:              7,
 					HTTPRequestsAllowedIn: 8,
 					HTTPRequestsDeniedIn:  9,
+				},
+				FlowReportedTCPStats: FlowReportedTCPStats{
+					SendCongestionWnd: TCPWnd{
+						Mean: 2,
+						Min:  3,
+					},
+					SmoothRtt: TCPRtt{
+						Mean: 2,
+						Max:  3,
+					},
+					MinRtt: TCPRtt{
+						Mean: 2,
+						Max:  3,
+					},
+					Mss: TCPMss{
+						Mean: 2,
+						Min:  3,
+					},
+					TotalRetrans:   7,
+					LostOut:        8,
+					UnrecoveredRTO: 9,
+					Count:          1,
 				},
 			},
 		}

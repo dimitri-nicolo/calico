@@ -69,6 +69,17 @@ type ConntrackInfoReader interface {
 	ConntrackInfoChan() <-chan ConntrackInfo
 }
 
+type TcpStatsData struct {
+	SendCongestionWnd int
+	SmoothRtt         int
+	MinRtt            int
+	Mss               int
+	TotalRetrans      int
+	LostOut           int
+	UnrecoveredRTO    int
+	IsDirty           bool
+}
+
 // ProcessData contains information about a process which includes its name and PID.
 type ProcessData struct {
 	Name string
@@ -85,6 +96,7 @@ type ProcessInfo struct {
 	IsDNAT       bool
 
 	ProcessData
+	TcpStatsData
 }
 
 // ProcessInfoCache is an interface that provides process information.
@@ -92,4 +104,5 @@ type ProcessInfoCache interface {
 	Start() error
 	Stop()
 	Lookup(Tuple, TrafficDirection) (ProcessInfo, bool)
+	Update(Tuple, bool)
 }

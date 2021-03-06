@@ -70,12 +70,10 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 				.snd_cwnd = tsk->snd_cwnd,
 				.srtt_us = tsk->srtt_us,
 				.rtt_min = tsk->rtt_min,
-				.snd_ssthresh = tsk->snd_ssthresh,
 				.total_retrans = tsk->total_retrans,
 				.lost_out = tsk->lost_out,
 				.icsk_retransmits = tsk->icsk_retransmits,
 				.mss_cache = tsk->mss_cache,
-				.ecn_flags = tsk->ecn_flags,
 			};
 			if (sk->family == 2) {
 				event.saddr[10] = event.saddr[11] = event.daddr[10] = event.daddr[11] = 0xff;

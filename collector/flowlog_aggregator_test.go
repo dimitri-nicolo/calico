@@ -22,8 +22,29 @@ type testProcessInfo struct {
 	numProcessNames int
 }
 
+type testTcpStats struct {
+	SendCongestionWnd TCPWnd
+	SmoothRtt         TCPRtt
+	MinRtt            TCPRtt
+	Mss               TCPMss
+	LostOut           int
+	TotalRetrans      int
+	UnrecoveredRTO    int
+	Count             int
+}
+
 var (
-	noProcessInfo = testProcessInfo{"-", 0, "-", 0}
+	noProcessInfo  = testProcessInfo{"-", 0, "-", 0}
+	noTcpStatsInfo = testTcpStats{
+		SendCongestionWnd: TCPWnd{Min: 0, Mean: 0},
+		SmoothRtt:         TCPRtt{Max: 0, Mean: 0},
+		MinRtt:            TCPRtt{Max: 0, Mean: 0},
+		Mss:               TCPMss{Min: 0, Mean: 0},
+		LostOut:           0,
+		TotalRetrans:      0,
+		UnrecoveredRTO:    0,
+		Count:             0,
+	}
 )
 
 // Common MetricUpdate definitions
@@ -59,13 +80,22 @@ var (
 			deltaPackets: 1,
 			deltaBytes:   20,
 		},
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 )
 
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, dsvc FlowService, sl, dl map[string]string, fp FlowPolicies, fe FlowExtras, fpi testProcessInfo) {
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, dsvc, sl, dl, fp, fe, fpi)
+	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, dsvc FlowService, sl, dl map[string]string, fp FlowPolicies, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) {
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, dsvc, sl, dl, fp, fe, fpi, tcps)
 
 		// We don't include the start and end time in the comparison, so copy to a new log without these
 		var flNoTime FlowLog
@@ -143,6 +173,55 @@ var _ = Describe("Flow log aggregator tests", func() {
 		return fp
 	}
 
+	extractFlowTCPStats := func(mus ...MetricUpdate) testTcpStats {
+		tcps := testTcpStats{}
+		for i, mu := range mus {
+			if mu.sendCongestionWnd == nil {
+				continue
+			}
+			if i == 0 {
+				tcps.SendCongestionWnd.Min = *mu.sendCongestionWnd
+				tcps.SendCongestionWnd.Mean = *mu.sendCongestionWnd
+
+				tcps.SmoothRtt.Max = *mu.smoothRtt
+				tcps.SmoothRtt.Mean = *mu.smoothRtt
+
+				tcps.MinRtt.Max = *mu.minRtt
+				tcps.MinRtt.Mean = *mu.minRtt
+
+				tcps.Mss.Min = *mu.mss
+				tcps.Mss.Mean = *mu.mss
+			} else {
+				if *mu.sendCongestionWnd < tcps.SendCongestionWnd.Min {
+					tcps.SendCongestionWnd.Min = *mu.sendCongestionWnd
+				}
+				tcps.SendCongestionWnd.Mean = ((tcps.SendCongestionWnd.Mean * tcps.Count) +
+					*mu.sendCongestionWnd) / (tcps.Count + 1)
+				if *mu.smoothRtt > tcps.SmoothRtt.Max {
+					tcps.SmoothRtt.Max = *mu.smoothRtt
+				}
+				tcps.SmoothRtt.Mean = ((tcps.SmoothRtt.Mean * tcps.Count) +
+					*mu.smoothRtt) / (tcps.Count + 1)
+				if *mu.minRtt > tcps.MinRtt.Max {
+					tcps.MinRtt.Max = *mu.minRtt
+				}
+				tcps.MinRtt.Mean = ((tcps.MinRtt.Mean * tcps.Count) +
+					*mu.minRtt) / (tcps.Count + 1)
+
+				if *mu.mss < tcps.Mss.Min {
+					tcps.Mss.Min = *mu.mss
+				}
+				tcps.Mss.Mean = ((tcps.Mss.Mean * tcps.Count) +
+					*mu.mss) / (tcps.Count + 1)
+			}
+			tcps.LostOut += mu.tcpMetric.deltaLostOut
+			tcps.TotalRetrans += mu.tcpMetric.deltaTotalRetrans
+			tcps.UnrecoveredRTO += mu.tcpMetric.deltaUnRecoveredRTO
+			tcps.Count += 1
+		}
+		return tcps
+	}
+
 	extractFlowProcessInfo := func(mus ...MetricUpdate) testProcessInfo {
 		fpi := testProcessInfo{}
 		procNames := set.New()
@@ -192,8 +271,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
 			expectedFP := extractFlowPolicies(muNoConn1Rule1AllowUpdate)
 			expectedFlowExtras := extractFlowExtras(muNoConn1Rule1AllowUpdate)
+			expectedTCPS := extractFlowTCPStats(muNoConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, expectedTCPS)
 
 			By("source port")
 			ca = NewFlowLogAggregator().AggregateOver(FlowSourcePort)
@@ -479,8 +559,13 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// The labels should have been intersected correctly.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectedFlowExtras := extractFlowExtras(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectedTCPS := extractFlowTCPStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectedTCPS.Count = expectedTCPS.Count * 2
+			expectedTCPS.LostOut = expectedTCPS.LostOut * 2
+			expectedTCPS.TotalRetrans = expectedTCPS.TotalRetrans * 2
+			expectedTCPS.UnrecoveredRTO = expectedTCPS.UnrecoveredRTO * 2
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, noService, map[string]string{"test-app": "true"}, map[string]string{}, nil, expectedFlowExtras, noProcessInfo)
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, noService, map[string]string{"test-app": "true"}, map[string]string{}, nil, expectedFlowExtras, noProcessInfo, expectedTCPS)
 
 			By("not affecting flow logs when IncludeLabels is disabled")
 			ca = NewFlowLogAggregator().IncludeLabels(false)
@@ -538,8 +623,13 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// The labels should have been intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectedFlowExtras = extractFlowExtras(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectedTCPS = extractFlowTCPStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectedTCPS.Count = expectedTCPS.Count * 2
+			expectedTCPS.LostOut = expectedTCPS.LostOut * 2
+			expectedTCPS.TotalRetrans = expectedTCPS.TotalRetrans * 2
+			expectedTCPS.UnrecoveredRTO = expectedTCPS.UnrecoveredRTO * 2
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, noService, nil, nil, nil, expectedFlowExtras, noProcessInfo) // nil & nil for Src and Dst Labels respectively.
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, noService, nil, nil, nil, expectedFlowExtras, noProcessInfo, expectedTCPS) // nil & nil for Src and Dst Labels respectively.
 		})
 	})
 
@@ -863,8 +953,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName)
 			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 		})
 
 		It("Includes process information with default aggregation with different processIDs", func() {
@@ -895,8 +986,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName, muWithSameProcessNameDifferentID)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName, muWithSameProcessNameDifferentID)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName, muWithSameProcessNameDifferentID)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName, muWithSameProcessNameDifferentID)
 			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 		})
 
 		It("Includes process information with default aggregation with different processIDs and expiration", func() {
@@ -928,8 +1020,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName, muWithSameProcessNameDifferentID, muWithProcessNameExpire)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName, muWithSameProcessNameDifferentID, muWithProcessNameExpire)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName, muWithSameProcessNameDifferentID, muWithProcessNameExpire)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName, muWithSameProcessNameDifferentID, muWithProcessNameExpire)
 			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 
 			messages = caa.GetAndCalibrate(FlowDefault)
 			Expect(len(messages)).Should(Equal(0))
@@ -965,8 +1058,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName)
 			expectedFlowLog := newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectedNumFlows = 1
@@ -977,8 +1071,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithDifferentProcessNameDifferentID, muWithDifferentProcessNameDifferentIDExpire)
 			expectedFlowExtras = extractFlowExtras(muWithDifferentProcessNameDifferentID, muWithDifferentProcessNameDifferentIDExpire)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithDifferentProcessNameDifferentID, muWithDifferentProcessNameDifferentIDExpire)
+			expectedTCPS = extractFlowTCPStats(muWithDifferentProcessNameDifferentID, muWithDifferentProcessNameDifferentIDExpire)
 			expectedFlowLog = newExpectedFlowLog(tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectFlowLogsMatch(actualFlowLogs, expectedFlowLogs)
@@ -1025,8 +1120,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName2)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName2)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName2)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName2)
 			expectedFlowLog := newExpectedFlowLog(tuple3Aggregated, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			By("Constructing the second of three flowlogs")
@@ -1043,8 +1139,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName3)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName3)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName3)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName3)
 			expectedFlowLog = newExpectedFlowLog(tuple4Aggregated, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			By("Constructing the third of three flowlogs")
@@ -1061,8 +1158,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName4, muWithProcessName5)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName4, muWithProcessName5)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName4, muWithProcessName5)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName4, muWithProcessName5)
 			expectedFlowLog = newExpectedFlowLog(tuple5Aggregated, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectFlowLogsMatch(actualFlowLogs, expectedFlowLogs)
@@ -1100,8 +1198,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName2)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName2)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName2)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName2)
 			expectedFlowLog := newExpectedFlowLog(tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			By("Constructing the second of four flowlogs")
@@ -1114,8 +1213,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName3)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName3)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName3)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName3)
 			expectedFlowLog = newExpectedFlowLog(tuple4, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			By("Constructing the third of four flowlogs")
@@ -1128,8 +1228,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName4)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName4)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName4)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName4)
 			expectedFlowLog = newExpectedFlowLog(tuple5, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			By("Constructing the fourth of four flowlogs")
@@ -1141,8 +1242,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName5)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName5)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName5)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName5)
 			expectedFlowLog = newExpectedFlowLog(tuple6, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectFlowLogsMatch(actualFlowLogs, expectedFlowLogs)
@@ -1182,8 +1284,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP := extractFlowPolicies(muWithProcessName2)
 			expectedFlowExtras := extractFlowExtras(muWithProcessName2)
 			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName2)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName2)
 			expectedFlowLog := newExpectedFlowLog(tuple3Aggregated, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectedNumFlows = 1
@@ -1197,8 +1300,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName3)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName3)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName3)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName3)
 			expectedFlowLog = newExpectedFlowLog(tuple4Aggregated, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectedNumFlows = 2
@@ -1212,8 +1316,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFP = extractFlowPolicies(muWithProcessName4, muWithProcessName5)
 			expectedFlowExtras = extractFlowExtras(muWithProcessName4, muWithProcessName5)
 			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessName4, muWithProcessName5)
+			expectedTCPS = extractFlowTCPStats(muWithProcessName4, muWithProcessName5)
 			expectedFlowLog = newExpectedFlowLog(tuple5Aggregated, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectFlowLogsMatch(actualFlowLogs, expectedFlowLogs)

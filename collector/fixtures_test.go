@@ -16,7 +16,11 @@ import (
 const testMaxBoundedSetSize = 5
 
 var (
-	flowMetaDefault = FlowMeta{
+	sendCongestionWnd = 10
+	smoothRtt         = 1
+	minRtt            = 2
+	mss               = 4
+	flowMetaDefault   = FlowMeta{
 		Tuple: Tuple{
 			src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 0, 0, 1},
 			dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 20, 0, 0, 1},
@@ -383,6 +387,15 @@ var (
 			deltaPackets: 1,
 			deltaBytes:   20,
 		},
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithEndpointMetaExpire = MetricUpdate{
@@ -450,6 +463,15 @@ var (
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   20,
+		},
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
 		},
 	}
 
@@ -689,8 +711,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process",
-		processID:   1234,
+		processName:       "test-process",
+		processID:         1234,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithProcessNameDifferentIDSameTuple = MetricUpdate{
@@ -716,8 +747,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process",
-		processID:   4321,
+		processName:       "test-process",
+		processID:         4321,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithProcessNameExpire = MetricUpdate{
@@ -766,8 +806,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process",
-		processID:   4321,
+		processName:       "test-process",
+		processID:         4321,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithSameProcessNameDifferentIDExpire = MetricUpdate{
@@ -816,8 +865,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process-2",
-		processID:   23456,
+		processName:       "test-process-2",
+		processID:         23456,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithDifferentProcessNameDifferentIDExpire = MetricUpdate{
@@ -839,8 +897,17 @@ var (
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
 
-		processName: "test-process-2",
-		processID:   23456,
+		processName:       "test-process-2",
+		processID:         23456,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithProcessName2 = MetricUpdate{
@@ -866,8 +933,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process-2",
-		processID:   9876,
+		processName:       "test-process-2",
+		processID:         9876,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithProcessName3 = MetricUpdate{
@@ -893,8 +969,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process-3",
-		processID:   5678,
+		processName:       "test-process-3",
+		processID:         5678,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithProcessName4 = MetricUpdate{
@@ -920,8 +1005,17 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process-4",
-		processID:   34567,
+		processName:       "test-process-4",
+		processID:         34567,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 
 	muWithProcessName5 = MetricUpdate{
@@ -947,7 +1041,16 @@ var (
 			deltaBytes:   20,
 		},
 
-		processName: "test-process-5",
-		processID:   7654,
+		processName:       "test-process-5",
+		processID:         7654,
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
 	}
 )

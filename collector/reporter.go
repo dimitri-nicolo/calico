@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -45,6 +45,12 @@ type MetricValue struct {
 	deltaDeniedHTTPRequests  int
 }
 
+type TCPMetricValue struct {
+	deltaTotalRetrans   int
+	deltaLostOut        int
+	deltaUnRecoveredRTO int
+}
+
 func (mv MetricValue) String() string {
 	return fmt.Sprintf("delta=%v deltaBytes=%v deltaAllowedHTTPReq=%v deltaDeniedHTTPReq=%v",
 		mv.deltaPackets, mv.deltaBytes, mv.deltaAllowedHTTPRequests, mv.deltaDeniedHTTPRequests)
@@ -64,6 +70,18 @@ func (mv *MetricValue) Reset() {
 	mv.deltaPackets = 0
 	mv.deltaAllowedHTTPRequests = 0
 	mv.deltaDeniedHTTPRequests = 0
+}
+
+func (tm *TCPMetricValue) Increment(other TCPMetricValue) {
+	tm.deltaTotalRetrans += other.deltaTotalRetrans
+	tm.deltaLostOut += other.deltaLostOut
+	tm.deltaUnRecoveredRTO += other.deltaUnRecoveredRTO
+}
+
+func (tm *TCPMetricValue) Reset() {
+	tm.deltaTotalRetrans = 0
+	tm.deltaLostOut = 0
+	tm.deltaUnRecoveredRTO = 0
 }
 
 type MetricUpdate struct {
@@ -98,6 +116,13 @@ type MetricUpdate struct {
 	// Optional process info
 	processName string
 	processID   int
+
+	//optional Tcp v4 socket stats
+	sendCongestionWnd *int
+	smoothRtt         *int
+	minRtt            *int
+	mss               *int
+	tcpMetric         TCPMetricValue
 }
 
 func (mu MetricUpdate) String() string {
@@ -123,8 +148,13 @@ func (mu MetricUpdate) String() string {
 		numOrigIPs = 0
 		origIPs = []net.IP{}
 	}
-	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d}",
-		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID)
+	if mu.sendCongestionWnd != nil && mu.smoothRtt != nil && mu.minRtt != nil && mu.mss != nil {
+		return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d} tcpSocketStats={%d, %d, %d, %d, %d, %d, %d}",
+			mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID, *mu.sendCongestionWnd, *mu.smoothRtt, *mu.minRtt, *mu.mss, mu.tcpMetric.deltaTotalRetrans, mu.tcpMetric.deltaLostOut, mu.tcpMetric.deltaUnRecoveredRTO)
+	} else {
+		return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d} tcpSocketStats={0, 0, 0, 0, 0, 0, 0}",
+			mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID)
+	}
 }
 
 func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {

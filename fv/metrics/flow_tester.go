@@ -190,9 +190,9 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, nu
 		// Build a FlowMeta with the metadata and IPs that we are looking for.
 		var template string
 		if dstIP != "" {
-			template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0"
+			template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 		} else {
-			template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0"
+			template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 		}
 		fl := &collector.FlowLog{}
 		err := fl.Deserialize(template)

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,6 +90,12 @@ func (a V4Addr) AsBinary() string {
 	}
 
 	return ipInBinary
+}
+
+func Int2NetIP(addr uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, addr)
+	return ip
 }
 
 type V6Addr [16]byte

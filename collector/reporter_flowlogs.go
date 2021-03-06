@@ -25,6 +25,7 @@ type FlowLogAggregator interface {
 	IncludePolicies(bool) FlowLogAggregator
 	IncludeService(bool) FlowLogAggregator
 	IncludeProcess(bool) FlowLogAggregator
+	IncludeTcpStats(bool) FlowLogAggregator
 	MaxOriginalIPsSize(int) FlowLogAggregator
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator

@@ -52,6 +52,7 @@ type flowLogAggregator struct {
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
 	perFlowProcessLimit  int
+	includeTcpStats      bool
 }
 
 type flowEntry struct {
@@ -104,6 +105,10 @@ func (c *flowLogAggregator) AggregateOver(kind FlowAggregationKind) FlowLogAggre
 	c.initial = kind
 	c.current = kind
 	c.previous = kind
+	return c
+}
+func (c *flowLogAggregator) IncludeTcpStats(b bool) FlowLogAggregator {
+	c.includeTcpStats = b
 	return c
 }
 

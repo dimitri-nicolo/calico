@@ -55,9 +55,7 @@ struct event_tcp_stats {
 	__u32 snd_cwnd;
 	__u32 srtt_us;
 	__u32 rtt_min;
-	__u32 snd_ssthresh;
 	__u32 mss_cache;
-	__u32 ecn_flags;
 	__u32 total_retrans;
 	__u32 lost_out;
 	__u32 icsk_retransmits;

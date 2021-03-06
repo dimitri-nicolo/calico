@@ -1781,3 +1781,4 @@ func (mockProcessCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, 
 	}
 	return ProcessInfo{}, false
 }
+func (mockProcessCache) Update(tuple Tuple, dirty bool) {}

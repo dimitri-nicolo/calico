@@ -193,7 +193,7 @@ func serializeCloudWatchFlowLog(f *FlowLog) string {
 	}
 
 	flowExtrasStr := flowExtrasToString(f.FlowExtras)
-	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
+	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
 		f.StartTime.Unix(), f.EndTime.Unix(),
 		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, f.SrcMeta.AggregatedName, srcLabels,
 		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, f.DstMeta.AggregatedName, dstLabels,
@@ -202,7 +202,10 @@ func serializeCloudWatchFlowLog(f *FlowLog) string {
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
 		f.Action, policyStr, flowExtrasStr,
 		f.DstService.Namespace, f.DstService.Name, f.DstService.Port,
-		f.ProcessName, f.NumProcessNames, f.ProcessID, f.NumProcessIDs)
+		f.ProcessName, f.NumProcessNames, f.ProcessID, f.NumProcessIDs,
+		f.SendCongestionWnd.Mean, f.SendCongestionWnd.Min, f.SmoothRtt.Mean,
+		f.SmoothRtt.Max, f.MinRtt.Mean, f.MinRtt.Max, f.Mss.Mean, f.Mss.Min,
+		f.TotalRetrans, f.LostOut, f.UnrecoveredRTO)
 }
 
 func (c *cloudWatchDispatcher) Initialize() error {

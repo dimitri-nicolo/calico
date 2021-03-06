@@ -123,6 +123,7 @@ func New(
 			EnableServices:               configParams.FlowLogsFileIncludeService,
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
+			IsBPFDataplane:               configParams.BPFEnabled,
 		},
 	)
 
@@ -243,6 +244,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				IncludeService(configParams.FlowLogsFileIncludeService).
 				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
+				IncludeTcpStats(configParams.FlowLogsCollectTcpStats).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionAllow)
@@ -256,6 +258,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				IncludeService(configParams.FlowLogsFileIncludeService).
+				IncludeTcpStats(configParams.FlowLogsCollectTcpStats).
 				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).

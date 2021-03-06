@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -39,6 +39,7 @@ type Config struct {
 	EnableServices        bool
 
 	MaxOriginalSourceIPsIncluded int
+	IsBPFDataplane               bool
 }
 
 // A collector (a StatsManager really) collects StatUpdates from data sources
@@ -276,7 +277,7 @@ func (c *collector) handleDataEndpointOrRulesChanged(data *Data) {
 		// Reset counters and replace the rule.
 		data.ResetConntrackCounters()
 		data.ResetApplicationCounters()
-
+		data.ResetTcpStats()
 		// Sett reported to false so the data can be updated without further reports.
 		data.reported = false
 	}
@@ -304,10 +305,52 @@ func (c *collector) checkEpStats() {
 	}
 }
 
+func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
+	t := data.PreDNATTuple()
+	processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirOutbound)
+	// In BPF dataplane, the existing connection tuples will be pre-DNAT and the new connections will
+	// be post-DNAT, because of connecttime load balancer. Hence if the lookup with preDNAT tuple fails,
+	// do a lookup with post DNAT tuple.
+	if !ok && c.config.IsBPFDataplane {
+		log.Debugf("Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
+		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirOutbound)
+	}
+	if ok {
+		log.Debugf("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
+		if !data.reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
+			data.SetSourceProcessData(processInfo.Name, processInfo.Pid)
+		}
+		if processInfo.TcpStatsData.IsDirty {
+			data.SetTcpSocketStats(processInfo.TcpStatsData)
+			// Since we have read the data TCP stats data from the cache, set it to false
+			c.processInfoCache.Update(t, false)
+			log.Debugf("Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
+		}
+	}
+	processInfo, ok = c.processInfoCache.Lookup(t, TrafficDirInbound)
+	if !ok && c.config.IsBPFDataplane {
+		log.Debugf("Lookup process cache for post DNAT tuple %+v for Inbound traffic", data.Tuple)
+		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirInbound)
+	}
+	if ok {
+		log.Debugf("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
+		if !data.reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
+			data.SetDestProcessData(processInfo.Name, processInfo.Pid)
+		}
+		if processInfo.TcpStatsData.IsDirty {
+			data.SetTcpSocketStats(processInfo.TcpStatsData)
+			// Since we have read the data TCP stats data from the cache, set it to false
+			c.processInfoCache.Update(t, false)
+			log.Debugf("Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
+		}
+	}
+}
+
 // reportMetrics reports the metrics if all required data is present, or returns false if not reported.
 // Set the force flag to true if the data should be reported before all asynchronous data is collected.
 func (c *collector) reportMetrics(data *Data, force bool) bool {
 	foundService := true
+	c.LookupProcessInfoCacheAndUpdate(data)
 	if !data.reported {
 		// Check if the destination was accessed via a service. Once reported, this will not be updated again.
 		if data.dstSvc.Name == "" {
@@ -317,25 +360,6 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 			} else if _, ok := c.luc.GetNode(data.Tuple.dst); ok {
 				// Destination is a node, so could be a node port service.
 				data.dstSvc, foundService = c.luc.GetNodePortService(data.Tuple.l4Dst, data.Tuple.proto)
-			}
-		}
-
-		if data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
-			log.Debugf("Process info not set for %+v outbound", data.Tuple)
-			t := data.PreDNATTuple()
-
-			if processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirOutbound); ok {
-				log.Debugf("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
-				data.SetSourceProcessData(processInfo.Name, processInfo.Pid)
-			}
-		}
-		if data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
-			log.Debugf("Process info not set for %+v inbound", data.Tuple)
-			t := data.PreDNATTuple()
-
-			if processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirInbound); ok {
-				log.Debugf("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
-				data.SetDestProcessData(processInfo.Name, processInfo.Pid)
 			}
 		}
 	}
@@ -423,6 +447,7 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
 		// from a connection to non-connection state.
 	}
+	data.TcpStats.ClearDirtyFlag()
 }
 
 // handleCtInfo handles an update from conntrack
@@ -834,3 +859,6 @@ func (r *NilProcessInfoCache) Start() error {
 }
 
 func (r *NilProcessInfoCache) Stop() {}
+
+func (r *NilProcessInfoCache) Update(tuple Tuple, dirty bool) {
+}

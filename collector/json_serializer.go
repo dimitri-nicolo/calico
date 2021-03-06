@@ -67,6 +67,18 @@ type FlowLogJSONOutput struct {
 
 	OrigSourceIPs    []net.IP `json:"original_source_ips"`
 	NumOrigSourceIPs int64    `json:"num_original_source_ips"`
+
+	SendCongestionWndMean int64 `json:"tcp_mean_send_congestion_window"`
+	SendCongestionWndMin  int64 `json:"tcp_min_send_congestion_window"`
+	SmoothRttMean         int64 `json:"tcp_mean_smooth_rtt"`
+	SmoothRttMax          int64 `json:"tcp_max_smooth_rtt"`
+	MinRttMean            int64 `json:"tcp_mean_min_rtt"`
+	MinRttMax             int64 `json:"tcp_max_min_rtt"`
+	MssMean               int64 `json:"tcp_mean_mss"`
+	MssMin                int64 `json:"tcp_min_mss"`
+	TotalRetrans          int64 `json:"tcp_total_retransmissions"`
+	LostOut               int64 `json:"tcp_lost_packets"`
+	UnrecoveredRTO        int64 `json:"tcp_unrecovered_to"`
 }
 
 type FlowLogLabelsJSONOutput struct {
@@ -175,6 +187,18 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.NumProcessNames = int64(l.NumProcessNames)
 	out.ProcessID = l.ProcessID
 	out.NumProcessIDs = int64(l.NumProcessIDs)
+
+	out.SendCongestionWndMean = int64(l.SendCongestionWnd.Mean)
+	out.SendCongestionWndMin = int64(l.SendCongestionWnd.Min)
+	out.SmoothRttMean = int64(l.SmoothRtt.Mean)
+	out.SmoothRttMax = int64(l.SmoothRtt.Max)
+	out.MinRttMean = int64(l.MinRtt.Mean)
+	out.MinRttMax = int64(l.MinRtt.Max)
+	out.MssMean = int64(l.Mss.Mean)
+	out.MssMin = int64(l.Mss.Min)
+	out.TotalRetrans = int64(l.TotalRetrans)
+	out.LostOut = int64(l.LostOut)
+	out.UnrecoveredRTO = int64(l.UnrecoveredRTO)
 	return out
 }
 
@@ -284,6 +308,17 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.ProcessID = o.ProcessID
 	fl.NumProcessIDs = int(o.NumProcessIDs)
 
+	fl.SendCongestionWnd.Mean = int(o.SendCongestionWndMean)
+	fl.SendCongestionWnd.Min = int(o.SendCongestionWndMin)
+	fl.SmoothRtt.Mean = int(o.SmoothRttMean)
+	fl.SmoothRtt.Max = int(o.SmoothRttMax)
+	fl.MinRtt.Mean = int(o.MinRttMean)
+	fl.MinRtt.Max = int(o.MinRttMax)
+	fl.Mss.Mean = int(o.MssMean)
+	fl.Mss.Min = int(o.MssMin)
+	fl.LostOut = int(o.LostOut)
+	fl.TotalRetrans = int(o.TotalRetrans)
+	fl.UnrecoveredRTO = int(o.UnrecoveredRTO)
 	if o.Policies == nil {
 		fl.FlowPolicies = nil
 	} else {

@@ -30,22 +30,25 @@ type BPFProcessInfoCache struct {
 	// Max time for which an entry is retained.
 	entryTTL time.Duration
 
-	stopOnce     sync.Once
-	wg           sync.WaitGroup
-	stopC        chan struct{}
-	eventC       <-chan EventProtoStats
-	processInfoC chan collector.ProcessInfo
+	stopOnce          sync.Once
+	wg                sync.WaitGroup
+	stopC             chan struct{}
+	eventProcessInfo  <-chan EventProtoStats
+	eventTcpStatsInfo <-chan EventTcpStats
+	processInfoC      chan collector.ProcessInfo
 }
 
 // NewBPFProcessInfoCache returns a new BPFProcessInfoCache
-func NewBPFProcessInfoCache(eventChan <-chan EventProtoStats, gcInterval time.Duration, entryTTL time.Duration) *BPFProcessInfoCache {
+func NewBPFProcessInfoCache(eventProcessInfoChan <-chan EventProtoStats, eventTcpStatsInfoChan <-chan EventTcpStats,
+	gcInterval time.Duration, entryTTL time.Duration) *BPFProcessInfoCache {
 	return &BPFProcessInfoCache{
-		stopC:        make(chan struct{}),
-		eventC:       eventChan,
-		expireTicker: jitter.NewTicker(gcInterval, gcInterval/10),
-		entryTTL:     entryTTL,
-		cache:        make(map[collector.Tuple]ProcessEntry),
-		lock:         sync.RWMutex{},
+		stopC:             make(chan struct{}),
+		eventProcessInfo:  eventProcessInfoChan,
+		eventTcpStatsInfo: eventTcpStatsInfoChan,
+		expireTicker:      jitter.NewTicker(gcInterval, gcInterval/10),
+		entryTTL:          entryTTL,
+		cache:             make(map[collector.Tuple]ProcessEntry),
+		lock:              sync.RWMutex{},
 	}
 }
 
@@ -53,7 +56,9 @@ func (r *BPFProcessInfoCache) Start() error {
 	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
-		r.run()
+		if r.eventProcessInfo != nil || r.eventTcpStatsInfo != nil {
+			r.run()
+		}
 	}()
 
 	return nil
@@ -65,10 +70,18 @@ func (r *BPFProcessInfoCache) run() {
 		select {
 		case <-r.stopC:
 			return
-		case event := <-r.eventC:
-			info := convertProtoEventToProcessInfo(event)
-			log.Debugf("Converted event %+v to process info %+v", event, info)
-			r.updateCache(info)
+		case processEvent, ok := <-r.eventProcessInfo:
+			if ok {
+				info := convertProtoEventToProcessInfo(processEvent)
+				log.Debugf("Converted event %+v to process info %+v", processEvent, info)
+				r.updateCacheWithProcessInfo(info)
+			}
+		case tcpStatsEvent, ok := <-r.eventTcpStatsInfo:
+			if ok {
+				info := convertTcpStatsEventToProcessInfo(tcpStatsEvent)
+				log.Debugf("Converted event %+v to process info %+v", tcpStatsEvent, info)
+				r.updateCacheWithStats(info)
+			}
 		case <-r.expireTicker.Channel():
 			r.expireCacheEntries()
 		}
@@ -100,16 +113,60 @@ func (r *BPFProcessInfoCache) Lookup(tuple collector.Tuple, direction collector.
 	return collector.ProcessInfo{}, false
 }
 
-func (r *BPFProcessInfoCache) updateCache(info collector.ProcessInfo) {
+func (r *BPFProcessInfoCache) Update(tuple collector.Tuple, dirty bool) {
+	r.updateCacheWithTcpStatsDirty(tuple, dirty)
+}
+func (r *BPFProcessInfoCache) updateCacheWithTcpStatsDirty(tuple collector.Tuple, dirty bool) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	log.Debugf("Setting the dirty flag for TCPStats to %+v", dirty)
+	entry, ok := r.cache[tuple]
+	if ok {
+		entry.TcpStatsData.IsDirty = dirty
+		r.cache[tuple] = entry
+	}
+	// May be entry has expired
+}
+
+func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessInfo) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	log.Debugf("Updating process info %+v", info)
-	entry := ProcessEntry{
-		ProcessInfo: info,
-		expiresAt:   time.Now().Add(r.entryTTL),
+	t := info.Tuple
+	entry, ok := r.cache[t]
+	if ok {
+		entry.ProcessData = info.ProcessData
+		entry.expiresAt = time.Now().Add(r.entryTTL)
+		log.Debugf("Process Info cache updated with process data %+v", entry)
+		r.cache[info.Tuple] = entry
+	} else {
+		entry := ProcessEntry{
+			ProcessInfo: info,
+			expiresAt:   time.Now().Add(r.entryTTL),
+		}
+		r.cache[info.Tuple] = entry
 	}
-	r.cache[info.Tuple] = entry
 	return
+}
+
+func (r *BPFProcessInfoCache) updateCacheWithStats(info collector.ProcessInfo) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	log.Debugf("Updating process info with stats %+v", info)
+	t := info.Tuple
+	entry, ok := r.cache[t]
+	if ok {
+		entry.TcpStatsData = info.TcpStatsData
+		entry.expiresAt = time.Now().Add(r.entryTTL)
+		log.Debugf("Process Info cache updated with TCP stats data %+v", entry)
+		r.cache[info.Tuple] = entry
+	} else {
+		entry := ProcessEntry{
+			ProcessInfo: info,
+			expiresAt:   time.Now().Add(r.entryTTL),
+		}
+		r.cache[info.Tuple] = entry
+	}
 }
 
 func (r *BPFProcessInfoCache) expireCacheEntries() {
@@ -137,6 +194,27 @@ func convertProtoEventToProcessInfo(event EventProtoStats) collector.ProcessInfo
 		ProcessData: collector.ProcessData{
 			Name: string(pname),
 			Pid:  int(event.Pid),
+		},
+	}
+}
+
+func convertTcpStatsEventToProcessInfo(event EventTcpStats) collector.ProcessInfo {
+	srcIP := event.Saddr
+	dstIP := event.Daddr
+	sport := int(event.Sport)
+	dport := int(event.Dport)
+	tuple := collector.MakeTuple(srcIP, dstIP, 6, sport, dport)
+	return collector.ProcessInfo{
+		Tuple: tuple,
+		TcpStatsData: collector.TcpStatsData{
+			SendCongestionWnd: event.SendCongestionWnd,
+			SmoothRtt:         event.SmoothRtt,
+			MinRtt:            event.MinRtt,
+			Mss:               event.Mss,
+			TotalRetrans:      event.TotalRetrans,
+			LostOut:           event.LostOut,
+			UnrecoveredRTO:    event.UnrecoveredRTO,
+			IsDirty:           true,
 		},
 	}
 }

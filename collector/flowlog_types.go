@@ -50,6 +50,21 @@ type FlowMeta struct {
 	Reporter   FlowLogReporter  `json:"flowReporter"`
 }
 
+type TCPRtt struct {
+	Mean int `json:"mean"`
+	Max  int `json:"max"`
+}
+
+type TCPWnd struct {
+	Mean int `json:"mean"`
+	Min  int `json:"min"`
+}
+
+type TCPMss struct {
+	Mean int `json:"mean"`
+	Min  int `json:"min"`
+}
+
 func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 	f := FlowMeta{}
 
@@ -397,6 +412,18 @@ type FlowReportedStats struct {
 	NumFlowsCompleted     int `json:"numFlowsCompleted"`
 }
 
+// FlowReportedTCPSocketStats
+type FlowReportedTCPStats struct {
+	Count             int    `json:"count"`
+	SendCongestionWnd TCPWnd `json:"sendCongestionWnd"`
+	SmoothRtt         TCPRtt `json:"smoothRtt"`
+	MinRtt            TCPRtt `json:"minRtt"`
+	Mss               TCPMss `json:"mss"`
+	TotalRetrans      int    `json:"totalRetrans"`
+	LostOut           int    `json:"lostOut"`
+	UnrecoveredRTO    int    `json:"unrecoveredRTO"`
+}
+
 func (f *FlowReportedStats) Add(other FlowReportedStats) {
 	f.PacketsIn += other.PacketsIn
 	f.PacketsOut += other.PacketsOut
@@ -409,9 +436,66 @@ func (f *FlowReportedStats) Add(other FlowReportedStats) {
 	f.NumFlowsCompleted += other.NumFlowsCompleted
 }
 
+func (f *FlowReportedTCPStats) Add(other FlowReportedTCPStats) {
+	if f.Count == 0 {
+		f.SendCongestionWnd.Min = other.SendCongestionWnd.Min
+		f.SendCongestionWnd.Mean = other.SendCongestionWnd.Mean
+
+		f.SmoothRtt.Max = other.SmoothRtt.Max
+		f.SmoothRtt.Mean = other.SmoothRtt.Mean
+
+		f.MinRtt.Max = other.MinRtt.Max
+		f.MinRtt.Mean = other.MinRtt.Mean
+
+		f.Mss.Min = other.Mss.Min
+		f.Mss.Mean = other.Mss.Mean
+
+		f.LostOut = other.LostOut
+		f.TotalRetrans = other.TotalRetrans
+		f.UnrecoveredRTO = other.UnrecoveredRTO
+		f.Count = 1
+		return
+
+	}
+
+	if other.SendCongestionWnd.Min < f.SendCongestionWnd.Min {
+		f.SendCongestionWnd.Min = other.SendCongestionWnd.Min
+	}
+	f.SendCongestionWnd.Mean = ((f.SendCongestionWnd.Mean * f.Count) +
+		(other.SendCongestionWnd.Mean * other.Count)) /
+		(f.Count + other.Count)
+
+	if f.SmoothRtt.Max < other.SmoothRtt.Max {
+		f.SmoothRtt.Max = other.SmoothRtt.Max
+	}
+	f.SmoothRtt.Mean = ((f.SmoothRtt.Mean * f.Count) +
+		(other.SmoothRtt.Mean * other.Count)) /
+		(f.Count + other.Count)
+
+	if f.MinRtt.Max < other.MinRtt.Max {
+		f.MinRtt.Max = other.MinRtt.Max
+	}
+	f.MinRtt.Mean = ((f.MinRtt.Mean * f.Count) +
+		(other.MinRtt.Mean * other.Count)) /
+		(f.Count + other.Count)
+
+	if other.Mss.Min < f.Mss.Min {
+		f.Mss.Min = other.Mss.Min
+	}
+	f.Mss.Mean = ((f.Mss.Mean * f.Count) +
+		(other.Mss.Mean * other.Count)) /
+		(f.Count + other.Count)
+
+	f.TotalRetrans += other.TotalRetrans
+	f.LostOut += other.LostOut
+	f.UnrecoveredRTO += other.UnrecoveredRTO
+	f.Count += other.Count
+}
+
 // FlowStats captures stats associated with a given FlowMeta.
 type FlowStats struct {
 	FlowReportedStats
+	FlowReportedTCPStats
 	flowReferences
 	processIDs set.Set
 }
@@ -434,7 +518,7 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	pids := set.New()
 	pids.Add(strconv.Itoa(mu.processID))
 
-	return FlowStats{
+	flowStats := FlowStats{
 		FlowReportedStats: FlowReportedStats{
 			NumFlows:              flowsRefs.Len(),
 			NumFlowsStarted:       flowsStartedRefs.Len(),
@@ -458,6 +542,86 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 		},
 		processIDs: pids,
 	}
+	// Here we check if the metric update has a valid TCP stats.
+	// If the TCP stats is not valid (example: config is disabled),
+	// it is indicated by one of sendCongestionWnd, smoothRtt, minRtt, Mss
+	// being nil. Hence it is enough if we compare one of the above with nil
+	if mu.sendCongestionWnd != nil {
+		flowStats.FlowReportedTCPStats.SendCongestionWnd = TCPWnd{Mean: *mu.sendCongestionWnd, Min: *mu.sendCongestionWnd}
+		flowStats.FlowReportedTCPStats.SmoothRtt = TCPRtt{Mean: *mu.smoothRtt, Max: *mu.smoothRtt}
+		flowStats.FlowReportedTCPStats.MinRtt = TCPRtt{Mean: *mu.minRtt, Max: *mu.minRtt}
+		flowStats.FlowReportedTCPStats.Mss = TCPMss{Mean: *mu.mss, Min: *mu.mss}
+		flowStats.FlowReportedTCPStats.TotalRetrans = mu.tcpMetric.deltaTotalRetrans
+		flowStats.FlowReportedTCPStats.LostOut = mu.tcpMetric.deltaLostOut
+		flowStats.FlowReportedTCPStats.UnrecoveredRTO = mu.tcpMetric.deltaUnRecoveredRTO
+		flowStats.FlowReportedTCPStats.Count = 1
+	}
+	return flowStats
+}
+
+func (f *FlowStats) aggregateFlowTCPStats(mu MetricUpdate) {
+	log.Debugf("Aggregrate TCP stats %+v with flow %+v", mu, f)
+	// Here we check if the metric update has a valid TCP stats.
+	// If the TCP stats is not valid (example: config is disabled),
+	// it is indicated by one of sendCongestionWnd, smoothRtt, minRtt, Mss
+	// being nil. Hence it is enough if we compare one of the above with nil
+	if mu.sendCongestionWnd == nil {
+		return
+	}
+	if f.Count == 0 {
+		f.SendCongestionWnd.Min = *mu.sendCongestionWnd
+		f.SendCongestionWnd.Mean = *mu.sendCongestionWnd
+		f.Count = 1
+
+		f.SmoothRtt.Max = *mu.smoothRtt
+		f.SmoothRtt.Mean = *mu.smoothRtt
+		f.Count = 1
+
+		f.MinRtt.Max = *mu.minRtt
+		f.MinRtt.Mean = *mu.minRtt
+		f.Count = 1
+
+		f.Mss.Min = *mu.mss
+		f.Mss.Mean = *mu.mss
+		f.Count = 1
+
+		f.LostOut = mu.tcpMetric.deltaLostOut
+		f.TotalRetrans = mu.tcpMetric.deltaTotalRetrans
+		f.UnrecoveredRTO = mu.tcpMetric.deltaUnRecoveredRTO
+		return
+	}
+	// Calculate Mean, Min of Send congestion window
+	if *mu.sendCongestionWnd < f.SendCongestionWnd.Min {
+		f.SendCongestionWnd.Min = *mu.sendCongestionWnd
+	}
+	f.SendCongestionWnd.Mean = ((f.SendCongestionWnd.Mean * f.Count) +
+		*mu.sendCongestionWnd) / (f.Count + 1)
+
+	// Calculate Mean, Max of Smooth Rtt
+	if *mu.smoothRtt > f.SmoothRtt.Max {
+		f.SmoothRtt.Max = *mu.smoothRtt
+	}
+	f.SmoothRtt.Mean = ((f.SmoothRtt.Mean * f.Count) +
+		*mu.smoothRtt) / (f.Count + 1)
+
+	// Calculate Mean, Max of Min Rtt
+	if *mu.minRtt > f.MinRtt.Max {
+		f.MinRtt.Max = *mu.minRtt
+	}
+	f.MinRtt.Mean = ((f.MinRtt.Mean * f.Count) +
+		*mu.minRtt) / (f.Count + 1)
+
+	// Calculate Mean,Min of MSS
+	if *mu.mss < f.Mss.Min {
+		f.Mss.Min = *mu.mss
+	}
+	f.Mss.Mean = ((f.Mss.Mean * f.Count) +
+		*mu.mss) / (f.Count + 1)
+
+	f.TotalRetrans += mu.tcpMetric.deltaTotalRetrans
+	f.LostOut += mu.tcpMetric.deltaLostOut
+	f.UnrecoveredRTO += mu.tcpMetric.deltaUnRecoveredRTO
+	f.Count += 1
 }
 
 func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
@@ -481,6 +645,7 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 	f.BytesOut += mu.outMetric.deltaBytes
 	f.HTTPRequestsAllowedIn += mu.inMetric.deltaAllowedHTTPRequests
 	f.HTTPRequestsDeniedIn += mu.inMetric.deltaDeniedHTTPRequests
+	f.aggregateFlowTCPStats(mu)
 }
 
 func (f *FlowStats) getActiveFlowsCount() int {
@@ -499,6 +664,7 @@ func (f *FlowStats) reset() {
 		NumFlows: f.flowsRefs.Len(),
 	}
 	f.processIDs.Clear()
+	f.FlowReportedTCPStats = FlowReportedTCPStats{}
 }
 
 // FlowStatsByProcess collects statistics organized by process names. When process information is not enabled
@@ -604,11 +770,12 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 		reportedStats := make([]FlowProcessReportedStats, 0, 1)
 		if stats, ok := f.statsByProcessName[flowLogFieldNotIncluded]; ok {
 			s := FlowProcessReportedStats{
-				ProcessName:       flowLogFieldNotIncluded,
-				NumProcessNames:   0,
-				ProcessID:         flowLogFieldNotIncluded,
-				NumProcessIDs:     0,
-				FlowReportedStats: stats.FlowReportedStats,
+				ProcessName:          flowLogFieldNotIncluded,
+				NumProcessNames:      0,
+				ProcessID:            flowLogFieldNotIncluded,
+				NumProcessIDs:        0,
+				FlowReportedStats:    stats.FlowReportedStats,
+				FlowReportedTCPStats: stats.FlowReportedTCPStats,
 			}
 			reportedStats = append(reportedStats, s)
 		} else {
@@ -624,6 +791,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 	numPids := 0
 	appendAggregatedStats := false
 	aggregatedReportedStats := FlowReportedStats{}
+	aggregatedReportedTCPStats := FlowReportedTCPStats{}
 
 	var next *list.Element
 	// Collect in insertion order, the first processLimit entries and then aggregate
@@ -665,24 +833,27 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			numPids += numPids
 			aggregatedReportedStats.Add(stats.FlowReportedStats)
 			appendAggregatedStats = true
+			aggregatedReportedTCPStats.Add(stats.FlowReportedTCPStats)
 		} else {
 			s := FlowProcessReportedStats{
-				ProcessName:       name,
-				NumProcessNames:   1,
-				ProcessID:         pid,
-				NumProcessIDs:     numPids,
-				FlowReportedStats: stats.FlowReportedStats,
+				ProcessName:          name,
+				NumProcessNames:      1,
+				ProcessID:            pid,
+				NumProcessIDs:        numPids,
+				FlowReportedStats:    stats.FlowReportedStats,
+				FlowReportedTCPStats: stats.FlowReportedTCPStats,
 			}
 			reportedStats = append(reportedStats, s)
 		}
 	}
 	if appendAggregatedStats {
 		s := FlowProcessReportedStats{
-			ProcessName:       flowLogFieldAggregated,
-			NumProcessNames:   numProcessNames,
-			ProcessID:         flowLogFieldAggregated,
-			NumProcessIDs:     numPids,
-			FlowReportedStats: aggregatedReportedStats,
+			ProcessName:          flowLogFieldAggregated,
+			NumProcessNames:      numProcessNames,
+			ProcessID:            flowLogFieldAggregated,
+			NumProcessIDs:        numPids,
+			FlowReportedStats:    aggregatedReportedStats,
+			FlowReportedTCPStats: aggregatedReportedTCPStats,
 		}
 		reportedStats = append(reportedStats, s)
 	}
@@ -696,6 +867,7 @@ type FlowProcessReportedStats struct {
 	ProcessID       string `json:"processID"`
 	NumProcessIDs   int    `json:"numProcessIDs"`
 	FlowReportedStats
+	FlowReportedTCPStats
 }
 
 // FlowLog is a record of flow data (metadata & reported stats) including
@@ -847,6 +1019,28 @@ func (f *FlowLog) Deserialize(fl string) error {
 	f.NumProcessNames, _ = strconv.Atoi(parts[33])
 	f.ProcessID = parts[34]
 	f.NumProcessIDs, _ = strconv.Atoi(parts[35])
+	temp, _ := strconv.Atoi(parts[36])
+	f.SendCongestionWnd.Mean = temp
+	temp, _ = strconv.Atoi(parts[37])
+	f.SendCongestionWnd.Min = temp
+	temp, _ = strconv.Atoi(parts[38])
+	f.SmoothRtt.Mean = temp
+	temp, _ = strconv.Atoi(parts[39])
+	f.SmoothRtt.Max = temp
+	temp, _ = strconv.Atoi(parts[40])
+	f.MinRtt.Mean = temp
+	temp, _ = strconv.Atoi(parts[41])
+	f.MinRtt.Max = temp
+	temp, _ = strconv.Atoi(parts[42])
+	f.Mss.Mean = temp
+	temp, _ = strconv.Atoi(parts[43])
+	f.Mss.Min = temp
+	temp, _ = strconv.Atoi(parts[44])
+	f.TotalRetrans = temp
+	temp, _ = strconv.Atoi(parts[45])
+	f.LostOut = temp
+	temp, _ = strconv.Atoi(parts[46])
+	f.UnrecoveredRTO = temp
 
 	return nil
 }

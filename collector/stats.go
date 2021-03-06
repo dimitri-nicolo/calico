@@ -351,6 +351,25 @@ func (t *Tuple) GetReverseTuple() Tuple {
 	return MakeTuple(t.dst, t.src, t.proto, t.l4Dst, t.l4Src)
 }
 
+type tcpStatsData struct {
+	//TCP stats
+	sendCongestionWnd int
+	smoothRtt         int
+	minRtt            int
+	mss               int
+	totalRetrans      Counter
+	lostOut           Counter
+	unRecoveredRTO    Counter
+	dirty             bool
+}
+
+func (t *tcpStatsData) ClearDirtyFlag() {
+	t.dirty = false
+	t.totalRetrans.ResetDelta()
+	t.lostOut.ResetDelta()
+	t.unRecoveredRTO.ResetDelta()
+}
+
 // Data contains metadata and statistics such as rule counters and age of a
 // connection(Tuple). Each Data object contains:
 // - 2 RuleTrace's - Ingress and Egress - each providing information on the
@@ -394,6 +413,8 @@ type Data struct {
 	// Process information
 	sourceProcessData ProcessData
 	destProcessData   ProcessData
+
+	TcpStats tcpStatsData
 
 	// These contain the aggregated counts per tuple per rule.
 	IngressRuleTrace RuleTrace
@@ -453,11 +474,14 @@ func (d *Data) String() string {
 		"tuple={%v}, srcEp={%v} dstEp={%v}, dstSvc={%v}, connTrackCtr={packets=%v bytes=%v}, "+
 			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
 			"origSourceIPs={ips=%v totalCount=%v}, "+
-			"sourceProcessInfo{name=%s, pid=%d}, destProcessInfo{name=%s, pid=%d}",
+			"sourceProcessInfo{name=%s, pid=%d}, destProcessInfo{name=%s, pid=%d} "+
+			"TcpStats{sendCongestionwnd=%v, smoothRtt=%v, minRtt=%v, mss=%v, totalRetrans=%v, lostOut=%v, unrecoveredTO=%v}",
 		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
 		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc,
-		d.SourceProcessData().Name, d.SourceProcessData().Pid, d.DestProcessData().Name, d.DestProcessData().Pid)
+		d.SourceProcessData().Name, d.SourceProcessData().Pid, d.DestProcessData().Name, d.DestProcessData().Pid,
+		d.TcpStats.sendCongestionWnd, d.TcpStats.smoothRtt, d.TcpStats.minRtt, d.TcpStats.mss, d.TcpStats.totalRetrans.Absolute(),
+		d.TcpStats.lostOut.Absolute(), d.TcpStats.unRecoveredRTO.Absolute())
 }
 
 func (d *Data) touch() {
@@ -542,6 +566,12 @@ func (d *Data) SetConntrackCounters(packets int, bytes int) {
 	d.touch()
 }
 
+func (d *Data) setTCPCounters(totalRetrans int, lostOut int, unRecoveredRTO int) {
+	d.TcpStats.lostOut.Set(lostOut)
+	d.TcpStats.totalRetrans.Set(totalRetrans)
+	d.TcpStats.unRecoveredRTO.Set(unRecoveredRTO)
+}
+
 // SetExpired flags the connection as expired for later cleanup.
 func (d *Data) SetExpired() {
 	d.expired = true
@@ -610,6 +640,18 @@ func (d *Data) ResetConntrackCounters() {
 func (d *Data) ResetApplicationCounters() {
 	d.httpReqAllowedCtr.Reset()
 	d.httpReqDeniedCtr.Reset()
+}
+
+// ResetTcpStatsCounters resets the Tcp socket stats
+func (d *Data) ResetTcpStats() {
+	d.TcpStats.sendCongestionWnd = 0
+	d.TcpStats.minRtt = 0
+	d.TcpStats.smoothRtt = 0
+	d.TcpStats.mss = 0
+	d.TcpStats.lostOut.Reset()
+	d.TcpStats.totalRetrans.Reset()
+	d.TcpStats.unRecoveredRTO.Reset()
+	d.TcpStats.dirty = false
 }
 
 func (d *Data) SetSourceEndpointData(sep *calc.EndpointData) {
@@ -731,7 +773,7 @@ func (d *Data) PreDNATTuple() Tuple {
 
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
 func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
-	return MetricUpdate{
+	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
@@ -752,11 +794,23 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 		processName: d.DestProcessData().Name,
 		processID:   d.DestProcessData().Pid,
 	}
+	if d.TcpStats.dirty {
+		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.minRtt = &d.TcpStats.minRtt
+		metricUpdate.mss = &d.TcpStats.mss
+		metricUpdate.tcpMetric = TCPMetricValue{
+			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			deltaLostOut:        d.TcpStats.lostOut.Delta(),
+			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		}
+	}
+	return metricUpdate
 }
 
 // metricUpdateEgressConn creates a metric update for Outbound connection traffic
 func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
-	return MetricUpdate{
+	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
@@ -775,11 +829,24 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 		processName: d.SourceProcessData().Name,
 		processID:   d.SourceProcessData().Pid,
 	}
+	if d.TcpStats.dirty {
+		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.minRtt = &d.TcpStats.minRtt
+		metricUpdate.mss = &d.TcpStats.mss
+		metricUpdate.tcpMetric = TCPMetricValue{
+			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			deltaLostOut:        d.TcpStats.lostOut.Delta(),
+			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		}
+	}
+	return metricUpdate
+
 }
 
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
 func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
-	return MetricUpdate{
+	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
@@ -787,6 +854,7 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 		dstService:   d.dstSvc,
 		ruleIDs:      d.IngressRuleTrace.Path(),
 		isConnection: d.isConnection,
+
 		inMetric: MetricValue{
 			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
@@ -794,11 +862,24 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 		processName: d.DestProcessData().Name,
 		processID:   d.DestProcessData().Pid,
 	}
+	if d.TcpStats.dirty {
+		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.minRtt = &d.TcpStats.minRtt
+		metricUpdate.mss = &d.TcpStats.mss
+		metricUpdate.tcpMetric = TCPMetricValue{
+			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			deltaLostOut:        d.TcpStats.lostOut.Delta(),
+			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		}
+	}
+	return metricUpdate
+
 }
 
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
 func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
-	return MetricUpdate{
+	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
@@ -813,6 +894,19 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 		processName: d.SourceProcessData().Name,
 		processID:   d.SourceProcessData().Pid,
 	}
+	if d.TcpStats.dirty {
+		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		metricUpdate.smoothRtt = &d.TcpStats.smoothRtt
+		metricUpdate.minRtt = &d.TcpStats.minRtt
+		metricUpdate.mss = &d.TcpStats.mss
+		metricUpdate.tcpMetric = TCPMetricValue{
+			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			deltaLostOut:        d.TcpStats.lostOut.Delta(),
+			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		}
+	}
+	return metricUpdate
+
 }
 
 // metricUpdateOrigSourceIPs creates a metric update for HTTP Data (original source ips).
@@ -838,8 +932,30 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 		processName:   d.DestProcessData().Name,
 		processID:     d.DestProcessData().Pid,
 	}
+	if d.TcpStats.dirty {
+		mu.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
+		mu.smoothRtt = &d.TcpStats.smoothRtt
+		mu.minRtt = &d.TcpStats.minRtt
+		mu.mss = &d.TcpStats.mss
+		mu.tcpMetric = TCPMetricValue{
+			deltaTotalRetrans:   d.TcpStats.totalRetrans.Delta(),
+			deltaLostOut:        d.TcpStats.lostOut.Delta(),
+			deltaUnRecoveredRTO: d.TcpStats.unRecoveredRTO.Delta(),
+		}
+	}
 	d.origSourceIPs.Reset()
 	return mu
+}
+
+func (d *Data) SetTcpSocketStats(tcpStats TcpStatsData) {
+	d.TcpStats.sendCongestionWnd = tcpStats.SendCongestionWnd
+	d.TcpStats.smoothRtt = tcpStats.SmoothRtt
+	d.TcpStats.minRtt = tcpStats.MinRtt
+	d.TcpStats.mss = tcpStats.Mss
+	d.setTCPCounters(tcpStats.TotalRetrans, tcpStats.LostOut, tcpStats.UnrecoveredRTO)
+	d.TcpStats.dirty = true
+	d.setDirtyFlag()
+	d.touch()
 }
 
 // endpointName is a convenience function to return a printable name for an endpoint.
