@@ -12,10 +12,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	calicojson "github.com/tigera/es-proxy/test/json"
-
-	celastic "github.com/tigera/lma/pkg/elastic"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -27,9 +23,11 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/tigera/compliance/pkg/datastore"
+	calicojson "github.com/tigera/es-proxy/test/json"
 	"github.com/tigera/es-proxy/test/thirdpartymock"
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
+	celastic "github.com/tigera/lma/pkg/elastic"
 
 	"github.com/olivere/elastic/v7"
 )
@@ -73,51 +71,39 @@ var _ = Describe("FlowLog", func() {
 					Expect(respRecorder.Code).Should(Equal(expectedCode))
 					Expect(strings.TrimSpace(respRecorder.Body.String())).Should(Equal(expectedBody))
 				},
-				Entry("when the action parameter is missing", createFlowLogRequest(map[string][]string{
-					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"}, "srcName": {"source"},
-					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"}, "reporter": {"dst"},
-				}), 400, "missing required parameter 'action'"),
-				Entry("when the cluster parameter is missing", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"}, "srcName": {"source"},
-					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"}, "reporter": {"dst"},
-				}), 400, "missing required parameter 'cluster'"),
 				Entry("when the srcType parameter is missing", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcNamespace": {"default"}, "srcName": {"source"},
-					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"}, "reporter": {"dst"},
+					"cluster": {"cluster"}, "srcNamespace": {"default"}, "srcName": {"source"},
+					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
 				}), 400, "missing required parameter 'srcType'"),
 				Entry("when the srcNamespace parameter is missing", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcName": {"source"},
-					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"}, "reporter": {"dst"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcName": {"source"},
+					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
 				}), 400, "missing required parameter 'srcNamespace'"),
 				Entry("when the srcName parameter is missing", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
-					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"}, "reporter": {"dst"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
 				}), 400, "missing required parameter 'srcName'"),
 				Entry("when the dstType parameter is missing and the dstType is wep", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
-					"srcName": {"source"}, "dstNamespace": {"default"}, "dstName": {"destination"}, "reporter": {"dst"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"srcName": {"source"}, "dstNamespace": {"default"}, "dstName": {"destination"},
 				}), 400, "missing required parameter 'dstType'"),
 				Entry("when the dstNamespace parameter is missing", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
-					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstName": {"destination"}, "reporter": {"dst"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstName": {"destination"},
 				}), 400, "missing required parameter 'dstNamespace'"),
 				Entry("when the dstName parameter is missing", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
-					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "reporter": {"dst"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"},
 				}), 400, "missing required parameter 'dstName'"),
-				Entry("when the reporter parameter is missing", createFlowLogRequest(map[string][]string{
-					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"}, "srcName": {"source"},
-					"dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-				}), 400, "missing required parameter 'reporter'"),
 				Entry("when startDateTime is set but not in the RFC3339 format", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-					"reporter": {"dst"}, "startDateTime": {"invalid-start-date-time"},
+					"startDateTime": {"invalid-start-date-time"},
 				}), 400, "failed to parse 'startDateTime' value 'invalid-start-date-time' as RFC3339 datetime"),
 				Entry("when endDateTime is set but not in the RFC3339 format", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-					"reporter": {"dst"}, "endDateTime": {"invalid-end-date-time"},
+					"endDateTime": {"invalid-end-date-time"},
 				}), 400, "failed to parse 'endDateTime' value 'invalid-end-date-time' as RFC3339 datetime"),
 			)
 
@@ -141,9 +127,9 @@ var _ = Describe("FlowLog", func() {
 					Expect(respRecorder.Code).Should(Equal(200))
 				},
 				Entry("when all parameters are properly set", createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
-					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-					"reporter": {"dst"},
+					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"},
+					"dstName": {"destination"},
 				})),
 			)
 		})
@@ -154,7 +140,7 @@ var _ = Describe("FlowLog", func() {
 			req := createFlowLogRequest(map[string][]string{
 				"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 				"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeHEP}, "dstName": {"destination"},
-				"dstNamespace": {api.GlobalEndpointType}, "reporter": {"dst"},
+				"dstNamespace": {api.GlobalEndpointType},
 			})
 
 			req = req.WithContext(request.WithUser(req.Context(), defaultUser))
@@ -186,9 +172,51 @@ var _ = Describe("FlowLog", func() {
 					"aggregations": calicojson.Map{"by_kvpair": calicojson.Map{"terms": calicojson.Map{"field": "dest_labels.labels"}}},
 					"nested":       calicojson.Map{"path": "dest_labels"},
 				},
-				"policies": calicojson.Map{
-					"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
-					"nested":       calicojson.Map{"path": "policies"},
+				"src_policy_report": calicojson.Map{
+					"filter": calicojson.Map{"term": calicojson.Map{"reporter": "src"}},
+					"aggregations": calicojson.Map{
+						"allowed_flow_policies": calicojson.Map{
+							"filter": calicojson.Map{"term": calicojson.Map{"action": "allow"}},
+							"aggregations": calicojson.Map{
+								"policies": calicojson.Map{
+									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
+									"nested":       calicojson.Map{"path": "policies"},
+								},
+							},
+						},
+						"denied_flow_policies": calicojson.Map{
+							"filter": calicojson.Map{"term": calicojson.Map{"action": "deny"}},
+							"aggregations": calicojson.Map{
+								"policies": calicojson.Map{
+									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
+									"nested":       calicojson.Map{"path": "policies"},
+								},
+							},
+						},
+					},
+				},
+				"dest_policy_report": calicojson.Map{
+					"filter": calicojson.Map{"term": calicojson.Map{"reporter": "dst"}},
+					"aggregations": calicojson.Map{
+						"allowed_flow_policies": calicojson.Map{
+							"filter": calicojson.Map{"term": calicojson.Map{"action": "allow"}},
+							"aggregations": calicojson.Map{
+								"policies": calicojson.Map{
+									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
+									"nested":       calicojson.Map{"path": "policies"},
+								},
+							},
+						},
+						"denied_flow_policies": calicojson.Map{
+							"filter": calicojson.Map{"term": calicojson.Map{"action": "deny"}},
+							"aggregations": calicojson.Map{
+								"policies": calicojson.Map{
+									"aggregations": calicojson.Map{"by_tiered_policy": calicojson.Map{"terms": calicojson.Map{"field": "policies.all_policies"}}},
+									"nested":       calicojson.Map{"path": "policies"},
+								},
+							},
+						},
+					},
 				},
 				"source_labels": calicojson.Map{
 					"aggregations": calicojson.Map{"by_kvpair": calicojson.Map{"terms": calicojson.Map{"field": "source_labels.labels"}}},
@@ -227,41 +255,37 @@ var _ = Describe("FlowLog", func() {
 	},
 		Entry("when startDateTime and endDateTime are not specified",
 			createFlowLogRequest(map[string][]string{
-				"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeHEP}, "srcName": {"source"},
+				"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeHEP}, "srcName": {"source"},
 				"srcNamespace": {api.GlobalEndpointType}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"},
-				"dstName": {"destination"}, "reporter": {"dst"},
+				"dstName": {"destination"},
 			}),
 
 			calicojson.Map{"bool": calicojson.Map{
 				"filter": []calicojson.Map{
-					{"term": calicojson.Map{"action": "deny"}},
 					{"term": calicojson.Map{"source_type": "hep"}},
 					{"term": calicojson.Map{"source_name_aggr": "source"}},
 					{"term": calicojson.Map{"source_namespace": api.GlobalEndpointType}},
 					{"term": calicojson.Map{"dest_type": "wep"}},
 					{"term": calicojson.Map{"dest_name_aggr": "destination"}},
 					{"term": calicojson.Map{"dest_namespace": "default"}},
-					{"term": calicojson.Map{"reporter": "dst"}},
 				}},
 			},
 		),
 		Entry("when startDateTime and endDateTime are specified",
 			createFlowLogRequest(map[string][]string{
-				"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+				"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 				"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-				"reporter": {"dst"}, "startDateTime": {"2006-01-02T13:04:05Z"}, "endDateTime": {"2006-01-02T15:04:05Z"},
+				"startDateTime": {"2006-01-02T13:04:05Z"}, "endDateTime": {"2006-01-02T15:04:05Z"},
 			}),
 
 			calicojson.Map{"bool": calicojson.Map{
 				"filter": []calicojson.Map{
-					{"term": calicojson.Map{"action": "deny"}},
 					{"term": calicojson.Map{"source_type": "wep"}},
 					{"term": calicojson.Map{"source_name_aggr": "source"}},
 					{"term": calicojson.Map{"source_namespace": "default"}},
 					{"term": calicojson.Map{"dest_type": "wep"}},
 					{"term": calicojson.Map{"dest_name_aggr": "destination"}},
 					{"term": calicojson.Map{"dest_namespace": "default"}},
-					{"term": calicojson.Map{"reporter": "dst"}},
 					{"range": calicojson.Map{
 						"end_time": calicojson.Map{
 							"from":          mustParseTime("2006-01-02T13:04:05Z", time.RFC3339).Unix(),
@@ -275,22 +299,19 @@ var _ = Describe("FlowLog", func() {
 		),
 		Entry("when source and destination labels are specified",
 			createFlowLogRequest(map[string][]string{
-				"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
+				"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 				"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-				"reporter":  {"dst"},
 				"srcLabels": {createLabelJson("srcname", "=", []string{"srcfoo"}), createLabelJson("srcotherlabel", "!=", []string{"srcbar"})},
 				"dstLabels": {createLabelJson("dstname", "=", []string{"srcfoo"}), createLabelJson("dstotherlabel", "!=", []string{"dstbar"})},
 			}),
 			calicojson.Map{"bool": calicojson.Map{
 				"filter": []calicojson.Map{
-					{"term": calicojson.Map{"action": "deny"}},
 					{"term": calicojson.Map{"source_type": "wep"}},
 					{"term": calicojson.Map{"source_name_aggr": "source"}},
 					{"term": calicojson.Map{"source_namespace": "default"}},
 					{"term": calicojson.Map{"dest_type": "wep"}},
 					{"term": calicojson.Map{"dest_name_aggr": "destination"}},
 					{"term": calicojson.Map{"dest_namespace": "default"}},
-					{"term": calicojson.Map{"reporter": "dst"}},
 					{"nested": calicojson.Map{
 						"path": "source_labels",
 						"query": calicojson.Map{
@@ -330,7 +351,6 @@ var _ = Describe("FlowLog", func() {
 			req := createFlowLogRequest(map[string][]string{
 				"action": {"deny"}, "cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 				"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
-				"reporter": {"dst"},
 			})
 
 			flowLogHandler.ServeHTTP(respRecorder, req)
@@ -351,9 +371,8 @@ var _ = Describe("FlowLog", func() {
 
 				respRecorder := httptest.NewRecorder()
 				req := createFlowLogRequest(map[string][]string{
-					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {srcType}, "srcNamespace": {srcNamespace},
+					"cluster": {"cluster"}, "srcType": {srcType}, "srcNamespace": {srcNamespace},
 					"srcName": {"source"}, "dstType": {dstType}, "dstNamespace": {dstNamespace}, "dstName": {"destination"},
-					"reporter": {"dst"},
 				})
 
 				req = req.WithContext(request.WithUser(req.Context(), defaultUser))
@@ -437,7 +456,7 @@ var _ = Describe("FlowLog", func() {
 				respRecorder := httptest.NewRecorder()
 				req := createFlowLogRequest(map[string][]string{
 					"action": {"deny"}, "cluster": {"cluster"}, "srcType": {srcType}, "srcNamespace": {srcNamespace}, "srcName": {"source"},
-					"dstType": {dstType}, "dstNamespace": {dstNamespace}, "dstName": {"destination"}, "reporter": {"dst"},
+					"dstType": {dstType}, "dstNamespace": {dstNamespace}, "dstName": {"destination"},
 				})
 
 				req = req.WithContext(request.WithUser(req.Context(), defaultUser))
@@ -507,7 +526,7 @@ var _ = Describe("FlowLog", func() {
 
 			req = createFlowLogRequest(map[string][]string{
 				"action": {"deny"}, "cluster": {"cluster"}, "srcType": {"wep"}, "srcNamespace": {"source-ns"}, "srcName": {"source"},
-				"dstType": {"wep"}, "dstNamespace": {"destination-ns"}, "dstName": {"destination"}, "reporter": {"dst"},
+				"dstType": {"wep"}, "dstNamespace": {"destination-ns"}, "dstName": {"destination"},
 			})
 			req = req.WithContext(request.WithUser(req.Context(), defaultUser))
 
@@ -631,21 +650,64 @@ var _ = Describe("FlowLog", func() {
 		})
 
 		Context("for policies", func() {
-			DescribeTable("parsing policies hits when completely authorized",
-				func(buckets []map[string]interface{}, expectedPolicies []*FlowResponsePolicy) {
+			DescribeTable("parsing policy hits when completely authorized",
+				func(
+					srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{},
+					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport) {
 					mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+
+					agg := elastic.Aggregations{}
+					if srcAllowHits != nil || srcDenyHits != nil {
+						srcPolicyHits := calicojson.Map{}
+						if srcAllowHits != nil {
+							srcPolicyHits["allowed_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": srcAllowHits,
+									},
+								},
+							}
+						}
+						if srcDenyHits != nil {
+							srcPolicyHits["denied_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": srcDenyHits,
+									},
+								},
+							}
+						}
+						agg["src_policy_report"] = calicojson.MustMarshal(srcPolicyHits)
+					}
+
+					if dstAllowHits != nil || dstDenyHits != nil {
+						dstPolicyHits := calicojson.Map{}
+						if dstAllowHits != nil {
+							dstPolicyHits["allowed_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": dstAllowHits,
+									},
+								},
+							}
+						}
+						if dstDenyHits != nil {
+							dstPolicyHits["denied_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": dstDenyHits,
+									},
+								},
+							}
+						}
+						agg["dst_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
+					}
 
 					mockDoer.On("Do", mock.Anything).Return(&http.Response{
 						StatusCode: http.StatusOK,
 						Body: esSearchResultToResponseBody(elastic.SearchResult{
-							Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-							Aggregations: elastic.Aggregations{
-								"policies": calicojson.MustMarshal(map[string]interface{}{
-									"by_tiered_policy": map[string]interface{}{
-										"buckets": buckets,
-									},
-								}),
-							},
+							Hits:         &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
+							Aggregations: agg,
 						}),
 					}, nil)
 
@@ -659,54 +721,246 @@ var _ = Describe("FlowLog", func() {
 					Expect(json.Unmarshal(respBody, &flResponse))
 
 					Expect(flResponse).Should(Equal(FlowResponse{
-						Count:    1,
-						Policies: expectedPolicies,
+						Count:           1,
+						SrcPolicyReport: expectedSrcPolicyReport,
+						DstPolicyReport: expectedDstPolicyReport,
 					}))
 				},
-				Entry("single policy hit",
+				Entry("single policy hit allowed at src and dst",
+					[]map[string]interface{}{
+						{"key": "0|tier1|namespace1/policy1|allow", "doc_count": 1},
+					}, nil,
+					[]map[string]interface{}{
+						{"key": "0|tier2|namespace2/policy2|allow", "doc_count": 1},
+					}, nil,
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+						},
+					},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "allow", Count: 1},
+						},
+					},
+				),
+				Entry("single policy hit allowed at src and denied at dst",
+					[]map[string]interface{}{
+						{"key": "0|tier1|namespace1/policy1|allow", "doc_count": 1},
+					}, nil,
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|tier2|namespace2/policy2|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+						},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
+						},
+					},
+				),
+				Entry("single policy hit denied at src and denied on dst",
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|tier1|namespace1/policy1|deny", "doc_count": 1},
+					},
+					nil, nil,
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "deny", Count: 1},
+						},
+					},
+					nil,
+				),
+				Entry("single policy hit allowed and denied at src and dst",
 					[]map[string]interface{}{
 						{"key": "0|tier1|namespace1/policy1|allow", "doc_count": 1},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+					[]map[string]interface{}{
+						{"key": "0|tier4|namespace4/policy4|deny", "doc_count": 1},
+					},
+					[]map[string]interface{}{
+						{"key": "0|tier3|namespace3/policy3|allow", "doc_count": 1},
+					},
+					[]map[string]interface{}{
+						{"key": "0|tier2|namespace2/policy2|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "allow", Count: 1},
+						},
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace4", Tier: "tier4", Name: "policy4", Action: "deny", Count: 1},
+						},
+					},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace3", Tier: "tier3", Name: "policy3", Action: "allow", Count: 1},
+						},
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
+						},
 					},
 				),
-				Entry("multiple policy hits",
+				// Note that this test isn't exactly valid since a deny at the source means no reported flow at the
+				// destination, but this is just to test that the allow / deny logic handles multiple policies for
+				// src and dst.
+				Entry("multiple policy hits for allowed and denied at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/tier1.policy1|pass", "doc_count": 1},
-						{"key": "1|tier2|namespace2/tier2.staged:policy2|deny", "doc_count": 1},
-						{"key": "2|tier2|namespace2/tier2.policy3|pass", "doc_count": 1},
-						{"key": "3|tier3|namespace3/tier3.policy4|pass", "doc_count": 1},
-						{"key": "4|tier4|namespace4/tier4.policy5|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace11/tier11.policy11|pass", "doc_count": 1},
+						{"key": "1|tier12|namespace12/tier12.staged:policy12|deny", "doc_count": 1},
+						{"key": "2|tier12|namespace12/tier12.policy13|pass", "doc_count": 1},
+						{"key": "3|tier13|namespace13/tier13.policy14|pass", "doc_count": 1},
+						{"key": "4|tier14|namespace14/tier14.policy15|allow", "doc_count": 1},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "namespace1", Tier: "tier1", Name: "policy1", Action: "pass", Count: 1},
-						{Index: 1, Staged: true, Namespace: "namespace2", Tier: "tier2", Name: "policy2", Action: "deny", Count: 1},
-						{Index: 2, Namespace: "namespace2", Tier: "tier2", Name: "policy3", Action: "pass", Count: 1},
-						{Index: 3, Namespace: "namespace3", Tier: "tier3", Name: "policy4", Action: "pass", Count: 1},
-						{Index: 4, Namespace: "namespace4", Tier: "tier4", Name: "policy5", Action: "deny", Count: 1},
+					[]map[string]interface{}{
+						{"key": "0|tier21|namespace21/tier21.policy21|pass", "doc_count": 1},
+						{"key": "1|tier22|namespace22/tier22.staged:policy22|deny", "doc_count": 1},
+						{"key": "2|tier22|namespace22/tier22.policy23|pass", "doc_count": 1},
+						{"key": "3|tier23|namespace23/tier23.policy24|pass", "doc_count": 1},
+						{"key": "4|tier24|namespace24/tier24.policy25|deny", "doc_count": 1},
 					},
+					[]map[string]interface{}{
+						{"key": "0|tier31|namespace31/tier31.policy31|pass", "doc_count": 1},
+						{"key": "1|tier32|namespace32/tier32.staged:policy32|deny", "doc_count": 1},
+						{"key": "2|tier32|namespace32/tier32.policy33|pass", "doc_count": 1},
+						{"key": "3|tier33|namespace33/tier33.policy34|pass", "doc_count": 1},
+						{"key": "4|tier34|namespace34/tier34.policy35|allow", "doc_count": 1},
+					},
+					[]map[string]interface{}{
+						{"key": "0|tier41|namespace41/tier41.policy41|pass", "doc_count": 1},
+						{"key": "1|tier42|namespace42/tier42.staged:policy42|deny", "doc_count": 1},
+						{"key": "2|tier42|namespace42/tier42.policy43|pass", "doc_count": 1},
+						{"key": "3|tier43|namespace43/tier43.policy44|pass", "doc_count": 1},
+						{"key": "4|tier44|namespace44/tier44.policy45|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace11", Tier: "tier11", Name: "policy11", Action: "pass", Count: 1},
+							{Index: 1, IsStaged: true, Namespace: "namespace12", Tier: "tier12", Name: "policy12", Action: "deny", Count: 1},
+							{Index: 2, Namespace: "namespace12", Tier: "tier12", Name: "policy13", Action: "pass", Count: 1},
+							{Index: 3, Namespace: "namespace13", Tier: "tier13", Name: "policy14", Action: "pass", Count: 1},
+							{Index: 4, Namespace: "namespace14", Tier: "tier14", Name: "policy15", Action: "allow", Count: 1},
+						},
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace21", Tier: "tier21", Name: "policy21", Action: "pass", Count: 1},
+							{Index: 1, IsStaged: true, Namespace: "namespace22", Tier: "tier22", Name: "policy22", Action: "deny", Count: 1},
+							{Index: 2, Namespace: "namespace22", Tier: "tier22", Name: "policy23", Action: "pass", Count: 1},
+							{Index: 3, Namespace: "namespace23", Tier: "tier23", Name: "policy24", Action: "pass", Count: 1},
+							{Index: 4, Namespace: "namespace24", Tier: "tier24", Name: "policy25", Action: "deny", Count: 1},
+						},
+					},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace31", Tier: "tier31", Name: "policy31", Action: "pass", Count: 1},
+							{Index: 1, IsStaged: true, Namespace: "namespace32", Tier: "tier32", Name: "policy32", Action: "deny", Count: 1},
+							{Index: 2, Namespace: "namespace32", Tier: "tier32", Name: "policy33", Action: "pass", Count: 1},
+							{Index: 3, Namespace: "namespace33", Tier: "tier33", Name: "policy34", Action: "pass", Count: 1},
+							{Index: 4, Namespace: "namespace34", Tier: "tier34", Name: "policy35", Action: "allow", Count: 1},
+						},
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "namespace41", Tier: "tier41", Name: "policy41", Action: "pass", Count: 1},
+							{Index: 1, IsStaged: true, Namespace: "namespace42", Tier: "tier42", Name: "policy42", Action: "deny", Count: 1},
+							{Index: 2, Namespace: "namespace42", Tier: "tier42", Name: "policy43", Action: "pass", Count: 1},
+							{Index: 3, Namespace: "namespace43", Tier: "tier43", Name: "policy44", Action: "pass", Count: 1},
+							{Index: 4, Namespace: "namespace44", Tier: "tier44", Name: "policy45", Action: "deny", Count: 1},
+						},
+					},
+				),
+				Entry("Parses Kubernetes policy",
+					nil,
+					[]map[string]interface{}{
+						{"key": "4|default|namespace/knp.default.policy|deny", "doc_count": 1},
+					},
+					nil, nil,
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, IsKubernetes: true, Namespace: "namespace", Tier: "default", Name: "policy", Action: "deny", Count: 1},
+						},
+					},
+					nil,
+				),
+				Entry("Parses Profile policy",
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|__PROFILE__|__PROFILE__.kns.namespace|deny", "doc_count": 1},
+					},
+					nil, nil,
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, IsProfile: true, Namespace: "", Tier: "__PROFILE__", Name: "namespace", Action: "deny", Count: 1},
+						},
+					},
+					nil,
 				),
 			)
 
 			DescribeTable("obfuscating policies",
-				func(buckets []map[string]interface{}, expectedPolicies []*FlowResponsePolicy, authResources []*authzv1.ResourceAttributes) {
+				func(srcAllowHits, srcDenyHits, dstAllowHits, dstDenyHits []map[string]interface{},
+					expectedSrcPolicyReport, expectedDstPolicyReport *PolicyReport,
+					authResources []*authzv1.ResourceAttributes) {
 					for _, resource := range authResources {
 						mockRBACAuthoriser.On("Authorize", mock.Anything, resource, mock.Anything).Return(true, nil)
 					}
 
 					mockRBACAuthoriser.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(false, nil).Maybe()
+
+					agg := elastic.Aggregations{}
+					if srcAllowHits != nil || srcDenyHits != nil {
+						srcPolicyHits := calicojson.Map{}
+						if srcAllowHits != nil {
+							srcPolicyHits["allowed_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": srcAllowHits,
+									},
+								},
+							}
+						}
+						if srcDenyHits != nil {
+							srcPolicyHits["denied_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": srcDenyHits,
+									},
+								},
+							}
+						}
+						agg["src_policy_report"] = calicojson.MustMarshal(srcPolicyHits)
+					}
+
+					if dstAllowHits != nil || dstDenyHits != nil {
+						dstPolicyHits := calicojson.Map{}
+						if dstAllowHits != nil {
+							dstPolicyHits["allowed_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": dstAllowHits,
+									},
+								},
+							}
+						}
+						if dstDenyHits != nil {
+							dstPolicyHits["denied_policy"] = calicojson.Map{
+								"policies": calicojson.Map{
+									"by_tiered_policy": calicojson.Map{
+										"buckets": dstDenyHits,
+									},
+								},
+							}
+						}
+						agg["dst_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
+					}
+
 					mockDoer.On("Do", mock.Anything).Return(&http.Response{
 						StatusCode: http.StatusOK,
 						Body: esSearchResultToResponseBody(elastic.SearchResult{
-							Hits: &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
-							Aggregations: elastic.Aggregations{
-								"policies": calicojson.MustMarshal(map[string]interface{}{
-									"by_tiered_policy": map[string]interface{}{
-										"buckets": buckets,
-									},
-								}),
-							},
+							Hits:         &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
+							Aggregations: agg,
 						}),
 					}, nil)
 
@@ -720,47 +974,91 @@ var _ = Describe("FlowLog", func() {
 					Expect(json.Unmarshal(respBody, &flResponse))
 
 					Expect(flResponse).Should(Equal(FlowResponse{
-						Count:    1,
-						Policies: expectedPolicies,
+						Count:           1,
+						SrcPolicyReport: expectedSrcPolicyReport,
+						DstPolicyReport: expectedDstPolicyReport,
 					}))
 				},
-				Entry("single obfuscated policy hit",
+				Entry("single obfuscated policy hit allowed at src and dst",
 					[]map[string]interface{}{
 						{"key": "0|tier1|namespace/policy|allow", "doc_count": 1},
+					}, nil,
+					[]map[string]interface{}{
+						{"key": "0|tier2|namespace/policy2|allow", "doc_count": 1},
+					}, nil,
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "allow", Count: 1},
+						},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "allow", Count: 1},
+					&PolicyReport{
+						AllowedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "allow", Count: 1},
+						},
 					},
 					[]*authzv1.ResourceAttributes{
 						{Namespace: "source-ns", Verb: "list", Resource: "pods"},
 						{Namespace: "destination-ns", Verb: "list", Resource: "pods"},
 					},
 				),
-				Entry("multiple obfuscated passes before non obfuscated deny",
+				// Note that this test isn't exactly valid since a deny at the source means no reported flow at the
+				// destination, but this is just to test that the allow / deny logic handles multiple policies for
+				// src and dst.
+				Entry("multiple obfuscated passes before non obfuscated deny at src and dst",
+					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace/tier1.policy1|pass", "doc_count": 1},
-						{"key": "1|tier2|namespace/tier2.policy2|pass", "doc_count": 1},
-						{"key": "2|tier3|namespace/tier3.policy3|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.policy11|pass", "doc_count": 1},
+						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
+						{"key": "2|tier13|namespace1/tier13.policy13|deny", "doc_count": 1},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
-						{Index: 1, Namespace: "namespace", Tier: "tier3", Name: "policy3", Action: "deny", Count: 1},
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|tier21|namespace2/tier21.policy21|pass", "doc_count": 1},
+						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
+						{"key": "2|tier23|namespace2/tier23.policy23|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
+							{Index: 1, Namespace: "namespace1", Tier: "tier13", Name: "policy13", Action: "deny", Count: 1},
+						},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
+							{Index: 1, Namespace: "namespace2", Tier: "tier23", Name: "policy23", Action: "deny", Count: 1},
+						},
 					},
 					[]*authzv1.ResourceAttributes{
 						{Namespace: "source-ns", Verb: "list", Resource: "pods"},
-						{Namespace: "destination-ns", Verb: "list", Resource: "pods"},
-						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier3"},
-						{Namespace: "namespace", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
+						{Namespace: "namespace1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
+						{Namespace: "namespace2", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
+						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier13"},
+						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier23"},
 					},
 				),
 				Entry("multiple obfuscated passes before obfuscated deny",
+					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace/tier1.policy1|pass", "doc_count": 1},
-						{"key": "1|tier2|namespace/tier2.policy2|pass", "doc_count": 1},
-						{"key": "2|tier3|namespace/tier3.policy3|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.policy11|pass", "doc_count": 1},
+						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
+						{"key": "2|tier13|namespace1/tier13.policy13|deny", "doc_count": 1},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 3},
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|tier21|namespace2/tier21.policy21|pass", "doc_count": 1},
+						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
+						{"key": "2|tier23|namespace2/tier23.policy23|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 3},
+						},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 3},
+						},
 					},
 					[]*authzv1.ResourceAttributes{
 						{Namespace: "source-ns", Verb: "list", Resource: "pods"},
@@ -768,33 +1066,67 @@ var _ = Describe("FlowLog", func() {
 					},
 				),
 				Entry("multiple obfuscated passes before non obfuscated staged deny before obfuscated deny",
+					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace/tier1.policy1|pass", "doc_count": 1},
-						{"key": "1|tier2|namespace/tier2.policy2|pass", "doc_count": 1},
-						{"key": "2|tier3|namespace/tier3.staged:policy3|deny", "doc_count": 1},
-						{"key": "3|tier3|namespace1/tier3.policy4|pass", "doc_count": 1},
-						{"key": "4|tier4|namespace/tier4.policy5|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.policy11|pass", "doc_count": 1},
+						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
+						{"key": "2|tier13|namespace1/tier13.staged:policy13|deny", "doc_count": 1},
+						{"key": "3|tier13|namespace11/tier13.policy14|pass", "doc_count": 1},
+						{"key": "4|tier14|namespace1/tier14.policy15|deny", "doc_count": 1},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
-						{Index: 1, Staged: true, Namespace: "namespace", Tier: "tier3", Name: "policy3", Action: "deny", Count: 1},
-						{Index: 2, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|tier21|namespace2/tier21.policy21|pass", "doc_count": 1},
+						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
+						{"key": "2|tier23|namespace2/tier23.staged:policy23|deny", "doc_count": 1},
+						{"key": "3|tier23|namespace21/tier23.policy24|pass", "doc_count": 1},
+						{"key": "4|tier24|namespace2/tier24.policy25|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
+							{Index: 1, IsStaged: true, Namespace: "namespace1", Tier: "tier13", Name: "policy13", Action: "deny", Count: 1},
+							{Index: 2, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
+						},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "pass", Count: 2},
+							{Index: 1, IsStaged: true, Namespace: "namespace2", Tier: "tier23", Name: "policy23", Action: "deny", Count: 1},
+							{Index: 2, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
+						},
 					},
 					[]*authzv1.ResourceAttributes{
 						{Namespace: "source-ns", Verb: "list", Resource: "pods"},
 						{Namespace: "destination-ns", Verb: "list", Resource: "pods"},
-						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier3"},
-						{Namespace: "namespace", Verb: "list", Group: "projectcalico.org", Resource: "tier.stagednetworkpolicies"},
+						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier13"},
+						{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier23"},
+						{Namespace: "namespace1", Verb: "list", Group: "projectcalico.org", Resource: "tier.stagednetworkpolicies"},
+						{Namespace: "namespace2", Verb: "list", Group: "projectcalico.org", Resource: "tier.stagednetworkpolicies"},
 					},
 				),
 				Entry("omit obfuscated staged deny combine obfuscated pass and deny",
+					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace/tier1.staged:policy1|deny", "doc_count": 1},
-						{"key": "1|tier1|namespace/tier1.policy2|pass", "doc_count": 1},
-						{"key": "2|tier2|namespace/tier2.policy3|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.staged:policy11|deny", "doc_count": 1},
+						{"key": "1|tier11|namespace1/tier11.policy12|pass", "doc_count": 1},
+						{"key": "2|tier12|namespace1/tier12.policy13|deny", "doc_count": 1},
 					},
-					[]*FlowResponsePolicy{
-						{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
+					nil,
+					[]map[string]interface{}{
+						{"key": "0|tier21|namespace2/tier21.staged:policy21|deny", "doc_count": 1},
+						{"key": "1|tier21|namespace2/tier21.policy22|pass", "doc_count": 1},
+						{"key": "2|tier22|namespace2/tier22.policy23|deny", "doc_count": 1},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
+						},
+					},
+					&PolicyReport{
+						DeniedFlowPolicies: []*FlowResponsePolicy{
+							{Index: 0, Namespace: "*", Tier: "*", Name: "*", Action: "deny", Count: 2},
+						},
 					},
 					[]*authzv1.ResourceAttributes{
 						{Namespace: "source-ns", Verb: "list", Resource: "pods"},
