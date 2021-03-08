@@ -1,8 +1,9 @@
 .PHONY: ci cd
 PACKAGE_NAME?=github.com/tigera/elasticsearch-docker
-GO_BUILD_VER?=v0.50
+GO_BUILD_VER?=v0.51
 
-GIT_VERSION?=$(shell git describe --tags --dirty --always --long  --abbrev=12)
+BUILD_IMAGE=tigera/elasticsearch
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 
 ###############################################################################
 # Download and include Makefile.common
@@ -21,35 +22,24 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
-BUILD_IMAGE_NAME=tigera/elasticsearch
-BUILD_IMAGE_TAG=latest
-BUILD_IMAGE=$(BUILD_IMAGE_NAME):$(BUILD_IMAGE_TAG)
-
-PUSH_IMAGE_NAME?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE_NAME)
-
 bin/readiness-probe: readiness-probe
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go build -o $@ "$(PACKAGE_NAME)/readiness-probe"';
 
 build: bin/readiness-probe
 
-image: build
-	docker build --pull -t $(BUILD_IMAGE) .
+image: $(BUILD_IMAGE)
+$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): build
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+endif
 
 compressed-image: image
-	$(MAKE) docker-compress IMAGE_NAME=$(BUILD_IMAGE)
+	$(MAKE) docker-compress IMAGE_NAME=$(BUILD_IMAGE):latest
 
-cd: compressed-image
-ifndef CONFIRM
-	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
-endif
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(BRANCH_NAME)
-	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(GIT_VERSION)
-	docker push $(PUSH_IMAGE_NAME):$(BRANCH_NAME)
-	docker push $(PUSH_IMAGE_NAME):$(GIT_VERSION)
+cd: compressed-image cd-common
 
 .PHONY: clean
 clean:
