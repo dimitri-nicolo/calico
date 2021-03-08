@@ -29,10 +29,7 @@ class TestEarly(TestBase):
         if os.path.exists(self.cfgpath):
             os.remove(self.cfgpath)
 
-    def test_early(self):
-        """
-        Mainline test for early networking.
-        """
+    def start_early_container(self):
         log_and_run("docker network create --subnet=10.19.11.0/24 --ip-range=10.19.11.0/24 plane1")
         log_and_run("docker network create --subnet=10.19.12.0/24 --ip-range=10.19.12.0/24 plane2")
         log_and_run("docker create --privileged --name calico-early" +
@@ -41,12 +38,22 @@ class TestEarly(TestBase):
                     " --net=plane1 tigera/cnx-node:latest-amd64")
         log_and_run("docker network connect plane2 calico-early")
         log_and_run("docker start calico-early")
+        retry_until_success(lambda: log_and_run("docker exec calico-early /bin/calico-node -v"),
+                            retries=3)
 
-        # Get IP addresses.
-        ips = log_and_run("docker inspect '--format={{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' calico-early").strip().split()
-        assert len(ips) == 2, "calico-early container should have two IP addresses"
+    def early_networking_setup_done(self):
+        # Check the container's log.
+        logs = log_and_run("docker logs calico-early")
+        assert "Early networking set up; now monitoring BIRD" in logs
 
-        # Write early networking config.
+        # Check that BIRD is running.
+        protocols = log_and_run("docker exec calico-early birdcl show protocols")
+        assert "tor1" in protocols
+        assert "tor2" in protocols
+        routes = log_and_run("docker exec calico-early birdcl show route")
+        assert "10.19.10.19/32" in routes
+
+    def write_config(self, ips, peer_ip_1='10.19.11.1', peer_ip_2='10.19.12.1'):
         f = open(self.cfgpath, "w")
         f.write("""
 kind: EarlyNetworkConfiguration
@@ -59,26 +66,13 @@ spec:
         address: 10.19.10.19
       asNumber: 65432
       peerings:
-        - peerIP: 10.19.11.1
-        - peerIP: 10.19.12.1
-""" % (ips[0], ips[1]))
+        - peerIP: %s
+        - peerIP: %s
+""" % (ips[0], ips[1], peer_ip_1, peer_ip_2))
         f.close()
         _log.info("Wrote early networking config to " + self.cfgpath)
 
-        def early_networking_setup_done():
-            # Check the container's log.
-            logs = log_and_run("docker logs calico-early")
-            assert "Early networking set up; now monitoring BIRD" in logs
-
-            # Check that BIRD is running.
-            protocols = log_and_run("docker exec calico-early birdcl show protocols")
-            assert "tor1" in protocols
-            assert "tor2" in protocols
-            routes = log_and_run("docker exec calico-early birdcl show route")
-            assert "10.19.10.19/32" in routes
-
-        retry_until_success(early_networking_setup_done, retries=3)
-
+    def access_stable_address(self, ips):
         # Create a test container on the same networks.
         log_and_run("docker create --privileged --name calico-early-test" +
                     " --net=plane1 spaster/alpine-sleep")
@@ -97,3 +91,72 @@ spec:
         # on its stable address.
         pings = log_and_run("docker exec calico-early-test ping -c 7 10.19.10.19")
         assert "7 received, 0% packet loss" in pings
+
+    def test_early(self):
+        self.start_early_container()
+
+        # Get IP addresses.
+        ips = log_and_run("docker inspect '--format={{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' calico-early").strip().split()
+        assert len(ips) == 2, "calico-early container should have two IP addresses"
+
+        # Write early networking config.
+        self.write_config(ips)
+
+        # Check setup succeeds.
+        retry_until_success(self.early_networking_setup_done, retries=3)
+
+        # Check access to the stable address from another container.
+        self.access_stable_address(ips)
+
+    def test_wrong_ips(self):
+        self.start_early_container()
+
+        # Get IP addresses.
+        ips = log_and_run("docker inspect '--format={{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' calico-early").strip().split()
+        assert len(ips) == 2, "calico-early container should have two IP addresses"
+
+        # Write early networking config with wrong IPs.
+        wrong_ips = ['10.24.0.1', '10.25.0.1']
+        assert wrong_ips[0] not in ips
+        assert wrong_ips[1] not in ips
+        self.write_config(wrong_ips)
+
+        # Setup should fail.
+        time.sleep(5)
+        try:
+            self.early_networking_setup_done()
+            self.fail("Setup succeeded when expected to fail")
+        except Exception:
+            pass
+
+        # Now rewrite config with correct IPs.
+        self.write_config(ips)
+        retry_until_success(self.early_networking_setup_done, retries=3)
+
+        # Check access to the stable address from another container.
+        self.access_stable_address(ips)
+
+    def test_bad_peer_ip(self):
+        self.start_early_container()
+
+        # Get IP addresses.
+        ips = log_and_run("docker inspect '--format={{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' calico-early").strip().split()
+        assert len(ips) == 2, "calico-early container should have two IP addresses"
+
+        # Write early networking config with bad peer IP.
+        self.write_config(ips, peer_ip_1="10.24.1.67.8")
+
+        # Setup should fail.
+        time.sleep(5)
+        try:
+            self.early_networking_setup_done()
+            self.fail("Setup succeeded when expected to fail")
+        except Exception:
+            pass
+
+        # Now rewrite config with correct IPs.
+        self.write_config(ips)
+        retry_until_success(self.early_networking_setup_done, retries=3)
+
+        # Check access to the stable address from another container.
+        self.access_stable_address(ips)

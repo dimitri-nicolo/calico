@@ -161,7 +161,7 @@ nodeLoop:
 	}
 
 	// Change interface-specific addresses to be scope link.
-	ensureInterfaceAddressesAndRoutes(thisNode)
+	ensureNodeAddressesAndRoutes(thisNode)
 
 	// Use multiple ECMP paths based on hashing 5-tuple.  These are not necessarily fatal, if
 	// setting fails.
@@ -189,6 +189,13 @@ nodeLoop:
 		logrus.WithError(err).Fatalf("Failed to write BIRD config at %v", BIRD_CONFIG_FILE)
 	}
 
+	// Start BIRD and check its status - e.g. in case we've generated invalid config.
+	out, err := exec.Command("sv", "-w", "2", "start", "bird").CombinedOutput()
+	if err != nil {
+		logrus.WithError(err).Fatalf("Failed sv start bird:\n%v", string(out))
+	}
+	logrus.Infof("sv start bird:\n%v", string(out))
+
 	// Loop deciding whether to run early BIRD or not.
 	logrus.Info("Early networking set up; now monitoring BIRD")
 	for {
@@ -205,14 +212,14 @@ nodeLoop:
 		}
 
 		// Recheck interface addresses and routes.
-		ensureInterfaceAddressesAndRoutes(thisNode)
+		ensureNodeAddressesAndRoutes(thisNode)
 
 		time.Sleep(10 * time.Second)
 	}
 
 }
 
-func ensureInterfaceAddressesAndRoutes(thisNode *ConfigNode) {
+func ensureNodeAddressesAndRoutes(thisNode *ConfigNode) {
 	links, err := netlink.LinkList()
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to list all links")
@@ -225,7 +232,7 @@ func ensureInterfaceAddressesAndRoutes(thisNode *ConfigNode) {
 		for _, addr := range addrs {
 			for _, peering := range thisNode.Peerings {
 				if sameSubnet(addr, peering.PeerIP) {
-					ensureInterfaceAddressAndRoutes(link, addr, peering.PeerIP)
+					ensureLinkAddressAndRoutes(link, addr, peering.PeerIP)
 					break
 				}
 			}
@@ -245,7 +252,7 @@ func sameSubnet(addr netlink.Addr, peerIP string) bool {
 // address/prefix, update the address in the ways that we need for
 // dual ToR operation, and ensure that we still have the routes that
 // we'd expect through that interface.
-func ensureInterfaceAddressAndRoutes(link netlink.Link, addr netlink.Addr, peerIP string) {
+func ensureLinkAddressAndRoutes(link netlink.Link, addr netlink.Addr, peerIP string) {
 	if addr.Scope != int(netlink.SCOPE_LINK) {
 		// Delete the given address and re-add it with scope link.
 		err := netlink.AddrDel(link, &addr)
