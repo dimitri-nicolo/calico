@@ -12,8 +12,10 @@ import (
 
 // Structure encapsulating info about a composite source query.
 type AggCompositeSourceInfo struct {
-	Name  string
-	Field string
+	Name         string
+	Field        string
+	ScriptName   string
+	ScriptParams map[string]interface{}
 }
 
 // Structure encapsulating info about a aggregated term query.
@@ -102,10 +104,13 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 	// Aggregate documents and fetch results based on Elasticsearch recommended batches of "resultBucketSize".
 	compiledCompositeSources := []elastic.CompositeAggregationValuesSource{}
 	for _, c := range q.AggCompositeSourceInfos {
-		compiledCompositeSources = append(
-			compiledCompositeSources,
-			elastic.NewCompositeAggregationTermsValuesSource(c.Name).Field(c.Field),
-		)
+		vs := elastic.NewCompositeAggregationTermsValuesSource(c.Name)
+		if c.Field != "" {
+			vs = vs.Field(c.Field)
+		} else if c.ScriptName != "" {
+			vs = vs.Script(elastic.NewScriptStored(c.ScriptName).Params(c.ScriptParams))
+		}
+		compiledCompositeSources = append(compiledCompositeSources, vs)
 	}
 	compiledCompositeAgg := elastic.NewCompositeAggregation().
 		Sources(compiledCompositeSources...).
