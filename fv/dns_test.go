@@ -645,5 +645,113 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				canWgetMicrosoft()
 			})
 		})
+
+		Context("with networkset with allowed egress domains", func() {
+			JustBeforeEach(func() {
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+
+			It("handles a domain set update", func() {
+				// Create another NetworkSet with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft-2"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
+				canWgetMicrosoft()
+			})
+		})
+
+		Context("with networkset with allowed egress wildcard domains", func() {
+			JustBeforeEach(func() {
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+
+			It("handles a domain set update", func() {
+				// Create another NetworkSet with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft-2"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
+				canWgetMicrosoft()
+			})
+		})
 	})
 })
