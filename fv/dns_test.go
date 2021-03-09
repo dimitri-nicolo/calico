@@ -692,6 +692,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				// the domain set membership will change.
 				ns := api.NewNetworkSet()
 				ns.Name = "allow-microsoft-2"
+				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
 				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
@@ -748,6 +749,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				// the domain set membership will change.
 				ns := api.NewNetworkSet()
 				ns.Name = "allow-microsoft-2"
+				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
 				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
