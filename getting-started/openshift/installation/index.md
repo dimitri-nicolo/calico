@@ -83,10 +83,6 @@ openshift-install create manifests
 
 {% include content/openshift-manifests.md %}
 
-{% include content/openshift-prometheus-operator.md %}
-
-{% include content/openshift-resources.md %}
-
 #### Add an image pull secret
 
 {% include content/openshift-pull-secret.md %}
@@ -138,6 +134,15 @@ Once the Tigera API server is ready, apply the license:
 ```
 oc create -f </path/to/license.yaml>
 ```
+
+#### Install {{site.prodname}} resources 
+Apply the custom resources for enterprise features.
+
+```bash
+oc apply -f {{ "/manifests/ocp/tigera-enterprise-resources.yaml" | absolute_url }} 
+```
+
+{% include content/openshift-prometheus-operator.md %}
 
 You can now monitor progress with the following command:
 

@@ -1,7 +1,0 @@
----
-layout: null
----
-
-{% helm tigera-operator --execute templates/crs/prometheus/servicemonitor.yaml %}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}
