@@ -35,22 +35,22 @@ This how-to guide uses the following features:
 #### Dual plane connectivity, aka "dual ToR"
 
 Large on-prem Kubernetes clusters, split across multiple server racks, can use two or more
-independent planes of connectivity between all the racks,
+independent planes of connectivity between all the racks.  The advantages are:
 
--  so that the cluster can still function if there is a single break in connectivity
-   somewhere;
+-  The cluster can still function, even if there is a single break in connectivity
+   somewhere.
 
--  and so that the cluster can load balance across the bandwidth of *both* planes, when
-   both planes are available.
+-  The cluster can load balance across the bandwidth of *both* planes, when both planes
+   are available.
 
 The redundant approach can be applied within each rack as well, such that each node has
-two or more independent connections to those connectivity planes.  Typically each rack has
-two top-of-rack routers ("ToRs") and each node has two fabric-facing interfaces, each of
-which connects over a separate link or Ethernet to one of the ToRs for the rack.
+two or more independent connections to those connectivity planes.  Typically, each rack
+has two top-of-rack routers ("ToRs") and each node has two fabric-facing interfaces, each
+of which connects over a separate link or Ethernet to one of the ToRs for the rack.
 
 Here's an example of how a dual plane setup might look, with just two racks and two nodes
-in each rack.  For simplicity we've shown the connections *between* racks as single links;
-in reality that would be more complex, but still following the overall dual plane
+in each rack.  For simplicity, we've shown the connections *between* racks as single
+links; in reality that would be more complex, but still following the overall dual plane
 paradigm.
 
 ![dual-tor]({{site.baseurl}}/images/dual-tor.png)
@@ -62,30 +62,30 @@ Because of the two ToRs per rack, the whole setup is often referred to as "dual 
 For a dual ToR cluster to operate seamlessly when there is a break on one of the planes,
 several things are needed.
 
-1. Each node should have a stable IP address that is independent of its per-interface
+-  Each node should have a stable IP address that is independent of its per-interface
    addresses and remains valid if the connectivity through *one* of those interfaces goes
    down.
 
-2. Each node must somehow know or learn the stable IP address of every other node.
+-  Each node must somehow know or learn the stable IP address of every other node.
 
-3. Wherever a connection (other than BGP) is to or from a *node* (as opposed to a
+-  Wherever a connection (other than BGP) is to or from a *node* (as opposed to a
    non-host-networked pod), that connection should use the node's stable address as its
    destination or source IP (respectively), so that the connection can continue working if
    one of the planes has an outage.
 
-4. Importantly, this includes connections that Kubernetes uses as part of its own control
+-  Importantly, this includes connections that Kubernetes uses as part of its own control
    plane, such as between the Kubernetes API server and kubelet on each node.  Ideally,
    therefore, the stable IP address setup on each node should happen before Kubernetes
    starts running.
 
-5. BGP is an exception to the previous points - in fact, the *only* exception - because we
+-  BGP is an exception to the previous points - in fact, the *only* exception - because we
    want each node's BGP peerings to be interface-specific and to reflect what is actually
    reachable, moment by moment, over that interface.  The Linux routing table then
    automatically adjusts so that the route to each remote destination is either ECMP -
    when both planes are up - or non-ECMP when it can only be reached over one of the
    planes.
 
-6. BGP peerings should be configured to detect any outages, and to propagate their
+-  BGP peerings should be configured to detect any outages, and to propagate their
    consequences, as quickly as possible, so that the routing can quickly respond on each
    node.  Note that this is quite different from the reasoning for a single connectivity
    plane, where it's better to delay any network churn, on the assumption that an outage
@@ -129,9 +129,14 @@ it can tag-team the BGP role with Calico's regular BGP service running inside th
    address, as well as pod IPs and so on.
 
 -  Later, the {{site.nodecontainer}} pod might be shut down, e.g. for restart or upgrade.
-   The early networking container spots this and restarts its own BGP, to ensure that the
-   node's stable IP address continues to be advertised to other nodes.  The cycle can now
-   repeat from the "Initially" state above.
+   If the downtime continues for longer than the graceful restart period, the early
+   networking container spots this and restarts its own BGP, to ensure that the node's
+   stable IP address continues to be advertised to other nodes.  The cycle can now repeat
+   from the "Initially" state above.
+
+   > **Note**: The default graceful restart period is 120s for traditional BGP GR and
+   > 3600s for LLGR.
+   {: .alert .alert-info}
 
 #### BGP configuration for rapid outage detection
 
