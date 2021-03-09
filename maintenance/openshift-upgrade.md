@@ -26,6 +26,10 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated
 during upgrade).
 
+If your cluster has Windows nodes and uses custom TLS certificates for log storage, prior to upgrade, prepare and apply new certificates for [log storage]({{site.baseurl}}/security/comms/log-storage-tls) that include the required service DNS names.
+
+For {{site.prodname}} v3.5, upgrading multi-cluster management setups must include updating all managed and management clusters.
+
 ### Download the new manifests
 
 Make a manifests directory.
