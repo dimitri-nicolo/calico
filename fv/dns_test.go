@@ -650,6 +650,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			JustBeforeEach(func() {
 				ns := api.NewNetworkSet()
 				ns.Name = "allow-microsoft"
+				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
 				ns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
@@ -657,6 +658,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 				policy := api.NewNetworkPolicy()
 				policy.Name = "allow-microsoft"
+				policy.Namespace = "fv"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
@@ -704,6 +706,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			JustBeforeEach(func() {
 				ns := api.NewNetworkSet()
 				ns.Name = "allow-microsoft"
+				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
 				ns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
@@ -711,6 +714,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 				policy := api.NewNetworkPolicy()
 				policy.Name = "allow-microsoft"
+				policy.Namespace = "fv"
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
