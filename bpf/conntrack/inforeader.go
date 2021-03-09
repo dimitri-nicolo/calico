@@ -153,13 +153,37 @@ func (r *InfoReader) IterationStart() {
 		r.goTimeOfLastKTimeLookup = r.time.Now()
 	}
 
-	r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+	if r.bufferedConntrackInfo == nil {
+		r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+	}
 }
 
 // IterationEnd is called and Scanner ends iterating over the conntrack table.
 func (r *InfoReader) IterationEnd() {
 	if len(r.bufferedConntrackInfo) > 0 {
-		r.outC <- r.bufferedConntrackInfo
+		select {
+		case r.outC <- r.bufferedConntrackInfo:
+			r.bufferedConntrackInfo = nil
+		default:
+			// Don't block. Keep the expired infos until the next iteration as they would
+			// be lost and toss away the rest as those will get updated during the next
+			// iteration anyway.
+			//
+			// It's ok to keep ConntrackInfoBatchSize items around until the next
+			// iteration, we want to avoid keeping many more since we were possibly not able
+			// to push the buffer out for a while.
+			expired := make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+			for _, info := range r.bufferedConntrackInfo {
+				if info.Expired {
+					expired = append(expired, info)
+				}
+			}
+
+			if len(expired) == 0 {
+				expired = nil
+			}
+			r.bufferedConntrackInfo = expired
+		}
 	}
 }
 
