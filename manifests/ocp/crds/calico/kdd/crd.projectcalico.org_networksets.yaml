@@ -23,6 +23,10 @@ spec:
               type: object
             spec:
               properties:
+                allowedEgressDomains:
+                  items:
+                    type: string
+                  type: array
                 nets:
                   items:
                     type: string
