@@ -5,21 +5,21 @@ set +e
 # These packages are split up into chunks of dependent packages (more or less).
 PACKAGES+=" python3-libs platform-python python3-libcomps platform-python-setuptools python3-rpm python3-dnf "
 PACKAGES+=" python3-hawkey python3-libdnf python3-gpg "
-PACKAGES+=" crypto-policies-scripts python3-setuptools-wheel python3-pip-wheel dnf nss-3.53.1-17.el8_3.i686 "
-PACKAGES+=" nss-3.53.1-17.el8_3.x86_64 nss-sysinit yum libdnf"
+PACKAGES+=" crypto-policies-scripts python3-setuptools-wheel python3-pip-wheel dnf nss-3.53.1-11.el8_2.i686 "
+PACKAGES+=" nss-3.53.1-11.el8_2.x86_64 nss-sysinit yum libdnf"
 
 # Remove systemd and dependencies.
 PACKAGES+=" systemd systemd-udev systemd-pam dracut-squash dracut-network dracut dbus kexec-tools dhcp-client device-mapper"
-PACKAGES+=" device-mapper-libs os-prober grub2-common grub2-tools grub2-tools-minimal grubby "
-PACKAGES+=" libkcapi-hmaccalc libkcapi cryptsetup-libs iputils trousers trousers-lib kpartx"
+PACKAGES+=" device-mapper-libs os-prober grub2-tools grub2-tools-minimal grubby libkcapi-hmaccalc libkcapi cryptsetup-libs"
+PACKAGES+=" iputils trousers trousers-lib"
 
 PACKAGES+=" json-c freetype fontconfig libpng kmod bind-export-libs rpm-build-libs kmod-libs openldap ima-evm-utils xz"
 PACKAGES+=" libidn2 gnupg2 gnutls gnupg2 gpgme glib2 librepo elfutils-libs libsolv libmodulemd shadow-utils libsemanage"
 PACKAGES+=" libsolv gettext-libs gettext libcroco cyrus-sasl-lib util-linux libpwquality pam libnsl2 libtirpc iproute"
 PACKAGES+=" kbd"
 
-PACKAGES+=" sqlite-libs-3.26.0-11.el8.i686 sqlite-libs-3.26.0-11.el8.x86_64 nss-softokn-3.53.1-17.el8_3.x86_64"
-PACKAGES+=" nss-softokn-3.53.1-17.el8_3.i686 elfutils-default-yama-scope libyaml dbus-common dbus-tools dbus-libs dbus-daemon"
+PACKAGES+=" sqlite-libs-3.26.0-11.el8.i686 sqlite-libs-3.26.0-11.el8.x86_64 nss-softokn-3.53.1-11.el8_2.x86_64"
+PACKAGES+=" nss-softokn-3.53.1-11.el8_2.i686 elfutils-default-yama-scope libyaml dbus-common dbus-tools dbus-libs dbus-daemon"
 PACKAGES+=" tar libseccomp"
 
 # Remove rpm and packages that rpm depends on.
