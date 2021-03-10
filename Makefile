@@ -442,15 +442,20 @@ TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 .PHONY: dual-tor-test
 dual-tor-test: cnx-node.tar calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
-.PHONY: dual-tor-setup
-dual-tor-setup: dual-tor-cleanup cnx-node.tar calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
-	git submodule update --init
-	cd tests/kind && make
+kubectl:
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
+
+.PHONY: dual-tor-setup
+DUAL_TOR_DIR=tests/k8st/dual-tor
+dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl cnx-node.tar calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
+	mkdir -p $(DUAL_TOR_DIR)/tmp
+	cp -a cnx-node.tar $(DUAL_TOR_DIR)/tmp/
+	docker build -t calico/dual-tor-node $(DUAL_TOR_DIR)
+	rm -rf $(DUAL_TOR_DIR)/tmp
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
-	ROUTER_IMAGE=$(BIRD_IMAGE) tests/k8st/dual-tor/dualtor.sh
+	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl $(DUAL_TOR_DIR)/dualtor.sh
 
 DUAL_TOR_ST_TO_RUN=dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture
 .PHONY: dual-tor-run-test
@@ -468,8 +473,7 @@ dual-tor-run-test:
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:
-	-STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
-	-rm ./kubectl
+	-STEPS=cleanup $(DUAL_TOR_DIR)/dualtor.sh
 
 tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 	mkdir -p dist

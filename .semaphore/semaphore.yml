@@ -115,6 +115,9 @@ blocks:
         - name: "Utils Tests"
           commands:
             - ST_TO_RUN=tests/st/utils/ make st
+        - name: "Early Networking Tests"
+          commands:
+            - ST_TO_RUN=tests/st/early/ make st
 
   - name: "Specialized Tests"
     dependencies: []

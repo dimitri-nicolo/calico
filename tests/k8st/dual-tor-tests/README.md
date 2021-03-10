@@ -48,8 +48,8 @@ EOF
 Per test case: start servers:
 
 ```
-kubectl exec -n dualtor ra-server -- nc -l -p 8090 >ra.log 2>&1 &
-kubectl exec -n dualtor rb-server -- nc -l -p 8090 >rb.log 2>&1 &
+kubectl exec -n dualtor ra-server -- /reliable-nc 8090 >ra.log 2>&1 &
+kubectl exec -n dualtor rb-server -- /reliable-nc 8090 >rb.log 2>&1 &
 ```
 
 Client for host access test case

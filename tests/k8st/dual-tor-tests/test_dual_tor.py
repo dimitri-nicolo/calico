@@ -91,6 +91,20 @@ def get_dev(output):
     return dev
 
 
+def traceroute(src_pod_name, dst_ip, timeout):
+    cmd = "kubectl exec " + src_pod_name + " -n dualtor -- timeout " + timeout + " traceroute -n " + dst_ip
+    _log.info("run: %s", cmd)
+    try:
+        output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        _log.info("output:\n%s", output)
+    except subprocess.CalledProcessError as e:
+        _log.info("rc %s output:\n%s", e.returncode, e.output)
+        run("kubectl get po -A -o wide")
+        run("kubectl describe po " + src_pod_name + " -n dualtor")
+        raise
+    return output.splitlines()
+
+
 def get_plane(src_pod_name, dst_ip):
 
     # Normally, starting from a pod, we're interested in the second traceroute hop.
@@ -99,32 +113,21 @@ def get_plane(src_pod_name, dst_ip):
         # But from a host-networked pod it's the first hop.
         route_order = 1
 
-    # traceroute src --> dst and get the route with route_order
-    cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 5s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
-    print cmd
+    # traceroute src --> dst
     try:
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        trlines = traceroute(src_pod_name, dst_ip, "5s")
     except Exception:
         print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
-        subprocess.call("kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip, shell=True)
-        cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 25s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        trlines = traceroute(src_pod_name, dst_ip, "25s")
 
-    print output
+    marker = str(route_order) + "  172"
+    for l in trlines:
+        if marker in l:
+            m = re.search('172\.31\..(\d)', l)
+            if m:
+                return m.group(1)
 
-    m = re.search('172\.31\..(\d)', output)
-    if m:
-        found = m.group(1)
-        return found
-    else:
-        print "something wrong"
-        cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 5s traceroute -n " + dst_ip
-        print cmd
-        output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
-        print output
-
-        _log.exception("failed to match route info to plane. output %s", output)
-        raise Exception("error match route info")
+    raise Exception("error match route info")
 
 
 class FailoverTestConfig(object):
@@ -175,7 +178,7 @@ class _FailoverTest(TestBase):
     def start_client(self, client_pod, ip, port):
         name = "from %s to %s:%s" % (client_pod, ip, port)
         script="for i in `seq 1 " + str(self.config.total_packets) + "`; do echo $i -- " + name + "; sleep 0.01; done | /reliable-nc " + ip + ":" + port
-        cmd = "kubectl exec -n dualtor -t " + client_pod + " -- /bin/sh -c \"" + script + "\""
+        cmd = "kubectl exec -n dualtor " + client_pod + " -- /bin/sh -c \"" + script + "\""
         _log.info("run: %s", cmd)
         proc1 = subprocess.Popen(shlex.split(cmd))
 
@@ -188,8 +191,10 @@ class _FailoverTest(TestBase):
 
         last_log = server_log[-1]
         if last_log.find("--") == -1:
-            _log.exception("failed to parse server log of %s at %d seconds", name, count)
-            raise Exception("error parsing server log")
+            last_log = server_log[-2]
+            if last_log.find("--") == -1:
+                _log.exception("failed to parse server log of %s at %d seconds", name, count)
+                raise Exception("error parsing server log")
 
         seq_string = last_log.split("--")[0]
         seq = int(seq_string)
@@ -211,7 +216,7 @@ class _FailoverTest(TestBase):
         for name in names:
             cmd_prefix="kubectl exec -n dualtor -t " + name + " -- "
             output=subprocess.check_output(cmd_prefix + "ps -a", shell=True, stderr=subprocess.STDOUT)
-            if output.find("nc -l") != -1:
+            if output.find("/reliable-nc 8090") != -1:
                 subprocess.call(cmd_prefix + "killall nc", shell=True, stderr=subprocess.STDOUT)
 
     def routes_all_ecmp(self):
@@ -234,7 +239,7 @@ class _FailoverTest(TestBase):
 
         for f in self.config.flows:
             f.server_log = Log()
-            run_with_log("kubectl exec -n dualtor " + f.server_pod + " -- nc -l -p 8090", f.server_log)
+            run_with_log("kubectl exec -n dualtor " + f.server_pod + " -- /reliable-nc 8090", f.server_log)
             f.previous_seq = 0
             f.errors = 0
 
@@ -263,6 +268,9 @@ class _FailoverTest(TestBase):
 
         # cleanup servers
         self.clean_up()
+
+        for f in self.config.flows:
+            _log.info("%s: %s", f.server_pod, f.server_log.logs[-1].strip())
 
         for f in self.config.flows:
             if f.errors > self.config.max_errors:
@@ -458,7 +466,7 @@ class TestFailoverServiceIP(_FailoverTest):
                 " pod/" + node + " -n dualtor")
 
 
-class TestFailoverNodePort(_FailoverTest):
+class _TestFailoverNodePort(_FailoverTest):
 
     def setUp(self):
         super(TestFailoverNodePort, self).setUp()
@@ -485,7 +493,7 @@ class TestRestartCalicoNodes(TestBase):
 
     def get_restart_node_pod_name(self):
         self.restart_pod_name = kubectl(
-            "get po -n kube-system" +
+            "get po -n calico-system" +
             " -l k8s-app=calico-node" +
             " --field-selector status.podIP=" + self.restart_node_ip +
             " -o jsonpath='{.items[*].metadata.name}'")
@@ -503,13 +511,13 @@ class TestRestartCalicoNodes(TestBase):
             self.get_restart_node_pod_name()
 
             # Delete it.
-            kubectl("delete po %s -n kube-system" % self.restart_pod_name)
+            kubectl("delete po %s -n calico-system" % self.restart_pod_name)
 
             # Wait until a replacement calico-node pod has been created.
             retry_until_success(self.get_restart_node_pod_name, retries=10, wait_time=1)
 
             # Wait until it is ready, before returning.
-            kubectl("wait po %s -n kube-system --timeout=2m --for=condition=ready" %
+            kubectl("wait po %s -n calico-system --timeout=2m --for=condition=ready" %
                 self.restart_pod_name)
 
             # Wait another 2s before moving on.
@@ -522,9 +530,9 @@ TestFailoverPodIP.dual_tor = True
 TestFailoverServiceIP.vanilla = False
 TestFailoverServiceIP.dual_stack = False
 TestFailoverServiceIP.dual_tor = True
-TestFailoverNodePort.vanilla = False
-TestFailoverNodePort.dual_stack = False
-TestFailoverNodePort.dual_tor = True
+_TestFailoverNodePort.vanilla = False
+_TestFailoverNodePort.dual_stack = False
+_TestFailoverNodePort.dual_tor = True
 TestFailoverHostAccess.vanilla = False
 TestFailoverHostAccess.dual_stack = False
 TestFailoverHostAccess.dual_tor = True
