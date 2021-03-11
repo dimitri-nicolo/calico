@@ -454,17 +454,6 @@ class TestFailoverServiceIP(_FailoverTest):
             Flow("client", "rb-server", get_service_ip("rb-server"), "8090"),
         ])
 
-    def test_z_deploy_daemonset(self):
-        # make it last test case to run.
-        # deploy four pods onto four nodes
-        nodes = ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]
-        for node in nodes:
-            kubectl("run --generator=run-pod/v1 " + node + " -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never " +
-                    " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"" + node + "\" } } }'" +
-                    " --command /bin/sleep -- 3600")
-            kubectl("wait --timeout=1m --for=condition=ready" +
-                " pod/" + node + " -n dualtor")
-
 
 class _TestFailoverNodePort(_FailoverTest):
 
