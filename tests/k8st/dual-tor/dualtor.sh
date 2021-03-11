@@ -27,6 +27,19 @@ export KUBECONFIG=~/.kube/kind-config-kind
 
 tmpd=$(mktemp -d -t calico.XXXXXX)
 
+function make_bird_graceful() {
+    node=$1
+    docker exec -i $node sed -i '/protocol kernel {/r /dev/stdin' /etc/bird.conf <<EOF
+    persist;          # Don't remove routes on bird shutdown
+    graceful restart; # Turn on graceful restart to reduce potential flaps in
+                      # routes when reloading BIRD configuration.  With a full
+                      # automatic mesh, there is no way to prevent BGP from
+                      # flapping since multiple nodes update their BGP
+                      # configuration at the same time, GR is not guaranteed to
+                      # work correctly in this scenario.
+EOF
+}
+
 function add_calico_resources() {
     ${CALICOCTL} apply -f - <<EOF
 apiVersion: projectcalico.org/v3
@@ -220,6 +233,10 @@ function do_setup {
     docker network connect --ip=172.31.1.2 uplink bird-a1
     docker network connect --ip=172.31.1.3 uplink bird-b1
 
+    # Configure graceful restart.
+    make_bird_graceful bird-a1
+    make_bird_graceful bird-b1
+
     # Configure the ToR routers to peer with each other.
     cat <<EOF | docker exec -i bird-a1 sh -c "cat > /etc/bird/peer-rb1.conf"
 protocol bgp rb1 {
@@ -229,12 +246,13 @@ protocol bgp rb1 {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   neighbor 172.31.1.3 as 65002;
   passive on;
-  bfd on;
+  bfd graceful;
 }
 EOF
     docker exec bird-a1 birdcl configure
@@ -246,11 +264,12 @@ protocol bgp ra1 {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   neighbor 172.31.1.2 as 65001;
-  bfd on;
+  bfd graceful;
 }
 EOF
     docker exec bird-b1 birdcl configure
@@ -265,11 +284,12 @@ template bgp nodes {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   next hop self;
-  bfd on;
+  bfd graceful;
 }
 protocol bgp node1 from nodes {
   neighbor 172.31.11.3 as 65001;
@@ -290,11 +310,12 @@ template bgp nodes {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   next hop self;
-  bfd on;
+  bfd graceful;
 }
 protocol bgp node1 from nodes {
   neighbor 172.31.21.3 as 65002;
@@ -348,6 +369,8 @@ EOF
 	docker run -d --privileged --net=rb2 --ip=172.31.22.1 --name=bird-b2 ${ROUTER_IMAGE}
 	docker network connect --ip=172.31.2.2 uplink2 bird-a2
 	docker network connect --ip=172.31.2.3 uplink2 bird-b2
+	make_bird_graceful bird-a2
+	make_bird_graceful bird-b2
 	cat <<EOF | docker exec -i bird-a2 sh -c "cat > /etc/bird/peer-rb2.conf"
 protocol bgp rb2 {
   description "Connection to BGP peer";
@@ -356,12 +379,13 @@ protocol bgp rb2 {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   neighbor 172.31.2.3 as 65002;
   passive on;
-  bfd on;
+  bfd graceful;
 }
 EOF
 	docker exec bird-a2 birdcl configure
@@ -373,11 +397,12 @@ protocol bgp ra2 {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   neighbor 172.31.2.2 as 65001;
-  bfd on;
+  bfd graceful;
 }
 EOF
 	docker exec bird-b2 birdcl configure
@@ -392,11 +417,12 @@ template bgp nodes2 {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   next hop self;
-  bfd on;
+  bfd graceful;
 }
 protocol bgp node1 from nodes2 {
   neighbor 172.31.12.3 as 65001;
@@ -417,11 +443,12 @@ template bgp nodes2 {
   import all;
   export all;
   add paths on;
+  graceful restart;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
   next hop self;
-  bfd on;
+  bfd graceful;
 }
 protocol bgp node1 from nodes2 {
   neighbor 172.31.22.3 as 65002;
