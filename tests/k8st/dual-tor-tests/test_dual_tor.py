@@ -130,6 +130,23 @@ def get_plane(src_pod_name, dst_ip):
     raise Exception("error match route info")
 
 
+def get_calico_node_pod_for_node(node_name):
+    pod_name = kubectl(
+        "get po -n calico-system" +
+        " -l k8s-app=calico-node" +
+        " --field-selector spec.nodeName=" + node_name +
+        " -o jsonpath='{.items[*].metadata.name}'")
+    if not pod_name:
+        raise Exception('pod name not found')
+    return pod_name
+
+
+def delete_calico_node_pod_for_node(node_name):
+    pod_name = get_calico_node_pod_for_node(node_name)
+    kubectl("delete po %s -n calico-system" % pod_name)
+    _log.info("Deleted calico-node pod on %s (%s)", node_name, pod_name)
+
+
 class FailoverTestConfig(object):
     def __init__(self, total_packets, max_errors, flows):
         self.total_packets = total_packets
@@ -343,6 +360,30 @@ class _FailoverTest(TestBase):
     def test_basic_connection(self):
         self._run_single_test("basic_connection", self.do_nothing, self.do_nothing)
 
+    # Test restarting calico-node for the client pod's node.
+    def test_restart_calico_node_client(self):
+        self._run_single_test(
+            "restart_calico_node_client",
+            lambda: delete_calico_node_pod_for_node("kind-worker"),
+            self.do_nothing,
+        )
+
+    # Test restarting calico-node for the ra-server pod's node.
+    def test_restart_calico_node_ra_server(self):
+        self._run_single_test(
+            "restart_calico_node_ra_server",
+            lambda: delete_calico_node_pod_for_node("kind-control-plane"),
+            self.do_nothing,
+        )
+
+    # Test restarting calico-node for the rb-server pod's node.
+    def test_restart_calico_node_rb_server(self):
+        self._run_single_test(
+            "restart_calico_node_rb_server",
+            lambda: delete_calico_node_pod_for_node("kind-worker3"),
+            self.do_nothing,
+        )
+
 
 # FailoverCluster holds methods to setup/cleanup testing enviroment.
 class FailoverCluster(object):
@@ -466,6 +507,14 @@ class _TestFailoverNodePort(_FailoverTest):
             Flow("client", "ra-server", node_port_ip, get_node_port("ra-server")),
             Flow("client", "rb-server", node_port_ip, get_node_port("rb-server")),
         ])
+
+    # Test restarting calico-node on the NodePort node.
+    def test_restart_calico_node_node_port(self):
+        self._run_single_test(
+            "restart_calico_node_node_port",
+            lambda: delete_calico_node_pod_for_node("kind-worker2"),
+            self.do_nothing,
+        )
 
 
 class TestFailoverHostAccess(_FailoverTest):
