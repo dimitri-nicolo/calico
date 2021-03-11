@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ type PolicySets struct {
 	IpSets []IPSetCache
 
 	supportedFeatures      hns.HNSSupportedFeatures
+	priorityLimit          uint16
 	policySetIdToPolicySet map[string]*policySet
 }
 
@@ -55,6 +56,7 @@ func NewPolicySets(hns HNSAPI, ipsets []IPSetCache) *PolicySets {
 
 		IpSets:            ipsets,
 		supportedFeatures: supportedFeatures,
+		priorityLimit:     PolicyRuleMaxPriority,
 	}
 }
 
@@ -125,6 +127,26 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	debug := log.GetLevel() >= log.DebugLevel
 	debug = true
 
+	// Get total number of rules
+	totalNumberOfRules := 0
+	for _, setId := range setIds {
+		policySet := s.policySetIdToPolicySet[setId]
+		if policySet == nil {
+			continue
+		}
+		for _, member := range policySet.Members {
+			if member.Direction != direction {
+				continue
+			}
+			totalNumberOfRules++
+		}
+	}
+	// Determine if we should always increment the rule priority.
+	// If the number of rules exceeds the max allowed priority (subtracting
+	// the base priority) then we assign the same priority to groups of
+	// rules that have the same direction and action.
+	alwaysIncrementPriority := totalNumberOfRules < int(s.priorityLimit-currentPriority)
+
 	var lastRule *hns.ACLPolicy
 	for _, setId := range setIds {
 		if debug {
@@ -143,15 +165,21 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 				continue
 			}
 
-			if lastRule != nil && lastRule.Action != member.Action {
-				// If we write two HNS rules at the same priority, HNS has a different tie-break algorithm
-				// to Calico.  Hence, to get Calico's first-rule-wins behaviour we need to increment the priority
-				// between rules that it's not safe to re-order.  It's certainly not safe to re-order rules
-				// that have different actions.
-				currentPriority += 1
-				if debug {
-					log.Debugf("Switching from %v to %v, incremented priority to %v",
-						lastRule.Action, member.Action, currentPriority)
+			if lastRule != nil {
+				if alwaysIncrementPriority {
+					currentPriority += 1
+				} else {
+					if lastRule.Action != member.Action {
+						// If we write two HNS rules at the same priority, HNS has a different tie-break algorithm
+						// to Calico.  Hence, to get Calico's first-rule-wins behaviour we need to increment the priority
+						// between rules that it's not safe to re-order.  It's certainly not safe to re-order rules
+						// that have different actions.
+						currentPriority += 1
+						if debug {
+							log.Debugf("Switching from %v to %v, incremented priority to %v",
+								lastRule.Action, member.Action, currentPriority)
+						}
+					}
 				}
 			}
 
