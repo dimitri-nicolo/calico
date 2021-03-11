@@ -5846,7 +5846,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"l7LogsFilePerNodeLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Limit on the number of L7 logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs.  [Default: 0, meaning no limit]",
+							Description: "Limit on the number of L7 logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs. A value of 0 means no limit. [Default: 1500]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

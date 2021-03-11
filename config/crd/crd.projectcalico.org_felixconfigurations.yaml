@@ -758,7 +758,7 @@ spec:
                   each flush interval.  When this limit has been reached, Felix counts
                   the number of unloggable L7 responses within the flush interval,
                   and emits a WARNING log with that count at the same time as it flushes
-                  the buffered L7 logs.  [Default: 0, meaning no limit]'
+                  the buffered L7 logs. A value of 0 means no limit. [Default: 1500]'
                 type: integer
               l7LogsFlushInterval:
                 description: 'L7LogsFlushInterval configures the interval at which

@@ -618,7 +618,7 @@ type FelixConfigurationSpec struct {
 	// Limit on the number of L7 logs that can be emitted within each flush interval.  When
 	// this limit has been reached, Felix counts the number of unloggable L7 responses within
 	// the flush interval, and emits a WARNING log with that count at the same time as it
-	// flushes the buffered L7 logs.  [Default: 0, meaning no limit]
+	// flushes the buffered L7 logs. A value of 0 means no limit. [Default: 1500]
 	L7LogsFilePerNodeLimit *int `json:"l7LogsFilePerNodeLimit,omitempty"`
 
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
