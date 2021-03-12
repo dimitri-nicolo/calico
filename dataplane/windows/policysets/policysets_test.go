@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 	"github.com/projectcalico/felix/proto"
 )
 
-func TestRuleRendering(t *testing.T) {
+func TestRuleRenderingExceedingPriorityLimit(t *testing.T) {
 	RegisterTestingT(t)
 
 	h := mockHNS{}
@@ -41,25 +41,10 @@ func TestRuleRendering(t *testing.T) {
 	}
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	ps.priorityLimit = 1002
 
-	// Unknown policy should result in default drop.
-	Expect(ps.GetPolicySetRules([]string{"unknown"}, true)).To(Equal([]*hns.ACLPolicy{
-		// Default deny rule.
-		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-	}), "unexpected rules returned for unknown policy")
-
-	// Empty policy should return no rules (apart from the default drop).
-	ps.AddOrReplacePolicySet("empty", &proto.Policy{
-		InboundRules:  []*proto.Rule{},
-		OutboundRules: []*proto.Rule{},
-	})
-
-	Expect(ps.GetPolicySetRules([]string{"empty"}, true)).To(Equal([]*hns.ACLPolicy{
-		// Default deny rule.
-		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-	}), "unexpected rules returned for empty policy")
-
-	// Tests of basic policy matches: CIDRs, protocol, ports.
+	// Test a set of rules that exceeds the priority limit. Rule priority should
+	// be reused when action and direction do not change.
 	ps.AddOrReplacePolicySet("policy-basic", &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
@@ -121,6 +106,107 @@ func TestRuleRendering(t *testing.T) {
 		},
 		// Default deny rule.
 		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1002},
+	}), "unexpected rules returned for basic policy")
+
+}
+
+func TestRuleRendering(t *testing.T) {
+	RegisterTestingT(t)
+
+	h := mockHNS{}
+
+	// Windows 1803/RS4
+	h.SupportedFeatures.Acl.AclRuleId = true
+	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
+
+	log.SetLevel(log.DebugLevel)
+
+	ipsc := mockIPSetCache{
+		IPSets: map[string][]string{},
+	}
+
+	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	Expect(ps.priorityLimit).To(BeEquivalentTo(PolicyRuleMaxPriority))
+
+	// Unknown policy should result in default drop.
+	Expect(ps.GetPolicySetRules([]string{"unknown"}, true)).To(Equal([]*hns.ACLPolicy{
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for unknown policy")
+
+	// Empty policy should return no rules (apart from the default drop).
+	ps.AddOrReplacePolicySet("empty", &proto.Policy{
+		InboundRules:  []*proto.Rule{},
+		OutboundRules: []*proto.Rule{},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"empty"}, true)).To(Equal([]*hns.ACLPolicy{
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for empty policy")
+
+	// Tests of basic policy matches: CIDRs, protocol, ports.
+	ps.AddOrReplacePolicySet("policy-basic", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:   "Allow",
+				SrcNet:   []string{"10.0.0.0/24"},
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
+				SrcPorts: []*proto.PortRange{{First: 1234, Last: 1234}},
+				DstPorts: []*proto.PortRange{{First: 80, Last: 80}},
+				RuleId:   "rule-1",
+			},
+			{
+				Action:   "Allow",
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Number{Number: 17}},
+				RuleId:   "rule-2",
+			},
+			{
+				Action: "Deny",
+				DstNet: []string{"10.0.0.0/24"},
+				RuleId: "rule-3",
+			},
+			{
+				Action: "Deny",
+				DstNet: []string{"11.0.0.0/24"},
+				RuleId: "rule-4",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"policy-basic"}, true)).To(Equal([]*hns.ACLPolicy{
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch,
+			Priority:        1000,
+			Protocol:        6,
+			Id:              "API0|basic---rule-1---0",
+			RemoteAddresses: "10.0.0.0/24",
+			RemotePorts:     "1234",
+			LocalPorts:      "80",
+		},
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch,
+			Priority: 1001,
+			Protocol: 17,
+			Id:       "API1|basic---rule-2---0",
+		},
+		{
+			Type: hns.ACL, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch,
+			Priority:       1002,
+			Protocol:       256,
+			Id:             "DPI2|basic---rule-3---0",
+			LocalAddresses: "10.0.0.0/24",
+		},
+		{
+			Type: hns.ACL, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch,
+			Priority:       1003,
+			Protocol:       256,
+			Id:             "DPI3|basic---rule-4---0",
+			LocalAddresses: "11.0.0.0/24",
+		},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1004},
 	}), "unexpected rules returned for basic policy")
 
 	// Tests for Profile
@@ -231,6 +317,7 @@ func TestNegativeTestCases(t *testing.T) {
 	}
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	Expect(ps.priorityLimit).To(BeEquivalentTo(PolicyRuleMaxPriority))
 
 	//Test Negative scenarios
 	//look up ip set that doesn't exist.
@@ -434,6 +521,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 	}
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	ps.priorityLimit = 1000
 
 	chunkSize := 2
 	//check for empty portrange
@@ -896,7 +984,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 
 }
 
-func TestPolicyOrdering(t *testing.T) {
+func TestPolicyOrderingExceedingPriorityLimit(t *testing.T) {
 	RegisterTestingT(t)
 
 	h := mockHNS{}
@@ -909,6 +997,7 @@ func TestPolicyOrdering(t *testing.T) {
 	}
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	ps.priorityLimit = 1000
 
 	// Empty policy should return no rules (apart from the default drop).
 	ps.AddOrReplacePolicySet("policy-allow", &proto.Policy{
@@ -934,6 +1023,57 @@ func TestPolicyOrdering(t *testing.T) {
 			Id: "API0|allow---0"},
 		// Default deny rule.
 		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+	}), "incorrect rules returned for allow,allow")
+
+	Expect(ps.GetPolicySetRules([]string{"policy-deny", "policy-allow"}, true)).To(Equal([]*hns.ACLPolicy{
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "DPI0|deny---0"},
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1001,
+			Id: "API0|allow---0"},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1002},
+	}), "incorrect rules returned for deny,allow")
+}
+
+func TestPolicyOrdering(t *testing.T) {
+	RegisterTestingT(t)
+
+	h := mockHNS{}
+	// Windows 1803/RS4
+	h.SupportedFeatures.Acl.AclRuleId = true
+	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
+
+	ipsc := mockIPSetCache{
+		IPSets: map[string][]string{},
+	}
+
+	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	Expect(ps.priorityLimit).To(BeEquivalentTo(PolicyRuleMaxPriority))
+
+	// Empty policy should return no rules (apart from the default drop).
+	ps.AddOrReplacePolicySet("policy-allow", &proto.Policy{
+		InboundRules: []*proto.Rule{{Action: "Allow"}},
+	})
+	ps.AddOrReplacePolicySet("policy-deny", &proto.Policy{
+		InboundRules: []*proto.Rule{{Action: "Deny"}},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"policy-allow", "policy-deny"}, true)).To(Equal([]*hns.ACLPolicy{
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "API0|allow---0"},
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001,
+			Id: "DPI0|deny---0"},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1002},
+	}), "incorrect rules returned for allow,deny")
+
+	Expect(ps.GetPolicySetRules([]string{"policy-allow", "policy-allow"}, true)).To(Equal([]*hns.ACLPolicy{
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "API0|allow---0"},
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1001,
+			Id: "API0|allow---0"},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1002},
 	}), "incorrect rules returned for allow,allow")
 
 	Expect(ps.GetPolicySetRules([]string{"policy-deny", "policy-allow"}, true)).To(Equal([]*hns.ACLPolicy{

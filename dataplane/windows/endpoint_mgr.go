@@ -418,8 +418,8 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			flatEgressRules := flattenTiers(egressRules)
 
 			// Make sure priorities are ascending.
-			rewritePriorities(flatIngressRules)
-			rewritePriorities(flatEgressRules)
+			rewritePriorities(flatIngressRules, policysets.PolicyRuleMaxPriority)
+			rewritePriorities(flatEgressRules, policysets.PolicyRuleMaxPriority)
 
 			// Finally, add default allow rule with a host-scope to allow traffic through
 			// the host windows firewall. Required by l2bridge network.
@@ -457,22 +457,6 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	}
 
 	return nil
-}
-
-func rewritePriorities(policies []*hns.ACLPolicy) {
-	if len(policies) <= 1 {
-		return
-	}
-	priority := policies[0].Priority
-	lastRule := policies[0]
-
-	for i := 1; i < len(policies); i++ {
-		if lastRule.Action != policies[i].Action {
-			priority++
-			policies[i].Priority = priority
-		}
-		lastRule = policies[i]
-	}
 }
 
 // extractUnicastIPv4Addrs examines the raw input addresses and returns any IPv4 addresses found.

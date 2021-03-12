@@ -206,3 +206,35 @@ func combineCIDRs(as, bs string) (string, error) {
 	}
 	return combined, nil
 }
+
+func rewritePriorities(policies []*hns.ACLPolicy, limit uint16) {
+	if len(policies) <= 1 {
+		return
+	}
+
+	currentPriority := policysets.PolicyRuleBasePriority
+	policies[0].Priority = currentPriority
+	lastRule := policies[0]
+
+	// Determine if we should always increment the rule priority.
+	// If the number of rules exceeds the max allowed priority (subtracting
+	// the base priority) then we assign the same priority to groups of
+	// rules that have the same direction and action.
+	alwaysIncrementPriority := len(policies) < int(limit-currentPriority)
+
+	if alwaysIncrementPriority {
+		for i := 1; i < len(policies); i++ {
+			currentPriority++
+			policies[i].Priority = currentPriority
+		}
+	} else {
+		for i := 1; i < len(policies); i++ {
+			if lastRule.Action != policies[i].Action {
+				currentPriority++
+			}
+
+			policies[i].Priority = currentPriority
+			lastRule = policies[i]
+		}
+	}
+}

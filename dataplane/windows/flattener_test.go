@@ -173,3 +173,39 @@ func TestFlatten(t *testing.T) {
 		{Action: hns.Block, RemoteAddresses: "10.0.10.0/24", LocalPorts: "6390-6400"},
 	}))
 }
+
+func TestReWritePriority(t *testing.T) {
+	RegisterTestingT(t)
+
+	t.Log("Should write incrementing priority")
+	policies := []*hns.ACLPolicy{
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24", Priority: 1000},
+		{Action: hns.Allow, RemoteAddresses: "10.0.11.0/24", Priority: 1001},
+		{Action: hns.Block, RemoteAddresses: "10.0.12.0/24", Priority: 1002},
+		{Action: hns.Block, RemoteAddresses: "10.0.13.0/24", Priority: 1003},
+	}
+
+	rewritePriorities(policies, policysets.PolicyRuleMaxPriority)
+	Expect(policies).To(Equal([]*hns.ACLPolicy{
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24", Priority: 1000},
+		{Action: hns.Allow, RemoteAddresses: "10.0.11.0/24", Priority: 1001},
+		{Action: hns.Block, RemoteAddresses: "10.0.12.0/24", Priority: 1002},
+		{Action: hns.Block, RemoteAddresses: "10.0.13.0/24", Priority: 1003},
+	}))
+
+	t.Log("Should write aggregated priority")
+	policies = []*hns.ACLPolicy{
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24", Priority: 1000},
+		{Action: hns.Allow, RemoteAddresses: "10.0.11.0/24", Priority: 1001},
+		{Action: hns.Block, RemoteAddresses: "10.0.12.0/24", Priority: 1002},
+		{Action: hns.Block, RemoteAddresses: "10.0.13.0/24", Priority: 1003},
+	}
+
+	rewritePriorities(policies, 1004)
+	Expect(policies).To(Equal([]*hns.ACLPolicy{
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24", Priority: 1000},
+		{Action: hns.Allow, RemoteAddresses: "10.0.11.0/24", Priority: 1000},
+		{Action: hns.Block, RemoteAddresses: "10.0.12.0/24", Priority: 1001},
+		{Action: hns.Block, RemoteAddresses: "10.0.13.0/24", Priority: 1001},
+	}))
+}
