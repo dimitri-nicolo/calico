@@ -105,7 +105,17 @@ var GenerateLicenseCmd = &cobra.Command{
 		if !features.IsValidPackageName(licensePackage) {
 			log.Fatalf("[ERROR] License Package must match one of %#v", features.PackageNames)
 		}
-		claims.Features = strings.Split(licensePackage, "|")
+
+		switch licensePackage {
+		case features.CloudCommunity:
+			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudCommunityFeatures)...)
+		case features.CloudStarter:
+			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudStarterFeatures)...)
+		case features.CloudPro:
+			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudProFeatures)...)
+		default:
+			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.EnterpriseFeatures)...)
+		}
 
 		// This might be used in future. Or it could be used for debugging.
 		claims.IssuedAt = jwt.NewNumericDate(time.Now().UTC())

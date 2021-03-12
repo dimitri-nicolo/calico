@@ -399,6 +399,14 @@ func TestDecodeAndVerify(t *testing.T) {
 	}
 }
 
+func keys(set map[string]bool) []string {
+	var keys []string
+	for k, _ := range set {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
 func TestFeatureFlags(t *testing.T) {
 	numNodes := 5
 	sampleClaims := client.LicenseClaims{
@@ -442,35 +450,16 @@ func TestFeatureFlags(t *testing.T) {
 		claims := sampleClaims
 		claims.Features = []string{"cnx", features.All}
 
-		Expect(claims.ValidateFeature(features.DropActionOverride)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.PrometheusMetrics)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.AWSCloudwatchMetrics)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.AWSCloudwatchFlowLogs)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.AWSSecurityGroups)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.IPSec)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.FederatedServices)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.FileOutputFlowLogs)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.ManagementPortal)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.PolicyRecommendation)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.PolicyPreview)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.PolicyManagement)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.Tiers)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.EgressAccessControl)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.ExportLogs)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.AlertManagement)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.ApplicationTelementry)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.TopologicalGraph)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.KibanaDashboard)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.DualNIC)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.ComplianceReports)).To(BeTrue())
-		Expect(claims.ValidateFeature(features.ThreatDefense)).To(BeTrue())
+		for f := range features.EnterpriseFeatures {
+			Expect(claims.ValidateFeature(f)).To(BeTrue())
+		}
 	})
 
 	t.Run("a license with 'cloud|community' package states any cloud community feature is enabled.", func(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = []string{"cloud", "community"}
+		claims.Features = append([]string{"cloud", "community"}, keys(features.CloudCommunityFeatures)...)
 
 		for f := range features.CloudCommunityFeatures {
 			Expect(claims.ValidateFeature(f)).To(BeTrue())
@@ -481,7 +470,7 @@ func TestFeatureFlags(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = []string{"cloud", "starter"}
+		claims.Features = append([]string{"cloud", "starter"}, keys(features.CloudStarterFeatures)...)
 
 		for f := range features.CloudStarterFeatures {
 			Expect(claims.ValidateFeature(f)).To(BeTrue())
@@ -492,88 +481,12 @@ func TestFeatureFlags(t *testing.T) {
 		RegisterTestingT(t)
 
 		claims := sampleClaims
-		claims.Features = []string{"cloud", "pro"}
+		claims.Features = append([]string{"cloud", "pro"}, keys(features.CloudProFeatures)...)
 
 		for f := range features.CloudProFeatures {
 			Expect(claims.ValidateFeature(f)).To(BeTrue())
 		}
 	})
-
-	t.Run("a license with 'cnx|all' features states that all APIs are available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cnx", features.All}
-
-		for k, _ := range features.EnterpriseAPIs {
-			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cloud|community' features states that all mapped APIs are available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cloud", "community"}
-
-		for k, _ := range features.CloudCommunityAPIs {
-			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cloud|starter' features states that all mapped APIs are available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cloud", "starter"}
-
-		for k, _ := range features.CloudStarterAPIs {
-			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cloud|pro' features states that all mapped APIs are available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cloud", "pro"}
-
-		for k, _ := range features.CloudProAPIs {
-			Expect(claims.ValidateAPIUsage(k)).To(BeTrue())
-		}
-	})
-
-	t.Run("a license with 'cnx|all' features states that an APIs that is not declared is not available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cnx", features.All}
-
-		Expect(claims.ValidateAPIUsage("missingAPI")).To(BeFalse())
-	})
-
-	t.Run("a license with 'cloud|community' features states that all mapped APIs for cloud|starter are not available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cloud", "community"}
-
-		for k, _ := range features.CloudStarterAPIs {
-			Expect(claims.ValidateAPIUsage(k)).To(BeFalse())
-		}
-	})
-
-	t.Run("a license with 'cloud|starter' features states that all mapped APIs for cloud|pro are not available.", func(t *testing.T) {
-		RegisterTestingT(t)
-
-		claims := sampleClaims
-		claims.Features = []string{"cloud", "starter"}
-
-		for k, _ := range features.CloudProAPIs {
-			Expect(claims.ValidateAPIUsage(k)).To(BeFalse())
-		}
-	})
-
 }
 
 func TestLicenseStatus(t *testing.T) {

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"strings"
 	"time"
 
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -106,9 +105,9 @@ type LicenseClaims struct {
 
 	// Features field is for future use.
 	// We will default this with `[ “cnx”, “all”]` for v2.1 and Enterprise package
-	// Cloud licenses will have one of the following values: ["cloud", "community"],
-	// ["cloud", "starter"] or [ "cloud", "pro" ]. Individual features are mapped to the license
-	// packages.
+	// Cloud licenses will have one of the following values: ["cloud", "community", ...],
+	// ["cloud", "starter", ...] or [ "cloud", "pro", ...]. Individual features are appended after the license
+	// package.
 	Features []string `json:"features"`
 
 	// GracePeriod is how many days the cluster will keep working even after
@@ -177,7 +176,7 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 // IsOpenSourceAPI determines is a calico API is defined as an open
 // source API
 func IsOpenSourceAPI(resourceGroupVersionKind string) bool {
-	return features.CloudCommunityAPIs[resourceGroupVersionKind]
+	return features.OpenSourceAPIs[resourceGroupVersionKind]
 }
 
 // ErrExpiredButWithinGracePeriod indicates the license has expired but is within the grace period.
@@ -260,70 +259,14 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 		return false
 	}
 
-	var licensePackage = strings.Join(c.Features, "|")
-
-	switch licensePackage {
-	case features.Enterprise:
-		return true
-	case features.CloudCommunity:
-		return features.CloudCommunityFeatures[feature]
-	case features.CloudStarter:
-		return features.CloudStarterFeatures[feature]
-	case features.CloudPro:
-		return features.CloudProFeatures[feature]
-	default:
-		// This is maintain backwards compatibility in case
-		// a license was issued with a single feature instead of cnx|all
-		// prior to 3.5
-		for _, f := range c.Features {
-			if f == features.All {
-				return true
-			}
-			if f == feature {
-				return true
-			}
+	for _, f := range c.Features {
+		if f == features.All {
+			return true
+		}
+		if f == feature {
+			return true
 		}
 	}
 
 	return false
-}
-
-// ValidateAPIUsage returns true if the API is enabled based on the licensing package currently, false if it is not.
-// False is returned if the license is invalid in any of the following ways:
-// - there isn't a license
-// - the license has expired and is no longer in its grace period.
-// The API is defined by group, version and kind for a kubernetes resource
-func (c *LicenseClaims) ValidateAPIUsage(resourceGroupVersionKind string) bool {
-	return c.ValidateAPIUsageAtTime(time.Now(), resourceGroupVersionKind)
-}
-
-// ValidateAPIUsage returns true if the API is enabled based on the licensing package at time t, false if it is not.
-// False is returned if the license is invalid in any of the following ways:
-// - there isn't a license
-// - the license has expired and is no longer in its grace period.
-// The API is defined by group, version and kind for a kubernetes resource
-func (c *LicenseClaims) ValidateAPIUsageAtTime(t time.Time, resourceGroupVersionKind string) bool {
-	switch c.ValidateAtTime(t) {
-	case NoLicenseLoaded, Expired:
-		return false
-	}
-
-	if len(c.Features) == 0 {
-		return false
-	}
-
-	var licensePackage = strings.Join(c.Features, "|")
-
-	switch licensePackage {
-	case features.Enterprise:
-		return features.EnterpriseAPIs[resourceGroupVersionKind]
-	case features.CloudCommunity:
-		return features.CloudCommunityAPIs[resourceGroupVersionKind]
-	case features.CloudStarter:
-		return features.CloudStarterAPIs[resourceGroupVersionKind]
-	case features.CloudPro:
-		return features.CloudProAPIs[resourceGroupVersionKind]
-	default:
-		return false
-	}
 }
