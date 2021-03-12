@@ -10,7 +10,7 @@ TEST_DIR=./tests/k8st
 : ${kubectl:=./kubectl}
 
 # kind binary.
-: ${KIND:=$TEST_DIR/kind}
+: ${KIND:=dist/kind}
 
 echo "Download kind executable with multiple networks support"
 curl -L https://github.com/projectcalico/kind/releases/download/multiple-networks-0.1/kind -o ${KIND}
