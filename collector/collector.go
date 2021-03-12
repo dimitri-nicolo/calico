@@ -133,7 +133,7 @@ func (c *collector) SetProcessInfoCache(pic ProcessInfoCache) {
 
 func (c *collector) startStatsCollectionAndReporting() {
 	var pktInfoC <-chan PacketInfo
-	var ctInfoC <-chan ConntrackInfo
+	var ctInfoC <-chan []ConntrackInfo
 
 	if c.packetInfoReader != nil {
 		pktInfoC = c.packetInfoReader.PacketInfoChan()
@@ -148,9 +148,11 @@ func (c *collector) startStatsCollectionAndReporting() {
 	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
-		case ctInfo := <-ctInfoC:
-			log.WithField("ConntrackInfo", ctInfo).Debug("collector event")
-			c.handleCtInfo(ctInfo)
+		case ctInfos := <-ctInfoC:
+			for _, ctInfo := range ctInfos {
+				log.WithField("ConntrackInfo", ctInfo).Debug("collector event")
+				c.handleCtInfo(ctInfo)
+			}
 		case pktInfo := <-pktInfoC:
 			log.WithField("PacketInfo", pktInfo).Debug("collector event")
 			c.ApplyPacketInfo(pktInfo)

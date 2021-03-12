@@ -1768,8 +1768,8 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 
 type dummyConntrackInfoReader struct{}
 
-func (dummyConntrackInfoReader) Start() error                            { return nil }
-func (dummyConntrackInfoReader) ConntrackInfoChan() <-chan ConntrackInfo { return nil }
+func (dummyConntrackInfoReader) Start() error                              { return nil }
+func (dummyConntrackInfoReader) ConntrackInfoChan() <-chan []ConntrackInfo { return nil }
 
 type mockProcessCache struct{}
 

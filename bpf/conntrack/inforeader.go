@@ -36,7 +36,9 @@ type InfoReader struct {
 	// cachedKTime is the most recent kernel time.
 	cachedKTime int64
 
-	outC chan collector.ConntrackInfo
+	outC chan []collector.ConntrackInfo
+
+	bufferedConntrackInfo []collector.ConntrackInfo
 }
 
 // NewInfoReader returns a new instance of InfoReader that can be used as a
@@ -48,7 +50,7 @@ func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface) *InfoRe
 		dsr:      dsr,
 		time:     time,
 
-		outC: make(chan collector.ConntrackInfo, 1000),
+		outC: make(chan []collector.ConntrackInfo, 1000),
 	}
 
 	if r.time == nil {
@@ -132,15 +134,15 @@ func (r *InfoReader) makeConntrackInfo(key Key, val Value, dnat bool) collector.
 }
 
 func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
-	// XXX we may want to make this non-blocking and what cannot go out now,
-	// should be deffered until the end of iteration not to block iterating over
-	// the conntrack table.
-	select {
-	case r.outC <- i:
-		// nothing, all good
-	default:
-		conntrackInfoReaderBlocks.Inc()
-		r.outC <- i
+	r.bufferedConntrackInfo = append(r.bufferedConntrackInfo, i)
+	if len(r.bufferedConntrackInfo) >= collector.ConntrackInfoBatchSize {
+		select {
+		case r.outC <- r.bufferedConntrackInfo:
+			r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+		default:
+			conntrackInfoReaderBlocks.Inc()
+			// keep buffering
+		}
 	}
 }
 
@@ -150,16 +152,45 @@ func (r *InfoReader) IterationStart() {
 		r.cachedKTime = r.time.KTimeNanos()
 		r.goTimeOfLastKTimeLookup = r.time.Now()
 	}
+
+	if r.bufferedConntrackInfo == nil {
+		r.bufferedConntrackInfo = make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+	}
 }
 
 // IterationEnd is called and Scanner ends iterating over the conntrack table.
 func (r *InfoReader) IterationEnd() {
+	if len(r.bufferedConntrackInfo) > 0 {
+		select {
+		case r.outC <- r.bufferedConntrackInfo:
+			r.bufferedConntrackInfo = nil
+		default:
+			// Don't block. Keep the expired infos until the next iteration as they would
+			// be lost and toss away the rest as those will get updated during the next
+			// iteration anyway.
+			//
+			// It's ok to keep ConntrackInfoBatchSize items around until the next
+			// iteration, we want to avoid keeping many more since we were possibly not able
+			// to push the buffer out for a while.
+			expired := make([]collector.ConntrackInfo, 0, collector.ConntrackInfoBatchSize)
+			for _, info := range r.bufferedConntrackInfo {
+				if info.Expired {
+					expired = append(expired, info)
+				}
+			}
+
+			if len(expired) == 0 {
+				expired = nil
+			}
+			r.bufferedConntrackInfo = expired
+		}
+	}
 }
 
 // Start is called by collector to start consuming data.
 func (r *InfoReader) Start() error { return nil }
 
 // ConntrackInfoChan returns a channel for collector to consume data.
-func (r *InfoReader) ConntrackInfoChan() <-chan collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
 	return r.outC
 }

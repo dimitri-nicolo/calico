@@ -25,7 +25,7 @@ func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
 }
 
 // ConntrackInfoChan returns the channel with converted ConntrackInfo.
-func (r *InfoReader) ConntrackInfoChan() <-chan collector.ConntrackInfo {
+func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
 	return nil
 }
 

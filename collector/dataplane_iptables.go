@@ -200,7 +200,7 @@ type NetLinkConntrackReader struct {
 	stopC    chan struct{}
 
 	ticker jitter.JitterTicker
-	outC   chan ConntrackInfo
+	outC   chan []ConntrackInfo
 }
 
 // NewNetLinkConntrackReader returns a new NetLinkConntrackReader
@@ -208,7 +208,7 @@ func NewNetLinkConntrackReader(period time.Duration) *NetLinkConntrackReader {
 	return &NetLinkConntrackReader{
 		stopC:  make(chan struct{}),
 		ticker: jitter.NewTicker(period, period/10),
-		outC:   make(chan ConntrackInfo, 1000),
+		outC:   make(chan []ConntrackInfo, 1000),
 	}
 }
 
@@ -235,25 +235,37 @@ func (r *NetLinkConntrackReader) run() {
 		case <-r.stopC:
 			return
 		case <-r.ticker.Channel():
-			_ = nfnetlink.ConntrackList(r.processCtEntry)
+			ctInfos := make([]ConntrackInfo, 0, ConntrackInfoBatchSize)
+			_ = nfnetlink.ConntrackList(func(ctEntry nfnetlink.CtEntry) {
+				ci, err := convertCtEntryToConntrackInfo(ctEntry)
+				if err != nil {
+					log.Error(err.Error())
+					return
+				}
+				ctInfos = append(ctInfos, ci)
+				if len(ctInfos) > ConntrackInfoBatchSize {
+					select {
+					case <-r.stopC:
+						return
+					case r.outC <- ctInfos:
+						ctInfos = make([]ConntrackInfo, 0, ConntrackInfoBatchSize)
+					default:
+						// Keep buffering
+					}
+				}
+			})
+			if len(ctInfos) > 0 {
+				select {
+				case <-r.stopC:
+					return
+				case r.outC <- ctInfos:
+				}
+			}
 		}
 	}
 }
 
-func (r *NetLinkConntrackReader) processCtEntry(ctEntry nfnetlink.CtEntry) {
-	ctInfo, err := convertCtEntryToConntrackInfo(ctEntry)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-
-	select {
-	case r.outC <- ctInfo:
-	case <-r.stopC:
-	}
-}
-
-func (r *NetLinkConntrackReader) ConntrackInfoChan() <-chan ConntrackInfo {
+func (r *NetLinkConntrackReader) ConntrackInfoChan() <-chan []ConntrackInfo {
 	return r.outC
 }
 

@@ -38,19 +38,16 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		mockTime = mocktime.New()
 		Expect(mockTime.KTimeNanos()).To(BeNumerically("==", now))
 		reader = conntrack.NewInfoReader(timeouts, false, mockTime)
-		reader.IterationStart()
-	})
-
-	AfterEach(func() {
-		reader.IterationEnd()
 	})
 
 	DescribeTable("forward entries",
 		func(k conntrack.Key, v conntrack.Value, expected collector.ConntrackInfo) {
+			reader.IterationStart()
 			reader.Check(k, v, nil)
+			reader.IterationEnd()
 			got := <-reader.ConntrackInfoChan()
 
-			Expect(got).To(Equal(expected))
+			Expect(got[0]).To(Equal(expected))
 		},
 		Entry("normal entry - no NAT",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
