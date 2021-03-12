@@ -85,6 +85,7 @@ NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_BIN_DIR=./dist/bin/
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
+NODE_GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 
 # Variables for the Windows packaging.
 # Name of the Windows release ZIP archive.
@@ -146,9 +147,9 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 # All these are required for correct version reporting by the various binaries
 # as well as embedding this information within the ClusterInformation resource.
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(GIT_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_VERSION) \
-	-X main.VERSION=$(GIT_VERSION) \
+	-X main.VERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
