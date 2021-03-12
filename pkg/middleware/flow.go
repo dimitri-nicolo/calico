@@ -32,9 +32,7 @@ const (
 // must be "-". srcNamespace and dstNamespace are always required.
 type flowRequestParams struct {
 	// Required parameters used to uniquely define a "flow".
-	action       string
 	clusterName  string
-	reporter     string
 	srcType      api.EndpointType
 	srcNamespace string
 	srcName      string
@@ -62,7 +60,7 @@ func (req flowRequestParams) clusterIndex() string {
 func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) {
 	query := req.URL.Query()
 
-	requiredParams := []string{"cluster", "srcType", "srcName", "dstType", "dstName", "reporter", "action", "srcNamespace", "dstNamespace"}
+	requiredParams := []string{"srcType", "srcName", "dstType", "dstName", "srcNamespace", "dstNamespace"}
 	for _, param := range requiredParams {
 		if query.Get(param) == "" {
 			return nil, fmt.Errorf("missing required parameter '%s'", param)
@@ -70,15 +68,17 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 	}
 
 	flowParams := &flowRequestParams{
-		action:       strings.ToLower(query.Get("action")),
 		clusterName:  strings.ToLower(query.Get("cluster")),
-		reporter:     strings.ToLower(query.Get("reporter")),
 		srcType:      api.StringToEndpointType(strings.ToLower(query.Get("srcType"))),
 		srcNamespace: strings.ToLower(query.Get("srcNamespace")),
 		srcName:      strings.ToLower(query.Get("srcName")),
 		dstType:      api.StringToEndpointType(strings.ToLower(query.Get("dstType"))),
 		dstNamespace: strings.ToLower(query.Get("dstNamespace")),
 		dstName:      strings.ToLower(query.Get("dstName")),
+	}
+
+	if flowParams.clusterName == "" {
+		flowParams.clusterName = datastore.DefaultCluster
 	}
 
 	if flowParams.srcType == api.EndpointTypeInvalid {
@@ -128,6 +128,16 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 	return flowParams, nil
 }
 
+type PolicyReport struct {
+	// AllowedFlowPolicies contains the policies from the allowed flow. Policies that the user is not authorized to view
+	// are obfuscated.
+	AllowedFlowPolicies []*FlowResponsePolicy `json:"allowedFlowPolicies"`
+
+	// DeniedFlowPolicies contains the policies from the denied flow. Policies that the user is not authorized to view
+	// are obfuscated.
+	DeniedFlowPolicies []*FlowResponsePolicy `json:"deniedFlowPolicies"`
+}
+
 // FlowResponse is the response that will be returned json marshaled and written in the flowHandler's ServeHTTP.
 type FlowResponse struct {
 	// Count is the total number of documents that were included in the flow log.
@@ -139,8 +149,11 @@ type FlowResponse struct {
 	// SrcLabels contains all the labels the flow's source had, if applicable, in the given time frame for the flow query.
 	SrcLabels FlowResponseLabels `json:"srcLabels"`
 
-	// Policies contains the policies from the flow. Policies that the user is not authorized to view are obfuscated.
-	Policies []*FlowResponsePolicy `json:"policies"`
+	// SrcPolicyReport contains the policies that were applied and reported by the source of the flow.
+	SrcPolicyReport *PolicyReport `json:"srcPolicyReport"`
+
+	// DstPolicyReport contains the policies that were applied and reported by the destination of the flow.
+	DstPolicyReport *PolicyReport `json:"dstPolicyReport"`
 }
 
 type FlowResponseLabels map[string][]FlowResponseLabelValue
@@ -151,13 +164,15 @@ type FlowResponseLabelValue struct {
 }
 
 type FlowResponsePolicy struct {
-	Index     int    `json:"index"`
-	Tier      string `json:"tier"`
-	Namespace string `json:"namespace"`
-	Name      string `json:"name"`
-	Action    string `json:"action"`
-	Staged    bool   `json:"staged"`
-	Count     int64  `json:"count"`
+	Index        int    `json:"index"`
+	Tier         string `json:"tier"`
+	Namespace    string `json:"namespace"`
+	Name         string `json:"name"`
+	Action       string `json:"action"`
+	IsStaged     bool   `json:"isStaged"`
+	IsKubernetes bool   `json:"isKubernetes"`
+	IsProfile    bool   `json:"isProfile"`
+	Count        int64  `json:"count"`
 }
 
 type flowHandler struct {
@@ -239,14 +254,12 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	log.Debug("User is authorised to view flow.")
 
 	filters := []elastic.Query{
-		elastic.NewTermQuery("action", req.action),
 		elastic.NewTermQuery("source_type", req.srcType),
 		elastic.NewTermQuery("source_name_aggr", req.srcName),
 		elastic.NewTermQuery("source_namespace", req.srcNamespace),
 		elastic.NewTermQuery("dest_type", req.dstType),
 		elastic.NewTermQuery("dest_name_aggr", req.dstName),
 		elastic.NewTermQuery("dest_namespace", req.dstNamespace),
-		elastic.NewTermQuery("reporter", req.reporter),
 	}
 
 	if len(req.srcLabels) > 0 {
@@ -277,9 +290,8 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		Index(req.clusterIndex()).
 		Size(0).
 		Query(query).
-		Aggregation("policies",
-			elastic.NewNestedAggregation().Path("policies").
-				SubAggregation("by_tiered_policy", elastic.NewTermsAggregation().Field("policies.all_policies"))).
+		Aggregation("src_policy_report", newReporterPolicyFilterAggregation("src")).
+		Aggregation("dest_policy_report", newReporterPolicyFilterAggregation("dst")).
 		Aggregation("dest_labels",
 			elastic.NewNestedAggregation().Path("dest_labels").
 				SubAggregation("by_kvpair", elastic.NewTermsAggregation().Field("dest_labels.labels"))).
@@ -314,14 +326,25 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		log.WithField("labels", response.DstLabels).Debug("Destination labels parsed.")
 	}
 
-	if policiesBucket, found := esResponse.Aggregations.Nested("policies"); found {
-		if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
-			log.WithError(err).Error("failed to read the polices from the elasticsearch response")
+	if srcPolicyReportBucket, found := esResponse.Aggregations.Filter("src_policy_report"); found {
+		if policyReport, err := newPolicyReportFromBucket(srcPolicyReportBucket, flowHelper); err != nil {
+			log.WithError(err).Error("failed to read the source policy report from the elasticsearch response")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		} else {
-			response.Policies = policies
-			log.WithField("policies", response.Policies).Debug("Policies parsed.")
+			log.WithField("policies", policyReport).Debug("Policies parsed.")
+			response.SrcPolicyReport = policyReport
+		}
+	}
+
+	if dstPolicyReportBucket, found := esResponse.Aggregations.Filter("dst_policy_report"); found {
+		if policyReport, err := newPolicyReportFromBucket(dstPolicyReportBucket, flowHelper); err != nil {
+			log.WithError(err).Error("failed to read the destination policy report from the elasticsearch response")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		} else {
+			log.WithField("policies", policyReport).Debug("Policies parsed.")
+			response.DstPolicyReport = policyReport
 		}
 	}
 
@@ -331,6 +354,41 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func newReporterPolicyFilterAggregation(reporter string) elastic.Aggregation {
+	return elastic.NewFilterAggregation().Filter(elastic.NewTermQuery("reporter", reporter)).
+		SubAggregation("allowed_flow_policies", newActionPolicyFilterAggregation("allow")).
+		SubAggregation("denied_flow_policies", newActionPolicyFilterAggregation("deny"))
+}
+
+func newActionPolicyFilterAggregation(action string) elastic.Aggregation {
+	return elastic.NewFilterAggregation().Filter(elastic.NewTermQuery("action", action)).
+		SubAggregation("policies", elastic.NewNestedAggregation().Path("policies").
+			SubAggregation("by_tiered_policy", elastic.NewTermsAggregation().Field("policies.all_policies")))
+}
+
+func newPolicyReportFromBucket(policyReportAgg *elastic.AggregationSingleBucket, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
+	policyReport := &PolicyReport{}
+	if allowedPolicy, found := policyReportAgg.Filter("allowed_policy"); found {
+		if policiesBucket, found := allowedPolicy.Nested("policies"); found {
+			if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
+				return nil, err
+			} else {
+				policyReport.AllowedFlowPolicies = policies
+			}
+		}
+	}
+	if deniedPolicy, found := policyReportAgg.Filter("denied_policy"); found {
+		if policiesBucket, found := deniedPolicy.Nested("policies"); found {
+			if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
+				return nil, err
+			} else {
+				policyReport.DeniedFlowPolicies = policies
+			}
+		}
+	}
+	return policyReport, nil
 }
 
 // getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy
@@ -382,13 +440,15 @@ func getPoliciesFromPolicyBucket(policiesAggregation *elastic.AggregationSingleB
 				}
 
 				policies = append(policies, &FlowResponsePolicy{
-					Index:     policyIdx,
-					Action:    string(policyHit.Action()),
-					Tier:      policyHit.Tier(),
-					Namespace: policyHit.Namespace(),
-					Name:      policyHit.Name(),
-					Staged:    policyHit.IsStaged(),
-					Count:     policyHit.Count(),
+					Index:        policyIdx,
+					Action:       string(policyHit.Action()),
+					Tier:         policyHit.Tier(),
+					Namespace:    policyHit.Namespace(),
+					Name:         policyHit.Name(),
+					IsStaged:     policyHit.IsStaged(),
+					IsKubernetes: policyHit.IsKubernetes(),
+					IsProfile:    policyHit.IsProfile(),
+					Count:        policyHit.Count(),
 				})
 
 				policyIdx++
