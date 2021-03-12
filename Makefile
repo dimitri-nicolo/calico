@@ -66,6 +66,8 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
+DIKASTES_GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
+
 # Get version from git - used for releases.
 GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 ifeq ($(LOCAL_BUILD),true)
@@ -171,7 +173,7 @@ bin/dikastes-%: local_build proto $(SRC_FILES)
 	mkdir -p bin
 	$(DOCKER_RUN_RO) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes'
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(DIKASTES_GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes'
 
 bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
@@ -182,7 +184,7 @@ bin/healthz-%: local_build proto $(SRC_FILES)
 	-mkdir -p .go-pkg-cache $(GOMOD_CACHE) || true
 	$(DOCKER_RUN_RO) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz'
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(DIKASTES_GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz'
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
