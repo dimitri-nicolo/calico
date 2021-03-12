@@ -234,7 +234,7 @@ class _FailoverTest(TestBase):
             cmd_prefix="kubectl exec -n dualtor -t " + name + " -- "
             output=subprocess.check_output(cmd_prefix + "ps -a", shell=True, stderr=subprocess.STDOUT)
             if output.find("/reliable-nc 8090") != -1:
-                subprocess.call(cmd_prefix + "killall nc", shell=True, stderr=subprocess.STDOUT)
+                subprocess.call(cmd_prefix + "killall reliable-nc", shell=True, stderr=subprocess.STDOUT)
 
     def routes_all_ecmp(self):
         _log.info("Check routing...")
