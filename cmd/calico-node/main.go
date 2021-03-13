@@ -134,14 +134,13 @@ func main() {
 	} else if *runConfd {
 		logrus.SetFormatter(&logutils.Formatter{Component: "confd"})
 		cfg, err := confdConfig.InitConfig(true)
+		if err != nil {
+			panic(err)
+		}
 		cfg.ConfDir = *confdConfDir
 		cfg.KeepStageFile = *confdKeep
 		cfg.Onetime = *confdRunOnce
 		cfg.CalicoConfig = *confdCalicoConfig
-
-		if err != nil {
-			panic(err)
-		}
 		confd.Run(cfg)
 	} else if *runAllocateTunnelAddrs {
 		logrus.SetFormatter(&logutils.Formatter{Component: "tunnel-ip-allocator"})
