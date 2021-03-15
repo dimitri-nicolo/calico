@@ -89,6 +89,9 @@ rules:
     - felixconfigurations
     verbs:
     - patch
+    - list
+    - get
+    - watch
   - apiGroups:
     - crd.projectcalico.org
     resources:
