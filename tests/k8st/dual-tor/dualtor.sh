@@ -247,6 +247,8 @@ protocol bgp rb1 {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -265,6 +267,8 @@ protocol bgp ra1 {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -285,6 +289,8 @@ template bgp nodes {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -311,6 +317,8 @@ template bgp nodes {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -380,6 +388,8 @@ protocol bgp rb2 {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -398,6 +408,8 @@ protocol bgp ra2 {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -418,6 +430,8 @@ template bgp nodes2 {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
@@ -444,6 +458,8 @@ template bgp nodes2 {
   export all;
   add paths on;
   graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
   connect delay time 2;
   connect retry time 5;
   error wait time 5,30;
