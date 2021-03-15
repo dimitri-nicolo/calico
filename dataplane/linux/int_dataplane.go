@@ -175,6 +175,7 @@ type Config struct {
 	StatusReportingInterval time.Duration
 
 	ConfigChangedRestartCallback func()
+	FatalErrorRestartCallback    func(error)
 	ChildExitedRestartCallback   func()
 
 	PostInSyncCallback func()
@@ -412,7 +413,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		toDataplane:       make(chan interface{}, msgPeekLimit),
 		fromDataplane:     make(chan interface{}, 100),
 		ruleRenderer:      ruleRenderer,
-		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig),
+		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
 		domainInfoChanges: make(chan *domainInfoChanged, 100),

@@ -457,7 +457,8 @@ func (r *DefaultRuleRenderer) failsafeInChain(table string) *Chain {
 		rules = append(rules, Rule{
 			Match: Match().
 				Protocol(protoPort.Protocol).
-				DestPorts(protoPort.Port),
+				DestPorts(protoPort.Port).
+				SourceNet(protoPort.Net),
 			Action: AcceptAction{},
 		})
 	}
@@ -471,7 +472,8 @@ func (r *DefaultRuleRenderer) failsafeInChain(table string) *Chain {
 			rules = append(rules, Rule{
 				Match: Match().
 					Protocol(protoPort.Protocol).
-					SourcePorts(protoPort.Port),
+					SourcePorts(protoPort.Port).
+					SourceNet(protoPort.Net),
 				Action: AcceptAction{},
 			})
 		}
@@ -490,7 +492,8 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string) *Chain {
 		rules = append(rules, Rule{
 			Match: Match().
 				Protocol(protoPort.Protocol).
-				DestPorts(protoPort.Port),
+				DestPorts(protoPort.Port).
+				DestNet(protoPort.Net),
 			Action: AcceptAction{},
 		})
 	}
@@ -504,7 +507,8 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string) *Chain {
 			rules = append(rules, Rule{
 				Match: Match().
 					Protocol(protoPort.Protocol).
-					SourcePorts(protoPort.Port),
+					SourcePorts(protoPort.Port).
+					SourceNet(protoPort.Net),
 				Action: AcceptAction{},
 			})
 		}

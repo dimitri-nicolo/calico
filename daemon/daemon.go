@@ -87,9 +87,14 @@ const (
 	// String sent on the failure report channel to indicate we're shutting down for a child
 	// process exited. e.g. charon daemon.
 	reasonChildExited = "child exit"
+	reasonFatalError  = "fatal error"
 	// Process return code used to report a config change.  This is the same as the code used
 	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
 	configChangedRC = 129
+
+	// Grace period we allow for graceful shutdown before panicking.
+	gracefulShutdownTimeout = 30 * time.Second
+
 	// Process return code used to report a child exit.  This is the same as the code used
 	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
 	childExitedRC = 129
@@ -432,7 +437,17 @@ configRetry:
 	var dpStopChan chan *sync.WaitGroup
 
 	failureReportChan := make(chan string)
-	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
+	configChangedRestartCallback := func() {
+		failureReportChan <- reasonConfigChanged
+		time.Sleep(gracefulShutdownTimeout)
+		log.Panic("Graceful shutdown took too long")
+	}
+	fatalErrorCallback := func(err error) {
+		log.WithError(err).Error("Shutting down due to fatal error")
+		failureReportChan <- reasonFatalError
+		time.Sleep(gracefulShutdownTimeout)
+		log.Panic("Graceful shutdown took too long")
+	}
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
 	dpDriver, dpDriverCmd, dpStopChan = dp.StartDataplaneDriver(
@@ -440,6 +455,7 @@ configRetry:
 		healthAggregator,
 		dpStatsCollector,
 		configChangedRestartCallback,
+		fatalErrorCallback,
 		childExitedRestartCallback,
 		k8sClientSet,
 		lookupsCache,
