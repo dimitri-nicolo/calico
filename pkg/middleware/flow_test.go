@@ -660,7 +660,7 @@ var _ = Describe("FlowLog", func() {
 					if srcAllowHits != nil || srcDenyHits != nil {
 						srcPolicyHits := calicojson.Map{}
 						if srcAllowHits != nil {
-							srcPolicyHits["allowed_policy"] = calicojson.Map{
+							srcPolicyHits["allowed_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": srcAllowHits,
@@ -669,7 +669,7 @@ var _ = Describe("FlowLog", func() {
 							}
 						}
 						if srcDenyHits != nil {
-							srcPolicyHits["denied_policy"] = calicojson.Map{
+							srcPolicyHits["denied_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": srcDenyHits,
@@ -683,7 +683,7 @@ var _ = Describe("FlowLog", func() {
 					if dstAllowHits != nil || dstDenyHits != nil {
 						dstPolicyHits := calicojson.Map{}
 						if dstAllowHits != nil {
-							dstPolicyHits["allowed_policy"] = calicojson.Map{
+							dstPolicyHits["allowed_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": dstAllowHits,
@@ -692,7 +692,7 @@ var _ = Describe("FlowLog", func() {
 							}
 						}
 						if dstDenyHits != nil {
-							dstPolicyHits["denied_policy"] = calicojson.Map{
+							dstPolicyHits["denied_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": dstDenyHits,
@@ -700,7 +700,7 @@ var _ = Describe("FlowLog", func() {
 								},
 							}
 						}
-						agg["dst_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
+						agg["dest_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
 					}
 
 					mockDoer.On("Do", mock.Anything).Return(&http.Response{
@@ -913,7 +913,7 @@ var _ = Describe("FlowLog", func() {
 					if srcAllowHits != nil || srcDenyHits != nil {
 						srcPolicyHits := calicojson.Map{}
 						if srcAllowHits != nil {
-							srcPolicyHits["allowed_policy"] = calicojson.Map{
+							srcPolicyHits["allowed_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": srcAllowHits,
@@ -922,7 +922,7 @@ var _ = Describe("FlowLog", func() {
 							}
 						}
 						if srcDenyHits != nil {
-							srcPolicyHits["denied_policy"] = calicojson.Map{
+							srcPolicyHits["denied_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": srcDenyHits,
@@ -936,7 +936,7 @@ var _ = Describe("FlowLog", func() {
 					if dstAllowHits != nil || dstDenyHits != nil {
 						dstPolicyHits := calicojson.Map{}
 						if dstAllowHits != nil {
-							dstPolicyHits["allowed_policy"] = calicojson.Map{
+							dstPolicyHits["allowed_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": dstAllowHits,
@@ -945,7 +945,7 @@ var _ = Describe("FlowLog", func() {
 							}
 						}
 						if dstDenyHits != nil {
-							dstPolicyHits["denied_policy"] = calicojson.Map{
+							dstPolicyHits["denied_flow_policies"] = calicojson.Map{
 								"policies": calicojson.Map{
 									"by_tiered_policy": calicojson.Map{
 										"buckets": dstDenyHits,
@@ -953,7 +953,7 @@ var _ = Describe("FlowLog", func() {
 								},
 							}
 						}
-						agg["dst_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
+						agg["dest_policy_report"] = calicojson.MustMarshal(dstPolicyHits)
 					}
 
 					mockDoer.On("Do", mock.Anything).Return(&http.Response{

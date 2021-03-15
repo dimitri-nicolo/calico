@@ -337,7 +337,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 		}
 	}
 
-	if dstPolicyReportBucket, found := esResponse.Aggregations.Filter("dst_policy_report"); found {
+	if dstPolicyReportBucket, found := esResponse.Aggregations.Filter("dest_policy_report"); found {
 		if policyReport, err := newPolicyReportFromBucket(dstPolicyReportBucket, flowHelper); err != nil {
 			log.WithError(err).Error("failed to read the destination policy report from the elasticsearch response")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -370,7 +370,7 @@ func newActionPolicyFilterAggregation(action string) elastic.Aggregation {
 
 func newPolicyReportFromBucket(policyReportAgg *elastic.AggregationSingleBucket, flowHelper rbac.FlowHelper) (*PolicyReport, error) {
 	policyReport := &PolicyReport{}
-	if allowedPolicy, found := policyReportAgg.Filter("allowed_policy"); found {
+	if allowedPolicy, found := policyReportAgg.Filter("allowed_flow_policies"); found {
 		if policiesBucket, found := allowedPolicy.Nested("policies"); found {
 			if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
 				return nil, err
@@ -379,7 +379,7 @@ func newPolicyReportFromBucket(policyReportAgg *elastic.AggregationSingleBucket,
 			}
 		}
 	}
-	if deniedPolicy, found := policyReportAgg.Filter("denied_policy"); found {
+	if deniedPolicy, found := policyReportAgg.Filter("denied_flow_policies"); found {
 		if policiesBucket, found := deniedPolicy.Nested("policies"); found {
 			if policies, err := getPoliciesFromPolicyBucket(policiesBucket, flowHelper); err != nil {
 				return nil, err
