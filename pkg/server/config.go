@@ -300,7 +300,7 @@ func getEnvOrDefaultInt(key string, defaultValue int) (int, error) {
 }
 
 func getEnvOrDefaultBool(key string, defaultValue bool) (bool, error) {
-	log.Error(key + " " + getEnv(key))
+	log.Debug(key + " " + getEnv(key))
 	if val := getEnv(key); val != "" {
 		return strconv.ParseBool(val)
 	}
