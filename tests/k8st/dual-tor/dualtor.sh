@@ -536,6 +536,28 @@ EOF
     done
     ${kubectl} get po -A -o wide
 
+    # Edit the calico-node DaemonSet so we can make calico-node restarts take longer.
+    ${KIND} get nodes | xargs -n1 -I {} kubectl label no {} ctd=f
+    ${kubectl} get ds calico-node -n calico-system -o yaml > ${tmpd}/ds.yaml
+    sed -i '/^  annotations:$/r /dev/stdin' ${tmpd}/ds.yaml <<EOF
+    unsupported.operator.tigera.io/ignore: "true"
+EOF
+    sed -i '/^      nodeSelector:$/r /dev/stdin' ${tmpd}/ds.yaml <<EOF
+        ctd: f
+EOF
+    ${kubectl} apply -f ${tmpd}/ds.yaml
+
+    # Check readiness again.
+    for k8sapp in calico-node calico-kube-controllers calico-typha; do
+	while ! time ${kubectl} wait pod --for=condition=Ready -l k8s-app=${k8sapp} -n calico-system --timeout=300s; do
+	    # This happens when no matching resources exist yet,
+	    # i.e. immediately after application of the Calico YAML.
+	    sleep 5
+	    ${kubectl} get po -A -o wide || true
+	done
+    done
+    ${kubectl} get po -A -o wide
+
     # Show routing table everywhere.
     docker exec bird-a1 ip r
     docker exec bird-b1 ip r
@@ -567,3 +589,5 @@ function do_cleanup {
 for step in ${STEPS}; do
     eval do_${step}
 done
+
+rm -rf ${tmpd}

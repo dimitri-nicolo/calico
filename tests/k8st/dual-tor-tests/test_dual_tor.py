@@ -147,8 +147,14 @@ def get_calico_node_pod_for_node(node_name):
 
 def delete_calico_node_pod_for_node(node_name):
     pod_name = get_calico_node_pod_for_node(node_name)
-    kubectl("delete po %s -n calico-system" % pod_name)
+    kubectl("label --overwrite no %s ctd=t" % node_name)
+    # Note: pod is automatically deleted because node no longer matches 'ctd: f' node selector.
     _log.info("Deleted calico-node pod on %s (%s)", node_name, pod_name)
+
+
+def restart_calico_node_pod_for_node(node_name):
+    kubectl("label --overwrite no %s ctd=f" % node_name)
+    _log.info("Labelled %s to allow calico-node to restart", node_name)
 
 
 class FailoverTestConfig(object):
@@ -381,7 +387,7 @@ class _FailoverTest(TestBase):
         self._run_single_test(
             "restart_calico_node_client",
             lambda: delete_calico_node_pod_for_node("kind-worker"),
-            self.do_nothing,
+            lambda: restart_calico_node_pod_for_node("kind-worker"),
         )
 
     # Test restarting calico-node for the ra-server pod's node.
@@ -389,7 +395,7 @@ class _FailoverTest(TestBase):
         self._run_single_test(
             "restart_calico_node_ra_server",
             lambda: delete_calico_node_pod_for_node("kind-control-plane"),
-            self.do_nothing,
+            lambda: restart_calico_node_pod_for_node("kind-control-plane"),
         )
 
     # Test restarting calico-node for the rb-server pod's node.
@@ -397,7 +403,7 @@ class _FailoverTest(TestBase):
         self._run_single_test(
             "restart_calico_node_rb_server",
             lambda: delete_calico_node_pod_for_node("kind-worker3"),
-            self.do_nothing,
+            lambda: restart_calico_node_pod_for_node("kind-worker3"),
         )
 
 
@@ -531,7 +537,7 @@ class _TestFailoverNodePort(_FailoverTest):
         self._run_single_test(
             "restart_calico_node_node_port",
             lambda: delete_calico_node_pod_for_node("kind-worker2"),
-            self.do_nothing,
+            lambda: restart_calico_node_pod_for_node("kind-worker2"),
         )
 
 
