@@ -39,7 +39,7 @@ def run_with_log(cmd, log):
 
 
 class Flow(object):
-    def __init__(self, client_pod, server_pod, target_ip, target_port):
+    def __init__(self, client_pod, server_pod, target_ip, target_port, target_ip_short, target_port_short):
         # A Flow object represents a single connection from a client pod to a target IP
         # and port.  The target IP and port will always resolve to a server pod; sometimes
         # directly (pod IP), sometimes via a cluster IP and sometimes via a NodePort.
@@ -53,6 +53,10 @@ class Flow(object):
         self.target_port = target_port
         self.client_ip = get_pod_ip("pod-name", self.client_pod)
         self.server_ip = get_pod_ip("pod-name", self.server_pod)
+
+        # IP and port for short-lived connections.
+        self.target_ip_short = target_ip_short
+        self.target_port_short = target_port_short
 
 
 def get_pod_ip(key, value):
@@ -277,6 +281,18 @@ class _FailoverTest(TestBase):
                     flows_still_running -= 1
                 f.previous_seq = new_seq
 
+                if (count % 3) == 0:
+                    # Test shortlived connection.
+                    short_log = Log()
+                    run_with_log("kubectl exec -n dualtor " + f.server_pod + " -- /reliable-nc 8091", short_log)
+                    def short_connection():
+                        run("kubectl exec -n dualtor " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
+                    time.sleep(0.25)
+                    retry_until_success(short_connection, retries=3, wait_time=0.25)
+                    def check_transmission():
+                        assert "hello\n" in short_log.logs, "Did not find 'hello' in server logs: %r" % short_log.logs
+                    retry_until_success(check_transmission, retries=3, wait_time=0.25)
+
             if count == 5:
                 break_func()
 
@@ -444,6 +460,8 @@ class FailoverCluster(object):
         # Create service
         self.create_service("ra-server")
         self.create_service("rb-server")
+        self.create_service("ra-server", "-short", 8091)
+        self.create_service("rb-server", "-short", 8091)
 
         # Check we can now exec into all the pods.
         def check_exec():
@@ -457,14 +475,14 @@ class FailoverCluster(object):
     def cleanup(self):
         kubectl("delete ns dualtor")
 
-    def create_service(self, name):
+    def create_service(self, name, svc_suffix="", port=8090):
         service = client.V1Service(
             metadata=client.V1ObjectMeta(
-                name=name,
-                labels={"name": name},
+                name=name + svc_suffix,
+                labels={"name": name + svc_suffix},
             ),
             spec={
-                "ports": [{"port": 8090}],
+                "ports": [{"port": port}],
                 "selector": {"pod-name": name},
                 "type": "NodePort",
             }
@@ -481,8 +499,8 @@ class TestFailoverPodIP(_FailoverTest):
     def setUp(self):
         super(TestFailoverPodIP, self).setUp()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090"),
-            Flow("client", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090"),
+            Flow("client", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090", get_pod_ip("pod-name", "ra-server"), "8091"),
+            Flow("client", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090", get_pod_ip("pod-name", "rb-server"), "8091"),
         ])
 
 
@@ -491,8 +509,8 @@ class TestFailoverServiceIP(_FailoverTest):
     def setUp(self):
         super(TestFailoverServiceIP, self).setUp()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client", "ra-server", get_service_ip("ra-server"), "8090"),
-            Flow("client", "rb-server", get_service_ip("rb-server"), "8090"),
+            Flow("client", "ra-server", get_service_ip("ra-server"), "8090", get_service_ip("ra-server-short"), "8091"),
+            Flow("client", "rb-server", get_service_ip("rb-server"), "8090", get_service_ip("rb-server-short"), "8091"),
         ])
 
 
@@ -504,8 +522,8 @@ class _TestFailoverNodePort(_FailoverTest):
         cmd='''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
         node_port_ip=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).strip()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client", "ra-server", node_port_ip, get_node_port("ra-server")),
-            Flow("client", "rb-server", node_port_ip, get_node_port("rb-server")),
+            Flow("client", "ra-server", node_port_ip, get_node_port("ra-server"), node_port_ip, get_node_port("ra-server-short")),
+            Flow("client", "rb-server", node_port_ip, get_node_port("rb-server"), node_port_ip, get_node_port("rb-server-short")),
         ])
 
     # Test restarting calico-node on the NodePort node.
@@ -522,8 +540,8 @@ class TestFailoverHostAccess(_FailoverTest):
     def setUp(self):
         super(TestFailoverHostAccess, self).setUp()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client-host", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090"),
-            Flow("client-host", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090"),
+            Flow("client-host", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090", get_pod_ip("pod-name", "ra-server"), "8091"),
+            Flow("client-host", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090", get_pod_ip("pod-name", "rb-server"), "8091"),
         ])
 
 
