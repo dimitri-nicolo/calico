@@ -388,6 +388,13 @@ func newPolicyReportFromBucket(policyReportAgg *elastic.AggregationSingleBucket,
 			}
 		}
 	}
+
+	// Don't return a policy report if there are neither allowed nor denied policies, since this means a policy report
+	// doesn't exist.
+	if policyReport.DeniedFlowPolicies == nil && policyReport.AllowedFlowPolicies == nil {
+		return nil, nil
+	}
+
 	return policyReport, nil
 }
 
