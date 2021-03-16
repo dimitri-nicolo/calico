@@ -113,8 +113,8 @@ var GenerateLicenseCmd = &cobra.Command{
 			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudStarterFeatures)...)
 		case features.CloudPro:
 			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.CloudProFeatures)...)
-		default:
-			claims.Features = append(strings.Split(licensePackage, "|"), features.Keys(features.EnterpriseFeatures)...)
+		case features.Enterprise:
+			claims.Features = strings.Split(licensePackage, "|")
 		}
 
 		// This might be used in future. Or it could be used for debugging.

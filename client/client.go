@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"time"
 
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -259,13 +260,30 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 		return false
 	}
 
-	for _, f := range c.Features {
-		if f == features.All {
-			return true
+	var licensePackage = strings.Join(c.Features, "|")
+
+	switch licensePackage {
+	case features.Enterprise:
+		return true
+	case features.CloudCommunity:
+		// This is maintain backwards compatibility for any cloud license issued for 3.5
+		return features.CloudCommunityFeatures[feature]
+	case features.CloudStarter:
+		// This is maintain backwards compatibility for any cloud license issued for 3.5
+		return features.CloudStarterFeatures[feature]
+	case features.CloudPro:
+		// This is maintain backwards compatibility for any cloud license issued for 3.5
+		return features.CloudProFeatures[feature]
+	default:
+		for _, f := range c.Features {
+			if f == features.All {
+				return true
+			}
+			if f == feature {
+				return true
+			}
 		}
-		if f == feature {
-			return true
-		}
+
 	}
 
 	return false
