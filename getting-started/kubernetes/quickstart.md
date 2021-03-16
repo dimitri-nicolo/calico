@@ -28,7 +28,7 @@ A Linux host that meets the following requirements.
 - 2CPU
 - 12GB RAM
 - 50GB free disk space
-- Ubuntu Server 16.04
+- Ubuntu Server 18.04
 - Internet access
 - {% include open-new-window.html text='Sufficient virtual memory' url='https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html' %}
 
