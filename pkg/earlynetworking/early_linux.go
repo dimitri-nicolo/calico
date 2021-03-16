@@ -236,14 +236,14 @@ func monitorOngoing(thisNode *ConfigNode) {
 func monitorNormalBird(earlyBirdWantedC chan<- bool) {
 	periodicCheckC := time.NewTicker(10 * time.Second).C
 	var gracefulTimeoutC <-chan time.Time
-	normalBirdRunning := false
+	normalBirdRunningRecorded := false
 	for {
 		select {
 		case <-periodicCheckC:
 			nowRunning := normalBGPRunning()
 			if nowRunning {
 				// Normal BIRD is up.
-				if normalBirdRunning {
+				if normalBirdRunningRecorded {
 					// Was running, and still is: no change.
 				} else if gracefulTimeoutC != nil {
 					logrus.Info("Normal BGP restarted within graceful restart period")
@@ -252,10 +252,10 @@ func monitorNormalBird(earlyBirdWantedC chan<- bool) {
 					logrus.Info("Normal BGP has (re)started")
 					earlyBirdWantedC <- false
 				}
-				normalBirdRunning = true
+				normalBirdRunningRecorded = true
 			} else {
 				// Normal BIRD is not running.
-				if normalBirdRunning {
+				if normalBirdRunningRecorded {
 					logrus.Info("Normal BGP stopped; wait for graceful restart period")
 					gracefulTimeoutC = time.NewTimer(120 * time.Second).C
 				}
@@ -265,7 +265,7 @@ func monitorNormalBird(earlyBirdWantedC chan<- bool) {
 				// expires - or we're past that and normal BIRD has been stopped for
 				// a long time.  Either way, there's no output event that we need to
 				// generate right now.
-				normalBirdRunning = false
+				normalBirdRunningRecorded = false
 			}
 		case <-gracefulTimeoutC:
 			logrus.Info("End of graceful restart period for normal BGP")

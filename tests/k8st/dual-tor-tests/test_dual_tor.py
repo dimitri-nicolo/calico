@@ -147,12 +147,20 @@ def get_calico_node_pod_for_node(node_name):
 
 def delete_calico_node_pod_for_node(node_name):
     pod_name = get_calico_node_pod_for_node(node_name)
+    # In this rig, the calico-node DaemonSet is modified so that it only matches nodes
+    # with label 'ctd: f'.  (That stands for "Calico Test Disabled: False".  In other
+    # words, calico-node only runs on nodes where it is *not* disabled.)
+    #
+    # Therefore we can kill the calico-node on a node, and prevent it from restarting, by
+    # changing the 'ctd' label to 't' (for True).
     kubectl("label --overwrite no %s ctd=t" % node_name)
     # Note: pod is automatically deleted because node no longer matches 'ctd: f' node selector.
     _log.info("Deleted calico-node pod on %s (%s)", node_name, pod_name)
 
 
 def restart_calico_node_pod_for_node(node_name):
+    # Change "Calico Test Disabled" label back to False.  Then the calico-node pod is
+    # automatically restarted on this node.
     kubectl("label --overwrite no %s ctd=f" % node_name)
     _log.info("Labelled %s to allow calico-node to restart", node_name)
 
