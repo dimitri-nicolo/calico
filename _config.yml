@@ -162,6 +162,7 @@ defaults:
         envoy: tigera/envoy
         key-cert-provisioner: tigera/key-cert-provisioner
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
+        elasticsearch-metrics: tigera/elasticsearch-metrics
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
         alertManager: quay.io/prometheus/alertmanager
