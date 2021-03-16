@@ -26,8 +26,8 @@ repository: projectcalico/calico
 
 noderunning: calico-node
 
-ocpMinVersion: 4.5
-ocpMaxVersion: 4.6
+ocpMinVersion: 4.6
+ocpMaxVersion: 4.7
 
 # DEPRECATED: This list of imageNames is not to be used or updated.
 # Docs and manifests should use the image names in versions.yml instead.
