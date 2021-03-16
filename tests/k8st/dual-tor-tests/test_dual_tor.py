@@ -165,6 +165,10 @@ def restart_calico_node_pod_for_node(node_name):
     _log.info("Labelled %s to allow calico-node to restart", node_name)
 
 
+def get_early_logs(node_name):
+    return run("docker exec %s podman logs calico-early" % node_name).splitlines()
+
+
 class FailoverTestConfig(object):
     def __init__(self, total_packets, max_errors, flows):
         self.total_packets = total_packets
@@ -392,27 +396,42 @@ class _FailoverTest(TestBase):
 
     # Test restarting calico-node for the client pod's node.
     def test_restart_calico_node_client(self):
+        old_log_count = len(get_early_logs("kind-worker"))
         self._run_single_test(
             "restart_calico_node_client",
             lambda: delete_calico_node_pod_for_node("kind-worker"),
             lambda: restart_calico_node_pod_for_node("kind-worker"),
         )
+        self.check_early_container_noticed_restart("kind-worker", old_log_count)
 
     # Test restarting calico-node for the ra-server pod's node.
     def test_restart_calico_node_ra_server(self):
+        old_log_count = len(get_early_logs("kind-control-plane"))
         self._run_single_test(
             "restart_calico_node_ra_server",
             lambda: delete_calico_node_pod_for_node("kind-control-plane"),
             lambda: restart_calico_node_pod_for_node("kind-control-plane"),
         )
+        self.check_early_container_noticed_restart("kind-control-plane", old_log_count)
 
     # Test restarting calico-node for the rb-server pod's node.
     def test_restart_calico_node_rb_server(self):
+        old_log_count = len(get_early_logs("kind-worker3"))
         self._run_single_test(
             "restart_calico_node_rb_server",
             lambda: delete_calico_node_pod_for_node("kind-worker3"),
             lambda: restart_calico_node_pod_for_node("kind-worker3"),
         )
+        self.check_early_container_noticed_restart("kind-worker3", old_log_count)
+
+    def check_early_container_noticed_restart(self, node_name, old_log_count):
+        new_logs = get_early_logs(node_name)[old_log_count:]
+        found_stopped = False
+        for new_log in new_logs:
+            if "Normal BGP stopped; wait for graceful restart period" in new_log:
+                found_stopped = True
+                break
+        assert found_stopped
 
 
 # FailoverCluster holds methods to setup/cleanup testing enviroment.
@@ -542,11 +561,13 @@ class _TestFailoverNodePort(_FailoverTest):
 
     # Test restarting calico-node on the NodePort node.
     def test_restart_calico_node_node_port(self):
+        old_log_count = len(get_early_logs("kind-worker2"))
         self._run_single_test(
             "restart_calico_node_node_port",
             lambda: delete_calico_node_pod_for_node("kind-worker2"),
             lambda: restart_calico_node_pod_for_node("kind-worker2"),
         )
+        self.check_early_container_noticed_restart("kind-worker2", old_log_count)
 
 
 class TestFailoverHostAccess(_FailoverTest):
