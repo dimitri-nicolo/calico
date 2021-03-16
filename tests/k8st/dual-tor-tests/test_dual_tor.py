@@ -39,7 +39,7 @@ def run_with_log(cmd, log):
 
 
 class Flow(object):
-    def __init__(self, client_pod, server_pod, target_ip, target_port):
+    def __init__(self, client_pod, server_pod, target_ip, target_port, target_ip_short, target_port_short):
         # A Flow object represents a single connection from a client pod to a target IP
         # and port.  The target IP and port will always resolve to a server pod; sometimes
         # directly (pod IP), sometimes via a cluster IP and sometimes via a NodePort.
@@ -53,6 +53,10 @@ class Flow(object):
         self.target_port = target_port
         self.client_ip = get_pod_ip("pod-name", self.client_pod)
         self.server_ip = get_pod_ip("pod-name", self.server_pod)
+
+        # IP and port for short-lived connections.
+        self.target_ip_short = target_ip_short
+        self.target_port_short = target_port_short
 
 
 def get_pod_ip(key, value):
@@ -128,6 +132,41 @@ def get_plane(src_pod_name, dst_ip):
                 return m.group(1)
 
     raise Exception("error match route info")
+
+
+def get_calico_node_pod_for_node(node_name):
+    pod_name = kubectl(
+        "get po -n calico-system" +
+        " -l k8s-app=calico-node" +
+        " --field-selector spec.nodeName=" + node_name +
+        " -o jsonpath='{.items[*].metadata.name}'")
+    if not pod_name:
+        raise Exception('pod name not found')
+    return pod_name
+
+
+def delete_calico_node_pod_for_node(node_name):
+    pod_name = get_calico_node_pod_for_node(node_name)
+    # In this rig, the calico-node DaemonSet is modified so that it only matches nodes
+    # with label 'ctd: f'.  (That stands for "Calico Test Disabled: False".  In other
+    # words, calico-node only runs on nodes where it is *not* disabled.)
+    #
+    # Therefore we can kill the calico-node on a node, and prevent it from restarting, by
+    # changing the 'ctd' label to 't' (for True).
+    kubectl("label --overwrite no %s ctd=t" % node_name)
+    # Note: pod is automatically deleted because node no longer matches 'ctd: f' node selector.
+    _log.info("Deleted calico-node pod on %s (%s)", node_name, pod_name)
+
+
+def restart_calico_node_pod_for_node(node_name):
+    # Change "Calico Test Disabled" label back to False.  Then the calico-node pod is
+    # automatically restarted on this node.
+    kubectl("label --overwrite no %s ctd=f" % node_name)
+    _log.info("Labelled %s to allow calico-node to restart", node_name)
+
+
+def get_early_logs(node_name):
+    return run("docker exec %s podman logs calico-early" % node_name).splitlines()
 
 
 class FailoverTestConfig(object):
@@ -217,7 +256,7 @@ class _FailoverTest(TestBase):
             cmd_prefix="kubectl exec -n dualtor -t " + name + " -- "
             output=subprocess.check_output(cmd_prefix + "ps -a", shell=True, stderr=subprocess.STDOUT)
             if output.find("/reliable-nc 8090") != -1:
-                subprocess.call(cmd_prefix + "killall nc", shell=True, stderr=subprocess.STDOUT)
+                subprocess.call(cmd_prefix + "killall reliable-nc", shell=True, stderr=subprocess.STDOUT)
 
     def routes_all_ecmp(self):
         _log.info("Check routing...")
@@ -259,6 +298,18 @@ class _FailoverTest(TestBase):
                 if new_seq > f.previous_seq and new_seq == self.config.total_packets:
                     flows_still_running -= 1
                 f.previous_seq = new_seq
+
+                if (count % 3) == 0:
+                    # Test shortlived connection.
+                    short_log = Log()
+                    run_with_log("kubectl exec -n dualtor " + f.server_pod + " -- /reliable-nc 8091", short_log)
+                    def short_connection():
+                        run("kubectl exec -n dualtor " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
+                    time.sleep(0.25)
+                    retry_until_success(short_connection, retries=3, wait_time=0.25)
+                    def check_transmission():
+                        assert "hello\n" in short_log.logs, "Did not find 'hello' in server logs: %r" % short_log.logs
+                    retry_until_success(check_transmission, retries=3, wait_time=0.25)
 
             if count == 5:
                 break_func()
@@ -343,6 +394,45 @@ class _FailoverTest(TestBase):
     def test_basic_connection(self):
         self._run_single_test("basic_connection", self.do_nothing, self.do_nothing)
 
+    # Test restarting calico-node for the client pod's node.
+    def test_restart_calico_node_client(self):
+        old_log_count = len(get_early_logs("kind-worker"))
+        self._run_single_test(
+            "restart_calico_node_client",
+            lambda: delete_calico_node_pod_for_node("kind-worker"),
+            lambda: restart_calico_node_pod_for_node("kind-worker"),
+        )
+        self.check_early_container_noticed_restart("kind-worker", old_log_count)
+
+    # Test restarting calico-node for the ra-server pod's node.
+    def test_restart_calico_node_ra_server(self):
+        old_log_count = len(get_early_logs("kind-control-plane"))
+        self._run_single_test(
+            "restart_calico_node_ra_server",
+            lambda: delete_calico_node_pod_for_node("kind-control-plane"),
+            lambda: restart_calico_node_pod_for_node("kind-control-plane"),
+        )
+        self.check_early_container_noticed_restart("kind-control-plane", old_log_count)
+
+    # Test restarting calico-node for the rb-server pod's node.
+    def test_restart_calico_node_rb_server(self):
+        old_log_count = len(get_early_logs("kind-worker3"))
+        self._run_single_test(
+            "restart_calico_node_rb_server",
+            lambda: delete_calico_node_pod_for_node("kind-worker3"),
+            lambda: restart_calico_node_pod_for_node("kind-worker3"),
+        )
+        self.check_early_container_noticed_restart("kind-worker3", old_log_count)
+
+    def check_early_container_noticed_restart(self, node_name, old_log_count):
+        new_logs = get_early_logs(node_name)[old_log_count:]
+        found_stopped = False
+        for new_log in new_logs:
+            if "Normal BGP stopped; wait for graceful restart period" in new_log:
+                found_stopped = True
+                break
+        assert found_stopped
+
 
 # FailoverCluster holds methods to setup/cleanup testing enviroment.
 class FailoverCluster(object):
@@ -403,6 +493,8 @@ class FailoverCluster(object):
         # Create service
         self.create_service("ra-server")
         self.create_service("rb-server")
+        self.create_service("ra-server", "-short", 8091)
+        self.create_service("rb-server", "-short", 8091)
 
         # Check we can now exec into all the pods.
         def check_exec():
@@ -416,14 +508,14 @@ class FailoverCluster(object):
     def cleanup(self):
         kubectl("delete ns dualtor")
 
-    def create_service(self, name):
+    def create_service(self, name, svc_suffix="", port=8090):
         service = client.V1Service(
             metadata=client.V1ObjectMeta(
-                name=name,
-                labels={"name": name},
+                name=name + svc_suffix,
+                labels={"name": name + svc_suffix},
             ),
             spec={
-                "ports": [{"port": 8090}],
+                "ports": [{"port": port}],
                 "selector": {"pod-name": name},
                 "type": "NodePort",
             }
@@ -440,8 +532,8 @@ class TestFailoverPodIP(_FailoverTest):
     def setUp(self):
         super(TestFailoverPodIP, self).setUp()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090"),
-            Flow("client", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090"),
+            Flow("client", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090", get_pod_ip("pod-name", "ra-server"), "8091"),
+            Flow("client", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090", get_pod_ip("pod-name", "rb-server"), "8091"),
         ])
 
 
@@ -450,20 +542,9 @@ class TestFailoverServiceIP(_FailoverTest):
     def setUp(self):
         super(TestFailoverServiceIP, self).setUp()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client", "ra-server", get_service_ip("ra-server"), "8090"),
-            Flow("client", "rb-server", get_service_ip("rb-server"), "8090"),
+            Flow("client", "ra-server", get_service_ip("ra-server"), "8090", get_service_ip("ra-server-short"), "8091"),
+            Flow("client", "rb-server", get_service_ip("rb-server"), "8090", get_service_ip("rb-server-short"), "8091"),
         ])
-
-    def test_z_deploy_daemonset(self):
-        # make it last test case to run.
-        # deploy four pods onto four nodes
-        nodes = ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]
-        for node in nodes:
-            kubectl("run --generator=run-pod/v1 " + node + " -n dualtor --image calico-test/busybox-with-reliable-nc --image-pull-policy Never " +
-                    " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"" + node + "\" } } }'" +
-                    " --command /bin/sleep -- 3600")
-            kubectl("wait --timeout=1m --for=condition=ready" +
-                " pod/" + node + " -n dualtor")
 
 
 class _TestFailoverNodePort(_FailoverTest):
@@ -474,9 +555,19 @@ class _TestFailoverNodePort(_FailoverTest):
         cmd='''docker exec kind-worker2 sh -c "ip a show dev lo | grep global | awk '{print \$2;}' | cut -f1 -d/"'''
         node_port_ip=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).strip()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client", "ra-server", node_port_ip, get_node_port("ra-server")),
-            Flow("client", "rb-server", node_port_ip, get_node_port("rb-server")),
+            Flow("client", "ra-server", node_port_ip, get_node_port("ra-server"), node_port_ip, get_node_port("ra-server-short")),
+            Flow("client", "rb-server", node_port_ip, get_node_port("rb-server"), node_port_ip, get_node_port("rb-server-short")),
         ])
+
+    # Test restarting calico-node on the NodePort node.
+    def test_restart_calico_node_node_port(self):
+        old_log_count = len(get_early_logs("kind-worker2"))
+        self._run_single_test(
+            "restart_calico_node_node_port",
+            lambda: delete_calico_node_pod_for_node("kind-worker2"),
+            lambda: restart_calico_node_pod_for_node("kind-worker2"),
+        )
+        self.check_early_container_noticed_restart("kind-worker2", old_log_count)
 
 
 class TestFailoverHostAccess(_FailoverTest):
@@ -484,8 +575,8 @@ class TestFailoverHostAccess(_FailoverTest):
     def setUp(self):
         super(TestFailoverHostAccess, self).setUp()
         self.config = FailoverTestConfig(2000, 10, [
-            Flow("client-host", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090"),
-            Flow("client-host", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090"),
+            Flow("client-host", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090", get_pod_ip("pod-name", "ra-server"), "8091"),
+            Flow("client-host", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090", get_pod_ip("pod-name", "rb-server"), "8091"),
         ])
 
 

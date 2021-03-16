@@ -198,25 +198,81 @@ nodeLoop:
 
 	// Loop deciding whether to run early BIRD or not.
 	logrus.Info("Early networking set up; now monitoring BIRD")
+	monitorOngoing(thisNode)
+}
+
+func monitorOngoing(thisNode *ConfigNode) {
+	// Channel used to signal when early BIRD is wanted, based on the state of normal BIRD.
+	earlyBirdWantedC := make(chan bool)
+	go monitorNormalBird(earlyBirdWantedC)
+
+	periodicCheckC := time.NewTicker(10 * time.Second).C
+	earlyBirdRunning := true
 	for {
-		if normalBGPRunning() {
-			err = exec.Command("sv", "down", "bird").Run()
-			if err != nil {
-				logrus.WithError(err).Fatal("Failed sv down bird")
+		select {
+		case earlyBirdWanted := <-earlyBirdWantedC:
+			if earlyBirdWanted && !earlyBirdRunning {
+				logrus.Info("Restart early BGP")
+				err := exec.Command("sv", "up", "bird").Run()
+				if err != nil {
+					logrus.WithError(err).Fatal("Failed sv up bird")
+				}
+				earlyBirdRunning = true
+			} else if earlyBirdRunning && !earlyBirdWanted {
+				logrus.Info("Stop early BGP")
+				err := exec.Command("sv", "down", "bird").Run()
+				if err != nil {
+					logrus.WithError(err).Fatal("Failed sv down bird")
+				}
+				earlyBirdRunning = false
 			}
-		} else {
-			err = exec.Command("sv", "up", "bird").Run()
-			if err != nil {
-				logrus.WithError(err).Fatal("Failed sv up bird")
-			}
+		case <-periodicCheckC:
+			// Recheck interface addresses and routes.
+			ensureNodeAddressesAndRoutes(thisNode)
 		}
-
-		// Recheck interface addresses and routes.
-		ensureNodeAddressesAndRoutes(thisNode)
-
-		time.Sleep(10 * time.Second)
 	}
+}
 
+func monitorNormalBird(earlyBirdWantedC chan<- bool) {
+	periodicCheckC := time.NewTicker(10 * time.Second).C
+	var gracefulTimeoutC <-chan time.Time
+	normalBirdRunningRecorded := false
+	for {
+		select {
+		case <-periodicCheckC:
+			nowRunning := normalBGPRunning()
+			if nowRunning {
+				// Normal BIRD is up.
+				if normalBirdRunningRecorded {
+					// Was running, and still is: no change.
+				} else if gracefulTimeoutC != nil {
+					logrus.Info("Normal BGP restarted within graceful restart period")
+					gracefulTimeoutC = nil
+				} else {
+					logrus.Info("Normal BGP has (re)started")
+					earlyBirdWantedC <- false
+				}
+				normalBirdRunningRecorded = true
+			} else {
+				// Normal BIRD is not running.
+				if normalBirdRunningRecorded {
+					logrus.Info("Normal BGP stopped; wait for graceful restart period")
+					gracefulTimeoutC = time.NewTimer(120 * time.Second).C
+				}
+				// Otherwise we already detected and handled that normal BIRD had
+				// stopped.  Either we're now in the graceful restart period - in
+				// which case the next event will be the timer firing when that
+				// expires - or we're past that and normal BIRD has been stopped for
+				// a long time.  Either way, there's no output event that we need to
+				// generate right now.
+				normalBirdRunningRecorded = false
+			}
+		case <-gracefulTimeoutC:
+			logrus.Info("End of graceful restart period for normal BGP")
+			earlyBirdWantedC <- true
+			gracefulTimeoutC = nil
+		}
+	}
 }
 
 func ensureNodeAddressesAndRoutes(thisNode *ConfigNode) {
@@ -321,7 +377,7 @@ func normalBGPRunning() bool {
 	scanner := bufio.NewScanner(connFile)
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "00000000:00B3") {
-			logrus.Info("Normal BGP is running")
+			logrus.Debug("Normal BGP is running")
 			return true
 		}
 	}
@@ -330,6 +386,6 @@ func normalBGPRunning() bool {
 		logrus.WithError(err).Fatal("Failed to read /proc/net/tcp")
 	}
 
-	logrus.Info("Normal BGP is not running")
+	logrus.Debug("Normal BGP is not running")
 	return false
 }
