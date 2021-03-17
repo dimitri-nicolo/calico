@@ -295,7 +295,7 @@ ut: local_build proto
 	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
 
 .PHONY: ci
-ci: clean mod-download build-all static-checks ut
+ci: mod-download build-all static-checks ut
 
 ## Avoid unplanned go.sum updates
 .PHONY: undo-go-sum check-dirty
