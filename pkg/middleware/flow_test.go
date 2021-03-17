@@ -99,12 +99,12 @@ var _ = Describe("FlowLog", func() {
 					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
 					"startDateTime": {"invalid-start-date-time"},
-				}), 400, "failed to parse 'startDateTime' value 'invalid-start-date-time' as RFC3339 datetime"),
+				}), 400, "failed to parse 'startDateTime' value 'invalid-start-date-time' as RFC3339 datetime or relative time"),
 				Entry("when endDateTime is set but not in the RFC3339 format", createFlowLogRequest(map[string][]string{
 					"cluster": {"cluster"}, "srcType": {api.FlowLogEndpointTypeWEP}, "srcNamespace": {"default"},
 					"srcName": {"source"}, "dstType": {api.FlowLogEndpointTypeWEP}, "dstNamespace": {"default"}, "dstName": {"destination"},
 					"endDateTime": {"invalid-end-date-time"},
-				}), 400, "failed to parse 'endDateTime' value 'invalid-end-date-time' as RFC3339 datetime"),
+				}), 400, "failed to parse 'endDateTime' value 'invalid-end-date-time' as RFC3339 datetime or relative time"),
 			)
 
 			DescribeTable("it passed parameter validation",
