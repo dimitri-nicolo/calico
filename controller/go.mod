@@ -4,7 +4,7 @@ go 1.15
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210311183155-746326c47108
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210305163939-5088de0fbab0
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210317223607-cba9dbfc1b24
 	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210316204601-cc35a8041678
 
 	// k8s apiserver upgrade
@@ -47,7 +47,7 @@ require (
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tigera/apiserver v0.0.0-20200602183955-40e8ca4efae0
-	github.com/tigera/licensing v1.0.1-0.20210208225242-c586047f6f54
+	github.com/tigera/licensing v1.0.1-0.20210316204601-cc35a8041678
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
