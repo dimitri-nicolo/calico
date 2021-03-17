@@ -33,10 +33,11 @@ If your deployment is configured to peer with BGP routers outside the cluster, t
 
 {{site.prodname}} implements the Kubernetes **externalTrafficPolicy** using kube-proxy to direct incoming traffic to a correct pod. Advertisement is handled differently based on the service type that you configure for your service.
 
-| **Service type**  | **Cluster IP advertisement**                                 | **Traffic is...**                                            | Source IP address is... |
+| **Service mode**  | **Cluster IP advertisement**                                 | **Traffic is...**                                            | Source IP address is... |
 | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------------- |
 | Cluster (default) | All nodes in the cluster statically advertise a route to the service CIDR. | Load balanced across nodes in the cluster using ECMP, then forwarded to appropriate pod in the service using SNAT. May incur second hop to another node, but good overall load balancing. | Obscured by SNAT        |
 | Local             | The nodes with a pod backing the service advertise a specific route (/32 or /128) to the service's IP. | Load balanced across nodes with endpoints for the service.  Avoids second hop for LoadBalancer and NodePort type services, traffic may be unevenly load balanced. (Other traffic is load balanced across nodes in the cluster.) | Preserved               |
+
 
 If your {{site.prodname}} deployment is configured to peer with BGP routers outside the cluster, those routers - plus any further upstream places that those routers propagate to - will be able to send traffic to a Kubernetes service cluster IP, and that traffic is routed to one of the available endpoints for that service.
 
@@ -49,10 +50,23 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 
 ### Before you begin...
 
-- [Configure BGP peering]({{ site.baseurl }}/networking/bgp) between {{site.prodname}} and your network infrastructure
+**Required**
+- [Configure BGP peering]({{site.baseurl}}/networking/bgp) between {{site.prodname}} and your network infrastructure
 - For ECMP load balancing to services, the upstream routers must be configured to use BGP multipath.
 - You need at least one external node outside the cluster that acts as a router, route reflector, or ToR that is peered with calico nodes inside the cluster.
-- Services must be configured with the correct service type (“Cluster” or “Local”) for your implementation. For `externalTrafficPolicy: Local`, the service must be type `LoadBalancer` or `NodePort`.
+- Services must be configured with the correct service mode (“Cluster” or “Local”) for your implementation. For `externalTrafficPolicy: Local`, the service must be type `LoadBalancer` or `NodePort`.
+
+**Limitations**
+- OpenShift, versions 4.5 and 4.6  
+    There is a {% include open-new-window.html text='bug' url='https://github.com/kubernetes/kubernetes/issues/91374' %} where the source IP is not preserved by NodePort service with externalTrafficPolicy:Local or by ClusterIP service, and when using a LoadBalancer service. To work around this, you can upgrade to **OpenShift 4.7** (where bug is fixed), or use this {% include open-new-window.html text='workaround to avoid SNAT with ExternalIP' url='https://docs.openshift.com/container-platform/4.7/nodes/clusters/nodes-cluster-enabling-features.html' %}:
+
+  ```
+   oc edit featuregates.config.openshift.io cluster
+   spec:
+     customNoUpgrade:
+       enabled:
+       - ExternalPolicyForExternalIP
+  ```     
 
 ### How to
 
