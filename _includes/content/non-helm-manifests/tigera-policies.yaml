@@ -942,8 +942,8 @@ spec:
     - action: Allow
       protocol: TCP
       destination:
-        # This rule is intended to allow egress between dex and your identity provider.
-        ports: [443, 6443]
+        # This rule is intended to allow egress between dex and your identity provider. Modify it if your server runs on a non-standard port.
+        ports: [443, 6443, 389, 636]
         # This subnet is added to represent the address(es) where your identity provider is running. If you make this subnet
         # more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
         nets: ['0.0.0.0/0']
