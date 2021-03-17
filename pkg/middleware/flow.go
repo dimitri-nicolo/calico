@@ -44,6 +44,7 @@ type flowRequestParams struct {
 	srcLabels []LabelSelector
 	dstLabels []LabelSelector
 
+	// The format is either RFC3339 or a relative time like now-15m, now-1h.
 	startDateTime *time.Time
 	endDateTime   *time.Time
 }
@@ -58,6 +59,7 @@ func (req flowRequestParams) clusterIndex() string {
 // Any error returned is of a format and contains information that can be returned in the response body. Any errors that
 // are not to be returned in the response are logged as an error.
 func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) {
+	var err error
 	query := req.URL.Query()
 
 	requiredParams := []string{"srcType", "srcName", "dstType", "dstName", "srcNamespace", "dstNamespace"}
@@ -88,23 +90,19 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 	}
 
 	if dateTimeStr := query.Get("startDateTime"); len(dateTimeStr) > 0 {
-		dateTime, err := time.Parse(time.RFC3339, dateTimeStr)
+		flowParams.startDateTime, _, err = ParseElasticsearchTime(time.Now(), &dateTimeStr)
 		if err != nil {
-			errMsg := fmt.Sprintf("failed to parse 'startDateTime' value '%s' as RFC3339 datetime", dateTimeStr)
+			errMsg := fmt.Sprintf("failed to parse 'startDateTime' value '%s' as RFC3339 datetime or relative time", dateTimeStr)
 			return nil, fmt.Errorf(errMsg)
 		}
-
-		flowParams.startDateTime = &dateTime
 	}
 
 	if dateTimeStr := query.Get("endDateTime"); len(dateTimeStr) > 0 {
-		dateTime, err := time.Parse(time.RFC3339, dateTimeStr)
+		flowParams.endDateTime, _, err = ParseElasticsearchTime(time.Now(), &dateTimeStr)
 		if err != nil {
-			errMsg := fmt.Sprintf("failed to parse 'endDateTime' value '%s' as RFC3339 datetime", dateTimeStr)
+			errMsg := fmt.Sprintf("failed to parse 'endDateTime' value '%s' as RFC3339 datetime or relative time", dateTimeStr)
 			return nil, fmt.Errorf(errMsg)
 		}
-
-		flowParams.endDateTime = &dateTime
 	}
 
 	if labels, exists := query["srcLabels"]; exists {
