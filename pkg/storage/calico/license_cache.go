@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	licClient "github.com/tigera/licensing/client"
-	features "github.com/tigera/licensing/client/features"
 	"k8s.io/klog"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -14,7 +13,7 @@ import (
 
 // LicenseCache stores LicenseKeys and validates API restrictions
 type LicenseCache interface {
-	IsAPIRestricted(gvk string, obj resourceObject) bool
+	FetchRegisteredFeatures() []string
 	Store(licenseKey libcalicoapi.LicenseKey) bool
 	Clear()
 }
@@ -34,40 +33,6 @@ func NewLicenseCache() LicenseCache {
 
 func newLicenseCache(claims *licClient.LicenseClaims) LicenseCache {
 	return &licenseCache{claims: claims}
-}
-
-// IsAPIRestricted determines whether a projectcalico API can be used without
-// any restrictions based on the license package.
-// APIs that are available for open source will not be restricted
-// EgressAccessControl feature will limit the creation of NetworkPolicy, GlobalNetworkPolicy,
-// StagedNetworkPolicy, StagedGlobalNetworkPolicy, GlobalNetworkSets that have defined a DNS domain
-// License Package (CloudCommunity,CloudStarter, CloudPro, Enterprise) will restrict
-// access to APIs as per license package definition
-func (lc *licenseCache) IsAPIRestricted(gvk string, obj resourceObject) bool {
-	lc.mu.RLock()
-	defer lc.mu.RUnlock()
-
-	if len(gvk) == 0 {
-		klog.Warningf("Group/Version/Kind is not defined. Resource cannot be identified.")
-		return false
-	}
-
-	if lc.claims != nil && obj != nil {
-		if !lc.claims.ValidateFeature(features.EgressAccessControl) && hasDNSDomains(gvk, obj) {
-			return true
-		}
-	}
-
-	if licClient.IsOpenSourceAPI(gvk) {
-		return false
-	}
-
-	if lc.claims == nil {
-		klog.Warningf("LicenseCache has not been initialised with a valid license.")
-		return true
-	}
-
-	return !lc.claims.ValidateAPIUsage(gvk)
 }
 
 // Store will store the claims extracted from a LicenseKey.
@@ -93,7 +58,21 @@ func (lc *licenseCache) Clear() {
 	lc.claims = nil
 }
 
-func hasDNSDomains(gvk string, lcObj resourceObject) bool {
+// FetchRegisteredFeatures returns the features registered
+func (lc *licenseCache) FetchRegisteredFeatures() []string {
+	lc.mu.Lock()
+	defer lc.mu.Unlock()
+
+	if lc.claims == nil {
+		klog.Error("LicenseCache has not been initialised with a valid license.")
+		return []string{}
+	}
+
+	return lc.claims.Features
+}
+
+// HasDNSDomains will check an object to see if a DNS domain defined
+func HasDNSDomains(gvk string, lcObj resourceObject) bool {
 	switch gvk {
 	case libcalicoapi.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String():
 		policy := *lcObj.(*libcalicoapi.NetworkPolicy)

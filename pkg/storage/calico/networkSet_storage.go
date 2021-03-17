@@ -49,6 +49,9 @@ func NewNetworkSetStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		olo := opts.(options.ListOptions)
 		return c.NetworkSets().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +71,7 @@ func NewNetworkSetStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		resourceName:      "NetworkSet",
 		converter:         NetworkSetConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

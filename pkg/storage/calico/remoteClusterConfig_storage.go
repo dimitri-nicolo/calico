@@ -49,6 +49,9 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		olo := opts.(options.ListOptions)
 		return c.RemoteClusterConfigurations().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +71,7 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		resourceName:      "RemoteClusterConfiguration",
 		converter:         RemoteClusterConfigurationConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

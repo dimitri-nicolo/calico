@@ -49,6 +49,10 @@ func NewKubeControllersConfigurationStorage(opts Options) (registry.DryRunnableS
 		olo := opts.(options.ListOptions)
 		return c.KubeControllersConfiguration().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
+
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +72,7 @@ func NewKubeControllersConfigurationStorage(opts Options) (registry.DryRunnableS
 		resourceName:      "KubeControllersConfiguration",
 		converter:         KubeControllersConfigurationConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

@@ -54,25 +54,28 @@ type clientObjectOperator func(context.Context, clientv3.Interface, resourceObje
 type clientNameOperator func(context.Context, clientv3.Interface, string, string, clientOpts) (resourceObject, error)
 type clientLister func(context.Context, clientv3.Interface, clientOpts) (resourceListObject, error)
 type clientWatcher func(context.Context, clientv3.Interface, clientOpts) (calicowatch.Interface, error)
+type clientLicenseCheck func(obj resourceObject, licensedFeatures []string) bool
 
 type resourceStore struct {
-	client            clientv3.Interface
-	codec             runtime.Codec
-	versioner         storage.Versioner
-	aapiType          reflect.Type
-	aapiListType      reflect.Type
-	libCalicoType     reflect.Type
-	libCalicoListType reflect.Type
-	isNamespaced      bool
-	create            clientObjectOperator
-	update            clientObjectOperator
-	get               clientNameOperator
-	delete            clientNameOperator
-	list              clientLister
-	watch             clientWatcher
-	resourceName      string
-	converter         resourceConverter
-	licenseCache      LicenseCache
+	client             clientv3.Interface
+	codec              runtime.Codec
+	versioner          storage.Versioner
+	aapiType           reflect.Type
+	aapiListType       reflect.Type
+	libCalicoType      reflect.Type
+	libCalicoListType  reflect.Type
+	isNamespaced       bool
+	create             clientObjectOperator
+	update             clientObjectOperator
+	get                clientNameOperator
+	delete             clientNameOperator
+	list               clientLister
+	watch              clientWatcher
+	hasRestrictions    clientLicenseCheck
+	resourceName       string
+	converter          resourceConverter
+	licenseCache       LicenseCache
+	registeredFeatures []string
 }
 
 func CreateClientFromConfig() clientv3.Interface {
@@ -126,11 +129,12 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	lcObj := rs.converter.convertToLibcalico(obj)
 
 	var gvk = lcObj.GetObjectKind().GroupVersionKind().String()
-	if rs.licenseCache.IsAPIRestricted(gvk, lcObj) {
+	var features = rs.licenseCache.FetchRegisteredFeatures()
+	if rs.hasRestrictions(lcObj, features) == true {
 		return aapierrors.NewForbidden(
 			schema.GroupResource{Group: calico.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
 			key,
-			fmt.Errorf("our license does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"))
+			fmt.Errorf("License does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"))
 	}
 
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}

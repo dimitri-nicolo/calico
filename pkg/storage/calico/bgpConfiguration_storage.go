@@ -49,6 +49,9 @@ func NewBGPConfigurationStorage(opts Options) (registry.DryRunnableStorage, fact
 		olo := opts.(options.ListOptions)
 		return c.BGPConfigurations().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -64,6 +67,7 @@ func NewBGPConfigurationStorage(opts Options) (registry.DryRunnableStorage, fact
 		delete:            deleteFn,
 		list:              listFn,
 		watch:             watchFn,
+		hasRestrictions:   hasRestrictionsFn,
 		resourceName:      "BGPConfiguration",
 		converter:         BGPConfigurationConverter{},
 		licenseCache:      opts.LicenseCache,

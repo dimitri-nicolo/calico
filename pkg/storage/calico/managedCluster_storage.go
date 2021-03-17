@@ -12,6 +12,7 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/apiserver/pkg/helpers"
+	"github.com/tigera/licensing/client/features"
 
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -101,6 +102,16 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		olo := opts.(options.ListOptions)
 		return c.ManagedClusters().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		for _, k := range licensedFeatures {
+			if k == features.MultiClusterManagement || k == features.All {
+				return false
+			}
+		}
+
+		return true
+	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -119,6 +130,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		resourceName:      "ManagedCluster",
 		converter:         ManagedClusterConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

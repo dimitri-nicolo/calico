@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -49,6 +50,15 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 		olo := opts.(options.ListOptions)
 		return c.PacketCaptures().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		for _, k := range licensedFeatures {
+			if k == features.PacketCapture || k == features.All {
+				return false
+			}
+		}
+
+		return true
+	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +78,7 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 		resourceName:      "PacketCapture",
 		converter:         PacketCaptureConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

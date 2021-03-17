@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/licensing/client/features"
 )
 
 // NewGlobalReportStorage creates a new libcalico-based storage.Interface implementation for GlobalReports
@@ -49,6 +50,15 @@ func NewGlobalReportStorage(opts Options) (registry.DryRunnableStorage, factory.
 		olo := opts.(options.ListOptions)
 		return c.GlobalReports().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		for _, k := range licensedFeatures {
+			if k == features.ComplianceReports || k == features.All {
+				return false
+			}
+		}
+
+		return true
+	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +78,7 @@ func NewGlobalReportStorage(opts Options) (registry.DryRunnableStorage, factory.
 		resourceName:      "GlobalReport",
 		converter:         GlobalReportConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

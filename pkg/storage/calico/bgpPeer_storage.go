@@ -49,6 +49,9 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		olo := opts.(options.ListOptions)
 		return c.BGPPeers().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -64,6 +67,7 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		delete:            deleteFn,
 		list:              listFn,
 		watch:             watchFn,
+		hasRestrictions:   hasRestrictionsFn,
 		resourceName:      "BGPPeer",
 		converter:         BGPPeerConverter{},
 		licenseCache:      opts.LicenseCache,

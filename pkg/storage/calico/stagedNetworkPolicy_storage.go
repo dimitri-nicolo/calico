@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -73,6 +74,22 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		olo := opts.(options.ListOptions)
 		return c.StagedNetworkPolicies().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		var hasFeatures bool
+		for _, k := range licensedFeatures {
+			if k == features.EgressAccessControl || k == features.All {
+				hasFeatures = true
+			}
+		}
+
+		if !hasFeatures && HasDNSDomains(obj.GetObjectKind().GroupVersionKind().String(), obj) {
+			return true
+		}
+
+		return false
+
+	}
+
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -92,6 +109,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		resourceName:      "StagedNetworkPolicy",
 		converter:         StagedNetworkPolicyConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

@@ -49,6 +49,9 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 		olo := opts.(options.ListOptions)
 		return c.HostEndpoints().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +71,7 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 		resourceName:      "HostEndpoint",
 		converter:         HostEndpointConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

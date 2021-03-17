@@ -49,6 +49,10 @@ func NewIPPoolStorage(opts Options) (registry.DryRunnableStorage, factory.Destro
 		olo := opts.(options.ListOptions)
 		return c.IPPools().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -67,6 +71,7 @@ func NewIPPoolStorage(opts Options) (registry.DryRunnableStorage, factory.Destro
 		resourceName:      "IPPool",
 		converter:         IPPoolConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

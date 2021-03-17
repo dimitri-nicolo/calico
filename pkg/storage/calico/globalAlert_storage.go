@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	features "github.com/tigera/licensing/client/features"
 )
 
 // NewGlobalAlertStorage creates a new libcalico-based storage.Interface implementation for GlobalAlerts
@@ -50,6 +51,15 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		olo := opts.(options.ListOptions)
 		return c.GlobalAlerts().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		for _, k := range licensedFeatures {
+			if k == features.AlertManagement || k == features.All {
+				return false
+			}
+		}
+
+		return true
+	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -69,6 +79,7 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		resourceName:      "GlobalAlert",
 		converter:         GlobalAlertConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

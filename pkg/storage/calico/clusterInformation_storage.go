@@ -49,6 +49,9 @@ func NewClusterInformationStorage(opts Options) (registry.DryRunnableStorage, fa
 		olo := opts.(options.ListOptions)
 		return c.ClusterInformation().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -67,6 +70,7 @@ func NewClusterInformationStorage(opts Options) (registry.DryRunnableStorage, fa
 		resourceName:      "ClusterInformation",
 		converter:         ClusterInformationConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

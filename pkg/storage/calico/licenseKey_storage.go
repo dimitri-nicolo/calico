@@ -53,6 +53,10 @@ func NewLicenseKeyStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		olo := opts.(options.ListOptions)
 		return c.LicenseKey().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -71,6 +75,7 @@ func NewLicenseKeyStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		resourceName:      "LicenseKey",
 		converter:         LicenseKeyConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

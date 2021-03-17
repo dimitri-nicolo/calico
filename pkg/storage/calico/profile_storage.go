@@ -49,6 +49,9 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		olo := opts.(options.ListOptions)
 		return c.Profiles().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		return false
+	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +71,7 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		resourceName:      "Profile",
 		converter:         ProfileConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

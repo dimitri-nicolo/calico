@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/licensing/client/features"
 )
 
 // NewGlobalThreatFeedStorage creates a new libcalico-based storage.Interface implementation for GlobalThreatFeeds
@@ -49,6 +50,15 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 		olo := opts.(options.ListOptions)
 		return c.GlobalThreatFeeds().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+		for _, k := range licensedFeatures {
+			if k == features.ThreatDefense || k == features.All {
+				return false
+			}
+		}
+
+		return true
+	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
@@ -68,6 +78,7 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 		resourceName:      "GlobalThreatFeed",
 		converter:         GlobalThreatFeedConverter{},
 		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

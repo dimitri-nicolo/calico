@@ -360,6 +360,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   `pkg/storage/calico/licenseKey_storage.go` as a model for your work - this is
   basically a copy/paste and then update the resource type declarations.
 
+* Define how the API is going to be used by defining its behaviour is `hasRestrictionsFn()`
+If an API is restricted by a license, you need to see if the feature is defined in the [licensing library](https://github.com/tigera/licensing/blob/master/client/features/features.go)
+A sample of implementing restrictions can be found at `pkg/storage/calico/globalReport_storage.go`
+
+
 * Add your factory function to `NewStorage()` function in
   `pkg/storage/calico/storage_interface.go`. For example:
 

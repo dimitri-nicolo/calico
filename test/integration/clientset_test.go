@@ -47,7 +47,6 @@ import (
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/apiserver/pkg/apiserver"
 	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/apiserver/pkg/helpers"
 	"github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/tigera/apiserver/pkg/registry/projectcalico/authorizationreview"
 	licFeatures "github.com/tigera/licensing/client/features"
@@ -460,6 +459,11 @@ func testTierClient(client calicoclient.Interface, name string) error {
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
 	ctx := context.Background()
+
+	err := createEnterprise(client, ctx)
+	if err == nil {
+		return fmt.Errorf("Could not create a license")
+	}
 
 	// start from scratch
 	tiers, err := tierClient.List(ctx, metav1.ListOptions{})
@@ -941,8 +945,8 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("License Package Type does not match")
 	}
 
-	if !reflect.DeepEqual(lic.Status.Features, helpers.SortedKeys(licFeatures.EnterpriseFeatures)) {
-		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, helpers.SortedKeys(licFeatures.EnterpriseFeatures))
+	if !reflect.DeepEqual(lic.Status.Features, sortedKeys(map[string]bool{"cnx": true, "all": true})) {
+		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, sortedKeys(map[string]bool{"cnx": true, "all": true}))
 		return fmt.Errorf("License features do not match")
 	}
 
@@ -959,13 +963,13 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return err
 	}
 	//Check for Maxiumum nodes
-	if lic.Status.MaxNodes != 100 {
+	if lic.Status.MaxNodes != 500 {
 		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
 	//Check for Certificate Expiry date
-	if lic.Status.Expiry.Time.String() != "2021-12-31 23:59:59 +0000 UTC" {
+	if lic.Status.Expiry.Time.String() != "2022-03-15 16:05:51 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
@@ -975,8 +979,8 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("License Package Type does not match")
 	}
 
-	if !reflect.DeepEqual(lic.Status.Features, helpers.SortedKeys(licFeatures.CloudProFeatures)) {
-		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, helpers.SortedKeys(licFeatures.CloudProFeatures))
+	if !reflect.DeepEqual(lic.Status.Features, sortedKeys(licFeatures.CloudProFeatures)) {
+		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, sortedKeys(licFeatures.CloudProFeatures))
 		return fmt.Errorf("License features do not match")
 	}
 
@@ -2992,6 +2996,11 @@ func TestPacketCaptureClient(t *testing.T) {
 
 func testPacketCapturesClient(client calicoclient.Interface, name string) error {
 	ctx := context.Background()
+	err := createEnterprise(client, ctx)
+	if err == nil {
+		return fmt.Errorf("Could not create a license")
+	}
+
 	ns := "default"
 	packetCaptureClient := client.ProjectcalicoV3().PacketCaptures(ns)
 	packetCapture := &v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Name: name}}
