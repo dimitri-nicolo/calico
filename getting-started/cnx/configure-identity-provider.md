@@ -263,6 +263,11 @@ For basic users with view-only permissions, apply this role.
   kubectl create clusterrolebinding <user>-tigera-ui-user --user=<user> --clusterrole=tigera-ui-user
   ```
 
+Or use the groups flag to assign cluster role to a group of users.
+  ```bash
+  kubectl create clusterrolebinding all-developers-tigera-ui-user --groups=<group> --clusterrole=tigera-ui-user
+  ```
+
 #### (Optional) Allow {{site.prodname}} URIs in your IdP
 
 Most IdPs require redirect URIs to be allowed to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. Consult your IdP documentation for authorizing your domain for the respective origins and destinations.

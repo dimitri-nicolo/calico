@@ -807,6 +807,21 @@ spec:
       selector: k8s-app == "kube-dns"
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule in this policy allows tigera-intrusion-detection to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
   # Pass to subsequent tiers for further enforcement
   - action: Pass
 
@@ -927,8 +942,8 @@ spec:
     - action: Allow
       protocol: TCP
       destination:
-        # This rule is intended to allow egress between dex and your identity provider.
-        ports: [443, 6443]
+        # This rule is intended to allow egress between dex and your identity provider. Modify it if your server runs on a non-standard port.
+        ports: [443, 6443, 389, 636]
         # This subnet is added to represent the address(es) where your identity provider is running. If you make this subnet
         # more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
         nets: ['0.0.0.0/0']

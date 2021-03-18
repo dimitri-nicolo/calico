@@ -5,10 +5,10 @@
 - Linux kernel 3.10 or later with [required dependencies](#kernel-dependencies).
   The following distributions have the required kernel, its dependencies, and are
   known to work well with {{site.prodname}} and {{include.orch}}.{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
-  - CentOS 7
+  - CentOS 8
   - Ubuntu 18.04 and 20.04
-  - RHEL 7
-  - Debian 9
+  - RHEL 8
+  - Debian 10
   {% endif %}{% if include.orch == "OpenShift" %}
   - Red Hat Enterprise Linux CoreOS
   {% endif %}{% if include.orch == "OpenStack" %}
