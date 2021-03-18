@@ -3,6 +3,8 @@ apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: allow-tigera
+  labels:
+    projectcalico.org/system-tier: "true"
 spec:
   order: 100
 

@@ -60,7 +60,7 @@ Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Window
     - Kubernetes version 1.20+
     
 **Linux control node requirements**
-- Installed with {{site.prodname}} v3.3+
+- Installed with {{site.prodname}} v3.5+
 - If {{site.prodname}} networking is being used:
     - Networking must be VXLAN or BGP without encapsulation. (Note: for EKS, networking is set to none since AWS VPC networking is used.)
     - Strict affinity must be set to `true`
