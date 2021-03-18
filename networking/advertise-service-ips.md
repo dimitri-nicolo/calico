@@ -57,16 +57,22 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 - Services must be configured with the correct service mode (“Cluster” or “Local”) for your implementation. For `externalTrafficPolicy: Local`, the service must be type `LoadBalancer` or `NodePort`.
 
 **Limitations**
-- OpenShift, versions 4.5 and 4.6  
-    There is a {% include open-new-window.html text='bug' url='https://github.com/kubernetes/kubernetes/issues/91374' %} where the source IP is not preserved by NodePort service with externalTrafficPolicy:Local or by ClusterIP service, and when using a LoadBalancer service. To work around this, you can upgrade to **OpenShift 4.7** (where bug is fixed), or use this {% include open-new-window.html text='workaround to avoid SNAT with ExternalIP' url='https://docs.openshift.com/container-platform/4.7/nodes/clusters/nodes-cluster-enabling-features.html' %}:
 
-  ```
-   oc edit featuregates.config.openshift.io cluster
-   spec:
-     customNoUpgrade:
-       enabled:
-       - ExternalPolicyForExternalIP
-  ```     
+- OpenShift, versions 4.5 and 4.6  
+    There is a {% include open-new-window.html text='bug' url='https://github.com/kubernetes/kubernetes/issues/91374' %} where the source IP is not preserved by NodePort services or traffic via a Service ExternalIP with externalTrafficPolicy:Local.   
+    
+   OpenShift users on v4.5 or v4.6 can use this {% include open-new-window.html text='workaround to avoid SNAT with ExternalIP' url='https://docs.openshift.com/container-platform/4.7/nodes/clusters/nodes-cluster-enabling-features.html' %}:
+
+   ```
+     oc edit featuregates.config.openshift.io cluster
+      spec:
+        customNoUpgrade:
+          enabled:
+          - ExternalPolicyForExternalIP
+   ```
+   Kubernetes users on version v1.18 or v1.19 can enable source IP preservation for NodePort services using the ExternalPolicyForExternalIP feature gate. 
+
+   Source IP preservation for NodePort and services and ExternalIPs is enabled by default in OpenShift v4.7+, and Kubernetes v1.20+. 
 
 ### How to
 
@@ -77,7 +83,7 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 
 #### Advertise service cluster IP addresses
 
-1. Determine the service cluster IP range.  (Or ranges, if your cluster is [dual stack]({{ site.baseurl }}/networking/ipv6).)
+1. Determine the service cluster IP range.  (Or ranges, if your cluster is [dual stack]({{site.baseurl}}/networking/ipv6).)
 
    The range(s) for your cluster can be inferred from the `--service-cluster-ip-range` option passed to the Kubernetes API server. For help, see the {% include open-new-window.html text='Kubernetes API server reference guide' url='https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/' %}.
 
@@ -114,7 +120,7 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
     EOF
    ```
 
-   For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).
+   For help see, [BGP configuration resource]({{site.baseurl}}/reference/resources/bgpconfig).
 
 > **Note**: In earlier versions of {{site.prodname}}, and for IPv4 only, service cluster IP advertisement was configured via the environment variable CALICO_ADVERTISE_CLUSTER_IPS.
 > That environment variable takes precedence over any serviceClusterIPs configured in the default BGPConfiguration. We recommend replacing the
@@ -171,7 +177,7 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
    EOF
    ```
 
-   For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).
+   For help see, [BGP configuration resource]({{site.baseurl}}/reference/resources/bgpconfig).
 
 1. When configuring a Kubernetes service that you want to be reachable via an external IP, specify that external IP in the service's `externalIPs` field.
 
@@ -211,7 +217,7 @@ The following steps will configure {{site.prodname}} to advertise Service `statu
    EOF
    ```
 
-   For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).
+   For help see, [BGP configuration resource]({{site.baseurl}}/reference/resources/bgpconfig).
 
 Service LoadBalancer address allocation is outside the current scope of {{site.prodname}}, but can be implemented with an external controller.
 You can build your own, or use a third-party implementation like the MetalLB project.
@@ -261,5 +267,5 @@ For a tutorial on how service advertisement works with {{site.prodname}}, see th
 
 Other topics on creating network policy for Kubernetes services:
 
-- [Apply policy to services exposed externally as cluster IPs]({{ site.baseurl }}/security/services-cluster-ips)
-- [Apply policy to Kubernetes node ports]({{ site.baseurl }}/security/kubernetes-node-ports)
+- [Apply policy to services exposed externally as cluster IPs]({{site.baseurl}}/security/services-cluster-ips)
+- [Apply policy to Kubernetes node ports]({{site.baseurl}}/security/kubernetes-node-ports)
