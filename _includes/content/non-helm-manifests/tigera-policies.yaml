@@ -1077,6 +1077,12 @@ spec:
       selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
       ports: [9200]
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: k8s-app == 'tigera-manager'
+      namespaceSelector: projectcalico.org/name == 'tigera-manager'
+      ports: [9443]
 
 ---
 
