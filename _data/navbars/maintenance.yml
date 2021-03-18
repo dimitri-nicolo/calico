@@ -96,7 +96,9 @@ section:
     - title: License metrics
       path: /maintenance/monitor/license-agent
     - title: Policy metrics 
-      path: /maintenance/monitor/metrics    
+      path: /maintenance/monitor/metrics
+    - title: Monitor Elasticsearch and Fluentd Metrics
+      path: /maintenance/monitor/elasticsearch-and-fluentd-metrics
 - title: Performance and scaling
   path: /maintenance/performance/
   section:
