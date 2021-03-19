@@ -112,6 +112,8 @@ func (m *InterfaceMonitor) MonitorInterfaces() {
 			if nlCancelC, err = m.netlinkStub.Subscribe(updates, routeUpdates); err != nil {
 				// If we can't even subscribe, something must have gone very wrong.  Bail.
 				m.fatalErrCallback(fmt.Errorf("failed to subscribe to netlink: %w", err))
+				filterUpdatesCancel()
+				return
 			}
 			go FilterUpdates(filterUpdatesCtx, filteredRouteUpdates, routeUpdates, filteredUpdates, updates)
 		}
@@ -123,6 +125,8 @@ func (m *InterfaceMonitor) MonitorInterfaces() {
 		err := m.resync()
 		if err != nil {
 			m.fatalErrCallback(fmt.Errorf("failed to read from netlink (initial resync): %w", err))
+			filterUpdatesCancel()
+			return
 		}
 
 	readLoop:
@@ -152,6 +156,9 @@ func (m *InterfaceMonitor) MonitorInterfaces() {
 				err := m.resync()
 				if err != nil {
 					m.fatalErrCallback(fmt.Errorf("failed to read from netlink (resync): %w", err))
+					close(nlCancelC)
+					filterUpdatesCancel()
+					return
 				}
 			}
 		}

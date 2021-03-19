@@ -439,14 +439,16 @@ configRetry:
 	failureReportChan := make(chan string)
 	configChangedRestartCallback := func() {
 		failureReportChan <- reasonConfigChanged
-		time.Sleep(gracefulShutdownTimeout)
-		log.Panic("Graceful shutdown took too long")
+		// It's important that we return here (rather than blocking until Felix exits).  That's because
+		// some components need to shut down gracefully (e.g. the DNS cache) and we could deadlock
+		// if we're being called from a place that interacts with those.
 	}
 	fatalErrorCallback := func(err error) {
 		log.WithError(err).Error("Shutting down due to fatal error")
 		failureReportChan <- reasonFatalError
-		time.Sleep(gracefulShutdownTimeout)
-		log.Panic("Graceful shutdown took too long")
+		// It's important that we return here (rather than blocking until Felix exits).  That's because
+		// some components need to shut down gracefully (e.g. the DNS cache) and we could deadlock
+		// if we're being called from a place that interacts with those.
 	}
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
