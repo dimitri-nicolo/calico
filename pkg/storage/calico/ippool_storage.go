@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -49,7 +50,7 @@ func NewIPPoolStorage(opts Options) (registry.DryRunnableStorage, factory.Destro
 		olo := opts.(options.ListOptions)
 		return c.IPPools().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
 		return false
 	}
 

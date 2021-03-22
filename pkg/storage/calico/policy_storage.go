@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -74,15 +75,8 @@ func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory
 		olo := opts.(options.ListOptions)
 		return c.NetworkPolicies().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
-		var hasFeatures bool
-		for _, k := range licensedFeatures {
-			if k == features.EgressAccessControl || k == features.All {
-				hasFeatures = true
-			}
-		}
-
-		if !hasFeatures && HasDNSDomains(obj.GetObjectKind().GroupVersionKind().String(), obj) {
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+		if !claims.ValidateFeature(features.EgressAccessControl) && HasDNSDomains(obj.GetObjectKind().GroupVersionKind().String(), obj) {
 			return true
 		}
 

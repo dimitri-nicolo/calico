@@ -13,7 +13,7 @@ import (
 
 // LicenseCache stores LicenseKeys and validates API restrictions
 type LicenseCache interface {
-	FetchRegisteredFeatures() []string
+	FetchRegisteredFeatures() *licClient.LicenseClaims
 	Store(licenseKey libcalicoapi.LicenseKey) bool
 	Clear()
 }
@@ -59,16 +59,11 @@ func (lc *licenseCache) Clear() {
 }
 
 // FetchRegisteredFeatures returns the features registered
-func (lc *licenseCache) FetchRegisteredFeatures() []string {
+func (lc *licenseCache) FetchRegisteredFeatures() *licClient.LicenseClaims {
 	lc.mu.Lock()
 	defer lc.mu.Unlock()
 
-	if lc.claims == nil {
-		klog.Error("LicenseCache has not been initialised with a valid license.")
-		return []string{}
-	}
-
-	return lc.claims.Features
+	return lc.claims
 }
 
 // HasDNSDomains will check an object to see if a DNS domain defined

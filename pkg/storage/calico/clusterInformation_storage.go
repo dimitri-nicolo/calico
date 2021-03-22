@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 )
 
 // NewClusterInformationStorage creates a new libcalico-based storage.Interface implementation for ClusterInformation
@@ -49,7 +50,7 @@ func NewClusterInformationStorage(opts Options) (registry.DryRunnableStorage, fa
 		olo := opts.(options.ListOptions)
 		return c.ClusterInformation().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
 		return false
 	}
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

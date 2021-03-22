@@ -31,6 +31,7 @@ import (
 	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
 
 	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 )
 
 type resourceObject interface {
@@ -54,7 +55,7 @@ type clientObjectOperator func(context.Context, clientv3.Interface, resourceObje
 type clientNameOperator func(context.Context, clientv3.Interface, string, string, clientOpts) (resourceObject, error)
 type clientLister func(context.Context, clientv3.Interface, clientOpts) (resourceListObject, error)
 type clientWatcher func(context.Context, clientv3.Interface, clientOpts) (calicowatch.Interface, error)
-type clientLicenseCheck func(obj resourceObject, licensedFeatures []string) bool
+type clientLicenseCheck func(obj resourceObject, claims *licClient.LicenseClaims) bool
 
 type resourceStore struct {
 	client             clientv3.Interface

@@ -53,7 +53,7 @@ func NewLicenseKeyStorage(opts Options) (registry.DryRunnableStorage, factory.De
 		olo := opts.(options.ListOptions)
 		return c.LicenseKey().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
 		return false
 	}
 

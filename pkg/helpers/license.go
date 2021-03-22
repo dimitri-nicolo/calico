@@ -13,24 +13,22 @@ import (
 // ConvertToPackageType converts the features array extracted from a license
 // to a LicensePackageType
 func ConvertToPackageType(features []string) libcalicoapi.LicensePackageType {
-	var featuresNames = strings.Join(features, "|")
-	if strings.Contains(featuresNames, licFeatures.CloudCommunity) {
+	if len(features) < 2 {
+		return ""
+	}
+
+	switch strings.Join(features[0:2], "|") {
+	case licFeatures.CloudCommunity:
 		return libcalicoapi.CloudCommunity
-	}
-
-	if strings.Contains(featuresNames, licFeatures.CloudStarter) {
+	case licFeatures.CloudStarter:
 		return libcalicoapi.CloudStarter
-	}
-
-	if strings.Contains(featuresNames, licFeatures.CloudPro) {
+	case licFeatures.CloudPro:
 		return libcalicoapi.CloudPro
-	}
-
-	if strings.Contains(featuresNames, licFeatures.Enterprise) {
+	case licFeatures.Enterprise:
 		return libcalicoapi.Enterprise
+	default:
+		return ""
 	}
-
-	return ""
 }
 
 // ExpandFeatureNames expands the license package to the individual

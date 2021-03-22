@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -50,14 +51,8 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 		olo := opts.(options.ListOptions)
 		return c.Tiers().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
-		for _, k := range licensedFeatures {
-			if k == features.Tiers || k == features.All {
-				return false
-			}
-		}
-
-		return true
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+		return !claims.ValidateFeature(features.Tiers)
 	}
 
 	// TODO(doublek): Inject codec, client for nicer testing.

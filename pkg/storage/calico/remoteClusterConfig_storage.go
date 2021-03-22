@@ -18,6 +18,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
 )
 
 // NewRemoteClusterConfigurationStorage creates a new libcalico-based storage.Interface implementation for RemoteClusterConfigurations
@@ -49,8 +51,8 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		olo := opts.(options.ListOptions)
 		return c.RemoteClusterConfigurations().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
-		return false
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+		return !claims.ValidateFeature(features.FederatedServices)
 	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

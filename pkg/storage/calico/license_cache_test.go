@@ -107,17 +107,17 @@ func TestClear(t *testing.T) {
 	}
 
 	// validate that API can be accessed
-	features := cache.FetchRegisteredFeatures()
-	if len(features) == 0 {
-		t.Fatalf("Fetching license features from cache should have not returned an empty list, but got %v instead", features)
+	claims := cache.FetchRegisteredFeatures()
+	if claims == nil {
+		t.Fatalf("Fetching license features from cache should have not returned an empty list, but got %v instead", claims)
 	}
 
 	// clear the cache
 	cache.Clear()
 
 	// validate that API can be accessed
-	features = cache.FetchRegisteredFeatures()
-	if len(features) != 0 {
-		t.Fatalf("Fetching license features from cache should have returned an empty list, but got %v instead", features)
+	claims = cache.FetchRegisteredFeatures()
+	if claims != nil {
+		t.Fatalf("Fetching license features from cache should have returned an empty list, but got %v instead", claims)
 	}
 }

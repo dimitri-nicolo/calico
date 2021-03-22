@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 )
 
@@ -51,14 +52,8 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		olo := opts.(options.ListOptions)
 		return c.GlobalAlerts().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
-		for _, k := range licensedFeatures {
-			if k == features.AlertManagement || k == features.All {
-				return false
-			}
-		}
-
-		return true
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+		return !claims.ValidateFeature(features.AlertManagement)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{

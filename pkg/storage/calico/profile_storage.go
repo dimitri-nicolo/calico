@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 )
 
 // NewProfileStorage creates a new libcalico-based storage.Interface implementation for Profiles
@@ -49,7 +50,7 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		olo := opts.(options.ListOptions)
 		return c.Profiles().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
 		return false
 	}
 

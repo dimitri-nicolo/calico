@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 )
 
@@ -50,14 +51,8 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 		olo := opts.(options.ListOptions)
 		return c.GlobalThreatFeeds().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, licensedFeatures []string) bool {
-		for _, k := range licensedFeatures {
-			if k == features.ThreatDefense || k == features.All {
-				return false
-			}
-		}
-
-		return true
+	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+		return !claims.ValidateFeature(features.ThreatDefense)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
