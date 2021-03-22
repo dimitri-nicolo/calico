@@ -43,7 +43,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.5.1
 	github.com/tigera/apiserver v0.0.0-20210322172610-9153f463178c
-	github.com/tigera/lma v0.0.0-20210322181015-27f702fcc029
+	github.com/tigera/lma v0.0.0-20210322184134-b9d243847d65
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	k8s.io/apimachinery v0.19.6
