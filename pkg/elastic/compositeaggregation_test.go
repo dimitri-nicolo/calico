@@ -2,14 +2,24 @@
 package elastic_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/mock"
+
 	pelastic "github.com/tigera/lma/pkg/elastic"
+	calicojson "github.com/tigera/lma/pkg/test/json"
+	"github.com/tigera/lma/pkg/test/thirdpartymock"
 )
 
 var (
@@ -729,3 +739,136 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(marshaledbucket).To(MatchJSON(sampleBucketJsonTestMarshal))
 	})
 })
+
+var _ = Describe("GetCompositeAggrFlows", func() {
+	var (
+		mockDoer       *thirdpartymock.MockDoer
+		mockFlowFilter *pelastic.MockFlowFilter
+	)
+
+	BeforeEach(func() {
+		mockDoer = new(thirdpartymock.MockDoer)
+		mockFlowFilter = new(pelastic.MockFlowFilter)
+	})
+
+	AfterEach(func() {
+		mockDoer.AssertExpectations(GinkgoT())
+		mockFlowFilter.AssertExpectations(GinkgoT())
+	})
+
+	Context("Elasticsearch request and response validation", func() {
+		It("creates the expected Elasticsearch query and returns the expected Elasticsearch response", func() {
+			mockDoer = new(thirdpartymock.MockDoer)
+
+			client, err := elastic.NewClient(elastic.SetHttpClient(mockDoer), elastic.SetSniff(false), elastic.SetHealthcheck(false))
+			Expect(err).ShouldNot(HaveOccurred())
+
+			expectedJsonObj := calicojson.Map{
+				"aggregations": calicojson.Map{
+					"flog_buckets": calicojson.Map{
+						"aggregations": calicojson.Map{
+							"sum_bytes_in":                 calicojson.Map{"sum": calicojson.Map{"field": "bytes_in"}},
+							"sum_bytes_out":                calicojson.Map{"sum": calicojson.Map{"field": "bytes_out"}},
+							"sum_http_requests_allowed_in": calicojson.Map{"sum": calicojson.Map{"field": "http_requests_allowed_in"}},
+							"sum_http_requests_denied_in":  calicojson.Map{"sum": calicojson.Map{"field": "http_requests_denied_in"}},
+							"sum_num_flows_completed":      calicojson.Map{"sum": calicojson.Map{"field": "num_flows_completed"}},
+							"sum_num_flows_started":        calicojson.Map{"sum": calicojson.Map{"field": "num_flows_started"}},
+							"sum_packets_in":               calicojson.Map{"sum": calicojson.Map{"field": "packets_in"}},
+							"sum_packets_out":              calicojson.Map{"sum": calicojson.Map{"field": "packets_out"}},
+						},
+						"composite": calicojson.Map{
+							"size": 1000,
+							"sources": []calicojson.Map{
+								{"source_type": calicojson.Map{"terms": calicojson.Map{"field": "source_type"}}},
+								{"source_namespace": calicojson.Map{"terms": calicojson.Map{"field": "source_namespace"}}},
+								{"source_name": calicojson.Map{"terms": calicojson.Map{"field": "source_name_aggr"}}},
+								{"dest_type": calicojson.Map{"terms": calicojson.Map{"field": "dest_type"}}},
+								{"dest_namespace": calicojson.Map{"terms": calicojson.Map{"field": "dest_namespace"}}},
+								{"dest_name": calicojson.Map{"terms": calicojson.Map{"field": "dest_name_aggr"}}},
+								{"action": calicojson.Map{"terms": calicojson.Map{"field": "action"}}},
+								{"reporter": calicojson.Map{"terms": calicojson.Map{"field": "reporter"}}},
+							},
+						},
+					},
+				},
+				"query": calicojson.Map{"bool": calicojson.Map{}},
+				"size":  0,
+			}
+
+			esResponse := elastic.Aggregations{
+				"flog_buckets": calicojson.MustMarshal(calicojson.Map{
+					"buckets": []calicojson.Map{
+						{
+							"doc_count": 2,
+							"key": calicojson.Map{
+								"source_type":      "net",
+								"source_namespace": "-",
+								"source_name":      "pvt",
+								"dest_type":        "wep",
+								"dest_namespace":   "kube-system",
+								"dest_name":        "coredns-6955765f44-*",
+								"action":           "allow",
+								"reporter":         "dst",
+							},
+							"sum_http_requests_denied_in": calicojson.Map{
+								"value": 0.0,
+							},
+							"sum_num_flows_started": calicojson.Map{
+								"value": 27.0,
+							},
+							"sum_bytes_in": calicojson.Map{
+								"value": 6246.0,
+							},
+							"sum_packets_out": calicojson.Map{
+								"value": 54.0,
+							},
+							"sum_packets_in": calicojson.Map{
+								"value": 54.0,
+							},
+						},
+					},
+				}),
+			}
+
+			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
+				defer GinkgoRecover()
+				req := args.Get(0).(*http.Request)
+
+				body, err := ioutil.ReadAll(req.Body)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
+
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+				requestJson := map[string]interface{}{}
+				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
+				Expect(calicojson.MustUnmarshalToStandardObject(body)).Should(Equal(calicojson.MustUnmarshalToStandardObject(expectedJsonObj)))
+			}).Return(&http.Response{
+				StatusCode: http.StatusOK,
+				Body: esSearchResultToResponseBody(elastic.SearchResult{
+					Hits:         &elastic.SearchHits{TotalHits: &elastic.TotalHits{Value: 1}},
+					Aggregations: esResponse,
+				}),
+			}, nil)
+
+			mockFlowFilter.On("IncludeFlow", mock.Anything).Return(true, nil)
+
+			results, err := pelastic.GetCompositeAggrFlows(
+				context.Background(), 1*time.Second, pelastic.NewWithClient(client),
+				elastic.NewBoolQuery(), "cluster", mockFlowFilter, 100,
+			)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(calicojson.MustUnmarshalToStandardObject(results.Aggregations)).Should(Equal(calicojson.MustUnmarshalToStandardObject(esResponse)))
+		})
+	})
+})
+
+func esSearchResultToResponseBody(searchResult elastic.SearchResult) io.ReadCloser {
+	byts, err := json.Marshal(searchResult)
+	if err != nil {
+		panic(err)
+	}
+
+	return ioutil.NopCloser(bytes.NewBuffer(byts))
+}

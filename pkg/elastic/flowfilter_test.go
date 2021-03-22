@@ -189,6 +189,7 @@ var _ = Describe("FlowFilter", func() {
 			},
 		},
 	)
+
 	DescribeTable(
 		"ModifyFlow",
 		func(flow *elastic.CompositeAggregationBucket, mockFunc func(mockFlowHelper *rbac.MockFlowHelper), expectedPolicyBuckets map[interface{}]int64) {
@@ -197,7 +198,6 @@ var _ = Describe("FlowFilter", func() {
 
 			filter := elastic.NewFlowFilterUserRBAC(mockFlowHelper)
 			err := filter.ModifyFlow(flow)
-			Expect(err).NotTo(HaveOccurred())
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(flow.AggregatedTerms["policies"].Buckets).To(Equal(expectedPolicyBuckets))
