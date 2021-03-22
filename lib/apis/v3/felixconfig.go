@@ -552,7 +552,7 @@ type FelixConfigurationSpec struct {
 	// [Default: 300s]
 	L7LogsFlushInterval *metav1.Duration `json:"l7LogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// L7LogsFileEnabled controls logging L7 logs to a file. If false no L7 logging to file will occur.
-	// [Default: false]
+	// [Default: true]
 	L7LogsFileEnabled *bool `json:"l7LogsFileEnabled,omitempty"`
 	// L7LogsFileMaxFiles sets the number of L7 log files to keep.
 	// [Default: 5]

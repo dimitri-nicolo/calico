@@ -5755,7 +5755,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"l7LogsFileEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "L7LogsFileEnabled controls logging L7 logs to a file. If false no L7 logging to file will occur. [Default: false]",
+							Description: "L7LogsFileEnabled controls logging L7 logs to a file. If false no L7 logging to file will occur. [Default: true]",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
