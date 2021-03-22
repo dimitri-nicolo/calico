@@ -5,17 +5,6 @@
     "flog_buckets": {
       "buckets": [
         {
-          "dest_labels": {
-            "by_kvpair": {
-              "buckets": [
-                {
-                  "doc_count": 1896,
-                  "key": "k8s-app=kube-dns"
-                }
-              ]
-            },
-            "doc_count": 1896
-          },
           "doc_count": 1896,
           "key": {
             "action": "allow",
@@ -26,23 +15,6 @@
             "source_name": "pvt",
             "source_namespace": "-",
             "source_type": "net"
-          },
-          "policies": {
-            "by_tiered_policy": {
-              "buckets": [
-                {
-                  "doc_count": 1896,
-                  "key": "0|*|*|allow"
-                }
-              ]
-            },
-            "doc_count": 1896
-          },
-          "source_labels": {
-            "by_kvpair": {
-              "buckets": []
-            },
-            "doc_count": 1896
           },
           "sum_bytes_in": {
             "value": 4815208392
