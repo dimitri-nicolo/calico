@@ -47,9 +47,12 @@ type PolicySets struct {
 	supportedFeatures      hns.HNSSupportedFeatures
 	priorityLimit          uint16
 	policySetIdToPolicySet map[string]*policySet
+
+	// staticACLRules contains the list of static endpoint ACL rules.
+	staticACLRules []*hns.ACLPolicy
 }
 
-func NewPolicySets(hns HNSAPI, ipsets []IPSetCache) *PolicySets {
+func NewPolicySets(hns HNSAPI, ipsets []IPSetCache, reader StaticRulesReader) *PolicySets {
 	supportedFeatures := hns.GetHNSSupportedFeatures()
 	return &PolicySets{
 		policySetIdToPolicySet: map[string]*policySet{},
@@ -57,6 +60,7 @@ func NewPolicySets(hns HNSAPI, ipsets []IPSetCache) *PolicySets {
 		IpSets:            ipsets,
 		supportedFeatures: supportedFeatures,
 		priorityLimit:     PolicyRuleMaxPriority,
+		staticACLRules:    readStaticRules(reader),
 	}
 }
 
@@ -146,6 +150,13 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	// the base priority) then we assign the same priority to groups of
 	// rules that have the same direction and action.
 	alwaysIncrementPriority := totalNumberOfRules < int(s.priorityLimit-currentPriority)
+
+	// Append static rules first.
+	for _, r := range s.staticACLRules {
+		if r.Direction == direction {
+			rules = append(rules, r)
+		}
+	}
 
 	var lastRule *hns.ACLPolicy
 	for _, setId := range setIds {
