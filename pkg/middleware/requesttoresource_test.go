@@ -71,6 +71,15 @@ var _ = Describe("Test request to resource name conversion", func() {
 		Entry("Audit ee conversion with cluster.name",
 			genRequest("/tigera_secure_ee_audit_ee.cluster.name.*/_search"),
 			"audit_ee"),
+		Entry("L7 conversion",
+			genRequest("/tigera_secure_ee_l7.cluster.*/_search"),
+			"l7"),
+		Entry("L7 conversion with cluster-name",
+			genRequest("/tigera_secure_ee_l7.cluster-name.*/_search"),
+			"l7"),
+		Entry("L7 conversion with cluster.name",
+			genRequest("/tigera_secure_ee_l7.cluster.name.*/_search"),
+			"l7"),
 		Entry("Audit kube conversion with cluster.name",
 			genRequest("/tigera_secure_ee_audit_kube.cluster.name.*/_search"),
 			"audit_kube"),
@@ -103,7 +112,6 @@ var _ = Describe("Test request to resource name conversion", func() {
 	DescribeTable("failed conversion",
 		func(req *http.Request) {
 			_, _, _, err := parseURLPath(req)
-
 			Expect(err).To(HaveOccurred())
 		},
 
@@ -117,6 +125,8 @@ var _ = Describe("Test request to resource name conversion", func() {
 			genRequest("flowLogs")),
 		Entry("lower cased endpoint name",
 			genRequest("/flowlogs")),
+		Entry("index that is not present in query resource map",
+			genRequest("/tigera_secure_ee_l7_abc.cluster-name.*/_search")),
 		Entry("Random attempts to create panics",
 			genRequest("http://foo.com/blah_blah_(wikipedia)_(again)")),
 		Entry("Random attempts to create panics",
@@ -150,6 +160,13 @@ var _ = Describe("Test url path modifications in parseLegacyURLPath()", func() {
 			"/tigera_secure_ee_flows.cluster.*/_search", "different", "/tigera_secure_ee_flows.different.*/_search"),
 		Entry("Standard scenario no .cluster",
 			"/tigera_secure_ee_flows*/_search", "cluster", "/tigera_secure_ee_flows*.cluster.*/_search"),
+
+		Entry("Standard scenario l7",
+			"/tigera_secure_ee_l7.cluster.*/_search", "cluster", "/tigera_secure_ee_l7.cluster.*/_search"),
+		Entry("Standard scenario, different x-cluster-id",
+			"/tigera_secure_ee_l7.cluster.*/_search", "different", "/tigera_secure_ee_l7.different.*/_search"),
+		Entry("Standard scenario no .cluster",
+			"/tigera_secure_ee_l7*/_search", "cluster", "/tigera_secure_ee_l7*.cluster.*/_search"),
 
 		Entry("Path prepended to standard scenario",
 			"/a.b/c/tigera_secure_ee_flows.cluster.*/_search", "cluster", "/a.b/c/tigera_secure_ee_flows.cluster.*/_search"),
