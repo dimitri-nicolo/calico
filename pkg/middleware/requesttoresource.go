@@ -28,7 +28,7 @@ func init() {
 	// This regexp matches legacy queries, for example: "/tigera-elasticsearch/tigera_secure_ee_flows.cluster.*/_search"
 	legacyURLPath = regexp.MustCompile(`^.*/tigera_secure_ee_.*/_search$`)
 	// This regexp extracts the index prefix from a legacy query URL path (up to first '.').
-	extractIndexPrefixPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z*]*)(?:\..*)?/_search`)
+	extractIndexPrefixPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z0-9*]*)(?:\..*)?/_search`)
 	datelessIndexPattern = regexp.MustCompile(`^tigera_secure_ee_events\*?$`)
 
 	// This map is used for looking up the resource from an index pattern (either in Kibana or an ES query).
@@ -44,6 +44,8 @@ func init() {
 		"tigera_secure_ee_events*":    "events",
 		"tigera_secure_ee_dns":        "dns",
 		"tigera_secure_ee_dns*":       "dns",
+		"tigera_secure_ee_l7":         "l7",
+		"tigera_secure_ee_l7*":        "l7",
 		"flowLogNames":                "flows",
 		"flowLogNamespaces":           "flows",
 		"flowLogs":                    "flows",
