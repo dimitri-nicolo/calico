@@ -743,7 +743,7 @@ spec:
                 type: string
               l7LogsFileEnabled:
                 description: 'L7LogsFileEnabled controls logging L7 logs to a file.
-                  If false no L7 logging to file will occur. [Default: false]'
+                  If false no L7 logging to file will occur. [Default: true]'
                 type: boolean
               l7LogsFileMaxFileSizeMB:
                 description: 'L7LogsFileMaxFileSizeMB sets the max size in MB of L7
