@@ -16,7 +16,6 @@ package clientv3
 
 import (
 	"context"
-	"errors"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -47,9 +46,6 @@ func (r licenseKey) Create(ctx context.Context, res *apiv3.LicenseKey, opts opti
 		return nil, err
 	}
 
-	if res.ObjectMeta.GetName() != "default" {
-		return nil, errors.New("Cannot create a License Key resource with a name other than \"default\"")
-	}
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindLicenseKey, res)
 	if out != nil {
 		return out.(*apiv3.LicenseKey), err

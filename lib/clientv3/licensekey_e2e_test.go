@@ -86,8 +86,11 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 				ObjectMeta: metav1.ObjectMeta{Name: "not-default"},
 				Spec:       spec1,
 			}, options.SetOptions{})
-			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("Cannot create a License Key resource with a name other than \"default\""))
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Attempting to delete the LicenseKey with a non-default name and spec1")
+			_, outError = c.LicenseKey().Delete(ctx, "not-default", options.DeleteOptions{})
+			Expect(outError).NotTo(HaveOccurred())
 
 			By("Creating a new LicenseKey with name/spec1")
 			res1, outError := c.LicenseKey().Create(ctx, &apiv3.LicenseKey{
