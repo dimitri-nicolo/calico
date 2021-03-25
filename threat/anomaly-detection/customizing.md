@@ -87,7 +87,7 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
     Decrease it if you want more alerts.
 
 #### dns_latency Job:
-    Now the [IsolationForest model] from scikit-learn is used in this detector. 
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
 -   **AD_DnsLatency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
     estimators needed. 
 -   **AD_DnsLatency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number! 
@@ -95,7 +95,7 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
     Increase it if you want more alerts.
 
 #### l7_latency Job:
-    Now the [IsolationForest model] from scikit-learn is used in this detector. 
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
 -   **AD_L7Latency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
     estimators needed. 
 -   **AD_L7Latency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number! 
