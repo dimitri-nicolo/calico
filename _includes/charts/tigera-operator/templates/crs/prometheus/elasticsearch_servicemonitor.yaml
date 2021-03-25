@@ -1,0 +1,21 @@
+{{ if .Values.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: elasticsearch-metrics
+  namespace: tigera-prometheus
+  labels:
+    team: network-operators
+spec:
+  selector:
+    matchLabels:
+      k8s-app: tigera-elasticsearch-metrics
+  namespaceSelector:
+    matchNames:
+      - tigera-elasticsearch
+  endpoints:
+    - port: metrics-port
+      interval: 5s
+      scrapeTimeout: 5s
+      honorLabels: true
+{{ end }}
