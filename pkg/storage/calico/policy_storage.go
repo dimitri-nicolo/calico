@@ -88,7 +88,7 @@ func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         APIObjectVersioner{&etcd.APIObjectVersioner{}},
+		versioner:         NetworkPolicyAPIObjectVersioner{&etcd.APIObjectVersioner{}},
 		aapiType:          reflect.TypeOf(aapi.NetworkPolicy{}),
 		aapiListType:      reflect.TypeOf(aapi.NetworkPolicyList{}),
 		libCalicoType:     reflect.TypeOf(libcalicoapi.NetworkPolicy{}),

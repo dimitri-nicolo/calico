@@ -63,7 +63,7 @@ func NewStagedKubernetesNetworkPolicyStorage(opts Options) (registry.DryRunnable
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         APIObjectVersioner{&etcd.APIObjectVersioner{}},
+		versioner:         &etcd.APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(aapi.StagedKubernetesNetworkPolicy{}),
 		aapiListType:      reflect.TypeOf(aapi.StagedKubernetesNetworkPolicyList{}),
 		libCalicoType:     reflect.TypeOf(libcalicoapi.StagedKubernetesNetworkPolicy{}),
