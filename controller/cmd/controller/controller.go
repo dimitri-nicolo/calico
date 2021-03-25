@@ -260,12 +260,20 @@ func main() {
 	)
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 	var enableForwarding = (err == nil && valueEnableForwarding)
+	var healthPingers health.Pingers
 	var enableFeeds = (os.Getenv("DISABLE_FEEDS") != "yes")
+	if enableFeeds {
+		healthPingers = append(healthPingers, s)
+	}
+
 	var enableAlerts = (os.Getenv("DISABLE_ALERTS") != "yes")
+	if enableAlerts {
+		healthPingers = append(healthPingers, a)
+	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)
 
-	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
+	hs := health.NewServer(healthPingers, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {
