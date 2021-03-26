@@ -236,6 +236,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
+	$(MAKE) push-image IMAGETAG=${GIT_VERSION}
 
 # Generate the protobuf bindings for Felix.
 .PHONY: felixbackend
