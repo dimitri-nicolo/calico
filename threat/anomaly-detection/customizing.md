@@ -90,4 +90,21 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
 -   **AD_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts.  
     Decrease it if you want more alerts.
 
+#### dns_latency Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
+-   **AD_DnsLatency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
+    estimators needed. 
+-   **AD_DnsLatency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number! 
+    Decrease this parameter if you want fewer alerts.  
+    Increase it if you want more alerts.
+
+#### l7_latency Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
+-   **AD_L7Latency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
+    estimators needed. 
+-   **AD_L7Latency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number! 
+    Decrease this parameter if you want fewer alerts.  
+    Increase it if you want more alerts.
+
 [Multi-cluster management]: /multicluster/index
+[IsolationForest model]: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html
