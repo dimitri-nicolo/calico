@@ -55,7 +55,7 @@ KIBANA_VERSION=$(shell jq -r '.version' kibana/package.json)
 
 image:
 	cd docker && KIBANA_VERSION=$(KIBANA_VERSION) bash Dockerfile-template.sh
-	docker build docker/. -t $(BUILD_IMAGE)
+	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) docker/. -t $(BUILD_IMAGE)
 
 compressed-image: image
 	$(MAKE) docker-compress IMAGE_NAME=$(BUILD_IMAGE)

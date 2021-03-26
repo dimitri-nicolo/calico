@@ -11,8 +11,13 @@ COPY cleanup.sh /
 RUN /cleanup.sh
 
 ARG GTM_INTEGRATION=disable
+
 COPY createKibanaConfig.sh /
 RUN /createKibanaConfig.sh /usr/share/kibana/config/kibana.yml
 
+COPY gtmSetup.sh /
+RUN /gtmSetup.sh
+
 USER kibana
 EOF
+
