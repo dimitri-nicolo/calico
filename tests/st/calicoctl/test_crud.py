@@ -37,7 +37,7 @@ class TestCalicoctlCommands(TestBase):
 
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
-        rc = calicoctl("create", data=valid_cnx_license_expires_march_03_2021)
+        rc = calicoctl("create", data=valid_cnx_license_expires_september_02_2021)
         rc.assert_no_error()
 
     def test_get(self):
@@ -608,7 +608,7 @@ class TestCalicoctlCommands(TestBase):
         - Shouldn't be able to apply/replace another valid license that expires sooner than the one currently applied
         - Should be able to get license
         """
-        rc = calicoctl("apply", data=valid_cnx_license_expires_march_03_2021)
+        rc = calicoctl("apply", data=valid_cnx_license_expires_september_02_2021)
         rc.assert_no_error()
 
         rc = calicoctl("create", data=expired_cnx_license)
@@ -617,19 +617,19 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("apply", data=expired_cnx_license)
         rc.assert_error()
 
-        rc = calicoctl("delete", data=valid_cnx_license_expires_march_03_2021)
+        rc = calicoctl("delete", data=valid_cnx_license_expires_september_02_2021)
         rc.assert_error()
-
-        rc = calicoctl("apply", data=valid_cnx_license_expires_march_03_2021)
-        rc.assert_no_error()
 
         rc = calicoctl("apply", data=valid_cnx_license_expires_september_02_2021)
         rc.assert_no_error()
 
-        rc = calicoctl("apply", data=valid_cnx_license_expires_march_03_2021)
+        rc = calicoctl("apply", data=valid_cnx_license_expires_november_01_2020)
+        rc.assert_no_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_september_02_2021)
         rc.assert_error()
 
-        rc = calicoctl("replace", data=valid_cnx_license_expires_march_03_2021)
+        rc = calicoctl("replace", data=valid_cnx_license_expires_september_02_2021)
         rc.assert_error()
 
         rc = calicoctl("get license -o wide")
