@@ -3,10 +3,10 @@ module github.com/tigera/compliance
 go 1.15
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210326224205-8f12028ea2df
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210327012935-1c5778d4a6fa
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210327011510-10f3ff913a85
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210323223957-e327e293590f
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210327012809-2206c48d9a91
 
 	k8s.io/api => k8s.io/api v0.19.6
 
