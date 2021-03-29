@@ -3,9 +3,9 @@ module github.com/tigera/intrusion-detection/controller
 go 1.15
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210323222518-ea856af14071
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210329185642-51da3dc354c1
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20210322172610-9153f463178c
-	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210316204601-cc35a8041678
+	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210329174156-fbcaf2a3b8aa
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.19.6
