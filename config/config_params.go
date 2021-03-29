@@ -326,7 +326,7 @@ type Config struct {
 	DNSLogsLatency             bool          `config:"bool;true"`
 
 	L7LogsFlushInterval                  time.Duration `config:"seconds;300"`
-	L7LogsFileEnabled                    bool          `config:"bool;false"`
+	L7LogsFileEnabled                    bool          `config:"bool;true"`
 	L7LogsFileDirectory                  string        `config:"string;/var/log/calico/l7logs"`
 	L7LogsFileMaxFiles                   int           `config:"int;5"`
 	L7LogsFileMaxFileSizeMB              int           `config:"int;100"`
