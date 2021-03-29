@@ -100,12 +100,9 @@ In this step, you enable the Policy Sync API on Felix.
 1. Enable the Policy Sync API in Felix. To do this cluster-wide, modify the `default`
 FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.
 
-1. Enable L7 log collection in Felix. To do this cluster-wide, modify the
-`default` FelixConfiguration to set the field `l7LogsFileEnabled` to `true`.
-
-```bash
-kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent","l7LogsFileEnabled":true}}'
-```
+    ```bash
+    kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
+    ```
 
 1. (Optional) Configure L7 log aggregation, retention, and reporting. See the
 [Felix Configuration documentation]({{site.baseurl}}/reference/felix/configuration#calico-enterprise-specific-configuration)
