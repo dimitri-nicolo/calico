@@ -112,6 +112,36 @@ var OpenSourceAPIs = set{
 	api.NewWorkloadEndpointList().GetObjectKind().GroupVersionKind().String():             true,
 }
 
+// EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names
+var EnterpriseAPIsToFeatureName = map[string]string{
+	api.NewGlobalAlert().GetObjectKind().GroupVersionKind().String():                    AlertManagement,
+	api.NewGlobalAlertList().GetObjectKind().GroupVersionKind().String():                AlertManagement,
+	api.NewGlobalAlertTemplate().GetObjectKind().GroupVersionKind().String():            AlertManagement,
+	api.NewGlobalAlertTemplateList().GetObjectKind().GroupVersionKind().String():        AlertManagement,
+	api.NewPacketCapture().GetObjectKind().GroupVersionKind().String():                  PacketCapture,
+	api.NewPacketCaptureList().GetObjectKind().GroupVersionKind().String():              PacketCapture,
+	api.NewRemoteClusterConfiguration().GetObjectKind().GroupVersionKind().String():     FederatedServices,
+	api.NewRemoteClusterConfigurationList().GetObjectKind().GroupVersionKind().String(): FederatedServices,
+	api.NewGlobalReport().GetObjectKind().GroupVersionKind().String():                   ComplianceReports,
+	api.NewGlobalReportList().GetObjectKind().GroupVersionKind().String():               ComplianceReports,
+	api.NewGlobalReportType().GetObjectKind().GroupVersionKind().String():               ComplianceReports,
+	api.NewGlobalReportTypeList().GetObjectKind().GroupVersionKind().String():           ComplianceReports,
+	api.NewGlobalThreatFeed().GetObjectKind().GroupVersionKind().String():               ThreatDefense,
+	api.NewGlobalThreatFeedList().GetObjectKind().GroupVersionKind().String():           ThreatDefense,
+	api.NewManagedCluster().GetObjectKind().GroupVersionKind().String():                 MultiClusterManagement,
+	api.NewManagedClusterList().GetObjectKind().GroupVersionKind().String():             MultiClusterManagement,
+}
+
+// ManagementAPIs maps calico enterprise APIs used for managing/accessing resources
+var ManagementAPIs = set{
+	api.NewAuthenticationReview().GetObjectKind().GroupVersionKind().String():     true,
+	api.NewAuthenticationReviewList().GetObjectKind().GroupVersionKind().String(): true,
+	api.NewAuthorizationReview().GetObjectKind().GroupVersionKind().String():      true,
+	api.NewAuthorizationReviewList().GetObjectKind().GroupVersionKind().String():  true,
+	api.NewLicenseKey().GetObjectKind().GroupVersionKind().String():               true,
+	api.NewLicenseKeyList().GetObjectKind().GroupVersionKind().String():           true,
+}
+
 // CloudCommunityFeatures is defined by features such as: Management Portal UI, Policy Management and Policy Troubleshooting
 var CloudCommunityFeatures = set{ManagementPortal: true, PolicyRecommendation: true, PolicyPreview: true, PolicyManagement: true, FileOutputFlowLogs: true, PrometheusMetrics: true, MultiClusterManagement: true}
 

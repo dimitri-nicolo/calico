@@ -180,6 +180,12 @@ func IsOpenSourceAPI(resourceGroupVersionKind string) bool {
 	return features.OpenSourceAPIs[resourceGroupVersionKind]
 }
 
+// IsManagementAPI determines is a calico API is defined as an api used to managed/access
+// resources on a calicco install
+func IsManagementAPI(resourceGroupVersionKind string) bool {
+	return features.ManagementAPIs[resourceGroupVersionKind]
+}
+
 // ErrExpiredButWithinGracePeriod indicates the license has expired but is within the grace period.
 type ErrExpiredButWithinGracePeriod struct {
 	Err error
@@ -264,6 +270,7 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 
 	switch licensePackage {
 	case features.Enterprise:
+		// This is maintain backwards compatibility for any cloud license issued for 3.5
 		return true
 	case features.CloudCommunity:
 		// This is maintain backwards compatibility for any cloud license issued for 3.5
@@ -284,6 +291,20 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 			}
 		}
 
+	}
+
+	return false
+}
+
+// ValidateAPIUsage checks if the API can be accessed.
+func (c *LicenseClaims) ValidateAPIUsage(gvk string) bool {
+	if IsOpenSourceAPI(gvk) || IsManagementAPI(gvk) {
+		return true
+	}
+
+	feature, ok := features.EnterpriseAPIsToFeatureName[gvk]
+	if ok {
+		return c.ValidateFeature(feature)
 	}
 
 	return false
