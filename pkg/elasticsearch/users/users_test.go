@@ -152,6 +152,14 @@ var _ = Describe("ElasticseachUsers", func() {
 										Privileges: []string{"read"},
 									},
 									{
+										Names:      []string{"tigera_secure_ee_dns.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_l7.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
 										Names:      []string{"tigera_secure_ee_events.managed-cluster"},
 										Privileges: []string{"read", "write"},
 									},
@@ -321,6 +329,14 @@ var _ = Describe("ElasticseachUsers", func() {
 								Indices: []elasticsearch.RoleIndex{
 									{
 										Names:      []string{"tigera_secure_ee_flows.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_dns.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_l7.cluster.*"},
 										Privileges: []string{"read"},
 									},
 									{
