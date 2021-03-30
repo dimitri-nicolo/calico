@@ -128,10 +128,16 @@ type ManagedClusterControllerConfig struct {
 	MultiClusterForwardingEndpoint string
 	MultiClusterForwardingCA       string
 	ElasticConfig                  ElasticsearchCfgControllerCfg
+	LicenseConfig                  LicenseControllerCfg
 }
 
 type RunConfigController struct {
 	out chan RunConfig
+}
+
+type LicenseControllerCfg struct {
+	NumberOfWorkers int
+	RESTConfig      *restclient.Config
 }
 
 // ConfigChan returns a channel that sends an initial config snapshot at start
@@ -388,6 +394,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ManagedCluster.ElasticConfig.NumberOfWorkers = envCfg.ManagedClusterElasticsearchConfigurationWorkers
+		rc.ManagedCluster.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)

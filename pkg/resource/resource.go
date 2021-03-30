@@ -16,6 +16,7 @@ const (
 	DefaultTSEEInstanceName      = "tigera-secure"
 	OIDCUsersConfigMapName       = "tigera-known-oidc-users"
 	OIDCUsersEsSecreteName       = "tigera-oidc-users-elasticsearch-credentials"
+	LicenseName                  = "default"
 )
 
 func CreateHashFromObject(obj interface{}) (string, error) {

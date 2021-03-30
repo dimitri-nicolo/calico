@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
@@ -91,6 +92,49 @@ var _ = Describe("Secret", func() {
 		Expect(cp.Data).Should(Equal(secret.Data))
 
 		compareMetaObject(secret.ObjectMeta, cp.ObjectMeta)
+	})
+})
+
+var _ = Describe("LicenseKey", func() {
+	It("Copies the expected values to the new LicenseKey", func() {
+		deleteTime := metav1.Now()
+		i := int64(5)
+
+		licenseKey := &v3.LicenseKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:                       "default",
+				GenerateName:               "TestGenerateName",
+				SelfLink:                   "/selflink",
+				UID:                        "TestUID",
+				ResourceVersion:            "TestResourceVersion",
+				Generation:                 int64(4),
+				CreationTimestamp:          metav1.Now(),
+				DeletionTimestamp:          &deleteTime,
+				DeletionGracePeriodSeconds: &i,
+				Labels: map[string]string{
+					"labelkey": "labelvalue",
+				},
+				Annotations: map[string]string{
+					"annotationkey": "annotationvalue",
+				},
+				OwnerReferences: []metav1.OwnerReference{{
+					Name: "TestOwner",
+				}},
+				Finalizers:  []string{"TestFinalizer"},
+				ClusterName: "TestClusterName",
+			},
+			Spec: v3.LicenseKeySpec{
+				Token:       "token",
+				Certificate: "certificate",
+			},
+		}
+
+		cp := resource.CopyLicenseKey(licenseKey)
+
+		Expect(cp.Spec.Certificate).Should(Equal(licenseKey.Spec.Certificate))
+		Expect(cp.Spec.Token).Should(Equal(licenseKey.Spec.Token))
+
+		compareMetaObject(licenseKey.ObjectMeta, cp.ObjectMeta)
 	})
 })
 

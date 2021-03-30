@@ -35,7 +35,7 @@ import (
 // compare the Elasticsearch hash in the user secrets in the cluster to the hash of the new Elasticsearch cluster and recreate
 // the users and secrets if they differ (and they will if the Elasticsearch cluster has been recreated)
 type managedClusterController struct {
-	createManagedk8sCLI func(string) (kubernetes.Interface, error)
+	createManagedk8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
 	calicoCLI           *tigeraapi.Clientset
 	cfg                 config.ManagedClusterControllerConfig
 	managementK8sCLI    *kubernetes.Clientset
@@ -44,7 +44,7 @@ type managedClusterController struct {
 }
 
 func New(
-	createManagedk8sCLI func(string) (kubernetes.Interface, error),
+	createManagedk8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error),
 	managementK8sCLI *kubernetes.Clientset,
 	calicok8sCLI *tigeraapi.Clientset,
 	esk8sCLI relasticsearch.RESTClient,
@@ -108,7 +108,8 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 		calicoCLI:                c.calicoCLI,
 		esK8sCLI:                 c.esk8sCLI,
 		managedClustersStopChans: make(map[string]chan struct{}),
-		cfg:                      c.cfg.ElasticConfig,
+		cfgEs:                    c.cfg.ElasticConfig,
+		cfgLic:                   c.cfg.LicenseConfig,
 		esClientBuilder:          c.esClientBuilder,
 		esClient:                 client,
 	}

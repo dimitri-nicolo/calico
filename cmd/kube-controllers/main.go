@@ -540,7 +540,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 
 		cc.controllerStates["ManagedCluster"] = &controllerState{
 			controller: managedcluster.New(
-				func(clustername string) (kubernetes.Interface, error) {
+				func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
 					kubeconfig.Host = cfg.Controllers.ManagedCluster.MultiClusterForwardingEndpoint
 					kubeconfig.CAFile = cfg.Controllers.ManagedCluster.MultiClusterForwardingCA
 					kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
@@ -549,14 +549,27 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 							rt:      rt,
 						}
 					}
-					return kubernetes.NewForConfig(kubeconfig)
+					k8sCLI, err := kubernetes.NewForConfig(kubeconfig)
+					if err != nil {
+						return k8sCLI, nil, err
+					}
+
+					calicoCLI, err := tigeraapi.NewForConfig(kubeconfig)
+					if err != nil {
+						return k8sCLI, calicoCLI, err
+					}
+
+					return k8sCLI, calicoCLI, nil
+
 				},
 				k8sClientset,
 				calicoV3Client,
 				esK8sREST,
 				esClientBuilder,
 				*cfg.Controllers.ManagedCluster),
+			licenseFeature: features.MultiClusterManagement,
 		}
+		cc.needLicenseMonitoring = true
 	}
 
 	if cfg.Controllers.AuthorizationConfiguration != nil {

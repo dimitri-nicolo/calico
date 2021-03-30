@@ -57,6 +57,7 @@ type Config struct {
 	AuthorizationWorkers                            int `default:"1" split_words:"true"`
 	ManagedClusterWorkers                           int `default:"1" split_words:"true"`
 	ManagedClusterElasticsearchConfigurationWorkers int `default:"1" split_words:"true"`
+	ManagedClusterLicenseConfigurationWorkers       int `default:"1" split_words:"true"`
 
 	// Path to a kubeconfig file to use for accessing the k8s API.
 	Kubeconfig string `default:"" split_words:"false"`

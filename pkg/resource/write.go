@@ -5,6 +5,9 @@ package resource
 
 import (
 	"context"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +48,27 @@ func WriteSecretToK8s(cli kubernetes.Interface, secret *corev1.Secret) error {
 		}
 	} else {
 		if _, err := cli.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteLicenseKeyToK8s creates or updates the give v3.LicenseKey using the give tigeraapi.Interfaces depending on whether or
+// not the given Secret exists in the k8s cluster
+func WriteLicenseKeyToK8s(cli tigeraapi.Interface, licenseKey *v3.LicenseKey) error {
+	ctx := context.Background()
+
+	if license, err := cli.ProjectcalicoV3().LicenseKeys().Get(ctx, licenseKey.Name, metav1.GetOptions{}); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		if _, err := cli.ProjectcalicoV3().LicenseKeys().Create(ctx, licenseKey, metav1.CreateOptions{}); err != nil {
+			return err
+		}
+	} else {
+		licenseKey.ResourceVersion = license.ResourceVersion
+		if _, err := cli.ProjectcalicoV3().LicenseKeys().Update(ctx, licenseKey, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}

@@ -4,6 +4,7 @@
 package resource
 
 import (
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -20,6 +21,15 @@ func CopyConfigMap(s *corev1.ConfigMap) *corev1.ConfigMap {
 // Secret copies the given corev1.Secret to a new instance. Check the clearSystemData method to see what values are retained
 // in the ObjectMeta after the copy.
 func CopySecret(s *corev1.Secret) *corev1.Secret {
+	d := s.DeepCopy()
+	d.ObjectMeta = clearSystemData(d.ObjectMeta)
+
+	return d
+}
+
+// CopyLicenseKey copies the given v3.LicenseKey to a new instance. Check the clearSystemData method to see what values are retained
+// in the ObjectMeta after the copy.
+func CopyLicenseKey(s *v3.LicenseKey) *v3.LicenseKey {
 	d := s.DeepCopy()
 	d.ObjectMeta = clearSystemData(d.ObjectMeta)
 

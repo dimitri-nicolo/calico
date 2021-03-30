@@ -4,9 +4,12 @@ package resource_test
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapifake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -101,5 +104,56 @@ var _ = Describe("Secret", func() {
 		s, err = cli.CoreV1().Secrets("TestNamespace").Get(context.Background(), "TestName", metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(s.Data["key"]).Should(Equal([]byte("newvalue")))
+	})
+})
+
+var _ = Describe("LicenseKey", func() {
+	It("Creates the LicenseKey when it doesn't exist", func() {
+		cli := tigeraapifake.NewSimpleClientset()
+		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.LicenseKeySpec{
+				Token:       "token",
+				Certificate: "certificate",
+			},
+		})).ShouldNot(HaveOccurred())
+
+		_, err := cli.ProjectcalicoV3().LicenseKeys().Get(context.Background(), "default", metav1.GetOptions{})
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	It("Updates the LicenseKey when it exists", func() {
+		cli := tigeraapifake.NewSimpleClientset()
+		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.LicenseKeySpec{
+				Token:       "token",
+				Certificate: "certificate",
+			},
+		})).ShouldNot(HaveOccurred())
+
+		lic, err := cli.ProjectcalicoV3().LicenseKeys().Get(context.Background(), "default", metav1.GetOptions{})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(lic.Spec.Token).Should(Equal("token"))
+		Expect(lic.Spec.Certificate).Should(Equal("certificate"))
+
+		Expect(resource.WriteLicenseKeyToK8s(cli, &v3.LicenseKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v3.LicenseKeySpec{
+				Token:       "new-token",
+				Certificate: "new-certificate",
+			},
+		})).ShouldNot(HaveOccurred())
+
+		lic, err = cli.ProjectcalicoV3().LicenseKeys().Get(context.Background(), "default", metav1.GetOptions{})
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(lic.Spec.Token).Should(Equal("new-token"))
+		Expect(lic.Spec.Certificate).Should(Equal("new-certificate"))
 	})
 })

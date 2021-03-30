@@ -80,6 +80,8 @@ clean:
 ###############################################################################
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
+TIGERA_API_BRANCH?=$(PIN_BRANCH)
+TIGERA_API_REPO?=github.com/tigera/api
 LIBCALICO_REPO=github.com/tigera/libcalico-go-private
 FELIX_REPO=github.com/tigera/felix-private
 TYPHA_REPO=github.com/tigera/typha-private
@@ -88,7 +90,10 @@ CNI_REPO=github.com/tigera/cni-plugin-private
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: update-licensing-pin replace-libcalico-pin replace-felix-pin replace-typha-pin replace-cni-pin
+update-tigerapi-pin:
+	$(call update_pin,github.com/tigera/api,$(TIGERA_API_REPO),$(TIGERA_API_BRANCH))
+
+update-pins: update-licensing-pin replace-libcalico-pin replace-felix-pin replace-typha-pin replace-cni-pin update-tigerapi-pin	
 
 ###############################################################################
 # Building the binary
