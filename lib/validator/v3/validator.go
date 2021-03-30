@@ -109,6 +109,7 @@ var (
 	routeSource           = regexp.MustCompile("^(WorkloadIPs|CalicoIPAM)$")
 	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
 	acceptReturnRegex     = regexp.MustCompile("^(Accept|Return)$")
+	ipTypeRegex           = regexp.MustCompile("^(CalicoNodeIP|InternalIP|ExternalIP)$")
 	fileRegex             = regexp.MustCompile("^[^\x00]+$")
 	endpointFmt           = "https?://[^:]+:\\d+"
 	k8sEndpointRegex      = regexp.MustCompile("^" + endpointFmt + "$")
@@ -230,6 +231,7 @@ func init() {
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("keyValueList", validateKeyValueList)
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
+	registerFieldValidator("ipType", validateIPType)
 
 	registerFieldValidator("sourceAddress", RegexValidator("SourceAddress", SourceAddressRegex))
 	registerFieldValidator("failureDetectionMode", RegexValidator("FailureDetectionMode", FailureDetectionModeRegex))
@@ -516,6 +518,12 @@ func validateIPIPMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPIP Mode: %s", s)
 	return ipipModeRegex.MatchString(s)
+}
+
+func validateIPType(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate IPType: %s", s)
+	return ipTypeRegex.MatchString(s)
 }
 
 func validateStagedAction(fl validator.FieldLevel) bool {

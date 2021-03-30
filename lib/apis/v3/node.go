@@ -1,4 +1,4 @@
-// Copyright (c) 2017,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,9 @@ import (
 const (
 	KindNode     = "Node"
 	KindNodeList = "NodeList"
+	CalicoNodeIP = "CalicoNodeIP"
+	InternalIP   = "InternalIP"
+	ExternalIP   = "ExternalIP"
 )
 
 // +genclient
@@ -64,6 +67,9 @@ type NodeSpec struct {
 type NodeAddress struct {
 	// Address is a string representation of the actual address.
 	Address string `json:"address" validate:"net"`
+
+	// Type is the node IP type
+	Type string `json:"type,omitempty" validate:"omitempty,ipType"`
 }
 
 type NodeStatus struct {

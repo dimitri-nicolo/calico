@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -288,7 +288,8 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 	// Build the request.
 	req := c.restClient.Get().
 		NamespaceIfScoped(namespace, c.namespaced).
-		Resource(c.resource)
+		Resource(c.resource).
+		Param("resourceVersion", revision)
 
 	// If the prefix is specified, look for the resources with the label
 	// of prefix.
