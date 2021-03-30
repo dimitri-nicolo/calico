@@ -11,6 +11,8 @@ spec:
     # init container needs the capabilities to patch iptables
     - NET_ADMIN
     - NET_RAW
+    - SETGID
+    - SETUID
   volumes:
     - 'configMap'
     - 'emptyDir'

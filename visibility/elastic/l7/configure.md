@@ -4,9 +4,6 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 ## Big Picture
 
 Use {{site.prodname}} L7 logs to monitor application activity.
@@ -47,6 +44,10 @@ In the namespace of the pod that you want to monitor, create a Kubernetes pull s
 ```bash
 kubectl create secret generic tigera-pull-secret -n <application pod namespace> --from-file=.dockerconfigjson=$HOME/.docker/config.json --type kubernetes.io/dockerconfigjson
 ```
+
+> **Important**: Enabling L7 logs requires at least an additional 1 GB LogStorage per node per one day retention period. 
+>Please adjust your [Log Storage](https://docs.tigera.io/maintenance/logstorage/adjust-log-storage-size) before proceeding. 
+{: .alert .alert-danger}
 
 ## How to
 

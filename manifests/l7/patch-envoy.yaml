@@ -57,6 +57,8 @@ spec:
             add:
             - NET_ADMIN
             - NET_RAW
+            - SETGID
+            - SETUID
             drop:
             - ALL
           privileged: false
