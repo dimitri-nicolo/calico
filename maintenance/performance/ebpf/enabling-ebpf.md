@@ -239,10 +239,10 @@ kubectl patch networks.operator.openshift.io cluster --type merge -p '{"spec":{"
 
 #### Enable eBPF mode
 
-To enable eBPF mode, change the `spec.calicoNetwork.linuxDataplane` parameter in the operator's `Installation` resource to `"BPF"`:
+To enable eBPF mode, change the `spec.calicoNetwork.linuxDataplane` parameter in the operator's `Installation` resource to `"BPF"`; you must also disable host ports because these are not supported in BPF mode:
 
 ```bash
-kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"BPF"}}}'
+kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"BPF", "hostPorts":"Disabled"}}}'
 ```
 
 > **Note**: the operator rolls out the change with a rolling update which means that some nodes will be in eBPF mode
@@ -275,7 +275,7 @@ To revert to standard Linux networking:
 1. Reverse the changes to the operator's `Installation`:
 
    ```bash
-   kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"Iptables"}}}'
+   kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"Iptables", "hostPorts":"Enabled"}}}'
    ```
 
 1. If you disabled `kube-proxy`, re-enable it (for example, by removing the node selector added above).
