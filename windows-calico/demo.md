@@ -393,7 +393,7 @@ spec:
     - containerPort: 80
     env:
     - name: SERVE_PORT_80
-      value: This is a Calico for Windows demo.
+      value: This is a Calico Enterprise for Windows demo.
     imagePullPolicy: IfNotPresent
   nodeSelector:
     kubernetes.io/os: windows
@@ -510,13 +510,13 @@ Now that client and server pods are running on both Linux and Windows nodes, let
     ```
     StatusCode        : 200
     StatusDescription : OK
-    Content           : This is a Calico for Windows demo.
+    Content           : This is a Calico Enterprise for Windows demo.
     RawContent        : HTTP/1.1 200 OK
                         Content-Length: 49
                         Content-Type: text/plain; charset=utf-8
                         Date: Fri, 21 Aug 2020 22:45:46 GMT
     
-                        This is a Calico for Windows demo.
+                        This is a Calico Enterprise for Windows demo.
     Forms             :
     Headers           : {[Content-Length, 49], [Content-Type, text/plain;
                         charset=utf-8], [Date, Fri, 21 Aug 2020 22:45:46 GMT]}
