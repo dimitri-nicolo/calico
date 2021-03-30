@@ -287,12 +287,6 @@ Follow these steps in the cluster you intend to use as the managed cluster.
    ```
    Wait until the `apiserver` shows a status of `Available`, then go to the next step.
 
-1. Install the Tigera license.
-
-   ```bash
-   kubectl create -f </path/to/license.yaml>
-   ```
-
 #### Turn the cluster into a managed cluster
 1. Apply the manifest that you modified in the step, [Add a managed cluster to the management cluster](#add-a-managed-cluster-to-the-management-cluster).
    ```bash
