@@ -12,6 +12,8 @@ allowPrivilegedContainer: false
 allowedCapabilities:
 - 'NET_RAW'
 - 'NET_ADMIN'
+- 'SETGID'
+- 'SETUID'
 fsGroup:
   type: MustRunAs
 priority: null
