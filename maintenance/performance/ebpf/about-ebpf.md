@@ -1,11 +1,13 @@
 ---
 title: About eBPF
 description: Learn about eBPF!
-canonical_url: '/about/about-ebpf'
+canonical_url: '/maintenance/performance/ebpf/about-ebpf'
 ---
 
-> <span class="glyphicon glyphicon-info-sign"></span> This guide provides optional background education, including
-> education that is not specific to {{site.prodname}}.
+>**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production 
+> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This 
+> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward 
+> policy); flow logs; and DNS policy.
 {: .alert .alert-info}
 
 eBPF is a Linux kernel feature that allows fast yet safe mini-programs to be loaded into the kernel in order to 
@@ -13,9 +15,9 @@ customise its operation.
 
 In this guide you will learn:
 
-- General background on eBPF.
-- Various uses of eBPF.
-- How {{site.prodname}} uses eBPF in the eBPF dataplane.
+- General background on eBPF
+- Various uses of eBPF
+- How {{site.prodname}} uses eBPF in the eBPF dataplane
 
 ### What is eBPF?
 
