@@ -272,16 +272,10 @@ Switching external traffic mode can disrupt in-progress connections.
 
 To revert to standard Linux networking:
 
-1. (Depending on whether you installed Calico with the operator or with a manifest) reverse the changes to the operator's `Installation` or the `FelixConfiguration` resource:
+1. Reverse the changes to the operator's `Installation`:
 
    ```bash
    kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"Iptables"}}}'
-   ```
-   
-   or:
-   
-   ```
-   kubectl patch felixconfiguration.p default --patch='{"spec": {"bpfEnabled": false}}'
    ```
 
 1. If you disabled `kube-proxy`, re-enable it (for example, by removing the node selector added above).
