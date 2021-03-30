@@ -37,7 +37,7 @@ Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Window
 - Be able to run a command as Administrator using powershell.
 - Additionally, for EKS:
   - The VPC controllers must be installed to run Windows pods.
-  - The Windows instance role must have permissions to get `namespaces` and get `secrets` in the calico-system namespace (or kube-system namespace if you are using a non operator-managed {{site.prodname}} installation.)
+  - The Windows instance role must have permissions to get `namespaces` and get `secrets` in the calico-system namespace.
     - Run these commands below to install the permissions needed to install {{site.prodnameWindows}}.
       Replace `<eks_node_name>` with the Kubernetes node name of the EKS Windows node, for example `ip-192-168-42-34.us-west-2.compute.internal`.
       Replace the namespace `calico-system` with `kube-system` in the commands below if you are using a non operator-managed {{site.prodname}} installation.
@@ -112,13 +112,11 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
 1. Setup a {{site.prodname}} Kubernetes cluster with {% include open-new-window.html text='Windows nodes' url='https://docs.microsoft.com/en-us/virtualization/windowscontainers/kubernetes/getting-started-kubernetes-windows' %}.
 
-1. Ensure that BGP is disabled.
-   If you installed Calico using operator, you can do this by:
+1. Ensure that BGP is disabled. You can do this by modifying the operator's installation resource:
 
    ```bash
    kubectl patch installation default --type=merge -p '{"spec": {"calicoNetwork": {"bgp": "Disabled"}}}'
    ```
-   If you installed Calico using the manifest from https://docs.projectcalico.org/manifests/calico-vxlan.yaml then BGP is already disabled.
 
 1. Prepare directory for Kubernetes files on Windows node.
 
@@ -417,7 +415,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 | DownloadOnly       | Download without installing {{site.prodnameWindows}}. Set to `yes` to manually install and configure {{site.prodnameWindows}}. For example, {{site.prodnameWindows}} the hard way. | no |
 | Datastore          | {{site.prodnameWindows}} datastore type [`kubernetes` or `etcdv3`] for reading endpoints and policy information. | kubernetes |
 | EtcdEndpoints      | Comma-delimited list of etcd connection endpoints. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`. Valid only if `Datastore` is set to `etcdv3`. | "" |
-| EtcdTlsSecretName  | Name of a secret in `calico-system` namespace which contains `etcd-key`, `etcd-cert`, `etcd-ca` for automatically configuring TLS. Either use this or parameters `EtcdKey`, `EtcdCert`, `EtcdCaCert` below. Note: If you are not using operator-based installation, use namespace `kube-system`. | "" |
+| EtcdTlsSecretName  | Name of a secret in `calico-system` namespace which contains `etcd-key`, `etcd-cert`, `etcd-ca` for automatically configuring TLS. Either use this or parameters `EtcdKey`, `EtcdCert`, `EtcdCaCert` below. | "" |
 | EtcdKey            | Path to key file for etcd TLS connection. | "" |
 | EtcdCert           | Path to certificate file for etcd TLS connection. | "" |
 | EtcdCaCert         | Path to CA certificate file for etcd TLS connection. | "" |
