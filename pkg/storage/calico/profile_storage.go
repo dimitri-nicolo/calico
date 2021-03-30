@@ -57,7 +57,7 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         etcd.APIObjectVersioner{},
+		versioner:         ProfileAPIObjectVersioner{&etcd.APIObjectVersioner{}},
 		aapiType:          reflect.TypeOf(aapi.Profile{}),
 		aapiListType:      reflect.TypeOf(aapi.ProfileList{}),
 		libCalicoType:     reflect.TypeOf(libcalicoapi.Profile{}),
