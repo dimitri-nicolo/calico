@@ -2316,6 +2316,23 @@ Calico Enterprise installation.</p>
 <tbody>
 <tr>
 <td>
+<code>linuxDataplane</code><br>
+<em>
+<a href="#operator.tigera.io/v1.LinuxDataplaneOption">
+LinuxDataplaneOption
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LinuxDataplane is used to select the dataplane used for Linux nodes. In particular, it
+causes the operator to add required mounts and environment variables for the particular dataplane.
+If not specified, iptables mode is used.
+Default: Iptables</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>bgp</code><br>
 <em>
 <a href="#operator.tigera.io/v1.BGPOption">
@@ -3350,6 +3367,14 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.LinuxDataplaneOption">LinuxDataplaneOption
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec</a>)
+</p>
+<p>LinuxDataplaneOption controls which dataplane is to be used on Linux nodes.</p>
+<p>One of: Iptables, BPF</p>
 <h3 id="operator.tigera.io/v1.LogCollectorSpec">LogCollectorSpec
 </h3>
 <p>
