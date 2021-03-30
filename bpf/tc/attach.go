@@ -48,6 +48,7 @@ type AttachPoint struct {
 	Iface          string
 	LogLevel       string
 	HostIP         net.IP
+	IntfIP         net.IP
 	FIB            bool
 	ToHostDrop     bool
 	DSR            bool
@@ -207,6 +208,11 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 	b.PatchVXLANPort(vxlanPort)
 	b.PatchIfNS(ap.VethNS)
 	b.PatchTcpStats(ap.EnableTCPStats)
+
+	err = b.PatchIntfAddr(ap.IntfIP)
+	if err != nil {
+		return fmt.Errorf("failed to patch interface IPv4 into BPF binary: %w", err)
+	}
 
 	err = b.WriteToFile(ofile)
 	if err != nil {
