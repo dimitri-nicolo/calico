@@ -228,7 +228,7 @@ func (f *FlowSpec) AggregateMetricUpdate(mu MetricUpdate) {
 
 	f.aggregateFlowLabels(mu)
 	f.aggregateFlowPolicies(mu)
-	f.aggregateFlowStats(mu)
+	f.aggregateFlowStatsByProcess(mu)
 	f.aggregateFlowExtrasRef(mu)
 }
 
@@ -498,6 +498,10 @@ type FlowStats struct {
 	FlowReportedTCPStats
 	flowReferences
 	processIDs set.Set
+
+	// Reset Process IDs  on the next metric update aggregation cycle. this ensures that we only clear
+	// process ID information when we receive a new metric update.
+	resetProcessIDs bool
 }
 
 func NewFlowStats(mu MetricUpdate) FlowStats {
@@ -625,6 +629,12 @@ func (f *FlowStats) aggregateFlowTCPStats(mu MetricUpdate) {
 }
 
 func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
+	if f.resetProcessIDs {
+		// Only clear process IDs when aggregating a new metric update and after
+		// a prior export.
+		f.processIDs.Clear()
+		f.resetProcessIDs = false
+	}
 	switch {
 	case mu.updateType == UpdateTypeReport && !f.flowsRefsActive.Contains(mu.tuple):
 		f.flowsStartedRefs.Add(mu.tuple)
@@ -663,8 +673,10 @@ func (f *FlowStats) reset() {
 	f.FlowReportedStats = FlowReportedStats{
 		NumFlows: f.flowsRefs.Len(),
 	}
-	f.processIDs.Clear()
 	f.FlowReportedTCPStats = FlowReportedTCPStats{}
+	// Signal that the process ID information should be reset prior to
+	// aggregating.
+	f.resetProcessIDs = true
 }
 
 // FlowStatsByProcess collects statistics organized by process names. When process information is not enabled
@@ -691,11 +703,11 @@ func NewFlowStatsByProcess(mu MetricUpdate, includeProcess bool, processLimit in
 		includeProcess:     includeProcess,
 		processLimit:       processLimit,
 	}
-	f.aggregateFlowStats(mu)
+	f.aggregateFlowStatsByProcess(mu)
 	return f
 }
 
-func (f *FlowStatsByProcess) aggregateFlowStats(mu MetricUpdate) {
+func (f *FlowStatsByProcess) aggregateFlowStatsByProcess(mu MetricUpdate) {
 	if !f.includeProcess || mu.processName == "" {
 		mu.processName = flowLogFieldNotIncluded
 		mu.processID = 0
@@ -803,6 +815,25 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 		if !ok {
 			log.Warnf("Stats not found for process name %v", name)
 			f.processNames.Remove(e)
+			continue
+		}
+
+		// If we didn't receive any process data then the flow stats are
+		// aggregated under a "-" which is flowLogFieldNotIncluded. All these
+		// This is handled separately here so that we can set numProcessNames
+		// and numProcessIDs to 0.
+		if name == flowLogFieldNotIncluded {
+			s := FlowProcessReportedStats{
+				ProcessName:          flowLogFieldNotIncluded,
+				NumProcessNames:      0,
+				ProcessID:            flowLogFieldNotIncluded,
+				NumProcessIDs:        0,
+				FlowReportedStats:    stats.FlowReportedStats,
+				FlowReportedTCPStats: stats.FlowReportedTCPStats,
+			}
+			reportedStats = append(reportedStats, s)
+			// Continue processing in case there are other tuples that did collect
+			// process information.
 			continue
 		}
 

@@ -237,16 +237,26 @@ var _ = Describe("Flow log aggregator tests", func() {
 			procID.Add(mu.processID)
 		}
 		if procNames.Len() == 1 {
-			fpi.processName = processName
-			fpi.numProcessNames = 1
+			if processName == "" {
+				fpi.processName = "-"
+				fpi.numProcessNames = 0
+			} else {
+				fpi.processName = processName
+				fpi.numProcessNames = 1
+			}
 		} else {
 			fpi.processName = "*"
 			fpi.numProcessNames = procNames.Len()
 		}
 
 		if procID.Len() == 1 {
-			fpi.processID = processID
-			fpi.numProcessIDs = 1
+			if processID == "0" {
+				fpi.processID = "-"
+				fpi.numProcessIDs = 0
+			} else {
+				fpi.processID = processID
+				fpi.numProcessIDs = 1
+			}
 		} else {
 			fpi.processID = "*"
 			fpi.numProcessIDs = procID.Len()
@@ -1322,6 +1332,123 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedFlowLogs = append(expectedFlowLogs, expectedFlowLog)
 
 			expectFlowLogsMatch(actualFlowLogs, expectedFlowLogs)
+		})
+
+		It("Includes correct process information with default aggregation across multiple flush intervals", func() {
+			By("Creating an aggregator for allow")
+			caa := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2)
+
+			By("Feeding update with process information")
+			_ = caa.FeedUpdate(muWithProcessName)
+
+			By("Checking calibration")
+			messages := caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog := messages[0]
+
+			dstMeta := EndpointMetadata{
+				Type:           "wep",
+				Namespace:      "default",
+				Name:           "nginx-412354-5123451",
+				AggregatedName: "nginx-412354-*",
+			}
+
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muWithProcessName)
+			expectedFP := extractFlowPolicies(muWithProcessName)
+			expectedFlowExtras := extractFlowExtras(muWithProcessName)
+			expectedFlowProcessInfo := extractFlowProcessInfo(muWithProcessName)
+			expectedTCPS := extractFlowTCPStats(muWithProcessName)
+			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
+
+			By("Checking calibration without any additional metric update")
+			messages = caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog = messages[0]
+
+			// MetricUpdate object only used for  calculating expectations and not really sent to aggregator
+			muWithProcessNameButNoStats := muWithProcessName
+			muWithProcessNameButNoStats.tcpMetric = TCPMetricValue{}
+			muWithProcessNameButNoStats.inMetric = MetricValue{}
+			muWithProcessNameButNoStats.sendCongestionWnd = nil
+			muWithProcessNameButNoStats.smoothRtt = nil
+			muWithProcessNameButNoStats.minRtt = nil
+			muWithProcessNameButNoStats.mss = nil
+
+			By("Expected flow logs contain the process ID")
+			expectedNumFlows = 1
+			expectedNumFlowsStarted = 0
+			expectedNumFlowsCompleted = 0
+
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muWithProcessNameButNoStats)
+			expectedFP = extractFlowPolicies(muWithProcessNameButNoStats)
+			expectedFlowExtras = extractFlowExtras(muWithProcessNameButNoStats)
+			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessNameButNoStats)
+			expectedTCPS = extractFlowTCPStats(muWithProcessNameButNoStats)
+			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
+
+			By("Feeding update with same process name but different ID")
+			_ = caa.FeedUpdate(muWithProcessNameDifferentIDSameTuple)
+
+			By("Checking calibration")
+			messages = caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog = messages[0]
+
+			By("Expected flow logs contain the new process ID from the metric update")
+			expectedNumFlows = 1
+			expectedNumFlowsStarted = 0
+			expectedNumFlowsCompleted = 0
+
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muWithProcessNameDifferentIDSameTuple)
+			expectedFP = extractFlowPolicies(muWithProcessNameDifferentIDSameTuple)
+			expectedFlowExtras = extractFlowExtras(muWithProcessNameDifferentIDSameTuple)
+			expectedFlowProcessInfo = extractFlowProcessInfo(muWithProcessNameDifferentIDSameTuple)
+			expectedTCPS = extractFlowTCPStats(muWithProcessNameDifferentIDSameTuple)
+			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
+		})
+
+		It("Handles missing process information with default aggregation", func() {
+			By("Creating an aggregator for allow")
+			caa := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2)
+
+			muWithoutProcessName := muWithProcessName
+			muWithoutProcessName.processName = ""
+			muWithoutProcessName.processID = 0
+
+			By("Feeding update with process information")
+			_ = caa.FeedUpdate(muWithoutProcessName)
+
+			By("Checking calibration")
+			messages := caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog := messages[0]
+
+			dstMeta := EndpointMetadata{
+				Type:           "wep",
+				Namespace:      "default",
+				Name:           "nginx-412354-5123451",
+				AggregatedName: "nginx-412354-*",
+			}
+
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muWithoutProcessName)
+			expectedFP := extractFlowPolicies(muWithoutProcessName)
+			expectedFlowExtras := extractFlowExtras(muWithoutProcessName)
+			expectedFlowProcessInfo := extractFlowProcessInfo(muWithoutProcessName)
+			expectedTCPS := extractFlowTCPStats(muWithoutProcessName)
+			expectFlowLog(*flowLog, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, dstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, expectedFlowProcessInfo, expectedTCPS)
+
 		})
 
 	})
