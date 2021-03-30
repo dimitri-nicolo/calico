@@ -85,12 +85,13 @@ NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_BIN_DIR=./dist/bin/
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
+NODE_GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 
 # Variables for the Windows packaging.
 # Name of the Windows release ZIP archive.
 WINDOWS_ARCHIVE_ROOT := windows-packaging/CalicoWindows
 WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/calico-node.exe
-WINDOWS_ARCHIVE_TAG?=$(GIT_VERSION)
+WINDOWS_ARCHIVE_TAG?=$(NODE_GIT_VERSION)
 WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
 WINDOWS_NSSM_VERSION=2.24
@@ -146,9 +147,9 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 # All these are required for correct version reporting by the various binaries
 # as well as embedding this information within the ClusterInformation resource.
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(GIT_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_VERSION) \
-	-X main.VERSION=$(GIT_VERSION) \
+	-X main.VERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
@@ -855,12 +856,12 @@ WINDOWS_GCS_BUCKET := gs://tigera-windows/dev/
 # If the git tag is a release tag (i.e. has the form vX.Y.Z) then it goes into
 # the GCS bucket for releases; otherwise the zip file goes into the dev bucket.
 push-windows-archive-gcs: build-windows-archive
-ifneq ($(shell echo ${GIT_VERSION} | grep -E "${RELEASE_TAG_REGEX}"),)
+ifneq ($(shell echo ${NODE_GIT_VERSION} | grep -E "${RELEASE_TAG_REGEX}"),)
 	@echo "GIT_VERSION is a release tag; using release bucket location for Windows artifact"
 	$(eval WINDOWS_GCS_BUCKET := gs://tigera-windows/)
 endif
 	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
-	gsutil cp dist/tigera-calico-windows-$(GIT_VERSION).zip $(WINDOWS_GCS_BUCKET)
+	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $(WINDOWS_GCS_BUCKET)
 	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
