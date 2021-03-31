@@ -22,9 +22,8 @@ package v1
 
 import (
 	spec "github.com/go-openapi/spec"
-	common "k8s.io/kube-openapi/pkg/common"
-
 	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
+	common "k8s.io/kube-openapi/pkg/common"
 )
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
