@@ -54,15 +54,6 @@ func PolicyRecommendationHandler(k8sClientFactory datastore.ClusterCtxK8sClientF
 
 		flowHelper := rbac.NewCachedFlowHelper(user, authorizer)
 
-		// Check that the user is allowed to access flow logs. This happens in the current cluster.
-		if authorized, err := authorizer.Authorize(user, createLMAResourceAttributes(clusterID, "flows"), nil); err != nil {
-			createAndReturnError(err, "Not permitting user actions", http.StatusInternalServerError, lmaerror.PolicyRec, w)
-			return
-		} else if !authorized {
-			createAndReturnError(err, "Not permitting user actions", http.StatusForbidden, lmaerror.PolicyRec, w)
-			return
-		}
-
 		// Check that user has sufficient permissions to list flows for the requested endpoint. This happens in the
 		// selected cluster from the UI drop-down menu.
 		if stat, err := ValidateRecommendationPermissions(flowHelper, params); err != nil {

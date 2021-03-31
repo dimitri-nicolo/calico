@@ -50,6 +50,7 @@ func init() {
 		"flowLogNamespaces":           "flows",
 		"flowLogs":                    "flows",
 		"flow":                        "flows",
+		"recommend":                   "flows",
 	}
 }
 

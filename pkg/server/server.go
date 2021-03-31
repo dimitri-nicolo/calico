@@ -141,8 +141,10 @@ func Start(cfg *Config) error {
 	case InsecureMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 		sm.Handle("/recommend",
-			middleware.AuthenticateRequest(authenticator,
-				middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))
+			middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPattern(
 				middleware.AuthenticateRequest(authenticator,
@@ -174,8 +176,10 @@ func Start(cfg *Config) error {
 	case ServiceUserMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 		sm.Handle("/recommend",
-			middleware.AuthenticateRequest(authenticator,
-				middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))
+			middleware.RequestToResource(
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPattern(
 				middleware.AuthenticateRequest(authenticator,
