@@ -39,6 +39,12 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
    curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-operator-{% include chart_version_name %}.tgz
    ```
 
+1. Install the operator custom resource definitions.
+
+   ```bash
+   kubectl apply -f {{ "/manifests/operator-crds.yaml" | absolute_url }}
+   ```
+
 1. Find the Helm installation name. This will be used in the following upgrade steps
 
    ```bash
