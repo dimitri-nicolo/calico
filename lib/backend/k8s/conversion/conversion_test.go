@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1040,14 +1040,79 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		pol, err := c.K8sNetworkPolicyToCalico(&np)
 		Expect(err).NotTo(HaveOccurred())
 
+		tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(ConsistOf(
 			apiv3.Rule{
 				Action:   "Allow",
-				Protocol: nil, // We only default to TCP when ports exist
+				Protocol: &tcp,
 				Source: apiv3.EntityRule{
 					Selector: "projectcalico.org/orchestrator == 'k8s' && k == 'v' && k2 == 'v2'",
 				},
 				Destination: apiv3.EntityRule{},
+			},
+		))
+	})
+
+	It("should parse a k8s egress NetworkPolicy with blank ports", func() {
+		port53 := intstr.FromInt(53)
+		port80 := intstr.FromInt(80)
+		protoUDP := kapiv1.ProtocolUDP
+		np := networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test.policy",
+				Namespace: "default",
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"label":  "value",
+						"label2": "value2",
+					},
+				},
+				Egress: []networkingv1.NetworkPolicyEgressRule{
+					{
+						Ports: []networkingv1.NetworkPolicyPort{{}, {Port: &port80}},
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"k":  "v",
+										"k2": "v2",
+									},
+								},
+							},
+						},
+					},
+					{
+						Ports: []networkingv1.NetworkPolicyPort{{Port: &port53, Protocol: &protoUDP}},
+					},
+				},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			},
+		}
+
+		// Parse the policy.
+		pol, err := c.K8sNetworkPolicyToCalico(&np)
+		Expect(err).NotTo(HaveOccurred())
+
+		tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
+		udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(ConsistOf(
+			apiv3.Rule{
+				Action:   "Allow",
+				Protocol: &tcp,
+				Source:   apiv3.EntityRule{},
+				Destination: apiv3.EntityRule{
+					Selector: "projectcalico.org/orchestrator == 'k8s' && k == 'v' && k2 == 'v2'",
+				},
+			},
+			apiv3.Rule{
+				Action:   "Allow",
+				Protocol: &udp,
+				Source:   apiv3.EntityRule{},
+				Destination: apiv3.EntityRule{
+					Ports: []numorstring.Port{numorstring.SinglePort(53)},
+				},
 			},
 		))
 	})
@@ -2687,6 +2752,11 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(k8sRev).To(Equal("5678"))
 
 		crdRev, k8sRev, err = c.SplitNetworkPolicyRevision("1234/")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(crdRev).To(Equal("1234"))
+		Expect(k8sRev).To(Equal(""))
+
+		crdRev, k8sRev, err = c.SplitNetworkPolicyRevision("1234")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crdRev).To(Equal("1234"))
 		Expect(k8sRev).To(Equal(""))

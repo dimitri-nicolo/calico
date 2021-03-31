@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -233,7 +233,7 @@ func (c *WorkloadEndpointClient) Get(ctx context.Context, key model.Key, revisio
 		}
 	}
 
-	return nil, kerrors.NewNotFound(apiv3.Resource("WorkloadEndpoint"), key.String())
+	return nil, cerrors.ErrorResourceDoesNotExist{Identifier: k}
 }
 
 func (c *WorkloadEndpointClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {

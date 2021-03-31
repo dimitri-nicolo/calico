@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,14 +55,17 @@ var _ = Describe("Test felix configuration upgrade", func() {
 			{
 				Protocol: "TCP",
 				Port:     1234,
+				Net:      "0.0.0.0/0",
 			},
 			{
 				Protocol: "UDP",
 				Port:     22,
+				Net:      "0.0.0.0/0",
 			},
 			{
 				Protocol: "TCP",
 				Port:     65535,
+				Net:      "0.0.0.0/0",
 			},
 		},
 	}
@@ -83,14 +86,17 @@ var _ = Describe("Test felix configuration upgrade", func() {
 			{
 				Protocol: "TCP",
 				Port:     1234,
+				Net:      "0.0.0.0/0",
 			},
 			{
 				Protocol: "UDP",
 				Port:     22,
+				Net:      "0.0.0.0/0",
 			},
 			{
 				Protocol: "TCP",
 				Port:     65535,
+				Net:      "0.0.0.0/0",
 			},
 		},
 	}

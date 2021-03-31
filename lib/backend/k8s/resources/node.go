@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -325,17 +325,19 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node, usePodCIDR bool) (*model.KVPair, erro
 func fillAllAddresses(calicoNode *apiv3.Node, k8sNode *kapiv1.Node) {
 	if bgp := calicoNode.Spec.BGP; bgp != nil {
 		if addr := bgp.IPv4Address; addr != "" {
-			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: addr})
+			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: addr, Type: apiv3.CalicoNodeIP})
 		}
 		if addr := bgp.IPv6Address; addr != "" {
-			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: addr})
+			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: addr, Type: apiv3.CalicoNodeIP})
 		}
 	}
 
 	for _, kaddr := range k8sNode.Status.Addresses {
 		switch kaddr.Type {
-		case kapiv1.NodeInternalIP, kapiv1.NodeExternalIP:
-			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: kaddr.Address})
+		case kapiv1.NodeInternalIP:
+			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: kaddr.Address, Type: apiv3.InternalIP})
+		case kapiv1.NodeExternalIP:
+			calicoNode.Spec.Addresses = append(calicoNode.Spec.Addresses, apiv3.NodeAddress{Address: kaddr.Address, Type: apiv3.ExternalIP})
 		default:
 			continue
 		}

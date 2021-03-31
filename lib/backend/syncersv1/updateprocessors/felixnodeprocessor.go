@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -92,6 +92,19 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 					log.WithField("IPv4IPIPTunnelAddr", bgp.IPv4IPIPTunnelAddr).Warn("Failed to parse IPv4IPIPTunnelAddr")
 					err = fmt.Errorf("failed to parsed IPv4IPIPTunnelAddr as an IP address")
 				}
+			}
+		}
+		// Look for internal node address, if BGP is not running
+		if ipv4 == nil {
+			ip := c.findNodeAddress(node, apiv3.InternalIP)
+			if ip != nil {
+				ipv4 = ip
+			}
+		}
+		if ipv4 == nil {
+			ip := c.findNodeAddress(node, apiv3.ExternalIP)
+			if ip != nil {
+				ipv4 = ip
 			}
 		}
 
@@ -214,14 +227,14 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 	if c.usePodCIDR {
 		// If we're using host-local IPAM based off the Kubernetes node PodCIDR, then
 		// we need to send Blocks based on the CIDRs to felix.
-		log.Info("Using pod cidr")
+		log.Debug("Using pod cidr")
 		var currentPodCIDRs []string
 		if node != nil {
 			currentPodCIDRs = node.Status.PodCIDRs
 		}
 		toRemove := c.nodeCIDRTracker.SetNodeCIDRs(name, currentPodCIDRs)
-		log.Infof("Current CIDRS: %s", currentPodCIDRs)
-		log.Infof("Old CIDRS: %s", toRemove)
+		log.Debugf("Current CIDRS: %s", currentPodCIDRs)
+		log.Debugf("Old CIDRS: %s", toRemove)
 
 		// Send deletes for any CIDRs which are no longer present.
 		for _, c := range toRemove {
@@ -268,4 +281,22 @@ func (c *FelixNodeUpdateProcessor) extractName(k model.Key) (string, error) {
 		return "", errors.New("Incorrect key type - expecting resource of kind Node")
 	}
 	return rk.Name, nil
+}
+
+func (c *FelixNodeUpdateProcessor) findNodeAddress(node *apiv3.Node, ipType string) *cnet.IP {
+	for _, addr := range node.Spec.Addresses {
+		if addr.Type == ipType {
+			ip, cidr, err := cnet.ParseCIDROrIP(addr.Address)
+			if err == nil {
+				if ip.To4() == nil {
+					continue
+				}
+				log.WithFields(log.Fields{"ip": ip, "cidr": cidr}).Debug("Parsed IPv4 address")
+				return ip
+			} else {
+				log.WithError(err).WithField("IPv4Address", addr.Address).Warn("Failed to parse IPv4Address")
+			}
+		}
+	}
+	return nil
 }
