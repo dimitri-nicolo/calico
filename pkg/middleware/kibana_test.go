@@ -4,10 +4,9 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"github.com/tigera/es-proxy/pkg/kibana"
 	"net/http"
 	"net/http/httptest"
-
-	"github.com/tigera/es-proxy/pkg/kibana"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -153,6 +152,38 @@ var _ = Describe("Kibana", func() {
 
 			Expect(len(response.Cookies())).Should(Equal(1))
 			Expect(response.Header.Get("Location")).Should(Equal(kibanaURL))
+		})
+
+		It("returns error if user does't exist in Elasticsearch", func() {
+			userSubjectID := "123456789abcdefg"
+
+			_, err := fakeClientSet.CoreV1().Secrets(ElasticsearchNamespace).Create(context.Background(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      OIDCUsersElasticsearchCredentialsSecret,
+					Namespace: ElasticsearchNamespace,
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			respRecorder := httptest.NewRecorder()
+
+			req, err := http.NewRequest("GET", "https://localhost:9443/tigera-elasticsearch/kibana/login", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{
+				Name: "test-user",
+				Extra: map[string][]string{
+					"iss": {dexIssuer},
+					"sub": {userSubjectID},
+				},
+			}))
+
+			NewKibanaLoginHandler(fakeClientSet, mockKibanaCli, true, dexIssuer, ElasticsearchLicenseTypeBasic).ServeHTTP(respRecorder, req)
+			response := respRecorder.Result()
+
+			Expect(len(response.Cookies())).Should(Equal(0))
+			Expect(response.Header.Get("Location")).Should(HavePrefix(dashboardURL))
+			Expect(response.Header.Get("Location")).Should(ContainSubstring("errorCode=403"))
 		})
 	})
 })

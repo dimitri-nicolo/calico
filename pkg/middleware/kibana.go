@@ -102,7 +102,13 @@ func (handler *kibanaLoginHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 			return
 		}
 
-		esPassword := string(credsSecret.Data[oidcUser.SubjectID])
+		pwdBytes, exists := credsSecret.Data[oidcUser.SubjectID]
+		if !exists{
+			log.Warnf("User %s doesn't exist or doesn't have permission to access Kibana.", oidcUser.Username)
+			redirectToDashboardWithError(w, req, http.StatusForbidden, "User doesn't exist or doesn't have permission to access Kibana")
+			return
+		}
+		esPassword := string(pwdBytes)
 		esUsername := fmt.Sprintf("%s-%s", ElasticsearchUsernamePrefix, oidcUser.SubjectID)
 
 		kibanaResponse, err := handler.kibanaCli.Login(fmt.Sprintf("%s://%s", req.URL.Scheme, req.URL.Host),
