@@ -32,14 +32,13 @@ require (
 	k8s.io/apiserver v0.19.6
 	k8s.io/client-go v0.19.6
 	k8s.io/klog v1.0.0
-	k8s.io/kubernetes v1.19.6 // indirect
 	sigs.k8s.io/controller-runtime v0.7.0 // indirect
 )
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210330201602-ec1f8246b72a
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210330210005-40e512c74751
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210330193744-b0b306b0c9bc
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210331012647-e44cb57a0326
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210331012641-b71b7372b3cd
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210330195141-36c677e4ab3c
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
