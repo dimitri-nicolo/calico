@@ -45,23 +45,10 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
    kubectl apply -f {{ "/manifests/operator-crds.yaml" | absolute_url }}
    ```
 
-1. Find the Helm installation name. This will be used in the following upgrade steps
-
-   ```bash
-   helm list
-   ```
-
-   The output should look like the following
-
-   ```bash
-   NAME                    REVISION        UPDATED                         STATUS          CHART                           APP VERSION     NAMESPACE
-   calico-enterprise       1               Tue Jan 26 17:38:07 2021        DEPLOYED        tigera-operator-v3.3.2-0        v3.3.2          default
-   ```
-
 1. Run the Helm upgrade command for `tigera-operator`
 
    ```bash
-   helm upgrade <helm installation name for tigera-operator> tigera-operator-{% include chart_version_name %}.tgz
+   helm upgrade calico-enterprise tigera-operator-{% include chart_version_name %}.tgz
    ```
 
 1. If your cluster has OIDC login configured, follow these steps:
