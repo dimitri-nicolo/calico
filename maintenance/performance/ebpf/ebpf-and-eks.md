@@ -54,7 +54,7 @@ The easiest way to start an EKS cluster that meets eBPF mode's requirements is t
 [Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a 
 container-optimised OS with an emphasis on security; it has a version of the kernel which is compatible with eBPF mode.
 
-* To create a 2-node test cluster with a Bottlerocket node group, run the command below.  It is important to use the config-file
+* To create a 4-node test cluster with a Bottlerocket node group, run the command below.  It is important to use the config-file
   approach to creating a cluster in order to set the additional IAM permissions for Bottlerocket.
 
   ```
@@ -67,10 +67,10 @@ container-optimised OS with an emphasis on security; it has a version of the ker
     version: '1.18'
   nodeGroups:
     - name: ng-my-calico-cluster
-      instanceType: t3.medium
+      instanceType: t3.xlarge
       minSize: 0
-      maxSize: 2
-      desiredCapacity: 2
+      maxSize: 4
+      desiredCapacity: 4
       amiFamily: Bottlerocket
       iam:
         attachPolicyARNs:
@@ -80,32 +80,17 @@ container-optimised OS with an emphasis on security; it has a version of the ker
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
   EOF
   ```
-* Install the Tigera operator:
+  
+* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/eks) to install {{site.prodname}}
+  using the Amazon VPC CNI (Calico CNI cannot be installed on Bottlerocket at this time), with the following tweak:
+  
+  Set `spec.flexVolumePath` to `/var/lib/kubelet/plugins` in the `Installation` resource in the `custom-resources.yaml`.  
+  This can be done by editing the YAML or by applying the YAML and then immediately running the following command to 
+  patch the `Installation` resource:
+  ```bash
+  kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"flexVolumePath":"/var/lib/kubelet/plugins"}}'
   ```
-  kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
-  ```
-
-  > **Note**: Do not use the manifests from the [<u>current EKS docs</u>](https://docs.aws.amazon.com/eks/latest/userguide/calico.html)
-  > because they reference an older version of Calico, which does not have the latest eBPF fixes.
-  >
-  > It's important to use the operator to install {{site.prodname}}, not a "manifest" install.  The "manifest" installs
-  > are not specialised for EKS (but the operator knows how to customise the installation for EKS).
-  {: .alert .alert-info}
-
-* Using `kubectl`, apply the following [`Installation` resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation) to tell the operator to install {{site.prodname}}; note the `flexVolumePath` tweak, which is needed for Bottlerocket.
-
-  ```
-  apiVersion: operator.tigera.io/v1
-  kind: Installation
-  metadata:
-    name: default
-  spec:
-    cni:
-      type: AmazonVPC
-    flexVolumePath: /var/lib/kubelet/plugins
-    # Enables provider-specific settings required for compatibility.
-    kubernetesProvider: EKS
-  ```
+  This tweak is required for Bottlerocket compatibility.
 
 %>
 <label:Custom AMI>
@@ -134,58 +119,9 @@ which is suitable:
    --without-nodegroup
   ```
 
-* Install the Tigera operator:
-  ```
-  kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
-  ```
+* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/eks) to install {{site.prodname}}
+  but when instructed to create the node group, use the AMI saved off above:
   
-* To use {{site.prodname}} with the AWS VPC CNI: 
-
-  * Using `kubectl`, apply the following [`Installation` resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation) to tell   the operator to install {{site.prodname}}.
-
-    ```
-    apiVersion: operator.tigera.io/v1
-    kind: Installation
-    metadata:
-      name: default
-    spec:
-      cni:
-        type: AmazonVPC
-      # Enables provider-specific settings required for compatibility.
-      kubernetesProvider: EKS
-    ```
-
-* Alternatively, to use {{site.prodname}} networking:
-
-  * Delete the `aws-node` daemon set to disable AWS VPC networking for pods.
-    
-    ```bash
-    kubectl delete daemonset -n kube-system aws-node
-    ```
-  * Using `kubectl`, apply the following [`Installation` resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation) to tell   the operator to install {{site.prodname}}.  Modify the IP pool CIDR to avoid any clash with your VPC network:
-
-    ```
-    apiVersion: operator.tigera.io/v1
-    kind: Installation
-    metadata:
-      name: default
-    spec:
-      # Configures Calico networking.
-      calicoNetwork:
-        # Note: The ipPools section cannot be modified post-install.
-        ipPools:
-        - blockSize: 26
-          cidr: 192.168.0.0/16
-          encapsulation: VXLANCrossSubnet
-          natOutgoing: Enabled
-          nodeSelector: all()
-      cni:
-        type: Calico
-      # Enables provider-specific settings required for compatibility.
-      kubernetesProvider: EKS
-    ```
-
-* Create a nodegroup, using the AMI ID you noted above.
   * `--node-ami` should be set to the AMI ID of the image built above.
   * `--node-ami-family` should be set to `Ubuntu1804` (despite the upgrade).
 
@@ -193,12 +129,16 @@ which is suitable:
     ```
     eksctl create nodegroup \
       --cluster my-calico-cluster \
-      --node-type t3.medium \
-      --node-ami auto \
+      --node-type t3.xlarge \
       --max-pods-per-node 100 \
       --node-ami-family Ubuntu1804 \
-      --node-ami <AMI ID>
+      --node-ami <AMI ID> \
+      --max-pods-per-node 100
     ```
+  
+    > **Tip**: Without the `--max-pods-per-node` option above, EKS will limit the 
+    > {% include open-new-window.html text='number of pods based on node-type' url='https://github.com/awslabs/amazon-eks-ami/blob/master/files/eni-max-pods.txt' %}. 
+    > See `eksctl create nodegroup --help` for the full set of node group options.
 
 %>
 {% endtabs %}
