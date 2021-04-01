@@ -344,13 +344,13 @@ rules:
 
 #### User has full control over NetworkPolicy resources in a specific tier
 
-In this example, the `ClusterRole` is used to provide full access control of Calico NetworkPolicy
-resource types in the **net-sec** tier.
--  If this is bound to a user using a `ClusterRoleBinding`, then the user has full access of these
-   policies across all namespaces.
--  If this is bound to a user using a `RoleBinding`, then the user has full access of these
-   policies within a specific namespace. (This is useful because you only need this one `ClusterRole` to be
-   defined, but it can be "reused" for users in different namespaces using a `RoleBinding`).
+In this example, two `ClusterRole` objects are used to provide full access control of Calico NetworkPolicy
+resource types in the **net-sec** tier:
+-  The `tiers` resource is bound to a user using a `ClusterRoleBinding`, because it is a global resource.
+   This results in the user having the ability to read the contents of the tier across all namespaces.
+-  The `networkpolicies` resources are bound to a user using a `RoleBinding`, because they are a namespaced resource.
+   You only need this one `ClusterRole` to be defined, but it can be "reused" for users in different namespaces
+   using additional `RoleBinding` objects).
 
 > **Note**: The Kubernetes NetworkPolicy resources are bound to the default tier, and so this `ClusterRole`
 > does not contain any Kubernetes resource types.
@@ -360,16 +360,56 @@ resource types in the **net-sec** tier.
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: net-sec-tier-policy-cruder
+  name: net-sec-tier-policy-reader
 rules:
-# To access Calico policy in a tier, the user requires get access to that tier.
+# To access Calico policy in a tier, the user requires get access to that tier, globally.
 - apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["net-sec"]
   verbs: ["get"]
-# This allows configuration of the Calico NetworkPolicy resources in the net-sec tier.
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: net-sec-tier-policy-cruder
+rules:
+# This allows configuration of the Calico NetworkPolicy resources in the net-sec tier, in this namespace.
 - apiGroups: ["projectcalico.org"]
   resources: ["tier.networkpolicies"]
   resourceNames: ["net-sec.*"]
   verbs: ["*"]
+
+---
+
+# Applied globally
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-tier-net-sec-global
+subjects:
+- kind: User
+  name: john
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: net-sec-tier-policy-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# Applied per-namespace
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: crud-tier-net-sec-in-this-namespace
+subjects:
+- kind: User
+  name: john
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: net-sec-tier-policy-cruder
+  apiGroup: rbac.authorization.k8s.io
 ```
