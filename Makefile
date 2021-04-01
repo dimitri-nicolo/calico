@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/license-agent
-GO_BUILD_VER    ?= v0.49
+GO_BUILD_VER    ?= v0.51
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 LOCAL_CHECKS     = mod-download
