@@ -85,7 +85,7 @@ container-optimised OS with an emphasis on security; it has a version of the ker
   using the Amazon VPC CNI (Calico CNI cannot be installed on Bottlerocket at this time), with the following tweak:
   
   Set `spec.flexVolumePath` to `/var/lib/kubelet/plugins` in the `Installation` resource in the `custom-resources.yaml`.  
-  This can be done by editing the YAML or by applying the YAML and then immediately running the following command to 
+  This can be done by editing `custom-resources.yaml` or by applying the YAML and then immediately running the following command to 
   patch the `Installation` resource:
   ```bash
   kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"flexVolumePath":"/var/lib/kubelet/plugins"}}'
