@@ -835,7 +835,7 @@ metadata:
 spec:
   tier: allow-tigera
   order: 1
-  selector: k8s-app == "fluentd-node"
+  selector: k8s-app == 'fluentd-node' || k8s-app == 'fluentd-node-windows'
   serviceAccountSelector: ''
   types:
     - Ingress
