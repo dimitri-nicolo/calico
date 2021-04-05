@@ -42,6 +42,8 @@ include Makefile.common
 
 ###############################################################################
 
+KUBE_CONTROLLERS_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
+
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
@@ -107,19 +109,19 @@ bin/kube-controllers-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	  go build -v -o $@ -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/kube-controllers/'
+	  go build -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/kube-controllers/'
 
 bin/wrapper-$(ARCH):
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	  go build -v -o $@ -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/wrapper'
+	  go build -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/wrapper'
 
 bin/check-status-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	  go build -v -o $@ -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/check-status/'
+	  go build -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/check-status/'
 
 bin/kubectl-$(ARCH):
 	wget https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/$(ARCH)/kubectl -O $@
