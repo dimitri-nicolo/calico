@@ -796,13 +796,11 @@ var remoteWlEpKey3 = WorkloadEndpointKey{remoteHostname, "orch", "wl3", "ep3"}
 var remoteWlEp3ID = "orch/wl2/ep2"
 
 var remoteWlEp1 = WorkloadEndpoint{
-	State: "active",
-	Name:  "cali1",
-	Mac:   mustParseMac("01:02:03:04:05:06"),
-	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"),
-		mustParseNet("10.1.0.2/32")},
-	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe11::1/128"),
-		mustParseNet("fe80:fe11::2/128")},
+	State:    "active",
+	Name:     "cali1",
+	Mac:      mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"), mustParseNet("10.1.0.2/32")},
+	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe11::1/128"), mustParseNet("fe80:fe11::2/128")},
 	Labels: map[string]string{
 		"id": "rem-ep-1",
 		"x":  "x",
@@ -814,7 +812,8 @@ var remoteWlEp1NoIpv6 = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali1",
 	Mac:   mustParseMac("01:02:03:04:05:06"),
-	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"),
+	IPv4Nets: []calinet.IPNet{
+		mustParseNet("10.1.0.1/32"),
 		mustParseNet("10.1.0.2/32")},
 	Labels: map[string]string{
 		"id": "rem-ep-1",
@@ -827,9 +826,11 @@ var remoteWlEp1UpdatedLabels = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali1",
 	Mac:   mustParseMac("01:02:03:04:05:06"),
-	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"),
+	IPv4Nets: []calinet.IPNet{
+		mustParseNet("10.1.0.1/32"),
 		mustParseNet("10.1.0.2/32")},
-	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe11::1/128"),
+	IPv6Nets: []calinet.IPNet{
+		mustParseNet("fe80:fe11::1/128"),
 		mustParseNet("fe80:fe11::2/128")},
 	Labels: map[string]string{
 		"id": "rem-ep-1",
@@ -843,9 +844,11 @@ var remoteWlEp3 = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali2",
 	Mac:   mustParseMac("02:03:04:05:06:07"),
-	IPv4Nets: []calinet.IPNet{mustParseNet("10.2.0.1/32"),
+	IPv4Nets: []calinet.IPNet{
+		mustParseNet("10.2.0.1/32"),
 		mustParseNet("10.2.0.2/32")},
-	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe22::1/128"),
+	IPv6Nets: []calinet.IPNet{
+		mustParseNet("fe80:fe22::1/128"),
 		mustParseNet("fe80:fe22::2/128")},
 	Labels: map[string]string{
 		"id": "rem-ep-2",

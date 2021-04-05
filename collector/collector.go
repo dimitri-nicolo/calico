@@ -179,6 +179,7 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 		// If the connection has expired then return the data as is. If there is no entry, that's fine too.
 		return data
 	}
+
 	srcEp, dstEp := c.lookupEndpoint(tuple.src), c.lookupEndpoint(tuple.dst)
 	if !okData {
 		// For new entries, check that at least one of the endpoints is local.
@@ -280,7 +281,7 @@ func (c *collector) handleDataEndpointOrRulesChanged(data *Data) {
 		data.ResetConntrackCounters()
 		data.ResetApplicationCounters()
 		data.ResetTcpStats()
-		// Sett reported to false so the data can be updated without further reports.
+		// Set reported to false so the data can be updated without further reports.
 		data.reported = false
 	}
 }
@@ -310,6 +311,7 @@ func (c *collector) checkEpStats() {
 func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	t := data.PreDNATTuple()
 	processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirOutbound)
+
 	// In BPF dataplane, the existing connection tuples will be pre-DNAT and the new connections will
 	// be post-DNAT, because of connecttime load balancer. Hence if the lookup with preDNAT tuple fails,
 	// do a lookup with post DNAT tuple.
@@ -317,6 +319,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 		log.Debugf("Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
 		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirOutbound)
 	}
+
 	if ok {
 		log.Debugf("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
 		if !data.reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
@@ -329,11 +332,13 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 			log.Debugf("Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
 		}
 	}
+
 	processInfo, ok = c.processInfoCache.Lookup(t, TrafficDirInbound)
 	if !ok && c.config.IsBPFDataplane {
 		log.Debugf("Lookup process cache for post DNAT tuple %+v for Inbound traffic", data.Tuple)
 		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirInbound)
 	}
+
 	if ok {
 		log.Debugf("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
 		if !data.reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
@@ -353,6 +358,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 func (c *collector) reportMetrics(data *Data, force bool) bool {
 	foundService := true
 	c.LookupProcessInfoCacheAndUpdate(data)
+
 	if !data.reported {
 		// Check if the destination was accessed via a service. Once reported, this will not be updated again.
 		if data.dstSvc.Name == "" {
@@ -469,6 +475,7 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 	// Get or create a data entry and update the counters. If no entry is returned then neither source nor dest are
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
+
 	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, ctInfo.Expired); data != nil {
 
 		if !data.isDNAT && ctInfo.IsDNAT {

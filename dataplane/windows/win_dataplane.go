@@ -40,6 +40,8 @@ import (
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/throttle"
 	"github.com/projectcalico/libcalico-go/lib/health"
+
+	felixconfig "github.com/projectcalico/felix/config"
 )
 
 const (
@@ -216,7 +218,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 	var epEventListeners []endPointEventListener
 	if config.Collector != nil {
 		log.Debug("Stats collection is required, create VFP info reader")
-		vfpInfoReader := vfp.NewInfoReader(config.LookupsCache, collector.DefaultConntrackPollingInterval)
+		vfpInfoReader := vfp.NewInfoReader(config.LookupsCache, felixconfig.DefaultConntrackPollingInterval)
 
 		config.Collector.SetPacketInfoReader(vfpInfoReader)
 		config.Collector.SetConntrackInfoReader(vfpInfoReader)

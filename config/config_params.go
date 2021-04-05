@@ -75,6 +75,14 @@ const (
 	DisabledByLicenseCheck
 )
 
+// Default stats collection const used globally
+const (
+	DefaultAgeTimeout               = time.Duration(10) * time.Second
+	DefaultInitialReportingDelay    = time.Duration(5) * time.Second
+	DefaultExportingInterval        = time.Duration(1) * time.Second
+	DefaultConntrackPollingInterval = time.Duration(5) * time.Second
+)
+
 var SourcesInDescendingOrder = []Source{DisabledByLicenseCheck, InternalOverride, EnvironmentVariable, ConfigFile, DatastorePerHost, DatastoreGlobal}
 
 func (source Source) String() string {

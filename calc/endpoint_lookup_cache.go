@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,10 +15,15 @@ import (
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/stringutils"
 
+	"github.com/projectcalico/felix/config"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
+)
+
+const (
+	endpointDataTTLAfterMarkedAsRemovedSeconds = 2 * config.DefaultConntrackPollingInterval
 )
 
 // ===== A note on data structures for storing policy matches =====
@@ -65,6 +71,10 @@ type EndpointData struct {
 	// endpoint for the IP is not found.
 	Endpoint   interface{}
 	Networkset interface{}
+
+	// used for deleting an EndpointData, to delegate the actual
+	// deletion endpointDataTTLAfterMarkedAsRemovedSeconds later
+	markedToBeDeleted bool
 }
 
 type MatchData struct {
@@ -114,7 +124,9 @@ func (e *EndpointData) IsHostEndpoint() (isHep bool) {
 type EndpointLookupsCache struct {
 	epMutex       sync.RWMutex
 	ipToEndpoints map[[16]byte][]*EndpointData
-	endpointToIps map[model.Key]set.Set
+	endpointData  map[model.Key]*EndpointData
+
+	endpointDeletionTimers map[model.Key]*time.Timer
 
 	// Node relationship data.
 	//TODO(rlb): We should just treat this as an endpoint
@@ -126,9 +138,11 @@ func NewEndpointLookupsCache() *EndpointLookupsCache {
 	ec := &EndpointLookupsCache{
 		epMutex:       sync.RWMutex{},
 		ipToEndpoints: map[[16]byte][]*EndpointData{},
-		endpointToIps: map[model.Key]set.Set{},
-		nodeIPToNames: make(map[[16]byte][]string),
-		nodes:         make(map[string]v3.NodeSpec),
+		endpointData:  map[model.Key]*EndpointData{},
+
+		endpointDeletionTimers: map[model.Key]*time.Timer{},
+		nodeIPToNames:          make(map[[16]byte][]string),
+		nodes:                  make(map[string]v3.NodeSpec),
 	}
 	return ec
 }
@@ -148,7 +162,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 	switch k := key.(type) {
 	case model.WorkloadEndpointKey:
 		if ep == nil {
-			ec.removeEndpoint(k)
+			ec.removeEndpointWithDelay(k)
 		} else {
 			endpoint := ep.(*model.WorkloadEndpoint)
 			ed := ec.CreateEndpointData(key, ep, filteredTiers)
@@ -156,7 +170,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 		}
 	case model.HostEndpointKey:
 		if ep == nil {
-			ec.removeEndpoint(k)
+			ec.removeEndpointWithDelay(k)
 		} else {
 			endpoint := ep.(*model.HostEndpoint)
 			ed := ec.CreateEndpointData(key, ep, filteredTiers)
@@ -263,7 +277,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 	switch k := epUpdate.Key.(type) {
 	case model.WorkloadEndpointKey:
 		if epUpdate.Value == nil {
-			ec.removeEndpoint(k)
+			ec.removeEndpointWithDelay(k)
 		} else {
 			endpoint := epUpdate.Value.(*model.WorkloadEndpoint)
 			ed := &EndpointData{
@@ -274,7 +288,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 		}
 	case model.HostEndpointKey:
 		if epUpdate.Value == nil {
-			ec.removeEndpoint(k)
+			ec.removeEndpointWithDelay(k)
 		} else {
 			endpoint := epUpdate.Value.(*model.HostEndpoint)
 			ed := &EndpointData{
@@ -316,127 +330,191 @@ func (ec *EndpointLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 
 // addOrUpdateEndpoint tracks endpoint to IP mapping as well as IP to endpoint reverse mapping
 // for a workload or host endpoint.
-func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed *EndpointData, nets [][16]byte) {
-	// If the endpoint exists, it was updated, then we might have to add or
+func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpointData *EndpointData, ipsOfIncomingEndpoint [][16]byte) {
+	// If the endpoint exists, and it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
-	// Note: We don't acquire a lock when reading this map to get the current IP addresses
-	// because the only writes are done via the calc_graph thread.
-	var ipsToRemove set.Set
-	currentIPs, ok := ec.endpointToIps[key]
+	var ipsToRemove set.Set = set.New()
+	currentEndpoint, endpointAlreadyExists := ec.endpointData[key]
 	// Create a copy so that we can figure out which IPs to keep and
 	// which ones to remove.
-	if !ok {
-		ipsToRemove = set.New()
-	} else {
-		ipsToRemove = currentIPs.Copy()
+	if endpointAlreadyExists {
+		// collect all IPs from existing endpoint key
+		switch currentEndpoint.Key.(type) {
+		case model.WorkloadEndpointKey:
+			ipsToRemove.AddAll(extractIPsFromWorkloadEndpoint(currentEndpoint.Endpoint.(*model.WorkloadEndpoint)))
+		case model.HostEndpointKey:
+			ipsToRemove.AddAll(extractIPsFromHostEndpoint(currentEndpoint.Endpoint.(*model.HostEndpoint)))
+		}
 	}
 
 	// Collect all IPs that correspond to this endpoint and mark
 	// any IP that shouldn't be discarded.
-	newIPs := set.New()
-	for _, ip := range nets {
+	ipsToUpdate := set.New()
+	for _, ip := range ipsOfIncomingEndpoint {
 		// If this is an already existing IP, then remove it,
-		// but skip adding the the new IP list to avoid adding
-		// duplicate endpoints.
 		if ipsToRemove.Contains(ip) {
 			ipsToRemove.Discard(ip)
-			continue
 		}
-		newIPs.Add(ip)
+
+		// capture all incoming IPs as both new and existing ip mappins
+		// need to be updated with incoming endpoint data
+		ipsToUpdate.Add(ip)
 	}
 
 	ec.epMutex.Lock()
 	defer ec.epMutex.Unlock()
-	newIPs.Iter(func(item interface{}) error {
-		newIP := item.([16]byte)
-		ec.updateIPToEndpointMapping(newIP, ed)
-		return nil
-	})
-	ipsToRemove.Iter(func(item interface{}) error {
-		ip := item.([16]byte)
-		ec.removeEndpointIpMapping(key, ip)
-		return set.RemoveItem
-	})
-	if newIPs.Len() != 0 {
-		ec.endpointToIps[key] = newIPs
+	// update endpoint data lookup by key
+
+	// if there was a previous endpoint with the same key to be deleted,
+	// stop the deletion timer and let the entries be updated with incomingEndpointData
+	deletionTimer, isEndpointSetToBePrevDeleted := ec.endpointDeletionTimers[key]
+	if endpointAlreadyExists && isEndpointSetToBePrevDeleted {
+		deletionTimer.Stop()
+		delete(ec.endpointDeletionTimers, key)
 	}
 
-	// At this point, we can check if we need to update endpoint data
-	// for existing IP addresses.
-	cips, ok := ec.endpointToIps[key]
-	if !ok {
-		return
-	}
-	cips.Iter(func(item interface{}) error {
-		curIP := item.([16]byte)
-		if newIPs.Contains(curIP) {
-			// Already updated above.
-			return nil
-		}
-		ec.updateIPToEndpointMapping(curIP, ed)
+	ec.endpointData[incomingEndpointData.Key] = incomingEndpointData
+
+	// update endpoint data lookup by ips
+	ipsToUpdate.Iter(func(item interface{}) error {
+		newIP := item.([16]byte)
+		ec.updateIPToEndpointMapping(newIP, incomingEndpointData)
 		return nil
 	})
+
+	ipsToRemove.Iter(
+		func(item interface{}) error {
+			ip := item.([16]byte)
+			ec.removeEndpointDataIpMapping(key, ip)
+			return set.RemoveItem
+		})
 }
 
 // updateIPToEndpointMapping creates or appends the EndpointData to a corresponding
 // ip address in the ipToEndpoints map.
 // This method isn't safe to be used concurrently and the caller should acquire the
 // EndpointLookupsCache.epMutex before calling this method.
-func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed *EndpointData) {
+func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, incomingEndpointData *EndpointData) {
 	// Check if this IP already has a corresponding endpoint.
 	// If it has one, then append the endpoint to it. This is
 	// expected to happen if an IP address is reused in a very
 	// short interval. Otherwise, create a new IP to endpoint
 	// mapping entry.
-	existingEps, ok := ec.ipToEndpoints[ip]
+	existingEpDataForIp, ok := ec.ipToEndpoints[ip]
 
 	if !ok {
-		ec.ipToEndpoints[ip] = []*EndpointData{ed}
-	} else {
-		isExistingEp := false
-		for i := range existingEps {
-			// Check if this is an existing endpoint. If it is,
-			// then just store the updated endpoint.
-			if ed.Key == existingEps[i].Key {
-				existingEps[i] = ed
-				isExistingEp = true
-				break
-			}
-		}
-		if !isExistingEp {
-			existingEps = append(existingEps, ed)
-		}
-		ec.ipToEndpoints[ip] = existingEps
+		ec.ipToEndpoints[ip] = []*EndpointData{incomingEndpointData}
+		return
 	}
+
+	// if there are existing EndpointData for the IP, loop through the slice
+	// > if an endpointData is marked to be deleted - delete it
+	// > update an endpointData
+	isExistingEp := false
+	i := 0
+	for i < len(existingEpDataForIp) {
+		if existingEpDataForIp[i].markedToBeDeleted {
+			existingEpDataForIp = removeEndpointDataFromSlice(existingEpDataForIp, i)
+			continue
+		}
+
+		// Check if this is an existing endpoint. If it is,
+		// then just store the updated endpoint.
+		if incomingEndpointData.Key == existingEpDataForIp[i].Key {
+			isExistingEp = true
+			existingEpDataForIp[i] = incomingEndpointData
+		}
+
+		i++
+	}
+
+	if !isExistingEp {
+		existingEpDataForIp = append(existingEpDataForIp, incomingEndpointData)
+	}
+	ec.ipToEndpoints[ip] = existingEpDataForIp
 }
 
-// removeEndpoint removes the endpoint from the EndpointLookupsCache.endpointToIps map
-// and all also removes all correspondoing IP to endpoint mapping as well.
+func removeEndpointDataFromSlice(s []*EndpointData, i int) []*EndpointData {
+	s[len(s)-1], s[i] = s[i], s[len(s)-1]
+
+	return s[:len(s)-1]
+}
+
+// removeEndpointWithDelay marks all EndpointData referenced by the
+// (key model.Key) and delegates the removeEndpoint to another
+// goroutine that will be called after endpointDataTTLAfterMarkedAsRemoved
+// has passed.  ipToEndpointDeletionTimers is used to track the all the timers
+// created for tentatively deleted endpoints as they are accessed by add/update
+//  operations.
+func (ec *EndpointLookupsCache) removeEndpointWithDelay(key model.Key) {
+	endpointData, endpointExists := ec.endpointData[key]
+	if !endpointExists {
+		// for performance improvement - as time.AfterFunc creates a go routine
+		return
+	}
+
+	_, isDeletionTimerForEndpointExists := ec.endpointDeletionTimers[key]
+	if isDeletionTimerForEndpointExists {
+		return
+	}
+
+	ec.epMutex.Lock()
+	defer ec.epMutex.Unlock()
+
+	// mark the endpoint to be deleted and attach a timer to delegate the actual deletion
+	endpointData.markedToBeDeleted = true
+
+	endpointDeletionTimer := time.AfterFunc(endpointDataTTLAfterMarkedAsRemovedSeconds, func() { ec.removeEndpoint(key) })
+	ec.endpointDeletionTimers[key] = endpointDeletionTimer
+}
+
+// removeEndpoint removes all EndpointData markedToBeDeleted from the slice
+// captures all IPs and removes all correspondoing IP to EndpointData mapping as well.
 // This method acquires (and releases) the EndpointLookupsCache.epMutex before (and after)
 // manipulating the maps.
 func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 	ec.epMutex.Lock()
 	defer ec.epMutex.Unlock()
-	currentIPs, ok := ec.endpointToIps[key]
+
+	// update ip mapping to remove all endpoints
+	currentEndpointData, ok := ec.endpointData[key]
 	if !ok {
-		// We don't know about this endpoint. Nothing to do here.
 		return
 	}
-	currentIPs.Iter(func(item interface{}) error {
+
+	ipsMarkedAsDeleted := set.New()
+
+	// if the endpoint has not been marked for deletion ignore it as it may have been
+	// updated before the deletion timer has been triggered
+	if !currentEndpointData.markedToBeDeleted {
+		return
+	}
+
+	// collect the IPs of this endpoint as we will need to remove it as well from the ipmapping
+	switch currentEndpointData.Key.(type) {
+	case model.WorkloadEndpointKey:
+		ipsMarkedAsDeleted.AddAll(extractIPsFromWorkloadEndpoint(currentEndpointData.Endpoint.(*model.WorkloadEndpoint)))
+	case model.HostEndpointKey:
+		ipsMarkedAsDeleted.AddAll(extractIPsFromHostEndpoint(currentEndpointData.Endpoint.(*model.HostEndpoint)))
+	}
+
+	ipsMarkedAsDeleted.Iter(func(item interface{}) error {
 		ip := item.([16]byte)
-		ec.removeEndpointIpMapping(key, ip)
+		ec.removeEndpointDataIpMapping(key, ip)
 		return nil
 	})
-	delete(ec.endpointToIps, key)
+
+	delete(ec.endpointData, key)
+	delete(ec.endpointDeletionTimers, key)
 }
 
-// removeEndpointIpMapping checks if  there is an existing
+// removeEndpointDataIpMapping checks if  there is an existing
 //  - IP to WEP/HEP relation that is being tracked and removes it if there is one.
 //  - Endpoint to IP relation that is being tracked and removes it if there is one.
 // This method isn't safe to be used concurrently and the caller should acquire the
 // EndpointLookupsCache.epMutex before calling this method.
-func (ec *EndpointLookupsCache) removeEndpointIpMapping(key model.Key, ip [16]byte) {
+func (ec *EndpointLookupsCache) removeEndpointDataIpMapping(key model.Key, ip [16]byte) {
 	// Remove existing IP to endpoint mapping.
 	existingEps, ok := ec.ipToEndpoints[ip]
 	if !ok || len(existingEps) == 1 {
@@ -456,20 +534,6 @@ func (ec *EndpointLookupsCache) removeEndpointIpMapping(key model.Key, ip [16]by
 		}
 		ec.ipToEndpoints[ip] = newEps
 	}
-
-	// Remove endpoint to IP mapping.
-	existingIps, ok := ec.endpointToIps[key]
-	if !ok {
-		return
-	}
-	if existingIps.Len() == 1 {
-		// There is only a single ip corresponding to this
-		// key so it is safe to remove this mapping.
-		delete(ec.endpointToIps, key)
-	} else {
-		existingIps.Discard(ip)
-		ec.endpointToIps[key] = existingIps
-	}
 }
 
 // IsEndpoint returns true if the supplied address is a endpoint, otherwise returns false.
@@ -484,12 +548,41 @@ func (ec *EndpointLookupsCache) IsEndpoint(addr [16]byte) bool {
 func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool) {
 	ec.epMutex.RLock()
 	defer ec.epMutex.RUnlock()
+
 	eps, ok := ec.ipToEndpoints[addr]
 	if len(eps) >= 1 {
 		// We return the last observed endpoint.
 		return eps[len(eps)-1], ok
 	}
 	return nil, ok
+}
+
+// GetEndpointKeys retrieves all keys from the EndpointLookupCache
+func (ec *EndpointLookupsCache) GetEndpointKeys() []model.Key {
+	ec.epMutex.RLock()
+	defer ec.epMutex.RUnlock()
+
+	eps := []model.Key{}
+	for key := range ec.endpointData {
+		eps = append(eps, key)
+	}
+	return eps
+}
+
+// GetEndpointKeys retrieves all EndpointData from the EndpointLookupCache
+// excluding those which are not marked as deleted
+func (ec *EndpointLookupsCache) GetAllEndpointData() []*EndpointData {
+	ec.epMutex.RLock()
+	defer ec.epMutex.RUnlock()
+
+	allEds := []*EndpointData{}
+	for _, ed := range ec.endpointData {
+		if ed.markedToBeDeleted {
+			continue
+		}
+		allEds = append(allEds, ed)
+	}
+	return allEds
 }
 
 func (ec *EndpointLookupsCache) GetNode(ip [16]byte) (string, bool) {
@@ -562,9 +655,14 @@ func extractIPsFromWorkloadEndpoint(endpoint *model.WorkloadEndpoint) [][16]byte
 	return combined
 }
 
+// DumpEndpoints generates a string of all endpoints in the cache
+// with formatting of:
+// "model.Key.Name: ip0, ip1, ... ipn", where ip0..n are IPs of
+// the endpoint
 func (ec *EndpointLookupsCache) DumpEndpoints() string {
 	ec.epMutex.RLock()
 	defer ec.epMutex.RUnlock()
+
 	lines := []string{}
 	for ip, eds := range ec.ipToEndpoints {
 		edNames := []string{}
@@ -573,9 +671,22 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 		}
 		lines = append(lines, net.IP(ip[:16]).String()+": "+strings.Join(edNames, ","))
 	}
+
 	lines = append(lines, "-------")
-	for key, ips := range ec.endpointToIps {
+
+	for key, endpointData := range ec.endpointData {
 		ipStr := []string{}
+		ips := set.New()
+
+		if !endpointData.markedToBeDeleted {
+			switch endpointData.Key.(type) {
+			case model.WorkloadEndpointKey:
+				ips.AddAll(extractIPsFromWorkloadEndpoint(endpointData.Endpoint.(*model.WorkloadEndpoint)))
+			case model.HostEndpointKey:
+				ips.AddAll(extractIPsFromHostEndpoint(endpointData.Endpoint.(*model.HostEndpoint)))
+			}
+		}
+
 		ips.Iter(func(item interface{}) error {
 			ip := item.([16]byte)
 			ipStr = append(ipStr, net.IP(ip[:16]).String())
@@ -583,6 +694,7 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 		})
 		lines = append(lines, endpointName(key), ": ", strings.Join(ipStr, ","))
 	}
+
 	return strings.Join(lines, "\n")
 }
 
