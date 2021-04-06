@@ -118,6 +118,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 		AggCompositeSourceInfos: PIPCompositeSources,
 		AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 		AggSumInfos:             elastic.FlowAggregationSums,
+		MaxBucketsPerQuery:      query.MaxBucketsPerQuery,
 	}
 
 	// Create a cancellable context so we can exit cleanly when we hit our target number of aggregated results.

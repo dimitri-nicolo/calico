@@ -331,6 +331,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
+			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
@@ -448,6 +449,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
+			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
@@ -588,6 +590,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
+			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always deny after)")
@@ -718,6 +721,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
+			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
