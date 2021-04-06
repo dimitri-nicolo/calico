@@ -579,15 +579,14 @@ func deconstructPolicyName(name string) (string, string, string, error) {
 		name = name[len(model.PolicyNamePrefixStaged):]
 	}
 
-	// Extract the tier, if present.
-	parts = strings.Split(name, ".")
-	switch len(parts) {
-	case 2: // Non-k8s
+	// If the policy name starts with "knp.default" then this is a kubernetes network policy.
+	if strings.HasPrefix(name, "knp.default.") {
+		return namespace, "default", stagedPrefix + name, nil
+	}
+
+	// This is a non-kubernetes policy, so extract the tier name from the policy name.
+	if parts = strings.SplitN(name, ".", 2); len(parts) == 2 {
 		return namespace, parts[0], stagedPrefix + parts[1], nil
-	case 3: // K8s
-		if parts[0] == "knp" && parts[1] == "default" {
-			return namespace, "default", stagedPrefix + name, nil
-		}
 	}
 
 	return "", "", "", fmt.Errorf("Could not parse policy %s", name)
