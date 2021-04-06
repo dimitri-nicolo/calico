@@ -39,6 +39,7 @@ eBPF mode currently has some limitations relative to the standard Linux pipeline
 - Disabling eBPF mode _is_ disruptive; connections that were handled through the eBPF dataplane may be broken and services that do not detect and recover may need to be restarted.
 - Hybrid clusters (with some eBPF nodes and some standard dataplane nodes) are not supported.  (In such a cluster, NodePort traffic from eBPF nodes to non-eBPF nodes will be dropped.)  This includes clusters with Windows nodes.
 - eBPF mode does not support floating IPs.
+- eBPF mode does not support host ports (these are normally implemented by the "portmap" CNI plugin, which is incompatible with eBPF mode).
 - eBPF mode does not support SCTP, either for policy or services.
 - eBPF mode requires that node  [IP autodetection]({{site.baseurl}}/networking/ip-autodetection) is enabled even in environments where {{site.prodname}} CNI and BGP are not in use.  In eBPF mode, the node IP is used to originate VXLAN packets when forwarding traffic from external sources to services.
 - eBPF mode does not support the "Log" action in policy rules. This limitation also applies to the Drop Action Override feature: `LOGandDROP` and `LOGandACCEPT` are interpreted as `DROP` and `ACCEPT`, respectively.
@@ -58,7 +59,8 @@ eBPF (or "extended Berkeley Packet Filter"), is a technology that allows safe mi
 
 ### Before you begin...
 
-eBPF mode has the following pre-requisites:
+This document assumes that you have [installed {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/) on a 
+Kubernetes cluster that meets pre-requisites for eBPF mode:
 
 - A supported Linux distribution:
 
@@ -239,10 +241,11 @@ kubectl patch networks.operator.openshift.io cluster --type merge -p '{"spec":{"
 
 #### Enable eBPF mode
 
-To enable eBPF mode, change the `spec.calicoNetwork.linuxDataplane` parameter in the operator's `Installation` resource to `"BPF"`; you must also disable host ports because these are not supported in BPF mode:
+To enable eBPF mode, change the `spec.calicoNetwork.linuxDataplane` parameter in the operator's `Installation` 
+resource to `"BPF"`; you must also clear the `hostPorts` setting because host ports are not supported in BPF mode:
 
 ```bash
-kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"BPF", "hostPorts":"Disabled"}}}'
+kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"BPF", "hostPorts":null}}}'
 ```
 
 > **Note**: the operator rolls out the change with a rolling update which means that some nodes will be in eBPF mode
@@ -275,7 +278,7 @@ To revert to standard Linux networking:
 1. Reverse the changes to the operator's `Installation`:
 
    ```bash
-   kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"Iptables", "hostPorts":"Enabled"}}}'
+   kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"Iptables"}}}'
    ```
 
 1. If you disabled `kube-proxy`, re-enable it (for example, by removing the node selector added above).
