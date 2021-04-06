@@ -365,11 +365,13 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonFirst, errors.New("foobar")})
 
 		By("Creating a composite agg query")
+		// Set max buckets to 1 so that we do more than one query.
 		q := &pelastic.CompositeAggregationQuery{
 			Name:                    "flog_buckets",
 			AggCompositeSourceInfos: compositeSources,
 			AggNestedTermInfos:      aggTerms,
 			AggSumInfos:             aggSums,
+			MaxBucketsPerQuery:      1,
 		}
 
 		By("Performing a composite agg search")
@@ -472,11 +474,13 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonNoAfterKey})
 
 		By("Creating a composite agg query")
+		// Set max buckets to query to be 1 so that we would normally query again - except there is no after key.
 		q := &pelastic.CompositeAggregationQuery{
 			Name:                    "flog_buckets",
 			AggCompositeSourceInfos: compositeSources,
 			AggNestedTermInfos:      aggTerms,
 			AggSumInfos:             aggSums,
+			MaxBucketsPerQuery:      1,
 		}
 
 		By("Performing a composite agg search")
@@ -523,11 +527,13 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		client := pelastic.NewMockSearchClient([]interface{}{sampleEsResponseJsonFirst, sampleEsResponseJsonNoAfterKey})
 
 		By("Creating a composite agg query")
+		// Set max buckets to ensure we do a second search.
 		q := &pelastic.CompositeAggregationQuery{
 			Name:                    "flog_buckets",
 			AggCompositeSourceInfos: compositeSources,
 			AggNestedTermInfos:      aggTerms,
 			AggSumInfos:             aggSums,
+			MaxBucketsPerQuery:      1,
 		}
 
 		By("Performing a composite agg search")

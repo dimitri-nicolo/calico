@@ -10,12 +10,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	resultBucketSize = 1000
+)
+
 // Structure encapsulating info about a composite source query.
 type AggCompositeSourceInfo struct {
-	Name         string
-	Field        string
+	// The source name.
+	Name string
+
+	// The underlying field for terms or histogram sources.
+	Field string
+
+	// Histogram intervals.
+	HistogramInterval     float64
+	HistogramDateInterval string
+
+	// For scripted source.
 	ScriptName   string
 	ScriptParams map[string]interface{}
+
+	// Sort order
+	Order string
 }
 
 // Structure encapsulating info about a aggregated term query.
@@ -97,6 +113,11 @@ type CompositeAggregationQuery struct {
 
 	// The aggregated sums info.
 	AggSumInfos []AggSumInfo
+
+	// The max buckets each iteration. Defaults to resultsBucketSize. Generally this should not need to be modified
+	// but it may become necessary to query smaller buckets if the amount of data is large, or could be incremented
+	// if there are no sub aggregations.
+	MaxBucketsPerQuery int
 }
 
 // getCompositeAggregation returns the CompositeAggregation associated with the query parameters.
@@ -104,17 +125,25 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 	// Aggregate documents and fetch results based on Elasticsearch recommended batches of "resultBucketSize".
 	compiledCompositeSources := []elastic.CompositeAggregationValuesSource{}
 	for _, c := range q.AggCompositeSourceInfos {
-		vs := elastic.NewCompositeAggregationTermsValuesSource(c.Name)
-		if c.Field != "" {
-			vs = vs.Field(c.Field)
+		var vs elastic.CompositeAggregationValuesSource
+		if c.HistogramDateInterval != "" {
+			vs = elastic.NewCompositeAggregationDateHistogramValuesSource(c.Name).Field(c.Field).
+				CalendarInterval(c.HistogramDateInterval).Order(c.Order)
+		} else if c.HistogramInterval != 0 {
+			vs = elastic.NewCompositeAggregationHistogramValuesSource(c.Name, c.HistogramInterval).
+				Field(c.Field).Order(c.Order)
+		} else if c.Field != "" {
+			vs = elastic.NewCompositeAggregationTermsValuesSource(c.Name).Field(c.Field).Order(c.Order)
 		} else if c.ScriptName != "" {
-			vs = vs.Script(elastic.NewScriptStored(c.ScriptName).Params(c.ScriptParams))
+			vs = elastic.NewCompositeAggregationTermsValuesSource(c.Name).
+				Script(elastic.NewScriptStored(c.ScriptName).Params(c.ScriptParams)).Order(c.Order)
 		}
+
 		compiledCompositeSources = append(compiledCompositeSources, vs)
 	}
 	compiledCompositeAgg := elastic.NewCompositeAggregation().
 		Sources(compiledCompositeSources...).
-		Size(resultBucketSize)
+		Size(q.getMaxBuckets())
 
 	// Add the aggregated sums.
 	for _, a := range q.AggSumInfos {
@@ -130,6 +159,13 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 	}
 
 	return compiledCompositeAgg
+}
+
+func (q *CompositeAggregationQuery) getMaxBuckets() int {
+	if q.MaxBucketsPerQuery > 0 {
+		return q.MaxBucketsPerQuery
+	}
+	return resultBucketSize
 }
 
 // ConvertBucket converts the aggregation bucket result to a CompositeAggregationBucket using the query parameters.
@@ -526,8 +562,8 @@ func searchCompositeAggregationsHelper(
 				}
 			}
 
-			// No results left - exit.
-			if len(rawResults.Buckets) == 0 || rawResults.AfterKey == nil || len(rawResults.AfterKey) == 0 {
+			// If we get the requested number of buckets then there may be more results to obtain.
+			if len(rawResults.Buckets) < query.getMaxBuckets() || rawResults.AfterKey == nil || len(rawResults.AfterKey) == 0 {
 				log.Debugf("Completed processing %s", query.DocumentIndex)
 				return
 			}

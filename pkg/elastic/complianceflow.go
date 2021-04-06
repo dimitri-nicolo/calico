@@ -19,7 +19,6 @@ import (
 
 const (
 	FlowLogIndex              = "tigera_secure_ee_flows"
-	resultBucketSize          = 1000
 	noResultsSize             = 0
 	endTimeField              = "end_time"
 	nameHasBeenAggregatedOver = "-"
