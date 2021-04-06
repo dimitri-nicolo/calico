@@ -4,6 +4,9 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
+>**Note**: This feature is currently unavailable for RKE and OpenShift clusters.
+{: .alert .alert-info}
+
 ## Big Picture
 
 Use {{site.prodname}} L7 logs to monitor application activity.
@@ -39,10 +42,12 @@ L7 logs and flow logs capture different types of data for troubleshooting.
 
 ## Before you begin...
 
-In the namespace of the pod that you want to monitor, create a Kubernetes pull secret.
+In the namespace of the pod that you want to monitor, create a Kubernetes pull secret
+for accessing {{site.prodname}} images. This should match the pull secret created
+during [{{site.prodname}} installation]({{site.baseurl}}/getting-started/kubernetes/quickstart).
 
 ```bash
-kubectl create secret generic tigera-pull-secret -n <application pod namespace> --from-file=.dockerconfigjson=$HOME/.docker/config.json --type kubernetes.io/dockerconfigjson
+kubectl create secret generic tigera-pull-secret -n <application pod namespace> --from-file=.dockerconfigjson=<path/to/pull/secret> --type kubernetes.io/dockerconfigjson
 ```
 
 > **Important**: Enabling L7 logs requires at least an additional 1 GB LogStorage per node per one day retention period. 
@@ -79,19 +84,6 @@ In this step, you configure the Envoy log collector to gather the L7 metrics.
 1. Create the Envoy config.
    ```
    kubectl create configmap envoy-config -n <application pod namespace> --from-file=envoy-config.yaml
-   ```
-
-**OpenShift Only**
-
-1. Apply the SecurityContextConstraint. This contains the minimum required SecurityContextConstraint for l7 logs. You may add additional constraints if your application requires them. 
-   ```
-   oc apply -f {{ "/manifests/l7/l7-collector-scc.yaml" | absolute_url }}
-   ```
-
-1. Add your application's service account to the SecurityContextConstraint. If no specific
-   service account is specified, it will usually default to the `default` service account.
-   ```
-   oc adm policy add-scc-to-user l7-collector -z <service account name> -n <application pod namespace>
    ```
 
 #### Step 2: Configure Felix for log data collection
