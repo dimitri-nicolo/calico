@@ -330,10 +330,12 @@ longer matters if there is any other programming of the true default route on th
       namespace: calico-system
     data:
       worker1: |
-        rack: ra
+        labels:
+          rack: ra
         asNumber: 65001
       worker2: |
-        rack: rb
+        labels:
+          rack: rb
         asNumber: 65002
       ...
     ```
