@@ -28,6 +28,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	kapiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -196,6 +197,12 @@ func Run() {
 		}
 	}
 
+	// If running under Kubernetes and there is a "bgp-layout" ConfigMap, read it to set this
+	// node's AS number and rack label.
+	if clientset != nil {
+		configureBGPLayout(ctx, clientset, nodeName, node)
+	}
+
 	// Populate a reference to the node based on orchestrator node identifiers.
 	configureNodeRef(node)
 	configureCloudOrchRef(node)
@@ -228,6 +235,64 @@ func Run() {
 		log.WithError(err).Errorf("Unable to ensure network for os")
 		terminate()
 	}
+}
+
+func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, nodeName string, node *api.Node) {
+	// Find the namespace we're running in.
+	namespace := os.Getenv("NAMESPACE")
+	if namespace == "" {
+		// Default to kube-system.
+		namespace = "kube-system"
+	}
+
+	// Get the "bgp-layout" ConfigMap, if available.
+	bgpLayout, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx,
+		"bgp-layout",
+		metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			log.Info("No 'bgp-layout' ConfigMap available")
+		} else {
+			log.WithError(err).Error("Couldn't get 'bgp-layout' ConfigMap")
+		}
+		return
+	}
+
+	// Get the entry in the ConfigMap for this node.
+	thisNodeLayout, exists := bgpLayout.Data[nodeName]
+	if !exists {
+		log.Errorf("bgp-layout ConfigMap does not have entry for this node (%v)", nodeName)
+		return
+	}
+
+	// Parse that entry (which is in YAML format).
+	type layout struct {
+		Labels   map[string]string `yaml:"labels"`
+		ASNumber int               `yaml:"asNumber"`
+	}
+	var l layout
+	err = yaml.NewDecoder(strings.NewReader(thisNodeLayout)).Decode(&l)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to decode bgp-layout YAML:\n%v", thisNodeLayout)
+		return
+	}
+
+	// Add labels to the Node.
+	for k, v := range l.Labels {
+		if v2, exists := node.Labels[k]; exists {
+			log.Warningf("Overriding existing node label: %v: %v -> %v", k, v2, v)
+		} else {
+			log.Infof("Setting node label: %v: %v", k, v)
+		}
+		node.Labels[k] = v
+	}
+
+	// Add annotation for the AS number.
+	if l.ASNumber != 0 {
+		log.Infof("Setting AS number annotation: %v", l.ASNumber)
+		node.Annotations["projectcalico.org/ASNumber"] = fmt.Sprintf("%v", l.ASNumber)
+	}
+	return
 }
 
 func getMonitorPollInterval() time.Duration {
