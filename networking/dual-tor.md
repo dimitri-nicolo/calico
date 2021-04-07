@@ -502,10 +502,9 @@ break in one of the connectivity planes.
 Details here vary, depending on **when** your Kubernetes installer gives an opportunity
 for you to define custom resources, but fundamentally what is needed here is to perform
 the installation as usual, except that all of the Calico resources prepared above, except
-the EarlyNetworkConfiguration, must be added into the datastore, and all of the nodes
-annotated with their AS number and rack label, **before** the {{site.nodecontainer}} pods
-start running on any node.  We can illustrate this by looking at two examples: with
-OpenShift, and when adding Calico to an existing Kubernetes cluster.
+the EarlyNetworkConfiguration, must be added into the datastore **before** the
+{{site.nodecontainer}} pods start running on any node.  We can illustrate this by looking
+at two examples: with OpenShift, and when adding Calico to an existing Kubernetes cluster.
 
 **OpenShift**
 
