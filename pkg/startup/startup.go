@@ -185,7 +185,7 @@ func Run() {
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
 		// Configure the node AS number if BGP is enabled.
 		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
-			configureASNumber(node)
+			configureASNumber(node, os.Getenv("AS"), "environment")
 		}
 
 		if clientset != nil {
@@ -289,8 +289,7 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 
 	// Add annotation for the AS number.
 	if l.ASNumber != 0 {
-		log.Infof("Setting AS number annotation: %v", l.ASNumber)
-		node.Annotations["projectcalico.org/ASNumber"] = fmt.Sprintf("%v", l.ASNumber)
+		configureASNumber(node, fmt.Sprintf("%v", l.ASNumber), "bgp-layout ConfigMap")
 	}
 	return
 }
@@ -896,17 +895,15 @@ func autoDetectCIDRBySkipInterface(ifaceRegexes []string, version int) *cnet.IPN
 	return cidr
 }
 
-// configureASNumber configures the Node resource with the AS number specified
-// in the environment, or is a no-op if not specified.
-func configureASNumber(node *api.Node) {
-	// Extract the AS number from the environment
-	asStr := os.Getenv("AS")
+// configureASNumber configures the Node resource with the specified AS number, or is a no-op if not
+// specified.
+func configureASNumber(node *api.Node, asStr string, source string) {
 	if asStr != "" {
 		if asNum, err := numorstring.ASNumberFromString(asStr); err != nil {
-			log.WithError(err).Errorf("The AS number specified in the environment (AS=%s) is not valid", asStr)
+			log.WithError(err).Errorf("The AS number specified in the %v (AS=%s) is not valid", source, asStr)
 			terminate()
 		} else {
-			log.Infof("Using AS number specified in environment (AS=%s)", asNum)
+			log.Infof("Using AS number specified in %v (AS=%s)", source, asNum)
 			node.Spec.BGP.ASNumber = &asNum
 		}
 	} else {
