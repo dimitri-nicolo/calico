@@ -105,58 +105,6 @@ Invoke-WebRequest -Uri "https://github.com/tigera/operator/releases/{{ version }
 ```
 
 %>
-<label:Linux PPC64le>
-<%
-1. Log into the host, open a terminal prompt, and navigate to the location where
-you want to install the binary.
-
-   > **Tip**: Consider navigating to a location that's in your `PATH`. For example,
-   > `/usr/local/bin/`.
-   {: .alert .alert-success}
-
-1. Use the following command to download the `calicoctl` binary.
-
-   ```bash
-   curl -o calicoctl -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-linux-ppc64le"
-   ```
-
-1. Set the file to be executable.
-
-   ```bash
-   chmod +x calicoctl
-   ```
-
-   > **Note**: If the location of `calicoctl` is not already in your `PATH`, move the file
-   > to one that is or add its location to your `PATH`. This will allow you to invoke it
-   > without having to prepend its location.
-   {: .alert .alert-info}
-%>
-<label:Linux arm64>
-<%
-1. Log into the host, open a terminal prompt, and navigate to the location where
-you want to install the binary.
-
-   > **Tip**: Consider navigating to a location that's in your `PATH`. For example,
-   > `/usr/local/bin/`.
-   {: .alert .alert-success}
-
-1. Use the following command to download the `calicoctl` binary.
-
-   ```bash
-   curl -o calicoctl -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-linux-arm64"
-   ```
-
-1. Set the file to be executable.
-
-   ```bash
-   chmod +x calicoctl
-   ```
-
-   > **Note**: If the location of `calicoctl` is not already in your `PATH`, move the file
-   > to one that is or add its location to your `PATH`. This will allow you to invoke it
-   > without having to prepend its location.
-   {: .alert .alert-info}
-%>
 {% endtabs %}
 
 ## Install calicoctl as a kubectl plugin on a single host
@@ -232,60 +180,6 @@ Invoke-WebRequest -Uri "https://github.com/tigera/operator/releases/{{ version }
 ```
 
 %>
-<label:Linux PPC64le>
-<%
-1. Log into the host, open a terminal prompt, and navigate to the location where
-you want to install the binary.
-
-   > **Tip**: Consider navigating to a location that's in your `PATH`. For example,
-   > `/usr/local/bin/`.
-   {: .alert .alert-success}
-
-1. Use the following command to download the `calicoctl` binary.
-
-   ```bash
-   curl -o kubectl-calico -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-linux-ppc64le"
-   ```
-
-1. Set the file to be executable.
-
-   ```bash
-   chmod +x kubectl-calico
-   ```
-
-   > **Note**: If the location of `kubectl-calico` is not already in your `PATH`, move the file
-   > to one that is or add its location to your `PATH`. This is required in order for
-   > kubectl to detect the plugin and allow you to use it.
-   {: .alert .alert-info}
-
-%>
-<label:Linux arm64>
-<%
-1. Log into the host, open a terminal prompt, and navigate to the location where
-you want to install the binary.
-
-   > **Tip**: Consider navigating to a location that's in your `PATH`. For example,
-   > `/usr/local/bin/`.
-   {: .alert .alert-success}
-
-1. Use the following command to download the `calicoctl` binary.
-
-   ```bash
-   curl -o kubectl-calico -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-linux-arm64"
-   ```
-
-1. Set the file to be executable.
-
-   ```bash
-   chmod +x kubectl-calico
-   ```
-
-   > **Note**: If the location of `kubectl-calico` is not already in your `PATH`, move the file
-   > to one that is or add its location to your `PATH`. This is required in order for
-   > kubectl to detect the plugin and allow you to use it.
-   {: .alert .alert-info}
-
-%>
 {% endtabs %}
 
 Verify the plugin works.
@@ -299,7 +193,6 @@ You can now run any `calicoctl` subcommands through `kubectl calico`.
 > **Note**: If you run these commands from your local machine (instead of a host node), some of
 > the node related subcommands will not work (like node status).
 {: .alert .alert-info}
-
 
 ## Install calicoctl as a container on a single host
 
