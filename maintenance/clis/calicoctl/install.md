@@ -47,7 +47,7 @@ you want to install the binary.
 1. Use the following command to download the `calicoctl` binary.
 
    ```bash
-   curl -o calicoctl -O -L  "https://github.com/tigera/operator/releases/download/{{ version }}/calicoctl"
+   curl -o calicoctl -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl"
    ```
 
 1. Set the file to be executable.
