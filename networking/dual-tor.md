@@ -318,16 +318,25 @@ longer matters if there is any other programming of the true default route on th
        > not.
        {: .alert .alert-info}
 
-1.  Keep a note of what each node's AS number and `rack` label should be so as to fit
-    correctly with the BGPPeer resources.  This doesn't have to be in any particular
-    format, it's just a note for later.  For example:
+1.  Prepare a ConfigMap resource named "bgp-layout", in namespace "calico-system", that
+    specifies each node's AS number and `rack` label, so as to fit correctly with the
+    BGPPeer resources.  For example:
 
 	```
-    worker1: ra, 65001
-    worker2: rb, 65002
+	apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: bgp-layout
+      namespace: calico-system
+    data:
+      worker1: |
+		rack: ra
+		asNumber: 65001
+	  worker2: |
+	    rack: rb
+		asNumber: 65002
+	  ...
     ```
-
-	and so on.
 
 1.  Prepare this BGPConfiguration resource to [disable the full node-to-node
 	mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
@@ -505,21 +514,7 @@ Then use `kubectl create configmap ...`, as that documentation says, to combine 
 prepared BGPPeer, BGPConfiguration and IPPool resources into a `calico-resources`
 ConfigMap.  Place the generated file in the manifests directory for the OpenShift install.
 
-Also prepare a Node resource for each node, with one Node resource per file, to specify
-that node's rack label and AS number, like this:
-
-```
-apiVersion: v1
-kind: Node
-metadata:
-  name: worker2                          	 # Replace with the correct node name
-  labels:
-    rack: rb                             	 # Replace with the correct rack label
-  annotations:
-    projectcalico.org/ASNumber: "65002"  	 # Replace with the correct AS number
-```
-
-Place those files also in the manifests directory.
+Also place the "bgp-layout" ConfigMap file in the manifests directory.
 
 Now continue with the OpenShift install process, and it will take care of adding those
 resources into the datastore as early as possible.
@@ -531,13 +526,7 @@ far as the option for installing any custom Calico resources.  Then use `calicoc
 that documentation says, to install the prepared BGPPeer, BGPConfiguration and IPPool
 resources.
 
-Then use `kubectl label` to label each node with its correct rack label, and `kubectl
-annotate` to annotate each node with its correct AS number, like this:
-
-```
-kubectl label <node name> rack=<rack label>
-kubectl annotate <node name> projectcalico.org/ASNumber="<AS number>"
-```
+Also use `kubectl` to install the "bgp-layout" ConfigMap.
 
 Now continue with the {{site.prodname}} install process, and you should observe each node
 establishing BGP sessions with its ToRs.
