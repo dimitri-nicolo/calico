@@ -1,6 +1,6 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
-package intdataplane
+package dns
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 
 var _ = Describe("Domain Info Store", func() {
 	var (
-		domainStore         *domainInfoStore
+		domainStore         *DomainInfoStore
 		mockDNSRecA1        = testutils.MakeA("a.com", "10.0.0.10")
 		mockDNSRecA2        = testutils.MakeA("b.com", "10.0.0.20")
 		mockDNSRecA2Caps    = testutils.MakeA("B.cOm", "10.0.0.20")
@@ -54,25 +54,25 @@ var _ = Describe("Domain Info Store", func() {
 	)
 
 	// Program a DNS record as an "answer" type response.
-	programDNSAnswer := func(domainStore *domainInfoStore, dnsPacket layers.DNSResourceRecord) {
+	programDNSAnswer := func(domainStore *DomainInfoStore, dnsPacket layers.DNSResourceRecord) {
 		var layerDNS layers.DNS
 		layerDNS.Answers = append(layerDNS.Answers, dnsPacket)
 		domainStore.processDNSPacket(&layerDNS)
 	}
 
 	// Program a DNS record as an "additionals" type response.
-	programDNSAdditionals := func(domainStore *domainInfoStore, dnsPacket layers.DNSResourceRecord) {
+	programDNSAdditionals := func(domainStore *DomainInfoStore, dnsPacket layers.DNSResourceRecord) {
 		var layerDNS layers.DNS
 		layerDNS.Additionals = append(layerDNS.Additionals, dnsPacket)
 		domainStore.processDNSPacket(&layerDNS)
 	}
 
 	// Assert that the domain store accepted and signaled the given record (and reason).
-	AssertDomainChanged := func(domainStore *domainInfoStore, d string, r string) {
+	AssertDomainChanged := func(domainStore *DomainInfoStore, d string, r string) {
 		select {
 		case receivedInfo := <-domainStore.domainInfoChanges:
-			log.Infof("domainInfoChanged:  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, strings.ToLower(d))
-			Expect(receivedInfo).To(Equal(&domainInfoChanged{domain: strings.ToLower(d), reason: r}))
+			log.Infof("DomainInfoChanged:  %s %s expected %s", receivedInfo.Domain, receivedInfo.Reason, strings.ToLower(d))
+			Expect(receivedInfo).To(Equal(&DomainInfoChanged{Domain: strings.ToLower(d), Reason: r}))
 		case <-time.After(1 * time.Second):
 			// Domain info change never sent.
 			Expect(false).To(Equal(true))
@@ -98,7 +98,7 @@ var _ = Describe("Domain Info Store", func() {
 
 	// Create a new datastore.
 	domainStoreCreateEx := func(capacity int, config *Config) {
-		domainChannel := make(chan *domainInfoChanged, capacity)
+		domainChannel := make(chan *DomainInfoChanged, capacity)
 		// For UT purposes, don't actually run any expiry timers, but arrange that mappings
 		// always appear to have expired when UT code calls processMappingExpiry.
 		domainStore = newDomainInfoStoreWithShims(
@@ -211,8 +211,8 @@ var _ = Describe("Domain Info Store", func() {
 		for {
 			select {
 			case signal := <-domainStore.domainInfoChanges:
-				log.Debugf("Got domain change signal for %v", signal.domain)
-				domainsSignaled.Add(signal.domain)
+				log.Debugf("Got domain change signal for %v", signal.Domain)
+				domainsSignaled.Add(signal.Domain)
 			default:
 				break loop
 			}
@@ -235,7 +235,7 @@ var _ = Describe("Domain Info Store", func() {
 			monitorRunning    sync.WaitGroup
 		)
 
-		monitor := func(domain string, domainChannel chan *domainInfoChanged) {
+		monitor := func(domain string, domainChannel chan *DomainInfoChanged) {
 			defer monitorRunning.Done()
 			for {
 			loop:
@@ -244,9 +244,9 @@ var _ = Describe("Domain Info Store", func() {
 					case <-killMonitor:
 						return
 					case signal := <-domainChannel:
-						log.Debugf("Got domain change signal for %v", signal.domain)
+						log.Debugf("Got domain change signal for %v", signal.Domain)
 						monitorMutex.Lock()
-						if signal.domain == domain {
+						if signal.Domain == domain {
 							expectedSeen = true
 							expectedDomainIPs = domainStore.GetDomainIPs(domain)
 						}

@@ -19,6 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/dataplane/dns"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -95,8 +96,8 @@ type store interface {
 }
 
 type DomainInfoChangeHandler interface {
-	// Handle a domainInfoChanged message and report if the dataplane needs syncing.
-	OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool)
+	// Handle a DomainInfoChanged message and report if the dataplane needs syncing.
+	OnDomainInfoChange(msg *dns.DomainInfoChanged) (dataplaneSyncNeeded bool)
 }
 
 func newIPSetsManager(ipsets_ ipsetsDataplane, maxIPSetSize int, domainInfoStore store, callbacks *callbacks) *ipSetsManager {
@@ -354,11 +355,11 @@ func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {
 }
 
 // This function may be called with a lowercase domain name when the original watch was uppercase.
-func (m *ipSetsManager) OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool) {
-	log.WithFields(log.Fields{"domain": msg.domain, "reason": msg.reason}).Debug("Domain info changed")
+func (m *ipSetsManager) OnDomainInfoChange(msg *dns.DomainInfoChanged) (dataplaneSyncNeeded bool) {
+	log.WithFields(log.Fields{"domain": msg.Domain, "reason": msg.Reason}).Debug("Domain info changed")
 
 	// Find the affected domain sets (note that the domain is always lowercased).
-	domainSetIds := m.domainSetIds[msg.domain]
+	domainSetIds := m.domainSetIds[msg.Domain]
 	if domainSetIds != nil {
 		// This is a domain name of active interest, so report that a dataplane sync will be
 		// needed.
@@ -368,7 +369,7 @@ func (m *ipSetsManager) OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyn
 		// domain name and adjust its overall IP set accordingly.
 		domainSetIds.Iter(func(item interface{}) error {
 			// Handle as a delta update where the same domain name is removed and then re-added.
-			m.handleDomainIPSetDeltaUpdate(item.(string), []string{msg.domain}, []string{msg.domain})
+			m.handleDomainIPSetDeltaUpdate(item.(string), []string{msg.Domain}, []string{msg.Domain})
 			return nil
 		})
 	}
