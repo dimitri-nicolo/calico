@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.50
+GO_BUILD_VER    ?= v0.51
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
@@ -10,6 +10,7 @@ LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
+ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
