@@ -29,13 +29,11 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/nfnetlink"
 
 	"github.com/projectcalico/felix/bpf/events"
 	"github.com/projectcalico/felix/collector"
 	fc "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -191,23 +189,11 @@ func newDomainInfoStoreWithShims(
 func (s *DomainInfoStore) Start() {
 	log.Info("Starting domain info store")
 
-	// Use nfnetlink to capture DNS response packets.
-	s.stopChannel = make(chan struct{})
 	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
 	// thread can handle a burst of DNS response packets without becoming blocked by the reading
 	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
 	// know that works; even though we probably won't need so much capacity for the DNS case.
 	s.MsgChannel = make(chan DataWithTimestamp, 1000)
-	nfnetlink.SubscribeDNS(
-		int(rules.NFLOGDomainGroup),
-		65535,
-		func(data []byte, timestamp uint64) {
-			s.MsgChannel <- DataWithTimestamp{
-				Data:      data,
-				Timestamp: timestamp,
-			}
-		},
-		s.stopChannel)
 
 	// Ensure that the directory for the persistent file exists.
 	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {

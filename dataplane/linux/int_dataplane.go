@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/nfnetlink"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -1325,8 +1326,21 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 	go d.monitorHostMTU()
 
-	// Start DNS response capture.
+	// Start the domain info store (for periodically saving DNS info).
 	d.domainInfoStore.Start()
+
+	// Use nfnetlink to capture DNS packets from iptables.
+	stopChannel := make(chan struct{})
+	nfnetlink.SubscribeDNS(
+		int(rules.NFLOGDomainGroup),
+		65535,
+		func(data []byte, timestamp uint64) {
+			d.domainInfoStore.MsgChannel <- dns.DataWithTimestamp{
+				Data:      data,
+				Timestamp: timestamp,
+			}
+		},
+		stopChannel)
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
