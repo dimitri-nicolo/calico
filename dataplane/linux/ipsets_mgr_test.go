@@ -1,4 +1,4 @@
-// Copyright (c) 2017 - 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/dataplane/dns"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -204,10 +205,10 @@ var _ = Describe("IP Sets manager", func() {
 						domainStore.mappings = map[string][]string{
 							members[2]: domainStore.GetDomainIPs(members[2]),
 						}
-						syncNeeded := ipsetsMgr.OnDomainInfoChange(&domainInfoChanged{
+						syncNeeded := ipsetsMgr.OnDomainInfoChange(&dns.DomainInfoChanged{
 							// The domain_info_store always returns lowercase domain names
-							domain: strings.ToLower(members[1]),
-							reason: "mapping expired",
+							Domain: strings.ToLower(members[1]),
+							Reason: "mapping expired",
 						})
 						Expect(syncNeeded).To(BeTrue())
 						err = ipsetsMgr.CompleteDeferredWork()

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package intdataplane
+package dns
 
 import (
 	"bufio"
@@ -29,13 +29,11 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/nfnetlink"
 
 	"github.com/projectcalico/felix/bpf/events"
 	"github.com/projectcalico/felix/collector"
 	fc "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -65,15 +63,22 @@ type dnsExchangeKey struct {
 	dnsID    uint16
 }
 
-type domainInfoStore struct {
+type DataWithTimestamp struct {
+	Data []byte
+	// We use 0 here to mean "invalid" or "unknown", as a 0 value would mean 1970,
+	// which will not occur in practice during Calico's active lifetime.
+	Timestamp uint64
+}
+
+type DomainInfoStore struct {
 	// Channel that we write to when we want DNS response capture to stop.
 	stopChannel chan struct{}
 
 	// Channel on which we receive captured DNS responses (beginning with the IP header).
-	msgChannel chan nfnetlink.DataWithTimestamp
+	MsgChannel chan DataWithTimestamp
 
 	// Channel that we write to when new information is available for a domain name.
-	domainInfoChanges chan *domainInfoChanged
+	domainInfoChanges chan *DomainInfoChanged
 
 	// Stores for the information that we glean from DNS responses.  Note: IPs are held here as
 	// strings, and also passed to the ipsets manager as strings.
@@ -121,9 +126,9 @@ type domainInfoStore struct {
 // Signal sent by the domain info store to the ipsets manager when the information for a given
 // domain name changes.  (i.e. when GetDomainIPs(domain) would return a different set of IP
 // addresses.)
-type domainInfoChanged struct {
-	domain string
-	reason string
+type DomainInfoChanged struct {
+	Domain string
+	Reason string
 }
 
 // Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
@@ -132,7 +137,16 @@ type domainMappingExpired struct {
 	name, value string
 }
 
-func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Config) *domainInfoStore {
+type Config struct {
+	Collector            collector.Collector
+	DNSCacheEpoch        int
+	DNSCacheFile         string
+	DNSCacheSaveInterval time.Duration
+	DNSExtraTTL          time.Duration
+	DNSLogsLatency       bool
+}
+
+func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *Config) *DomainInfoStore {
 	return newDomainInfoStoreWithShims(
 		domainInfoChanges,
 		config,
@@ -143,13 +157,13 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Confi
 }
 
 func newDomainInfoStoreWithShims(
-	domainInfoChanges chan *domainInfoChanged,
+	domainInfoChanges chan *DomainInfoChanged,
 	config *Config,
 	makeExpiryTimer func(time.Duration, func()) *time.Timer,
 	expiryTimePassed func(time.Time) bool,
-) *domainInfoStore {
+) *DomainInfoStore {
 	log.Info("Creating domain info store")
-	s := &domainInfoStore{
+	s := &DomainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
 		mappings:             make(map[string]*nameData),
 		wildcards:            make(map[string]*regexp.Regexp),
@@ -172,17 +186,14 @@ func newDomainInfoStoreWithShims(
 	return s
 }
 
-func (s *domainInfoStore) Start() {
+func (s *DomainInfoStore) Start() {
 	log.Info("Starting domain info store")
 
-	// Use nfnetlink to capture DNS response packets.
-	s.stopChannel = make(chan struct{})
 	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
 	// thread can handle a burst of DNS response packets without becoming blocked by the reading
 	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
 	// know that works; even though we probably won't need so much capacity for the DNS case.
-	s.msgChannel = make(chan nfnetlink.DataWithTimestamp, 1000)
-	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
+	s.MsgChannel = make(chan DataWithTimestamp, 1000)
 
 	// Ensure that the directory for the persistent file exists.
 	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
@@ -202,7 +213,7 @@ func (s *domainInfoStore) Start() {
 	go s.loop(saveTimerC, gcTimerC)
 }
 
-func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
+func (s *DomainInfoStore) DNSPacketFromBPF(e events.Event) {
 	log.Debugf("DNS packet from BPF: %v", e)
 
 	// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
@@ -210,7 +221,7 @@ func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
 	timestampNS := binary.LittleEndian.Uint64(e.Data())
 	consumed := 8
 
-	s.msgChannel <- nfnetlink.DataWithTimestamp{
+	s.MsgChannel <- DataWithTimestamp{
 		// We currently only capture DNS packets on workload interfaces, and the packet data
 		// on those interfaces always begins with an Ethernet header that we don't want.
 		// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
@@ -220,7 +231,7 @@ func (s *domainInfoStore) DNSPacketFromBPF(e events.Event) {
 }
 
 // Dynamically handle changes to DNSCacheEpoch and DNSExtraTTL.
-func (s *domainInfoStore) OnUpdate(msg interface{}) {
+func (s *DomainInfoStore) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.ConfigUpdate:
 		felixConfig := fc.FromConfigUpdate(msg)
@@ -240,20 +251,20 @@ func (s *domainInfoStore) OnUpdate(msg interface{}) {
 	}
 }
 
-func (s *domainInfoStore) CompleteDeferredWork() error {
+func (s *DomainInfoStore) CompleteDeferredWork() error {
 	// Nothing to do, we don't defer any work.
 	return nil
 }
 
-func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
+func (s *DomainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
 		s.loopIteration(saveTimerC, gcTimerC)
 	}
 }
 
-func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
+func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 	select {
-	case msg := <-s.msgChannel:
+	case msg := <-s.MsgChannel:
 		// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 		// in the next line is clearly a v4 assumption, and some of the code inside
 		// `nfnetlink.SubscribeDNS` also looks v4-specific.
@@ -289,7 +300,7 @@ func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 	case expiry := <-s.mappingExpiryChannel:
 		s.processMappingExpiry(expiry.name, expiry.value)
 	case <-saveTimerC:
-		if err := s.saveMappingsV1(); err != nil {
+		if err := s.SaveMappingsV1(); err != nil {
 			log.WithError(err).Warning("Failed to save mappings to file")
 		}
 	case <-gcTimerC:
@@ -306,7 +317,7 @@ type jsonMappingV1 struct {
 	Type   string
 }
 
-func (s *domainInfoStore) readMappings() error {
+func (s *DomainInfoStore) readMappings() error {
 	// This happens before the domain info store thread is started, so we don't need locking for
 	// concurrency reasons.  But we do need to lock the mutex because we'll be calling through
 	// to subroutines that assume it's locked and briefly unlock it.
@@ -344,7 +355,7 @@ const (
 	v1TypeName = "name"
 )
 
-func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
+func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 	for scanner.Scan() {
 		var jsonMapping jsonMappingV1
 		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
@@ -367,7 +378,7 @@ func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 	return scanner.Err()
 }
 
-func (s *domainInfoStore) saveMappingsV1() error {
+func (s *DomainInfoStore) SaveMappingsV1() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -425,7 +436,7 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	return nil
 }
 
-func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
+func (s *DomainInfoStore) processDNSPacket(dns *layers.DNS) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	log.Debugf("DNS packet with %v answers %v additionals", len(dns.Answers), len(dns.Additionals))
@@ -437,7 +448,7 @@ func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
 	}
 }
 
-func (s *domainInfoStore) processMappingExpiry(name, value string) {
+func (s *DomainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
@@ -454,7 +465,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	}
 }
 
-func (s *domainInfoStore) expireAllMappings() {
+func (s *DomainInfoStore) expireAllMappings() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	log.Info("Expire all mappings")
@@ -470,7 +481,7 @@ func (s *domainInfoStore) expireAllMappings() {
 	s.gcTrigger = true
 }
 
-func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
+func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
 	if rec.Class != layers.DNSClassIN {
 		log.Debugf("Ignore DNS response with class %v", rec.Class)
 		return
@@ -518,7 +529,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 	return
 }
 
-func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
 	if value == "0.0.0.0" {
 		// DNS records sometimes contain 0.0.0.0, but it's not a real routable IP and we
 		// must avoid passing it on to ipsets, because ipsets complains with "ipset v6.38:
@@ -626,7 +637,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	}
 }
 
-func (s *domainInfoStore) GetDomainIPs(domain string) []string {
+func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	// All names are stored and looked up as lowercase.
@@ -698,7 +709,7 @@ func wildcardToRegexpString(wildcard string) string {
 	return "^" + strings.Join(nonWildParts, ".*") + "$"
 }
 
-func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
+func (s *DomainInfoStore) signalDomainInfoChange(name, reason string) {
 	changedNames := set.From(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
@@ -715,12 +726,12 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	defer s.mutex.Lock()
 	changedNames.Iter(func(item interface{}) error {
 		log.Debugf("Signal domain change for %v -> %v", name, item.(string))
-		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
+		s.domainInfoChanges <- &DomainInfoChanged{Domain: item.(string), Reason: reason}
 		return nil
 	})
 }
 
-func (s *domainInfoStore) collectGarbage() (numDeleted int) {
+func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -764,7 +775,7 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 	return
 }
 
-func (s *domainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
+func (s *DomainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
 	if !s.measureLatency {
 		return
 	}

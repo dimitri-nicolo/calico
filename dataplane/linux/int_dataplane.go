@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/nfnetlink"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -50,6 +51,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/dataplane/dns"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
@@ -310,8 +312,8 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
-	domainInfoStore   *domainInfoStore
-	domainInfoChanges chan *domainInfoChanged
+	domainInfoStore   *dns.DomainInfoStore
+	domainInfoChanges chan *dns.DomainInfoChanged
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
@@ -416,7 +418,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
-		domainInfoChanges: make(chan *domainInfoChanged, 100),
+		domainInfoChanges: make(chan *dns.DomainInfoChanged, 100),
 		config:            config,
 		applyThrottle:     throttle.New(10),
 		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
@@ -562,7 +564,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = newDomainInfoStore(dp.domainInfoChanges, &config)
+	dp.domainInfoStore = dns.NewDomainInfoStore(dp.domainInfoChanges, &dns.Config{
+		Collector:            config.Collector,
+		DNSCacheEpoch:        config.DNSCacheEpoch,
+		DNSCacheFile:         config.DNSCacheFile,
+		DNSCacheSaveInterval: config.DNSCacheSaveInterval,
+		DNSExtraTTL:          config.DNSExtraTTL,
+		DNSLogsLatency:       config.DNSLogsLatency,
+	})
 	dp.RegisterManager(dp.domainInfoStore)
 
 	callbacks := newCallbacks()
@@ -1317,8 +1326,21 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 	go d.monitorHostMTU()
 
-	// Start DNS response capture.
+	// Start the domain info store (for periodically saving DNS info).
 	d.domainInfoStore.Start()
+
+	// Use nfnetlink to capture DNS packets from iptables.
+	stopChannel := make(chan struct{})
+	nfnetlink.SubscribeDNS(
+		int(rules.NFLOGDomainGroup),
+		65535,
+		func(data []byte, timestamp uint64) {
+			d.domainInfoStore.MsgChannel <- dns.DataWithTimestamp{
+				Data:      data,
+				Timestamp: timestamp,
+			}
+		},
+		stopChannel)
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
@@ -1883,15 +1905,15 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		case domainInfoChange := <-d.domainInfoChanges:
 			// Opportunistically read and coalesce other domain change signals that are
 			// already pending on this channel.
-			domainChangeSignals := []*domainInfoChanged{domainInfoChange}
-			domainsChanged := set.From(domainInfoChange.domain)
+			domainChangeSignals := []*dns.DomainInfoChanged{domainInfoChange}
+			domainsChanged := set.From(domainInfoChange.Domain)
 		domainChangeLoop:
 			for {
 				select {
 				case domainInfoChange := <-d.domainInfoChanges:
-					if !domainsChanged.Contains(domainInfoChange.domain) {
+					if !domainsChanged.Contains(domainInfoChange.Domain) {
 						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
-						domainsChanged.Add(domainInfoChange.domain)
+						domainsChanged.Add(domainInfoChange.Domain)
 					}
 				default:
 					// Channel blocked so we've caught up.
@@ -1937,7 +1959,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
 		case stopWG := <-d.stopChan:
 			defer stopWG.Done()
-			if err := d.domainInfoStore.saveMappingsV1(); err != nil {
+			if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
 
 			}
