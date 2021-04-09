@@ -30,20 +30,13 @@ const (
 
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
-type DataWithTimestamp struct {
-	Data []byte
-	// We use 0 here to mean "invalid" or "unknown", as a 0 value would mean 1970,
-	// which will not occur in practice during Calico's active lifetime.
-	Timestamp uint64
-}
-
-func SubscribeDNS(groupNum int, bufSize int, ch chan<- DataWithTimestamp, done <-chan struct{}) error {
+func SubscribeDNS(groupNum int, bufSize int, callback func(data []byte, timestamp uint64), done <-chan struct{}) error {
 	log.Infof("Subscribe to NFLOG group %v for DNS responses", groupNum)
-	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true, false)
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2000, true, false)
 	if err != nil {
 		return err
 	}
-	parseAndReturnDNSResponses(groupNum, resChan, ch)
+	parseAndReturnDNSResponses(groupNum, resChan, callback)
 	return nil
 }
 
@@ -263,10 +256,9 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 	}()
 }
 
-func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<- DataWithTimestamp) {
+func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, callback func(data []byte, timestamp uint64)) {
 	// Start another goroutine for parsing netlink messages into DNS response data.
 	go func() {
-		defer close(ch)
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
@@ -283,7 +275,7 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 						continue
 					}
 					logCtx.Debugf("DNS response length %v", len(packetData))
-					ch <- DataWithTimestamp{Data: packetData, Timestamp: timestamp}
+					callback(packetData, timestamp)
 				}
 			}
 		}
