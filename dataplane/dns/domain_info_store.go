@@ -65,12 +65,19 @@ type dnsExchangeKey struct {
 	dnsID    uint16
 }
 
+type DataWithTimestamp struct {
+	Data []byte
+	// We use 0 here to mean "invalid" or "unknown", as a 0 value would mean 1970,
+	// which will not occur in practice during Calico's active lifetime.
+	Timestamp uint64
+}
+
 type DomainInfoStore struct {
 	// Channel that we write to when we want DNS response capture to stop.
 	stopChannel chan struct{}
 
 	// Channel on which we receive captured DNS responses (beginning with the IP header).
-	msgChannel chan nfnetlink.DataWithTimestamp
+	MsgChannel chan DataWithTimestamp
 
 	// Channel that we write to when new information is available for a domain name.
 	domainInfoChanges chan *DomainInfoChanged
@@ -190,8 +197,17 @@ func (s *DomainInfoStore) Start() {
 	// thread can handle a burst of DNS response packets without becoming blocked by the reading
 	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
 	// know that works; even though we probably won't need so much capacity for the DNS case.
-	s.msgChannel = make(chan nfnetlink.DataWithTimestamp, 1000)
-	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
+	s.MsgChannel = make(chan DataWithTimestamp, 1000)
+	nfnetlink.SubscribeDNS(
+		int(rules.NFLOGDomainGroup),
+		65535,
+		func(data []byte, timestamp uint64) {
+			s.MsgChannel <- DataWithTimestamp{
+				Data:      data,
+				Timestamp: timestamp,
+			}
+		},
+		s.stopChannel)
 
 	// Ensure that the directory for the persistent file exists.
 	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
@@ -219,7 +235,7 @@ func (s *DomainInfoStore) DNSPacketFromBPF(e events.Event) {
 	timestampNS := binary.LittleEndian.Uint64(e.Data())
 	consumed := 8
 
-	s.msgChannel <- nfnetlink.DataWithTimestamp{
+	s.MsgChannel <- DataWithTimestamp{
 		// We currently only capture DNS packets on workload interfaces, and the packet data
 		// on those interfaces always begins with an Ethernet header that we don't want.
 		// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
@@ -262,7 +278,7 @@ func (s *DomainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 
 func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 	select {
-	case msg := <-s.msgChannel:
+	case msg := <-s.MsgChannel:
 		// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 		// in the next line is clearly a v4 assumption, and some of the code inside
 		// `nfnetlink.SubscribeDNS` also looks v4-specific.
