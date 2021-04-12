@@ -37,7 +37,7 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
 1. Be sure to {% include open-new-window.html text='set up an S3 state store' url='https://kops.sigs.k8s.io/getting_started/aws/#cluster-state-storage' %} and export its name:
 
    ```
-   export KOPS_STATE_STORE=s3://name-of-your-state-store-bucket
+   export KOPS_STATE_STORE=s3://<name-of-your-state-store-bucket>
    ```
 1. Configure kops to use {{site.prodname}} for networking.
    Create a cluster with kops using the `--networking cni` flag. For example:
@@ -46,13 +46,13 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
    kops create cluster \
     --zones us-west-2a \
     --networking cni \
-    name-of-your-cluster
+    <name-of-your-cluster>
    ```
 
       > **Note:** The name of the cluster must be chosen as a valid DNS name belonging to the root user.  It can either be a subdomain of an existing domain name or a subdomain which can be configured on AWS Route 53 service. More details on DNS domain requirements on the `kops` command can be found in Kubernetes' {% include open-new-window.html text='documentation for kops' url='https://kubernetes.io/docs/setup/production-environment/tools/kops/#2-5-create-a-route53-domain-for-your-cluster' %}.
       
 
-   Or, you you can add `cni` to your cluster config.  Run `kops update cluster --name=name-of-your-cluster` and set the following networking configuration.
+   Or, you you can add `cni` to your cluster config.  Run `kops update cluster --name=<name-of-your-cluster>` and set the following networking configuration.
 
    ```
    networking:
@@ -60,8 +60,27 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
    ```
       > **Note:** Setting the `--networking cni` flag delegates the installation of the CNI to the user for a later stage.
 
+1. The provisioned kOps cluster will assign it's own set of pod network CIDR in the kube-proxy instance different than the one {{site.prodname}} expects.  To set the cluster cidr for the kube-proxy to match the one expected by {{site.prodname}} edit the cluster config `kops edit cluster <name-of-your-cluster>` and add the the `kubeProxy` config with the `clusterCIDR` expected by the default {{site.prodname}} installation.  
+   ```
+   spec:
+      ...
+      kubeProxy:
+         clusterCIDR: 192.168.0.0/16
+   ```
+      > **Note:** For more advanced pod networking CIDR configuration, the requirement is to have `ipPools` CIDR set by the {{site.prodname}} installation to match cluster CIDR set in kube-proxy.  Calico's `ipPools` setting is obtainable in the Installation resource `kubectl get installation -o yaml` and can be configured in the editting the operator manifest found in the [install instructions for {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/generic-install).
 
-1. Once your cluster has been configured run `kops update cluster --name=name-of-your-cluster` to preview the changes.  Then the same command with `--yes` option (ie. `kops update cluster --name=name-of-your-cluster --yes`) to commit the changes to AWS to create the cluster. It may take 10 to 15 minutes for the cluster to be fully created.
+
+1. The default size of the provisioned instance groups for the cluster might not be sufficient for the full installation of kubernetes and {{site.prodname}}. To increase the size of the instance groups run `kops edit ig <name-of-instance-group-in-your-cluster> --name <name-of-your-cluster>` and edit the following fields accordingly.
+   ```
+      spec:
+         ...
+         machineType: t3.medium
+         maxSize: 1
+         minSize: 1
+   ```
+   The name of the instance groups can be obtained from `kops get instancegroups --name <name-of-your-cluster>`.
+
+1. Once your cluster has been configured run `kops update cluster --name=<name-of-your-cluster>` to preview the changes.  Then the same command with `--yes` option (ie. `kops update cluster --name=<name-of-your-cluster> --yes`) to commit the changes to AWS to create the cluster. It may take 10 to 15 minutes for the cluster to be fully created.
 
     > **Note:** Once the cluster has been created, the `kubectl` command should be pointing to the newly created cluster. By default `kops>=1.19` does not update `kubeconfig` to include the cluster certificates, accesses to the cluster through `kubectl` must be configured. 
 
@@ -75,8 +94,7 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
 1. KOps does not install any CNI when the flag ```--networking cni``` or ```spec.networking: cni {}``` is used. In this case the user is expected to install the CNI separately.
    To Install {{site.prodname}} follow the [install instructions for {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/generic-install).
 
-
-1. Finally, to delete your cluster once finished, run `kops delete cluster name-of-your-cluster --yes`.
+1. Finally, to delete your cluster once finished, run `kops delete cluster <name-of-your-cluster> --yes`.
 
 The geeky details of what you get:
 {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:etcd' %}
