@@ -15,8 +15,14 @@
 package windataplane
 
 import (
+	"math"
 	"regexp"
+	"sync"
 	"time"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
+
+	"github.com/projectcalico/felix/config"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/windows/hcn"
@@ -27,6 +33,7 @@ import (
 	"github.com/projectcalico/felix/dataplane/windows/vfp"
 
 	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/jitter"
@@ -60,6 +67,17 @@ type Config struct {
 
 	// Optional stats collector
 	Collector collector.Collector
+
+	// Currently set to maximum value.
+	MaxIPSetSize int
+
+	// Config for DNS policy.
+	DNSCacheFile         string
+	DNSCacheSaveInterval time.Duration
+	DNSCacheEpoch        int
+	DNSExtraTTL          time.Duration
+	DNSLogsLatency       bool
+	DNSTrustedServers    []config.ServerPort
 
 	Hostname     string
 	VXLANEnabled bool
@@ -130,6 +148,14 @@ type WindowsDataplane struct {
 	// config provides a way for felix to provide some additional configuration options
 	// to the dataplane driver. This isn't really used currently, but will be in the future.
 	config Config
+
+	// Channel used when the Felix top level wants the dataplane to stop.
+	stopChan chan *sync.WaitGroup
+
+	// DNS policy components
+	domainInfoReader  *domainInfoReader
+	domainInfoStore   *common.DomainInfoStore
+	domainInfoChanges chan *common.DomainInfoChanged
 }
 
 const (
@@ -156,7 +182,7 @@ func (d *WindowsDataplane) RegisterManager(mgr Manager) {
 
 // NewWinDataplaneDriver creates and initializes a new dataplane driver using the provided
 // configuration.
-func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
+func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitGroup) *WindowsDataplane {
 	log.WithField("config", config).Info("Creating Windows dataplane driver.")
 
 	ipSetsConfigV4 := ipsets.NewIPVersionConfig(
@@ -164,13 +190,16 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	)
 
 	ipSetsV4 := ipsets.NewIPSets(ipSetsConfigV4)
+	config.MaxIPSetSize = math.MaxInt64
 
 	dp := &WindowsDataplane{
-		toDataplane:      make(chan interface{}, msgPeekLimit),
-		fromDataplane:    make(chan interface{}, 100),
-		ifaceAddrUpdates: make(chan []string, 1),
-		config:           config,
-		applyThrottle:    throttle.New(10),
+		toDataplane:       make(chan interface{}, msgPeekLimit),
+		fromDataplane:     make(chan interface{}, 100),
+		ifaceAddrUpdates:  make(chan []string, 1),
+		config:            config,
+		domainInfoChanges: make(chan *common.DomainInfoChanged, 100),
+		applyThrottle:     throttle.New(10),
+		stopChan:          stopChan,
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -195,10 +224,22 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 		epEventListeners = append(epEventListeners, vfpInfoReader.EndpointEventHandler())
 	}
 
-	dp.RegisterManager(newIPSetsManager(ipSetsV4))
+	dp.domainInfoReader = NewDomainInfoReader(config.DNSTrustedServers)
+	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges,
+		&common.DnsConfig{
+			Collector:            config.Collector,
+			DNSCacheFile:         config.DNSCacheFile,
+			DNSCacheSaveInterval: config.DNSCacheSaveInterval,
+			DNSCacheEpoch:        config.DNSCacheEpoch,
+			DNSExtraTTL:          config.DNSExtraTTL,
+		})
+	dp.RegisterManager(dp.domainInfoStore)
+
+	dp.RegisterManager(common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, common.NewCallback()))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
 	dp.endpointMgr = newEndpointManager(hns, dp.policySets, epEventListeners)
 	dp.RegisterManager(dp.endpointMgr)
+	ipSetsV4.SetCallback(dp.endpointMgr.OnIPSetsUpdate)
 	if config.VXLANEnabled {
 		log.Info("VXLAN enabled, starting the VXLAN manager")
 		dp.RegisterManager(newVXLANManager(
@@ -229,6 +270,10 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 func (d *WindowsDataplane) Start() {
 	go d.loopUpdatingDataplane()
 	go loopPollingForInterfaceAddrs(d.ifaceAddrUpdates)
+
+	// Start DNS response capture.
+	d.domainInfoStore.Start()
+	d.domainInfoReader.Start(d.domainInfoStore.MsgChannel)
 }
 
 // Called by someone to put a message into our channel so that the loop will pick it up
@@ -299,6 +344,33 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 			d.dataplaneNeedsSync = true
 		case upd := <-d.ifaceAddrUpdates:
 			d.endpointMgr.OnHostAddrsUpdate(upd)
+		case domainInfoChange := <-d.domainInfoChanges:
+			// Opportunistically read and coalesce other domain change signals that are
+			// already pending on this channel.
+			domainChangeSignals := []*common.DomainInfoChanged{domainInfoChange}
+			domainsChanged := set.From(domainInfoChange.Domain)
+		domainChangeLoop:
+			for {
+				select {
+				case domainInfoChange := <-d.domainInfoChanges:
+					if !domainsChanged.Contains(domainInfoChange.Domain) {
+						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
+						domainsChanged.Add(domainInfoChange.Domain)
+					}
+				default:
+					// Channel blocked so we've caught up.
+					break domainChangeLoop
+				}
+			}
+			for _, domainInfoChange = range domainChangeSignals {
+				for _, mgr := range d.allManagers {
+					if handler, ok := mgr.(common.DomainInfoChangeHandler); ok {
+						if handler.OnDomainInfoChange(domainInfoChange) {
+							d.dataplaneNeedsSync = true
+						}
+					}
+				}
+			}
 		case <-throttleC:
 			d.applyThrottle.Refill()
 		case <-healthTicks:
@@ -307,6 +379,12 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 			log.Debug("Reschedule kick received")
 			d.dataplaneNeedsSync = true
 			d.reschedC = nil
+		case stopWG := <-d.stopChan:
+			defer stopWG.Done()
+			if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
+				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
+
+			}
 		}
 
 		if datastoreInSync && d.dataplaneNeedsSync {

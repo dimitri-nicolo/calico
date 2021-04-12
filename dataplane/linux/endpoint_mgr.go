@@ -27,6 +27,7 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/felix/bpf/stats"
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/iptables"
@@ -59,16 +60,16 @@ type hepListener interface {
 }
 
 type endpointManagerCallbacks struct {
-	addInterface           *AddInterfaceFuncs
-	removeInterface        *RemoveInterfaceFuncs
-	updateInterface        *UpdateInterfaceFuncs
-	updateHostEndpoint     *UpdateHostEndpointFuncs
-	removeHostEndpoint     *RemoveHostEndpointFuncs
-	updateWorkloadEndpoint *UpdateWorkloadEndpointFuncs
-	removeWorkloadEndpoint *RemoveWorkloadEndpointFuncs
+	addInterface           *common.AddInterfaceFuncs
+	removeInterface        *common.RemoveInterfaceFuncs
+	updateInterface        *common.UpdateInterfaceFuncs
+	updateHostEndpoint     *common.UpdateHostEndpointFuncs
+	removeHostEndpoint     *common.RemoveHostEndpointFuncs
+	updateWorkloadEndpoint *common.UpdateWorkloadEndpointFuncs
+	removeWorkloadEndpoint *common.RemoveWorkloadEndpointFuncs
 }
 
-func newEndpointManagerCallbacks(callbacks *callbacks, ipVersion uint8) endpointManagerCallbacks {
+func newEndpointManagerCallbacks(callbacks *common.Callbacks, ipVersion uint8) endpointManagerCallbacks {
 	if ipVersion == 4 {
 		return endpointManagerCallbacks{
 			addInterface:           callbacks.AddInterfaceV4,
@@ -81,13 +82,13 @@ func newEndpointManagerCallbacks(callbacks *callbacks, ipVersion uint8) endpoint
 		}
 	} else {
 		return endpointManagerCallbacks{
-			addInterface:           &AddInterfaceFuncs{},
-			removeInterface:        &RemoveInterfaceFuncs{},
-			updateInterface:        &UpdateInterfaceFuncs{},
-			updateHostEndpoint:     &UpdateHostEndpointFuncs{},
-			removeHostEndpoint:     &RemoveHostEndpointFuncs{},
-			updateWorkloadEndpoint: &UpdateWorkloadEndpointFuncs{},
-			removeWorkloadEndpoint: &RemoveWorkloadEndpointFuncs{},
+			addInterface:           &common.AddInterfaceFuncs{},
+			removeInterface:        &common.RemoveInterfaceFuncs{},
+			updateInterface:        &common.UpdateInterfaceFuncs{},
+			updateHostEndpoint:     &common.UpdateHostEndpointFuncs{},
+			removeHostEndpoint:     &common.RemoveHostEndpointFuncs{},
+			updateWorkloadEndpoint: &common.UpdateWorkloadEndpointFuncs{},
+			removeWorkloadEndpoint: &common.RemoveWorkloadEndpointFuncs{},
 		}
 	}
 }
@@ -233,7 +234,7 @@ func newEndpointManager(
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 	bpfEnabled bool,
 	bpfEndpointManager hepListener,
-	callbacks *callbacks,
+	callbacks *common.Callbacks,
 	tcpStatsEnabled bool,
 	bpfLogLevel string,
 ) *endpointManager {
@@ -276,7 +277,7 @@ func newEndpointManagerWithShims(
 	osStat func(name string) (os.FileInfo, error),
 	bpfEnabled bool,
 	bpfEndpointManager hepListener,
-	callbacks *callbacks,
+	callbacks *common.Callbacks,
 	nlHandle netlinkHandle,
 	tcpStatsEnabled bool,
 	bpfLogLevel string,

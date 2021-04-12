@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dns
+package common
 
 import (
 	"bufio"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -30,7 +29,6 @@ import (
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/bpf/events"
 	"github.com/projectcalico/felix/collector"
 	fc "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
@@ -137,7 +135,7 @@ type domainMappingExpired struct {
 	name, value string
 }
 
-type Config struct {
+type DnsConfig struct {
 	Collector            collector.Collector
 	DNSCacheEpoch        int
 	DNSCacheFile         string
@@ -146,7 +144,7 @@ type Config struct {
 	DNSLogsLatency       bool
 }
 
-func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *Config) *DomainInfoStore {
+func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *DnsConfig) *DomainInfoStore {
 	return newDomainInfoStoreWithShims(
 		domainInfoChanges,
 		config,
@@ -158,7 +156,7 @@ func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *Confi
 
 func newDomainInfoStoreWithShims(
 	domainInfoChanges chan *DomainInfoChanged,
-	config *Config,
+	config *DnsConfig,
 	makeExpiryTimer func(time.Duration, func()) *time.Timer,
 	expiryTimePassed func(time.Time) bool,
 ) *DomainInfoStore {
@@ -211,23 +209,6 @@ func (s *DomainInfoStore) Start() {
 	gcTimerC := time.NewTicker(s.gcInterval).C
 
 	go s.loop(saveTimerC, gcTimerC)
-}
-
-func (s *DomainInfoStore) DNSPacketFromBPF(e events.Event) {
-	log.Debugf("DNS packet from BPF: %v", e)
-
-	// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
-	// packet data begins after that.
-	timestampNS := binary.LittleEndian.Uint64(e.Data())
-	consumed := 8
-
-	s.MsgChannel <- DataWithTimestamp{
-		// We currently only capture DNS packets on workload interfaces, and the packet data
-		// on those interfaces always begins with an Ethernet header that we don't want.
-		// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
-		Data:      e.Data()[consumed+14:],
-		Timestamp: timestampNS,
-	}
 }
 
 // Dynamically handle changes to DNSCacheEpoch and DNSExtraTTL.

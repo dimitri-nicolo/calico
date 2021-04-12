@@ -51,12 +51,20 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		Collector:    collector,
 		LookupsCache: lookupsCache,
+
+		DNSCacheFile:         configParams.DNSCacheFile,
+		DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
+		DNSCacheEpoch:        configParams.DNSCacheEpoch,
+		DNSExtraTTL:          configParams.DNSExtraTTL,
+		DNSLogsLatency:       configParams.DNSLogsLatency,
+		DNSTrustedServers:    configParams.DNSTrustedServers,
 	}
 
-	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)
+	stopChan := make(chan *sync.WaitGroup, 1)
+	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig, stopChan)
 	winDP.Start()
 
-	return winDP, nil, nil
+	return winDP, nil, stopChan
 }
 
 func SupportsBPF() error {

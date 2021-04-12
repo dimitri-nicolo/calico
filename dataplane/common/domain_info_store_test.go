@@ -1,6 +1,6 @@
 // Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
-package dns
+package common
 
 import (
 	"fmt"
@@ -91,13 +91,13 @@ var _ = Describe("Domain Info Store", func() {
 		})
 	}
 
-	defaultConfig := &Config{
+	defaultConfig := &DnsConfig{
 		DNSCacheFile:         "/dnsinfo",
 		DNSCacheSaveInterval: time.Minute,
 	}
 
 	// Create a new datastore.
-	domainStoreCreateEx := func(capacity int, config *Config) {
+	domainStoreCreateEx := func(capacity int, config *DnsConfig) {
 		domainChannel := make(chan *DomainInfoChanged, capacity)
 		// For UT purposes, don't actually run any expiry timers, but arrange that mappings
 		// always appear to have expired when UT code calls processMappingExpiry.
@@ -442,7 +442,7 @@ var _ = Describe("Domain Info Store", func() {
 
 	Context("with 10s extra TTL", func() {
 		BeforeEach(func() {
-			domainStoreCreateEx(100, &Config{
+			domainStoreCreateEx(100, &DnsConfig{
 				DNSExtraTTL:   10 * time.Second,
 				DNSCacheEpoch: 1,
 			})

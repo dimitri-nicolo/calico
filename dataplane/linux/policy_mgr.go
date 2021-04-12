@@ -17,17 +17,18 @@ package intdataplane
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 )
 
 type policyManagerCallbacks struct {
-	updatePolicy *UpdatePolicyDataFuncs
-	removePolicy *RemovePolicyDataFuncs
+	updatePolicy *common.UpdatePolicyDataFuncs
+	removePolicy *common.RemovePolicyDataFuncs
 }
 
-func newPolicyManagerCallbacks(callbacks *callbacks, ipVersion uint8) policyManagerCallbacks {
+func newPolicyManagerCallbacks(callbacks *common.Callbacks, ipVersion uint8) policyManagerCallbacks {
 	if ipVersion == 4 {
 		return policyManagerCallbacks{
 			updatePolicy: callbacks.UpdatePolicyV4,
@@ -35,8 +36,8 @@ func newPolicyManagerCallbacks(callbacks *callbacks, ipVersion uint8) policyMana
 		}
 	} else {
 		return policyManagerCallbacks{
-			updatePolicy: &UpdatePolicyDataFuncs{},
-			removePolicy: &RemovePolicyDataFuncs{},
+			updatePolicy: &common.UpdatePolicyDataFuncs{},
+			removePolicy: &common.RemovePolicyDataFuncs{},
 		}
 	}
 }
@@ -65,7 +66,7 @@ type policyRenderer interface {
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain)
 }
 
-func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8, callbacks *callbacks) *policyManager {
+func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8, callbacks *common.Callbacks) *policyManager {
 	return &policyManager{
 		rawTable:     rawTable,
 		mangleTable:  mangleTable,

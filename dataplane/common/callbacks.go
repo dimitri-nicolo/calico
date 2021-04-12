@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package intdataplane
+package common
 
 import (
 	"github.com/projectcalico/felix/proto"
@@ -20,7 +20,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-type callbacks struct {
+type Callbacks struct {
 	UpdatePolicyV4           *UpdatePolicyDataFuncs
 	RemovePolicyV4           *RemovePolicyDataFuncs
 	AddMembersIPSetV4        *AddMembersIPSetFuncs
@@ -36,8 +36,8 @@ type callbacks struct {
 	RemoveWorkloadEndpointV4 *RemoveWorkloadEndpointFuncs
 }
 
-func newCallbacks() *callbacks {
-	return &callbacks{
+func NewCallback() *Callbacks {
+	return &Callbacks{
 		UpdatePolicyV4:           &UpdatePolicyDataFuncs{},
 		RemovePolicyV4:           &RemovePolicyDataFuncs{},
 		AddMembersIPSetV4:        &AddMembersIPSetFuncs{},
@@ -54,7 +54,7 @@ func newCallbacks() *callbacks {
 	}
 }
 
-func (c *callbacks) Drop(id *CbID) {
+func (c *Callbacks) Drop(id *CbID) {
 	if id.dropper != nil {
 		id.dropper()
 		id.dropper = nil
