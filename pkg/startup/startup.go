@@ -181,6 +181,16 @@ func Run() {
 
 	configureAndCheckIPAddressSubnets(ctx, cli, node)
 
+	// If running under Kubernetes and there is a "bgp-layout" ConfigMap, read it to set this
+	// node's AS number and rack label.  Note: the "AS" environment variable can still override
+	// this.
+	if clientset != nil {
+		if err := configureBGPLayout(ctx, clientset, nodeName, node); err != nil {
+			log.WithError(err).Error("BGP layout configuration failed")
+			terminate()
+		}
+	}
+
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
 		// Configure the node AS number if BGP is enabled.
@@ -194,15 +204,6 @@ func Run() {
 			if err != nil {
 				log.WithError(err).Error("Unable to set NetworkUnavailable to False")
 			}
-		}
-	}
-
-	// If running under Kubernetes and there is a "bgp-layout" ConfigMap, read it to set this
-	// node's AS number and rack label.
-	if clientset != nil {
-		if err := configureBGPLayout(ctx, clientset, nodeName, node); err != nil {
-			log.WithError(err).Error("BGP layout configuration failed")
-			terminate()
 		}
 	}
 
