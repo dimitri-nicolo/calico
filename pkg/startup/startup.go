@@ -241,8 +241,8 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 	// Find the namespace we're running in.
 	namespace := os.Getenv("NAMESPACE")
 	if namespace == "" {
-		// Default to kube-system.
-		namespace = "kube-system"
+		// Default to calico-system.
+		namespace = "calico-system"
 	}
 
 	// Get the "bgp-layout" ConfigMap, if available.
