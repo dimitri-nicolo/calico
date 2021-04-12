@@ -1,8 +1,9 @@
 .PHONY: cd image
 PACKAGE_NAME?=github.com/tigera/kibana-docker
-GO_BUILD_VER?=v0.50
+GO_BUILD_VER?=v0.51
 
-GIT_VERSION?=$(shell git describe --tags --dirty --always --long --abbrev=12)
+ORGANIZATION=tigera
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_KIBANA_DOCKER_PROJECT_ID)
 
 ###############################################################################
 # Download and include Makefile.common
