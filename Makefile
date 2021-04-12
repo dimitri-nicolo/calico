@@ -5,6 +5,9 @@ GO_BUILD_VER?=v0.51
 BUILD_IMAGE=tigera/elasticsearch
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 
+ORGANIZATION=tigera
+SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ELASTICSEARCH_DOCKER_PROJECT_ID)
+
 ###############################################################################
 # Download and include Makefile.common
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since

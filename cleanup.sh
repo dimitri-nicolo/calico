@@ -14,7 +14,7 @@ PACKAGES+=" cryptsetup-libs kpartx grub2-tools grub2-tools-minimal grubby rpm-bu
 PACKAGES+=" kmod bind-export-libs kmod-libs openldap libevent ima-evm-utils xz openssl openssl-pkcs11 libidn2 gnupg2 gnutls"
 PACKAGES+=" gnupg2 gpgme gnupg2-smime glib2 libmodulemd1 pinentry libsecret librepo elfutils-libs elfutils-debuginfod-client libsolv"
 PACKAGES+=" libmodulemd shadow-utils libsemanage zip unzip libsolv gettext-libs gettext libcroco nmap-ncat json-c cyrus-sasl-lib util-linux"
-PACKAGES+=" libpwquality kbd pam libnsl2 libtirpc iproute sqlite-libs elfutils-default-yama-scope tar file-5.33-16.el8 file-libs"
+PACKAGES+=" libpwquality kbd pam libnsl2 libtirpc iproute sqlite-libs elfutils-default-yama-scope tar file file-libs"
 PACKAGES+=" procps-ng libsmartcols dbus-libs dbus-tools dbus-daemon systemd-libs dhcp-libs libusbx libblkid libuuid libmount"
 PACKAGES+=" libfdisk binutils vim-minimal libyaml libseccomp"
 
