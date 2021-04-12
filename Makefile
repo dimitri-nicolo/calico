@@ -1,9 +1,10 @@
 PACKAGE_NAME    ?= github.com/tigera/lma
-GO_BUILD_VER    ?= v0.49
+GO_BUILD_VER    ?= v0.51
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 LOCAL_CHECKS     = mod-download
 
+ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LMA_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
