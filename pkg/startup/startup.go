@@ -200,7 +200,10 @@ func Run() {
 	// If running under Kubernetes and there is a "bgp-layout" ConfigMap, read it to set this
 	// node's AS number and rack label.
 	if clientset != nil {
-		configureBGPLayout(ctx, clientset, nodeName, node)
+		if err := configureBGPLayout(ctx, clientset, nodeName, node); err != nil {
+			log.WithError(err).Error("BGP layout configuration failed")
+			terminate()
+		}
 	}
 
 	// Populate a reference to the node based on orchestrator node identifiers.
@@ -237,7 +240,7 @@ func Run() {
 	}
 }
 
-func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, nodeName string, node *api.Node) {
+func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, nodeName string, node *api.Node) error {
 	// Find the namespace we're running in.
 	namespace := os.Getenv("NAMESPACE")
 	if namespace == "" {
@@ -252,17 +255,15 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			log.Info("No 'bgp-layout' ConfigMap available")
-		} else {
-			log.WithError(err).Error("Couldn't get 'bgp-layout' ConfigMap")
+			return nil
 		}
-		return
+		return err
 	}
 
 	// Get the entry in the ConfigMap for this node.
 	thisNodeLayout, exists := bgpLayout.Data[nodeName]
 	if !exists {
-		log.Errorf("bgp-layout ConfigMap does not have entry for this node (%v)", nodeName)
-		return
+		return fmt.Errorf("bgp-layout ConfigMap does not have entry for this node (%v)", nodeName)
 	}
 
 	// Parse that entry (which is in YAML format).
@@ -273,8 +274,7 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 	var l layout
 	err = yaml.NewDecoder(strings.NewReader(thisNodeLayout)).Decode(&l)
 	if err != nil {
-		log.WithError(err).Fatalf("Failed to decode bgp-layout YAML:\n%v", thisNodeLayout)
-		return
+		return fmt.Errorf("Failed to decode bgp-layout YAML:\n%v\nerr=%v", thisNodeLayout, err)
 	}
 
 	// Add labels to the Node.
@@ -291,7 +291,7 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 	if l.ASNumber != 0 {
 		configureASNumber(node, fmt.Sprintf("%v", l.ASNumber), "bgp-layout ConfigMap")
 	}
-	return
+	return nil
 }
 
 func getMonitorPollInterval() time.Duration {
