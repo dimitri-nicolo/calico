@@ -2,10 +2,11 @@
 
 APP_NAME        = voltron
 PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
-GO_BUILD_VER   ?= v0.49
+GO_BUILD_VER   ?= v0.51
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 
+ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_VOLTRON_PROJECT_ID)
 
 # Used by Makefile.common
@@ -265,12 +266,6 @@ ifndef BRANCH_NAME
 endif
 	$(MAKE) tag-images push-images IMAGETAG=${BRANCH_NAME}
 	$(MAKE) tag-images push-images IMAGETAG=${GIT_VERSION_LONG}
-
-# ensure we have a real imagetag
-imagetag:
-ifndef IMAGETAG
-	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
-endif
 
 tag-images: imagetag
 	ARCHES="$(ARCHES)" BUILD_IMAGES="$(BUILD_IMAGES)" PUSH_REPO="$(PUSH_REPO)" IMAGETAG="$(IMAGETAG)" make-helpers/tag-images
