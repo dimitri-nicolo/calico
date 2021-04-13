@@ -26,7 +26,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
+
+	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/upgrade/converters"
 )
 
@@ -360,7 +361,7 @@ func (m *migrationHelper) parseProtoPort(raw string) (*[]apiv3.ProtoPort, error)
 		}
 
 		if netStr != "" {
-			_, netParsed, err := cnet.ParseCIDROrIP(netStr)
+			_, netParsed, err := net.ParseCIDROrIP(netStr)
 			if err != nil {
 				err = m.parseProtoPortFailed("invalid CIDR or IP " + netStr)
 				return nil, err

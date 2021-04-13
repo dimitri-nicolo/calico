@@ -1,6 +1,7 @@
 PACKAGE_NAME=github.com/projectcalico/libcalico-go
-GO_BUILD_VER=v0.50
+GO_BUILD_VER=v0.51
 
+ORGANIZATION=tigera
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_TYPHA_PRIVATE_PROJECT_ID) $(SEMAPHORE_LICENSING_PROJECT_ID) \
 	$(SEMAPHORE_CNI_PLUGIN_PRIVATE_PROJECT_ID) $(SEMAPHORE_LMA_PROJECT_ID) $(SEMAPHORE_APP_POLICY_PRIVATE_PROJECT_ID) \
@@ -59,7 +60,7 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
-gen-files: gen-crds
+gen-files: gen-crds fix
 	rm -rf $(GENERATED_FILES)
 	$(MAKE) $(GENERATED_FILES)
 
@@ -133,7 +134,7 @@ $(BINDIR)/deepcopy-gen:
 LINT_ARGS += --disable gosimple,unused,structcheck,errcheck,deadcode,varcheck,ineffassign,staticcheck,govet
 
 .PHONY: check-gen-files
-check-gen-files: $(GENERATED_FILES)
+check-gen-files: $(GENERATED_FILES) fix
 	git diff --exit-code -- $(GENERATED_FILES) || (echo "The generated targets changed, please 'make gen-files' and commit the results"; exit 1)
 
 .PHONY: check-format

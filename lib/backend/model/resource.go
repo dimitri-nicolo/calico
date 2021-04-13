@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -111,6 +111,7 @@ func init() {
 		reflect.TypeOf(apiv3.NetworkPolicy{}),
 	)
 	registerResourceInfo(
+
 		apiv3.KindStagedNetworkPolicy,
 		"stagednetworkpolicies",
 		reflect.TypeOf(apiv3.StagedNetworkPolicy{}),
@@ -119,6 +120,11 @@ func init() {
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		"stagedkubernetesnetworkpolicies",
 		reflect.TypeOf(apiv3.StagedKubernetesNetworkPolicy{}),
+	)
+	registerResourceInfo(
+		KindKubernetesNetworkPolicy,
+		"kubernetesnetworkpolicies",
+		reflect.TypeOf(apiv3.NetworkPolicy{}),
 	)
 	registerResourceInfo(
 		apiv3.KindNetworkSet,

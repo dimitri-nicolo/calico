@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,19 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
+const (
+	// Re-implement the model.KindKubernetesNetworkPolicy constant here
+	// to avoid an import loop.
+	KindKubernetesNetworkPolicy = "KubernetesNetworkPolicy"
+)
+
 func IsNamespaced(kind string) bool {
 	switch kind {
 	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindStagedNetworkPolicy, apiv3.KindStagedKubernetesNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints, apiv3.KindNetworkSet, apiv3.KindPacketCapture:
+		return true
+	case KindKubernetesNetworkPolicy:
+		// KindKubernetesNetworkPolicy is a special-case resource. We don't expose it over the
+		// v3 API, but it is used in the felix syncer to implement the Kubernetes NetworkPolicy API.
 		return true
 	default:
 		return false
