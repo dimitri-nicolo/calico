@@ -72,7 +72,7 @@ metadata:
     deployment: production
 spec:
   reportType: cis-benchmark
-  schedule: 0 * * * *
+  schedule: 0 0 * * *
   cis:
     highThreshold: 100
     medThreshold: 50
