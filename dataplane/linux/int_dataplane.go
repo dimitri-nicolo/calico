@@ -772,7 +772,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// The failsafe manager sets up the failsafe port map.  It's important that it is registered before the
 		// endpoint managers so that the map is brought up to date before they run for the first time.
 		failsafesMap := failsafes.Map(bpfMapContext)
-		err = arpMap.EnsureExists()
+		err = failsafesMap.EnsureExists()
 		if err != nil {
 			log.WithError(err).Panic("Failed to create failsafe port BPF map.")
 		}
