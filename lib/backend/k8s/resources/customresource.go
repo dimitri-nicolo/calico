@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -355,6 +355,11 @@ func (c *customK8sResourceClient) Watch(ctx context.Context, list model.ListInte
 		// We've been asked to watch a specific customresource.
 		log.WithField("name", rlo.Name).Debug("Watching a single customresource")
 		fieldSelector = fields.OneTermEqualSelector("metadata.name", rlo.Name)
+
+		// If this is a namespaced resource, we also need the namespace specified.
+		if c.namespaced && rlo.Namespace == "" {
+			return nil, fmt.Errorf("name present, but missing namespace on watch request")
+		}
 	}
 
 	k8sWatchClient := cache.NewListWatchFromClient(c.restClient, c.resource, rlo.Namespace, fieldSelector)

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -208,6 +208,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		resources.NewStagedKubernetesNetworkPolicyClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		model.KindKubernetesNetworkPolicy,
+		resources.NewKubernetesNetworkPolicyClient(cs),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),

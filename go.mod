@@ -9,14 +9,16 @@ require (
 	github.com/alecthomas/participle v0.7.1
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/go-openapi/spec v0.19.3
+	github.com/go-openapi/spec v0.19.5
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.0.0-20170327191703-71201497bace // indirect
+	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/gopacket v1.1.17
-	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.11.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.9.6 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 // indirect
+	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.0
 	github.com/kelseyhightower/envconfig v0.0.0-20180517194557-dd1402a4d99d
@@ -29,14 +31,15 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron v1.2.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	google.golang.org/grpc v1.27.0
+	google.golang.org/grpc v1.27.1
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
@@ -44,13 +47,12 @@ require (
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	gopkg.in/tchap/go-patricia.v2 v2.2.6
-	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
-	k8s.io/api v0.19.6
-	k8s.io/apimachinery v0.19.6
-	k8s.io/apiserver v0.19.6
-	k8s.io/client-go v0.19.6
-	k8s.io/code-generator v0.19.6
-	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
+	k8s.io/api v0.21.0
+	k8s.io/apimachinery v0.21.0
+	k8s.io/apiserver v0.21.0
+	k8s.io/client-go v0.21.0
+	k8s.io/code-generator v0.21.0-rc.0
+	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 )
 
 replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico

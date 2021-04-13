@@ -57,8 +57,6 @@ type Converter interface {
 	StagedKubernetesNetworkPolicyToStagedName(stagedK8sName string) string
 	K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*model.KVPair, error)
 	ProfileNameToNamespace(profileName string) (string, error)
-	JoinNetworkPolicyRevisions(crdNPRev, k8sNPRev string) string
-	SplitNetworkPolicyRevision(rev string) (crdNPRev string, k8sNPRev string, err error)
 	ServiceAccountToProfile(sa *kapiv1.ServiceAccount) (*model.KVPair, error)
 	ProfileNameToServiceAccount(profileName string) (ns, sa string, err error)
 	JoinProfileRevisions(nsRev, saRev string) string
@@ -170,6 +168,9 @@ func (c converter) IsReadyCalicoPod(pod *kapiv1.Pod) bool {
 	} else if !c.HasIPAddress(pod) {
 		log.WithField("pod", pod.Name).Debug("Pod does not have an IP address.")
 		return false
+	} else if IsFinished(pod) {
+		log.WithField("pod", pod.Name).Debug("Pod is finished.")
+		return false
 	}
 	return true
 }
@@ -182,8 +183,12 @@ const (
 
 func IsFinished(pod *kapiv1.Pod) bool {
 	if pod.DeletionTimestamp != nil {
-		// Pod is Terminating, check if it still has its IPs.
-		if pod.Annotations[AnnotationPodIP] == "" {
+		// Pod is being deleted but it may still be in its termination grace period.  If Calico CNI
+		// was used, then we use AnnotationPodIP to signal the moment that the pod actually loses its
+		// IP by setting the annotation to "".  (Otherwise, just fall back on the status of the pod.)
+		if ip, ok := pod.Annotations[AnnotationPodIP]; ok && ip == "" {
+			// AnnotationPodIP is explicitly set to empty string, Calico CNI has removed the network
+			// from the pod.
 			log.Debug("Pod is being deleted and IPs have been removed.")
 			return true
 		}
@@ -205,9 +210,18 @@ func (c converter) IsHostNetworked(pod *kapiv1.Pod) bool {
 }
 
 func (c converter) HasIPAddress(pod *kapiv1.Pod) bool {
-	return pod.Status.PodIP != "" || pod.Annotations[AnnotationPodIP] != ""
 	// Note: we don't need to check PodIPs and AnnotationPodIPs here, because those cannot be
 	// non-empty if the corresponding singular field is empty.
+	if ip, ok := pod.Annotations[AnnotationPodIP]; ok && ip == "" {
+		// AnnotationPodIP explicitly set to empty string, we use this to signal that the
+		// CNI plugin has been called to remove the IP(s) from the pod.
+		return false
+	} else if ip != "" {
+		// Our annotation has an IP in it.
+		return true
+	}
+	// Our annotation is not set, fall back on the PodIP field.
+	return pod.Status.PodIP != ""
 }
 
 // getPodIPs extracts the IP addresses from a Kubernetes Pod.  We support a single IPv4 address
@@ -215,7 +229,11 @@ func (c converter) HasIPAddress(pod *kapiv1.Pod) bool {
 // present, or the calico podIP annotation.
 func getPodIPs(pod *kapiv1.Pod) ([]*cnet.IPNet, error) {
 	var podIPs []string
-	if ips := pod.Status.PodIPs; len(ips) != 0 {
+	if ip, ok := pod.Annotations[AnnotationPodIP]; ok && ip == "" {
+		// Special case, our CNI plugin uses explicit empty string to signal to us that the IP has been
+		// removed.
+		log.Debug("Empty podIP annotation: Pod has no IPs")
+	} else if ips := pod.Status.PodIPs; len(ips) != 0 {
 		log.WithField("ips", ips).Debug("PodIPs field filled in")
 		for _, ip := range ips {
 			podIPs = append(podIPs, ip.IP)
@@ -425,6 +443,10 @@ func (c converter) k8sRuleToCalico(rPeers []networkingv1.NetworkPolicyPeer, rPor
 			// Make the default explicit here because our data-model always requires
 			// the protocol to be specified if we're doing a port match.
 			port.Protocol = &protoTCP
+		}
+
+		if p.EndPort != nil {
+			port.EndPort = p.EndPort
 		}
 		ports = append(ports, &port)
 	}
@@ -650,9 +672,13 @@ func (c converter) k8sPeerToCalicoFields(peer *networkingv1.NetworkPolicyPeer, n
 func (c converter) k8sPortToCalico(port networkingv1.NetworkPolicyPort) ([]numorstring.Port, error) {
 	var portList []numorstring.Port
 	if port.Port != nil {
-		p, err := numorstring.PortFromString(port.Port.String())
+		calicoPort := port.Port.String()
+		if port.EndPort != nil {
+			calicoPort = fmt.Sprintf("%s:%d", calicoPort, *port.EndPort)
+		}
+		p, err := numorstring.PortFromString(calicoPort)
 		if err != nil {
-			return nil, fmt.Errorf("invalid port %+v: %s", port.Port, err)
+			return nil, fmt.Errorf("invalid port %+v: %s", calicoPort, err)
 		}
 		return append(portList, p), nil
 	}
@@ -670,33 +696,6 @@ func (c converter) ProfileNameToNamespace(profileName string) (string, error) {
 	}
 
 	return strings.TrimPrefix(profileName, NamespaceProfileNamePrefix), nil
-}
-
-// JoinNetworkPolicyRevisions constructs the revision from the individual CRD and K8s NetworkPolicy
-// revisions.
-func (c converter) JoinNetworkPolicyRevisions(crdNPRev, k8sNPRev string) string {
-	return crdNPRev + "/" + k8sNPRev
-}
-
-// SplitNetworkPolicyRevision extracts the CRD and K8s NetworkPolicy revisions from the combined
-// revision returned on the KDD NetworkPolicy client.
-func (c converter) SplitNetworkPolicyRevision(rev string) (crdNPRev string, k8sNPRev string, err error) {
-	if rev == "" {
-		return
-	}
-
-	revs := strings.Split(rev, "/")
-	if len(revs) > 2 {
-		err = fmt.Errorf("ResourceVersion is not valid: %s", rev)
-		return
-	}
-	// A single rev value is valid since AAPI is directly dealing with the conversion
-	// as part of the update request.
-	crdNPRev = revs[0]
-	if len(revs) == 2 {
-		k8sNPRev = revs[1]
-	}
-	return
 }
 
 // serviceAccountNameToProfileName creates a profile name that is a join

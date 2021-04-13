@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -144,6 +144,15 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			},
 		}
 		resourceTypes = append(resourceTypes, additionalTypes...)
+
+		// If running in kdd mode, also watch Kubernetes network policies directly.
+		// We don't need this in etcd mode, since kube-controllers copies k8s policies into etcd.
+		if cfg.DatastoreType == apiconfig.Kubernetes {
+			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
+				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesNetworkPolicy},
+				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
+			})
+		}
 
 		// If using Calico IPAM, include IPAM resources the felix cares about.
 		if !cfg.K8sUsePodCIDR {

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -115,14 +114,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			}
 
 			By("Updating the NetworkPolicy before it is created")
-			var rv string
-			if config.Spec.DatastoreType != apiconfig.Kubernetes {
-				rv = "1234"
-			} else {
-				// Resource version for KDD is a combination of both the CRD and K8s NP backed
-				// resources separated by a slash.
-				rv = conversion.NewConverter().JoinNetworkPolicyRevisions("1234", "5678")
-			}
+			rv := "1234"
 			_, outError := c.NetworkPolicies().Update(ctx, &apiv3.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, CreationTimestamp: metav1.Now(), UID: "test-fail-networkpolicy"},
 				Spec:       spec1,
