@@ -3,10 +3,10 @@ module github.com/tigera/compliance
 go 1.15
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210401160125-1f1fdb6869aa
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210413165720-465a5beec9d9
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210401061029-706c78a0cada
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210401071709-99c5c9124a07
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210413172637-55670145061a
 
 	k8s.io/api => k8s.io/api v0.19.6
 
@@ -56,12 +56,12 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/apiserver v0.0.0-20210402000240-a839a1b7f42c
-	github.com/tigera/lma v0.0.0-20210402000821-c3d08cbee09b
+	github.com/tigera/lma v0.0.0-20210413173243-67b8f9cc88e2
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.19.6
-	k8s.io/apimachinery v0.19.6
+	k8s.io/api v0.21.0-rc.0
+	k8s.io/apimachinery v0.21.0-rc.0
 	k8s.io/apiserver v0.19.6
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v1.0.0
