@@ -7,12 +7,6 @@ GO_BUILD_VER    ?= v0.50
 CALICO_BUILD     = calico/go-build:$(GO_BUILD_VER)
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-.PHONY: imagetag
-imagetag:
-ifndef IMAGETAG
-	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
-endif
-
 .PHONY: confirm
 confirm:
 ifndef CONFIRM

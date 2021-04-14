@@ -5,3 +5,4 @@ test/tmp/*
 */bin/*
 .idea
 .manifest.yaml
+Makefile.common*
