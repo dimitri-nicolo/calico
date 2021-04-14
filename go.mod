@@ -11,7 +11,7 @@ require (
 	github.com/emicklei/go-restful v2.11.1+incompatible // indirect
 	github.com/go-openapi/spec v0.19.4 // indirect
 	github.com/gofrs/flock v0.8.0
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/howeyc/fsnotify v0.9.0
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
@@ -23,21 +23,21 @@ require (
 	github.com/nmrshll/go-cp v0.0.0-20180115193924-61436d3b7cfa
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2
+	github.com/projectcalico/libcalico-go v1.7.2-0.20210408205943-bb0bd60e8fec
 	github.com/prometheus/common v0.10.0
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
-	golang.org/x/sys v0.0.0-20201112073958-5cba982894dd
-	google.golang.org/grpc v1.27.0
+	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
+	golang.org/x/sys v0.0.0-20210225134936-a50acf3fe073
+	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	k8s.io/api v0.19.6
-	k8s.io/apimachinery v0.19.6
-	k8s.io/client-go v0.19.6
-	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
+	k8s.io/api v0.21.0-rc.0
+	k8s.io/apimachinery v0.21.0-rc.0
+	k8s.io/client-go v0.21.0-rc.0
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 replace (
