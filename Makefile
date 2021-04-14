@@ -8,6 +8,9 @@ TYPHA_REPO       = github.com/tigera/typha-private
 LOCAL_CHECKS     = vendor
 BINARY           = bin/calicoq
 
+ORGANIZATION=tigera
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOQ_PROJECT_ID)
+
 build: $(BINARY)
 
 ##############################################################################
@@ -162,11 +165,6 @@ endif
 	# Create the binary
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
-
-imagetag:
-ifndef IMAGETAG
-	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
-endif
 
 tag-image: imagetag build-image
 	docker tag $(BUILD_IMAGE):latest $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
