@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -691,7 +691,7 @@ func epsToSlice(eps *v1.Endpoints) *discovery.EndpointSlice {
 				"kubernetes.io/service-name": eps.ObjectMeta.Name,
 			},
 		},
-		AddressType: discovery.AddressTypeIP,
+		AddressType: discovery.AddressTypeIPv4,
 	}
 
 	for i, subset := range eps.Subsets {

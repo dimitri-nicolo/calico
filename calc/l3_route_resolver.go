@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	cresources "github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/felix/dispatcher"
@@ -343,7 +344,20 @@ func (c *L3RouteResolver) OnResourceUpdate(update api.Update) (_ bool) {
 				Addr: ip.FromCalicoIP(*ipv4).(ip.V4Addr),
 				CIDR: ip.CIDRFromCalicoNet(*caliNodeCIDR).(ip.V4CIDR),
 			}
+		} else {
+			ipv4, caliNodeCIDR := cresources.FindNodeAddress(node, apiv3.InternalIP)
+			if ipv4 == nil {
+				ipv4, caliNodeCIDR = cresources.FindNodeAddress(node, apiv3.ExternalIP)
+			}
+			if ipv4 != nil && caliNodeCIDR != nil {
+				nodeInfo = &l3rrNodeInfo{
+					Addr: ip.FromCalicoIP(*ipv4).(ip.V4Addr),
+					CIDR: ip.CIDRFromCalicoNet(*caliNodeCIDR).(ip.V4CIDR),
+				}
+			}
+		}
 
+		if nodeInfo != nil {
 			if node.Spec.Wireguard != nil && node.Spec.Wireguard.InterfaceIPv4Address != "" {
 				nodeInfo.WireguardAddr = ip.FromString(node.Spec.Wireguard.InterfaceIPv4Address)
 			}
