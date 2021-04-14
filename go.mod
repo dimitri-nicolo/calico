@@ -42,8 +42,8 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/apiserver v0.0.0-20210413175240-1310cdfb38b4
-	github.com/tigera/lma v0.0.0-20210413175835-85cf12f8cc4f
+	github.com/tigera/apiserver v0.0.0-20210414205115-6e90b874fac6
+	github.com/tigera/lma v0.0.0-20210414205731-0be98aca9bef
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	k8s.io/apimachinery v0.21.0
