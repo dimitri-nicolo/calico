@@ -47,11 +47,12 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 		}
 
 		// Parse the view IDs.
-		index := flows.GetFlowsIndex(req)
+		indexL3 := flows.GetFlowsIndex(req)
+		indexL7 := flows.GetL7FlowsIndex(req)
 		rbacFilter := s.getRBACFilter(req)
 
 		// Get the filtered flow from the cache.
-		if f, err := s.flowCache.GetFilteredFlowData(index, sgr.TimeRange, sgr.IncludeTimeSeries, rbacFilter); err != nil {
+		if f, err := s.flowCache.GetFilteredFlowData(indexL3, indexL7, sgr.TimeRange, rbacFilter); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if pv, err := ParseViewIDs(sgr, f.ServiceGroups); err != nil {

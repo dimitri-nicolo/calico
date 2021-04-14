@@ -77,7 +77,7 @@ func (f *rbacFilter) IncludeFlow(e FlowEdge) bool {
 }
 
 func (f *rbacFilter) includeEndpoint(e FlowEndpoint) bool {
-	// Flow data should only consists of the endpoint types contained in the flow logs, and not any of the generated
+	// L3Flow data should only consists of the endpoint types contained in the flow logs, and not any of the generated
 	// types for the graph.
 	switch e.Type {
 	case v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:

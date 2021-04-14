@@ -13,11 +13,8 @@ type GraphEdge struct {
 	// The graph edge ID.
 	ID GraphEdgeID `json:"id"`
 
-	// The set of edges related through the original data.
-	RelatedEdges []GraphEdge `json:"related_edges,omitempty"`
-
 	// Statistics associated with this edge. Each entry corresponds to the time range in ServiceGraphResponse.
-	TrafficStats []GraphTrafficStats `json:"traffic_stats"`
+	TrafficStats []GraphTrafficStats `json:"traffic_stats,omitempty"`
 }
 
 func (e *GraphEdge) Include(ts []GraphTrafficStats) {

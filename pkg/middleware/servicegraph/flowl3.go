@@ -21,8 +21,6 @@ import (
 // time range, to correlate the source and destination flows and to aggregate out ports and protocols that are not
 // accessed via a service. Where elasticsearch raw flow logs may contain separate source and destination flows, this
 // will return a single flow with statistics for allowed, denied-at-source and denied-at-dest.
-//
-// TODO(rlb): Include L7 flows in this dataset too.  Possibly even separate DNS traffic?
 
 const (
 	maxAggregatedProtocol              = 10
@@ -43,23 +41,24 @@ const (
 	// remember it could be accessed via a service for one source and directly for another). If the endpoint+port+proto
 	// is not accessed via a service then we'll aggregate the port and proto - this prevents things like port scans
 	// from making the graph unreadable.
-	destTypeIdx = iota
-	destNamespaceIdx
-	destNameAggrIdx
-	destServiceNamespaceIdx
-	destServiceNameIdx
-	destServicePortIdx
-	protoIdx
-	destPortIdx
-	sourceTypeIdx
-	sourceNamespaceIdx
-	sourceNameAggrIdx
-	reporterIdx
-	actionIdx
+	flowDestTypeIdx = iota
+	flowDestNamespaceIdx
+	flowDestNameAggrIdx
+	flowDestServiceNamespaceIdx
+	flowDestServiceNameIdx
+	flowDestServicePortIdx
+	flowProtoIdx
+	flowDestPortIdx
+	flowSourceTypeIdx
+	flowSourceNamespaceIdx
+	flowSourceNameAggrIdx
+	flowProcessIdx
+	flowReporterIdx
+	flowActionIdx
 )
 
 var (
-	serviceEndpointCompositeSources = []lmaelastic.AggCompositeSourceInfo{
+	flowCompositeSources = []lmaelastic.AggCompositeSourceInfo{
 		{Name: "dest_type", Field: "dest_type"},
 		{Name: "dest_namespace", Field: "dest_namespace"},
 		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
@@ -71,9 +70,11 @@ var (
 		{Name: "source_type", Field: "source_type"},
 		{Name: "source_namespace", Field: "source_namespace"},
 		{Name: "source_name_aggr", Field: "source_name_aggr"},
+		{Name: "process_name", Field: "source_name_aggr"},
 		{Name: "reporter", Field: "reporter"},
 		{Name: "action", Field: "action"},
 	}
+	zeroGraphTCPStats = v1.GraphTCPStats{}
 )
 
 var (
@@ -84,6 +85,23 @@ var (
 		{Name: "sum_bytes_in", Field: "bytes_in"},
 		{Name: "sum_packets_out", Field: "packets_out"},
 		{Name: "sum_bytes_out", Field: "bytes_out"},
+		{Name: "sum_tcp_total_retransmissions", Field: "tcp_total_retransmissions"},
+		{Name: "sum_tcp_lost_packets", Field: "tcp_lost_packets"},
+		{Name: "sum_tcp_unrecovered_to", Field: "tcp_unrecovered_to"},
+	}
+	flowAggregationMin = []lmaelastic.AggMaxMinInfo{
+		{Name: "tcp_min_send_congestion_window", Field: "tcp_min_send_congestion_window"},
+		{Name: "tcp_min_mss", Field: "tcp_min_mss"},
+	}
+	flowAggregationMax = []lmaelastic.AggMaxMinInfo{
+		{Name: "tcp_max_smooth_rtt", Field: "tcp_max_smooth_rtt"},
+		{Name: "tcp_max_min_rtt", Field: "tcp_max_min_rtt"},
+	}
+	flowAggregationMean = []lmaelastic.AggMeanInfo{
+		{Name: "tcp_mean_send_congestion_window", Field: "tcp_mean_send_congestion_window"},
+		{Name: "tcp_mean_smooth_rtt", Field: "tcp_mean_smooth_rtt"},
+		{Name: "tcp_mean_min_rtt", Field: "tcp_mean_min_rtt"},
+		{Name: "tcp_mean_mss", Field: "tcp_mean_mss"},
 	}
 )
 
@@ -100,13 +118,13 @@ func (e FlowEndpoint) String() string {
 	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Proto, e.Port)
 }
 
-type Flow struct {
+type L3Flow struct {
 	Edge                 FlowEdge
 	AggregatedProtoPorts *v1.AggregatedProtoPorts
-	Stats                v1.GraphTrafficStats
+	Stats                v1.GraphL3Stats
 }
 
-func (f Flow) String() string {
+func (f L3Flow) String() string {
 	return fmt.Sprintf("%s [%#v; %#v]", f.Edge, f.AggregatedProtoPorts, f.Stats)
 }
 
@@ -142,49 +160,53 @@ const (
 )
 
 type RawFlowData struct {
-	Flows []Flow
+	Flows []L3Flow
 }
 
-func GetRawFlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]Flow, error) {
+func GetRawL3FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]L3Flow, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), flowTimeout)
 	defer cancel()
 
-	aggQuery := &lmaelastic.CompositeAggregationQuery{
+	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
 		Query:                   flows.GetTimeRangeQuery(t),
 		Name:                    flowsBucketName,
-		AggCompositeSourceInfos: serviceEndpointCompositeSources,
+		AggCompositeSourceInfos: flowCompositeSources,
 		AggSumInfos:             flowAggregationSums,
+		AggMaxInfos:             flowAggregationMax,
+		AggMinInfos:             flowAggregationMin,
+		AggMeanInfos:            flowAggregationMean,
 	}
 
-	// Perform the query with composite aggregation
-	var fs []Flow
-	rcvdBuckets, rcvdErrors := client.SearchCompositeAggregations(ctx, aggQuery, nil)
+	// Perform the L3 composite aggregation query.
+	var fs []L3Flow
+	rcvdL3Buckets, rcvdL3Errors := client.SearchCompositeAggregations(ctx, aggQueryL3, nil)
+
 	var lastDestGp *FlowEndpoint
 	var dgd *destinationGroupData
-	for bucket := range rcvdBuckets {
+	for bucket := range rcvdL3Buckets {
 		key := bucket.CompositeAggregationKey
-		reporter := key[reporterIdx].String()
-		action := key[actionIdx].String()
-		proto := removeSingleDash(key[protoIdx].String())
+		reporter := key[flowReporterIdx].String()
+		action := key[flowActionIdx].String()
+		proto := removeSingleDash(key[flowProtoIdx].String())
 		source := FlowEndpoint{
-			Type:      mapType(key[sourceTypeIdx].String(), true),
-			NameAggr:  removeSingleDash(key[sourceNameAggrIdx].String()),
-			Namespace: removeSingleDash(key[sourceNamespaceIdx].String()),
+			Type:      mapType(key[flowSourceTypeIdx].String(), true),
+			NameAggr:  removeSingleDash(key[flowSourceNameAggrIdx].String()),
+			Namespace: removeSingleDash(key[flowSourceNamespaceIdx].String()),
 		}
 		svc := ServicePort{
 			NamespacedName: types.NamespacedName{
-				Name:      removeSingleDash(key[destServiceNameIdx].String()),
-				Namespace: removeSingleDash(key[destServiceNamespaceIdx].String()),
+				Name:      removeSingleDash(key[flowDestServiceNameIdx].String()),
+				Namespace: removeSingleDash(key[flowDestServiceNamespaceIdx].String()),
 			},
-			Port:  removeSingleDash(key[destServicePortIdx].String()),
+			Port:  removeSingleDash(key[flowDestServicePortIdx].String()),
 			Proto: proto,
 		}
 		dest := FlowEndpoint{
-			Type:      mapType(key[destTypeIdx].String(), true),
-			NameAggr:  removeSingleDash(key[destNameAggrIdx].String()),
-			Namespace: removeSingleDash(key[destNamespaceIdx].String()),
-			Port:      int(key[destPortIdx].Float64()),
+			Type:      mapType(key[flowDestTypeIdx].String(), true),
+			NameAggr:  removeSingleDash(key[flowDestNameAggrIdx].String()),
+			Namespace: removeSingleDash(key[flowDestNamespaceIdx].String()),
+			Port:      int(key[flowDestPortIdx].Float64()),
 			Proto:     proto,
 		}
 		destGp := GetServiceGroupFlowEndpointKey(dest)
@@ -197,6 +219,25 @@ func GetRawFlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]F
 			PacketsOut: int64(bucket.AggregatedSums["sum_packets_out"]),
 			BytesIn:    int64(bucket.AggregatedSums["sum_bytes_in"]),
 			BytesOut:   int64(bucket.AggregatedSums["sum_bytes_out"]),
+		}
+		tcp := v1.GraphTCPStats{
+			SumTotalRetransmissions:  int64(bucket.AggregatedSums["sum_tcp_total_retransmissions"]),
+			SumLostPackets:           int64(bucket.AggregatedSums["sum_tcp_lost_packets"]),
+			SumUnrecoveredTo:         int64(bucket.AggregatedSums["sum_tcp_unrecovered_to"]),
+			MinSendCongestionWindow:  bucket.AggregatedMin["tcp_min_send_congestion_window"],
+			MinSendMSS:               bucket.AggregatedMin["tcp_min_mss"],
+			MaxSmoothRTT:             bucket.AggregatedMax["tcp_max_smooth_rtt"],
+			MaxMinRTT:                bucket.AggregatedMax["tcp_max_min_rtt"],
+			MeanSendCongestionWindow: bucket.AggregatedMean["tcp_mean_send_congestion_window"],
+			MeanSmoothRTT:            bucket.AggregatedMean["tcp_mean_smooth_rtt"],
+			MeanMinRTT:               bucket.AggregatedMean["tcp_mean_min_rtt"],
+			MeanMSS:                  bucket.AggregatedMean["tcp_mean_mss"],
+		}
+		if tcp != zeroGraphTCPStats {
+			// TCP stats have min and means which could be adversely impacted by zero data which indicates
+			// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
+			// diluting when merging with non-zero data.
+			tcp.Count = bucket.DocCount
 		}
 
 		// If the source and/or dest group have changed, and we were in the middle of reconciling multiple flows then
@@ -219,7 +260,7 @@ func GetRawFlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]F
 				log.Debugf("- Processing %s reported flow: %s -> %s", reporter, source, dest)
 			}
 		}
-		dgd.add(reporter, action, source, svc, dest, flowStats{packetStats: gps, connStats: gcs})
+		dgd.add(reporter, action, source, svc, dest, flowStats{packetStats: gps, connStats: gcs, tcpStats: tcp})
 
 		// Store the last dest group.
 		lastDestGp = destGp
@@ -231,7 +272,7 @@ func GetRawFlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]F
 		dgd = nil
 	}
 
-	return fs, <-rcvdErrors
+	return fs, <-rcvdL3Errors
 }
 
 func removeSingleDash(val string) string {
@@ -328,8 +369,8 @@ func (d destinationGroupData) add(
 	sourceGroup.add(reporter, action, svc, destination, stats, d.allServiceDestinations[destination])
 }
 
-func (d *destinationGroupData) getFlows(destGp *FlowEndpoint) []Flow {
-	var fs []Flow
+func (d *destinationGroupData) getFlows(destGp *FlowEndpoint) []L3Flow {
+	var fs []L3Flow
 	log.Debug("Handling source/dest reconciliation")
 	for source, data := range d.sources {
 		fs = append(fs, data.getFlows(source, destGp)...)
@@ -399,8 +440,8 @@ func (s *sourceData) add(
 	rc.add(reporter, action, ServicePort{}, stats)
 }
 
-func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []Flow {
-	var fs []Flow
+func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []L3Flow {
+	var fs []L3Flow
 
 	// Add the reconciled flows for each endpoint/Proto that is part of one or more services.
 	for dest, frd := range s.serviceDestinations {
@@ -472,12 +513,14 @@ func newFlowReconciliationData() *flowReconciliationData {
 type flowStats struct {
 	packetStats v1.GraphPacketStats
 	connStats   v1.GraphConnectionStats
+	tcpStats    v1.GraphTCPStats
 }
 
 func (f flowStats) add(f2 flowStats) flowStats {
 	return flowStats{
 		packetStats: f.packetStats.Add(f2.packetStats),
 		connStats:   f.connStats.Add(f2.connStats),
+		tcpStats:    f.tcpStats.Add(f2.tcpStats),
 	}
 }
 
@@ -520,16 +563,16 @@ func (d *flowReconciliationData) add(
 
 // getFlows returns the final reconciled flows. This essentially divvies up the destination edges across the
 // various source reported flows based on simple proportion.
-func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []Flow {
-	var f []Flow
+func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
+	var f []L3Flow
 
-	addFlow := func(svc ServicePort, stats v1.GraphTrafficStats) {
+	addFlow := func(svc ServicePort, stats v1.GraphL3Stats) {
 		log.Debugf("  Including flow for service: %s", svc)
 		var spp *ServicePort
 		if svc.Name != "" {
 			spp = &svc
 		}
-		f = append(f, Flow{
+		f = append(f, L3Flow{
 			Edge: FlowEdge{
 				Source:      source,
 				Dest:        dest,
@@ -553,9 +596,10 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []Flow {
 	addSingleReportedFlows := func(allowed, denied map[ServicePort]flowStats, rep reporter) {
 		allServices(allowed, denied).Iter(func(item interface{}) error {
 			svc := item.(ServicePort)
-			stats := v1.GraphTrafficStats{
+			stats := v1.GraphL3Stats{
 				Connections: allowed[svc].connStats.Add(denied[svc].connStats),
 				Allowed:     allowed[svc].packetStats,
+				TCP:         allowed[svc].tcpStats,
 			}
 			if rep == reportedAtSource {
 				stats.DeniedAtSource = denied[svc].packetStats
@@ -573,13 +617,13 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []Flow {
 
 	if sourceReported {
 		if !destReported {
-			log.Debug("  Flow reported at source only")
+			log.Debug("  L3Flow reported at source only")
 			addSingleReportedFlows(d.sourceReportedAllowed, d.sourceReportedDenied, reportedAtSource)
 			return f
 		}
 	} else if destReported {
 		if !sourceReported {
-			log.Debug("  Flow reported at dest only")
+			log.Debug("  L3Flow reported at dest only")
 			addSingleReportedFlows(d.destReportedAllowed, d.destReportedDenied, reportedAtDest)
 			return f
 		}
@@ -587,7 +631,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []Flow {
 
 	// The flow will be reported at source and dest, which most importantly means the allow flows at dest need to be
 	// divvied up to be allowed or denied at dest.
-	log.Debug("  Flow reported at source and dest")
+	log.Debug("  L3Flow reported at source and dest")
 	allServices(d.sourceReportedAllowed, d.sourceReportedDenied).Iter(func(item interface{}) error {
 		svc := item.(ServicePort)
 
@@ -602,11 +646,13 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []Flow {
 		propAllowed := totalAllowedAtDest.Prop(totalDeniedAtDest)
 		divviedAllowed := d.sourceReportedAllowed[svc].packetStats.Multiply(propAllowed)
 
-		addFlow(svc, v1.GraphTrafficStats{
+		addFlow(svc, v1.GraphL3Stats{
 			Allowed:        divviedAllowed,
 			DeniedAtSource: d.sourceReportedDenied[svc].packetStats,
 			DeniedAtDest:   d.sourceReportedAllowed[svc].packetStats.Sub(divviedAllowed),
 			Connections:    d.sourceReportedAllowed[svc].connStats.Add(d.sourceReportedDenied[svc].connStats),
+			TCP: d.sourceReportedAllowed[svc].tcpStats.Add(d.sourceReportedDenied[svc].tcpStats).
+				Add(d.destReportedAllowed[svc].tcpStats).Add(d.destReportedDenied[svc].tcpStats),
 		})
 		return nil
 	})

@@ -2,6 +2,7 @@ package servicegraph
 
 import (
 	"fmt"
+	"sync"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -28,9 +29,9 @@ type TimeSeriesFlow struct {
 
 func (t TimeSeriesFlow) String() string {
 	if t.AggregatedProtoPorts == nil {
-		return fmt.Sprintf("Flow %s", t.Edge)
+		return fmt.Sprintf("L3Flow %s", t.Edge)
 	}
-	return fmt.Sprintf("Flow %s (%s)", t.Edge, t.AggregatedProtoPorts)
+	return fmt.Sprintf("L3Flow %s (%s)", t.Edge, t.AggregatedProtoPorts)
 }
 
 type FlowData struct {
@@ -40,7 +41,7 @@ type FlowData struct {
 }
 
 type FlowCache interface {
-	GetFilteredFlowData(index string, tr v1.TimeRange, timeSeries bool, filter RBACFilter) (*FlowData, error)
+	GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRange, filter RBACFilter) (*FlowData, error)
 }
 
 func NewFlowCache(client lmaelastic.Client) FlowCache {
@@ -53,11 +54,29 @@ type flowCache struct {
 	client lmaelastic.Client
 }
 
-func (fc *flowCache) GetFilteredFlowData(index string, tr v1.TimeRange, timeSeries bool, filter RBACFilter) (*FlowData, error) {
-	// At the moment there is no cache and only a single data point in the flow.
-	raw, err := GetRawFlowData(fc.client, index, tr)
-	if err != nil {
-		return nil, err
+func (fc *flowCache) GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRange, filter RBACFilter) (*FlowData, error) {
+	// At the moment there is no cache and only a single data point in the flow. Kick off the L3 and L7 queries at the
+	// same time.
+	wg := sync.WaitGroup{}
+	var rawL3 []L3Flow
+	var rawL7 []L7Flow
+	var errL3, errL7 error
+
+	wg.Add(2)
+	go func() {
+		rawL3, errL3 = GetRawL3FlowData(fc.client, indexL3, tr)
+		wg.Done()
+	}()
+	go func() {
+		rawL7, errL7 = GetRawL7FlowData(fc.client, indexL7, tr)
+		wg.Done()
+	}()
+	wg.Wait()
+	if errL3 != nil {
+		return nil, errL3
+	}
+	if errL7 != nil {
+		return nil, errL7
 	}
 
 	fd := &FlowData{
@@ -65,8 +84,8 @@ func (fc *flowCache) GetFilteredFlowData(index string, tr v1.TimeRange, timeSeri
 		ServiceGroups: NewServiceGroups(),
 	}
 
-	// Filter the flows based on RBAC. All other graph content is removed through graph pruning.
-	for _, rf := range raw {
+	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning.
+	for _, rf := range rawL3 {
 		if !filter.IncludeFlow(rf.Edge) {
 			continue
 		}
@@ -76,9 +95,23 @@ func (fc *flowCache) GetFilteredFlowData(index string, tr v1.TimeRange, timeSeri
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
 			Edge:                 rf.Edge,
 			AggregatedProtoPorts: rf.AggregatedProtoPorts,
-			TrafficStats: []v1.GraphTrafficStats{
-				rf.Stats,
-			},
+			TrafficStats: []v1.GraphTrafficStats{{
+				L3: &rf.Stats,
+			}},
+		})
+	}
+	fd.ServiceGroups.FinishMappings()
+
+	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
+	for _, rf := range rawL7 {
+		if !filter.IncludeFlow(rf.Edge) {
+			continue
+		}
+		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
+			Edge: rf.Edge,
+			TrafficStats: []v1.GraphTrafficStats{{
+				L7: &rf.Stats,
+			}},
 		})
 	}
 	fd.ServiceGroups.FinishMappings()

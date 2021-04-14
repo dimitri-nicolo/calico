@@ -39,21 +39,22 @@ type GraphNode struct {
 	Port        int           `json:"port,omitempty"`
 	Layer       string        `json:"layer,omitempty"`
 
-	// Aggregated port and protocol stats
+	// Aggregated data for the node. This is included if
 	Aggregated *AggregatedProtoPorts `json:"aggregated,omitempty"`
 
 	// Traffic stats for packets flowing between endpoints within this graph node. Each entry corresponds to the
-	TrafficStats []GraphTrafficStats `json:"traffic_stats"`
+	// a time slice as specified in the main response object.
+	TrafficStats []GraphTrafficStats `json:"traffic_stats,omitempty"`
 
 	// Whether this node is further expandable. In other words if this node is added as an `Expanded` node to
 	// the `GraphView` then the results will return additional nodes and edges.
-	Expandable bool `json:"expandable"`
+	Expandable bool `json:"expandable,omitempty"`
 
 	// Whether this node may be further followed in the egress connection direction or ingress connection direction.
 	// If true, this node can be added to FollowedEgress or FollowedIngress in the `GraphView` to return additional
 	// nodes and edges.
-	FollowEgress  bool `json:"follow_egress"`
-	FollowIngress bool `json:"follow_ingress"`
+	FollowEgress  bool `json:"follow_egress,omitempty"`
+	FollowIngress bool `json:"follow_ingress,omitempty"`
 }
 
 func (n *GraphNode) Include(ts []GraphTrafficStats) {
