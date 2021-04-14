@@ -242,7 +242,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	/* Do conntrack lookup before anything else */
 	ctx.state->ct_result = calico_ct_v4_lookup(&ctx);
-	CALI_DEBUG("conntrack entry flags 0x%x\n", ctx.state->ct_result.flags);
+	CALI_DEBUG("conntrack entry flags 0x%x ifindex_created %u\n", ctx.state->ct_result.flags, ctx.state->ct_result.ifindex_created);
 
 	/* Handle reporting DNS packets up to Felix userspace. */
 	calico_dns_check(&ctx);

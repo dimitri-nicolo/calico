@@ -109,8 +109,8 @@ func fileHasMapping(lname, rname string) func() error {
 }
 
 func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrack.Key, conntrack.Value) {
-	a2bLeg := conntrack.Leg{Opener: true, Ifindex: uint32(ifIndex)}
-	b2aLeg := conntrack.Leg{Opener: false}
+	a2bLeg := conntrack.Leg{Opener: true, Ifindex: uint32(ifIndex), Whitelisted: true}
+	b2aLeg := conntrack.Leg{Opener: false, Whitelisted: true}
 
 	// BPF conntrack map convention is for the first IP to be the smaller one.  Bizarrely, the
 	// "smaller" comparison here is with little endian byte ordering.
