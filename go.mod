@@ -15,7 +15,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/projectcalico/felix v0.0.0-20210412223940-2a0a572644ca
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/typha v0.7.3-0.20201007232318-2dba00d728ad
+	github.com/projectcalico/typha v0.7.3-0.20210410010014-a43ccfa508a1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
@@ -26,10 +26,10 @@ require (
 	github.com/tigera/licensing v1.0.1-0.20210413173249-491e9677adeb
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
-	k8s.io/api v0.21.0-rc.0
-	k8s.io/apimachinery v0.21.0-rc.0
-	k8s.io/apiserver v0.21.0-rc.0
-	k8s.io/client-go v0.21.0-rc.0
+	k8s.io/api v0.21.0
+	k8s.io/apimachinery v0.21.0
+	k8s.io/apiserver v0.21.0
+	k8s.io/client-go v0.21.0
 	k8s.io/klog v1.0.0
 	k8s.io/kubernetes v1.21.1-rc.0 // indirect
 	sigs.k8s.io/controller-runtime v0.9.0-alpha.1 // indirect
@@ -37,9 +37,9 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210402005224-24a8da20386e
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210413165720-465a5beec9d9
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210401061029-706c78a0cada
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210413172637-55670145061a
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210414151912-3853a5811d5d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210413175233-e27a8a2da08f
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210413191413-c4be90b52ff8
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
