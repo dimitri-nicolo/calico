@@ -681,6 +681,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if err != nil {
 			log.WithError(err).Error("Failed to create perf event")
 			config.FlowLogsCollectProcessInfo = false
+			config.FlowLogsCollectTcpStats = false
 		} else {
 			bpfEventPoller = newBpfEventPoller(bpfEvnt)
 
@@ -691,26 +692,34 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.FlowLogsCollectProcessInfo {
-		err := bpf.MountDebugfs()
-		if err != nil {
-			log.WithError(err).Panic("Failed to mount debug fs")
+		installKprobes := func() error {
+			err := bpf.MountDebugfs()
+			if err != nil {
+				return fmt.Errorf("failed to mount debug fs: %v", err)
+			}
+			kp := kprobe.New(config.BPFLogLevel, bpfEvnt, bpfMapContext)
+			if kp != nil {
+				err = kp.AttachTCPv4()
+				if err != nil {
+					return fmt.Errorf("failed to install TCP v4 kprobes: %v", err)
+				}
+				err = kp.AttachUDPv4()
+				if err != nil {
+					kp.DetachTCPv4()
+					return fmt.Errorf("failed to install UDP v4 kprobes: %v", err)
+				}
+			} else {
+				return fmt.Errorf("error creating new kprobe object.")
+			}
+			return nil
 		}
-		kp := kprobe.New(config.BPFLogLevel, bpfEvnt, bpfMapContext)
-		if kp == nil {
-			log.WithError(err).Panic("Failed to create kprobe object")
+		if err := installKprobes(); err != nil {
+			log.WithError(err).Error("error installing kprobes. skipping it")
+		} else {
+			log.Info("BPF: Registered events sink for TypeProtoStats")
+			eventProtoStatsSink = events.NewEventProtoStatsSink()
+			bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
 		}
-		err = kp.AttachTCPv4()
-		if err != nil {
-			log.WithError(err).Panic("Failed to install TCP v4 kprobes")
-		}
-		err = kp.AttachUDPv4()
-		if err != nil {
-			log.WithError(err).Panic("Failed to install UDP v4 kprobes")
-		}
-
-		log.Info("BPF: Registered events sink for TypeProtoStats")
-		eventProtoStatsSink = events.NewEventProtoStatsSink()
-		bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
 	}
 
 	if config.FlowLogsCollectTcpStats {
@@ -909,13 +918,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			conntrackScanner.AddFirstUnlocked(conntrackInfoReader)
 			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
 			collectorConntrackInfoReader = conntrackInfoReader
-
-			if config.FlowLogsCollectTcpStats {
-				//tcpV4StatsEventListener := events.NewCollectorTcpV4StatsListener()
-				//bpfEventPoller.Register(events.TypeTcpStatsV4, tcpV4StatsEventListener.EventHandler)
-				//collectorTcpSocketInfoReader = tcpV4StatsEventListener
-			}
-
 		}
 
 		conntrackScanner.Start()
@@ -1147,7 +1149,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("ConntrackInfoReader added to collector")
 		config.Collector.SetProcessInfoCache(processInfoCache)
 		log.Info("ProcessInfoCache added to collector")
-		//config.Collector.SetTcpSocketInfoReader(collectorTcpSocketInfoReader)
 	}
 
 	if bpfEventPoller != nil {
