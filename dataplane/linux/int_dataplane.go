@@ -1008,7 +1008,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.RegisterManager(newServiceLoopManager(filterTableV4, ruleRenderer, 4))
 
-	var activeCaptures, err = capture.NewActiveCaptures(config.PacketCapture)
+	var activeCaptures, err = capture.NewActiveCaptures(config.PacketCapture, dp.fromDataplane)
 	if err != nil {
 		log.WithError(err).Panicf("Failed create dir %s required to start packet capture", config.PacketCapture.Directory)
 	}

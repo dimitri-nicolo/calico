@@ -181,6 +181,9 @@ message FromDataplane {
     // WireguardStatusUpdate is sent when the wireguard is available with the
     // crypto primitives set up.
     WireguardStatusUpdate wireguard_status_update = 9;
+
+    // PacketCaptureStatusUpdate is sent when a capture file is created/removed
+    PacketCaptureStatusUpdate packet_capture_status_update = 10;
   }
 }
 
@@ -759,4 +762,9 @@ message PacketCaptureRemove {
 message PacketCaptureID {
   string name = 1;
   string namespace = 2;
+}
+
+message PacketCaptureStatusUpdate {
+  PacketCaptureID id = 1;
+  repeated string capture_files = 2;
 }
