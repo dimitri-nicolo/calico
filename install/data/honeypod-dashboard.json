@@ -13,7 +13,7 @@
       "title": "honeypod-search",
       "version": 1,
       "kibanaSavedObjectMeta": {
-        "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":{\"query\":\"dest_namespace : \\\"tigera-internal\\\" \",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+        "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":\"\",\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
       },
       "columns": [
         "source_name_aggr",
@@ -105,7 +105,7 @@
         "value": 0
       },
       "kibanaSavedObjectMeta": {
-        "searchSourceJSON": "{\"query\":{\"language\":\"kuery\",\"query\":\"\"},\"filter\":[]}"
+        "searchSourceJSON": "{\"query\":{\"language\":\"kuery\",\"query\":\"dest_namespace : \\\"tigera-internal\\\" \"},\"filter\":[]}"
       }
     },
     "references": [
