@@ -49,6 +49,7 @@
 #include "tc.h"
 #include "policy_program.h"
 #include "parsing.h"
+#include "tcp_stats_bpf.h"
 #include "socket_lookup.h"
 #include "failsafe.h"
 

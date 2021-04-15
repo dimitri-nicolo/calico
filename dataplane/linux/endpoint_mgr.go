@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/felix/bpf/stats"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/iptables"
@@ -197,7 +198,8 @@ type endpointManager struct {
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
 	newIfaceNameToHostEpID    map[string]proto.HostEndpointID
-
+	// tcpStatsProgramAttached holds the list of workloads with tcp stats bpf program attached.
+	tcpStatsProgramAttached map[string]struct{}
 	// Interfaces to which we've added a host-side address, for egress IP function to work.
 	egressGatewayAddressAdded map[string]netlink.Addr
 
@@ -210,6 +212,8 @@ type endpointManager struct {
 	bpfEnabled             bool
 	bpfEndpointManager     hepListener
 	nlHandle               netlinkHandle
+	tcpStatsEnabled        bool
+	bpfLogLevel            string
 }
 
 type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string)
@@ -230,6 +234,8 @@ func newEndpointManager(
 	bpfEnabled bool,
 	bpfEndpointManager hepListener,
 	callbacks *callbacks,
+	tcpStatsEnabled bool,
+	bpfLogLevel string,
 ) *endpointManager {
 	nlHandle, _ := netlink.NewHandle()
 
@@ -250,6 +256,8 @@ func newEndpointManager(
 		bpfEndpointManager,
 		callbacks,
 		nlHandle,
+		tcpStatsEnabled,
+		bpfLogLevel,
 	)
 }
 
@@ -270,6 +278,8 @@ func newEndpointManagerWithShims(
 	bpfEndpointManager hepListener,
 	callbacks *callbacks,
 	nlHandle netlinkHandle,
+	tcpStatsEnabled bool,
+	bpfLogLevel string,
 ) *endpointManager {
 	wlIfacesPattern := "^(" + strings.Join(wlInterfacePrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
@@ -325,12 +335,15 @@ func newEndpointManagerWithShims(
 		activeHostMangleDispatchChains: map[string]*iptables.Chain{},
 		activeHostRawDispatchChains:    map[string]*iptables.Chain{},
 		activeEPMarkDispatchChains:     map[string]*iptables.Chain{},
+		tcpStatsProgramAttached:        map[string]struct{}{},
 		needToCheckDispatchChains:      true, // Need to do start-of-day update.
 		needToCheckEndpointMarkChains:  true, // Need to do start-of-day update.
 
 		OnEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
 		callbacks:              newEndpointManagerCallbacks(callbacks, ipVersion),
 		nlHandle:               nlHandle,
+		tcpStatsEnabled:        tcpStatsEnabled,
+		bpfLogLevel:            bpfLogLevel,
 	}
 }
 
@@ -681,6 +694,22 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 				m.activeWlIfaceNameToID[workload.Name] = id
 				delete(m.pendingWlEpUpdates, id)
 
+				if !m.bpfEnabled && m.tcpStatsEnabled {
+					_, ok := m.tcpStatsProgramAttached[workload.Name]
+					if !ok {
+						l, err := netlink.LinkByName(workload.Name)
+						if err != nil {
+							log.Errorf("error getting workload %v namespace", workload.Name)
+						} else {
+							err = stats.AttachTcpStatsBpfProgram(workload.Name, m.bpfLogLevel, uint16(l.Attrs().NetNsID))
+							if err != nil {
+								log.Errorf("error attaching tcp stats program %v %v", workload.Name, err)
+							} else {
+								m.tcpStatsProgramAttached[workload.Name] = struct{}{}
+							}
+						}
+					}
+				}
 				m.callbacks.InvokeUpdateWorkload(oldWorkload, workload)
 			} else {
 				logCxt.Info("Workload removed, deleting its chains.")
@@ -704,6 +733,9 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 					if bestShadowedId.EndpointId != "" {
 						m.pendingWlEpUpdates[bestShadowedId] = m.shadowedWlEndpoints[bestShadowedId]
 						delete(m.shadowedWlEndpoints, bestShadowedId)
+					}
+					if m.tcpStatsEnabled {
+						delete(m.tcpStatsProgramAttached, oldWorkload.Name)
 					}
 				}
 			}

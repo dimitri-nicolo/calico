@@ -126,6 +126,26 @@ func (ap AttachPoint) AttachProgram() error {
 	return nil
 }
 
+func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
+	tempDir, err := ioutil.TempDir("", "calico-tc")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
+	preCompiledBinary := path.Join(bpf.ObjectDir, fileName)
+	tempBinary := path.Join(tempDir, fileName)
+	err = patchVethNs(nsId, preCompiledBinary, tempBinary)
+	if err != nil {
+		return fmt.Errorf("failed to patch veth namespace ID: %v", err)
+	}
+	_, err = ExecTC("filter", "add", "dev", ifaceName, "ingress",
+		"bpf", "da", "obj", tempBinary,
+		"sec", "calico_tcp_stats")
+	return err
+}
+
 func ExecTC(args ...string) (out string, err error) {
 	tcCmd := exec.Command("tc", args...)
 	outBytes, err := tcCmd.Output()
@@ -185,6 +205,21 @@ func (ap AttachPoint) listAttachedPrograms() ([]attachedProg, error) {
 		}
 	}
 	return progsToClean, nil
+}
+
+func patchVethNs(nsId uint16, ifile, ofile string) error {
+	b, err := bpf.BinaryFromFile(ifile)
+	if err != nil {
+		return fmt.Errorf("failed to read pre-compiled BPF binary: %w", err)
+	}
+
+	b.PatchIfNS(nsId)
+	err = b.WriteToFile(ofile)
+	if err != nil {
+		return fmt.Errorf("failed to write pre-compiled BPF binary: %w", err)
+	}
+
+	return nil
 }
 
 func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error {

@@ -27,9 +27,28 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/bpf/stats"
 	"github.com/projectcalico/felix/bpf/tc"
 )
 
+func TestTcpStatsBinaryIsLoadable(t *testing.T) {
+	RegisterTestingT(t)
+
+	bpffs, err := bpf.MaybeMountBPFfs()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(bpffs).To(Equal("/sys/fs/bpf"))
+	for _, logLevel := range []string{"no_log", "info", "debug"} {
+		t.Run(logLevel, func(t *testing.T) {
+			RegisterTestingT(t)
+			vethName, veth := createVeth()
+			defer deleteLink(veth)
+			err = tc.EnsureQdisc(vethName)
+			Expect(err).NotTo(HaveOccurred())
+			err = stats.AttachTcpStatsBpfProgram(vethName, logLevel, 0)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	}
+}
 func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 	RegisterTestingT(t)
 

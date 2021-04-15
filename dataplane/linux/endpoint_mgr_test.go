@@ -841,6 +841,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 				hepListener,
 				newCallbacks(),
 				nlHandle,
+				false,
+				"info",
 			)
 		})
 

@@ -47,6 +47,7 @@ import (
 	bpfproxy "github.com/projectcalico/felix/bpf/proxy"
 	"github.com/projectcalico/felix/bpf/routes"
 	"github.com/projectcalico/felix/bpf/state"
+	"github.com/projectcalico/felix/bpf/stats"
 	"github.com/projectcalico/felix/bpf/tc"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
@@ -725,6 +726,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.FlowLogsCollectTcpStats {
 		eventTcpStatsSink = events.NewEventTcpStatsSink()
 		bpfEventPoller.Register(events.TypeTcpStats, eventTcpStatsSink.HandleEvent)
+		if !config.BPFEnabled {
+			socketStatsMap := stats.SocketStatsMap(bpfMapContext)
+			err := socketStatsMap.EnsureExists()
+			if err != nil {
+				log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
+				config.FlowLogsCollectTcpStats = false
+			}
+
+		}
 	}
 
 	if config.BPFEnabled {
@@ -941,7 +951,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 		config.BPFEnabled,
 		bpfEndpointManager,
-		callbacks)
+		callbacks,
+		config.FlowLogsCollectTcpStats,
+		config.BPFLogLevel)
 	dp.RegisterManager(epManager)
 	dp.endpointsSourceV4 = epManager
 	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4))
@@ -1050,7 +1062,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 			config.BPFEnabled,
 			nil,
-			callbacks))
+			callbacks,
+			config.FlowLogsCollectTcpStats,
+			config.BPFLogLevel))
 		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6))
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
 		dp.RegisterManager(newServiceLoopManager(filterTableV6, ruleRenderer, 6))
