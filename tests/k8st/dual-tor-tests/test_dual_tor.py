@@ -198,6 +198,7 @@ class FailoverTestConfig(object):
 class _FailoverTest(TestBase):
     @classmethod
     def setUpClass(cls):
+        ensureCalicoReady()
         cluster = FailoverCluster()
         cluster.setup()
 
@@ -578,6 +579,24 @@ class TestFailoverHostAccess(_FailoverTest):
             Flow("client-host", "ra-server", get_pod_ip("pod-name", "ra-server"), "8090", get_pod_ip("pod-name", "ra-server"), "8091"),
             Flow("client-host", "rb-server", get_pod_ip("pod-name", "rb-server"), "8090", get_pod_ip("pod-name", "rb-server"), "8091"),
         ])
+
+
+def ensureCalicoReady():
+
+    def assertCalicoReady():
+        for node in ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]:
+            get_calico_node_pod_for_node(node)
+        kubectl("wait po -l k8s-app=calico-node -n calico-system --timeout=2m --for=condition=ready")
+        for node in ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]:
+            pod = get_calico_node_pod_for_node(node)
+            out = kubectl("exec %s -n calico-system -- birdcl show protocols" % pod)
+            bgp_established = 0
+            for line in out.splitlines():
+                if "BGP" in line and "Established" in line:
+                    bgp_established += 1
+            assert bgp_established == 2, "Only %d established BGP sessions on %s" % (bgp_established, node)
+
+    retry_until_success(assertCalicoReady, retries=12, wait_time=10)
 
 
 class TestRestartCalicoNodes(TestBase):
