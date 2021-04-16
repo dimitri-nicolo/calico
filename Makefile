@@ -72,14 +72,14 @@ GIT_VERSION_TAG=$(GIT_VERSION)
 endif
 endif
 
-tag-images:
+tag-kibana-images:
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(BRANCH_NAME_TAG)
 	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(GIT_VERSION_TAG)
 
-cd: compressed-image tag-images
+cd: compressed-image tag-kibana-images
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
