@@ -69,7 +69,7 @@ $(GATEWAY_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_
 ci: clean image-all
 
 ## Deploys images to registry
-cd:
+cd: cd-common
 
 ###############################################################################
 # Release
