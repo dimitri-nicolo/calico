@@ -46,8 +46,6 @@ endif
 # These arches not yet building in node-private
 EXCLUDEARCH?=s390x arm64 ppc64le
 
-include Makefile.common
-
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
 # release is merged into node-private.
@@ -58,6 +56,8 @@ CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 BUILD_IMAGE?=tigera/cnx-node
 PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
 RELEASE_IMAGES?=
+
+include Makefile.common
 
 # Versions and location of dependencies used in the build.
 BIRD_VERSION=v0.3.3-167-g0a2f8d2d
