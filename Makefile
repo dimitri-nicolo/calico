@@ -28,8 +28,6 @@ endif
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
-include Makefile.common
-
 ##############################################################################
 PROTOC_VER ?= v0.1
 PROTOC_CONTAINER ?= calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
@@ -76,6 +74,8 @@ EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
 ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
 V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
 HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
+
+include Makefile.common
 
 ############################################################################
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
