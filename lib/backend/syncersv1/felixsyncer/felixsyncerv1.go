@@ -143,7 +143,6 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				ClientID:      calicoClientID, // This is backed by the calico client
 			},
 		}
-		resourceTypes = append(resourceTypes, additionalTypes...)
 
 		// If running in kdd mode, also watch Kubernetes network policies directly.
 		// We don't need this in etcd mode, since kube-controllers copies k8s policies into etcd.
@@ -153,6 +152,8 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
 			})
 		}
+
+		resourceTypes = append(resourceTypes, additionalTypes...)
 
 		// If using Calico IPAM, include IPAM resources the felix cares about.
 		if !cfg.K8sUsePodCIDR {
