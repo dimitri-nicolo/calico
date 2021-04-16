@@ -396,7 +396,7 @@ class _FailoverTest(TestBase):
         self._run_single_test("basic_connection", self.do_nothing, self.do_nothing)
 
     # Test restarting calico-node for the client pod's node.
-    def test_restart_calico_node_client(self):
+    def suppress_restart_calico_node_client(self):
         old_log_count = len(get_early_logs("kind-worker"))
         self._run_single_test(
             "restart_calico_node_client",
@@ -406,7 +406,7 @@ class _FailoverTest(TestBase):
         self.check_early_container_noticed_restart("kind-worker", old_log_count)
 
     # Test restarting calico-node for the ra-server pod's node.
-    def test_restart_calico_node_ra_server(self):
+    def suppress_restart_calico_node_ra_server(self):
         old_log_count = len(get_early_logs("kind-control-plane"))
         self._run_single_test(
             "restart_calico_node_ra_server",
@@ -416,7 +416,7 @@ class _FailoverTest(TestBase):
         self.check_early_container_noticed_restart("kind-control-plane", old_log_count)
 
     # Test restarting calico-node for the rb-server pod's node.
-    def test_restart_calico_node_rb_server(self):
+    def suppress_restart_calico_node_rb_server(self):
         old_log_count = len(get_early_logs("kind-worker3"))
         self._run_single_test(
             "restart_calico_node_rb_server",
@@ -561,7 +561,7 @@ class _TestFailoverNodePort(_FailoverTest):
         ])
 
     # Test restarting calico-node on the NodePort node.
-    def test_restart_calico_node_node_port(self):
+    def suppress_restart_calico_node_node_port(self):
         old_log_count = len(get_early_logs("kind-worker2"))
         self._run_single_test(
             "restart_calico_node_node_port",
