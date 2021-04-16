@@ -39,13 +39,13 @@ $(LOCAL_BUILD_DEP):
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 endif
 
-include Makefile.common
-
-###############################################################################
-
 BUILD_IMAGE?=tigera/calicoctl
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/calicoctl
 RELEASE_IMAGES?=
+
+include Makefile.common
+
+###############################################################################
 
 CALICOCTL_DIR=calicoctl
 CTL_CONTAINER_CREATED=$(CALICOCTL_DIR)/.calico_ctl.created-$(ARCH)
