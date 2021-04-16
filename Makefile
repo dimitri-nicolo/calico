@@ -39,10 +39,9 @@ $(LOCAL_BUILD_DEP):
 		-replace=github.com/projectcalico/typha=../typha
 endif
 
-# Makefile configuration options
-BUILD_IMAGE?=calico/kube-controllers
+BUILD_IMAGE?=tigera/kube-controllers
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 FLANNEL_MIGRATION_BUILD_IMAGE?=calico/flannel-migration-controller
-PUSH_IMAGES?=$(BUILD_IMAGE) quay.io/$(BUILD_IMAGE) $(FLANNEL_MIGRATION_BUILD_IMAGE) quay.io/$(FLANNEL_MIGRATION_BUILD_IMAGE)
 RELEASE_IMAGES?=
 
 include Makefile.common
