@@ -35,9 +35,6 @@ MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/* -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) -v /var/run/docker.sock:/var/run/docker.sock:rw
 
-include Makefile.common
-
-###############################################################################
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
 
@@ -50,6 +47,11 @@ endif
 EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
+
+
+include Makefile.common
+
+###############################################################################
 
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
