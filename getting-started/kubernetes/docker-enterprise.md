@@ -44,10 +44,11 @@ The geeky details of what you get:
 
 1. [Configure a storage class for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
-1. Install Docker EE specific role bindings.
-
+1. Configure Tigera operator role bindings for Docker EE.
+   
    ```
-   kubectl create -f {{ "/manifests/docker-enterprise/bindings.yaml" | absolute_url }}
+   kubectl create clusterrolebinding tigera-operator-cluster-admin -n tigera-operator \
+    --clusterrole cluster-admin --serviceaccount tigera-operator:tigera-operator
    ```
 
 1. Install the Tigera operator and custom resource definitions.
