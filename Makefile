@@ -52,13 +52,11 @@ else
 local_build:
 endif
 
-include Makefile.common
-
-###############################################################################
-# Define some constants
 BUILD_IMAGE?=tigera/es-proxy
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
+
+include Makefile.common
 
 ETCD_VERSION?=v3.3.7
 # If building on amd64 omit the arch in the container name.  Fixme!
