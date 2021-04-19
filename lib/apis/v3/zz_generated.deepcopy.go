@@ -1706,6 +1706,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.BPFExtToServiceConnmark != nil {
+		in, out := &in.BPFExtToServiceConnmark, &out.BPFExtToServiceConnmark
+		*out = new(int)
+		**out = **in
+	}
 	if in.BPFKubeProxyIptablesCleanupEnabled != nil {
 		in, out := &in.BPFKubeProxyIptablesCleanupEnabled, &out.BPFKubeProxyIptablesCleanupEnabled
 		*out = new(bool)
