@@ -35,8 +35,6 @@ ifdef LIBCALICOGO_PATH
 EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
 endif
 
-include Makefile.common
-
 ##############################################################################
 # Define some constants
 ##############################################################################
@@ -60,6 +58,9 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
+
+# Include Makefile after env variables have been initialized
+include Makefile.common
 
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
