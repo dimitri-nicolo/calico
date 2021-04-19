@@ -3,7 +3,6 @@ module github.com/projectcalico/cni-plugin
 go 1.15
 
 require (
-	github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5 // indirect
 	github.com/Microsoft/hcsshim v0.8.6
 	github.com/buger/jsonparser v1.0.0
 	github.com/containernetworking/cni v0.8.0
@@ -48,3 +47,5 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.21.0-rc.0
 
 )
+
+replace github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
