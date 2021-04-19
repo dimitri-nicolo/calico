@@ -183,6 +183,8 @@ ifeq ($(ARCH),amd64)
 endif
 	touch $@
 
+update-pins: proto/felixbackend.pb.go proto/healthz.pb.go replace-libcalico-pin
+
 ###############################################################################
 # UTs
 ###############################################################################
