@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package utils
 
@@ -27,7 +27,7 @@ func RegisterDeletedWep(containerID string) error {
 	return nil
 }
 
-func CheckForSpuriousAdd(args *skel.CmdArgs,
+func CheckForSpuriousDockerAdd(args *skel.CmdArgs,
 	conf types.NetConf,
 	epIDs WEPIdentifiers,
 	endpoint *api.WorkloadEndpoint,

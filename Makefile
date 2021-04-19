@@ -11,6 +11,13 @@ LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclud
 # This var contains some default values that the common makefile may append to.
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cni
 
+BUILD_IMAGE_ORG?=calico
+CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
+
+BUILD_IMAGE?=tigera/cni
+DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
+RELEASE_IMAGES?=
+
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CNI_PLUGIN_PRIVATE_PROJECT_ID)
 
@@ -59,17 +66,10 @@ CURL=curl -C - -sSf
 
 CNI_VERSION=v0.8.6
 
-BUILD_IMAGE_ORG?=calico
-
 # By default set the CNI_SPEC_VERSION to 0.3.1 for tests.
 CNI_SPEC_VERSION?=0.3.1
 
-CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
-
-BUILD_IMAGE?=tigera/cni
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
-
-RELEASE_IMAGES?=
 
 ETCD_CONTAINER ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 # If building on amd64 omit the arch in the container name.
