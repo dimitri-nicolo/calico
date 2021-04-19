@@ -27,10 +27,10 @@ replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20210419131237-bc4c47a318cc
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210419131455-1dab767d5909
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210419204244-341d0b690c8c
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210419143343-c40f749c17d8
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210419124135-41d11f202068
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210419130202-91d2fb9a71a8
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210419200439-5a9046f84fb7
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210419201938-f3e5303c5363
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
