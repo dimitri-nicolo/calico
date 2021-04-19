@@ -61,42 +61,39 @@ docs' url='https://coreos.com/etcd/' %} for detailed advice and setup.{% endif %
 
 ## Network requirements
 
-Ensure that your hosts and firewalls allow the necessary traffic based on your configuration.
+Ensure that your hosts and firewalls allow the necessary traffic based on your configuration. See [Component architecture]({{site.baseurl}}/reference/architecture/overview) to view the following components. 
 
-| Configuration                                                | Host(s)              | Connection type | Port/protocol |
-|--------------------------------------------------------------|----------------------|-----------------|---------------|
-| {{site.prodname}} networking (BGP)                           | All                  | Bidirectional   | TCP 179 |
-| {{site.prodname}} networking in IP-in-IP mode (default mode) | All                  | Bidirectional   | IP-in-IP, often represented by its protocol number `4` |
-{%- if include.orch == "OpenShift" %}
-| {{site.prodname}} networking with VXLAN enabled              | All                  | Bidirectional   | UDP 4789 |
-| Typha access                                                 | Typha agent hosts    | Incoming        | TCP 5473 (default) |
-| All                                                         | kube-apiserver host  | Incoming        | Often TCP 443 or 8443\* |
-| etcd datastore                                               | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
-{%- else if include.orch == "Kubernetes" %}
-| {{site.prodname}} networking with VXLAN enabled              | All                  | Bidirectional   | UDP 4789 |
-| {{site.prodname}} networking with Typha enabled              | Typha agent hosts    | Incoming        | TCP 5473 (default) |
-| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 6443\* |
-| etcd datastore                                               | etcd hosts           | Incoming        | {% include open-new-window.html text='Officially' url='http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt' %}  TCP 2379 but can vary |
-{%- else %}
-| All                                                          | etcd hosts           | Incoming        | {% include open-new-window.html text='Officially' url='http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt' %}  TCP 2379 but can vary |
+| Configuration                        | Host(s)                                                      | Port/protocol                     |
+| ------------------------------------ | ------------------------------------------------------------ | --------------------------------- |
+| **{{site.prodname}} networking options** | IP-in-IP (default)                                       | Protocol number 4                 |
+|                                      | BGP                                                          | TCP 179                           |
+|                                      | VXLAN                                                        | UDP 4789                          |
+| **Cluster scaling**                  | Any {{site.prodname}} networking option above with Typha agents enabled | TCP 5473 (default)     |
+{%- if include.orch == "Kubernetes" %} 
+| **APIs**                             | Kubernetes API (kube-apiserver) to access Kubernetes datastore (kdd)| Often TCP 443 or 6443\*    |
+|                                      | {{site.prodname}} API server                                        | TCP 8080 and 5443 (default)|
+{%- elsif include.orch == "OpenShift" %}
+| **APIs**                             | Kubernetes API (kube-apiserver) to access Kubernetes datastore (kdd)| Often TCP 443 or 8443\*    |
+|                                      | {{site.prodname}} API server                                        | TCP 8080 and 5443 (default)|
 {%- endif %}
-{%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
-| All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)
-| All                                                          | agent hosts         | Incoming        | TCP 9081 (default)
-| All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)
-| All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)
-| All                                                          | ECK operator hosts  | Incoming        | TCP 9443 (default)
-| All                                                          | Elasticsearch hosts | Incoming        | TCP 9200 (default)
-| All                                                          | Kibana hosts        | Incoming        | TCP 5601 (default)
-| All                                                          | {{site.prodname}} Manager host | Incoming | TCP 9443 (default)
-| All                                                          | {{site.prodname}} Compliance server host | Incoming | TCP 5443 (default)
-{%- endif %}
+| **Nodes**                            | calico-node (Felix, BIRD, confd)                                    | TCP 9090 (default)         |
+| **Component metrics**                | Prometheus metrics                                                  | TCP 9081 (default)         |
+|                                      | Prometheus BGP metrics                                              | TCP 9900 (default)
+|                                      | Prometheus Alertmanager                                             | TCP 9093 (default)         |
+| **Logs and storage**                 | Elasticsearch with fluentd datastore                                | TCP 9200 (default)         |
+|                                      | Elasticssearch for cloud (ECK)                                      | TCP 9443 (default)         |
+|                                      | Kibana                                                              | TCP 5601 (default)         |
+| **User interface**                   | {{site.prodname}} Manager UI                                        | TCP 9443 (default)         |
+| **Intrusion Detection System (IDS)** | {{site.prodname}} intrusion detection                               | TCP 5443 (default)         |
+| **Compliance**                       | {{site.prodname}} compliance                                        | TCP 5443 (default)         |
+| **Multi-cluster management**         | Additional port required for Manager UI                             | TCP 9449                   |
+
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
 
 \* _The value passed to kube-apiserver using the `--secure-port` flag. If you cannot locate this, check the `targetPort` value returned by `kubectl get svc kubernetes -o yaml`._
-{% endif -%}
-{%- if include.orch == "OpenStack" %}
+{%- endif %}
 
+{%- if include.orch == "OpenStack" %}
 \* _If your compute hosts connect directly and don't use IP-in-IP, you don't need to allow IP-in-IP traffic._
 {%- endif %}
 

@@ -1,7 +1,6 @@
 ---
 title: Monitor Elasticsearch and Fluentd metrics
-description: Monitor Elasticsearch and Fluentd metrics and get alerts on log storage or collection issues that can lead 
-to service disruption.
+description: Monitor Elasticsearch and Fluentd metrics and get alerts on log storage or collection issues.
 ---
 
 ### Big picture
