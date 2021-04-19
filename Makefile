@@ -60,8 +60,6 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 ARCHES = amd64
 
-include Makefile.common
-
 ##############################################################################
 # Define some constants
 ##############################################################################
@@ -118,6 +116,9 @@ LDFLAGS:=-ldflags "\
 NON_SRC_DIRS = test
 # All Compliance Server go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print)
+
+# Common Makefile needs to be included after the build env variables are set.
+include Makefile.common
 
 .PHONY: clean
 clean:
