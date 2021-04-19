@@ -42,6 +42,17 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `policies`            | array of keywords | Policy or policies that allowed or denied this flow. Staged policy names are prefixed with "staged:". |
 | `process_name`        | keyword           | The name of the process that initiated or received the connection or connection request. A "-" indicates that the process name is not logged. A "*" indicates that the per flow process limit has exceeded and the process names are now aggregated. |
 | `process_id`          | keyword           | The process ID of the corresponding process (indicated by the `process_name` field) that initiated or received the connection or connection request. A "-" indicates that the process ID is not logged. A "*" indicates that there are more than one unique process IDs for the corresponding process name. |
+| `tcp_mean_send_congestion_window` | long  | Mean tcp send congestion window size. |
+| `tcp_min_send_congestion_window`  | long  | Minimum tcp send congestion window size. |
+| `tcp_mean_smooth_rtt`  | long             | Mean smooth RTT in micro seconds. |
+| `tcp_max_smooth_rtt`   | long             | Maximum smooth RTT in micro seconds. |
+| `tcp_mean_min_rtt`     | long             | Mean MinRTT in micro seconds. |
+| `tcp_max_min_rtt`      | long             | Maximum MinRTT in micro seconds. |
+| `tcp_mean_mss`         | long             | Mean TCP MSS. |
+| `tcp_min_mss`          | long             | Minimum TCP MSS. |
+| `tcp_total_retransmissions`| long         | Total retranmitted packets. |
+| `tcp_lost_packets`         | long         | Total lost packets. |
+| `tcp_unrecovered_to`       | long         | Total unrecovered timeouts. |
 | `source_ip`           | ip                | IP address of the source pod. A null value indicates aggregation. |
 | `source_name`         | keyword           | Contains one of the following values: <br />- Name of the source pod.<br />- Name of the pod that was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated. |
 | `source_name_aggr`    | keyword           | Contains one of the following values: <br />- Aggregated name of the source pod. <br />- `pvt`: Endpoint is not a pod. Its IP address belongs to a private subnet.<br />- `pub`: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
