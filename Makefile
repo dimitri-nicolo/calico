@@ -22,13 +22,14 @@ Makefile.common.$(MAKE_BRANCH):
 
 EXTRA_DOCKER_ARGS+=-e GOPRIVATE='github.com/tigera/*'
 
-include Makefile.common
-
 ###############################################################################
 CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 BUILD_IMAGE?=tigera/egress-gateway
 PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/egress-gateway
 RELEASE_IMAGES?=
+
+# Common Makefile needs to be included after the build env variables
+include Makefile.common
 
 # Variables controlling the image
 GATEWAY_CONTAINER_CREATED=.egress_gateway.created-$(ARCH)
