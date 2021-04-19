@@ -434,7 +434,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 skip_pre_dnat_default:
 	if (rt_addr_is_local_host(ctx.state->post_nat_ip_dst)) {
 		CALI_DEBUG("Post-NAT dest IP is local host.\n");
-		if (CALI_F_FROM_HEP && is_failsafe_in(ctx.state->ip_proto, ctx.state->post_nat_dport)) {
+		if (CALI_F_FROM_HEP && is_failsafe_in(ctx.state->ip_proto, ctx.state->post_nat_dport, ctx.state->ip_src)) {
 			CALI_DEBUG("Inbound failsafe port: %d. Skip policy.\n", ctx.state->post_nat_dport);
 			ctx.state->pol_rc = CALI_POL_ALLOW;
 			goto skip_policy;
@@ -443,7 +443,7 @@ skip_pre_dnat_default:
 	}
 	if (rt_addr_is_local_host(ctx.state->ip_src)) {
 		CALI_DEBUG("Source IP is local host.\n");
-		if (CALI_F_TO_HEP && is_failsafe_out(ctx.state->ip_proto, ctx.state->post_nat_dport)) {
+		if (CALI_F_TO_HEP && is_failsafe_out(ctx.state->ip_proto, ctx.state->post_nat_dport, ctx.state->post_nat_ip_dst)) {
 			CALI_DEBUG("Outbound failsafe port: %d. Skip policy.\n", ctx.state->post_nat_dport);
 			ctx.state->pol_rc = CALI_POL_ALLOW;
 			goto skip_policy;
@@ -817,6 +817,21 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 					nat_type = CT_CREATE_NAT_FWD;
 					ct_ctx_nat.tun_ip = rt->next_hop;
 					state->ip_dst = rt->next_hop;
+				} else if (cali_rt_is_workload(rt) && state->ip_dst != state->post_nat_ip_dst) {
+					/* Packet arrived from a HEP for a workload and we're
+					 * about to NAT it.  We can't rely on the kernel's RPF check
+					 * to do the right thing here in the presence of source
+					 * based routing because the kernel would do the RPF check
+					 * based on the post-NAT dest IP and that may give the wrong
+					 * result.
+					 *
+					 * Marking the packet allows us to influence which routing
+					 * rule is used.
+					 */
+
+					ct_ctx_nat.flags |= CALI_CT_FLAG_EXT_LOCAL;
+					ctx->state->ct_result.flags |= CALI_CT_FLAG_EXT_LOCAL;
+					CALI_DEBUG("CT_NEW marked with FLAG_EXT_LOCAL\n");
 				}
 			}
 
@@ -1075,6 +1090,7 @@ nat_encap:
 
 	CALI_DEBUG("vxlan return %d ifindex_fwd %d\n",
 			dnat_return_should_encap(), state->ct_result.ifindex_fwd);
+
 	if (dnat_return_should_encap() && state->ct_result.ifindex_fwd != CT_INVALID_IFINDEX) {
 		rc = CALI_RES_REDIR_IFINDEX;
 	}
