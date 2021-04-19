@@ -248,20 +248,6 @@ section:
     path: /reference/host-endpoints/conntrack
 - title: Attribution
   path: /reference/attribution/attribution
-- title: Architecture
-  path: /reference/architecture/
-  section:
-  - title: Component architecture
-    path: /reference/architecture/overview
-  - title: Data path
-    path: /reference/architecture/data-path
-  - title: Network design
-    path: /reference/architecture/design/
-    section: 
-    - title: Calico over Ethernet fabrics
-      path: /reference/architecture/design/l2-interconnect-fabric
-    - title: Calico over IP fabrics
-      path: /reference/architecture/design/l3-interconnect-fabric
 - title: REST API
   path: /reference/apidocs/
 - title: Frequently asked questions
