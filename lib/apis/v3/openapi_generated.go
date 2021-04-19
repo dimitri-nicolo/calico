@@ -5517,6 +5517,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"bpfExtToServiceConnmark": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFExtToServiceConnmark in BPF mode, control a 32bit mark that is set on connections from an external client to a local service. This mark allows us to control how packets of that connection are routed within the host and how is routing intepreted by RPF check. [Default: 0]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"bpfKubeProxyIptablesCleanupEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFKubeProxyIptablesCleanupEnabled, if enabled in BPF mode, Felix will proactively clean up the upstream Kubernetes kube-proxy's iptables chains.  Should only be enabled if kube-proxy is not running.  [Default: true]",
