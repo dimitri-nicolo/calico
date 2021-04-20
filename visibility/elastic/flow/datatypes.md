@@ -42,6 +42,15 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `policies`            | array of keywords | Policy or policies that allowed or denied this flow. Staged policy names are prefixed with "staged:". |
 | `process_name`        | keyword           | The name of the process that initiated or received the connection or connection request. A "-" indicates that the process name is not logged. A "*" indicates that the per flow process limit has exceeded and the process names are now aggregated. |
 | `process_id`          | keyword           | The process ID of the corresponding process (indicated by the `process_name` field) that initiated or received the connection or connection request. A "-" indicates that the process ID is not logged. A "*" indicates that there are more than one unique process IDs for the corresponding process name. |
+| `source_ip`           | ip                | IP address of the source pod. A null value indicates aggregation. |
+| `source_name`         | keyword           | Contains one of the following values: <br />- Name of the source pod.<br />- Name of the pod that was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated. |
+| `source_name_aggr`    | keyword           | Contains one of the following values: <br />- Aggregated name of the source pod. <br />- `pvt`: Endpoint is not a pod. Its IP address belongs to a private subnet.<br />- `pub`: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
+| `source_namespace`    | keyword           | Namespace of the source endpoint. A `-` means the endpoint is not namespaced.|
+| `source_port`         | long              | Source port. A null value indicates aggregation. |
+| `source_type`         | keyword           | The type of source endpoint. Possible values:<br />- `wep`: A workload endpoint, a pod in Kubernetes.<br />- `ns`: A Networkset. If multiple Networksets match, then the one with the longest prefix match is chosen.<br />- `net`: A Network. The IP address did not fall into a known endpoint type.|
+| `source_labels`       | array of keywords | Labels applied to the source pod. A hyphen indicates aggregation. |
+| `original_source_ips` | array of ips      | List of external IP addresses collected from requests made to the cluster through an ingress resource. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
+| `num_original_source_ips` | long          | Number of unique external IP addresses collected from requests made to the cluster through an ingress resource. This count includes the IP addresses included in the `original_source_ips` field. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
 | `tcp_mean_send_congestion_window` | long  | Mean tcp send congestion window size. |
 | `tcp_min_send_congestion_window`  | long  | Minimum tcp send congestion window size. |
 | `tcp_mean_smooth_rtt`  | long             | Mean smooth RTT in micro seconds. |
@@ -53,13 +62,4 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `tcp_total_retransmissions`| long         | Total retranmitted packets. |
 | `tcp_lost_packets`         | long         | Total lost packets. |
 | `tcp_unrecovered_to`       | long         | Total unrecovered timeouts. |
-| `source_ip`           | ip                | IP address of the source pod. A null value indicates aggregation. |
-| `source_name`         | keyword           | Contains one of the following values: <br />- Name of the source pod.<br />- Name of the pod that was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated. |
-| `source_name_aggr`    | keyword           | Contains one of the following values: <br />- Aggregated name of the source pod. <br />- `pvt`: Endpoint is not a pod. Its IP address belongs to a private subnet.<br />- `pub`: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
-| `source_namespace`    | keyword           | Namespace of the source endpoint. A `-` means the endpoint is not namespaced.|
-| `source_port`         | long              | Source port. A null value indicates aggregation. |
-| `source_type`         | keyword           | The type of source endpoint. Possible values:<br />- `wep`: A workload endpoint, a pod in Kubernetes.<br />- `ns`: A Networkset. If multiple Networksets match, then the one with the longest prefix match is chosen.<br />- `net`: A Network. The IP address did not fall into a known endpoint type.|
-| `source_labels`       | array of keywords | Labels applied to the source pod. A hyphen indicates aggregation. |
-| `original_source_ips` | array of ips      | List of external IP addresses collected from requests made to the cluster through an ingress resource. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
-| `num_original_source_ips` | long          | Number of unique external IP addresses collected from requests made to the cluster through an ingress resource. This count includes the IP addresses included in the `original_source_ips` field. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
 
