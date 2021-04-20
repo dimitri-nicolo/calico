@@ -1,12 +1,12 @@
 ---
-title: Configure Calico Enterprise for multi-cluster management, Kubernetes
-description: Configure Calico Enterprise to manage clusters from a single management plane for Kubernetes.
+title: Configure Calico Enterprise for multi-cluster management
+description: Configure Calico Enterprise to manage clusters from a single management plane.
 canonical_url: '/multicluster/mcm/configure'
 ---
 
 ### Big picture
 
-Install {{site.prodname}} multi-cluster management to manage clusters from a single management plane for Kubernetes.
+Install {{site.prodname}} multi-cluster management to manage clusters from a single management plane.
 
 ### Value
 
