@@ -4,7 +4,7 @@ package rbac_test
 import (
 	"encoding/json"
 
-	. "github.com/tigera/apiserver/pkg/rbac"
+	. "github.com/projectcalico/apiserver/pkg/rbac"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,7 +12,7 @@ import (
 	rbac_v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	rbacmock "github.com/tigera/apiserver/pkg/rbac/mock"
+	rbacmock "github.com/projectcalico/apiserver/pkg/rbac/mock"
 )
 
 var (

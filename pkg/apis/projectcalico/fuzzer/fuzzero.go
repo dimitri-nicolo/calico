@@ -1,22 +1,24 @@
-/*
-Copyright 2017 The Kubernetes Authors.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.package fuzzer
 
 package fuzzer
 
 import (
 	fuzz "github.com/google/gofuzz"
-	"github.com/tigera/apiserver/pkg/apis/projectcalico"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
+
+	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -58,7 +60,7 @@ var Funcs = func(codecs runtimeserializer.CodecFactory) []interface{} {
 			c.FuzzNoCustom(s) // fuzz first without calling this function again
 
 			s.Spec.Ports = []apiv3.EndpointPort{
-				apiv3.EndpointPort{
+				{
 					Name: "some-port",
 					Protocol: numorstring.Protocol{
 						Type:   numorstring.NumOrStringString,
@@ -66,7 +68,7 @@ var Funcs = func(codecs runtimeserializer.CodecFactory) []interface{} {
 					},
 					Port: 1234,
 				},
-				apiv3.EndpointPort{
+				{
 					Name: "another-port",
 					Protocol: numorstring.Protocol{
 						Type:   numorstring.NumOrStringString,
@@ -86,7 +88,7 @@ var Funcs = func(codecs runtimeserializer.CodecFactory) []interface{} {
 			s.Spec.FailsafeOutboundHostPorts = nil
 			s.Spec.DNSTrustedServers = nil
 			s.Spec.KubeNodePortRanges = &[]numorstring.Port{
-				numorstring.Port{MinPort: 30000, MaxPort: 32767, PortName: ""},
+				{MinPort: 30000, MaxPort: 32767, PortName: ""},
 			}
 
 		},
@@ -124,13 +126,14 @@ var Funcs = func(codecs runtimeserializer.CodecFactory) []interface{} {
 			destination := createSourceEntityRule()
 
 			s.Spec.Ingress = []apiv3.Rule{
-				apiv3.Rule{Action: apiv3.Allow,
+				{Action: apiv3.Allow,
 					Source:      source,
 					Destination: destination,
 				},
 			}
 			s.Spec.Egress = []apiv3.Rule{
-				apiv3.Rule{Action: apiv3.Allow,
+				{
+					Action:      apiv3.Allow,
 					Source:      source,
 					Destination: destination,
 				},
@@ -144,13 +147,15 @@ var Funcs = func(codecs runtimeserializer.CodecFactory) []interface{} {
 			destination := createSourceEntityRule()
 
 			s.Spec.Ingress = []apiv3.Rule{
-				apiv3.Rule{Action: apiv3.Allow,
+				{
+					Action:      apiv3.Allow,
 					Source:      source,
 					Destination: destination,
 				},
 			}
 			s.Spec.Egress = []apiv3.Rule{
-				apiv3.Rule{Action: apiv3.Allow,
+				{
+					Action:      apiv3.Allow,
 					Source:      source,
 					Destination: destination,
 				},
@@ -164,13 +169,15 @@ var Funcs = func(codecs runtimeserializer.CodecFactory) []interface{} {
 			destination := createSourceEntityRule()
 
 			s.Spec.Ingress = []apiv3.Rule{
-				apiv3.Rule{Action: apiv3.Allow,
+				{
+					Action:      apiv3.Allow,
 					Source:      source,
 					Destination: destination,
 				},
 			}
 			s.Spec.Egress = []apiv3.Rule{
-				apiv3.Rule{Action: apiv3.Allow,
+				{
+					Action:      apiv3.Allow,
 					Source:      source,
 					Destination: destination,
 				},

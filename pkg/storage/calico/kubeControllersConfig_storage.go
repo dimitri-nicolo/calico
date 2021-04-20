@@ -17,8 +17,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
+
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
 
 // NewKubeControllersConfigurationStorage creates a new libcalico-based storage.Interface implementation for KubeControllersConfigurations

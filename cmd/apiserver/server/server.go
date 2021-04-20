@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,11 +20,13 @@ import (
 	"flag"
 	"io"
 
-	"github.com/tigera/apiserver/pkg/apiserver"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/apiserver/pkg/apiserver"
+
 	"k8s.io/kubernetes/pkg/util/interrupt"
+
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/spf13/cobra"
 	"k8s.io/klog"

@@ -3,7 +3,6 @@ artifacts/simple-image/calico-k8sapiserver
 bin/calico-k8sapiserver
 /bin
 .idea/
-vendor
 **.*.swp
 cscope.*
 .go-pkg-cache/
@@ -13,3 +12,7 @@ Makefile.common*
 docker-image/bin/
 .generate_execs
 .generate_files
+gen-execs
+config/
+test/integration/apiserver.local.config/certificates/apiserver.crt
+test/integration/apiserver.local.config/certificates/apiserver.key

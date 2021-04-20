@@ -5,7 +5,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,6 +12,8 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"

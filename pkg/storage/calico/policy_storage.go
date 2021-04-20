@@ -8,9 +8,11 @@ import (
 
 	"golang.org/x/net/context"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
+
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -88,7 +90,7 @@ func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         NetworkPolicyAPIObjectVersioner{&etcd.APIObjectVersioner{}},
+		versioner:         APIObjectVersioner{&etcd.APIObjectVersioner{}},
 		aapiType:          reflect.TypeOf(aapi.NetworkPolicy{}),
 		aapiListType:      reflect.TypeOf(aapi.NetworkPolicyList{}),
 		libCalicoType:     reflect.TypeOf(libcalicoapi.NetworkPolicy{}),

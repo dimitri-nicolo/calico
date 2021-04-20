@@ -1,28 +1,26 @@
-/*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package networkpolicy
 
 import (
 	"context"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/authorizer"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/util"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizer"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/util"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -39,6 +37,7 @@ import (
 type REST struct {
 	*genericregistry.Store
 	authorizer authorizer.TierAuthorizer
+	shortNames []string
 }
 
 // EmptyObject returns an empty instance
@@ -101,7 +100,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store, authorizer.NewTierAuthorizer(opts.Authorizer)}, nil
+	return &REST{store, authorizer.NewTierAuthorizer(opts.Authorizer), []string{}}, nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
@@ -172,4 +171,12 @@ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptio
 	}
 
 	return r.Store.Watch(ctx, options)
+}
+
+func (r *REST) ShortNames() []string {
+	return r.shortNames
+}
+
+func (r *REST) Categories() []string {
+	return []string{""}
 }

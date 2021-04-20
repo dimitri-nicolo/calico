@@ -1,18 +1,16 @@
-/*
-Copyright 2016-2020 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package rest
 
@@ -24,38 +22,38 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/rbac"
-	calicoauthenticationreview "github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
-	calicoauthorizationreview "github.com/tigera/apiserver/pkg/registry/projectcalico/authorizationreview"
-	calicobgpconfiguration "github.com/tigera/apiserver/pkg/registry/projectcalico/bgpconfiguration"
-	calicobgppeer "github.com/tigera/apiserver/pkg/registry/projectcalico/bgppeer"
-	calicoclusterinformation "github.com/tigera/apiserver/pkg/registry/projectcalico/clusterinformation"
-	calicofelixconfig "github.com/tigera/apiserver/pkg/registry/projectcalico/felixconfig"
-	calicogalert "github.com/tigera/apiserver/pkg/registry/projectcalico/globalalert"
-	calicogalerttemplate "github.com/tigera/apiserver/pkg/registry/projectcalico/globalalerttemplate"
-	calicognetworkset "github.com/tigera/apiserver/pkg/registry/projectcalico/globalnetworkset"
-	calicogpolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/globalpolicy"
-	calicoglobalreport "github.com/tigera/apiserver/pkg/registry/projectcalico/globalreport"
-	calicoglobalreporttype "github.com/tigera/apiserver/pkg/registry/projectcalico/globalreporttype"
-	calicogthreatfeed "github.com/tigera/apiserver/pkg/registry/projectcalico/globalthreatfeed"
-	calicohostendpoint "github.com/tigera/apiserver/pkg/registry/projectcalico/hostendpoint"
-	calicoippool "github.com/tigera/apiserver/pkg/registry/projectcalico/ippool"
-	calicokubecontrollersconfig "github.com/tigera/apiserver/pkg/registry/projectcalico/kubecontrollersconfig"
-	calicolicensekey "github.com/tigera/apiserver/pkg/registry/projectcalico/licensekey"
-	calicomanagedcluster "github.com/tigera/apiserver/pkg/registry/projectcalico/managedcluster"
-	calicopolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/networkpolicy"
-	caliconetworkset "github.com/tigera/apiserver/pkg/registry/projectcalico/networkset"
-	calicopacketcapture "github.com/tigera/apiserver/pkg/registry/projectcalico/packetcapture"
-	calicoprofile "github.com/tigera/apiserver/pkg/registry/projectcalico/profile"
-	calicoremoteclusterconfig "github.com/tigera/apiserver/pkg/registry/projectcalico/remoteclusterconfig"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
-	calicostagedgpolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/stagedglobalnetworkpolicy"
-	calicostagedk8spolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/stagedkubernetesnetworkpolicy"
-	calicostagedpolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/stagednetworkpolicy"
-	calicotier "github.com/tigera/apiserver/pkg/registry/projectcalico/tier"
-	calicostorage "github.com/tigera/apiserver/pkg/storage/calico"
-	"github.com/tigera/apiserver/pkg/storage/etcd"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/rbac"
+	calicoauthenticationreview "github.com/projectcalico/apiserver/pkg/registry/projectcalico/authenticationreview"
+	calicoauthorizationreview "github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
+	calicobgpconfiguration "github.com/projectcalico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
+	calicobgppeer "github.com/projectcalico/apiserver/pkg/registry/projectcalico/bgppeer"
+	calicoclusterinformation "github.com/projectcalico/apiserver/pkg/registry/projectcalico/clusterinformation"
+	calicofelixconfig "github.com/projectcalico/apiserver/pkg/registry/projectcalico/felixconfig"
+	calicogalert "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalalert"
+	calicogalerttemplate "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalalerttemplate"
+	calicognetworkset "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalnetworkset"
+	calicogpolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalpolicy"
+	calicoglobalreport "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalreport"
+	calicoglobalreporttype "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalreporttype"
+	calicogthreatfeed "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalthreatfeed"
+	calicohostendpoint "github.com/projectcalico/apiserver/pkg/registry/projectcalico/hostendpoint"
+	calicoippool "github.com/projectcalico/apiserver/pkg/registry/projectcalico/ippool"
+	calicokubecontrollersconfig "github.com/projectcalico/apiserver/pkg/registry/projectcalico/kubecontrollersconfig"
+	calicolicensekey "github.com/projectcalico/apiserver/pkg/registry/projectcalico/licensekey"
+	calicomanagedcluster "github.com/projectcalico/apiserver/pkg/registry/projectcalico/managedcluster"
+	calicopolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/networkpolicy"
+	caliconetworkset "github.com/projectcalico/apiserver/pkg/registry/projectcalico/networkset"
+	calicopacketcapture "github.com/projectcalico/apiserver/pkg/registry/projectcalico/packetcapture"
+	calicoprofile "github.com/projectcalico/apiserver/pkg/registry/projectcalico/profile"
+	calicoremoteclusterconfig "github.com/projectcalico/apiserver/pkg/registry/projectcalico/remoteclusterconfig"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
+	calicostagedgpolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/stagedglobalnetworkpolicy"
+	calicostagedk8spolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/stagedkubernetesnetworkpolicy"
+	calicostagedpolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/stagednetworkpolicy"
+	calicotier "github.com/projectcalico/apiserver/pkg/registry/projectcalico/tier"
+	calicostorage "github.com/projectcalico/apiserver/pkg/storage/calico"
+	"github.com/projectcalico/apiserver/pkg/storage/etcd"
 )
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for
@@ -93,6 +91,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"cnp", "caliconetworkpolicy", "caliconetworkpolicies"},
 	)
 
 	networksetRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networksets"))
@@ -115,6 +114,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"netsets"},
 	)
 
 	stagedk8spolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("stagedkubernetesnetworkpolicies"))
@@ -137,6 +137,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	stagedpolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("stagednetworkpolicies"))
@@ -159,6 +160,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	tierRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("tiers"))
@@ -181,6 +183,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	gpolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalnetworkpolicies"))
@@ -203,6 +206,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"gnp", "cgnp", "calicoglobalnetworkpolicies"},
 	)
 
 	stagedgpolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("stagedglobalnetworkpolicies"))
@@ -225,6 +229,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	gNetworkSetRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalnetworksets"))
@@ -247,6 +252,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	licenseKeyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("licensekeys"))
@@ -269,6 +275,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	gAlertRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalalerts"))
@@ -291,6 +298,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	gAlertTemplateRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalalerttemplates"))
@@ -313,6 +321,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	gThreatFeedRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalthreatfeeds"))
@@ -335,6 +344,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	hostEndpointRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("hostendpoints"))
@@ -357,6 +367,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"hep", "heps"},
 	)
 
 	globalReportRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalreports"))
@@ -379,6 +390,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	globalReportTypeRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalreporttypes"))
@@ -401,6 +413,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	ipPoolRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("ippools"))
@@ -423,6 +436,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	bgpConfigurationRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgpconfigurations"))
@@ -445,6 +459,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"bgpconfig", "bgpconfigs"},
 	)
 
 	bgpPeerRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgppeers"))
@@ -467,6 +482,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	profileRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("profiles"))
@@ -489,6 +505,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	remoteclusterconfigRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("remoteclusterconfigurations"))
@@ -511,6 +528,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	felixConfigRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("felixconfigurations"))
@@ -533,6 +551,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"felixconfig", "felixconfigs"},
 	)
 
 	kubeControllersConfigsRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("kubecontrollersconfigurations"))
@@ -555,6 +574,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"kcconfig"},
 	)
 
 	managedClusterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("managedclusters"))
@@ -578,6 +598,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	clusterInformationRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("clusterinformations"))
@@ -600,6 +621,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{"clusterinfo"},
 	)
 
 	packetCaptureRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("packetcaptures"))
@@ -622,6 +644,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		p.StorageType,
 		authorizer,
+		[]string{},
 	)
 
 	storage := map[string]rest.Storage{}

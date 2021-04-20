@@ -15,12 +15,9 @@ const GroupName = "projectcalico.org"
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v3"}
 
 var (
-	// TODO: move SchemeBuilder with zz_generated.deepcopy.go to k8s.io/api.
-	// localSchemeBuilder and AddToScheme will stay in k8s.io/kubernetes.
 	SchemeBuilder      runtime.SchemeBuilder
 	localSchemeBuilder = &SchemeBuilder
-	// AddToScheme is exposed for API installation
-	AddToScheme = localSchemeBuilder.AddToScheme
+	AddToScheme        = localSchemeBuilder.AddToScheme
 )
 
 func init() {

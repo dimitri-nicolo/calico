@@ -29,9 +29,10 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/helpers"
 	licClient "github.com/tigera/licensing/client"
+
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/helpers"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )

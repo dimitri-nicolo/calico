@@ -8,7 +8,7 @@ import (
 
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 const (

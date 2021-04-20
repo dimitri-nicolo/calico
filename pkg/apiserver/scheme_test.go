@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2017-2021 The Kubernetes Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,8 +14,6 @@ limitations under the License.
 package apiserver
 
 import (
-	//projectcalicofuzzer "github.com/tigera/apiserver/pkg/apis/projectcalico/fuzzer"
-	//"k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
 	"testing"
 )
 

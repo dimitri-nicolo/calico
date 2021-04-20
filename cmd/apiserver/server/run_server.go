@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2017-2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/klog"
 
-	"github.com/tigera/apiserver/pkg/apiserver"
+	"github.com/projectcalico/apiserver/pkg/apiserver"
 )
 
 // PrepareServer prepares the server for execution. After invoking the caller should run RunServer.
@@ -48,8 +48,8 @@ func PrepareServer(opts *CalicoServerOptions) (*apiserver.ProjectCalicoServer, e
 
 // RunServer runs the Calico API server.  This blocks until stopped channel (passed in through options) is closed.
 func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer) error {
-	path := "/tmp/ready"
-	_ = os.Remove(path)
+	readinessPath := "/tmp/ready"
+	_ = os.Remove(readinessPath)
 
 	allStop := make(chan struct{})
 	go func() {
@@ -64,11 +64,13 @@ func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer)
 	}()
 
 	go func() {
-		// do we need to do any post api installation setup? We should have set up the api already?
 		klog.Infoln("Running the API server")
-		server.GenericAPIServer.AddPostStartHook("tigera-apiserver-autoregistration",
+
+		// Add a post-start hook to write the readiness file, which is used for
+		// readiness probes.
+		server.GenericAPIServer.AddPostStartHook("apiserver-autoregistration",
 			func(context genericapiserver.PostStartHookContext) error {
-				f, err := os.Create(path)
+				f, err := os.Create(readinessPath)
 				if err != nil {
 					klog.Errorln(err)
 					return err
@@ -105,13 +107,11 @@ func WriteSwaggerJSON(handler *genericapiserver.APIServerHandler, path string) {
 	req, err := http.NewRequest("GET", "/openapi/v2", nil)
 	if err != nil {
 		panic(fmt.Sprintf("Could not fetch swagger. Reason: %v", err))
-		return
 	}
 	swaggerPath := gpath.Join(path, "swagger.json")
 	f, err := os.Create(swaggerPath)
 	if err != nil {
 		panic(fmt.Sprintf("Could not create file at '%s'. Reason: %v", swaggerPath, err))
-		return
 	}
 	defer f.Close()
 	resp := &fileResponseWriter{f}

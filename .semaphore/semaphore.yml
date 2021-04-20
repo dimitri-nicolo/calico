@@ -9,6 +9,12 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 
+auto_cancel:
+  running:
+    when: "branch != 'master'"
+  queued:
+    when: "branch != 'master'"
+
 global_job_config:
   secrets:
     - name: docker-hub
@@ -26,27 +32,27 @@ global_job_config:
       # Login to docker in order to pull images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
       - checkout
-      # Semaphore is doing shallow clone on a commit without tags.
-      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-      - git fetch --unshallow
-      # Note that the 'cache restore' commands require that the "Build" block has been run. The "Build" block is what populates
-      # the cache, therefore every block that requires the use of these cached items must make the "Build" block one of
-      # it's dependencies.
-      - 'cache restore go-pkg-cache-${SEMAPHORE_GIT_SHA}'
-      - 'cache restore go-mod-cache-${SEMAPHORE_GIT_SHA}'
-      - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+      #- git fetch --unshallow
 
 blocks:
-  - name: 'CI'
+  - name: Unit Tests
     dependencies: []
     task:
       jobs:
-        - name: Run UT
+        - name: "make ci"
           commands:
             - make ci
 
+  - name: Static Checks
+    dependencies: []
+    task:
+      jobs:
+        - name: Static Checks
+          commands:
+            - make static-checks
+
   - name: 'Push Images (non-PR builds only)'
-    dependencies: ["CI"]
+    dependencies: ["Unit Tests", "Static Checks"]
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"

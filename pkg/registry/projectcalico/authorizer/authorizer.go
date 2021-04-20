@@ -8,7 +8,7 @@ import (
 
 	"k8s.io/klog"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8sauth "k8s.io/apiserver/pkg/authorization/authorizer"
