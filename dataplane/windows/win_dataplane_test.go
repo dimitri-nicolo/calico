@@ -37,7 +37,7 @@ var _ = Describe("Constructor test", func() {
 	})
 
 	It("should be constructable", func() {
-		var dp = windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)
+		var dp = windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig, nil)
 		Expect(dp).ToNot(BeNil())
 	})
 })

@@ -18,17 +18,18 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 var _ = Describe("Host ip manager", func() {
 	var (
 		hostIPMgr *hostIPManager
-		ipSets    *mockIPSets
+		ipSets    *common.MockIPSets
 	)
 
 	BeforeEach(func() {
-		ipSets = newMockIPSets()
+		ipSets = common.NewMockIPSets()
 		hostIPMgr = newHostIPManager([]string{"cali"}, "this-host", ipSets, 1024)
 	})
 
