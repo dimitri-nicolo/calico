@@ -53,7 +53,7 @@ func NewDomainInfoReader(trustedServers []fc.ServerPort) *domainInfoReader {
 	}
 
 	return &domainInfoReader{
-		stopChannel:    make(chan struct{}),
+		stopChannel: make(chan struct{}),
 		// domainInfoReader forward DNS message to domainInfoStore as soon as it get it.
 		// Both domainInfoStore and Windows ETW package caches DNS message so we don't need
 		// to cache them here. Set buffer to 10.

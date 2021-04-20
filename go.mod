@@ -15,7 +15,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.4.3
-	github.com/google/gopacket v1.1.18
+	github.com/google/gopacket v1.1.19
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
@@ -43,7 +43,7 @@ require (
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/tigera/licensing v1.0.1-0.20210419124827-a1a73fa1579e
 	github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133
-	github.com/tigera/windows-networking v0.0.0-20210216141047-0f2491c3b4e1
+	github.com/tigera/windows-networking v0.0.0-20210419160444-f5561401fe3c
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
