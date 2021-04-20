@@ -290,6 +290,11 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 
 	// Add annotation for the AS number.
 	if l.ASNumber != 0 {
+		if node.Spec.BGP != nil && node.Spec.BGP.ASNumber != nil {
+			log.Warningf("Overriding existing node AS number: %v -> %v", *node.Spec.BGP.ASNumber, l.ASNumber)
+		} else {
+			log.Infof("Setting node AS number: %v", l.ASNumber)
+		}
 		configureASNumber(node, fmt.Sprintf("%v", l.ASNumber), "bgp-layout ConfigMap")
 	}
 	return nil
