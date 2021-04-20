@@ -9,7 +9,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/cni-plugin v1.11.1-0.20210419132530-70c653b45e92
 	github.com/projectcalico/felix v0.0.0-20210420092053-6cab83fb61ad
-	github.com/projectcalico/libcalico-go v1.7.2-0.20210416001455-0b0b0574f5a1
+	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
 	github.com/projectcalico/typha v0.7.3-0.20210419132752-e9cecb0306ed
 	github.com/prometheus/client_golang v1.7.1
