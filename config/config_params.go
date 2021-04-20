@@ -129,6 +129,7 @@ type Config struct {
 	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
 	BPFKubeProxyMinSyncPeriod          time.Duration  `config:"seconds;1"`
 	BPFKubeProxyEndpointSlicesEnabled  bool           `config:"bool;false"`
+	BPFExtToServiceConnmark            int            `config:"int;0"`
 	FlowLogsCollectProcessInfo         bool           `config:"bool;false"`
 	FlowLogsCollectTcpStats            bool           `config:"bool;false"`
 

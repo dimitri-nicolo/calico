@@ -591,6 +591,9 @@ type mockSyncer struct {
 	stop chan struct{}
 }
 
+func (s *mockSyncer) SetTriggerFn(f func()) {
+}
+
 func newMockSyncer(stop chan struct{}) *mockSyncer {
 	return &mockSyncer{
 		out:  make(chan proxy.DPSyncerState),

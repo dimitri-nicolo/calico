@@ -852,6 +852,7 @@ func testPacketUDPDefaultNP(destIP net.IP) (*layers.Ethernet, *layers.IPv4, gopa
 func resetBPFMaps() {
 	resetCTMap(ctMap)
 	resetRTMap(rtMap)
+	resetMap(fsafeMap)
 }
 
 func TestMapIterWithDelete(t *testing.T) {
