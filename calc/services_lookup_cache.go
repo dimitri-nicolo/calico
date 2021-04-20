@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/projectcalico/felix/k8sutils"
+	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
 
@@ -26,6 +27,17 @@ import (
 const (
 	multiPortsSameService = "*"
 )
+
+var (
+	gaugeServicesCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_lookupcache_services",
+		Help: "Total number of entries currently residing in the services lookup cache.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeServicesCacheLength)
+}
 
 // IP/port/proto key used to lookup a service.
 type ipPortProtoKey struct {
@@ -65,11 +77,12 @@ func NewServiceLookupsCache() *ServiceLookupsCache {
 		nodePortServices:      make(map[portProtoKey][]proxy.ServicePortName),
 		services:              make(map[model.ResourceKey]kapiv1.ServiceSpec),
 	}
+
 	return ec
 }
 
-func (ec *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
-	allUpdateDisp.Register(model.ResourceKey{}, ec.OnResourceUpdate)
+func (sc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
+	allUpdateDisp.Register(model.ResourceKey{}, sc.OnResourceUpdate)
 }
 
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
@@ -149,7 +162,7 @@ func IPStringToArray(str string) (res [16]byte, parsed bool) {
 	return
 }
 
-func (ec *ServiceLookupsCache) handleService(
+func (sc *ServiceLookupsCache) handleService(
 	key model.ResourceKey, svc kapiv1.ServiceSpec,
 	epOperator func(key ipPortProtoKey, svc proxy.ServicePortName),
 	nodePortOperator func(key portProtoKey, svc proxy.ServicePortName),
@@ -241,33 +254,35 @@ func (ec *ServiceLookupsCache) removeServiceMap(key ipPortProtoKey, svc proxy.Se
 }
 
 // addOrUpdateService tracks service cluster IP to service mappings.
-func (ec *ServiceLookupsCache) addOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
-	ec.epMutex.Lock()
-	defer ec.epMutex.Unlock()
+func (sc *ServiceLookupsCache) addOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
+	sc.epMutex.Lock()
+	defer sc.epMutex.Unlock()
 
-	if existing, ok := ec.services[key]; ok {
+	if existing, ok := sc.services[key]; ok {
 		if reflect.DeepEqual(existing, service.Spec) {
 			// Service data has not changed. Do nothing.
 			return
 		}
 
 		// Service data has changed, keep the logic simple by removing the old service and re-adding the new one.
-		ec.handleService(key, existing, ec.removeServiceMap, ec.removeNodePortMap)
+		sc.handleService(key, existing, sc.removeServiceMap, sc.removeNodePortMap)
 	}
 
-	ec.handleService(key, service.Spec, ec.addServiceMap, ec.addNodePortMap)
-	ec.services[key] = service.Spec
+	sc.handleService(key, service.Spec, sc.addServiceMap, sc.addNodePortMap)
+	sc.services[key] = service.Spec
+	sc.reportServicesCacheMetrics()
 }
 
-func (ec *ServiceLookupsCache) removeService(key model.ResourceKey) {
-	ec.epMutex.Lock()
-	defer ec.epMutex.Unlock()
+func (sc *ServiceLookupsCache) removeService(key model.ResourceKey) {
+	sc.epMutex.Lock()
+	defer sc.epMutex.Unlock()
 
 	// Look up service by key and remove the entry.
-	if existing, ok := ec.services[key]; ok {
+	if existing, ok := sc.services[key]; ok {
 		// Remove the service maps.
-		ec.handleService(key, existing, ec.removeServiceMap, ec.removeNodePortMap)
-		delete(ec.services, key)
+		sc.handleService(key, existing, sc.removeServiceMap, sc.removeNodePortMap)
+		delete(sc.services, key)
+		sc.reportServicesCacheMetrics()
 	}
 }
 
@@ -325,4 +340,9 @@ func uniqueService(svcs []proxy.ServicePortName) proxy.ServicePortName {
 		}
 	}
 	return svc
+}
+
+//reportServicesCacheMetrics  reports servies cache performance metrics to prometheus
+func (sc *ServiceLookupsCache) reportServicesCacheMetrics() {
+	gaugeServicesCacheLength.Set(float64(len(sc.services)))
 }

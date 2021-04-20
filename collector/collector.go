@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -13,6 +13,7 @@ import (
 
 	"github.com/gavv/monotime"
 	"github.com/google/gopacket/layers"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/calc"
@@ -28,6 +29,65 @@ const (
 	expectedLocalDestination
 	expectedLocalSource
 )
+
+var (
+	// conntrack processing prometheus metrics
+	histogramConntrackLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "felix_collector_conntrack_processing_latency_seconds",
+		Help: "Histogram for measuring the latency of Conntrack processing.",
+	})
+
+	// TODO: find a way to track errors for conntrack processing as there are no
+	//indicative method to track errors currently
+
+	// process info processing prometheus metrics
+	histogramPacketInfoLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "felix_collector_packet_info_processing_latency_seconds",
+		Help: "Histogram for measuring latency Process Info processing.",
+	})
+
+	// TODO: find a way to track errors for process info processing as there are no
+	//indicative method to track errors currently
+
+	// dumpStats processing prometheus metrics
+	histogramDumpStatsLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "felix_collector_dumpstats_latency_seconds",
+		Help: "Histogram for measuring latency for processing cached stats to stats file in config.StatsDumpFilePath.",
+	})
+
+	// TODO: find a way to track errors for epStats dump processing as there are no
+	//indicative method to track errors currently
+
+	// dataplaneStatsUpdate processing prometheus metrics
+	histogramDataplaneStatsUpdate = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "felix_collector_dataplanestats_update_processing_latency_seconds",
+		Help: "Histogram for measuring latency for processing merging the proto.DataplaneStatistics to the current data cache.",
+	})
+
+	gaugeDataplaneStatsUpdateErrorsPerMinute = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_dataplanestats_update_processing_errors_per_minute",
+		Help: "Number of errors encountered when processing merging the proto.DataplaneStatistics to the current data cache.",
+	})
+
+	dataplaneStatsUpdateLastErrorReportTime time.Time
+	dataplaneStatsUpdateErrorsInLastMinute  uint32
+
+	// epStats cache prometheus metrics
+	gaugeEpStatsCacheSizeLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_epstats",
+		Help: "Total number of entries currently residing in the epStats cache.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(histogramConntrackLatency)
+	prometheus.MustRegister(histogramPacketInfoLatency)
+	prometheus.MustRegister(histogramDumpStatsLatency)
+	prometheus.MustRegister(gaugeEpStatsCacheSizeLength)
+	prometheus.MustRegister(histogramDataplaneStatsUpdate)
+	prometheus.MustRegister(gaugeDataplaneStatsUpdateErrorsPerMinute)
+
+}
 
 type Config struct {
 	StatsDumpFilePath string
@@ -116,6 +176,9 @@ func (c *collector) Start() error {
 		c.l7LogReporter.Start()
 	}
 
+	// init prometheus metrics timings
+	dataplaneStatsUpdateLastErrorReportTime = time.Now()
+
 	return nil
 }
 
@@ -149,19 +212,27 @@ func (c *collector) startStatsCollectionAndReporting() {
 	for {
 		select {
 		case ctInfos := <-ctInfoC:
+			conntrackProcessStart := time.Now()
 			for _, ctInfo := range ctInfos {
 				log.WithField("ConntrackInfo", ctInfo).Debug("collector event")
 				c.handleCtInfo(ctInfo)
 			}
+			histogramConntrackLatency.Observe(float64(time.Since(conntrackProcessStart).Seconds()))
 		case pktInfo := <-pktInfoC:
 			log.WithField("PacketInfo", pktInfo).Debug("collector event")
-			c.ApplyPacketInfo(pktInfo)
+			processInfoProcessSttart := time.Now()
+			c.applyPacketInfo(pktInfo)
+			histogramPacketInfoLatency.Observe(float64(time.Since(processInfoProcessSttart).Seconds()))
 		case <-c.ticker.Channel():
 			c.checkEpStats()
 		case <-c.sigChan:
+			dumpStatsProcessStart := time.Now()
 			c.dumpStats()
+			histogramDumpStatsLatency.Observe(float64(time.Since(dumpStatsProcessStart).Seconds()))
 		case ds := <-c.ds:
+			dataplaneStatsUpdateStart := time.Now()
 			c.convertDataplaneStatsAndApplyUpdate(ds)
+			histogramDataplaneStatsUpdate.Observe(float64(time.Since(dataplaneStatsUpdateStart).Seconds()))
 		}
 	}
 }
@@ -189,7 +260,7 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
 		data = NewData(tuple, srcEp, dstEp, c.config.MaxOriginalSourceIPsIncluded)
-		c.epStats[tuple] = data
+		c.updateEpStatsCache(tuple, data)
 
 		// Return the new entry.
 		return data
@@ -201,7 +272,7 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 
 		// For updated entries, check that at least one of the endpoints is still local. If not delete the entry.
 		if (srcEp == nil || !srcEp.IsLocal) && (dstEp == nil || !dstEp.IsLocal) {
-			c.deleteData(data)
+			c.deleteDataFromEpStats(data)
 			return nil
 		}
 	}
@@ -233,6 +304,19 @@ func (c *collector) lookupEndpoint(ip [16]byte) *calc.EndpointData {
 	return nil
 }
 
+// updateEpStatsCache updates/add entry to the epStats cache (map[Tuple]*Data) and update the
+// prometheus reporting
+func (c *collector) updateEpStatsCache(tuple Tuple, data *Data) {
+	c.epStats[tuple] = data
+
+	c.reportEpStatsCacheMetrics()
+}
+
+// reportEpStatsCacheMetrics reports of current epStats cache status to Prometheus
+func (c *collector) reportEpStatsCacheMetrics() {
+	gaugeEpStatsCacheSizeLength.Set(float64(len(c.epStats)))
+}
+
 // applyConntrackStatUpdate applies a stats update from a conn track poll.
 // If entryExpired is set then, this means that the update is for a recently
 // expired entry. One of the following will be done:
@@ -253,7 +337,7 @@ func (c *collector) applyConntrackStatUpdate(
 			// time for asynchronous meta data to be gathered (such as service info and process info).
 			if c.reportMetrics(data, false) {
 				c.expireMetrics(data)
-				c.deleteData(data)
+				c.deleteDataFromEpStats(data)
 			} else {
 				data.SetExpired()
 			}
@@ -303,7 +387,7 @@ func (c *collector) checkEpStats() {
 		}
 		if data.UpdatedAt() < minExpirationAt {
 			c.expireMetrics(data)
-			c.deleteData(data)
+			c.deleteDataFromEpStats(data)
 		}
 	}
 }
@@ -395,8 +479,10 @@ func (c *collector) expireMetrics(data *Data) {
 	}
 }
 
-func (c *collector) deleteData(data *Data) {
+func (c *collector) deleteDataFromEpStats(data *Data) {
 	delete(c.epStats, data.Tuple)
+
+	c.reportEpStatsCacheMetrics()
 }
 
 func (c *collector) sendMetrics(data *Data, expired bool) {
@@ -492,7 +578,7 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 	}
 }
 
-func (c *collector) ApplyPacketInfo(pktInfo PacketInfo) {
+func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 	var (
 		localEp        *calc.EndpointData
 		localMatchData *calc.MatchData
@@ -587,7 +673,7 @@ func (c *collector) ApplyPacketInfo(pktInfo PacketInfo) {
 		// If the data is expired then attempt to report it now so that we can remove the connection entry. If reported
 		// the data can be expired and deleted immediately, otherwise it will get exported during ticker processing.
 		c.expireMetrics(data)
-		c.deleteData(data)
+		c.deleteDataFromEpStats(data)
 	}
 }
 
@@ -599,6 +685,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	t, err := extractTupleFromDataplaneStats(d)
 	if err != nil {
 		log.Errorf("unable to extract 5-tuple from DataplaneStats: %v", err)
+		reportDataplaneStatsUpdateErrorMetrics(1)
 		return
 	}
 
@@ -627,9 +714,10 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 			log.WithField("kind", s.Kind.String()).Warnf("Received a statistic from the dataplane that Felix cannot process")
 			continue
 		}
-
 	}
+
 	ips := make([]net.IP, 0, len(d.HttpData))
+
 	for _, hd := range d.HttpData {
 		if c.l7LogReporter != nil && hd.Type != "" {
 			// If the l7LogReporter has been set, then L7 logs are configured to be run.
@@ -652,10 +740,12 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 			ips = append(ips, sip)
 		}
 	}
+
 	if len(ips) != 0 {
 		if httpDataCount == 0 {
 			httpDataCount = len(ips)
 		}
+
 		bs := NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, ips, httpDataCount)
 		data.AddOriginalSourceIPs(bs)
 	} else if httpDataCount != 0 {
@@ -675,6 +765,7 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 		case "udp":
 			protocol = 17
 		default:
+			reportDataplaneStatsUpdateErrorMetrics(1)
 			return Tuple{}, fmt.Errorf("unhandled protocol: %s", n)
 		}
 	}
@@ -682,10 +773,12 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 	// Use the standard go net library to parse the IP since this always returns IPs as 16 bytes.
 	srcIP := net.ParseIP(d.SrcIp)
 	if srcIP == nil {
+		reportDataplaneStatsUpdateErrorMetrics(1)
 		return Tuple{}, fmt.Errorf("bad source IP: %s", d.SrcIp)
 	}
 	dstIP := net.ParseIP(d.DstIp)
 	if dstIP == nil {
+		reportDataplaneStatsUpdateErrorMetrics(1)
 		return Tuple{}, fmt.Errorf("bad destination IP: %s", d.DstIp)
 	}
 
@@ -697,6 +790,19 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// before nflogs or conntrack).
 	return MakeTuple(srcArray, dstArray, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
+}
+
+// reportDataplaneStatsUpdateErrorMetrics reports error statistics encoutered when updating Dataplane stats
+func reportDataplaneStatsUpdateErrorMetrics(dataplaneErrorDelta uint32) {
+
+	if dataplaneStatsUpdateLastErrorReportTime.Before(time.Now().Add(-1 * time.Minute)) {
+		dataplaneStatsUpdateErrorsInLastMinute = dataplaneErrorDelta
+	} else {
+		dataplaneStatsUpdateErrorsInLastMinute += dataplaneErrorDelta
+	}
+
+	dataplaneStatsUpdateErrorsInLastMinute += dataplaneErrorDelta
+	gaugeDataplaneStatsUpdateErrorsPerMinute.Set(float64(dataplaneStatsUpdateErrorsInLastMinute))
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.
@@ -793,6 +899,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	// Grab the destination metadata to use the namespace to validate the service name
 	dstMeta, err := getFlowLogEndpointMetadata(data.dstEp, tuple.dst)
 	if err != nil {
+		reportDataplaneStatsUpdateErrorMetrics(1)
 		log.WithError(err).Errorf("Failed to extract metadata for destination %v", update.DstEp)
 	}
 
@@ -843,6 +950,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 
 	// Send the update to the reporter
 	if err := c.l7LogReporter.Log(update); err != nil {
+		reportDataplaneStatsUpdateErrorMetrics(1)
 		log.WithError(err).WithFields(log.Fields{
 			"src": tuple.src,
 			"dst": tuple.src,
