@@ -19,4 +19,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210419200439-5a9046f84fb7
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210420170807-282d73e15338
