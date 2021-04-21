@@ -1,3 +1,5 @@
+$baseDir = "$PSScriptRoot"
+ipmo $baseDir\libs\calico\calico.psm1
 
 ## Cluster configuration:
 
@@ -39,6 +41,13 @@ $env:ETCD_CA_CERT_FILE = "<your etcd ca cert>"
 $env:CNI_BIN_DIR = "c:\k\cni"
 # Place to install the CNI config to.  Should be located in kubelet's --cni-conf-dir.
 $env:CNI_CONF_DIR = "c:\k\cni\config"
+
+if (Get-IsContainerdRunning)
+{
+    $env:CNI_BIN_DIR = Get-ContainerdCniBinDir
+    $env:CNI_CONF_DIR = Get-ContainerdCniConfDir
+}
+
 $env:CNI_CONF_FILENAME = "10-calico.conf"
 # IPAM type to use with Calico's CNI plugin.  One of "calico-ipam" or "host-local".
 $env:CNI_IPAM_TYPE = "calico-ipam"
@@ -87,7 +96,6 @@ $env:FELIX_LOGSEVERITYSYS = "none"
 # confd logs to screen at info level by default.  Uncomment this line to override the log
 # level.
 #$env:BGP_LOGSEVERITYSCREEN = "debug"
-#
 
 # Enable flowlogs. 
 $env:FELIX_FLOWLOGSFILEENABLED = "true"
