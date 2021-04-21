@@ -252,21 +252,22 @@ func configureBGPLayout(node *api.Node) error {
 
 	// Find the EarlyNetworkConfiguration entry for this node.
 	var thisNode *earlynetworking.ConfigNode
+	nodeIP := strings.Split(node.Spec.BGP.IPv4Address, "/")[0]
 nodeLoop:
 	for _, nodeCfg := range cfg.Spec.Nodes {
 		for _, addr := range nodeCfg.InterfaceAddresses {
-			if addr == node.Spec.BGP.IPv4Address {
+			if addr == nodeIP {
 				thisNode = &nodeCfg
 				break nodeLoop
 			}
 		}
-		if nodeCfg.StableAddress.Address == node.Spec.BGP.IPv4Address {
+		if nodeCfg.StableAddress.Address == nodeIP {
 			thisNode = &nodeCfg
 			break nodeLoop
 		}
 	}
 	if thisNode == nil {
-		return fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", node.Spec.BGP.IPv4Address)
+		return fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", nodeIP)
 	}
 	log.WithField("cfg", *thisNode).Info("Found EarlyNetworkConfiguration entry for this node")
 
@@ -276,6 +277,9 @@ nodeLoop:
 			log.Warningf("Overriding existing node label: %v: %v -> %v", k, v2, v)
 		} else {
 			log.Infof("Setting node label: %v: %v", k, v)
+		}
+		if node.Labels == nil {
+			node.Labels = make(map[string]string)
 		}
 		node.Labels[k] = v
 	}
