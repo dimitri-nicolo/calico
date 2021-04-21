@@ -26,7 +26,8 @@ type ConfigNode struct {
 	InterfaceAddresses []string            `yaml:"interfaceAddresses"`
 	ASNumber           int                 `yaml:"asNumber"`
 	StableAddress      ConfigStableAddress `yaml:"stableAddress"`
-	Peerings           []ConfigPeering
+	Peerings           []ConfigPeering     `yaml:"peerings"`
+	Labels             map[string]string   `yaml:"labels"`
 }
 
 type ConfigStableAddress struct {

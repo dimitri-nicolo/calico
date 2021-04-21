@@ -67,27 +67,33 @@ protocol bgp tor%v from tors {
 `
 )
 
-// Do setup for a dual ToR node, then run as the "early BGP" daemon
-// until calico-node's BIRD can take over.
-
-func Run() {
-	logrus.Info("Beginning dual ToR setup for this node")
-
-	// There must be a YAML file mapped in at $CALICO_EARLY_NETWORKING that defines addresses
-	// and AS numbers for the nodes in this cluster.  Read that file.
-	yamlFileName := os.Getenv("CALICO_EARLY_NETWORKING")
+func GetEarlyNetworkConfig(yamlFileName string) (*EarlyNetworkConfiguration, error) {
 	yamlFile, err := os.Open(yamlFileName)
 	if err != nil {
-		logrus.WithError(err).Fatalf("Failed to open YAML file at %v", yamlFileName)
+		return nil, fmt.Errorf("Failed to open YAML file at %v: %v", yamlFileName, err)
 	}
 	defer yamlFile.Close()
 
 	var cfg EarlyNetworkConfiguration
 	err = yaml.NewDecoder(yamlFile).Decode(&cfg)
 	if err != nil {
-		logrus.WithError(err).Fatalf("Failed to decode YAML file at %v", yamlFileName)
+		return nil, fmt.Errorf("Failed to decode YAML file at %v: %v", yamlFileName, err)
 	}
 	logrus.WithField("cfg", cfg).Infof("Read YAML file at %v", yamlFileName)
+	return &cfg, nil
+}
+
+// Do setup for a dual ToR node, then run as the "early BGP" daemon
+// until calico-node's BIRD can take over.
+func Run() {
+	logrus.Info("Beginning dual ToR setup for this node")
+
+	// There must be a YAML file mapped in at $CALICO_EARLY_NETWORKING that defines addresses
+	// and AS numbers for the nodes in this cluster.  Read that file.
+	cfg, err := GetEarlyNetworkConfig(os.Getenv("CALICO_EARLY_NETWORKING"))
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to read EarlyNetworkConfiguration")
+	}
 
 	// Find the source address that the default route will use, which must be one of the
 	// per-interface addresses.  We will use this to identify this node in the overall YAML

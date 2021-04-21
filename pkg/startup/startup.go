@@ -28,7 +28,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 	kapiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,6 +48,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator/clients"
 
 	"github.com/projectcalico/node/pkg/calicoclient"
+	"github.com/projectcalico/node/pkg/earlynetworking"
 	"github.com/projectcalico/node/pkg/startup/autodetection"
 	"github.com/projectcalico/node/pkg/startup/autodetection/ipv4"
 )
@@ -181,14 +181,12 @@ func Run() {
 
 	configureAndCheckIPAddressSubnets(ctx, cli, node)
 
-	// If running under Kubernetes and there is a "bgp-layout" ConfigMap, read it to set this
-	// node's AS number and rack label.  Note: the "AS" environment variable can still override
-	// this.
-	if clientset != nil {
-		if err := configureBGPLayout(ctx, clientset, nodeName, node); err != nil {
-			log.WithError(err).Error("BGP layout configuration failed")
-			terminate()
-		}
+	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
+	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
+	// override this.
+	if err := configureBGPLayout(ctx, clientset, nodeName, node); err != nil {
+		log.WithError(err).Error("BGP layout configuration failed")
+		terminate()
 	}
 
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
@@ -242,44 +240,38 @@ func Run() {
 }
 
 func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, nodeName string, node *api.Node) error {
-	// Find the namespace we're running in.
-	namespace := os.Getenv("NAMESPACE")
-	if namespace == "" {
-		// Default to calico-system.
-		namespace = "calico-system"
+	yamlFileName := os.Getenv("CALICO_EARLY_NETWORKING")
+	if yamlFileName == "" {
+		log.Info("CALICO_EARLY_NETWORKING is not set")
+		return nil
+	}
+	cfg, err := earlynetworking.GetEarlyNetworkConfig(yamlFileName)
+	if err != nil {
+		return fmt.Errorf("Failed to read EarlyNetworkConfiguration: %v", err)
 	}
 
-	// Get the "bgp-layout" ConfigMap, if available.
-	bgpLayout, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx,
-		"bgp-layout",
-		metav1.GetOptions{})
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			log.Info("No 'bgp-layout' ConfigMap available")
-			return nil
+	// Find the EarlyNetworkConfiguration entry for this node.
+	var thisNode *earlynetworking.ConfigNode
+nodeLoop:
+	for _, nodeCfg := range cfg.Spec.Nodes {
+		for _, addr := range nodeCfg.InterfaceAddresses {
+			if addr == node.Spec.BGP.IPv4Address {
+				thisNode = &nodeCfg
+				break nodeLoop
+			}
 		}
-		return err
+		if nodeCfg.StableAddress.Address == node.Spec.BGP.IPv4Address {
+			thisNode = &nodeCfg
+			break nodeLoop
+		}
 	}
-
-	// Get the entry in the ConfigMap for this node.
-	thisNodeLayout, exists := bgpLayout.Data[nodeName]
-	if !exists {
-		return fmt.Errorf("bgp-layout ConfigMap does not have entry for this node (%v)", nodeName)
+	if thisNode == nil {
+		return fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", node.Spec.BGP.IPv4Address)
 	}
-
-	// Parse that entry (which is in YAML format).
-	type layout struct {
-		Labels   map[string]string `yaml:"labels"`
-		ASNumber int               `yaml:"asNumber"`
-	}
-	var l layout
-	err = yaml.NewDecoder(strings.NewReader(thisNodeLayout)).Decode(&l)
-	if err != nil {
-		return fmt.Errorf("Failed to decode bgp-layout YAML:\n%v\nerr=%v", thisNodeLayout, err)
-	}
+	log.WithField("cfg", *thisNode).Info("Found EarlyNetworkConfiguration entry for this node")
 
 	// Add labels to the Node.
-	for k, v := range l.Labels {
+	for k, v := range thisNode.Labels {
 		if v2, exists := node.Labels[k]; exists {
 			log.Warningf("Overriding existing node label: %v: %v -> %v", k, v2, v)
 		} else {
@@ -289,13 +281,13 @@ func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, no
 	}
 
 	// Add annotation for the AS number.
-	if l.ASNumber != 0 {
+	if thisNode.ASNumber != 0 {
 		if node.Spec.BGP != nil && node.Spec.BGP.ASNumber != nil {
-			log.Warningf("Overriding existing node AS number: %v -> %v", *node.Spec.BGP.ASNumber, l.ASNumber)
+			log.Warningf("Overriding existing node AS number: %v -> %v", *node.Spec.BGP.ASNumber, thisNode.ASNumber)
 		} else {
-			log.Infof("Setting node AS number: %v", l.ASNumber)
+			log.Infof("Setting node AS number: %v", thisNode.ASNumber)
 		}
-		configureASNumber(node, fmt.Sprintf("%v", l.ASNumber), "bgp-layout ConfigMap")
+		configureASNumber(node, fmt.Sprintf("%v", thisNode.ASNumber), "EarlyNetworkConfiguration")
 	}
 	return nil
 }

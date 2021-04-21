@@ -2,7 +2,7 @@
 # From https://github.com/faisyl/alpine-runit
 env > /etc/envvars
 
-if [ "$CALICO_EARLY_NETWORKING" ]; then
+if [ "$CALICO_EARLY_NETWORKING" -a -z "$KUBERNETES_SERVICE_HOST" ]; then
     # Pre-Kubernetes early networking setup (e.g. for dual ToR):
     # enable BIRD IPv4 and early networking services; then those will
     # do what's needed.
