@@ -318,28 +318,6 @@ longer matters if there is any other programming of the true default route on th
        > not.
        {: .alert .alert-info}
 
-1.  Prepare a ConfigMap resource named "bgp-layout", in namespace "calico-system", that
-    specifies each node's AS number and `rack` label, so as to fit correctly with the
-    BGPPeer resources.  For example:
-
-    ```
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: bgp-layout
-      namespace: calico-system
-    data:
-      worker1: |
-        labels:
-          rack: ra
-        asNumber: 65001
-      worker2: |
-        labels:
-          rack: rb
-        asNumber: 65002
-      ...
-    ```
-
 1.  Prepare this BGPConfiguration resource to [disable the full node-to-node
     mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
 
@@ -396,9 +374,18 @@ longer matters if there is any other programming of the true default route on th
     > from pods to the Internet.
     {: .alert .alert-info}
 
-1.  Prepare an EarlyNetworkConfiguration resource to provide the information that
-    dual-homed nodes need for bootstrapping, each time that they boot.  For example, with
-    IP addresses and AS numbers similar as for other resources above:
+1.  Prepare an EarlyNetworkConfiguration resource to specify the additional information
+    that is needed for each node in a multi-rack dual ToR cluster:
+
+	-  The stable address for the node.
+	-  Its BGP AS number.
+	-  The IPs that the node should peer with, when {{site.nodecontainer}} runs
+       as a container for early networking setup after each node boot.
+	-  Any labels that the node should have, so as to match the right BGPPeer definitions
+       for its rack, when {{site.nodecontainer}} runs as a Kubernetes pod.
+
+	<br>
+    For example, with IP addresses and AS numbers similar as for other resources above:
 
     ```
     apiVersion: projectcalico.org/v3
@@ -415,6 +402,8 @@ longer matters if there is any other programming of the true default route on th
           peerings:
             - peerIP: 172.31.11.100
             - peerIP: 172.31.12.100
+          labels:
+            rack: ra
         # worker2
         - interfaceAddresses:
             - 172.31.21.4
@@ -425,16 +414,30 @@ longer matters if there is any other programming of the true default route on th
           peerings:
             - peerIP: 172.31.21.100
             - peerIP: 172.31.22.100
+          labels:
+            rack: rb
         ...
     ```
 
-    > **Note**: Despite the apparent similarity, this resource differs from all the others
-    > in that it will be provided as a file on each newly provisioned node (whereas the
-    > other resources are all served from the Kubernetes API).  It specifies the stable
-    > address for each node.  It also repeats information that could be inferred from the
-    > preceding resources, but that is because the information is needed for post-boot
-    > setup on each node, at a point where the node cannot access the Kubernetes API.
-    {: .alert .alert-info}
+1.  Prepare a ConfigMap resource named "bgp-layout", in namespace "tigera-operator", that
+    wraps the EarlyNetworkConfiguration like this:
+
+    ```
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: bgp-layout
+      namespace: calico-system
+    data:
+      earlyNetworkConfiguration: |
+	    apiVersion: projectcalico.org/v3
+	    kind: EarlyNetworkConfiguration
+	    spec:
+	      nodes:
+	        # worker1
+	        - interfaceAddresses:
+        ...
+    ```
 
 #### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
 
