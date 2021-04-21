@@ -1200,3 +1200,14 @@ var _ = Describe("UT for IP and IP6", func() {
 		Entry("get the original ip(v6)", "1:2:3:4::1111", 6, "1:2:3:4::1111"),
 	)
 })
+
+var _ = Describe("BGP layout tests", func() {
+
+	It("does nothing if CALICO_EARLY_NETWORKING not set", func() {
+		node := makeNode("1.2.3.4/32", "fdf5::1.2.3.4/128")
+		nodeCopy := node.DeepCopy()
+		err := configureBGPLayout(node)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(*node).To(Equal(*nodeCopy))
+	})
+})
