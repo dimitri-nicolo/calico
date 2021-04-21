@@ -1176,7 +1176,7 @@ var _ = Describe("UT for IP and IP6", func() {
 	DescribeTable("env IP is defined", func(ipv4Env string, version int, exceptValue string) {
 		ipv4MockInterfaces := func([]string, []string, int) ([]autodetection.Interface, error) {
 			return []autodetection.Interface{
-				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1.2.3.4/24")},}}, nil
+				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1.2.3.4/24")}}}, nil
 		}
 		ipv4CIDROrIP, _ := getLocalCIDR(ipv4Env, version, ipv4MockInterfaces)
 		Expect(ipv4CIDROrIP).To(Equal(exceptValue))
@@ -1184,13 +1184,12 @@ var _ = Describe("UT for IP and IP6", func() {
 		Entry("get the local cidr", "1.2.3.4", 4, "1.2.3.4/24"),
 		Entry("get the original cidr", "4.3.2.1/25", 4, "4.3.2.1/25"),
 		Entry("get the original ip(v4)", "1.2.3.5", 4, "1.2.3.5"),
-
 	)
 
 	var _ = DescribeTable("env IP6 is defined", func(ipv6Env string, version int, exceptValue string) {
 		ipv6MockInterfaces := func([]string, []string, int) ([]autodetection.Interface, error) {
 			return []autodetection.Interface{
-				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1:2:3:4::5/120")},}}, nil
+				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1:2:3:4::5/120")}}}, nil
 		}
 		ipv4CIDROrIP, _ := getLocalCIDR(ipv6Env, version, ipv6MockInterfaces)
 		Expect(ipv4CIDROrIP).To(Equal(exceptValue))
