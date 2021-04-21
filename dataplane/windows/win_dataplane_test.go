@@ -46,7 +46,23 @@ var _ = Describe("Constructor test", func() {
 		configParams = config.New()
 
 		dpConfig = windataplane.Config{
-			IPv6Enabled: configParams.Ipv6Support,
+			IPv6Enabled:      configParams.Ipv6Support,
+			HealthAggregator: nil,
+
+			Hostname:     configParams.FelixHostname,
+			VXLANEnabled: configParams.VXLANEnabled,
+			VXLANID:      configParams.VXLANVNI,
+			VXLANPort:    configParams.VXLANPort,
+
+			Collector:    nil,
+			LookupsCache: nil,
+
+			DNSCacheFile:         configParams.DNSCacheFile,
+			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
+			DNSCacheEpoch:        configParams.DNSCacheEpoch,
+			DNSExtraTTL:          configParams.DNSExtraTTL,
+			DNSLogsLatency:       configParams.DNSLogsLatency,
+			DNSTrustedServers:    configParams.DNSTrustedServers,
 		}
 	})
 
