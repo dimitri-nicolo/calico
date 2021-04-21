@@ -32,13 +32,13 @@ apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
   name: tigera-secure
-  spec:
-    retention:
-      auditReports: 91
-      snapshots: 91
-      complianceReports: 91
-    nodes:
-      count: 1
+spec:
+  retention:
+    auditReports: 91
+    snapshots: 91
+    complianceReports: 91
+  nodes:
+    count: 1
 ```
 
 This configuration can be done at initial creation of the **LogStorage** resource or by updating it after it is created.
