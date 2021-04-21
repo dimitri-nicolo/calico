@@ -1247,7 +1247,8 @@ var _ = Describe("BGP layout tests", func() {
 				// Write EarlyNetworkConfiguration to file.
 				file, err := os.Create(encFileName)
 				Expect(err).NotTo(HaveOccurred())
-				file.WriteString(enc)
+				_, err = file.WriteString(enc)
+				Expect(err).NotTo(HaveOccurred())
 				file.Close()
 
 				// Call configuration function.
