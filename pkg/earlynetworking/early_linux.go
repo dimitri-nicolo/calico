@@ -15,7 +15,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -66,22 +65,6 @@ protocol bgp tor%v from tors {
 }
 `
 )
-
-func GetEarlyNetworkConfig(yamlFileName string) (*EarlyNetworkConfiguration, error) {
-	yamlFile, err := os.Open(yamlFileName)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to open YAML file at %v: %v", yamlFileName, err)
-	}
-	defer yamlFile.Close()
-
-	var cfg EarlyNetworkConfiguration
-	err = yaml.NewDecoder(yamlFile).Decode(&cfg)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to decode YAML file at %v: %v", yamlFileName, err)
-	}
-	logrus.WithField("cfg", cfg).Infof("Read YAML file at %v", yamlFileName)
-	return &cfg, nil
-}
 
 // Do setup for a dual ToR node, then run as the "early BGP" daemon
 // until calico-node's BIRD can take over.
