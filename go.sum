@@ -656,10 +656,10 @@ github.com/tcnksm/go-input v0.0.0-20180404061846-548a7d7a8ee8/go.mod h1:IlWNj9v/
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae h1:vgGSvdW5Lqg+I1aZOlG32uyE6xHpLdKhZzcTEktz5wM=
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210416175331-1d353f9b9a02 h1:aR/ccESfCPGkq5yWbn+GBneDdlMcrcQ7YXy2/IqVZ2Q=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210416175331-1d353f9b9a02/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
-github.com/tigera/licensing v1.0.1-0.20210416175638-142a1c11df12 h1:ToLXrp7QPPLwTWoX9dfZJIkbA9OIqjngk58cMoqvhZc=
-github.com/tigera/licensing v1.0.1-0.20210416175638-142a1c11df12/go.mod h1:zI8VI8JD4kidw2UzdqaZO2qvl1e4+c4+8zjfP0srerY=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210419124135-41d11f202068 h1:D4W8mnHRvou6yFrtYlVzuVflzIIE17HYGEvK041s8HE=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210419124135-41d11f202068/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
+github.com/tigera/licensing v1.0.1-0.20210419124827-a1a73fa1579e h1:a9bMxYElOTEQ0i1dyX4Ts4xEHh3X47RyEU/nNx9kqHg=
+github.com/tigera/licensing v1.0.1-0.20210419124827-a1a73fa1579e/go.mod h1:X+aYeeu9AZLIuvm3WAz0pFfv4V31QZtr23wmiPJggAw=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
