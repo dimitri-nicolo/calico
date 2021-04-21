@@ -184,7 +184,7 @@ func Run() {
 	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
 	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
 	// override this.
-	if err := configureBGPLayout(ctx, clientset, nodeName, node); err != nil {
+	if err := configureBGPLayout(node); err != nil {
 		log.WithError(err).Error("BGP layout configuration failed")
 		terminate()
 	}
@@ -239,7 +239,7 @@ func Run() {
 	}
 }
 
-func configureBGPLayout(ctx context.Context, clientset *kubernetes.Clientset, nodeName string, node *api.Node) error {
+func configureBGPLayout(node *api.Node) error {
 	yamlFileName := os.Getenv("CALICO_EARLY_NETWORKING")
 	if yamlFileName == "" {
 		log.Info("CALICO_EARLY_NETWORKING is not set")
