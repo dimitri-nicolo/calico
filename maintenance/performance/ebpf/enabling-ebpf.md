@@ -43,6 +43,7 @@ eBPF mode currently has some limitations relative to the standard Linux pipeline
 - eBPF mode does not support SCTP, either for policy or services.
 - eBPF mode requires that node  [IP autodetection]({{site.baseurl}}/networking/ip-autodetection) is enabled even in environments where {{site.prodname}} CNI and BGP are not in use.  In eBPF mode, the node IP is used to originate VXLAN packets when forwarding traffic from external sources to services.
 - eBPF mode does not support the "Log" action in policy rules. This limitation also applies to the Drop Action Override feature: `LOGandDROP` and `LOGandACCEPT` are interpreted as `DROP` and `ACCEPT`, respectively.
+- eBPF mode does not support Egress Gateways.
 
 ### Features
 
