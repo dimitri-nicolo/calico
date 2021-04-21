@@ -15,8 +15,11 @@
 package windataplane_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 
@@ -29,6 +32,17 @@ var _ = Describe("Constructor test", func() {
 	var dpConfig windataplane.Config
 
 	JustBeforeEach(func() {
+		saveGetKubernetesService := config.GetKubernetesService
+		defer func() { config.GetKubernetesService = saveGetKubernetesService }()
+		config.GetKubernetesService = func(namespace, name string) (*v1.Service, error) {
+			if namespace == "kube-system" && name == "kube-dns" {
+				return &v1.Service{Spec: v1.ServiceSpec{
+					ClusterIP: "10.96.0.45",
+					Ports:     []v1.ServicePort{{Port: 54}},
+				}}, nil
+			}
+			return nil, fmt.Errorf("No such service")
+		}
 		configParams = config.New()
 
 		dpConfig = windataplane.Config{
