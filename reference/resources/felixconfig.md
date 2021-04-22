@@ -107,6 +107,7 @@ spec:
 | flowLogsFileIncludePolicies | When set to `true`, include all policies in the aggregated flow logs that acted upon and matches the flow log traffic. | `true`, `false` | boolean | `false` |
 | flowLogsEnableNetworkSets | When set to `true`, include an arbitrary network set in the aggregated flow log that matches the IP address of the flow log endpoint. | `true`, `false` | boolean | `false` |
 | flowLogsCollectProcessInfo | When set to `true`, Felix will load the kprobe BPF programs to collect process info. | `true`, `false` | boolean | `false` |
+| flowLogsCollectTcpStats | When set to `true`, Felix will collect the TCP socket stats. | `true`, `false` | boolean | `false` |
 | flowLogsFilePerFlowProcessLimit | Specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated | int | int | `2` |
 | statsDumpFilePath | Specify the position of the file used for dumping flow log statistics on Linux nodes. Note this is an internal setting that users shouldn't need to modify.| string | string | `/var/log/calico/stats/dump` |
 | routeTableRange                    | Calico programs additional Linux route tables for various purposes.  `RouteTableRange` specifies the indices of the route tables that Calico should use. |  | [RouteTableRange](#routetablerange) | `{Min: 1, Max: 250}` |
