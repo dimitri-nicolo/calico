@@ -230,18 +230,18 @@ class _FailoverTest(TestBase):
         error = 0
 
         if len(server_log) == 0:
-            _log.exception("empty server log of %s at %d seconds", name, count)
-            raise Exception("error empty server log")
-
-        last_log = server_log[-1]
-        if last_log.find("--") == -1:
-            last_log = server_log[-2]
+            # No packets received yet.
+            seq = 0
+        else:
+            last_log = server_log[-1]
             if last_log.find("--") == -1:
-                _log.exception("failed to parse server log of %s at %d seconds", name, count)
-                raise Exception("error parsing server log")
+                last_log = server_log[-2]
+                if last_log.find("--") == -1:
+                    _log.exception("failed to parse server log of %s at %d seconds", name, count)
+                    raise Exception("error parsing server log")
+            seq_string = last_log.split("--")[0]
+            seq = int(seq_string)
 
-        seq_string = last_log.split("--")[0]
-        seq = int(seq_string)
         diff = seq - previous_seq
 
         _log.info("%d second -- %s %s packets received (latest seq # %d, %d server log lines)",
