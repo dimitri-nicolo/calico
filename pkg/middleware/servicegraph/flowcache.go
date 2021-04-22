@@ -1,6 +1,7 @@
 package servicegraph
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -34,14 +35,14 @@ func (t TimeSeriesFlow) String() string {
 	return fmt.Sprintf("L3Flow %s (%s)", t.Edge, t.AggregatedProtoPorts)
 }
 
-type FlowData struct {
+type FilteredTimeSeriesFlowData struct {
 	TimeIntervals []v1.TimeRange
 	FilteredFlows []TimeSeriesFlow
 	ServiceGroups ServiceGroups
 }
 
 type FlowCache interface {
-	GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRange, filter RBACFilter) (*FlowData, error)
+	GetFilteredFlowData(ctx context.Context, indexL3, indexL7 string, tr v1.TimeRange, filter RBACFilter) (*FilteredTimeSeriesFlowData, error)
 }
 
 func NewFlowCache(client lmaelastic.Client) FlowCache {
@@ -54,7 +55,7 @@ type flowCache struct {
 	client lmaelastic.Client
 }
 
-func (fc *flowCache) GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRange, filter RBACFilter) (*FlowData, error) {
+func (fc *flowCache) GetFilteredFlowData(ctx context.Context, indexL3, indexL7 string, tr v1.TimeRange, filter RBACFilter) (*FilteredTimeSeriesFlowData, error) {
 	// At the moment there is no cache and only a single data point in the flow. Kick off the L3 and L7 queries at the
 	// same time.
 	wg := sync.WaitGroup{}
@@ -64,11 +65,11 @@ func (fc *flowCache) GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRang
 
 	wg.Add(2)
 	go func() {
-		rawL3, errL3 = GetRawL3FlowData(fc.client, indexL3, tr)
+		rawL3, errL3 = GetL3FlowData(ctx, fc.client, indexL3, tr)
 		wg.Done()
 	}()
 	go func() {
-		rawL7, errL7 = GetRawL7FlowData(fc.client, indexL7, tr)
+		rawL7, errL7 = GetRawL7FlowData(ctx, fc.client, indexL7, tr)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -79,7 +80,7 @@ func (fc *flowCache) GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRang
 		return nil, errL7
 	}
 
-	fd := &FlowData{
+	fd := &FilteredTimeSeriesFlowData{
 		TimeIntervals: []v1.TimeRange{tr},
 		ServiceGroups: NewServiceGroups(),
 	}
@@ -92,11 +93,12 @@ func (fc *flowCache) GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRang
 		if rf.Edge.ServicePort != nil {
 			fd.ServiceGroups.AddMapping(*rf.Edge.ServicePort, rf.Edge.Dest)
 		}
+		stats := rf.Stats
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
 			Edge:                 rf.Edge,
 			AggregatedProtoPorts: rf.AggregatedProtoPorts,
 			TrafficStats: []v1.GraphTrafficStats{{
-				L3: &rf.Stats,
+				L3: &stats,
 			}},
 		})
 	}
@@ -107,10 +109,11 @@ func (fc *flowCache) GetFilteredFlowData(indexL3, indexL7 string, tr v1.TimeRang
 		if !filter.IncludeFlow(rf.Edge) {
 			continue
 		}
+		stats := rf.Stats
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
 			Edge: rf.Edge,
 			TrafficStats: []v1.GraphTrafficStats{{
-				L7: &rf.Stats,
+				L7: &stats,
 			}},
 		})
 	}

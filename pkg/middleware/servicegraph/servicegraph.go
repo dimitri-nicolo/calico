@@ -46,13 +46,16 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 			return
 		}
 
+		// Extract the request context.
+		ctx := req.Context()
+
 		// Parse the view IDs.
 		indexL3 := flows.GetFlowsIndex(req)
 		indexL7 := flows.GetL7FlowsIndex(req)
 		rbacFilter := s.getRBACFilter(req)
 
 		// Get the filtered flow from the cache.
-		if f, err := s.flowCache.GetFilteredFlowData(indexL3, indexL7, sgr.TimeRange, rbacFilter); err != nil {
+		if f, err := s.flowCache.GetFilteredFlowData(ctx, indexL3, indexL7, sgr.TimeRange, rbacFilter); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if pv, err := ParseViewIDs(sgr, f.ServiceGroups); err != nil {

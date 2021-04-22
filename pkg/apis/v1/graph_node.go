@@ -1,7 +1,14 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package v1
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"sort"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 type GraphNodeType string
 
@@ -39,8 +46,12 @@ type GraphNode struct {
 	Port        int           `json:"port,omitempty"`
 	Layer       string        `json:"layer,omitempty"`
 
-	// Aggregated data for the node. This is included if
-	Aggregated *AggregatedProtoPorts `json:"aggregated,omitempty"`
+	// The services contained within this group.
+	Services Services `json:"services,omitempty"`
+
+	// Aggregated protocol and port information for this node. Protocols and ports that are explicitly included in the
+	// graph because they are part of an expanded service are not included in this aggregated set.
+	AggregatedProtoPorts *AggregatedProtoPorts `json:"aggregated_proto_ports,omitempty"`
 
 	// Traffic stats for packets flowing between endpoints within this graph node. Each entry corresponds to the
 	// a time slice as specified in the main response object.
@@ -55,6 +66,10 @@ type GraphNode struct {
 	// nodes and edges.
 	FollowEgress  bool `json:"follow_egress,omitempty"`
 	FollowIngress bool `json:"follow_ingress,omitempty"`
+
+	// The selectors provide the set of selector expressions used to access the raw data that corresponds to this
+	// graph node.
+	Selectors GraphSelectors `json:"selectors"`
 }
 
 func (n *GraphNode) Include(ts []GraphTrafficStats) {
@@ -62,9 +77,66 @@ func (n *GraphNode) Include(ts []GraphTrafficStats) {
 		n.TrafficStats = ts
 	} else if ts != nil {
 		for i := range n.TrafficStats {
-			n.TrafficStats[i] = n.TrafficStats[i].Add(ts[i])
+			n.TrafficStats[i] = n.TrafficStats[i].Combine(ts[i])
 		}
 	}
+}
+
+func (n *GraphNode) IncludeAggregatedProtoPorts(p *AggregatedProtoPorts) {
+	if p == nil {
+		return
+	} else if n.AggregatedProtoPorts == nil {
+		n.AggregatedProtoPorts = p
+		return
+	}
+
+	// We can't really combine the aggregated ports and protos very easily. If one has more protocols than the other
+	// use that.
+	if p.NumOtherProtocols > n.AggregatedProtoPorts.NumOtherProtocols {
+		n.AggregatedProtoPorts = p
+		return
+	}
+
+	// Number of other protocols is the same.  Combine the data.
+	otherProtos := p.NumOtherProtocols
+	protoPorts := map[string]AggregatedPorts{}
+	var protos []string
+	for _, ap := range n.AggregatedProtoPorts.ProtoPorts {
+		protoPorts[ap.Protocol] = ap
+		protos = append(protos, ap.Protocol)
+	}
+	for _, ap := range p.ProtoPorts {
+		if existing, ok := protoPorts[ap.Protocol]; ok {
+			if ap.NumOtherPorts > existing.NumOtherPorts {
+				protoPorts[ap.Protocol] = ap
+			}
+		} else {
+			protoPorts[ap.Protocol] = ap
+			protos = append(protos, ap.Protocol)
+			otherProtos--
+		}
+	}
+	if otherProtos < 0 {
+		otherProtos = 0
+	}
+
+	app := AggregatedProtoPorts{
+		NumOtherProtocols: otherProtos,
+	}
+	sort.Strings(protos)
+	for _, proto := range protos {
+		ap := protoPorts[proto]
+		app.ProtoPorts = append(app.ProtoPorts, ap)
+	}
+
+	n.AggregatedProtoPorts = &app
+}
+
+func (n *GraphNode) IncludeService(s types.NamespacedName) {
+	if n.Services == nil {
+		n.Services = make(Services)
+	}
+	n.Services[s] = struct{}{}
 }
 
 func (n GraphNode) String() string {
@@ -80,7 +152,7 @@ type AggregatedProtoPorts struct {
 }
 
 func (a AggregatedProtoPorts) String() string {
-	return fmt.Sprintf("Aggregated protocol and ports: %#v", a)
+	return fmt.Sprintf("AggregatedProtoPorts protocol and ports: %#v", a)
 }
 
 type AggregatedPorts struct {
@@ -96,4 +168,52 @@ type PortRange struct {
 
 func (p PortRange) Num() int {
 	return p.MaxPort - p.MinPort + 1
+}
+
+type Services map[types.NamespacedName]struct{}
+
+func (s Services) MarshalJSON() ([]byte, error) {
+	var svcs SortableServices
+	for svc := range s {
+		svcs = append(svcs, svc)
+	}
+	sort.Sort(svcs)
+
+	buffer := bytes.NewBufferString("[")
+	length := len(svcs)
+	count := 0
+	for _, value := range svcs {
+		jsonValueNamespace, err := json.Marshal(value.Namespace)
+		if err != nil {
+			return nil, err
+		}
+		jsonValueName, err := json.Marshal(value.Name)
+		if err != nil {
+			return nil, err
+		}
+		buffer.WriteString(fmt.Sprintf("{\"namespace\":%s,\"name\":%s}", string(jsonValueNamespace), string(jsonValueName)))
+		count++
+		if count < length {
+			buffer.WriteString(",")
+		}
+	}
+	buffer.WriteString("]")
+	return buffer.Bytes(), nil
+}
+
+type SortableServices []types.NamespacedName
+
+func (s SortableServices) Len() int {
+	return len(s)
+}
+func (s SortableServices) Less(i, j int) bool {
+	if s[i].Namespace < s[j].Namespace {
+		return true
+	} else if s[i].Namespace == s[j].Namespace && s[i].Name < s[j].Name {
+		return true
+	}
+	return false
+}
+func (s SortableServices) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }

@@ -12,11 +12,14 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-// This file implements a service group organizer and cache. It effectively defines the concept of a service group
-// which is a group of services that are related by a common set of endpoints. It is careful with HostEndpoints,
+// This file implements a service group organizer and pre-request cache. It effectively defines the concept of a service
+// group which is a group of services that are related by a common set of endpoints. It is careful with HostEndpoints,
 // NetworkSets, GlobalNetworkSets and networks - ensuring that when included in a service, they are unrelated to the
 // same endpoint not in a service (i.e. A "pub" Network in service X will be a separate graph node from a "pub"
 // Network in service Y, both will be a separate graph node from a "pub" Network not in a service).
+//
+// The service group mappings are calculated on a per-request basis to avoid overly bloating the service group
+// relationships - if we held a persistent cache of service group info then we'd need to age out expired endpoints.
 
 // GetServiceGroupFlowEndpointKey returns an aggregated FlowEndpoint associated with the endpoint, protocol and port.
 // This is the natural grouping of the endpoint for service groups.
@@ -47,6 +50,7 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 	return nil
 }
 
+// ServiceGroups interface is used to populate and query the service group relationship cache.
 type ServiceGroups interface {
 	// Methods used to populate the service groups
 	AddMapping(svc ServicePort, ep FlowEndpoint)
@@ -58,6 +62,7 @@ type ServiceGroups interface {
 	GetByEndpoint(ep FlowEndpoint) *ServiceGroup
 }
 
+// ServiceGroup contains the endpoint and service information for a single service group.
 type ServiceGroup struct {
 	// The ID for this service group.
 	ID string
@@ -115,18 +120,20 @@ func NewServiceGroups() ServiceGroups {
 	return sd
 }
 
+// FinishMappings is called when all of the service<->endpoint mappings have been added to this cache. This method
+// calculates the service groupings by collecting services with common sets of endpoints.
 func (sd *serviceGroups) FinishMappings() {
 	// Calculate the service groups name and namespace.
 	sd.serviceGroups.Iter(func(item interface{}) error {
 		sg := item.(*ServiceGroup)
-		names := &nameCalculator{}
-		namespaces := &nameCalculator{}
+		names := &nameCalculator{names: make(map[string]bool)}
+		namespaces := &nameCalculator{names: make(map[string]bool)}
 		for svcKey := range sg.ServicePorts {
 			names.add(svcKey.Name)
 			namespaces.add(svcKey.Namespace)
 		}
-		sg.Name = names.calc()
-		sg.Namespace = namespaces.calc()
+		sg.Name = names.combined()
+		sg.Namespace = namespaces.uniq()
 
 		return nil
 	})
@@ -168,7 +175,7 @@ func (sd *serviceGroups) FinishMappings() {
 		sg := item.(*ServiceGroup)
 
 		// Sort the services for easier testing.
-		sort.Sort(sortableServices(sg.Services))
+		sort.Sort(v1.SortableServices(sg.Services))
 
 		// Construct the id using the IDInfo.
 		f.Services = sg.Services
@@ -216,6 +223,8 @@ func (sd *serviceGroups) FinishMappings() {
 	})
 }
 
+// AddMapping adds a service port <-> endpoint mapping to the cache.  When all mappings have been added, the caller should call
+// FinishMappings.
 func (s *serviceGroups) AddMapping(svc ServicePort, ep FlowEndpoint) {
 	// If there is an existing service group either by service or endpoint then apply updates to that service
 	// group, otherwise create a new service group.
@@ -272,6 +281,9 @@ func (s *serviceGroups) AddMapping(svc ServicePort, ep FlowEndpoint) {
 	}
 }
 
+// migrateReferences is invoked when a service->endoint mapping is added that links two service groups together. In this
+// case the service groups are combined into a single group by migrating the endpoint data from one service group into
+// the other.
 func (s *serviceGroups) migrateReferences(from, to *ServiceGroup) {
 	// Update the mappings.
 	for svc, eps := range from.ServicePorts {
@@ -287,43 +299,36 @@ func (s *serviceGroups) migrateReferences(from, to *ServiceGroup) {
 		to.ServicePorts[svc] = eps
 	}
 
-	// Remote the old grouop.
+	// Remove the old group.
 	s.serviceGroups.Discard(from)
-}
-
-type sortableServices []types.NamespacedName
-
-func (s sortableServices) Len() int {
-	return len(s)
-}
-func (s sortableServices) Less(i, j int) bool {
-	if s[i].Namespace < s[j].Namespace {
-		return true
-	} else if s[i].Namespace == s[j].Namespace && s[i].Name < s[j].Name {
-		return true
-	}
-	return false
-}
-func (s sortableServices) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
 }
 
 // nameCalculator is used to track names underpinning a group of resources, and to create an aggregated name from the
 // set of names.
-// At the moment this simply returns a "*" if there are multiple distinct names, but in future we could look for
-// common name segment prefixes.
 type nameCalculator struct {
-	name string
+	names map[string]bool
+	name  string
 }
 
+// Add a name to the calculator.
 func (nc *nameCalculator) add(name string) {
 	if nc.name == "" {
 		nc.name = name
-	} else if nc.name != name {
-		nc.name = "*"
+	} else if nc.names[name] {
+		nc.name += "/" + name
 	}
+	nc.names[name] = true
 }
 
-func (nc *nameCalculator) calc() string {
+// Return a name constructed from a  unique combination of the names.
+func (nc *nameCalculator) combined() string {
+	return nc.name
+}
+
+// Return the unique name. If there are multiple different names then return a "*".
+func (nc *nameCalculator) uniq() string {
+	if len(nc.names) > 1 {
+		return "*"
+	}
 	return nc.name
 }

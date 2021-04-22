@@ -15,6 +15,10 @@ type GraphEdge struct {
 
 	// Statistics associated with this edge. Each entry corresponds to the time range in ServiceGraphResponse.
 	TrafficStats []GraphTrafficStats `json:"traffic_stats,omitempty"`
+
+	// The selectors provide the set of selector expressions used to access the raw data that corresponds to this
+	// graph edge.
+	Selectors GraphSelectors `json:"selectors"`
 }
 
 func (e *GraphEdge) Include(ts []GraphTrafficStats) {
@@ -22,7 +26,7 @@ func (e *GraphEdge) Include(ts []GraphTrafficStats) {
 		e.TrafficStats = ts
 	} else if ts != nil {
 		for i := range e.TrafficStats {
-			e.TrafficStats[i] = e.TrafficStats[i].Add(ts[i])
+			e.TrafficStats[i] = e.TrafficStats[i].Combine(ts[i])
 		}
 	}
 }

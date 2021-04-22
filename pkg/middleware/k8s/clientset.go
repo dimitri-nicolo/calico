@@ -10,12 +10,14 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/transport"
+
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 // Unexported type to avoid context key collisions.

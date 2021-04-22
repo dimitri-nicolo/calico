@@ -51,9 +51,12 @@ func newParsedNodes() *ParsedNodes {
 // ParsedLayers contains the details about the parsed layers. The different aggregation levels are split
 // out for easier lookup in the graph constructor.
 type ParsedLayers struct {
-	NamespaceToLayer    map[string]string
-	ServiceGroupToLayer map[*ServiceGroup]string
-	EndpointToLayer     map[FlowEndpoint]string
+	NamespaceToLayer     map[string]string
+	ServiceGroupToLayer  map[*ServiceGroup]string
+	EndpointToLayer      map[FlowEndpoint]string
+	LayerToNamespaces    map[string][]string
+	LayerToServiceGroups map[string][]*ServiceGroup
+	LayerToEndpoints     map[string][]FlowEndpoint
 }
 
 // newParsedLayers initializes a new ParsedLayers struct.
@@ -130,22 +133,34 @@ func parseLayers(layers v1.Layers, sgs ServiceGroups) (pn *ParsedLayers, err err
 			} else {
 				switch pid.ParsedIDType {
 				case v1.GraphNodeTypeNamespace:
-					pn.NamespaceToLayer[pid.Endpoint.Namespace] = layer
+					if _, ok := pn.NamespaceToLayer[pid.Endpoint.Namespace]; !ok {
+						pn.NamespaceToLayer[pid.Endpoint.Namespace] = layer
+						pn.LayerToNamespaces[layer] = append(pn.LayerToNamespaces[layer], pid.Endpoint.Namespace)
+					}
 				case v1.GraphNodeTypeService, v1.GraphNodeTypeServicePort:
 					if sg := sgs.GetByService(pid.Service.NamespacedName); sg != nil {
-						pn.ServiceGroupToLayer[sg] = layer
+						if _, ok := pn.ServiceGroupToLayer[sg]; !ok {
+							pn.ServiceGroupToLayer[sg] = layer
+							pn.LayerToServiceGroups[layer] = append(pn.LayerToServiceGroups[layer], sg)
+						}
 					}
 				case v1.GraphNodeTypeServiceGroup:
 					for _, s := range pid.Services {
 						if sg := sgs.GetByService(s); sg != nil {
-							pn.ServiceGroupToLayer[sg] = layer
+							if _, ok := pn.ServiceGroupToLayer[sg]; !ok {
+								pn.ServiceGroupToLayer[sg] = layer
+								pn.LayerToServiceGroups[layer] = append(pn.LayerToServiceGroups[layer], sg)
+							}
 						}
 					}
 				default:
 					// Otherwise assume it's the endpoint we parsed - and in that case we use the service group
 					// endpoint key - which may or may not include port and protocol based on what is available.
 					if ep := GetServiceGroupFlowEndpointKey(pid.Endpoint); ep != nil {
-						pn.EndpointToLayer[*ep] = layer
+						if _, ok := pn.EndpointToLayer[*ep]; !ok {
+							pn.EndpointToLayer[*ep] = layer
+							pn.LayerToEndpoints[layer] = append(pn.LayerToEndpoints[layer], *ep)
+						}
 					}
 				}
 			}

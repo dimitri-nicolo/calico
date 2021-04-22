@@ -65,8 +65,8 @@ var (
 	}
 )
 
-func GetRawL7FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]L7Flow, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), flowTimeout)
+func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, index string, t v1.TimeRange) ([]L7Flow, error) {
+	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
@@ -119,22 +119,22 @@ func GetRawL7FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([
 		key := bucket.CompositeAggregationKey
 		code := key[l7ResponseCodeIdx].String()
 		source := FlowEndpoint{
-			Type:      mapType(key[l7SourceTypeIdx].String(), true),
-			NameAggr:  removeSingleDash(key[l7SourceNameAggrIdx].String()),
-			Namespace: removeSingleDash(key[l7SourceNamespaceIdx].String()),
+			Type:      mapRawTypeToGraphNodeType(key[l7SourceTypeIdx].String(), true),
+			NameAggr:  singleDashToBlank(key[l7SourceNameAggrIdx].String()),
+			Namespace: singleDashToBlank(key[l7SourceNamespaceIdx].String()),
 		}
 		svc := ServicePort{
 			NamespacedName: types.NamespacedName{
-				Name:      removeSingleDash(key[l7DestServiceNameIdx].String()),
-				Namespace: removeSingleDash(key[l7DestServiceNamespaceIdx].String()),
+				Name:      singleDashToBlank(key[l7DestServiceNameIdx].String()),
+				Namespace: singleDashToBlank(key[l7DestServiceNamespaceIdx].String()),
 			},
-			//Port:  removeSingleDash(key[flowDestServicePortIdx].String()),
+			//Port:  singleDashToBlank(key[flowDestServicePortIdx].String()),
 			Proto: l7Proto,
 		}
 		dest := FlowEndpoint{
-			Type:      mapType(key[l7DestTypeIdx].String(), true),
-			NameAggr:  removeSingleDash(key[l7DestNameAggrIdx].String()),
-			Namespace: removeSingleDash(key[l7DestNamespaceIdx].String()),
+			Type:      mapRawTypeToGraphNodeType(key[l7DestTypeIdx].String(), true),
+			NameAggr:  singleDashToBlank(key[l7DestNameAggrIdx].String()),
+			Namespace: singleDashToBlank(key[l7DestNamespaceIdx].String()),
 			//Port:      int(key[l7DestPortIdx].Float64()),
 			Proto: l7Proto,
 		}
@@ -149,7 +149,7 @@ func GetRawL7FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([
 		}
 
 		l7PacketStats := v1.GraphL7PacketStats{
-			GraphPacketStats: v1.GraphPacketStats{
+			GraphByteStats: v1.GraphByteStats{
 				BytesIn:  int64(bucket.AggregatedSums["sum_bytes_in"]),
 				BytesOut: int64(bucket.AggregatedSums["sum_bytes_out"]),
 			},
@@ -168,19 +168,17 @@ func GetRawL7FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([
 
 		if code_val, err := strconv.Atoi(code); err == nil {
 			if code_val < 200 {
-				l7Stats.ResponseCode1xx = l7Stats.ResponseCode1xx.Add(l7PacketStats)
+				l7Stats.ResponseCode1xx = l7Stats.ResponseCode1xx.Combine(l7PacketStats)
 			} else if code_val < 300 {
-				l7Stats.ResponseCode2xx = l7Stats.ResponseCode2xx.Add(l7PacketStats)
+				l7Stats.ResponseCode2xx = l7Stats.ResponseCode2xx.Combine(l7PacketStats)
 			} else if code_val < 400 {
-				l7Stats.ResponseCode3xx = l7Stats.ResponseCode3xx.Add(l7PacketStats)
+				l7Stats.ResponseCode3xx = l7Stats.ResponseCode3xx.Combine(l7PacketStats)
 			} else if code_val < 500 {
-				l7Stats.ResponseCode4xx = l7Stats.ResponseCode4xx.Add(l7PacketStats)
+				l7Stats.ResponseCode4xx = l7Stats.ResponseCode4xx.Combine(l7PacketStats)
 			} else {
-				l7Stats.ResponseCode5xx = l7Stats.ResponseCode5xx.Add(l7PacketStats)
+				l7Stats.ResponseCode5xx = l7Stats.ResponseCode5xx.Combine(l7PacketStats)
 			}
 		}
-
-		lastSource, lastDest, lastSvc = source, dest, svc
 	}
 	if foundFlow {
 		addFlow(lastSource, lastDest, lastSvc, l7Stats)

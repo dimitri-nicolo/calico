@@ -27,7 +27,7 @@ import (
 //                                                 E will be included if the ingress connections for D are being followed
 
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
-func GetServiceGraphResponse(f *FlowData, v *ParsedViewIDs) (*v1.ServiceGraphResponse, error) {
+func GetServiceGraphResponse(f *FilteredTimeSeriesFlowData, v *ParsedViewIDs) (*v1.ServiceGraphResponse, error) {
 	sgr := &v1.ServiceGraphResponse{
 		// Response should include the time range actually used to perform these queries.
 		TimeIntervals: f.TimeIntervals,
@@ -88,7 +88,7 @@ func GetServiceGraphResponse(f *FlowData, v *ParsedViewIDs) (*v1.ServiceGraphRes
 		})
 	}
 
-	// Trace out the service groups if the log level is debug.
+	// Trace out the nodes and edges if the log level is debug.
 	if log.IsLevelEnabled(log.DebugLevel) {
 		for _, node := range sgr.Nodes {
 			log.Debugf("%s", node)
@@ -148,14 +148,14 @@ type serviceGraphConstructionData struct {
 	edgesMap map[v1.GraphEdgeID]*v1.GraphEdge
 
 	// The supplied flow data.
-	flowData *FlowData
+	flowData *FilteredTimeSeriesFlowData
 
 	// The supplied view data.
 	view *ParsedViewIDs
 }
 
 // newServiceGraphConstructor intializes a new serviceGraphConstructionData.
-func newServiceGraphConstructor(f *FlowData, v *ParsedViewIDs) *serviceGraphConstructionData {
+func newServiceGraphConstructor(f *FilteredTimeSeriesFlowData, v *ParsedViewIDs) *serviceGraphConstructionData {
 	return &serviceGraphConstructionData{
 		groupsMap: make(map[string]*trackedGroup),
 		nodesMap:  make(map[string]*v1.GraphNode),
@@ -178,6 +178,21 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 	srcGp, srcEp, _ := s.trackNodes(flow.Edge.Source, nil, DirectionEgress)
 	dstGp, dstEp, servicePortDst := s.trackNodes(flow.Edge.Dest, flow.Edge.ServicePort, DirectionIngress)
 
+	// Include any aggregated port proto info in either the group or the endpoint.  Include the service in the group if
+	// it is not expanded.
+	if dstGp != "" && dstEp == "" && servicePortDst == "" {
+		if flow.AggregatedProtoPorts != nil {
+			s.nodesMap[dstGp].IncludeAggregatedProtoPorts(flow.AggregatedProtoPorts)
+		}
+		if flow.Edge.ServicePort != nil {
+			s.nodesMap[dstGp].IncludeService(flow.Edge.ServicePort.NamespacedName)
+		}
+	} else if dstEp != "" {
+		if flow.AggregatedProtoPorts != nil {
+			s.nodesMap[dstEp].IncludeAggregatedProtoPorts(flow.AggregatedProtoPorts)
+		}
+	}
+
 	// If the source and dest group are the same then do not add edges, instead add the traffic stats to the group node
 	// and just return the group node.
 	if srcGp == dstGp {
@@ -199,6 +214,7 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 			s.edgesMap[id] = &v1.GraphEdge{
 				ID:           id,
 				TrafficStats: flow.TrafficStats,
+				Selectors:    v1.GetEdgeSelectors(s.nodesMap[srcEp].Selectors, s.nodesMap[servicePortDst].Selectors),
 			}
 		}
 
@@ -213,6 +229,7 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 			s.edgesMap[id] = &v1.GraphEdge{
 				ID:           id,
 				TrafficStats: flow.TrafficStats,
+				Selectors:    v1.GetEdgeSelectors(s.nodesMap[servicePortDst].Selectors, s.nodesMap[dstEp].Selectors),
 			}
 		}
 	} else {
@@ -227,6 +244,7 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 			s.edgesMap[id] = &v1.GraphEdge{
 				ID:           id,
 				TrafficStats: flow.TrafficStats,
+				Selectors:    v1.GetEdgeSelectors(s.nodesMap[srcEp].Selectors, s.nodesMap[dstEp].Selectors),
 			}
 		}
 	}
@@ -292,8 +310,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 			s.nodesMap[id] = &v1.GraphNode{
 				ID:         id,
 				Type:       v1.GraphNodeTypeLayer,
-				Layer:      layerName,
+				Name:       layerName,
 				Expandable: true,
+				Selectors:  GetLayerNodeSelectors(layerName, s.view),
 			}
 			s.groupsMap[id] = newTrackedGroup(
 				id, s.view.Focus.Layers[layerName],
@@ -312,8 +331,10 @@ func (s *serviceGraphConstructionData) trackNodes(
 			s.nodesMap[id] = &v1.GraphNode{
 				ID:         id,
 				Type:       v1.GraphNodeTypeNamespace,
+				Name:       endpoint.Namespace,
 				Layer:      layerNameNamespace,
 				Expandable: true,
+				Selectors:  GetNamespaceNodeSelectors(endpoint.Namespace),
 			}
 			s.groupsMap[id] = newTrackedGroup(
 				id,
@@ -338,6 +359,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 				Name:       sg.Name,
 				Layer:      layerNameServiceGroup,
 				Expandable: true,
+				Selectors:  GetServiceGroupNodeSelectors(sg),
 			}
 			s.groupsMap[id] = newTrackedGroup(
 				id,
@@ -371,13 +393,14 @@ func (s *serviceGraphConstructionData) trackNodes(
 					Name:        svc.Name,
 					ServicePort: svc.Port,
 					ParentID:    parentId,
+					Selectors:   GetServicePortNodeSelectors(*svc),
 				}
 				s.groupsMap[groupId].update(serviceId, false, false, false)
 			}
 		}
 	}
 
-	// Add the aggregated endpoint node - this should  always be available for a flow.
+	// Combine the aggregated endpoint node - this should  always be available for a flow.
 	id := idi.GetAggrEndpointID()
 	if _, ok := s.nodesMap[id]; !ok {
 		s.nodesMap[id] = &v1.GraphNode{
@@ -387,6 +410,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 			Name:       endpoint.NameAggr,
 			Layer:      layerNameEndpoint,
 			Expandable: true,
+			Selectors: GetEndpointNodeSelectors(idi.GetAggrEndpointType(), endpoint.Namespace, endpoint.NameAggr,
+				NoProto, NoPort, idi.Direction),
 		}
 
 		var isInFocus, isFollowingEgress, isFollowingIngress bool
@@ -433,6 +458,10 @@ func (s *serviceGraphConstructionData) trackNodes(
 					Port:     endpoint.Port,
 					Protocol: endpoint.Proto,
 					ParentID: parentId,
+					Selectors: GetEndpointNodeSelectors(
+						idi.GetAggrEndpointType(), endpoint.Namespace, endpoint.NameAggr,
+						endpoint.Proto, endpoint.Port, idi.Direction,
+					),
 				}
 				s.groupsMap[groupId].update(id, false, false, false)
 			}
@@ -450,6 +479,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 			Namespace: endpoint.Namespace,
 			Name:      endpoint.Name,
 			ParentID:  parentId,
+			Selectors: GetEndpointNodeSelectors(
+				idi.Endpoint.Type, endpoint.Namespace, endpoint.NameAggr, NoProto, NoPort, idi.Direction,
+			),
 		}
 		s.groupsMap[groupId].update(nonAggEndpointId, false, false, false)
 	}
@@ -463,6 +495,10 @@ func (s *serviceGraphConstructionData) trackNodes(
 				Port:     endpoint.Port,
 				Protocol: endpoint.Proto,
 				ParentID: parentId,
+				Selectors: GetEndpointNodeSelectors(
+					idi.Endpoint.Type, endpoint.Namespace, endpoint.NameAggr,
+					endpoint.Proto, endpoint.Port, idi.Direction,
+				),
 			}
 			s.groupsMap[groupId].update(id, false, false, false)
 		}

@@ -159,12 +159,12 @@ const (
 	reportedAtDest
 )
 
-type RawFlowData struct {
+type L3FlowData struct {
 	Flows []L3Flow
 }
 
-func GetRawL3FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([]L3Flow, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), flowTimeout)
+func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, t v1.TimeRange) ([]L3Flow, error) {
+	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
@@ -188,24 +188,24 @@ func GetRawL3FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([
 		key := bucket.CompositeAggregationKey
 		reporter := key[flowReporterIdx].String()
 		action := key[flowActionIdx].String()
-		proto := removeSingleDash(key[flowProtoIdx].String())
+		proto := singleDashToBlank(key[flowProtoIdx].String())
 		source := FlowEndpoint{
-			Type:      mapType(key[flowSourceTypeIdx].String(), true),
-			NameAggr:  removeSingleDash(key[flowSourceNameAggrIdx].String()),
-			Namespace: removeSingleDash(key[flowSourceNamespaceIdx].String()),
+			Type:      mapRawTypeToGraphNodeType(key[flowSourceTypeIdx].String(), true),
+			NameAggr:  singleDashToBlank(key[flowSourceNameAggrIdx].String()),
+			Namespace: singleDashToBlank(key[flowSourceNamespaceIdx].String()),
 		}
 		svc := ServicePort{
 			NamespacedName: types.NamespacedName{
-				Name:      removeSingleDash(key[flowDestServiceNameIdx].String()),
-				Namespace: removeSingleDash(key[flowDestServiceNamespaceIdx].String()),
+				Name:      singleDashToBlank(key[flowDestServiceNameIdx].String()),
+				Namespace: singleDashToBlank(key[flowDestServiceNamespaceIdx].String()),
 			},
-			Port:  removeSingleDash(key[flowDestServicePortIdx].String()),
+			Port:  singleDashToBlank(key[flowDestServicePortIdx].String()),
 			Proto: proto,
 		}
 		dest := FlowEndpoint{
-			Type:      mapType(key[flowDestTypeIdx].String(), true),
-			NameAggr:  removeSingleDash(key[flowDestNameAggrIdx].String()),
-			Namespace: removeSingleDash(key[flowDestNamespaceIdx].String()),
+			Type:      mapRawTypeToGraphNodeType(key[flowDestTypeIdx].String(), true),
+			NameAggr:  singleDashToBlank(key[flowDestNameAggrIdx].String()),
+			Namespace: singleDashToBlank(key[flowDestNamespaceIdx].String()),
 			Port:      int(key[flowDestPortIdx].Float64()),
 			Proto:     proto,
 		}
@@ -214,30 +214,34 @@ func GetRawL3FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([
 			Started:   int64(bucket.AggregatedSums["sum_num_flows_started"]),
 			Completed: int64(bucket.AggregatedSums["sum_num_flows_completed"]),
 		}
-		gps := v1.GraphPacketStats{
+		gps := &v1.GraphPacketStats{
 			PacketsIn:  int64(bucket.AggregatedSums["sum_packets_in"]),
 			PacketsOut: int64(bucket.AggregatedSums["sum_packets_out"]),
 			BytesIn:    int64(bucket.AggregatedSums["sum_bytes_in"]),
 			BytesOut:   int64(bucket.AggregatedSums["sum_bytes_out"]),
 		}
-		tcp := v1.GraphTCPStats{
-			SumTotalRetransmissions:  int64(bucket.AggregatedSums["sum_tcp_total_retransmissions"]),
-			SumLostPackets:           int64(bucket.AggregatedSums["sum_tcp_lost_packets"]),
-			SumUnrecoveredTo:         int64(bucket.AggregatedSums["sum_tcp_unrecovered_to"]),
-			MinSendCongestionWindow:  bucket.AggregatedMin["tcp_min_send_congestion_window"],
-			MinSendMSS:               bucket.AggregatedMin["tcp_min_mss"],
-			MaxSmoothRTT:             bucket.AggregatedMax["tcp_max_smooth_rtt"],
-			MaxMinRTT:                bucket.AggregatedMax["tcp_max_min_rtt"],
-			MeanSendCongestionWindow: bucket.AggregatedMean["tcp_mean_send_congestion_window"],
-			MeanSmoothRTT:            bucket.AggregatedMean["tcp_mean_smooth_rtt"],
-			MeanMinRTT:               bucket.AggregatedMean["tcp_mean_min_rtt"],
-			MeanMSS:                  bucket.AggregatedMean["tcp_mean_mss"],
-		}
-		if tcp != zeroGraphTCPStats {
-			// TCP stats have min and means which could be adversely impacted by zero data which indicates
-			// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
-			// diluting when merging with non-zero data.
-			tcp.Count = bucket.DocCount
+
+		var tcp *v1.GraphTCPStats
+		if proto == "tcp" {
+			tcp = &v1.GraphTCPStats{
+				SumTotalRetransmissions:  int64(bucket.AggregatedSums["sum_tcp_total_retransmissions"]),
+				SumLostPackets:           int64(bucket.AggregatedSums["sum_tcp_lost_packets"]),
+				SumUnrecoveredTo:         int64(bucket.AggregatedSums["sum_tcp_unrecovered_to"]),
+				MinSendCongestionWindow:  bucket.AggregatedMin["tcp_min_send_congestion_window"],
+				MinSendMSS:               bucket.AggregatedMin["tcp_min_mss"],
+				MaxSmoothRTT:             bucket.AggregatedMax["tcp_max_smooth_rtt"],
+				MaxMinRTT:                bucket.AggregatedMax["tcp_max_min_rtt"],
+				MeanSendCongestionWindow: bucket.AggregatedMean["tcp_mean_send_congestion_window"],
+				MeanSmoothRTT:            bucket.AggregatedMean["tcp_mean_smooth_rtt"],
+				MeanMinRTT:               bucket.AggregatedMean["tcp_mean_min_rtt"],
+				MeanMSS:                  bucket.AggregatedMean["tcp_mean_mss"],
+			}
+			if *tcp != zeroGraphTCPStats {
+				// TCP stats have min and means which could be adversely impacted by zero data which indicates
+				// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
+				// diluting when merging with non-zero data.
+				tcp.Count = bucket.DocCount
+			}
 		}
 
 		// If the source and/or dest group have changed, and we were in the middle of reconciling multiple flows then
@@ -275,14 +279,21 @@ func GetRawL3FlowData(client lmaelastic.Client, index string, t v1.TimeRange) ([
 	return fs, <-rcvdL3Errors
 }
 
-func removeSingleDash(val string) string {
+func singleDashToBlank(val string) string {
 	if val == "-" {
 		return ""
 	}
 	return val
 }
 
-func mapType(val string, agg bool) v1.GraphNodeType {
+func blankToSingleDash(val string) string {
+	if val == "" {
+		return "-"
+	}
+	return val
+}
+
+func mapRawTypeToGraphNodeType(val string, agg bool) v1.GraphNodeType {
 	switch val {
 	case "wep":
 		if agg {
@@ -297,6 +308,22 @@ func mapType(val string, agg bool) v1.GraphNodeType {
 		return v1.GraphNodeTypeNetworkSet
 	}
 	return v1.GraphNodeTypeUnknown
+}
+
+func mapGraphNodeTypeToRawType(val v1.GraphNodeType) (string, bool) {
+	switch val {
+	case v1.GraphNodeTypeWorkload:
+		return "wep", false
+	case v1.GraphNodeTypeReplicaSet:
+		return "wep", true
+	case v1.GraphNodeTypeHostEndpoint:
+		return "hep", true
+	case v1.GraphNodeTypeNetwork:
+		return "net", true
+	case v1.GraphNodeTypeNetworkSet:
+		return "ns", true
+	}
+	return "", false
 }
 
 type ports struct {
@@ -382,7 +409,7 @@ type sourceData struct {
 	// Service Endpoints.
 	serviceDestinations map[FlowEndpoint]*flowReconciliationData
 
-	// Aggregated data for non-service Endpoints.
+	// AggregatedProtoPorts data for non-service Endpoints.
 	other      *flowReconciliationData
 	protoPorts map[string]*ports
 }
@@ -405,8 +432,8 @@ func (s *sourceData) add(
 		s.serviceDestinations[destination] = rc
 	}
 	if rc != nil {
-		// We have a flowReconciliationData for the service. Add the stats to that.
-		log.Debug("   endpoint is part of a service")
+		// We have a flowReconciliationData for the service. Combine the stats to that.
+		log.Debug("  endpoint is part of a service")
 		rc.add(reporter, action, svc, stats)
 		return
 	}
@@ -436,19 +463,19 @@ func (s *sourceData) add(
 		p.add(destination.Port)
 	}
 
-	// Add the data to the aggregated data set.
+	// Combine the data to the aggregated data set.
 	rc.add(reporter, action, ServicePort{}, stats)
 }
 
 func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []L3Flow {
 	var fs []L3Flow
 
-	// Add the reconciled flows for each endpoint/Proto that is part of one or more services.
+	// Combine the reconciled flows for each endpoint/Proto that is part of one or more services.
 	for dest, frd := range s.serviceDestinations {
 		fs = append(fs, frd.getFlows(source, dest)...)
 	}
 
-	// Add the aggregated info. There should at most a single flow here.
+	// Combine the aggregated info. There should at most a single flow here.
 	if s.other != nil {
 		log.Debug(" add flow with aggregated ports and protocols")
 		dest := FlowEndpoint{
@@ -511,16 +538,16 @@ func newFlowReconciliationData() *flowReconciliationData {
 }
 
 type flowStats struct {
-	packetStats v1.GraphPacketStats
+	packetStats *v1.GraphPacketStats
 	connStats   v1.GraphConnectionStats
-	tcpStats    v1.GraphTCPStats
+	tcpStats    *v1.GraphTCPStats
 }
 
 func (f flowStats) add(f2 flowStats) flowStats {
 	return flowStats{
 		packetStats: f.packetStats.Add(f2.packetStats),
 		connStats:   f.connStats.Add(f2.connStats),
-		tcpStats:    f.tcpStats.Add(f2.tcpStats),
+		tcpStats:    f.tcpStats.Combine(f2.tcpStats),
 	}
 }
 
@@ -635,24 +662,32 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 	allServices(d.sourceReportedAllowed, d.sourceReportedDenied).Iter(func(item interface{}) error {
 		svc := item.(ServicePort)
 
-		// Get the stats for allowed and denied at dest.  Add the stats for direct A->B and A->SVC->B. We don't expect
+		// Get the stats for allowed and denied at dest.  Combine the stats for direct A->B and A->SVC->B. We don't expect
 		// the latter, but just in case...
 		totalAllowedAtDest := d.destReportedAllowed[ServicePort{Proto: svc.Proto}].packetStats.
 			Add(d.destReportedAllowed[svc].packetStats)
 		totalDeniedAtDest := d.destReportedDenied[ServicePort{Proto: svc.Proto}].packetStats.
 			Add(d.destReportedDenied[svc].packetStats)
 
-		// Get the proportion allowed at dest and we'll assume the remainder is denied.
-		propAllowed := totalAllowedAtDest.Prop(totalDeniedAtDest)
-		divviedAllowed := d.sourceReportedAllowed[svc].packetStats.Multiply(propAllowed)
+		var allowed, deniedAtDest *v1.GraphPacketStats
+		if totalAllowedAtDest == nil {
+			deniedAtDest = d.sourceReportedAllowed[svc].packetStats
+		} else if totalDeniedAtDest == nil {
+			allowed = d.sourceReportedAllowed[svc].packetStats
+		} else {
+			// Get the proportion allowed at dest and we'll assume the remainder is denied.
+			propAllowed := totalAllowedAtDest.Prop(totalDeniedAtDest)
+			allowed = d.sourceReportedAllowed[svc].packetStats.Multiply(propAllowed)
+			deniedAtDest = d.sourceReportedAllowed[svc].packetStats.Sub(allowed)
+		}
 
 		addFlow(svc, v1.GraphL3Stats{
-			Allowed:        divviedAllowed,
+			Allowed:        allowed,
 			DeniedAtSource: d.sourceReportedDenied[svc].packetStats,
-			DeniedAtDest:   d.sourceReportedAllowed[svc].packetStats.Sub(divviedAllowed),
+			DeniedAtDest:   deniedAtDest,
 			Connections:    d.sourceReportedAllowed[svc].connStats.Add(d.sourceReportedDenied[svc].connStats),
-			TCP: d.sourceReportedAllowed[svc].tcpStats.Add(d.sourceReportedDenied[svc].tcpStats).
-				Add(d.destReportedAllowed[svc].tcpStats).Add(d.destReportedDenied[svc].tcpStats),
+			TCP: d.sourceReportedAllowed[svc].tcpStats.Combine(d.sourceReportedDenied[svc].tcpStats).
+				Combine(d.destReportedAllowed[svc].tcpStats).Combine(d.destReportedDenied[svc].tcpStats),
 		})
 		return nil
 	})

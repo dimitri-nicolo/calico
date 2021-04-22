@@ -17,6 +17,12 @@ import (
 // ParseGraphNodeID is used to parse a graph node ID and return an IDInfo.
 // Create an IDInfo with appropriate data filled in, and use the various helper methods to construct an ID for a node.
 
+const (
+	NoPort      int       = 0
+	NoDirection Direction = ""
+	NoProto               = ""
+)
+
 const graphNodeTypeDirection = "dir"
 
 type Direction string
