@@ -313,8 +313,9 @@ class _FailoverTest(TestBase):
                     flows_still_running -= 1
                 f.previous_seq = new_seq
 
-                if (count % 3) == 0:
-                    # Test shortlived connection.
+                # Test shortlived new connections: 3 seconds into the test, 3 seconds
+                # after plane breakage, and 3 seconds after broken plane restoration.
+                if count in [3, 8, 18]:
                     short_log = Log()
                     run_with_log("kubectl exec -n " + self.namespace() + " " + f.server_pod + " -- /reliable-nc 8091", short_log)
                     def short_connection():
