@@ -17,7 +17,7 @@ import (
 	"k8s.io/kubernetes/pkg/registry/rbac/validation"
 	rbac_auth "k8s.io/kubernetes/plugin/pkg/auth/authorizer/rbac"
 
-	projectcalicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
