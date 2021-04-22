@@ -51,15 +51,15 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `source_labels`       | array of keywords | Labels applied to the source pod. A hyphen indicates aggregation. |
 | `original_source_ips` | array of ips      | List of external IP addresses collected from requests made to the cluster through an ingress resource. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
 | `num_original_source_ips` | long          | Number of unique external IP addresses collected from requests made to the cluster through an ingress resource. This count includes the IP addresses included in the `original_source_ips` field. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
-| `tcp_mean_send_congestion_window` | long  | Mean tcp send congestion window size. |
-| `tcp_min_send_congestion_window`  | long  | Minimum tcp send congestion window size. |
-| `tcp_mean_smooth_rtt`  | long             | Mean smooth RTT in micro seconds. |
-| `tcp_max_smooth_rtt`   | long             | Maximum smooth RTT in micro seconds. |
-| `tcp_mean_min_rtt`     | long             | Mean MinRTT in micro seconds. |
-| `tcp_max_min_rtt`      | long             | Maximum MinRTT in micro seconds. |
-| `tcp_mean_mss`         | long             | Mean TCP MSS. |
-| `tcp_min_mss`          | long             | Minimum TCP MSS. |
-| `tcp_total_retransmissions`| long         | Total retranmitted packets. |
-| `tcp_lost_packets`         | long         | Total lost packets. |
-| `tcp_unrecovered_to`       | long         | Total unrecovered timeouts. |
+| `tcp_mean_send_congestion_window` | long  | Mean tcp send congestion window size. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_min_send_congestion_window`  | long  | Minimum tcp send congestion window size. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_mean_smooth_rtt`  | long             | Mean smooth RTT in micro seconds. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_max_smooth_rtt`   | long             | Maximum smooth RTT in micro seconds. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_mean_min_rtt`     | long             | Mean MinRTT in micro seconds. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_max_min_rtt`      | long             | Maximum MinRTT in micro seconds. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_mean_mss`         | long             | Mean TCP MSS. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_min_mss`          | long             | Minimum TCP MSS. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_total_retransmissions`| long         | Total retranmitted packets. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_lost_packets`         | long         | Total lost packets. This field is only available if flowLogsEnableTcpStats is enabled |
+| `tcp_unrecovered_to`       | long         | Total unrecovered timeouts. This field is only available if flowLogsEnableTcpStats is enabled |
 
