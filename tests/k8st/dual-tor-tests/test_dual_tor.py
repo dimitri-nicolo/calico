@@ -319,8 +319,12 @@ class _FailoverTest(TestBase):
                     short_log = Log()
                     run_with_log("kubectl exec -n " + self.namespace() + " " + f.server_pod + " -- /reliable-nc 8091", short_log)
                     def short_connection():
-                        run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
-                    time.sleep(0.25)
+                        try:
+                            run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
+                        except Exception:
+                            run("docker exec kind-control-plane ip r")
+                            raise
+                        time.sleep(0.25)
                     try:
                         retry_until_success(short_connection, retries=3, wait_time=0.25)
                     finally:
