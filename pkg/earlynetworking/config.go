@@ -3,6 +3,11 @@
 package earlynetworking
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,7 +31,8 @@ type ConfigNode struct {
 	InterfaceAddresses []string            `yaml:"interfaceAddresses"`
 	ASNumber           int                 `yaml:"asNumber"`
 	StableAddress      ConfigStableAddress `yaml:"stableAddress"`
-	Peerings           []ConfigPeering
+	Peerings           []ConfigPeering     `yaml:"peerings"`
+	Labels             map[string]string   `yaml:"labels"`
 }
 
 type ConfigStableAddress struct {
@@ -36,4 +42,20 @@ type ConfigStableAddress struct {
 type ConfigPeering struct {
 	PeerIP       string `yaml:"peerIP"`
 	PeerASNumber int    `yaml:"peerASNumber"`
+}
+
+func GetEarlyNetworkConfig(yamlFileName string) (*EarlyNetworkConfiguration, error) {
+	yamlFile, err := os.Open(yamlFileName)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open YAML file at %v: %v", yamlFileName, err)
+	}
+	defer yamlFile.Close()
+
+	var cfg EarlyNetworkConfiguration
+	err = yaml.NewDecoder(yamlFile).Decode(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to decode YAML file at %v: %v", yamlFileName, err)
+	}
+	logrus.WithField("cfg", cfg).Infof("Read YAML file at %v", yamlFileName)
+	return &cfg, nil
 }

@@ -48,6 +48,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator/clients"
 
 	"github.com/projectcalico/node/pkg/calicoclient"
+	"github.com/projectcalico/node/pkg/earlynetworking"
 	"github.com/projectcalico/node/pkg/startup/autodetection"
 	"github.com/projectcalico/node/pkg/startup/autodetection/ipv4"
 )
@@ -180,11 +181,19 @@ func Run() {
 
 	configureAndCheckIPAddressSubnets(ctx, cli, node)
 
+	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
+	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
+	// override the AS number.
+	if err := configureBGPLayout(node); err != nil {
+		log.WithError(err).Error("BGP layout configuration failed")
+		terminate()
+	}
+
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
 		// Configure the node AS number if BGP is enabled.
 		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
-			configureASNumber(node)
+			configureASNumber(node, os.Getenv("AS"), "environment")
 		}
 
 		if clientset != nil {
@@ -228,6 +237,63 @@ func Run() {
 		log.WithError(err).Errorf("Unable to ensure network for os")
 		terminate()
 	}
+}
+
+func configureBGPLayout(node *api.Node) error {
+	yamlFileName := os.Getenv("CALICO_EARLY_NETWORKING")
+	if yamlFileName == "" {
+		log.Info("CALICO_EARLY_NETWORKING is not set")
+		return nil
+	}
+	cfg, err := earlynetworking.GetEarlyNetworkConfig(yamlFileName)
+	if err != nil {
+		return fmt.Errorf("Failed to read EarlyNetworkConfiguration: %v", err)
+	}
+
+	// Find the EarlyNetworkConfiguration entry for this node.
+	var thisNode *earlynetworking.ConfigNode
+	nodeIP := strings.Split(node.Spec.BGP.IPv4Address, "/")[0]
+nodeLoop:
+	for _, nodeCfg := range cfg.Spec.Nodes {
+		for _, addr := range nodeCfg.InterfaceAddresses {
+			if addr == nodeIP {
+				thisNode = &nodeCfg
+				break nodeLoop
+			}
+		}
+		if nodeCfg.StableAddress.Address == nodeIP {
+			thisNode = &nodeCfg
+			break nodeLoop
+		}
+	}
+	if thisNode == nil {
+		return fmt.Errorf("Failed to find EarlyNetworkConfiguration entry for this node (%v)", nodeIP)
+	}
+	log.WithField("cfg", *thisNode).Info("Found EarlyNetworkConfiguration entry for this node")
+
+	// Add labels to the Node.
+	for k, v := range thisNode.Labels {
+		if v2, exists := node.Labels[k]; exists {
+			log.Warningf("Overriding existing node label: %v: %v -> %v", k, v2, v)
+		} else {
+			log.Infof("Setting node label: %v: %v", k, v)
+		}
+		if node.Labels == nil {
+			node.Labels = make(map[string]string)
+		}
+		node.Labels[k] = v
+	}
+
+	// Add annotation for the AS number.
+	if thisNode.ASNumber != 0 {
+		if node.Spec.BGP != nil && node.Spec.BGP.ASNumber != nil {
+			log.Warningf("Overriding existing node AS number: %v -> %v", *node.Spec.BGP.ASNumber, thisNode.ASNumber)
+		} else {
+			log.Infof("Setting node AS number: %v", thisNode.ASNumber)
+		}
+		configureASNumber(node, fmt.Sprintf("%v", thisNode.ASNumber), "EarlyNetworkConfiguration")
+	}
+	return nil
 }
 
 func getMonitorPollInterval() time.Duration {
@@ -831,17 +897,15 @@ func autoDetectCIDRBySkipInterface(ifaceRegexes []string, version int) *cnet.IPN
 	return cidr
 }
 
-// configureASNumber configures the Node resource with the AS number specified
-// in the environment, or is a no-op if not specified.
-func configureASNumber(node *api.Node) {
-	// Extract the AS number from the environment
-	asStr := os.Getenv("AS")
+// configureASNumber configures the Node resource with the specified AS number, or is a no-op if not
+// specified.
+func configureASNumber(node *api.Node, asStr string, source string) {
 	if asStr != "" {
 		if asNum, err := numorstring.ASNumberFromString(asStr); err != nil {
-			log.WithError(err).Errorf("The AS number specified in the environment (AS=%s) is not valid", asStr)
+			log.WithError(err).Errorf("The AS number specified in the %v (AS=%s) is not valid", source, asStr)
 			terminate()
 		} else {
-			log.Infof("Using AS number specified in environment (AS=%s)", asNum)
+			log.Infof("Using AS number specified in %v (AS=%s)", source, asNum)
 			node.Spec.BGP.ASNumber = &asNum
 		}
 	} else {

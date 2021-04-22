@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +35,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -1176,7 +1179,7 @@ var _ = Describe("UT for IP and IP6", func() {
 	DescribeTable("env IP is defined", func(ipv4Env string, version int, exceptValue string) {
 		ipv4MockInterfaces := func([]string, []string, int) ([]autodetection.Interface, error) {
 			return []autodetection.Interface{
-				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1.2.3.4/24")},}}, nil
+				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1.2.3.4/24")}}}, nil
 		}
 		ipv4CIDROrIP, _ := getLocalCIDR(ipv4Env, version, ipv4MockInterfaces)
 		Expect(ipv4CIDROrIP).To(Equal(exceptValue))
@@ -1184,13 +1187,12 @@ var _ = Describe("UT for IP and IP6", func() {
 		Entry("get the local cidr", "1.2.3.4", 4, "1.2.3.4/24"),
 		Entry("get the original cidr", "4.3.2.1/25", 4, "4.3.2.1/25"),
 		Entry("get the original ip(v4)", "1.2.3.5", 4, "1.2.3.5"),
-
 	)
 
 	var _ = DescribeTable("env IP6 is defined", func(ipv6Env string, version int, exceptValue string) {
 		ipv6MockInterfaces := func([]string, []string, int) ([]autodetection.Interface, error) {
 			return []autodetection.Interface{
-				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1:2:3:4::5/120")},}}, nil
+				{Name: "eth1", Cidrs: []net.IPNet{net.MustParseCIDR("1:2:3:4::5/120")}}}, nil
 		}
 		ipv4CIDROrIP, _ := getLocalCIDR(ipv6Env, version, ipv6MockInterfaces)
 		Expect(ipv4CIDROrIP).To(Equal(exceptValue))
@@ -1199,4 +1201,172 @@ var _ = Describe("UT for IP and IP6", func() {
 		Entry("get the original cidr", "5:4:3:2::1/64", 6, "5:4:3:2::1/64"),
 		Entry("get the original ip(v6)", "1:2:3:4::1111", 6, "1:2:3:4::1111"),
 	)
+})
+
+var _ = Describe("BGP layout tests", func() {
+
+	var node, nodeCopy *api.Node
+
+	BeforeEach(func() {
+		node = makeNode("1.2.3.4/32", "fdf5::1.2.3.4/128")
+		nodeCopy = node.DeepCopy()
+	})
+
+	It("does nothing if CALICO_EARLY_NETWORKING not set", func() {
+		err := configureBGPLayout(node)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(*node).To(Equal(*nodeCopy))
+	})
+
+	Context("with CALICO_EARLY_NETWORKING set", func() {
+
+		var encDir, encFileName string
+
+		BeforeEach(func() {
+			var err error
+			encDir, err = ioutil.TempDir("", "enc.XXXX")
+			Expect(err).NotTo(HaveOccurred())
+			encFileName = filepath.Join(encDir, "enc.yml")
+			os.Setenv("CALICO_EARLY_NETWORKING", encFileName)
+		})
+
+		AfterEach(func() {
+			os.Unsetenv("CALICO_EARLY_NETWORKING")
+			os.RemoveAll(encDir)
+		})
+
+		It("reports error if CALICO_EARLY_NETWORKING set but does not exist", func() {
+			err := configureBGPLayout(node)
+			Expect(err).To(HaveOccurred())
+		})
+
+		noChange := func(node *api.Node) {}
+
+		DescribeTable("with EarlyNetworkConfiguration",
+			func(enc string, expectError bool, expectNodeChange func(*api.Node)) {
+				// Write EarlyNetworkConfiguration to file.
+				file, err := os.Create(encFileName)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = file.WriteString(enc)
+				Expect(err).NotTo(HaveOccurred())
+				file.Close()
+
+				// Call configuration function.
+				err = configureBGPLayout(node)
+				if expectError {
+					Expect(err).To(HaveOccurred())
+				} else {
+					Expect(err).NotTo(HaveOccurred())
+					expectNodeChange(nodeCopy)
+				}
+				Expect(*node).To(Equal(*nodeCopy))
+			},
+
+			Entry("non-YAML", "xycz", true, noChange),
+			Entry("no ENC entry for this node", `
+apiVersion: projectcalico.org/v3
+kind: EarlyNetworkConfiguration
+spec:
+  nodes:
+    # worker1
+    - interfaceAddresses:
+        - 172.31.11.3
+        - 172.31.12.3
+      stableAddress:
+        address: 172.31.10.3
+      asNumber: 65001
+      peerings:
+        - peerIP: 172.31.11.100
+        - peerIP: 172.31.12.100
+      labels:
+        rack: ra
+    # worker2
+    - interfaceAddresses:
+        - 172.31.21.4
+        - 172.31.22.4
+      stableAddress:
+        address: 172.31.20.4
+      asNumber: 65002
+      peerings:
+        - peerIP: 172.31.21.100
+        - peerIP: 172.31.22.100
+      labels:
+        rack: rb
+`, true, noChange),
+			Entry("ENC has entry for this node", `
+apiVersion: projectcalico.org/v3
+kind: EarlyNetworkConfiguration
+spec:
+  nodes:
+    # worker1
+    - interfaceAddresses:
+        - 172.31.11.3
+        - 172.31.12.3
+      stableAddress:
+        address: 172.31.10.3
+      asNumber: 65001
+      peerings:
+        - peerIP: 172.31.11.100
+        - peerIP: 172.31.12.100
+      labels:
+        rack: ra
+    # worker2
+    - interfaceAddresses:
+        - 172.31.21.4
+        - 1.2.3.4
+      stableAddress:
+        address: 172.31.20.4
+      asNumber: 65002
+      peerings:
+        - peerIP: 172.31.21.100
+        - peerIP: 172.31.22.100
+      labels:
+        rack: rb
+`, false, func(node *api.Node) {
+				if node.Labels == nil {
+					node.Labels = make(map[string]string)
+				}
+				node.Labels["rack"] = "rb"
+				asNumber := numorstring.ASNumber(65002)
+				node.Spec.BGP.ASNumber = &asNumber
+			}),
+			Entry("ENC entry matches by stable address", `
+apiVersion: projectcalico.org/v3
+kind: EarlyNetworkConfiguration
+spec:
+  nodes:
+    # worker1
+    - interfaceAddresses:
+        - 172.31.11.3
+        - 172.31.12.3
+      stableAddress:
+        address: 172.31.10.3
+      asNumber: 65001
+      peerings:
+        - peerIP: 172.31.11.100
+        - peerIP: 172.31.12.100
+      labels:
+        rack: ra
+    # worker2
+    - interfaceAddresses:
+        - 172.31.21.4
+        - 172.31.22.4
+      stableAddress:
+        address: 1.2.3.4
+      asNumber: 65002
+      peerings:
+        - peerIP: 172.31.21.100
+        - peerIP: 172.31.22.100
+      labels:
+        rack: rb
+`, false, func(node *api.Node) {
+				if node.Labels == nil {
+					node.Labels = make(map[string]string)
+				}
+				node.Labels["rack"] = "rb"
+				asNumber := numorstring.ASNumber(65002)
+				node.Spec.BGP.ASNumber = &asNumber
+			}),
+		)
+	})
 })
