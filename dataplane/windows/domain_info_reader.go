@@ -22,7 +22,7 @@ type domainInfoReader struct {
 	// Channel on which we receive captured DNS responses (beginning with the IP header) from ETW.
 	msgChannel chan *etw.PktEvent
 
-	// Channel on which domainInfoStore receive captured DNS responses (beginning with the IP header).
+	// Channel on which domainInfoStore receives captured DNS responses (beginning with the IP header).
 	storeMsgChannel chan common.DataWithTimestamp
 
 	// Trusted Servers for DNS packet.
@@ -35,7 +35,7 @@ type domainInfoReader struct {
 func NewDomainInfoReader(trustedServers []fc.ServerPort) *domainInfoReader {
 	log.WithField("serverports", trustedServers).Info("Creating Windows domain info reader")
 	if len(trustedServers) == 0 {
-		log.Fatal("Should have at least one DNS trusted servers.")
+		log.Fatal("Should have at least one DNS trusted server.")
 	}
 
 	serverPorts := []etw.ServerPort{}
@@ -53,17 +53,19 @@ func NewDomainInfoReader(trustedServers []fc.ServerPort) *domainInfoReader {
 	}
 
 	return &domainInfoReader{
-		stopChannel: make(chan struct{}),
-		// domainInfoReader forward DNS message to domainInfoStore as soon as it get it.
-		// Both domainInfoStore and Windows ETW package caches DNS message so we don't need
-		// to cache them here. Set buffer to 10.
+		stopChannel: make(chan struct{}, 1),
+		// domainInfoReader forwards DNS message to domainInfoStore as soon as it gets it.
+		// domainInfoStore has a buffered channel to receive messages with the capacity set to 1000,
+		// hence the channel capacity for domainInfoReader to forward messages to domainInfoStore could be small
+		// without blocking ETW event reader.
+		// Set channel capacity to 10.
 		msgChannel:     make(chan *etw.PktEvent, 10),
 		trustedServers: serverPorts,
 		etwOps:         etwOps,
 	}
 }
 
-// Start function starts the reader and connect it with domainInfoStore.
+// Start function starts the reader and connects it with domainInfoStore.
 func (r *domainInfoReader) Start(msgChan chan common.DataWithTimestamp) {
 	log.Info("Starting Windows domain info reader")
 
@@ -85,12 +87,10 @@ func (r *domainInfoReader) loop() {
 }
 
 func (r *domainInfoReader) loopIteration() {
-	select {
-	case pktEvent := <-r.msgChannel:
-		// Forward to domainInfoStore.
-		r.storeMsgChannel <- common.DataWithTimestamp{
-			Timestamp: pktEvent.NanoSeconds(),
-			Data:      pktEvent.Payload(),
-		}
+	pktEvent := <-r.msgChannel
+	// Forward to domainInfoStore.
+	r.storeMsgChannel <- common.DataWithTimestamp{
+		Timestamp: pktEvent.NanoSeconds(),
+		Data:      pktEvent.Payload(),
 	}
 }

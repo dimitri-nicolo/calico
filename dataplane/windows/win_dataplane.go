@@ -383,8 +383,8 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 			defer stopWG.Done()
 			if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
-
 			}
+			return
 		}
 
 		if datastoreInSync && d.dataplaneNeedsSync {

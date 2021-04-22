@@ -28,11 +28,12 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kardianos/osext"
@@ -641,20 +642,21 @@ func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 func realGetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	// Try to get the kubernetes config either from environments or in-cluster.
 	// Note: Felix on Windows does not run as a Pod hence no in-cluster config is available.
-	cfgFile := os.Getenv("KUBECONFIG")
-	master := os.Getenv("KUBERNETES_MASTER")
-	cfg, err := clientcmd.BuildConfigFromFlags(master, cfgFile)
+	// Attempt in-cluster config first.
+	k8scfg, err := rest.InClusterConfig()
 	if err != nil {
-		log.WithError(err).Info("KUBECONFIG environment variable not found, attempting in-cluster")
-		// Attempt in cluster config
-		cfg, err = rest.InClusterConfig()
+		log.WithError(err).Info("Unable to create in-cluster Kubernetes config, attemping environments instead")
+
+		cfgFile := os.Getenv("KUBECONFIG")
+		master := os.Getenv("KUBERNETES_MASTER")
+		k8scfg, err = clientcmd.BuildConfigFromFlags(master, cfgFile)
 		if err != nil {
-			log.WithError(err).Info("Unable to create Kubernetes config.")
+			log.WithError(err).Errorf("Unable to create Kubernetes config.")
 			return nil, err
 		}
 	}
 
-	clientset, err := kubernetes.NewForConfig(cfg)
+	clientset, err := kubernetes.NewForConfig(k8scfg)
 	if err != nil {
 		log.WithError(err).Error("Unable to create Kubernetes client set.")
 		return nil, err

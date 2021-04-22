@@ -1129,8 +1129,6 @@ func TestRuleRenderingWithDomainIPSets(t *testing.T) {
 	h.SupportedFeatures.Acl.AclRuleId = true
 	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
 
-	log.SetLevel(log.DebugLevel)
-
 	//Updating the ipset
 	ipsc := mockIPSetCache{
 		IPSets: map[string][]string{
