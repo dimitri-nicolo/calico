@@ -17,8 +17,9 @@ limitations under the License.
 package tier
 
 import (
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -38,10 +39,7 @@ func EmptyObject() runtime.Object {
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.TierList{
-		//TypeMeta: metav1.TypeMeta{},
-		//Items:    []calico.Tier{},
-	}
+	return &calico.TierList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.

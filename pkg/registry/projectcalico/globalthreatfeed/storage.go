@@ -19,6 +19,9 @@ package globalthreatfeed
 import (
 	"context"
 
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,9 +29,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
-
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
 )
 
 // rest implements a RESTStorage for API services against etcd

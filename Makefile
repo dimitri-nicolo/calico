@@ -1,8 +1,8 @@
-PACKAGE_NAME    ?= github.com/tigera/apiserver
+PACKAGE_NAME    ?= github.com/projectcalico/apiserver
 GO_BUILD_VER    ?= v0.51
-GOMOD_VENDOR    := true
+GOMOD_VENDOR    := false
 GIT_USE_SSH      = true
-LOCAL_CHECKS     = lint-cache-dir vendor goimports
+LOCAL_CHECKS     = lint-cache-dir goimports
 # Used by Makefile.common
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 # Used only when doing local build
@@ -44,13 +44,13 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
 				 -v $(CURDIR)/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 
-include Makefile.common
-
 ###############################################################################
 K8S_VERSION = v1.16.3
 BINDIR ?= bin
-CONTAINER_NAME = gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
+BUILD_IMAGE?=tigera/cnx-apiserver
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 BUILD_DIR ?= build
+
 TOP_SRC_DIRS = pkg cmd
 SRC_DIRS = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
                    -exec dirname {} \\; | sort | uniq")
@@ -84,14 +84,8 @@ BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
 
-# vendor is a shortcut for force rebuilding the go vendor directory.
-.PHONY: vendor
-vendor vendor/.up-to-date: go.mod
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod vendor'
-ifdef LIBCALICOGO_PATH
-	go mod edit -replace=github.com/projectcalico/libcalico-go=$(LOCAL_LIBCALICO)
-endif
-	touch vendor/.up-to-date
+# Common Makefile must be included after the build env variables are set
+include Makefile.common
 
 ###############################################################################
 # Managing the upstream library pins
@@ -125,43 +119,36 @@ update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-licensing-pin
 ###############################################################################
 # This section contains the code generation stuff
 ###############################################################################
-.PHONY: gen-execs
-gen-execs .generate_execs: lint-cache-dir $(BINDIR)/defaulter-gen \
-            $(BINDIR)/deepcopy-gen \
-            $(BINDIR)/conversion-gen \
-            $(BINDIR)/client-gen \
-            $(BINDIR)/lister-gen \
-            $(BINDIR)/informer-gen \
-            $(BINDIR)/openapi-gen
-	touch .generate_execs
+.generate_execs: lint-cache-dir\
+	$(BINDIR)/defaulter-gen \
+	$(BINDIR)/deepcopy-gen \
+	$(BINDIR)/conversion-gen \
+	$(BINDIR)/client-gen \
+	$(BINDIR)/lister-gen \
+	$(BINDIR)/informer-gen \
+	$(BINDIR)/openapi-gen
+	touch $@
 
-$(BINDIR)/defaulter-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/defaulter-gen/*.go'
+$(BINDIR)/deepcopy-gen:
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/deepcopy-gen"
 
-$(BINDIR)/deepcopy-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/deepcopy-gen/*.go'
+$(BINDIR)/client-gen:
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/client-gen"
 
-$(BINDIR)/conversion-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/conversion-gen/*.go'
+$(BINDIR)/lister-gen:
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/lister-gen"
 
-$(BINDIR)/client-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/client-gen/*.go'
+$(BINDIR)/informer-gen:
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/informer-gen"
 
-$(BINDIR)/lister-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/lister-gen/*.go'
+$(BINDIR)/defaulter-gen: 
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/defaulter-gen"
 
-$(BINDIR)/informer-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/informer-gen/*.go'
+$(BINDIR)/conversion-gen: 
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/conversion-gen"
 
-$(BINDIR)/openapi-gen: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/openapi-gen/*.go'
+$(BINDIR)/openapi-gen:
+	$(DOCKER_GO_BUILD) sh -c "$(GIT_CONFIG_SSH) GOBIN=/go/src/$(PACKAGE_NAME)/$(BINDIR) go install k8s.io/code-generator/cmd/openapi-gen"
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .PHONY: gen-files
@@ -208,29 +195,13 @@ gen-files .generate_files: lint-cache-dir .generate_execs clean-generated
 
 .PHONY: gen-swagger
 gen-swagger: $(BINDIR)/apiserver run-kubernetes-server
-	KUBECONFIG=test/test-apiserver-kubeconfig.conf $(BINDIR)/apiserver --secure-port 5443 \
-		--print-swagger --kubeconfig test/test-apiserver-kubeconfig.conf \
-		--swagger-file-path artifacts/swagger
-
-###############################################################################
-# ensure we have a real imagetag
-###############################################################################
-imagetag:
-ifndef IMAGETAG
-	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
-endif
-
-tag-image: imagetag tigera/cnx-apiserver
-	docker tag tigera/cnx-apiserver:latest $(CONTAINER_NAME):$(IMAGETAG)
-
-push-image: imagetag tag-image
-	docker push $(CONTAINER_NAME):$(IMAGETAG)
+	$(BINDIR)/apiserver --secure-port 5443 \
+		--print-swagger \
+		--kubeconfig test/test-apiserver-kubeconfig.conf --swagger-file-path artifacts/swagger
 
 ###############################################################################
 # Static checks
 ###############################################################################
-.PHONY: static-checks
-
 ## Perform static checks on the code.
 # TODO: re-enable these linters !
 LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck --timeout 5m
@@ -240,18 +211,10 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean check-generated-files static-checks tigera/cnx-apiserver fv ut
+ci: clean check-generated-files tigera/cnx-apiserver fv ut
 
 ## Deploys images to registry
-cd:
-ifndef CONFIRM
-	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
-endif
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
-	$(MAKE) push-image IMAGETAG=${GIT_VERSION}
+cd: image-all cd-common
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
@@ -267,7 +230,7 @@ check-generated-files: .generate_files
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
-$(BINDIR)/apiserver: vendor/.up-to-date .generate_files $(K8SAPISERVER_GO_FILES)
+$(BINDIR)/apiserver: .generate_files $(K8SAPISERVER_GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
@@ -294,14 +257,27 @@ endif
 	        grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 		( echo "Error: $(BINDIR)/filecheck was not statically linked"; false ) )'
 
-# Build cnx-apiserver docker image.
-# Recursive make tigera/cnx-apiserver forces make to rebuild dependencies again
-image:
-	make tigera/cnx-apiserver
+###############################################################################
+# Building the image
+###############################################################################
+CONTAINER_CREATED=.apiserver.created-$(ARCH)
+.PHONY: image $(BUILD_IMAGE)
+image: $(BUILD_IMAGE)
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+$(BUILD_IMAGE): $(CONTAINER_CREATED)
+$(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver
+	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+endif
+	touch $@
 
 # Build the tigera/cnx-apiserver docker image.
 .PHONY: tigera/cnx-apiserver
-tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/apiserver $(BINDIR)/filecheck
+tigera/cnx-apiserver: .generate_files $(BINDIR)/apiserver $(BINDIR)/filecheck
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/apiserver docker-image/bin/
@@ -312,11 +288,24 @@ tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/apiserver $(B
 lint-cache-dir:
 	mkdir -p $(CURDIR)/.lint-cache
 
-.PHONY: ut
-ut: lint-cache-dir vendor/.up-to-date run-etcd
+ut: lint-cache-dir run-etcd
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+
+.PHONY: st
+st:
+	@echo "Nothing to do for $@"
+
+.PHONY: check-copyright
+check-copyright:
+	@hack/check-copyright.sh
+
+config/crd: mod-download
+	mkdir -p config/crd
+	$(DOCKER_GO_BUILD) sh -c ' \
+		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config/crd/* config/crd; \
+		chmod +w config/crd/*'
 
 ## Run etcd as a container (calico-etcd)
 run-etcd: stop-etcd
@@ -343,7 +332,7 @@ hack-lib:
 	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/etcd.sh -o hack/lib/etcd.sh
 
 ## Run a local kubernetes server with API via hyperkube
-run-kubernetes-server: run-etcd stop-kubernetes-server
+run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	# Run a Kubernetes apiserver using Docker.
 	docker run \
 		--net=host --name st-apiserver \
@@ -382,7 +371,7 @@ run-kubernetes-server: run-etcd stop-kubernetes-server
 		-v  $(CURDIR):/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
-		apply -f /manifests/test/crds.yaml
+		apply -f /manifests/config/crd/
 
 	# Create a Node in the API for the tests to use.
 	docker run \
@@ -420,20 +409,18 @@ stop-kubernetes-server:
 fv: fv-kdd
 
 .PHONY: fv-etcd
-fv-etcd: vendor/.up-to-date run-kubernetes-server hack-lib
+fv-etcd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
 
 .PHONY: fv-kdd
-fv-kdd: vendor/.up-to-date run-kubernetes-server hack-lib
+fv-kdd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'K8S_API_ENDPOINT="http://127.0.0.1:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-hack-lib
-	rm -rf vendor \
-		   .lint-cache \
-		   Makefile.common*
+	rm -rf .lint-cache Makefile.common*
 
 clean-build-image:
 	docker rmi -f tigera/cnx-apiserver > /dev/null 2>&1 || true
@@ -542,27 +529,6 @@ endif
 ###############################################################################
 # Utils
 ###############################################################################
-.PHONY: kubeadm
-kubeadm:
-	kubeadm reset
-	rm -rf /var/etcd
-	kubeadm init --config artifacts/misc/kubeadm.yaml
-
-	# Wait for it to be ready
-	while ! KUBECONFIG=$(KUBECONFIG_DIR) kubectl get pods; do sleep 15; done
-
-	# Install Calico and the AAPI server
-	KUBECONFIG=$(KUBECONFIG_DIR) kubectl apply -f artifacts/misc/calico.yaml
-	KUBECONFIG=$(KUBECONFIG_DIR) kubectl taint nodes --all node-role.kubernetes.io/master-
-	KUBECONFIG=$(KUBECONFIG_DIR) kubectl create namespace calico
-	KUBECONFIG=$(KUBECONFIG_DIR) kubectl create -f artifacts/example/
-	@echo "Kubeadm master created."
-	@echo "To use, run the following commands:"
-	@echo "sudo cp $(KUBECONFIG_DIR) \$$HOME"
-	@echo "sudo chown \$$(id -u):\$$(id -g) \$$HOME/admin.conf"
-	@echo "export KUBECONFIG=\$$HOME/admin.conf"
-	@echo "kubectl get tiers"
-
 # this is not a linked target, available for convenience.
 .PHONY: tidy
 ## 'tidy' mods.

@@ -8,9 +8,9 @@ cli:
   project: git@github.com:tigera/apiserver.git
 analyze:
   modules:
-  - name: github.com/tigera/apiserver/cmd/apiserver
+  - name: github.com/projectcalico/apiserver/cmd/apiserver
     type: go
-    target: github.com/tigera/apiserver/cmd/apiserver
-    path: /go/src/github.com/tigera/apiserver/cmd/apiserver
+    target: github.com/projectcalico/apiserver/cmd/apiserver
+    path: /go/src/github.com/projectcalico/apiserver/cmd/apiserver
     options:
       allow-unresolved: true

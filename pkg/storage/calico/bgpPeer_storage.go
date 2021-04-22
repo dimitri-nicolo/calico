@@ -7,8 +7,10 @@ import (
 
 	"golang.org/x/net/context"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
+
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -53,6 +55,7 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
 		return false
 	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,

@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"

@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	calicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	apitesting "k8s.io/apimachinery/pkg/api/apitesting"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -19,6 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/klog"
+
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calicov3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
@@ -176,7 +177,7 @@ func TestTierUnconditionalDelete(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.Tier{} // reset
-		err := store.Delete(ctx, tt.key, out, nil, nil)
+		err := store.Delete(ctx, tt.key, out, nil, nil, nil)
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
 				t.Errorf("#%d: expecting not found error, but get: %s", i, err)
@@ -211,7 +212,7 @@ func TestTierConditionalDelete(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.Tier{}
-		err := store.Delete(ctx, key, out, tt.precondition, nil)
+		err := store.Delete(ctx, key, out, tt.precondition, nil, nil)
 		if tt.expectInvalidObjErr {
 			if err == nil || !storage.IsInvalidObj(err) {
 				t.Errorf("#%d: expecting invalid UID error, but get: %s", i, err)
@@ -366,7 +367,7 @@ func TestTierGuaranteedUpdate(t *testing.T) {
 					tier.GenerateName = selector
 				}
 				return &tier, nil
-			}))
+			}), nil)
 
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
@@ -416,7 +417,7 @@ func TestTierGuaranteedUpdateWithTTL(t *testing.T) {
 		func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 			ttl := uint64(1)
 			return input, &ttl, nil
-		})
+		}, nil)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
@@ -447,7 +448,7 @@ func TestTierGuaranteedUpdateWithConflict(t *testing.T) {
 				tier.GenerateName = "foo-1"
 				secondToEnter.Wait()
 				return tier, nil
-			}))
+			}), nil)
 		firstToFinish.Done()
 		errChan <- err
 	}()
@@ -463,7 +464,7 @@ func TestTierGuaranteedUpdateWithConflict(t *testing.T) {
 			tier := obj.(*calico.Tier)
 			tier.GenerateName = "foo-2"
 			return tier, nil
-		}))
+		}), nil)
 	if err != nil {
 		t.Fatalf("Second GuaranteedUpdate error %#v", err)
 	}

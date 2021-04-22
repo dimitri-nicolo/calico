@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 
 	"github.com/projectcalico/libcalico-go/lib/options"
 
@@ -87,47 +87,6 @@ func testWatch(t *testing.T, list bool) {
 				return nil, fields.Set{"metadata.name": policy.Name}, nil
 			},
 		},
-		/*TODO: Fix these two cases case. Currently flapping. Needs test cleanup.
-
-		}, { // update
-			watchTests: []*testWatchStruct{
-				{
-					key:         "projectcalico.org/networkpolicies/default/foo1",
-					obj:         policyFoo1,
-					expectEvent: true,
-					watchType:   watch.Added,
-				},
-				{
-					key:         "projectcalico.org/networkpolicies/default/foo1",
-					obj:         policyFoo1,
-					expectEvent: true,
-					watchType:   watch.Modified,
-				},
-			},
-			pred: storage.Everything,
-			}, { // delete because of being filtered
-				watchTests: []*testWatchStruct{
-					{
-						key:         "projectcalico.org/networkpolicies/default/foo2",
-						obj:         policyFoo2,
-						expectEvent: true,
-						watchType:   watch.Added,
-					},
-					{
-						key:         "projectcalico.org/networkpolicies/default/foo2",
-						obj:         policyBar,
-						expectEvent: true,
-						watchType:   watch.Deleted,
-					},
-				},
-				pred: storage.SelectionPredicate{
-					Label: labels.Everything(),
-					Field: fields.ParseSelectorOrDie("metadata.name!=bar"),
-					GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
-						policy := obj.(*calico.NetworkPolicy)
-						return nil, fields.Set{"metadata.name": policy.Spec.Selector}, policy.Initializers != nil, nil
-					},
-				},*/
 	}}
 	for i, tt := range tests {
 		var w watch.Interface
@@ -157,7 +116,7 @@ func testWatch(t *testing.T, list bool) {
 			err = store.GuaranteedUpdate(ctx, watchTest.key, out, true, nil, storage.SimpleUpdate(
 				func(runtime.Object) (runtime.Object, error) {
 					return watchTest.obj, nil
-				}))
+				}), nil)
 			if err != nil {
 				t.Fatalf("GuaranteedUpdate failed: %v", err)
 			}

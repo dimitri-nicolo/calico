@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2016-2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,9 +20,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/tigera/apiserver/cmd/apiserver/server"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog"
+
+	"github.com/projectcalico/apiserver/cmd/apiserver/server"
 )
 
 func main() {

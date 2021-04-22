@@ -7,8 +7,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/helpers"
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/helpers"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"

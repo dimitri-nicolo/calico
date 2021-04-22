@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package hostendpoint
 
@@ -15,7 +15,7 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
 
 type apiServerStrategy struct {

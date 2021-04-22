@@ -17,8 +17,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
+
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
 
 // NewProfileStorage creates a new libcalico-based storage.Interface implementation for Profiles
@@ -57,7 +58,7 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         ProfileAPIObjectVersioner{&etcd.APIObjectVersioner{}},
+		versioner:         etcd.APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(aapi.Profile{}),
 		aapiListType:      reflect.TypeOf(aapi.ProfileList{}),
 		libCalicoType:     reflect.TypeOf(libcalicoapi.Profile{}),

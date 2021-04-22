@@ -32,7 +32,7 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
 
 type apiServerStrategy struct {

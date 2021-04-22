@@ -17,9 +17,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
+
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
 
 // NewRemoteClusterConfigurationStorage creates a new libcalico-based storage.Interface implementation for RemoteClusterConfigurations

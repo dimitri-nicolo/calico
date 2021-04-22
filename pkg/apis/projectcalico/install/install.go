@@ -3,10 +3,11 @@
 package install
 
 import (
-	"github.com/tigera/apiserver/pkg/apis/projectcalico"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 )
 
 // Install registers the API group and adds types to a scheme

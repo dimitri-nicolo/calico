@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package apiserver
 
@@ -28,12 +28,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 
-	"github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/apis/projectcalico/install"
-	"github.com/tigera/apiserver/pkg/helpers"
-	"github.com/tigera/apiserver/pkg/rbac"
-	calicorest "github.com/tigera/apiserver/pkg/registry/projectcalico/rest"
-	"github.com/tigera/apiserver/pkg/storage/calico"
+	"github.com/projectcalico/apiserver/pkg/helpers"
+	"github.com/projectcalico/apiserver/pkg/rbac"
+	"github.com/projectcalico/apiserver/pkg/storage/calico"
+
+	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/apis/projectcalico/install"
+	calicorest "github.com/projectcalico/apiserver/pkg/registry/projectcalico/rest"
 )
 
 var (
@@ -114,7 +115,7 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	}
 
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(projectcalico.GroupName, Scheme, metav1.ParameterCodec, Codecs)
-	//apiGroupInfo.OptionsExternalVersion = &schema.GroupVersion{Version: "v3"}
+	apiGroupInfo.NegotiatedSerializer = newProtocolShieldSerializer(&Codecs)
 
 	// TODO: Make the storage type configurable
 	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}

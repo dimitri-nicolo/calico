@@ -19,10 +19,10 @@ package stagedglobalpolicy
 import (
 	"context"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/authorizer"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
-	"github.com/tigera/apiserver/pkg/registry/projectcalico/util"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizer"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/util"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -48,10 +48,7 @@ func EmptyObject() runtime.Object {
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.StagedGlobalNetworkPolicyList{
-		//TypeMeta: metav1.TypeMeta{},
-		//Items:    []calico.NetworkPolicy{},
-	}
+	return &calico.StagedGlobalNetworkPolicyList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.

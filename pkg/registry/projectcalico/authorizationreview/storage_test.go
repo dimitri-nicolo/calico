@@ -6,8 +6,6 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	. "github.com/tigera/apiserver/pkg/registry/projectcalico/authorizationreview"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -15,9 +13,10 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/tigera/apiserver/pkg/apis/projectcalico"
-	"github.com/tigera/apiserver/pkg/rbac"
-	rbacmock "github.com/tigera/apiserver/pkg/rbac/mock"
+	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/rbac"
+	rbacmock "github.com/projectcalico/apiserver/pkg/rbac/mock"
+	. "github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
 )
 
 var _ = Describe("RBAC calculator tests", func() {

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package authorizationreview
 
@@ -6,9 +6,9 @@ import (
 	"context"
 	"sort"
 
-	"github.com/tigera/apiserver/pkg/rbac"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/rbac"
 
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2017-2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 
-	"github.com/tigera/apiserver/pkg/apiserver"
-	"github.com/tigera/apiserver/pkg/openapi"
+	"github.com/projectcalico/apiserver/pkg/apiserver"
+	"github.com/projectcalico/apiserver/pkg/openapi"
 )
 
 // CalicoServerOptions contains the aggregation of configuration structs for

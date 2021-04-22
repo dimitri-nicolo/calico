@@ -5,8 +5,9 @@ package authenticationreview
 import (
 	"context"
 
-	"github.com/tigera/apiserver/pkg/apis/projectcalico"
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

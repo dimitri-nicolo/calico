@@ -11,9 +11,10 @@ import (
 
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 
-	"github.com/tigera/apiserver/pkg/helpers"
 	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
+
+	"github.com/projectcalico/apiserver/pkg/helpers"
 
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,7 +28,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
