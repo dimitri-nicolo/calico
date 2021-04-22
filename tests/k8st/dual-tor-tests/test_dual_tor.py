@@ -279,6 +279,16 @@ class _FailoverTest(TestBase):
         _log.info("All /26 routes are ECMP")
 
     def _run_single_test(self, case_name, break_func, restore_func):
+        self.restore_needed = False
+        try:
+            self.__run_single_test(case_name, break_func, restore_func)
+        finally:
+            if self.restore_needed:
+                restore_func()
+            # cleanup servers
+            self.clean_up()
+
+    def __run_single_test(self, case_name, break_func, restore_func):
         self.config.resolve_flows()
 
         for f in self.config.flows:
@@ -321,12 +331,11 @@ class _FailoverTest(TestBase):
 
             if count == 5:
                 break_func()
+                self.restore_needed = True
 
             if count == 15:
                 restore_func()
-
-        # cleanup servers
-        self.clean_up()
+                self.restore_needed = False
 
         for f in self.config.flows:
             _log.info("%s: %s", f.server_pod, f.server_log.logs[-1].strip())
