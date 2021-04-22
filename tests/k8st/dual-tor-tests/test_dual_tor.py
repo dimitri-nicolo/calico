@@ -255,13 +255,10 @@ class _FailoverTest(TestBase):
 
         return seq, error
 
-    def clean_up(self):
-        names = ["ra-server", "rb-server"]
+    def clean_up_servers(self, names, port):
         for name in names:
-            cmd_prefix="kubectl exec -n " + self.namespace() + " -t " + name + " -- "
-            output=subprocess.check_output(cmd_prefix + "ps -a", shell=True, stderr=subprocess.STDOUT)
-            if output.find("/reliable-nc 8090") != -1:
-                subprocess.call(cmd_prefix + "killall reliable-nc", shell=True, stderr=subprocess.STDOUT)
+            kubectl("exec -t -n %s %s -- pkill -f \"reliable-nc %s\"" % (self.namespace(), name, port),
+                    allow_fail=True)
 
     def routes_all_ecmp(self):
         _log.info("Check routing...")
@@ -285,8 +282,7 @@ class _FailoverTest(TestBase):
         finally:
             if self.restore_needed:
                 restore_func()
-            # cleanup servers
-            self.clean_up()
+            self.clean_up_servers(["ra-server", "rb-server"], 8090)
 
     def __run_single_test(self, case_name, break_func, restore_func):
         self.config.resolve_flows()
@@ -327,6 +323,7 @@ class _FailoverTest(TestBase):
                     try:
                         retry_until_success(short_connection, retries=3, wait_time=0.25)
                     finally:
+                        self.clean_up_servers([f.server_pod], 8091)
                         _log.info("Short connection %s log:\n%s", f.server_pod, "".join(short_log.logs))
                     def check_transmission():
                         assert "hello\n" in short_log.logs, "Did not find 'hello' in server logs: %r" % short_log.logs
