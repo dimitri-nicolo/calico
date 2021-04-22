@@ -135,6 +135,8 @@ func (s *IPSets) GetIPSetMembers(setID string) []string {
 		return nil
 	})
 
+	// Note: It is very important that nil is returned if there is no ip in an ipset
+	// so that policy rules related to this ipset won't be populated.
 	return retVal
 }
 
