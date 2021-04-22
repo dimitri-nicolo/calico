@@ -317,10 +317,10 @@ class _FailoverTest(TestBase):
                 # after plane breakage, and 3 seconds after broken plane restoration.
                 if count in [3, 8, 18]:
                     short_log = Log()
-                    run_with_log("kubectl exec -n " + self.namespace() + " " + f.server_pod + " -- /reliable-nc 8091", short_log)
+                    run_with_log("kubectl exec -n " + self.namespace() + " " + f.server_pod + " --request-timeout=1s -- /reliable-nc 8091", short_log)
                     def short_connection():
                         try:
-                            run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
+                            run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " --request-timeout=1s -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
                         except Exception:
                             run("docker exec kind-control-plane ip r")
                             raise
