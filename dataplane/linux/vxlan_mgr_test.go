@@ -21,7 +21,7 @@ import (
 	"github.com/projectcalico/felix/rules"
 
 	"github.com/projectcalico/felix/ip"
-
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/routetable"
 
 	. "github.com/onsi/ginkgo"
@@ -102,7 +102,7 @@ var _ = Describe("VXLANManager", func() {
 		mockProcSys = &testProcSys{state: map[string]string{}}
 
 		manager = newVXLANManagerWithShims(
-			newMockIPSets(),
+			common.NewMockIPSets(),
 			rt,
 			"vxlan.calico",
 			Config{

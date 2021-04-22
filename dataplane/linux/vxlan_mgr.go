@@ -33,6 +33,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
@@ -75,7 +76,7 @@ type vxlanManager struct {
 
 	// Indicates if configuration has changed since the last apply.
 	routesDirty       bool
-	ipsetsDataplane   ipsetsDataplane
+	ipsetsDataplane   common.IPSetsDataplane
 	ipSetMetadata     ipsets.IPSetMetadata
 	externalNodeCIDRs []string
 	vtepsDirty        bool
@@ -88,7 +89,7 @@ type vxlanManager struct {
 }
 
 func newVXLANManager(
-	ipsetsDataplane ipsetsDataplane,
+	ipsetsDataplane common.IPSetsDataplane,
 	rt routeTable,
 	deviceName string,
 	dpConfig Config,
@@ -113,7 +114,7 @@ func newVXLANManager(
 }
 
 func newVXLANManagerWithShims(
-	ipsetsDataplane ipsetsDataplane,
+	ipsetsDataplane common.IPSetsDataplane,
 	rt routeTable,
 	deviceName string,
 	dpConfig Config,

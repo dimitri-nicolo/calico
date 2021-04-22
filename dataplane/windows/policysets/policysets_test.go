@@ -1120,6 +1120,75 @@ func TestMultiIpPortChunks(t *testing.T) {
 
 }
 
+func TestRuleRenderingWithDomainIPSets(t *testing.T) {
+	RegisterTestingT(t)
+
+	h := mockHNS{}
+
+	// Windows 1803/RS4
+	h.SupportedFeatures.Acl.AclRuleId = true
+	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
+
+	//Updating the ipset
+	ipsc := mockIPSetCache{
+		IPSets: map[string][]string{
+			"a": {"10.0.0.1", "10.0.0.2"},
+			"d": {"10.1.0.1", "10.1.0.2"},
+			"s": {"12.0.0.1"},
+		},
+	}
+
+	ps := NewPolicySets(&h, []IPSetCache{&ipsc}, mockReader(""))
+
+	// Policy should handle domain IpSets.
+	ps.AddOrReplacePolicySet("policy-domain-ipset-update", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"s"},
+				RuleId:      "rule-1",
+			},
+		},
+		OutboundRules: []*proto.Rule{
+			{
+				Action:            "Allow",
+				DstIpSetIds:       []string{"a"},
+				DstDomainIpSetIds: []string{"d"},
+				RuleId:            "rule-1",
+			},
+		},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"policy-domain-ipset-update"}, true)).To(Equal([]*hns.ACLPolicy{
+		// Inbound rule.
+		{Type: hns.ACL, Id: "API0|domain-ipset-update---rule-1---0", Protocol: 256, Action: hns.Allow, Direction: hns.In,
+			RuleType: hns.Switch, Priority: 1000, RemoteAddresses: "12.0.0.1", RemotePorts: ""},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for domain ipset policy")
+
+	Expect(ps.GetPolicySetRules([]string{"policy-domain-ipset-update"}, false)).To(Equal([]*hns.ACLPolicy{
+		// Outbound rule.
+		{Type: hns.ACL, Id: "APE0|domain-ipset-update---rule-1---0", Protocol: 256, Action: hns.Allow, Direction: hns.Out,
+			RuleType: hns.Switch, Priority: 1000, RemoteAddresses: "10.0.0.1,10.0.0.2,10.1.0.1,10.1.0.2", RemotePorts: ""},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for domain ipset policy")
+
+	//Policy should handle empty domain IpSets.
+	ipsc.IPSets["a"] = []string{}
+	ipsc.IPSets["d"] = []string{}
+
+	ps.ProcessIpSetUpdate("a")
+	ps.ProcessIpSetUpdate("d")
+
+	Expect(ps.GetPolicySetRules([]string{"policy-domain-ipset-update"}, false)).To(Equal([]*hns.ACLPolicy{
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for domain ipset policy")
+
+}
+
 func TestPolicyOrderingExceedingPriorityLimit(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -1305,5 +1374,9 @@ type mockIPSetCache struct {
 }
 
 func (c *mockIPSetCache) GetIPSetMembers(ipsetID string) []string {
+	if len(c.IPSets[ipsetID]) == 0 {
+		return nil
+	}
+
 	return c.IPSets[ipsetID]
 }

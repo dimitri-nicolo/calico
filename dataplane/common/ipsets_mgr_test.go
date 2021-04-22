@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package intdataplane
+package common
 
 import (
 	"strings"
@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/dataplane/dns"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -76,15 +75,15 @@ func allIPsForDomains(mappings map[string][]string, domains ...string) (ips []st
 
 var _ = Describe("IP Sets manager", func() {
 	var (
-		ipsetsMgr   *ipSetsManager
-		ipSets      *mockIPSets
+		ipsetsMgr   *IPSetsManager
+		ipSets      *MockIPSets
 		domainStore *mockDomainStore
 	)
 
 	BeforeEach(func() {
 		domainStore = &mockDomainStore{mappings: make(map[string][]string)}
-		ipSets = newMockIPSets()
-		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore, newCallbacks())
+		ipSets = NewMockIPSets()
+		ipsetsMgr = NewIPSetsManager(ipSets, 1024, domainStore, NewCallback())
 	})
 
 	// Generic assumptions used during tests. Having them here reduces code duplication and improves readability.
@@ -205,7 +204,7 @@ var _ = Describe("IP Sets manager", func() {
 						domainStore.mappings = map[string][]string{
 							members[2]: domainStore.GetDomainIPs(members[2]),
 						}
-						syncNeeded := ipsetsMgr.OnDomainInfoChange(&dns.DomainInfoChanged{
+						syncNeeded := ipsetsMgr.OnDomainInfoChange(&DomainInfoChanged{
 							// The domain_info_store always returns lowercase domain names
 							Domain: strings.ToLower(members[1]),
 							Reason: "mapping expired",

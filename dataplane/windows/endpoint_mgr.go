@@ -30,6 +30,7 @@ import (
 
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (
@@ -70,6 +71,9 @@ type endpointManager struct {
 	// lastCacheUpdate records the last time that the addressToEndpointId map was refreshed.
 	lastCacheUpdate time.Time
 	hns             hnsInterface
+
+	// pendingIPSetUpdate stores any ipset id which has been updated.
+	pendingIPSetUpdate set.Set
 
 	// pendingHostAddrs is either nil if no update is pending for the host addresses, or it contains the new set of IPs.
 	pendingHostAddrs []string
@@ -119,6 +123,7 @@ func newEndpointManager(hns hnsInterface,
 		addressToEndpointId: make(map[string]string),
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		pendingIPSetUpdate:  set.New(),
 		hostAddrs:           hostIPv4s,
 		eventListeners:      eventListeners,
 	}
@@ -126,6 +131,10 @@ func newEndpointManager(hns hnsInterface,
 
 func (m *endpointManager) OnHostAddrsUpdate(hostAddrs []string) {
 	m.pendingHostAddrs = hostAddrs
+}
+
+func (m *endpointManager) OnIPSetsUpdate(ipSetId string) {
+	m.pendingIPSetUpdate.Add(ipSetId)
 }
 
 type endPointEventListener interface {
@@ -162,12 +171,6 @@ func (m *endpointManager) OnUpdate(msg interface{}) {
 	case *proto.WorkloadEndpointRemove:
 		log.WithField("workloadEndpointId", msg.Id).Info("Processing WorkloadEndpointRemove")
 		m.pendingWlEpUpdates[*msg.Id] = nil
-	case *proto.IPSetUpdate:
-		log.WithField("ipSetId", msg.Id).Info("Processing IPSetUpdate")
-		m.ProcessIpSetUpdate(msg.Id)
-	case *proto.IPSetDeltaUpdate:
-		log.WithField("ipSetId", msg.Id).Info("Processing IPSetDeltaUpdate")
-		m.ProcessIpSetUpdate(msg.Id)
 	case *proto.ActivePolicyUpdate:
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyUpdate")
 		m.ProcessPolicyProfileUpdate(policysets.PolicyNamePrefix + msg.Id.Name)
@@ -324,6 +327,12 @@ func (m *endpointManager) ProcessPolicyProfileUpdate(policySetId string) {
 // have already been processed by the various managers and we should now have a complete picture
 // of the policy/rules to be applied for each pending endpoint.
 func (m *endpointManager) CompleteDeferredWork() error {
+	m.pendingIPSetUpdate.Iter(func(item interface{}) error {
+		id := item.(string)
+		m.ProcessIpSetUpdate(id)
+		return set.RemoveItem
+	})
+
 	if m.pendingHostAddrs != nil {
 		log.WithField("update", m.pendingHostAddrs).Debug("Pending host addrs update")
 		// Defensive: sort before comparison.  We do this in the poll loop too but just in case we add another source of

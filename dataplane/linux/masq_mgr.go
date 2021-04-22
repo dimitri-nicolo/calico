@@ -19,6 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
@@ -38,7 +39,7 @@ import (
 // pool is excluded.
 type masqManager struct {
 	ipVersion       uint8
-	ipsetsDataplane ipsetsDataplane
+	ipsetsDataplane common.IPSetsDataplane
 	natTable        iptablesTable
 	activePools     map[string]*proto.IPAMPool
 	masqPools       set.Set
@@ -49,7 +50,7 @@ type masqManager struct {
 }
 
 func newMasqManager(
-	ipsetsDataplane ipsetsDataplane,
+	ipsetsDataplane common.IPSetsDataplane,
 	natTable iptablesTable,
 	ruleRenderer rules.RuleRenderer,
 	maxIPSetSize int,

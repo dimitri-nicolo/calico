@@ -103,7 +103,7 @@ type InfoReader struct {
 }
 
 func NewInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *InfoReader {
-	etwOps, err := etw.NewEtwOperations([]int{etw.VFP_EVENT_ID_ENDPOINT_ACL}, windowsCollectorETWSession)
+	etwOps, err := etw.NewEtwOperations([]int{etw.VFP_EVENT_ID_ENDPOINT_ACL}, etw.EtwVfpProcessor(windowsCollectorETWSession))
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to create ETW operations")
 	}
@@ -170,7 +170,7 @@ func (r *InfoReader) EndpointEventHandler() *EndpointEventHandler {
 
 // Subscribe subscribes the reader to the ETW event stream.
 func (r *InfoReader) subscribe() error {
-	return r.etwOps.Subscribe(r.eventAggrC, r.eventDoneC)
+	return r.etwOps.SubscribeToVfp(r.eventAggrC, r.eventDoneC)
 }
 
 func (r *InfoReader) run() {

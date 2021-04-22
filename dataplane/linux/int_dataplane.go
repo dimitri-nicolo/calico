@@ -16,6 +16,7 @@ package intdataplane
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -52,7 +53,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/dataplane/dns"
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
@@ -298,7 +299,7 @@ type InternalDataplane struct {
 	iptablesNATTables    []*iptables.Table
 	iptablesRawTables    []*iptables.Table
 	iptablesFilterTables []*iptables.Table
-	ipSets               []ipsetsDataplane
+	ipSets               []common.IPSetsDataplane
 
 	ipipManager          *ipipManager
 	allHostsIpsetManager *allHostsIpsetManager
@@ -314,8 +315,8 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
-	domainInfoStore   *dns.DomainInfoStore
-	domainInfoChanges chan *dns.DomainInfoChanged
+	domainInfoStore   *common.DomainInfoStore
+	domainInfoChanges chan *common.DomainInfoChanged
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
@@ -356,7 +357,7 @@ type InternalDataplane struct {
 	sockmapState      *sockmapState
 	endpointsSourceV4 endpointsSource
 	ipsetsSourceV4    ipsetsSource
-	callbacks         *callbacks
+	callbacks         *common.Callbacks
 
 	loopSummarizer *logutils.Summarizer
 }
@@ -420,7 +421,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
-		domainInfoChanges: make(chan *dns.DomainInfoChanged, 100),
+		domainInfoChanges: make(chan *common.DomainInfoChanged, 100),
 		config:            config,
 		applyThrottle:     throttle.New(10),
 		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
@@ -566,7 +567,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = dns.NewDomainInfoStore(dp.domainInfoChanges, &dns.Config{
+	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges, &common.DnsConfig{
 		Collector:            config.Collector,
 		DNSCacheEpoch:        config.DNSCacheEpoch,
 		DNSCacheFile:         config.DNSCacheFile,
@@ -576,7 +577,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	callbacks := newCallbacks()
+	callbacks := common.NewCallback()
 	dp.callbacks = callbacks
 	if !config.BPFEnabled && config.XDPEnabled {
 		if err := bpf.SupportsXDP(); err != nil {
@@ -639,7 +640,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if !config.BPFEnabled {
 		// BPF mode disabled, create the iptables-only managers.
-		ipsetsManager := newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks)
+		ipsetsManager := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks)
 		dp.RegisterManager(ipsetsManager)
 		dp.ipsetsSourceV4 = ipsetsManager
 		// TODO Connect host IP manager to BPF
@@ -688,7 +689,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			bpfEventPoller = newBpfEventPoller(bpfEvnt)
 
 			// Register BPF event handling for DNS events.
-			bpfEventPoller.Register(events.TypeDNSEvent, dp.domainInfoStore.DNSPacketFromBPF)
+			bpfEventPoller.Register(events.TypeDNSEvent,
+				func(e events.Event) {
+					log.Debugf("DNS packet from BPF: %v", e)
+					// The first 8 bytes of the event data are a 64-bit timestamp (in nanoseconds).  The DNS
+					// packet data begins after that.
+					timestampNS := binary.LittleEndian.Uint64(e.Data())
+					consumed := 8
+					dp.domainInfoStore.MsgChannel <- common.DataWithTimestamp{
+						// We currently only capture DNS packets on workload interfaces, and the packet data
+						// on those interfaces always begins with an Ethernet header that we don't want.
+						// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
+						Data:      e.Data()[consumed+14:],
+						Timestamp: timestampNS,
+					}
+				})
 			log.Info("BPF: Registered events sink for TypeDNSEvent")
 		}
 	}
@@ -757,7 +772,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
-		dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
+		dp.RegisterManager(common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
 		bpfRTMgr := newBPFRouteManager(config.Hostname, config.ExternalNodesCidrs, bpfMapContext)
 		dp.RegisterManager(bpfRTMgr)
 
@@ -1043,7 +1058,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			unix.RT_TABLE_UNSPEC, dp.loopSummarizer)
 
 		if !config.BPFEnabled {
-			dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
+			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
 			dp.RegisterManager(newHostIPManager(
 				config.RulesConfig.WorkloadIfacePrefixes,
 				rules.IPSetIDThisHostIPs,
@@ -1352,7 +1367,7 @@ func (d *InternalDataplane) Start() {
 		int(rules.NFLOGDomainGroup),
 		65535,
 		func(data []byte, timestamp uint64) {
-			d.domainInfoStore.MsgChannel <- dns.DataWithTimestamp{
+			d.domainInfoStore.MsgChannel <- common.DataWithTimestamp{
 				Data:      data,
 				Timestamp: timestamp,
 			}
@@ -1936,7 +1951,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		case domainInfoChange := <-d.domainInfoChanges:
 			// Opportunistically read and coalesce other domain change signals that are
 			// already pending on this channel.
-			domainChangeSignals := []*dns.DomainInfoChanged{domainInfoChange}
+			domainChangeSignals := []*common.DomainInfoChanged{domainInfoChange}
 			domainsChanged := set.From(domainInfoChange.Domain)
 		domainChangeLoop:
 			for {
@@ -1953,7 +1968,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			for _, domainInfoChange = range domainChangeSignals {
 				for _, mgr := range d.allManagers {
-					if handler, ok := mgr.(DomainInfoChangeHandler); ok {
+					if handler, ok := mgr.(common.DomainInfoChangeHandler); ok {
 						if handler.OnDomainInfoChange(domainInfoChange) {
 							d.dataplaneNeedsSync = true
 						}
@@ -1992,7 +2007,6 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			defer stopWG.Done()
 			if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
-
 			}
 			return
 		}
@@ -2189,7 +2203,7 @@ func (d *InternalDataplane) apply() {
 	var ipSetsWG sync.WaitGroup
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
-		go func(ipSets ipsetsDataplane) {
+		go func(ipSets common.IPSetsDataplane) {
 			ipSets.ApplyUpdates()
 			d.reportHealth()
 			ipSetsWG.Done()
@@ -2254,7 +2268,7 @@ func (d *InternalDataplane) apply() {
 	// Now clean up any left-over IP sets.
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
-		go func(s ipsetsDataplane) {
+		go func(s common.IPSetsDataplane) {
 			s.ApplyDeletions()
 			d.reportHealth()
 			ipSetsWG.Done()

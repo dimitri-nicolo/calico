@@ -12,18 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package intdataplane
+package common
 
 import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/dataplane/dns"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
+
+type IPSetsDataplane interface {
+	AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string)
+	AddMembers(setID string, newMembers []string)
+	RemoveMembers(setID string, removedMembers []string)
+	RemoveIPSet(setID string)
+	GetIPFamily() ipsets.IPFamily
+	GetTypeOf(setID string) (ipsets.IPSetType, error)
+	GetMembers(setID string) (set.Set, error)
+	QueueResync()
+	ApplyUpdates()
+	ApplyDeletions()
+}
 
 type ipSetsManagerCallbacks struct {
 	addMembersIPSet    *AddMembersIPSetFuncs
@@ -32,7 +44,7 @@ type ipSetsManagerCallbacks struct {
 	removeIPSet        *RemoveIPSetFuncs
 }
 
-func newIPSetsManagerCallbacks(callbacks *callbacks, ipFamily ipsets.IPFamily) ipSetsManagerCallbacks {
+func newIPSetsManagerCallbacks(callbacks *Callbacks, ipFamily ipsets.IPFamily) ipSetsManagerCallbacks {
 	if ipFamily == ipsets.IPFamilyV4 {
 		return ipSetsManagerCallbacks{
 			addMembersIPSet:    callbacks.AddMembersIPSetV4,
@@ -66,11 +78,11 @@ func (c *ipSetsManagerCallbacks) InvokeRemoveIPSet(setID string) {
 	c.removeIPSet.Invoke(setID)
 }
 
-// Except for domain IP sets, ipSetsManager simply passes through IP set updates from the datastore
+// Except for domain IP sets, IPSetsManager simply passes through IP set updates from the datastore
 // to the ipsets.IPSets dataplane layer.  For domain IP sets - which hereafter we'll just call
-// "domain sets" - ipSetsManager handles the resolution from domain names to expiring IPs.
-type ipSetsManager struct {
-	ipsetsDataplane ipsetsDataplane
+// "domain sets" - IPSetsManager handles the resolution from domain names to expiring IPs.
+type IPSetsManager struct {
+	ipsetsDataplane IPSetsDataplane
 	maxSize         int
 	callbacks       ipSetsManagerCallbacks
 
@@ -97,11 +109,11 @@ type store interface {
 
 type DomainInfoChangeHandler interface {
 	// Handle a DomainInfoChanged message and report if the dataplane needs syncing.
-	OnDomainInfoChange(msg *dns.DomainInfoChanged) (dataplaneSyncNeeded bool)
+	OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyncNeeded bool)
 }
 
-func newIPSetsManager(ipsets_ ipsetsDataplane, maxIPSetSize int, domainInfoStore store, callbacks *callbacks) *ipSetsManager {
-	return &ipSetsManager{
+func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store, callbacks *Callbacks) *IPSetsManager {
+	return &IPSetsManager{
 		ipsetsDataplane: ipsets_,
 		maxSize:         maxIPSetSize,
 		callbacks:       newIPSetsManagerCallbacks(callbacks, ipsets_.GetIPFamily()),
@@ -113,15 +125,15 @@ func newIPSetsManager(ipsets_ ipsetsDataplane, maxIPSetSize int, domainInfoStore
 	}
 }
 
-func (m *ipSetsManager) GetIPSetType(setID string) (ipsets.IPSetType, error) {
+func (m *IPSetsManager) GetIPSetType(setID string) (ipsets.IPSetType, error) {
 	return m.ipsetsDataplane.GetTypeOf(setID)
 }
 
-func (m *ipSetsManager) GetIPSetMembers(setID string) (set.Set /*<string>*/, error) {
+func (m *IPSetsManager) GetIPSetMembers(setID string) (set.Set /*<string>*/, error) {
 	return m.ipsetsDataplane.GetMembers(setID)
 }
 
-func (m *ipSetsManager) OnUpdate(msg interface{}) {
+func (m *IPSetsManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	// IP set-related messages, these are extremely common.
 	case *proto.IPSetDeltaUpdate:
@@ -181,19 +193,19 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 		}
 		m.ipsetsDataplane.RemoveIPSet(msg.Id)
 		if m.domainSetProgramming[msg.Id] == nil {
-			// Note: no XDP callbacks for domain IP set removal because XDP is
+			// Note: no XDP Callbacks for domain IP set removal because XDP is
 			// for ingress policy only and domain IP sets are egress only.
 			m.callbacks.InvokeRemoveIPSet(msg.Id)
 		}
 	}
 }
 
-func (m *ipSetsManager) CompleteDeferredWork() error {
+func (m *IPSetsManager) CompleteDeferredWork() error {
 	// Nothing to do, we don't defer any work.
 	return nil
 }
 
-func (m *ipSetsManager) domainIncludedInSet(domain string, ipSetId string) {
+func (m *IPSetsManager) domainIncludedInSet(domain string, ipSetId string) {
 	if m.domainSetIds[domain] != nil {
 		m.domainSetIds[domain].Add(ipSetId)
 	} else {
@@ -201,7 +213,7 @@ func (m *ipSetsManager) domainIncludedInSet(domain string, ipSetId string) {
 	}
 }
 
-func (m *ipSetsManager) domainRemovedFromSet(domain string, ipSetId string) {
+func (m *IPSetsManager) domainRemovedFromSet(domain string, ipSetId string) {
 	if m.domainSetIds[domain] != nil {
 		m.domainSetIds[domain].Discard(ipSetId)
 		if m.domainSetIds[domain].Len() == 0 {
@@ -210,7 +222,7 @@ func (m *ipSetsManager) domainRemovedFromSet(domain string, ipSetId string) {
 	}
 }
 
-func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata *ipsets.IPSetMetadata) {
+func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata *ipsets.IPSetMetadata) {
 	log.Infof("Update whole domain set: msg=%v metadata=%v", msg, metadata)
 
 	if m.domainSetProgramming[msg.Id] != nil {
@@ -260,7 +272,7 @@ func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	for ip := range ipToDomains {
 		ipMembers = append(ipMembers, ip)
 	}
-	// Note: no XDP callbacks here because XDP is for ingress policy only and domain
+	// Note: no XDP Callbacks here because XDP is for ingress policy only and domain
 	// IP sets are egress only.
 	m.ipsetsDataplane.AddOrReplaceIPSet(*metadata, ipMembers)
 
@@ -277,7 +289,7 @@ func setToSlice(setOfThings set.Set) []string {
 	return slice
 }
 
-func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemoved []string, domainsAdded []string) {
+func (m *IPSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemoved []string, domainsAdded []string) {
 	log.Infof("Domain set delta update: id=%v removed=%v added=%v", ipSetId, domainsRemoved, domainsAdded)
 
 	// Get the current programming for this domain set.
@@ -340,13 +352,13 @@ func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 		return nil
 	})
 
-	// Pass IP deltas onto the ipsets dataplane layer.  Note: no XDP callbacks here
+	// Pass IP deltas onto the ipsets dataplane layer.  Note: no XDP Callbacks here
 	// because XDP is for ingress policy only and domain IP sets are egress only.
 	m.ipsetsDataplane.RemoveMembers(ipSetId, setToSlice(ipsToRemove))
 	m.ipsetsDataplane.AddMembers(ipSetId, setToSlice(ipsToAdd))
 }
 
-func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {
+func (m *IPSetsManager) removeDomainIPSetTracking(ipSetId string) {
 	log.Infof("Domain set removed: id=%v", ipSetId)
 	for domain, _ := range m.domainSetIds {
 		m.domainRemovedFromSet(domain, ipSetId)
@@ -355,7 +367,7 @@ func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {
 }
 
 // This function may be called with a lowercase domain name when the original watch was uppercase.
-func (m *ipSetsManager) OnDomainInfoChange(msg *dns.DomainInfoChanged) (dataplaneSyncNeeded bool) {
+func (m *IPSetsManager) OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyncNeeded bool) {
 	log.WithFields(log.Fields{"domain": msg.Domain, "reason": msg.Reason}).Debug("Domain info changed")
 
 	// Find the affected domain sets (note that the domain is always lowercased).

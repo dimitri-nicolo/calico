@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -120,9 +121,9 @@ func NewXDPStateWithBPFLibrary(library bpf.BPFDataplane, allowGenericXDP bool) *
 	}
 }
 
-func (x *xdpState) PopulateCallbacks(cbs *callbacks) {
+func (x *xdpState) PopulateCallbacks(cbs *common.Callbacks) {
 	if x.ipV4State != nil {
-		cbIDs := []*CbID{
+		cbIDs := []*common.CbID{
 			cbs.UpdatePolicyV4.Append(x.ipV4State.updatePolicy),
 			cbs.RemovePolicyV4.Append(x.ipV4State.removePolicy),
 			cbs.AddMembersIPSetV4.Append(x.ipV4State.addMembersIPSet),
@@ -139,7 +140,7 @@ func (x *xdpState) PopulateCallbacks(cbs *callbacks) {
 	}
 }
 
-func (x *xdpState) DepopulateCallbacks(cbs *callbacks) {
+func (x *xdpState) DepopulateCallbacks(cbs *common.Callbacks) {
 	if x.ipV4State != nil {
 		for _, id := range x.ipV4State.cbIDs {
 			cbs.Drop(id)
@@ -270,7 +271,7 @@ type xdpIPState struct {
 	pendingDiffState  *xdpPendingDiffState
 	newCurrentState   *xdpSystemState
 	bpfActions        *xdpBPFActions
-	cbIDs             []*CbID
+	cbIDs             []*common.CbID
 	logCxt            *log.Entry
 }
 
@@ -2150,7 +2151,7 @@ type ipsetsSource interface {
 	GetIPSetMembers(setID string) (set.Set /*<string>*/, error)
 }
 
-var _ ipsetsSource = &ipSetsManager{}
+var _ ipsetsSource = &common.IPSetsManager{}
 var _ ipsetsSource = &nilIPSetsSource{}
 
 type xdpMemberCache struct {

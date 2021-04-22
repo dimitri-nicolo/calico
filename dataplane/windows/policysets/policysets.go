@@ -260,6 +260,7 @@ func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Ru
 	for _, rule := range rules {
 		ipSetIds.AddAll(rule.SrcIpSetIds)
 		ipSetIds.AddAll(rule.DstIpSetIds)
+		ipSetIds.AddAll(rule.DstDomainIpSetIds)
 	}
 
 	return ipSetIds
@@ -491,8 +492,12 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 	//
 	dstAddresses := ruleCopy.DstNet
 
-	if len(ruleCopy.DstIpSetIds) > 0 {
-		ipsetAddresses, err := s.getIPSetAddresses(ruleCopy.DstIpSetIds)
+	// Merge DstIpSetIds and DstDomainIpSetIds
+	dstIpSetIds := ruleCopy.DstIpSetIds
+	dstIpSetIds = append(dstIpSetIds, ruleCopy.DstDomainIpSetIds...)
+
+	if len(dstIpSetIds) > 0 {
+		ipsetAddresses, err := s.getIPSetAddresses(dstIpSetIds)
 		if err != nil {
 			logCxt.Warn("DstIpSetIds could not be resolved, rule will be skipped")
 			return nil, err

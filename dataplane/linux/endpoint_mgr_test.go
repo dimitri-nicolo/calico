@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
@@ -839,7 +840,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				mockProcSys.stat,
 				false,
 				hepListener,
-				newCallbacks(),
+				common.NewCallback(),
 				nlHandle,
 				false,
 				"info",

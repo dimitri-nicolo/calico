@@ -25,6 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -37,7 +38,7 @@ var (
 var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	var (
 		ipipMgr     *ipipManager
-		ipSets      *mockIPSets
+		ipSets      *common.MockIPSets
 		dataplane   *mockIPIPDataplane
 		mockProcSys *testProcSys
 	)
@@ -53,7 +54,7 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 
 	BeforeEach(func() {
 		dataplane = &mockIPIPDataplane{}
-		ipSets = newMockIPSets()
+		ipSets = common.NewMockIPSets()
 		mockProcSys = &testProcSys{state: map[string]string{}}
 		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, mockProcSys.write, dataplane, nil, Config{EgressIPEnabled: true})
 	})
@@ -212,7 +213,7 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 var _ = Describe("ipipManager IP set updates", func() {
 	var (
 		ipipMgr     *ipipManager
-		ipSets      *mockIPSets
+		ipSets      *common.MockIPSets
 		dataplane   *mockIPIPDataplane
 		mockProcSys *testProcSys
 	)
@@ -223,7 +224,7 @@ var _ = Describe("ipipManager IP set updates", func() {
 
 	BeforeEach(func() {
 		dataplane = &mockIPIPDataplane{}
-		ipSets = newMockIPSets()
+		ipSets = common.NewMockIPSets()
 		mockProcSys = &testProcSys{state: map[string]string{}}
 		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, mockProcSys.write, dataplane, []string{externalCIDR}, Config{EgressIPEnabled: false})
 	})
