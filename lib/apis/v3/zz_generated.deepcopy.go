@@ -1911,6 +1911,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.WindowsDNSExtraTTL != nil {
+		in, out := &in.WindowsDNSExtraTTL, &out.WindowsDNSExtraTTL
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.DNSTrustedServers != nil {
 		in, out := &in.DNSTrustedServers, &out.DNSTrustedServers
 		*out = new([]string)

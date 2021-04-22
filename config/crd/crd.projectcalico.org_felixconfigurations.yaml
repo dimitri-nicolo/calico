@@ -980,6 +980,16 @@ spec:
                 type: integer
               vxlanVNI:
                 type: integer
+              windowsDnsCacheFile:
+                description: 'The name of the file that Felix uses to preserve learnt
+                  DNS information when restarting. [Default: "c:\\TigeraCalico\\felix-dns-cache.txt"].'
+                type: string
+              windowsDnsExtraTTL:
+                description: 'Extra time to keep IPs and alias names that are learnt
+                  from DNS, in addition to each name or IP''s advertised TTL. The
+                  default value is 120s which is same as the default value of ServicePointManager.DnsRefreshTimeout
+                  on .net framework. [Default: 120s].'
+                type: string
               windowsFlowLogsFileDirectory:
                 description: 'WindowsFlowLogsFileDirectory sets the directory where
                   flow logs files are stored on Windows nodes. [Default: "c:\\TigeraCalico\\flowlogs"].'
