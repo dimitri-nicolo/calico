@@ -298,7 +298,10 @@ class _FailoverTest(TestBase):
             count += 1
 
             for f in self.config.flows:
-                new_seq, error = self.packets_received(f.client_pod, f.server_log.logs, count, f.previous_seq)
+                new_seq, error = self.packets_received(f.client_pod + ":" + f.server_pod,
+                                                       f.server_log.logs,
+                                                       count,
+                                                       f.previous_seq)
                 f.errors += error
                 if new_seq > f.previous_seq and new_seq == self.config.total_packets:
                     flows_still_running -= 1
