@@ -499,6 +499,13 @@ type FelixConfigurationSpec struct {
 	WindowsFlowLogsPositionFilePath string `json:"windowsFlowLogsPositionFilePath,omitempty"`
 	// WindowsStatsDumpFilePath is used to specify the path of the stats dump file on Windows nodes. [Default: "c:\\TigeraCalico\\stats\\dump"]
 	WindowsStatsDumpFilePath string `json:"windowsStatsDumpFilePath,omitempty"`
+	// The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default:
+	// "c:\\TigeraCalico\\felix-dns-cache.txt"].
+	WindowsDNSCacheFile string `json:"windowsDnsCacheFile,omitempty"`
+	// Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name
+	// or IP's advertised TTL. The default value is 120s which is same as the default value of
+	// ServicePointManager.DnsRefreshTimeout on .net framework. [Default: 120s].
+	WindowsDNSExtraTTL *metav1.Duration `json:"windowsDnsExtraTTL,omitempty" configv1timescale:"seconds"`
 
 	// The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an
 	// explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS
