@@ -673,7 +673,7 @@ github.com/projectcalico/hcsshim v0.8.9-calico h1:aRrOWouDTzKwaIoRGMV/I1QikR+ikw
 github.com/projectcalico/hcsshim v0.8.9-calico/go.mod h1:5692vkUqntj1idxauYlpoINNKeqCiG6Sg38RRsjT5y8=
 github.com/projectcalico/logrus v1.0.4-calico h1:bHJ2KLGTFzoWpRISe13CO7HVxxrKunDjyUz/wFiBY8c=
 github.com/projectcalico/logrus v1.0.4-calico/go.mod h1:DfgrchabbtEO9wjOz5lVae+XRvjFKKWEA9GTMme6A8g=
-github.com/projectcalico/pod2daemon v0.0.0-20210416195010-6f2d574230b3/go.mod h1:96lk2GRh7Z5QdPGRmZMC6DRxEOToaAlS+emdl4WiMPM=
+github.com/projectcalico/pod2daemon v0.0.0-20210421215417-6a02764eed37/go.mod h1:96lk2GRh7Z5QdPGRmZMC6DRxEOToaAlS+emdl4WiMPM=
 github.com/projectcalico/pod2daemon v3.8.2+incompatible h1:sJB3gIal6B32tt/JvJ0XDMX+hkAUWSdW14fMMhEHOHI=
 github.com/projectcalico/pod2daemon v3.8.2+incompatible/go.mod h1:TgmA+ArLHObRADfET11mFF1aTK5i++4ZhqIuE4IV+IU=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
@@ -774,8 +774,8 @@ github.com/tigera/cni-plugin-private v1.11.1-0.20210420173835-808bcd134fcb h1:Ia
 github.com/tigera/cni-plugin-private v1.11.1-0.20210420173835-808bcd134fcb/go.mod h1:rmBvibScXWfErM1QqIyIkc/xWsj7VntCflDOCiMscrE=
 github.com/tigera/confd-private v1.0.1-0.20210420173320-ec4ec95b5bf4 h1:BtrvmJHig3FSLtaSNvQQpLzA4AYHa+NHGMiNPFKqj1k=
 github.com/tigera/confd-private v1.0.1-0.20210420173320-ec4ec95b5bf4/go.mod h1:dlJGLGxI8DHa+/cOsxdBu5xTmV/PpOLqxv2stKv4KQ0=
-github.com/tigera/felix-private v0.0.0-20210420213332-817fa8555fa1 h1:KVEzbySXzX3aSSG02bk0JcjfHG1V50M7F+M59pPR4WY=
-github.com/tigera/felix-private v0.0.0-20210420213332-817fa8555fa1/go.mod h1:jzDdVw0p6sOUuJw0qzagHmEx2lIMazk90o+N3d6kueg=
+github.com/tigera/felix-private v0.0.0-20210422041916-73210edc8bc5 h1:KBC74gdX2CuLHi56jgbmQXXjvlKJ6AafLfXInoZ754k=
+github.com/tigera/felix-private v0.0.0-20210422041916-73210edc8bc5/go.mod h1:0YbNk9qDn5ABkZRuYxMNG7Psezr5xKbubbnkqNAQwx8=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210420170807-282d73e15338 h1:LQ/nwT4OyHdZ6neQa5CFimDYsdBKJxibEsP/50ZZ970=

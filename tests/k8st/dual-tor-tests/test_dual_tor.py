@@ -230,18 +230,18 @@ class _FailoverTest(TestBase):
         error = 0
 
         if len(server_log) == 0:
-            _log.exception("empty server log of %s at %d seconds", name, count)
-            raise Exception("error empty server log")
-
-        last_log = server_log[-1]
-        if last_log.find("--") == -1:
-            last_log = server_log[-2]
+            # No packets received yet.
+            seq = 0
+        else:
+            last_log = server_log[-1]
             if last_log.find("--") == -1:
-                _log.exception("failed to parse server log of %s at %d seconds", name, count)
-                raise Exception("error parsing server log")
+                last_log = server_log[-2]
+                if last_log.find("--") == -1:
+                    _log.exception("failed to parse server log of %s at %d seconds", name, count)
+                    raise Exception("error parsing server log")
+            seq_string = last_log.split("--")[0]
+            seq = int(seq_string)
 
-        seq_string = last_log.split("--")[0]
-        seq = int(seq_string)
         diff = seq - previous_seq
 
         _log.info("%d second -- %s %s packets received (latest seq # %d, %d server log lines)",
@@ -255,13 +255,10 @@ class _FailoverTest(TestBase):
 
         return seq, error
 
-    def clean_up(self):
-        names = ["ra-server", "rb-server"]
+    def clean_up_servers(self, names, port):
         for name in names:
-            cmd_prefix="kubectl exec -n " + self.namespace() + " -t " + name + " -- "
-            output=subprocess.check_output(cmd_prefix + "ps -a", shell=True, stderr=subprocess.STDOUT)
-            if output.find("/reliable-nc 8090") != -1:
-                subprocess.call(cmd_prefix + "killall reliable-nc", shell=True, stderr=subprocess.STDOUT)
+            kubectl("exec -t -n %s %s -- pkill -f \"reliable-nc %s\"" % (self.namespace(), name, port),
+                    allow_fail=True)
 
     def routes_all_ecmp(self):
         _log.info("Check routing...")
@@ -279,6 +276,15 @@ class _FailoverTest(TestBase):
         _log.info("All /26 routes are ECMP")
 
     def _run_single_test(self, case_name, break_func, restore_func):
+        self.restore_needed = False
+        try:
+            self.__run_single_test(case_name, break_func, restore_func)
+        finally:
+            if self.restore_needed:
+                restore_func()
+            self.clean_up_servers(["ra-server", "rb-server"], 8090)
+
+    def __run_single_test(self, case_name, break_func, restore_func):
         self.config.resolve_flows()
 
         for f in self.config.flows:
@@ -298,32 +304,43 @@ class _FailoverTest(TestBase):
             count += 1
 
             for f in self.config.flows:
-                new_seq, error = self.packets_received(f.client_pod, f.server_log.logs, count, f.previous_seq)
+                new_seq, error = self.packets_received(f.client_pod + ":" + f.server_pod,
+                                                       f.server_log.logs,
+                                                       count,
+                                                       f.previous_seq)
                 f.errors += error
                 if new_seq > f.previous_seq and new_seq == self.config.total_packets:
                     flows_still_running -= 1
                 f.previous_seq = new_seq
 
-                if (count % 3) == 0:
-                    # Test shortlived connection.
+                # Test shortlived new connections: 3 seconds into the test, 3 seconds
+                # after plane breakage, and 3 seconds after broken plane restoration.
+                if count in [3, 8, 18]:
                     short_log = Log()
-                    run_with_log("kubectl exec -n " + self.namespace() + " " + f.server_pod + " -- /reliable-nc 8091", short_log)
+                    run_with_log("kubectl exec -n " + self.namespace() + " " + f.server_pod + " --request-timeout=1s -- /reliable-nc 8091", short_log)
                     def short_connection():
-                        run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
-                    time.sleep(0.25)
-                    retry_until_success(short_connection, retries=3, wait_time=0.25)
+                        try:
+                            run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " --request-timeout=1s -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
+                        except Exception:
+                            run("docker exec kind-control-plane ip r")
+                            raise
+                        time.sleep(0.25)
+                    try:
+                        retry_until_success(short_connection, retries=3, wait_time=0.25)
+                    finally:
+                        self.clean_up_servers([f.server_pod], 8091)
+                        _log.info("Short connection %s log:\n%s", f.server_pod, "".join(short_log.logs))
                     def check_transmission():
                         assert "hello\n" in short_log.logs, "Did not find 'hello' in server logs: %r" % short_log.logs
                     retry_until_success(check_transmission, retries=3, wait_time=0.25)
 
             if count == 5:
                 break_func()
+                self.restore_needed = True
 
             if count == 15:
                 restore_func()
-
-        # cleanup servers
-        self.clean_up()
+                self.restore_needed = False
 
         for f in self.config.flows:
             _log.info("%s: %s", f.server_pod, f.server_log.logs[-1].strip())
