@@ -23,7 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210323171118-94397aa7c4fd
-	github.com/tigera/licensing v1.0.1-0.20210420171159-c2691055e3b3
+	github.com/tigera/licensing v1.0.1-0.20210422165141-a2325849af0e
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.21.0
@@ -37,8 +37,8 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210420173835-808bcd134fcb
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210422041916-73210edc8bc5
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210420170807-282d73e15338
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210422165944-15090e9425e6
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210420172306-6d2537d5c9f2
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
