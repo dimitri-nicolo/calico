@@ -324,7 +324,10 @@ class _FailoverTest(TestBase):
                     def short_connection():
                         run("kubectl exec -n " + self.namespace() + " " + f.client_pod + " -- /bin/sh -c 'echo hello | /reliable-nc " + f.target_ip_short + ":" + f.target_port_short + "'")
                     time.sleep(0.25)
-                    retry_until_success(short_connection, retries=3, wait_time=0.25)
+                    try:
+                        retry_until_success(short_connection, retries=3, wait_time=0.25)
+                    finally:
+                        _log.info("Short connection %s log:\n%s", f.server_pod, "".join(short_log.logs))
                     def check_transmission():
                         assert "hello\n" in short_log.logs, "Did not find 'hello' in server logs: %r" % short_log.logs
                     retry_until_success(check_transmission, retries=3, wait_time=0.25)
