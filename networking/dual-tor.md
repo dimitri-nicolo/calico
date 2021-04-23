@@ -247,44 +247,44 @@ longer matters if there is any other programming of the true default route on th
 #### Prepare YAML resources describing the layout of your cluster
 
 1.  Prepare BGPPeer resources to specify how each node in your cluster should peer with
-	the ToR routers in its rack.  For example, if your rack 'A' has ToRs with IPs
-	172.31.11.100 and 172.31.12.100 and the rack AS number is 65001:
+    the ToR routers in its rack.  For example, if your rack 'A' has ToRs with IPs
+    172.31.11.100 and 172.31.12.100 and the rack AS number is 65001:
 
-	```
-	apiVersion: projectcalico.org/v3
-	kind: BGPPeer
-	metadata:
-	  name: ra1
-	spec:
-	  nodeSelector: "rack == 'ra' || rack == 'ra_single'"
-	  peerIP: 172.31.11.100
-	  asNumber: 65001
-	  sourceAddress: None
-	---
-	apiVersion: projectcalico.org/v3
-	kind: BGPPeer
-	metadata:
-	  name: ra2
-	spec:
-	  nodeSelector: "rack == 'ra'"
-	  peerIP: 172.31.12.100
-	  asNumber: 65001
-	  sourceAddress: None
-	EOF
-	```
+    ```
+    apiVersion: projectcalico.org/v3
+    kind: BGPPeer
+    metadata:
+      name: ra1
+    spec:
+      nodeSelector: "rack == 'ra' || rack == 'ra_single'"
+      peerIP: 172.31.11.100
+      asNumber: 65001
+      sourceAddress: None
+    ---
+    apiVersion: projectcalico.org/v3
+    kind: BGPPeer
+    metadata:
+      name: ra2
+    spec:
+      nodeSelector: "rack == 'ra'"
+      peerIP: 172.31.12.100
+      asNumber: 65001
+      sourceAddress: None
+    EOF
+    ```
 
-	> **Note**: The effect of the `nodeSelector` fields here is that any node with label
-	> `rack: ra` will peer with both these ToRs, while any node with label `rack:
-	> ra_single` will peer with only the first ToR.  For optimal dual ToR function and
-	> resilience, nodes in rack 'A' should be labelled `rack: ra`, but `rack: ra_single`
-	> can be used instead on any nodes which cannot be dual-homed.
-	{: .alert .alert-info}
+    > **Note**: The effect of the `nodeSelector` fields here is that any node with label
+    > `rack: ra` will peer with both these ToRs, while any node with label `rack:
+    > ra_single` will peer with only the first ToR.  For optimal dual ToR function and
+    > resilience, nodes in rack 'A' should be labelled `rack: ra`, but `rack: ra_single`
+    > can be used instead on any nodes which cannot be dual-homed.
+    {: .alert .alert-info}
 
-	Repeat for as many racks as there are in your cluster.  Each rack needs a new pair of
-	BGPPeer resources with its own ToR addresses and AS number, and `nodeSelector` fields
-	matching the nodes that should peer with its ToR routers.
+    Repeat for as many racks as there are in your cluster.  Each rack needs a new pair of
+    BGPPeer resources with its own ToR addresses and AS number, and `nodeSelector` fields
+    matching the nodes that should peer with its ToR routers.
 
-	Depending on what your ToR supports, consider also setting these fields in each
+    Depending on what your ToR supports, consider also setting these fields in each
     BGPPeer:
 
     -  `failureDetectionMode: BFDIfDirectlyConnected` to enable BFD, when possible, for
@@ -318,22 +318,11 @@ longer matters if there is any other programming of the true default route on th
        > not.
        {: .alert .alert-info}
 
-1.  Keep a note of what each node's AS number and `rack` label should be so as to fit
-    correctly with the BGPPeer resources.  This doesn't have to be in any particular
-    format, it's just a note for later.  For example:
-
-	```
-    worker1: ra, 65001
-    worker2: rb, 65002
-    ```
-
-	and so on.
-
 1.  Prepare this BGPConfiguration resource to [disable the full node-to-node
-	mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
+    mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
 
-	```
-	apiVersion: projectcalico.org/v3
+    ```
+    apiVersion: projectcalico.org/v3
     kind: BGPConfiguration
     metadata:
       name: default
@@ -345,8 +334,8 @@ longer matters if there is any other programming of the true default route on th
     addresses for dual-homed nodes.  For example, if the nodes in rack 'A' will have
     stable addresses from 172.31.10.0/24:
 
-	```
-	apiVersion: projectcalico.org/v3
+    ```
+    apiVersion: projectcalico.org/v3
     kind: IPPool
     metadata:
       name: ra-stable
@@ -363,12 +352,12 @@ longer matters if there is any other programming of the true default route on th
     > routes within the given CIDRs, which is essential for the core BGP infrastructure to
     > learn how to route to each stable address.  `disabled: true` tells {{site.prodname}}
     > *not* to use these CIDRs for pod IPs.
-	{: .alert .alert-info}
+    {: .alert .alert-info}
 
 1.  Prepare an enabled IPPool resource for your default CIDR for pod IPs.  For example:
 
-	```
-	apiVersion: projectcalico.org/v3
+    ```
+    apiVersion: projectcalico.org/v3
     kind: IPPool
     metadata:
       name: default-ipv4
@@ -383,14 +372,23 @@ longer matters if there is any other programming of the true default route on th
     > `vxlanMode`, as these are incompatible with dual ToR operation.  `natOutgoing` can
     > be omitted, as here, if your core infrastructure will perform an SNAT for traffic
     > from pods to the Internet.
-	{: .alert .alert-info}
+    {: .alert .alert-info}
 
-1.  Prepare an EarlyNetworkConfiguration resource to provide the information that
-    dual-homed nodes need for bootstrapping, each time that they boot.  For example, with
-    IP addresses and AS numbers similar as for other resources above:
+1.  Prepare an EarlyNetworkConfiguration resource to specify the additional information
+    that is needed for each node in a multi-rack dual ToR cluster:
 
-	```
-	apiVersion: projectcalico.org/v3
+	-  The stable address for the node.
+	-  Its BGP AS number.
+	-  The IPs that the node should peer with, when {{site.nodecontainer}} runs
+       as a container for early networking setup after each node boot.
+	-  Any labels that the node should have, so as to match the right BGPPeer definitions
+       for its rack, when {{site.nodecontainer}} runs as a Kubernetes pod.
+
+	<br>
+    For example, with IP addresses and AS numbers similar as for other resources above:
+
+    ```
+    apiVersion: projectcalico.org/v3
     kind: EarlyNetworkConfiguration
     spec:
       nodes:
@@ -404,6 +402,8 @@ longer matters if there is any other programming of the true default route on th
           peerings:
             - peerIP: 172.31.11.100
             - peerIP: 172.31.12.100
+          labels:
+            rack: ra
         # worker2
         - interfaceAddresses:
             - 172.31.21.4
@@ -414,16 +414,37 @@ longer matters if there is any other programming of the true default route on th
           peerings:
             - peerIP: 172.31.21.100
             - peerIP: 172.31.22.100
+          labels:
+            rack: rb
         ...
     ```
 
-    > **Note**: Despite the apparent similarity, this resource differs from all the others
-    > in that it will be provided as a file on each newly provisioned node (whereas the
-    > other resources are all served from the Kubernetes API).  It specifies the stable
-    > address for each node.  It also repeats information that could be inferred from the
-    > preceding resources, but that is because the information is needed for post-boot
-    > setup on each node, at a point where the node cannot access the Kubernetes API.
-	{: .alert .alert-info}
+1.  Prepare a ConfigMap resource named "bgp-layout", in namespace "tigera-operator", that
+    wraps the EarlyNetworkConfiguration like this:
+
+    ```
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: bgp-layout
+      namespace: calico-system
+    data:
+      earlyNetworkConfiguration: |
+	    apiVersion: projectcalico.org/v3
+	    kind: EarlyNetworkConfiguration
+	    spec:
+	      nodes:
+	        # worker1
+	        - interfaceAddresses:
+        ...
+    ```
+
+> **Note**: EarlyNetworkingConfiguration supplies labels and AS numbers to apply to each
+> Calico node, as well as peering and other network configuration to use during node
+> startup prior to receiving BGPPeer and BGPConfiguration resources from the datastore.
+> EarlyNetworkingConfiguration will be superseded by any BGPPeer or BGPConfiguration
+> resources after successful startup.
+{: .alert .alert-info}
 
 #### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
 
@@ -491,10 +512,9 @@ break in one of the connectivity planes.
 Details here vary, depending on **when** your Kubernetes installer gives an opportunity
 for you to define custom resources, but fundamentally what is needed here is to perform
 the installation as usual, except that all of the Calico resources prepared above, except
-the EarlyNetworkConfiguration, must be added into the datastore, and all of the nodes
-annotated with their AS number and rack label, **before** the {{site.nodecontainer}} pods
-start running on any node.  We can illustrate this by looking at two examples: with
-OpenShift, and when adding Calico to an existing Kubernetes cluster.
+the EarlyNetworkConfiguration, must be added into the datastore **before** the
+{{site.nodecontainer}} pods start running on any node.  We can illustrate this by looking
+at two examples: with OpenShift, and when adding Calico to an existing Kubernetes cluster.
 
 **OpenShift**
 
@@ -505,21 +525,7 @@ Then use `kubectl create configmap ...`, as that documentation says, to combine 
 prepared BGPPeer, BGPConfiguration and IPPool resources into a `calico-resources`
 ConfigMap.  Place the generated file in the manifests directory for the OpenShift install.
 
-Also prepare a Node resource for each node, with one Node resource per file, to specify
-that node's rack label and AS number, like this:
-
-```
-apiVersion: v1
-kind: Node
-metadata:
-  name: worker2                          	 # Replace with the correct node name
-  labels:
-    rack: rb                             	 # Replace with the correct rack label
-  annotations:
-    projectcalico.org/ASNumber: "65002"  	 # Replace with the correct AS number
-```
-
-Place those files also in the manifests directory.
+Also place the "bgp-layout" ConfigMap file in the manifests directory.
 
 Now continue with the OpenShift install process, and it will take care of adding those
 resources into the datastore as early as possible.
@@ -531,13 +537,7 @@ far as the option for installing any custom Calico resources.  Then use `calicoc
 that documentation says, to install the prepared BGPPeer, BGPConfiguration and IPPool
 resources.
 
-Then use `kubectl label` to label each node with its correct rack label, and `kubectl
-annotate` to annotate each node with its correct AS number, like this:
-
-```
-kubectl label <node name> rack=<rack label>
-kubectl annotate <node name> projectcalico.org/ASNumber="<AS number>"
-```
+Also use `kubectl` to install the "bgp-layout" ConfigMap.
 
 Now continue with the {{site.prodname}} install process, and you should observe each node
 establishing BGP sessions with its ToRs.
