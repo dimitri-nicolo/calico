@@ -53,7 +53,7 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/hashutils"

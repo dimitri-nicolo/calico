@@ -5,6 +5,7 @@ GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
 TYPHA_REPO               = github.com/tigera/typha-private
+APISERVER_REPO           =github.com/tigera/apiserver
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_COMPLIANCE_PROJECT_ID)
@@ -48,7 +49,7 @@ EXTRA_DOCKER_ARGS += -v $(CURDIR)/../apiserver:/go/src/github.com/tigera/apiserv
 local_build:
 	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 	go mod edit -replace=github.com/tigera/lma=../lma
-	go mod edit -replace=github.com/tigera/apiserver=../apiserver
+	go mod edit -replace=github.com/projectcalico/apiserver=../apiserver
 else
 local_build:
 endif
@@ -425,16 +426,11 @@ guard-ssh-forwarding-bug:
 
 LMA_REPO=github.com/tigera/lma
 LMA_BRANCH=$(PIN_BRANCH)
-APISERVER_REPO=github.com/tigera/apiserver
-APISERVER_BRANCH=$(PIN_BRANCH)
 
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-apiserver-pin:
-	$(call update_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin update-apiserver-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-lma-pin
 ###############################################################################
 
 ###############################################################################

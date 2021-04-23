@@ -20,7 +20,7 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
-	pcv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 

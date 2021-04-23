@@ -12,7 +12,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
-	pcv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 

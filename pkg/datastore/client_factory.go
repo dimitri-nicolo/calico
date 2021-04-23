@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/lma/pkg/auth"
 
 	"k8s.io/client-go/kubernetes"

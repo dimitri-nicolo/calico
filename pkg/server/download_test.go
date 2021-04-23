@@ -8,8 +8,8 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	"github.com/tigera/apiserver/pkg/authentication"
-	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/projectcalico/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/tigera/compliance/pkg/datastore"
 

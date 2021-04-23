@@ -30,7 +30,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/api"
 )

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
