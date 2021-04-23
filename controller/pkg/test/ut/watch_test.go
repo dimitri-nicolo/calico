@@ -17,8 +17,8 @@ import (
 	oElastic "github.com/olivere/elastic/v7"
 
 	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/yalp/jsonpath"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

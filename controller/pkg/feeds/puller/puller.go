@@ -7,7 +7,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 )
 
 type SyncFailFunction func(error)

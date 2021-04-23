@@ -9,8 +9,8 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 
 	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"

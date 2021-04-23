@@ -9,11 +9,16 @@ import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1appconfig "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 type MockConfigMap struct {
 	ConfigMapData map[string]string
 	Error         error
+}
+
+func (m *MockConfigMap) Apply(ctx context.Context, configMap *corev1appconfig.ConfigMapApplyConfiguration, opts v12.ApplyOptions) (result *v1.ConfigMap, err error) {
+	panic("implement me")
 }
 
 func (*MockConfigMap) Create(context.Context, *v1.ConfigMap, v12.CreateOptions) (*v1.ConfigMap, error) {

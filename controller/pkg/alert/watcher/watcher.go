@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"sync"
 
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
-	apiv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

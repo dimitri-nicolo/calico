@@ -13,8 +13,8 @@ import (
 	"time"
 
 	retry "github.com/avast/retry-go"
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
-	calico "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 

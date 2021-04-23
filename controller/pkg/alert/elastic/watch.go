@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/lithammer/dedent"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"

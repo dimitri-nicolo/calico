@@ -16,9 +16,9 @@ import (
 	"strconv"
 	"syscall"
 
+	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	log "github.com/sirupsen/logrus"
-	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"

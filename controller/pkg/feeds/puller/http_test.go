@@ -15,8 +15,8 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 
 	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

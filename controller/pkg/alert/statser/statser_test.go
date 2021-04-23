@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"

@@ -75,7 +75,7 @@ func TestMain(m *testing.M) {
 		}
 		cfg.ExposedPorts = nat.PortSet{"9200/tcp": struct{}{}}
 	}
-	result, err := d.ContainerCreate(ctx, cfg, hCfg, nil, "")
+	result, err := d.ContainerCreate(ctx, cfg, hCfg, nil, nil, "")
 	if err != nil {
 		panic("could not create elastic container: " + err.Error())
 	}
