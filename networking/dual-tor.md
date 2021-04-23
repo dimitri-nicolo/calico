@@ -439,17 +439,11 @@ longer matters if there is any other programming of the true default route on th
         ...
     ```
 
-> **Note**: The EarlyNetworkConfiguration is processed at two different times on each
-> node, with different parts of the configuration being relevant each time.  Firstly it is
-> used each time a node boots, and before Kubernetes starts running, in order to establish
-> early BGP sessions to the node's ToR routers, and to set up the node's stable address.
-> At this time the peering information in the EarlyNetworkConfiguration is used, because
-> BGPPeer resources are not yet accessible from Kubernetes.
->
-> Secondly it is processed by {{site.nodecontainer}} when it starts up as a Kubernetes pod
-> on each node, in order to set the correct AS number and labels on the node.  At this
-> time the EarlyNetworkConfiguration peering fields are ignored, because equivalent and
-> possibly more detailed peering config is available from the BGPPeer resources.
+> **Note**: EarlyNetworkingConfiguration supplies labels and AS numbers to apply to each
+> Calico node, as well as peering and other network configuration to use during node
+> startup prior to receiving BGPPeer and BGPConfiguration resources from the datastore.
+> EarlyNetworkingConfiguration will be superseded by any BGPPeer or BGPConfiguration
+> resources after successful startup.
 {: .alert .alert-info}
 
 #### Arrange for dual-homed nodes to run {{site.nodecontainer}} on each boot
