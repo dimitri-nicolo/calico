@@ -6,8 +6,8 @@ import (
 	"context"
 	"sync"
 
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"

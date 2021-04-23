@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	corev1appconfig "k8s.io/client-go/applyconfigurations/core/v1"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -41,6 +42,10 @@ func secretAccessDenied(name string) error {
 
 type RestrictedSecretsClient struct {
 	Client core.SecretInterface
+}
+
+func (r RestrictedSecretsClient) Apply(ctx context.Context, secret *corev1appconfig.SecretApplyConfiguration, opts metav1.ApplyOptions) (result *v1.Secret, err error) {
+	return nil, UnsupportedOperation
 }
 
 func (r RestrictedSecretsClient) isPermitted(name string) bool {

@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	v32 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	v33 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v32 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

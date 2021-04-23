@@ -5,6 +5,8 @@ package puller
 import (
 	"context"
 
+	corev1appconfig "k8s.io/client-go/applyconfigurations/core/v1"
+
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,6 +16,10 @@ import (
 type MockSecrets struct {
 	SecretsData map[string][]byte
 	Error       error
+}
+
+func (m *MockSecrets) Apply(ctx context.Context, secret *corev1appconfig.SecretApplyConfiguration, opts v12.ApplyOptions) (result *v1.Secret, err error) {
+	panic("implement me")
 }
 
 func (*MockSecrets) Create(context.Context, *v1.Secret, v12.CreateOptions) (*v1.Secret, error) {

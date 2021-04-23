@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	generatedV3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
-	generatedV3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	idsElastic "github.com/tigera/intrusion-detection/controller/pkg/elastic"

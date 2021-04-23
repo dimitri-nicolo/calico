@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"

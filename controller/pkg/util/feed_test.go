@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/gomega"
