@@ -10,8 +10,8 @@ import (
 
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	"github.com/tigera/apiserver/pkg/authentication"
-	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/projectcalico/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
@@ -25,7 +25,7 @@ import (
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"

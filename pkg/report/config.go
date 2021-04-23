@@ -6,7 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/caimeo/iniflags"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"

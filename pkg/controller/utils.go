@@ -32,7 +32,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 )
