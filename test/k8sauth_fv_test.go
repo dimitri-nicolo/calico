@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	fv "github.com/tigera/es-proxy/test"
 	"github.com/tigera/lma/pkg/auth"

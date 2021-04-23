@@ -10,7 +10,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	pcv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/lma/pkg/api"
 )
