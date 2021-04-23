@@ -14,6 +14,8 @@
 
 package config
 
+import "time"
+
 func (config *Config) GetFlowLogsPositionFilePath() string {
 	return config.FlowLogsPositionFilePath
 }
@@ -24,4 +26,12 @@ func (config *Config) GetFlowLogsFileDirectory() string {
 
 func (config *Config) GetStatsDumpFilePath() string {
 	return config.StatsDumpFilePath
+}
+
+func (config *Config) GetDNSCacheFile() string {
+	return config.DNSCacheFile
+}
+
+func (config *Config) GetDNSExtraTTL() time.Duration {
+	return config.DNSExtraTTL
 }

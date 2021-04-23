@@ -160,7 +160,7 @@ func newDomainInfoStoreWithShims(
 	makeExpiryTimer func(time.Duration, func()) *time.Timer,
 	expiryTimePassed func(time.Time) bool,
 ) *DomainInfoStore {
-	log.Info("Creating domain info store")
+	log.WithField("config", config).Info("Creating domain info store")
 	s := &DomainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
 		mappings:             make(map[string]*nameData),
@@ -224,7 +224,7 @@ func (s *DomainInfoStore) OnUpdate(msg interface{}) {
 			s.epoch = newEpoch
 			s.resetC <- struct{}{}
 		}
-		newExtraTTL := felixConfig.DNSExtraTTL
+		newExtraTTL := felixConfig.GetDNSExtraTTL()
 		if newExtraTTL != s.extraTTL {
 			log.Infof("Extra TTL is now %v", newExtraTTL)
 			s.extraTTL = newExtraTTL

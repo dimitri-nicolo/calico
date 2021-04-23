@@ -737,6 +737,8 @@ github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tK
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210420170807-282d73e15338 h1:LQ/nwT4OyHdZ6neQa5CFimDYsdBKJxibEsP/50ZZ970=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210420170807-282d73e15338/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236 h1:m1VfuR9aeII70tJVsumFJvNHSQU/NW0TOE2FwAhDLNA=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
 github.com/tigera/licensing v1.0.1-0.20210420171159-c2691055e3b3 h1:ix5fosrjfn3k4b3XsATk77hq7g5h1ouTGyA/0hZUVEk=
 github.com/tigera/licensing v1.0.1-0.20210420171159-c2691055e3b3/go.mod h1:1grak1NnyWIdqXW3geM+LNr4+s/euNPNFlpxBTiSqO0=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
@@ -745,6 +747,8 @@ github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133 h1:/y3vUmVwRQiLX0
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210420172306-6d2537d5c9f2 h1:2cpvx/nIA0MvVM6fNGL/ck2rTqPKBvv8/NuWV0S7Qcc=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210420172306-6d2537d5c9f2/go.mod h1:NUTIqL54gSRL7iPIj2A4PXJgwSMEG7dNXGkl1qY8m3Y=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210422170328-e25ccb20e002 h1:2w5+pvxNreE4DiARAdFXTH1RrjBRWaM+pn+51Yl42Vc=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210422170328-e25ccb20e002/go.mod h1:zaK2MddxlsEcALA3B40fCL3+AlSmjBwxQRJm8b1zBcI=
 github.com/tigera/windows-networking v0.0.0-20210216141047-0f2491c3b4e1 h1:FHjGeXkopIX8s1UkF/sEHvMU+qnbPhnCcvIzf5sjyws=
 github.com/tigera/windows-networking v0.0.0-20210216141047-0f2491c3b4e1/go.mod h1:zLPYHfMmBxMWc/BQ110LwhjFju7wlWx+ycNTMNvguSQ=
 github.com/tigera/windows-networking v0.0.0-20210419160444-f5561401fe3c h1:MwpCw7gaUI6e27OU3xgtwpyM7+UFS2kA3LvV35rZXkY=

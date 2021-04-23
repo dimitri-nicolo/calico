@@ -52,10 +52,10 @@ func StartDataplaneDriver(configParams *config.Config,
 		Collector:    collector,
 		LookupsCache: lookupsCache,
 
-		DNSCacheFile:         configParams.DNSCacheFile,
+		DNSCacheFile:         configParams.GetDNSCacheFile(),
 		DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
 		DNSCacheEpoch:        configParams.DNSCacheEpoch,
-		DNSExtraTTL:          configParams.DNSExtraTTL,
+		DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 		DNSLogsLatency:       configParams.DNSLogsLatency,
 		DNSTrustedServers:    configParams.DNSTrustedServers,
 	}
