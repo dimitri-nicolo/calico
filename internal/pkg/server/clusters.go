@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	vtls "github.com/tigera/voltron/pkg/tls"

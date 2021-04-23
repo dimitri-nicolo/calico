@@ -10,11 +10,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	apiv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	clientv3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"k8s.io/client-go/kubernetes"
 
@@ -40,7 +40,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/regex"
@@ -48,7 +48,7 @@ import (
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/pkg/tunnel"
 
-	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
@@ -306,7 +306,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					return len(list)
 				}).Should(Equal(0))
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
 				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
@@ -450,7 +450,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					payload, _ := base64.RawURLEncoding.DecodeString(strings.Split(jennyToken, ".")[1])
 					keyset.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(jennyToken, "Bearer "))).Return(payload, nil)
 
-					_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
+					_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        clusterA,
 							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterACert)},
@@ -534,7 +534,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 
 						Expect(err).NotTo(HaveOccurred())
-						_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
+						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
 								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterBCert)},
@@ -695,7 +695,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			By("adding ClusterA")
-			_, err = k8sAPI.ManagedClusters().Create(context.Background(),&apiv3.ManagedCluster{
+			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        clusterA,
 					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(cert)},
@@ -1065,7 +1065,7 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authe
 
 func WaitForClusterToConnect(k8sAPI bootstrap.K8sClient, clusterName string) {
 	Eventually(func() calicov3.ManagedClusterStatus {
-		managedCluster, err := k8sAPI.ManagedClusters().Get(context.Background(),clusterName, metav1.GetOptions{})
+		managedCluster, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterName, metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		return managedCluster.Status
 	}, 5*time.Second, 100*time.Millisecond).Should(Equal(calicov3.ManagedClusterStatus{

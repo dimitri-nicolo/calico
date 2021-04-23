@@ -7,8 +7,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	clientv3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 // K8sClient is the actual client

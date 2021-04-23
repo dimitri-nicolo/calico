@@ -21,7 +21,7 @@ import (
 	"golang.org/x/net/http2"
 	"k8s.io/client-go/rest"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/regex"
