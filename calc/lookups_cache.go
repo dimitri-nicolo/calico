@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -8,7 +8,6 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 // LookupsCache provides an API to do the following:
@@ -46,6 +45,18 @@ func (lc *LookupsCache) IsEndpoint(addr [16]byte) bool {
 // GetEndpoint returns the ordered list of tiers for a particular endpoint.
 func (lc *LookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool) {
 	return lc.epCache.GetEndpoint(addr)
+}
+
+// GetEndpointKeys returns all endpoint keys that the cache is tracking.
+// Convenience method only used for testing purposes.
+func (lc *LookupsCache) GetEndpointKeys() []model.Key {
+	return lc.epCache.GetEndpointKeys()
+}
+
+// GetEndpointData returns all endpoint data that the cache is tracking.
+// Convenience method only used for testing purposes.
+func (lc *LookupsCache) GetAllEndpointData() []*EndpointData {
+	return lc.epCache.GetAllEndpointData()
 }
 
 // GetNode returns the node configured with the supplied address. This matches against one of the following:
@@ -126,35 +137,4 @@ func (lc *LookupsCache) SetMockData(
 	for k, v := range svcs {
 		lc.svcCache.OnResourceUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
-}
-
-// GetEndpointKeys returns all endpoint keys that the cache is tracking.
-// Convenience method only used for testing purposes.
-func (lc *LookupsCache) GetEndpointKeys() []model.Key {
-	lc.epCache.epMutex.RLock()
-	defer lc.epCache.epMutex.RUnlock()
-	eps := []model.Key{}
-	for key, _ := range lc.epCache.endpointToIps {
-		eps = append(eps, key)
-	}
-	return eps
-}
-
-// GetEndpointData returns all endpoint data that the cache is tracking.
-// Convenience method only used for testing purposes.
-func (lc *LookupsCache) GetAllEndpointData() []*EndpointData {
-	lc.epCache.epMutex.RLock()
-	defer lc.epCache.epMutex.RUnlock()
-	uniq := set.New()
-	allEds := []*EndpointData{}
-	for _, eds := range lc.epCache.ipToEndpoints {
-		for _, ed := range eds {
-			if uniq.Contains(ed.Key) {
-				continue
-			}
-			uniq.Add(ed.Key)
-			allEds = append(allEds, ed)
-		}
-	}
-	return allEds
 }

@@ -1,12 +1,15 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package calc_test
 
 import (
+	"fmt"
 	"net"
+	"time"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/rules"
 
 	. "github.com/projectcalico/felix/calc"
@@ -16,6 +19,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+)
+
+const (
+	endpointDataTTLAfterMarkedAsRemoved = 2 * config.DefaultConntrackPollingInterval
 )
 
 var (
@@ -30,6 +37,8 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		"Check adding/deleting workload endpoint modifies the cache",
 		func(key model.WorkloadEndpointKey, wep *model.WorkloadEndpoint, ipAddr net.IP) {
 			c := "WEP(" + key.Hostname + "/" + key.OrchestratorID + "/" + key.WorkloadID + "/" + key.EndpointID + ")"
+
+			// tests adding an endpoint
 			update := api.Update{
 				KVPair: model.KVPair{
 					Key:   key,
@@ -41,27 +50,60 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			copy(addrB[:], ipAddr.To16()[:16])
 
 			ec.OnUpdate(update)
+
+			// test GetEndpointByIP retrieves the endpointData
 			ed, ok := ec.GetEndpoint(addrB)
 			Expect(ok).To(BeTrue(), c)
 			Expect(ed.Key).To(Equal(key))
 
+			// test GetEndpointKeys
+			keys := ec.GetEndpointKeys()
+			Expect(len(keys)).To(Equal(1))
+			Expect(keys).To(ConsistOf(ed.Key))
+
+			// test GetAllEndpointData also contains the one
+			// retrieved by the IP
+			endpoints := ec.GetAllEndpointData()
+			Expect(len(endpoints)).To(Equal(1))
+			Expect(endpoints).To(ConsistOf(ed))
+
+			// tests deleting an endpoint
 			update = api.Update{
 				KVPair: model.KVPair{
 					Key: key,
 				},
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
+
+			// OnUpdate delays deletion with delay
 			ec.OnUpdate(update)
 			_, ok = ec.GetEndpoint(addrB)
+			Expect(ok).To(BeTrue(), c)
+
+			time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+
+			_, ok = ec.GetEndpoint(addrB)
 			Expect(ok).To(BeFalse(), c)
+
+			// test GetEndpointKeys are empty after deletion
+			keys = ec.GetEndpointKeys()
+			Expect(len(keys)).To(Equal(0))
+			Expect(keys).NotTo(ConsistOf(ed.Key))
+
+			// test GetAllEndpointData are empty after deletion
+			endpoints = ec.GetAllEndpointData()
+			Expect(len(endpoints)).To(Equal(0))
+			Expect(endpoints).NotTo(ConsistOf(ed))
+
 		},
 		Entry("remote WEP1 IPv4", remoteWlEpKey1, &remoteWlEp1, remoteWlEp1.IPv4Nets[0].IP),
 		Entry("remote WEP1 IPv6", remoteWlEpKey1, &remoteWlEp1, remoteWlEp1.IPv6Nets[0].IP),
 	)
 
 	DescribeTable(
-		"Check adding/deleting host endpoint modifies the cache",
+		"should cancel a previous endpoint data mark to be deleted and update the endpoint key with data in the new entry",
 		func(key model.HostEndpointKey, hep *model.HostEndpoint, ipAddr net.IP) {
+			// setup - add entry for key
 			c := "HEP(" + key.Hostname + "/" + key.EndpointID + ")"
 			update := api.Update{
 				KVPair: model.KVPair{
@@ -78,15 +120,37 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			Expect(ok).To(BeTrue(), c)
 			Expect(ed.Key).To(Equal(key))
 
+			// deletion process
 			update = api.Update{
 				KVPair: model.KVPair{
 					Key: key,
 				},
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
+			// OnUpdate delays deletion with time to live
 			ec.OnUpdate(update)
 			_, ok = ec.GetEndpoint(addrB)
-			Expect(ok).To(BeFalse(), c)
+			Expect(ok).To(BeTrue(), c)
+
+			// re-add entry before the deletion is delegated
+			update = api.Update{
+				KVPair: model.KVPair{
+					Key:   key,
+					Value: hep,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}
+			ec.OnUpdate(update)
+			ed, ok = ec.GetEndpoint(addrB)
+			Expect(ok).To(BeTrue(), c)
+			Expect(ed.Key).To(Equal(key))
+
+			// re-fetching the entry after expected time it was deleted
+			time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+			_, ok = ec.GetEndpoint(addrB)
+			// to ensure deletion delegation was cancelled
+			Expect(ok).To(BeTrue(), c)
+
 		},
 		Entry("Host Endpoint IPv4", hostEpWithNameKey, &hostEpWithName, hostEpWithName.ExpectedIPv4Addrs[0].IP),
 		Entry("Host Endpoint IPv6", hostEpWithNameKey, &hostEpWithName, hostEpWithName.ExpectedIPv6Addrs[0].IP),
@@ -116,6 +180,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			case model.HostEndpointKey:
 				name = "HEP(" + k.Hostname + "/" + k.EndpointID + ")"
 			}
+
 			var addrB [16]byte
 			copy(addrB[:], ipAddr.To16()[:16])
 
@@ -132,6 +197,9 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 					}
 				}
 			} else {
+				// take delay with deletion into account
+				time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+				_, ok = ec.GetEndpoint(addrB)
 				Expect(ok).To(BeFalse(), name+".\n"+ec.DumpEndpoints())
 			}
 		}
@@ -176,8 +244,12 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		}
 		ec.OnUpdate(update)
 
+		// delete is delayed
+		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+
 		By("verifying all IPv4 and IPv6 addresses of the host endpoint are not present in the mapping")
 		for _, ipv4 := range hostEpWithName.ExpectedIPv4Addrs {
+			fmt.Println()
 			verifyIpToEndpoint(hostEpWithNameKey, ipv4.IP, false, nil)
 		}
 		for _, ipv6 := range hostEpWithName.ExpectedIPv6Addrs {
@@ -200,6 +272,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			"y":  "y",
 			"z":  "z",
 		}
+
 		By("verifying all IPv4 and IPv6 addresses are present with updated labels")
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to
 		// get a list of Ipv6 addresses to check against.
@@ -239,6 +312,8 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			UpdateType: api.UpdateTypeKVUpdated,
 		}
 		ec.OnUpdate(update)
+		// delete is delayed
+		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
 
 		By("verifying all IPv4 are present but no Ipv6 addresses are present")
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to
@@ -258,6 +333,8 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			UpdateType: api.UpdateTypeKVDeleted,
 		}
 		ec.OnUpdate(update)
+		// delete is delayed
+		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
 
 		By("verifying all there are no mapping present")
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to

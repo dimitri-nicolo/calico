@@ -53,6 +53,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
+	felixconfig "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -1154,7 +1155,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
-			ctrd := collector.NewNetLinkConntrackReader(collector.DefaultConntrackPollingInterval)
+			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval)
 			collectorConntrackInfoReader = ctrd
 		}
 

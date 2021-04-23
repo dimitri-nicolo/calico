@@ -4,7 +4,6 @@ package collector
 
 import (
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -23,12 +22,6 @@ const (
 	FlowLogsFileDispatcherName   = "file"
 	DNSLogsFileDispatcherName    = "dnsfile"
 	L7LogsFileDispatcherName     = "l7file"
-
-	//TODO: Move these into felix config
-	DefaultAgeTimeout               = time.Duration(10) * time.Second
-	DefaultInitialReportingDelay    = time.Duration(5) * time.Second
-	DefaultExportingInterval        = time.Duration(1) * time.Second
-	DefaultConntrackPollingInterval = time.Duration(5) * time.Second
 )
 
 // New creates the required dataplane stats collector, reporters and aggregators.
@@ -117,9 +110,9 @@ func New(
 		rm,
 		&Config{
 			StatsDumpFilePath:            configParams.GetStatsDumpFilePath(),
-			AgeTimeout:                   DefaultAgeTimeout,
-			InitialReportingDelay:        DefaultInitialReportingDelay,
-			ExportingInterval:            DefaultExportingInterval,
+			AgeTimeout:                   config.DefaultAgeTimeout,
+			InitialReportingDelay:        config.DefaultInitialReportingDelay,
+			ExportingInterval:            config.DefaultExportingInterval,
 			EnableServices:               configParams.FlowLogsFileIncludeService,
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
