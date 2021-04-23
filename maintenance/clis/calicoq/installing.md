@@ -30,19 +30,19 @@ you want to install the binary.
    > `/usr/local/bin/`.
    {: .alert .alert-success}
 
-1. Use the following command to download the `calicoctl` binary.
+1. Use the following command to download the `calicoq` binary.
 
    ```
-   curl -o calicoq -O -L  "https://github.com/tigera/operator/releases/download/{{ version }}/calicoq"
+   curl -o calicoq -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoq"
    ```
 
 1. Set the file to be executable.
 
    ```
-   chmod +x calicoctl
+   chmod +x calicoq
    ```
 
-   > **Note**: If the location of `calicoctl` is not already in your `PATH`, move the file
+   > **Note**: If the location of `calicoq` is not already in your `PATH`, move the file
    > to one that is or add its location to your `PATH`. This will allow you to invoke it
    > without having to prepend its location.
    {: .alert .alert-info}
