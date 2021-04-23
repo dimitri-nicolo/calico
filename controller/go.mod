@@ -8,7 +8,6 @@ require (
 	github.com/docker/docker v20.10.2+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
 	github.com/onsi/gomega v1.10.1
@@ -31,7 +30,7 @@ require (
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210422222805-23c96af206a1
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236
-	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210401061046-5912e3eb40f5
+	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210422165141-a2325849af0e
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
