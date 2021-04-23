@@ -168,6 +168,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
 			AggSumInfos:             pelastic.FlowAggregationSums,
+			MaxBucketsPerQuery:      1, // Set this to ensure we iterate after only a single response.
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
