@@ -19,7 +19,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/server"

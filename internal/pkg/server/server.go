@@ -19,7 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"

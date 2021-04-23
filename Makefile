@@ -6,11 +6,20 @@ GO_BUILD_VER   ?= v0.51
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 
+#############################################
+# Env vars related to packaging and releasing
+#############################################
+PUSH_REPO     ?= gcr.io/unique-caldron-775/cnx
+COMPONENTS     = guardian voltron
+BUILD_IMAGES  ?= $(addprefix tigera/, $(COMPONENTS))
+RELEASE_BUILD ?= ""
+
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_VOLTRON_PROJECT_ID)
 
 # Used by Makefile.common
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
+APISERVER_REPO  = github.com/tigera/apiserver
 
 build: images
 
@@ -84,14 +93,6 @@ VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(BUILD_VERSION) \
 
 BUILD_LDFLAGS   = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
-
-#############################################
-# Env vars related to packaging and releasing
-#############################################
-PUSH_REPO     ?= gcr.io/unique-caldron-775/cnx
-COMPONENTS     = guardian voltron
-BUILD_IMAGES  ?= $(addprefix tigera/, $(COMPONENTS))
-RELEASE_BUILD ?= ""
 
 ##########################################################################################
 help:
@@ -231,16 +232,11 @@ guard-ssh-forwarding-bug:
 
 LMA_REPO=github.com/tigera/lma
 LMA_BRANCH=$(PIN_BRANCH)
-APISERVER_REPO=github.com/tigera/apiserver
-APISERVER_BRANCH=$(PIN_BRANCH)
 
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-apiserver-pin:
-	$(call update_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-lma-pin update-apiserver-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-lma-pin replace-apiserver-pin
 
 ##########################################################################################
 # CI/CD
