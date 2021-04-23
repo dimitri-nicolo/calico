@@ -284,6 +284,18 @@ var _ = Describe("ElasticseachUsers", func() {
 											Privileges: []string{"read"},
 										},
 										{
+											Names:      []string{"tigera_secure_ee_flows.*.*"},
+											Privileges: []string{"read"},
+										},
+										{
+											Names:      []string{"tigera_secure_ee_audit_*.*.*"},
+											Privileges: []string{"read"},
+										},
+										{
+											Names:      []string{"tigera_secure_ee_dns.*.*"},
+											Privileges: []string{"read"},
+										},
+										{
 											Names: []string{
 												".tigera.ipset.cluster",
 												".tigera.domainnameset.cluster",

@@ -142,13 +142,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					Name: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management),
 					Definition: &elasticsearch.RoleDefinition{
 						Cluster: []string{"monitor", "manage_index_templates"},
-						Indices: []elasticsearch.RoleIndex{
-							{
-								Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*")},
-								Privileges: []string{"read"},
-							},
-							buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName, management),
-						},
+						Indices: buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName, management),
 					},
 				},
 				{
@@ -196,8 +190,8 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 	return users
 }
 
-func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isManagement bool) elasticsearch.RoleIndex {
-	roleIndex := elasticsearch.RoleIndex{
+func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isManagement bool) []elasticsearch.RoleIndex {
+	allPrivileges := elasticsearch.RoleIndex{
 		Names: []string{
 			indexPattern(".tigera.ipset", clusterName, ""),
 			indexPattern(".tigera.domainnameset", clusterName, ""),
@@ -206,16 +200,36 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 		Privileges: []string{"all"},
 	}
 
-	// When configuring a management cluster we need to provide permissions for the events index across all clusters
-	// (used by the IDS alert forwarding feature).
-	// Otherwise, we only need permissions to the events index specific for that individual cluster.
-	if isManagement {
-		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", "*", ""))
-	} else {
-		roleIndex.Names = append(roleIndex.Names, indexPattern("tigera_secure_ee_events", clusterName, ""))
+	readPrivileges := []elasticsearch.RoleIndex{
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*")},
+			Privileges: []string{"read"},
+		},
 	}
+	// When configuring a management cluster we need to provide permissions for the indices across all clusters
+	// (used by the IDS alert forwarding and GlobalAlerts feature).
+	// Otherwise, we only need permissions to the indices specific for that individual cluster.
+	if isManagement {
+		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", "*", ""))
 
-	return roleIndex
+		datasetReadPrivileges := []elasticsearch.RoleIndex{
+			{
+				Names:      []string{indexPattern("tigera_secure_ee_flows", "*", ".*")},
+				Privileges: []string{"read"},
+			},
+			{
+				Names:      []string{indexPattern("tigera_secure_ee_audit_*", "*", ".*")},
+				Privileges: []string{"read"},
+			},
+			{
+				Names:      []string{indexPattern("tigera_secure_ee_dns", "*", ".*")},
+				Privileges: []string{"read"},
+			}}
+		readPrivileges = append(readPrivileges, datasetReadPrivileges...)
+	} else {
+		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", clusterName, ""))
+	}
+	return append(readPrivileges, allPrivileges)
 }
 
 func buildManagedUserPattern() []*regexp.Regexp {
