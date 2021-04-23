@@ -342,9 +342,11 @@ type Config struct {
 	L7LogsFileAggregationURLCharLimit    int           `config:"int;250"`
 	L7LogsFilePerNodeLimit               int           `config:"int;1500"`
 
-	WindowsFlowLogsFileDirectory    string `config:"string;c:\\TigeraCalico\\flowlogs"`
-	WindowsFlowLogsPositionFilePath string `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
-	WindowsStatsDumpFilePath        string `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`
+	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
+	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
+	WindowsStatsDumpFilePath        string        `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`
+	WindowsDNSCacheFile             string        `config:"file;c:\\TigeraCalico\\felix-dns-cache.txt"`
+	WindowsDNSExtraTTL              time.Duration `config:"seconds;120"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`

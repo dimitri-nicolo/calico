@@ -57,10 +57,10 @@ var _ = Describe("Constructor test", func() {
 			Collector:    nil,
 			LookupsCache: nil,
 
-			DNSCacheFile:         configParams.DNSCacheFile,
+			DNSCacheFile:         configParams.GetDNSCacheFile(),
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
 			DNSCacheEpoch:        configParams.DNSCacheEpoch,
-			DNSExtraTTL:          configParams.DNSExtraTTL,
+			DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 			DNSLogsLatency:       configParams.DNSLogsLatency,
 			DNSTrustedServers:    configParams.DNSTrustedServers,
 		}

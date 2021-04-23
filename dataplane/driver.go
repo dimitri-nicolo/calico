@@ -417,10 +417,10 @@ func StartDataplaneDriver(configParams *config.Config,
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
 
 			Collector:            collector,
-			DNSCacheFile:         configParams.DNSCacheFile,
+			DNSCacheFile:         configParams.GetDNSCacheFile(),
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
 			DNSCacheEpoch:        configParams.DNSCacheEpoch,
-			DNSExtraTTL:          configParams.DNSExtraTTL,
+			DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 			DNSLogsLatency:       configParams.DNSLogsLatency,
 
 			PacketCapture: capture.Config{
