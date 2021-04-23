@@ -10,8 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/stretchr/testify/mock"
-	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/lma/pkg/auth"
 )
 

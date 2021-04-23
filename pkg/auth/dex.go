@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/apiserver/pkg/authentication"
 	"gopkg.in/square/go-jose.v2"
 	"k8s.io/apiserver/pkg/authentication/user"
 )

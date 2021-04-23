@@ -17,7 +17,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	projectcalico_v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	projectcalico_v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 )
