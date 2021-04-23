@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 func NewAuthnClient() authentication.Authenticator {
