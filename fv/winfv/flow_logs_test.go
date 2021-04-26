@@ -57,7 +57,9 @@ var _ = Describe("Windows flow logs test", func() {
 	)
 
 	BeforeEach(func() {
-		fv, err = NewWinFV("c:\\CalicoWindows", "c:\\TigeraCalico\\flowlogs")
+		fv, err = NewWinFV("c:\\CalicoWindows",
+			"c:\\TigeraCalico\\flowlogs",
+			"c:\\TigeraCalico\\felix-dns-cache.txt")
 		Expect(err).NotTo(HaveOccurred())
 
 		flowLogsReaders = []metrics.FlowLogReader{fv}

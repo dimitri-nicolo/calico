@@ -919,7 +919,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 	Expect(ps.GetPolicySetRules([]string{"policy-selector"}, true)).To(Equal([]*hns.ACLPolicy{
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "API0|selector---rule-1---0", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.2,10.0.0.3",
+			Id: "API0|selector---rule-1---0", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.3",
 		},
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
@@ -1176,6 +1176,34 @@ func TestRuleRenderingWithDomainIPSets(t *testing.T) {
 	}), "unexpected rules returned for domain ipset policy")
 
 	//Policy should handle empty domain IpSets.
+	ipsc.IPSets["d"] = []string{}
+
+	ps.ProcessIpSetUpdate("d")
+
+	Expect(ps.GetPolicySetRules([]string{"policy-domain-ipset-update"}, false)).To(Equal([]*hns.ACLPolicy{
+		// Outbound rule.
+		{Type: hns.ACL, Id: "APE0|domain-ipset-update---rule-1---0", Protocol: 256, Action: hns.Allow, Direction: hns.Out,
+			RuleType: hns.Switch, Priority: 1000, RemoteAddresses: "10.0.0.1,10.0.0.2", RemotePorts: ""},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for domain ipset policy")
+
+	//Policy should handle empty DstIpSet.
+	ipsc.IPSets["a"] = []string{}
+	ipsc.IPSets["d"] = []string{"10.1.0.1", "10.1.0.2"}
+
+	ps.ProcessIpSetUpdate("a")
+	ps.ProcessIpSetUpdate("d")
+
+	Expect(ps.GetPolicySetRules([]string{"policy-domain-ipset-update"}, false)).To(Equal([]*hns.ACLPolicy{
+		// Outbound rule.
+		{Type: hns.ACL, Id: "APE0|domain-ipset-update---rule-1---0", Protocol: 256, Action: hns.Allow, Direction: hns.Out,
+			RuleType: hns.Switch, Priority: 1000, RemoteAddresses: "10.1.0.1,10.1.0.2", RemotePorts: ""},
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for domain ipset policy")
+
+	//Policy should handle empty DstIpSet and domain IpSets.
 	ipsc.IPSets["a"] = []string{}
 	ipsc.IPSets["d"] = []string{}
 

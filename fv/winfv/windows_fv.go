@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/tigera/windows-networking/pkg/testutils"
 
@@ -22,11 +23,13 @@ type WinFV struct {
 	flowLogDir string
 	configFile string
 
+	dnsCacheFile string
+
 	// The original content of config.ps1.
 	originalConfig string
 }
 
-func NewWinFV(rootDir, flowLogDir string) (*WinFV, error) {
+func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
 	configFile := filepath.Join(rootDir, "config.ps1")
 	b, err := ioutil.ReadFile(configFile) // just pass the file name
 	if err != nil {
@@ -36,6 +39,7 @@ func NewWinFV(rootDir, flowLogDir string) (*WinFV, error) {
 	return &WinFV{
 		rootDir:        rootDir,
 		flowLogDir:     flowLogDir,
+		dnsCacheFile:   dnsCacheFile,
 		configFile:     configFile,
 		originalConfig: string(b),
 	}, nil
@@ -116,4 +120,39 @@ func (f *WinFV) ReadFlowLogsFile() ([]collector.FlowLog, error) {
 		flowLogs = append(flowLogs, fl)
 	}
 	return flowLogs, nil
+}
+
+type JsonMappingV1 struct {
+	LHS    string
+	RHS    string
+	Expiry string
+	Type   string
+}
+
+func (f *WinFV) ReadDnsCacheFile() ([]JsonMappingV1, error) {
+	result := []JsonMappingV1{}
+
+	log.WithField("file", f.dnsCacheFile).Info("Reading DNS Cache from file")
+	logFile, err := os.Open(f.dnsCacheFile)
+	if err != nil {
+		return result, err
+	}
+	defer logFile.Close()
+
+	s := bufio.NewScanner(logFile)
+	for s.Scan() {
+		var m JsonMappingV1
+
+		// filter out anything other than a valid entry
+		if !strings.Contains(s.Text(), "LHS") {
+			continue
+		}
+		err = json.Unmarshal(s.Bytes(), &m)
+		if err != nil {
+			all, _ := ioutil.ReadFile(f.dnsCacheFile)
+			return result, fmt.Errorf("Error unmarshaling dns log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
+		}
+		result = append(result, m)
+	}
+	return result, nil
 }

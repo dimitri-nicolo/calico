@@ -34,6 +34,10 @@ func (t *EtwOperations) SubscribeToPktMon(ch chan<- *PktEvent, done <-chan struc
 	return nil
 }
 
+func (t *EtwOperations) WaitForSessionClose() {
+	return
+}
+
 const (
 	PKTMON_EVENT_ID_CAPTURE = 0
 )
