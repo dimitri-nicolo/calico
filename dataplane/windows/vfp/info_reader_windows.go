@@ -152,6 +152,8 @@ func (r *InfoReader) Stop() {
 		close(r.stopC)
 		r.wg.Wait()
 	})
+	r.eventDoneC <- struct{}{}
+	r.etwOps.WaitForSessionClose()
 }
 
 // PacketInfoChan returns the channel with converted PacketInfo.
