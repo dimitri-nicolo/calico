@@ -1168,7 +1168,7 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 	}
 
 	// rp_filter=2 only works if the interface also has at least one IP address defined on it.
-	// So assign the IPv4 link-local address 169.254.1.1 on the interface (which is the host
+	// So assign the IPv4 link-local address 169.254.1.2 on the interface (which is the host
 	// side of the veth pair for the egress gateway pod).
 	link, err := m.nlHandle.LinkByName(name)
 	if err != nil {
@@ -1187,8 +1187,8 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 		return nil
 	}
 
-	// No existing IPv4 addresses, so add 169.254.1.1/32.
-	ip, net, err := net.ParseCIDR("169.254.1.1/32")
+	// No existing IPv4 addresses, so add 169.254.1.2/32.
+	ip, net, err := net.ParseCIDR("169.254.1.2/32")
 	if err != nil {
 		return err
 	}
