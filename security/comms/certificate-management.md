@@ -17,7 +17,10 @@ certificate issuance, {{site.prodname}} provides a simple configuration option t
 
 **Limitations**
 
-In this release, the feature is available only if your installation does not use the LogStorage, LogCollector, Compliance, Intrusion Detection and Manager UI resources.
+If your cluster is already running {{site.prodname}} and you would like to enable certificate management, you need to 
+temporarily remove [the logstorage resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogStorage)
+before following the steps to enable certificate management and then re-apply afterwards. For detailed steps on 
+re-creating logstorage, read more on [how to create a new Elasticsearch cluster]({{site.baseurl}}/visibility/troubleshoot#how-to-create-a-new-cluster).
 
 **Supported algorithms**
 - Private Key Pair: RSA (size: 2048, 4096, 8192), ECDSA (curve: 256, 384, 521)
