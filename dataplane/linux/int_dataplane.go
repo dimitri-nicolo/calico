@@ -733,6 +733,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 		if err := installKprobes(); err != nil {
 			log.WithError(err).Error("error installing kprobes. skipping it")
+			config.FlowLogsCollectProcessInfo = false;
 		} else {
 			log.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
