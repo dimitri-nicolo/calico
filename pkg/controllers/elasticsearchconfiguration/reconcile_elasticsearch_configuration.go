@@ -102,7 +102,7 @@ func (c *reconciler) reconcileConfigMap() error {
 	return nil
 }
 
-// reconcilePublicCert copies the tigera-secure-es-http-certs-public and tigera-secure-kb-http-certs-public secrets from
+// reconcileCASecrets copies the tigera-secure-es-http-certs-public and tigera-secure-kb-http-certs-public secrets from
 // the management cluster to the managed cluster
 func (c *reconciler) reconcileCASecrets() error {
 	for _, secretName := range []string{resource.ElasticsearchCertSecret, resource.KibanaCertSecret} {
