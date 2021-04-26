@@ -1731,7 +1731,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 					It("should have configured the interface for gateway role", func() {
 						if ipVersion == 4 {
-							Expect(nlDataplane.AddedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+							Expect(nlDataplane.AddedAddrs.Contains("169.254.1.2/32")).To(BeTrue())
 							mockProcSys.checkState(map[string]string{
 								"/proc/sys/net/ipv4/conf/cali12345-ab/forwarding":     "1",
 								"/proc/sys/net/ipv4/conf/cali12345-ab/route_localnet": "1",
@@ -1767,9 +1767,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 						It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab"))
 
-						It("should have removed the 169.254.1.1 address", func() {
+						It("should have removed the 169.254.1.2 address", func() {
 							if ipVersion == 4 {
-								Expect(nlDataplane.DeletedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+								Expect(nlDataplane.DeletedAddrs.Contains("169.254.1.2/32")).To(BeTrue())
 							}
 						})
 					})
@@ -1858,7 +1858,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 						It("should have configured the interface for gateway role", func() {
 							if ipVersion == 4 {
-								Expect(nlDataplane.AddedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+								Expect(nlDataplane.AddedAddrs.Contains("169.254.1.2/32")).To(BeTrue())
 								mockProcSys.checkState(map[string]string{
 									"/proc/sys/net/ipv4/conf/cali12345-ab/forwarding":     "1",
 									"/proc/sys/net/ipv4/conf/cali12345-ab/route_localnet": "1",
