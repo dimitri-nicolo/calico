@@ -7,10 +7,11 @@ require (
 	github.com/avast/retry-go v2.2.0+incompatible
 	github.com/docker/docker v20.10.2+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/emicklei/go-restful v2.11.2-0.20200112161605-a7c079c43d51+incompatible // indirect
+	github.com/go-openapi/jsonreference v0.19.4-0.20191224164422-1f9748e5f45e // indirect
+	github.com/go-openapi/swag v0.19.7 // indirect
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/go-acme/lego v2.5.0+incompatible
-	github.com/google/martian v2.1.0+incompatible
-	github.com/lithammer/dedent v1.1.0
+	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
@@ -19,10 +20,8 @@ require (
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tigera/licensing v1.0.1-0.20210420171159-c2691055e3b3
-	github.com/tigera/api v0.0.0-20210210003744-476f909e3f8f
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/api v0.21.0
