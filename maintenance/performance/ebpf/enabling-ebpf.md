@@ -187,20 +187,13 @@ data:
   KUBERNETES_SERVICE_HOST: "<API server host>"
   KUBERNETES_SERVICE_PORT: "<API server port>"
 ```
-
-Wait 60s for kubelet to pick up the `ConfigMap` (see Kubernetes [issue #30189](https://github.com/kubernetes/kubernetes/issues/30189){:target="_blank"}); then, restart the operator to pick up the change:
-
-```
-kubectl delete pod -n tigera-operator -l k8s-app=tigera-operator
-```
-
 The operator will then do a rolling update of {{site.prodname}} to pass on the change.  Confirm that pods restart and then reach the `Running` state with the following command:
 
 ```
 watch kubectl get pods -n calico-system
 ```
 
-If you do not see the pods restart then it's possible that the `ConfigMap` wasn't picked up (sometimes Kubernetes is slow to propagate `ConfigMap`s due the above issue).  You can try restarting the operator again.
+If you do not see the pods restart then it's possible that the `ConfigMap` wasn't picked up (sometimes Kubernetes is slow to propagate `ConfigMap`s due the above issue).  You can try restarting the operator.
 
 #### Configure kube-proxy
 

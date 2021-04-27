@@ -174,12 +174,6 @@ data:
 EOF
 ```
 
-Wait 60s for kubelet to pick up the `ConfigMap` (see Kubernetes [issue #30189](https://github.com/kubernetes/kubernetes/issues/30189){:target="_blank"}); then, restart the operator to pick up the change:
-
-```
-kubectl delete pod -n tigera-operator -l k8s-app=tigera-operator
-```
-
 #### Disable kube-proxy
 
 In eBPF mode, {{site.prodname}} replaces `kube-proxy` so it wastes resources to run both.  To disable `kube-proxy` reversibly, we recommend adding a node selector to `kube-proxy`'s `DaemonSet` that matches no nodes, for example:
