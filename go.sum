@@ -749,8 +749,8 @@ github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/felix-private v0.0.0-20210423191756-c6173f117a07 h1:y0v/9S3cOU9oclkPiZ/wYyGBkxnfEOO0s4bI7vnDkz8=
-github.com/tigera/felix-private v0.0.0-20210423191756-c6173f117a07/go.mod h1:/9/73zmrvJXVaf+Ht5/xZIewYs2Q0fjwVtuuifVvXmE=
+github.com/tigera/felix-private v0.0.0-20210426125804-60acd1712fd8 h1:TDVoJ08w4SD+4KmNZ6w1+OedpFGU5QHz1jfdiVkx9hM=
+github.com/tigera/felix-private v0.0.0-20210426125804-60acd1712fd8/go.mod h1:/9/73zmrvJXVaf+Ht5/xZIewYs2Q0fjwVtuuifVvXmE=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236 h1:m1VfuR9aeII70tJVsumFJvNHSQU/NW0TOE2FwAhDLNA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
 github.com/tigera/licensing v1.0.1-0.20210422165141-a2325849af0e h1:kXlZapEN6r94DSKJIFe7zSP99l5TlXyOG/F/+4ukkao=
