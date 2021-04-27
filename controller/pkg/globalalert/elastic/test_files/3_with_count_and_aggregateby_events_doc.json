@@ -1,0 +1,4 @@
+{"index":{"_index":"tigera_secure_ee_events.test-cluster"}}
+{"alert":"sample-test","description":"test alert: sample-test","record":{"source_namespace": "crc-local-storage-system", "count": 806},"severity":100,"time":1615857005,"type":"alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster"}}
+{"alert":"sample-test","description":"test alert: sample-test","record":{"source_namespace": "calico-system", "count": 1270},"severity":100,"time":1615857005,"type":"alert"}

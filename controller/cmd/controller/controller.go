@@ -18,6 +18,12 @@ import (
 
 	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/managedcluster"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
+
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
@@ -27,9 +33,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	alertElastic "github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
-	alertWatcher "github.com/tigera/intrusion-detection/controller/pkg/alert/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/rbac"
@@ -38,15 +41,19 @@ import (
 	feedsWatcher "github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/forwarder"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
+
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 )
 
 const (
-	DefaultElasticScheme      = "https"
-	DefaultElasticHost        = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
-	DefaultElasticPort        = 9200
-	DefaultElasticUser        = "elastic"
-	DefaultConfigMapNamespace = "tigera-intrusion-detection"
-	DefaultSecretsNamespace   = "tigera-intrusion-detection"
+	DefaultElasticScheme                  = "https"
+	DefaultElasticHost                    = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
+	DefaultElasticPort                    = "9200"
+	DefaultElasticUser                    = "elastic"
+	DefaultConfigMapNamespace             = "tigera-intrusion-detection"
+	DefaultSecretsNamespace               = "tigera-intrusion-detection"
+	DefaultMultiClusterForwardingEndpoint = "https://tigera-manager.tigera-manager.svc:9443"
+	DefaultMultiClusterForwardingCA       = "/manager-tls/cert"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -99,14 +106,8 @@ func main() {
 	}
 
 	// This allows us to use "calico-monitoring" in helm if we want to
-	configMapNamespace := os.Getenv("CONFIG_MAP_NAMESPACE")
-	if configMapNamespace == "" {
-		configMapNamespace = DefaultConfigMapNamespace
-	}
-	secretsNamespace := os.Getenv("SECRETS_NAMESPACE")
-	if secretsNamespace == "" {
-		secretsNamespace = DefaultSecretsNamespace
-	}
+	configMapNamespace := getStrEnvOrDefault("CONFIG_MAP_NAMESPACE", DefaultConfigMapNamespace)
+	secretsNamespace := getStrEnvOrDefault("SECRETS_NAMESPACE", DefaultSecretsNamespace)
 
 	var u *url.URL
 	uri := os.Getenv("ELASTIC_URI")
@@ -117,26 +118,13 @@ func main() {
 			panic(err)
 		}
 	} else {
-		scheme := os.Getenv("ELASTIC_SCHEME")
-		if scheme == "" {
-			scheme = DefaultElasticScheme
-		}
+		scheme := getStrEnvOrDefault("ELASTIC_SCHEME", DefaultElasticScheme)
+		host := getStrEnvOrDefault("ELASTIC_HOST", DefaultElasticHost)
 
-		host := os.Getenv("ELASTIC_HOST")
-		if host == "" {
-			host = DefaultElasticHost
-		}
-
-		portStr := os.Getenv("ELASTIC_PORT")
-		var port int64
-		if portStr == "" {
-			port = DefaultElasticPort
-		} else {
-			var err error
-			port, err = strconv.ParseInt(portStr, 10, 16)
-			if err != nil {
-				panic(err)
-			}
+		portStr := getStrEnvOrDefault("ELASTIC_PORT", DefaultElasticPort)
+		port, err := strconv.ParseInt(portStr, 10, 16)
+		if err != nil {
+			panic(err)
 		}
 
 		u = &url.URL{
@@ -148,10 +136,7 @@ func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
-	user := os.Getenv("ELASTIC_USER")
-	if user == "" {
-		user = DefaultElasticUser
-	}
+	user := getStrEnvOrDefault("ELASTIC_USER", DefaultElasticUser)
 	pass := os.Getenv("ELASTIC_PASSWORD")
 	pathToCA := os.Getenv("ELASTIC_CA")
 
@@ -198,10 +183,13 @@ func main() {
 		}
 	}
 
-	e, err := elastic.NewElastic(h, u, user, pass, indexSettings, debugElastic)
+	esCLI, err := elastic.NewClient(h, u, user, pass, debugElastic)
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elastic")
+		panic(err)
 	}
+	defer esCLI.Stop()
+	e := elastic.NewService(esCLI, u, indexSettings)
 	e.Run(ctx)
 	defer e.Close()
 
@@ -239,7 +227,6 @@ func main() {
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
 	eip := syncElastic.NewIPSetController(e)
 	edn := syncElastic.NewDomainNameSetController(e)
-	ean := alertElastic.NewAlertController(e)
 	sIP := events.NewSuspiciousIP(e)
 	sDN := events.NewSuspiciousDomainNameSet(e)
 
@@ -252,12 +239,6 @@ func main() {
 		edn,
 		&http.Client{},
 		e, e, sIP, sDN, e)
-	a := alertWatcher.NewWatcher(
-		calicoClient.ProjectcalicoV3().GlobalAlerts(),
-		ean,
-		e,
-		&http.Client{},
-	)
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 	var enableForwarding = (err == nil && valueEnableForwarding)
 	var healthPingers health.Pingers
@@ -266,9 +247,18 @@ func main() {
 		healthPingers = append(healthPingers, s)
 	}
 
-	var enableAlerts = (os.Getenv("DISABLE_ALERTS") != "yes")
+	var managementAlertController, managedClusterController controller.Controller
+	var alertHealthPinger, managedClusterHealthPinger health.Pingers
+	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
 	if enableAlerts {
-		healthPingers = append(healthPingers, a)
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, esCLI, getStrEnvOrDefault("CLUSTER_NAME", "cluster"))
+		healthPingers = append(healthPingers, &alertHealthPinger)
+
+		multiClusterForwardingEndpoint := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_ENDPOINT", DefaultMultiClusterForwardingEndpoint)
+		multiClusterForwardingCA := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_CA", DefaultMultiClusterForwardingCA)
+		managedClusterController, managedClusterHealthPinger = managedcluster.NewManagedClusterController(calicoClient, esCLI, indexSettings,
+			util.ManagedClusterClient(config, multiClusterForwardingEndpoint, multiClusterForwardingCA))
+		healthPingers = append(healthPingers, &managedClusterHealthPinger)
 	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)
@@ -294,8 +284,10 @@ func main() {
 			}
 
 			if enableAlerts {
-				a.Run(ctx)
-				defer a.Close()
+				managementAlertController.Run(ctx)
+				defer managementAlertController.Close()
+				managedClusterController.Run(ctx)
+				defer managedClusterController.Close()
 			}
 
 			if enableForwarding {
@@ -312,7 +304,8 @@ func main() {
 			}
 
 			if enableAlerts {
-				a.Close()
+				managedClusterController.Close()
+				managementAlertController.Close()
 			}
 
 			if enableForwarding {
@@ -335,4 +328,13 @@ func main() {
 			continue
 		}
 	}
+}
+
+// getStrEnvOrDefault returns the environment variable named by the key if it is not empty, else returns the defaultValue
+func getStrEnvOrDefault(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value != "" {
+		return value
+	}
+	return defaultValue
 }

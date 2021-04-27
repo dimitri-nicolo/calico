@@ -1,0 +1,31 @@
+{
+  "hits": {
+    "hits": [],
+    "total": {
+      "value": 2,
+      "relation": "eq"
+    },
+    "max_score": null
+  },
+  "aggregations": {
+    "composite_aggs": {
+      "after_key": {
+        "source_namespace": "calico-system"
+      },
+      "buckets": [
+        {
+          "key": {
+            "source_namespace": "crc-local-storage-system"
+          },
+          "doc_count": 806
+        },
+        {
+          "key": {
+            "source_namespace": "calico-system"
+          },
+          "doc_count": 1270
+        }
+      ]
+    }
+  }
+}

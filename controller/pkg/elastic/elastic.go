@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -87,15 +86,6 @@ type domainNameSetDoc struct {
 	Domains   db.DomainNameSetSpec `json:"domains"`
 }
 
-type IndexSettings struct {
-	Replicas int `json:"number_of_replicas"`
-	Shards   int `json:"number_of_shards"`
-}
-
-func DefaultIndexSettings() IndexSettings {
-	return IndexSettings{DefaultReplicas, DefaultShards}
-}
-
 type Elastic struct {
 	c                             *elastic.Client
 	url                           *url.URL
@@ -109,27 +99,9 @@ type Elastic struct {
 	indexSettings                 IndexSettings
 }
 
-func NewElastic(h *http.Client, url *url.URL, username, password string, indexSettings IndexSettings, debug bool) (*Elastic, error) {
-	options := []elastic.ClientOptionFunc{
-		elastic.SetURL(url.String()),
-		elastic.SetHttpClient(h),
-		elastic.SetErrorLog(log.StandardLogger()),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-	}
-	// Enable debug (trace-level) logging for the Elastic client library we use
-	if debug {
-		options = append(options, elastic.SetTraceLog(log.StandardLogger()))
-	}
-	if username != "" {
-		options = append(options, elastic.SetBasicAuth(username, password))
-	}
-	c, err := elastic.NewClient(options...)
-	if err != nil {
-		return nil, err
-	}
-	e := &Elastic{
-		c:                             c,
+func NewService(esCLI *elastic.Client, url *url.URL, indexSettings IndexSettings) *Elastic {
+	return &Elastic{
+		c:                             esCLI,
 		url:                           url,
 		ipSetMappingCreated:           make(chan struct{}),
 		domainNameSetMappingCreated:   make(chan struct{}),
@@ -138,14 +110,13 @@ func NewElastic(h *http.Client, url *url.URL, username, password string, indexSe
 		indexSettings:                 indexSettings,
 	}
 
-	return e, nil
 }
 
 func (e *Elastic) Run(ctx context.Context) {
 	e.once.Do(func() {
 		ctx, e.cancel = context.WithCancel(ctx)
 		go func() {
-			if err := e.createOrUpdateIndex(ctx, IPSetIndex, ipSetMapping, e.ipSetMappingCreated); err != nil {
+			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, IPSetIndex, ipSetMapping, e.ipSetMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"index": IPSetIndex,
 				}).Error("Could not create index")
@@ -153,7 +124,7 @@ func (e *Elastic) Run(ctx context.Context) {
 		}()
 
 		go func() {
-			if err := e.createOrUpdateIndex(ctx, DomainNameSetIndex, domainNameSetMapping, e.domainNameSetMappingCreated); err != nil {
+			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, DomainNameSetIndex, domainNameSetMapping, e.domainNameSetMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"index": DomainNameSetIndex,
 				}).Error("Could not create index")
@@ -161,7 +132,7 @@ func (e *Elastic) Run(ctx context.Context) {
 		}()
 
 		go func() {
-			if err := e.createOrUpdateIndex(ctx, EventIndex, EventMapping, e.eventMappingCreated); err != nil {
+			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, EventIndex, EventMapping, e.eventMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"index": EventIndex,
 				}).Error("Could not create index")
@@ -171,7 +142,7 @@ func (e *Elastic) Run(ctx context.Context) {
 		// We create the index ForwarderConfigIndex regardless of whether the event forwarder is enabled or not (so that it's
 		// available when needed).
 		go func() {
-			if err := e.createOrUpdateIndex(ctx, ForwarderConfigIndex, forwarderConfigMapping, e.forwarderConfigMappingCreated); err != nil {
+			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, ForwarderConfigIndex, forwarderConfigMapping, e.forwarderConfigMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"index": ForwarderConfigIndex,
 				}).Error("Could not create index")
@@ -262,51 +233,6 @@ func (e *Elastic) putSet(ctx context.Context, name string, idx string, c <-chan 
 	log.WithField("name", name).Info("set stored")
 
 	return err
-}
-
-func (e *Elastic) createOrUpdateIndex(ctx context.Context, index, mapping string, ch chan struct{}) error {
-	attempt := 0
-	for {
-		attempt++
-		err := e.ensureIndexExists(ctx, index, mapping)
-		if err != nil {
-			log.WithError(err).WithFields(log.Fields{
-				"index":       index,
-				"attempt":     attempt,
-				"retry_delay": CreateIndexFailureDelay,
-			}).Errorf("Failed to create index")
-
-			select {
-			case <-ctx.Done():
-				return err
-			case <-time.After(CreateIndexFailureDelay):
-				// noop
-			}
-		} else {
-			close(ch)
-			return nil
-		}
-	}
-}
-
-func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) error {
-	exists, err := e.c.IndexExists(idx).Do(ctx)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		r, err := e.c.CreateIndex(idx).BodyJson(map[string]interface{}{
-			"mappings": json.RawMessage(mapping),
-			"settings": e.indexSettings,
-		}).Do(ctx)
-		if err != nil {
-			return err
-		}
-		if !r.Acknowledged {
-			return fmt.Errorf("not acknowledged index %s create", idx)
-		}
-	}
-	return nil
 }
 
 func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
@@ -683,70 +609,4 @@ func (e *Elastic) auditObjectCreatedDeletedBetween(
 	}).Debug("AuditLog query results")
 
 	return rval, nil
-}
-
-func (e *Elastic) ListWatches(ctx context.Context) ([]db.Meta, error) {
-	result, err := e.c.Search(WatchIndex).Query(elastic.NewMatchAllQuery()).Do(ctx)
-
-	// Handle the special case where no watches have been created. Querying for watches returns
-	// index_not_found_exception. This is not an error. There are no watches.
-	if err != nil {
-		switch err.(type) {
-		case *elastic.Error:
-			err := err.(*elastic.Error)
-			if err.Details.Type == "index_not_found_exception" {
-				return nil, nil
-			}
-		}
-		return nil, err
-	}
-
-	var res []db.Meta
-	for _, hit := range result.Hits.Hits {
-		if strings.HasPrefix(hit.Id, WatchNamePrefix) {
-			res = append(res, db.Meta{
-				Name:        hit.Id[len(WatchNamePrefix):],
-				SeqNo:       hit.SeqNo,
-				PrimaryTerm: hit.PrimaryTerm,
-			})
-		}
-	}
-	return res, nil
-}
-
-func (e *Elastic) ExecuteWatch(ctx context.Context, body *ExecuteWatchBody) (*elastic.XPackWatchRecord, error) {
-	res, err := e.c.XPackWatchExecute().BodyJson(body).Do(ctx)
-
-	if res != nil {
-		return res.WatchRecord, err
-	}
-	return nil, err
-}
-
-func (e *Elastic) PutWatch(ctx context.Context, name string, body *PutWatchBody) error {
-	// Wait for the SecurityEvent Mapping to be created
-	if err := util.WaitForChannel(ctx, e.eventMappingCreated, CreateIndexWaitTimeout); err != nil {
-		return err
-	}
-
-	watchID := WatchNamePrefix + name
-	_, err := e.c.XPackWatchPut(watchID).Body(body).Do(ctx)
-	return err
-}
-
-func (e *Elastic) GetWatchStatus(ctx context.Context, name string) (*elastic.XPackWatchStatus, error) {
-	res, err := e.c.XPackWatchGet(WatchNamePrefix + name).Do(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return res.Status, err
-}
-
-func (e *Elastic) DeleteWatch(ctx context.Context, m db.Meta) error {
-	// TODO This has a race condition. :(
-	// should maybe check version before or in result. Elastic does not allow you to specify version which
-	// causes the race.
-	watchID := WatchNamePrefix + m.Name
-	_, err := e.c.XPackWatchDelete(watchID).Do(ctx)
-	return err
 }

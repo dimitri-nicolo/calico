@@ -1,0 +1,23 @@
+{
+  "took" : 7,
+  "errors" : false,
+  "items" : [
+    {
+      "index" : {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "nkCas3gBW1vpm67M6Sla",
+        "_version" : 1,
+        "result" : "created",
+        "_shards" : {
+          "total" : 1,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 905,
+        "_primary_term" : 6,
+        "status" : 201
+      }
+    }
+  ]
+}

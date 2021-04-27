@@ -1,0 +1,15 @@
+{
+  "hits": {
+    "total": {
+      "value": 793,
+      "relation": "eq"
+    },
+    "max_score": null,
+    "hits": []
+  },
+  "aggregations": {
+    "count": {
+      "value": 66057.0
+    }
+  }
+}

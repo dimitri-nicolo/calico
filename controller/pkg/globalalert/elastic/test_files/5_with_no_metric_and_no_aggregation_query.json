@@ -1,0 +1,23 @@
+{
+  "query" : {
+    "bool" : {
+      "filter" : {
+        "range" : {
+          "start_time" : {
+            "format" : "strict_date_optional_time||epoch_millis",
+            "gte" : "1615247000833",
+            "lte" : "1615247463833"
+          }
+        }
+      },
+      "must" : {
+        "term" : {
+          "action" : {
+            "value" : "allow"
+          }
+        }
+      }
+    }
+  },
+  "size" : 10000
+}
