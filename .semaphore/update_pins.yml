@@ -35,4 +35,4 @@ blocks:
       jobs:
         - name: 'Auto pin update'
           commands:
-            - CONFIRM=true GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN} make commit-pin-updates
+            - CONFIRM=true GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN} make trigger-auto-pin-update-process
