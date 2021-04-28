@@ -44,6 +44,7 @@ LOGS_IGNORE_ALL_TESTS = [
     "Exiting. reason=\"config changed\"",
     "Exiting immediately reason=\"config changed\"",
     "unable to load in-cluster configuration",
+    "Unable to create Kubernetes config"
 ]
 
 
