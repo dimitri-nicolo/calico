@@ -402,8 +402,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236 h1:m1VfuR9aeII70tJVsumFJvNHSQU/NW0TOE2FwAhDLNA=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210422164824-326b0db88236/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210428213214-15c1878d8dc3 h1:013cyg4EaPamR280FB2h5t1S/mMONXK1/BFSIcGCX7Q=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210428213214-15c1878d8dc3/go.mod h1:/JOnkIrdx+0tansiGswl9GRWcCUPP2EQKKC5hVwA9Gs=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
