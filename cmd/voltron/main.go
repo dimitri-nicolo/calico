@@ -3,118 +3,31 @@
 package main
 
 import (
-	"encoding/json"
-	"flag"
 	"fmt"
 	"net"
 	"net/url"
-	"os"
-	"time"
-
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/regex"
-	"github.com/tigera/voltron/internal/pkg/utils"
-	"github.com/tigera/voltron/pkg/version"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/regex"
+	"github.com/tigera/voltron/internal/pkg/utils"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
+	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/server"
 )
 
-const (
-	// EnvConfigPrefix represents the prefix used to load ENV variables required for startup
-	EnvConfigPrefix = "VOLTRON"
-)
-
-var (
-	versionFlag = flag.Bool("version", false, "Print version information")
-)
-
-// Config is a configuration used for Voltron
-type config struct {
-	Port       int `default:"5555"`
-	Host       string
-	TunnelPort int    `default:"5566" split_words:"true"`
-	TunnelHost string `split_words:"true"`
-	TunnelCert string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
-	TunnelKey  string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
-	LogLevel   string `default:"INFO"`
-	PublicIP   string `default:"127.0.0.1:32453" split_words:"true"`
-
-	// HTTPSCert, HTTPSKey - path to an x509 certificate and its private key used
-	// for external communication (Tigera UI <-> Voltron)
-	HTTPSCert string `default:"/certs/https/cert" split_words:"true" json:"-"`
-	HTTPSKey  string `default:"/certs/https/key" split_words:"true" json:"-"`
-	// InternalHTTPSCert, InternalHTTPSKey - path to an x509 certificate and its private key used
-	//for internal communication within the K8S cluster
-	InternalHTTPSCert string `default:"/certs/internal/cert" split_words:"true" json:"-"`
-	InternalHTTPSKey  string `default:"/certs/internal/key" split_words:"true" json:"-"`
-
-	K8sConfigPath                string `split_words:"true"`
-	KeepAliveEnable              bool   `default:"true" split_words:"true"`
-	KeepAliveInterval            int    `default:"100" split_words:"true"`
-	K8sEndpoint                  string `default:"https://kubernetes.default" split_words:"true"`
-	ComplianceEndpoint           string `default:"https://compliance.tigera-compliance.svc.cluster.local" split_words:"true"`
-	ComplianceCABundlePath       string `default:"/certs/compliance/tls.crt" split_words:"true"`
-	ComplianceInsecureTLS        bool   `default:"false" split_words:"true"`
-	EnableCompliance             bool   `default:"true" split_words:"true"`
-	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
-	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
-	PProf                        bool   `default:"false"`
-	EnableMultiClusterManagement bool   `default:"false" split_words:"true"`
-	KibanaEndpoint               string `default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601" split_words:"true"`
-	KibanaBasePath               string `default:"/tigera-kibana" split_words:"true"`
-	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
-
-	// Dex settings
-	DexEnabled        bool   `default:"false" split_words:"true"`
-	DexURL            string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/" split_words:"true"`
-	DexJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
-	DexBasePath       string `default:"/dex/" split_words:"true"`
-	DexCABundlePath   string `default:"/etc/ssl/certs/tls-dex.crt" split_words:"true"`
-	DexIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
-	DexClientID       string `default:"tigera-manager" split_words:"true"`
-	DexUsernameClaim  string `default:"email" split_words:"true"`
-	DexUsernamePrefix string `split_words:"true"`
-	DexGroupsClaim    string `default:"groups" split_words:"true"`
-	DexGroupsPrefix   string `split_words:"true"`
-
-	// The DefaultForward parameters configure where connections from guardian should be forwarded to by default
-	ForwardingEnabled               bool          `default:"true" split_words:"true"`
-	DefaultForwardServer            string        `default:"tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
-	DefaultForwardDialRetryAttempts int           `default:"5" split_words:"true"`
-	DefaultForwardDialInterval      time.Duration `default:"2s" split_words:"true"`
-}
-
-func (cfg config) String() string {
-	// Parse all command-line flags
-	flag.Parse()
-
-	// For --version use case
-	if *versionFlag {
-		version.Version()
-		os.Exit(0)
-	}
-
-	data, err := json.Marshal(cfg)
-	if err != nil {
-		return "{}"
-	}
-	return string(data)
-}
-
 func main() {
-	cfg := config{}
-	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
+	cfg := config.Config{}
+	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting %s with %s", EnvConfigPrefix, cfg)
+	log.Infof("Starting %s with %s", config.EnvConfigPrefix, cfg)
 
 	if cfg.PProf {
 		go func() {

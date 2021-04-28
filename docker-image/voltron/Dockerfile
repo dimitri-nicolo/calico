@@ -16,6 +16,11 @@ FROM scratch
 COPY --from=ubi /rootfs /
 # Add your binary to the image
 COPY --chown=1001 --from=ubi /voltron /voltron
+
+# Add the trusted certs from the ubi image.
+COPY --from=ubi /etc/pki /etc/pki
+COPY --from=ubi /usr/share/pki /usr/share/pki
+
 # Set the working directory to where you can run your application
 WORKDIR /
 
