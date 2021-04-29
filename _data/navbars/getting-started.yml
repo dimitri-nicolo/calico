@@ -16,7 +16,9 @@ section:
     path: /getting-started/kubernetes/
     section:
     - title: Options for installing Calico Enterprise
-      path: /getting-started/options-install  
+      path: /getting-started/options-install
+    - title: Installing in eBPF mode
+      path: /getting-started/kubernetes/ebpf
     - title: Standard
       path: /getting-started/kubernetes/generic-install
     - title: Docker Enterprise
