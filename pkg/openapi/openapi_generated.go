@@ -8658,6 +8658,19 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"windowsDnsCacheFile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default: \"c:\\TigeraCalico\\felix-dns-cache.txt\"].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"windowsDnsExtraTTL": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. The default value is 120s which is same as the default value of ServicePointManager.DnsRefreshTimeout on .net framework. [Default: 120s].",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 					"dnsTrustedServers": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS service. `<port>` defaults to the first service port, or 53 for an IP, and `<namespace>` to `kube-system`. An IPv6 address with a port must use the square brackets convention, for example `[fd00:83a6::12]:5353`.Note that Felix (calico-node) will need RBAC permission to read the details of each service specified by a `k8s-service:...` form. [Default: \"k8s-service:kube-dns\"].",
