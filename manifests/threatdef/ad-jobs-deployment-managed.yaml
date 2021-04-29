@@ -19,10 +19,10 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      namespaceSelector: name == 'tigera-elasticsearch'
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      namespaceSelector: projectcalico.org/name == 'tigera-guardian'
+      selector: k8s-app == 'tigera-guardian'
       ports:
-      - 9200
+      - 8080
   - action: Allow
     protocol: UDP
     destination:
@@ -41,21 +41,21 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-tigera.elasticsearch-access-anomaly-detection
-  namespace: tigera-elasticsearch
+  namespace: tigera-guardian
 spec:
   tier: allow-tigera
   order: 1
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  selector: k8s-app == 'tigera-guardian'
   types:
   - Ingress
   ingress:
   - action: Allow
     destination:
       ports:
-      - 9200
+      - 8080
     protocol: TCP
     source:
-      namespaceSelector: name == 'tigera-intrusion-detection'
+      namespaceSelector: projectcalico.org/name == 'tigera-intrusion-detection'
       selector:  app == 'anomaly-detection'
 ---
 apiVersion: apps/v1
@@ -79,7 +79,7 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: ad-jobs
-        image: {{page.registry}}{% include component_image component="anomaly-detection-jobs" %}
+        image: {{page.registry}}{% include component_image component="anomaly_detection_jobs" %}
         resources:
           requests:
             memory: 1G

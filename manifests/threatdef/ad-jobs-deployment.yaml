@@ -79,7 +79,7 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: ad-jobs
-        image: {{page.registry}}{% include component_image component="anomaly-detection-jobs" %}
+        image: {{page.registry}}{% include component_image component="anomaly_detection_jobs" %}
         resources:
           requests:
             memory: 1G

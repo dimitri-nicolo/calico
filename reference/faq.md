@@ -111,7 +111,7 @@ documents *mandates* the use of VLANs.
 3. Load the modified file.
 
    ```bash
-   calicoctl replace -f pool.yaml
+   kubectl replace -f pool.yaml
    ```
 
 ## How does {{site.prodname}} maintain saved state?
@@ -266,7 +266,7 @@ Alternatively you can use {{site.prodname}}'s built in outbound NAT capability b
 node on which each container is hosted.
 
 ```bash
-cat <<EOF | calicoctl apply -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
@@ -344,7 +344,7 @@ Refer to the appropriate guide for your orchestration system for details on how 
 Yes. If you are running in a public cloud that doesn't allow either L3 peering or L2 connectivity between {{site.prodname}} hosts then you can enable IP-in-IP in your {{site.prodname}} IP pool:
 
 ```bash
-cat <<EOF | calicoctl apply -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
@@ -365,7 +365,7 @@ You can disable Source/Destination Check using [Felix configuration]({{ site.bas
 ```bash
 aws ec2 modify-instance-attribute --instance-id <INSTANCE_ID> --source-dest-check "{\"Value\": false}"
 
-cat <<EOF | calicoctl apply -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:

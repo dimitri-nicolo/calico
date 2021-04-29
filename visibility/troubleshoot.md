@@ -45,7 +45,7 @@ The following user-configured resources are related to Elasticsearch:
 > **Important**: Be aware that removing LogStorage temporarily removes Elasticsearch from your cluster. Features that depend on LogStorage are temporarily unavailable, including the dashboards in the Manager UI. Data ingestion is also temporarily paused, but will resume when the LogStorage is up and running again.
 {: .alert .alert-danger}
    
-Follow these steps to create a new Elasticsearch cluster. A new trial will be started that is valid for 30 days.
+Follow these steps to create a new Elasticsearch cluster.
 1. (Optional) To delete all current data follow this step. For each PersistentVolume in StorageClass `tigera-elasticsearch` that is currently mounted, set the ReclaimPolicy to `Recycle` or `Delete`.
 1. Export your current LogStorage resource to a file.
 ```bash
@@ -57,14 +57,14 @@ kubectl get logstorage tigera-secure -o yaml --export=true > log-storage.yaml
 kubectl delete -f log-storage.yaml
 ```
 
-1. Delete the trial license.
+1. Delete the trial license. You can skip this step if the secret is not present in your cluster.
 ```bash
 kubectl delete secret -n tigera-eck-operator trial-status
 ```
 
 1. (Optional) If you made changes to the ReclaimPolicy in step 1, revert them so that it matches the value in StorageClass `tigera-elasticsearch` again.
 
-1. Apply the LogStorage again to create a new Elasticsearch cluster with a trial.
+1. Apply the LogStorage again.
 ```bash
 kubectl apply -f log-storage.yaml
 ```
@@ -77,13 +77,6 @@ watch kubectl get tigerastatus
 1. (Optional) If you have a valid license, [apply a license](#how-to-apply-a-valid-license).
 
 ### Common problems
-
-#### License is expired
-**Problem**: You did not replace the 30-day trial license with a valid license within 30 days of the installation. Or, you have deleted an Elasticsearch cluster, which can invalidate the trial license.
-
-**Solution/workaround**: [Apply a valid license](#how-to-apply-a-valid-license). Note that Elasticsearch still works without a license, 
-but threat defense and SSO login for Kibana are no longer available. It is possible to [reset Elasticsearch](#how-to-create-a-new-cluster) with another trial license 
-at the cost of losing data.
 
 #### Elasticsearch is pending
 
@@ -127,3 +120,19 @@ intrusiondetection.operator.tigera.io "tigera-secure" deleted
 $ kubectl apply -f intrusiondetection.yaml 
 intrusiondetection.operator.tigera.io/tigera-secure created
 ```
+
+#### Elastic Operator OOM killed
+
+**Solution/workaround**: Increase the memory requests/limits for the Elastic Operator in the LogStorage Custom Resource.
+
+```
+$ kubectl edit logstorage tigera-secure
+```
+
+Find the `ECKOperator` Component Resource in the `spec` section. Increase the limits and requests memory amounts as needed. Verify that the pod has restarted with the new settings:
+
+```
+$ kubectl descibe pod elastic-operator -n tigera-eck-operator   
+```
+
+Check the `Container.Limits` and `Container.Requests` fields to confirm the values have propagated correctly.

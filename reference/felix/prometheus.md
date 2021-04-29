@@ -22,6 +22,17 @@ existing metrics.
 | `felix_active_local_policies` | Number of active policies on this host. |
 | `felix_active_local_selectors` | Number of active selectors on this host. |
 | `felix_active_local_tags` | Number of active tags on this host. |
+| `felix_bpf_conntrack_cleaned` | Number of entries cleaned during a conntrack table sweep. |
+| `felix_bpf_conntrack_cleaned_total` |Total number of entries cleaned during conntrack table sweeps, incremented for each clean individualy. |
+| `felix_bpf_conntrack_expired` | Number of entries cleaned during a conntrack table sweep due to expiration. |
+| `felix_bpf_conntrack_expired_total` | Total number of entries cleaned during conntrack table sweep due to expiration - by reason. |
+| `felix_bpf_conntrack_inforeader_blocks` | Conntrack InfoReader would-blocks. |
+| `felix_bpf_conntrack_stale_nat` | Number of entries cleaned during a conntrack table sweep due to stale NAT. |
+| `felix_bpf_conntrack_stale_nat_total` | Total number of entries cleaned during conntrack table sweeps due to stale NAT. |
+| `felix_bpf_conntrack_sweeps` | Number of contrack table sweeps made so far. |
+| `felix_bpf_conntrack_used` | Number of used entries visited during a conntrack table sweep. |
+| `felix_bpf_conntrack_sweep_duration` | Conntrack sweep execution time (ns). |
+| `felix_bpf_num_ip_sets` | Number of BPF IP sets managed in the dataplane. |
 | `felix_calc_graph_output_events` | Number of events emitted by the calculation graph. |
 | `felix_calc_graph_update_time_seconds` | Seconds to update calculation graph for each datastore OnUpdate call. |
 | `felix_calc_graph_updates_processed` | Number of datastore updates processed by the calculation graph. |

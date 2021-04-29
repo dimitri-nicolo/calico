@@ -2,9 +2,10 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: logstorages.operator.tigera.io
   annotations:
     helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: logstorages.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -25,18 +26,64 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
             description: Specification of the desired state for Tigera log storage.
             properties:
+              componentResources:
+                description: ComponentResources can be used to customize the resource
+                  requirements for each component. Only ECKOperator is supported for
+                  this spec.
+                items:
+                  description: The ComponentResource struct associates a ResourceRequirements
+                    with a component by name
+                  properties:
+                    componentName:
+                      description: ComponentName is an enum which identifies the component
+                      enum:
+                      - ECKOperator
+                      type: string
+                    resourceRequirements:
+                      description: ResourceRequirements allows customization of limits
+                        and requests for compute resources such as cpu and memory.
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Limits describes the maximum amount of compute
+                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Requests describes the minimum amount of compute
+                            resources required. If Requests is omitted for a container,
+                            it defaults to Limits if that is explicitly specified,
+                            otherwise to an implementation-defined value. More info:
+                            https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          type: object
+                      type: object
+                  required:
+                  - componentName
+                  - resourceRequirements
+                  type: object
+                type: array
               dataNodeSelector:
                 additionalProperties:
                   type: string
@@ -139,7 +186,7 @@ spec:
                     description: 'AuditReports configures the retention period for
                       audit logs, in days.  Logs written on a day that started at
                       least this long ago are removed.  To keep logs for at least
-                      x days, use a retention period of x+1. Default: 367'
+                      x days, use a retention period of x+1. Default: 91'
                     format: int32
                     type: integer
                   complianceReports:
@@ -149,7 +196,7 @@ spec:
                       reporting. Consult the Compliance Reporting documentation for
                       more details on reports. Logs written on a day that started
                       at least this long ago are removed.  To keep logs for at least
-                      x days, use a retention period of x+1. Default: 367'
+                      x days, use a retention period of x+1. Default: 91'
                     format: int32
                     type: integer
                   flows:
@@ -166,7 +213,7 @@ spec:
                       the Compliance Reporting documentation for more details on snapshots.
                       Logs written on a day that started at least this long ago are
                       removed.  To keep logs for at least x days, use a retention
-                      period of x+1. Default: 367'
+                      period of x+1. Default: 91'
                     format: int32
                     type: integer
                 type: object
@@ -203,4 +250,10 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 {{ end }}

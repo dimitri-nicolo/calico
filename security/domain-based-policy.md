@@ -22,6 +22,7 @@ This how-to guide uses the following {{site.prodname}} features:
 - **GlobalNetworkPolicy** with exact or wildcard domain names
 - **NetworkPolicy** with exact or wildcard domain names
 - **GlobalNetworkSet** with exact or wildcard domain names, where the network set is referenced in a GlobalNetworkPolicy
+- **NetworkSet** with exact or wildcard domain names, where the network set is referenced in a NetworkPolicy
 
 ### Concepts
 
@@ -173,12 +174,53 @@ spec:
       selector: color == 'red'
 ```
 
+#### Use domain names in a network set
+
+In this method, you create a **NetworkSet** with the allowed destination domain names in the `allowedEgressDomains` field. Then,
+you create a **NetworkPolicy** with a `destination.selector` that matches that NetworkSet.
+
+In the following example, the allowed egress domains (`api.alice.com` and `*.example.com`) are specified in the NetworkSet.
+
+```
+apiVersion: projectcalico.org/v3
+kind: NetworkSet
+metadata:
+  name: allowed-domains-1
+  namespace: rollout-test
+  labels:
+    color: red
+spec:
+  allowedEgressDomains:
+  - api.alice.com
+  - "*.example.com"
+```
+
+Then, you reference the network set in a **NetworkPolicy** using a destination label selector.
+
+```
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-domain
+  namespace: rollout-test
+spec:
+  order: 1
+  selector: my-pod-label == 'my-value'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    destination:
+      selector: color == 'red'
+```
+
 ### Above and beyond
 
 To change the default DNS trusted servers, use the [DNSTrustedServers parameter]({{site.baseurl}}/reference/felix/configuration).
 
 For more detail about the relevant resources, see
 [GlobalNetworkSet]({{site.baseurl}}/reference/resources/globalnetworkset),
-[GlobalNetworkPolicy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
+[GlobalNetworkPolicy]({{site.baseurl}}/reference/resources/globalnetworkpolicy),
+[NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy)
 and
-[NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy).
+[NetworkSet]({{site.baseurl}}/reference/resources/networkset).

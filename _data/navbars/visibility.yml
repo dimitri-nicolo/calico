@@ -26,6 +26,8 @@ section:
       path: /visibility/elastic/flow/aggregation  
     - title: Enable process information
       path: /visibility/elastic/flow/process
+    - title: Enable TCP socket stats
+      path: /visibility/elastic/flow/tcpstats
   - title: Audit logs
     path: /visibility/elastic/ee-audit
   - title: DNS logs

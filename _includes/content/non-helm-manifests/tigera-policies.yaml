@@ -3,6 +3,8 @@ apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: allow-tigera
+  labels:
+    projectcalico.org/system-tier: "true"
 spec:
   order: 100
 
@@ -486,7 +488,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'fluentd-node'
+      selector: k8s-app == 'fluentd-node' || k8s-app == 'fluentd-node-windows'
       namespaceSelector: name == 'tigera-fluentd'
     destination:
       ports: [9200]
@@ -578,6 +580,13 @@ spec:
     destination:
       ports: [9200]
     protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-elasticsearch-metrics'
+      namespaceSelector: name == 'tigera-elasticsearch'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
     # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
@@ -604,6 +613,15 @@ spec:
       namespaceSelector: projectcalico.org/name == 'tigera-dex'
       selector: k8s-app == 'tigera-dex'
       ports: [5556]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule in this policy allows compliance to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
 ---
 
 # Allow internal communication within the ElasticSearch cluster
@@ -634,6 +652,57 @@ spec:
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
       selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
       ports: [9300]
+---
+
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.elasticsearch-metrics
+  namespace: tigera-elasticsearch
+spec:
+  tier: allow-tigera
+  order: 1
+  selector: k8s-app == "tigera-elasticsearch-metrics"
+  serviceAccountSelector: ''
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+      namespaceSelector: projectcalico.org/name == "tigera-prometheus"
+    destination:
+      ports:
+      - '9081'
+  egress:
+  - action: Allow
+    protocol: TCP
+    source: {}
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == "tigera-secure"
+      namespaceSelector: projectcalico.org/name == "tigera-elasticsearch"
+      ports:
+      - '9200'
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == "kube-system"
+      selector: k8s-app == "kube-dns"
+      ports: [53]
+{%- endif %}
+
 ---
 
 # Allow access to Kibana
@@ -700,6 +769,15 @@ spec:
       selector: k8s-app == "kube-dns"
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule in this policy allows compliance to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
 ---
 
 apiVersion: projectcalico.org/v3
@@ -747,6 +825,21 @@ spec:
       selector: k8s-app == "kube-dns"
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule in this policy allows tigera-intrusion-detection to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
   # Pass to subsequent tiers for further enforcement
   - action: Pass
 
@@ -760,11 +853,20 @@ metadata:
 spec:
   tier: allow-tigera
   order: 1
-  selector: k8s-app == "fluentd-node"
+  selector: k8s-app == 'fluentd-node' || k8s-app == 'fluentd-node-windows'
   serviceAccountSelector: ''
   types:
     - Ingress
     - Egress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+      namespaceSelector: projectcalico.org/name == "tigera-prometheus"
+    destination:
+      ports:
+      - '9081'
   egress:
   - action: Deny
     protocol: TCP
@@ -858,8 +960,8 @@ spec:
     - action: Allow
       protocol: TCP
       destination:
-        # This rule is intended to allow egress between dex and your identity provider.
-        ports: [443, 6443]
+        # This rule is intended to allow egress between dex and your identity provider. Modify it if your server runs on a non-standard port.
+        ports: [443, 6443, 389, 636]
         # This subnet is added to represent the address(es) where your identity provider is running. If you make this subnet
         # more specific, network policies are enforced to block egress to all addresses that do not correspond with your IdP.
         nets: ['0.0.0.0/0']
@@ -942,6 +1044,105 @@ spec:
       namespaceSelector: projectcalico.org/name == 'tigera-kibana'
       selector: k8s-app == 'tigera-secure'
       ports: [5601]
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      ports: [9200]
+
+---
+
+# Allow kube-controllers to communicate with API server, DNS and elasticsearch.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.kube-controller-access
+  namespace: calico-system
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'calico-kube-controllers'
+  types:
+    - Egress
+  egress:
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == "kube-system"
+      selector: k8s-app == "kube-dns"
+      ports: [53]
+{%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: k8s-app == 'tigera-manager'
+      namespaceSelector: projectcalico.org/name == 'tigera-manager'
+      ports: [9443]
+
+---
+
+# Allow the elastic-operator to communicate with API server, DNS and elastic search.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.elastic-operator-access
+  namespace: tigera-eck-operator
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'elastic-operator'
+  types:
+    - Egress
+  egress:
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == "kube-system"
+      selector: k8s-app == "kube-dns"
+      ports: [53]
+{%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule in this policy allows tigera api-server to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
   - action: Allow
     protocol: TCP
     destination:

@@ -4,7 +4,7 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
+>**Note**: This feature is currently unavailable for RKE and OpenShift clusters.
 {: .alert .alert-info}
 
 ## Big Picture
@@ -42,11 +42,17 @@ L7 logs and flow logs capture different types of data for troubleshooting.
 
 ## Before you begin...
 
-In the namespace of the pod that you want to monitor, create a Kubernetes pull secret.
+In the namespace of the pod that you want to monitor, create a Kubernetes pull secret
+for accessing {{site.prodname}} images. This should match the pull secret created
+during [{{site.prodname}} installation]({{site.baseurl}}/getting-started/kubernetes/quickstart).
 
 ```bash
-kubectl create secret generic tigera-pull-secret -n <application pod namespace> --from-file=.dockerconfigjson=$HOME/.docker/config.json --type kubernetes.io/dockerconfigjson
+kubectl create secret generic tigera-pull-secret -n <application pod namespace> --from-file=.dockerconfigjson=<path/to/pull/secret> --type kubernetes.io/dockerconfigjson
 ```
+
+> **Important**: Enabling L7 logs requires at least an additional 1 GB LogStorage per node per one day retention period. 
+>Please adjust your [Log Storage](https://docs.tigera.io/maintenance/logstorage/adjust-log-storage-size) before proceeding. 
+{: .alert .alert-danger}
 
 ## How to
 
@@ -80,19 +86,6 @@ In this step, you configure the Envoy log collector to gather the L7 metrics.
    kubectl create configmap envoy-config -n <application pod namespace> --from-file=envoy-config.yaml
    ```
 
-**OpenShift Only**
-
-1. Apply the SecurityContextConstraint.
-   ```
-   oc apply -f {{ "/manifests/l7/l7-collector-scc.yaml" | absolute_url }}
-   ```
-
-1. Add your application's service account to the SecurityContextConstraint. If no specific
-   service account is specified, it will usually default to the `default` service account.
-   ```
-   oc adm policy add-scc-to-user l7-collector -z <service account name> -n <application pod namespace>
-   ```
-
 #### Step 2: Configure Felix for log data collection
 
 In this step, you enable the Policy Sync API on Felix.
@@ -100,12 +93,9 @@ In this step, you enable the Policy Sync API on Felix.
 1. Enable the Policy Sync API in Felix. To do this cluster-wide, modify the `default`
 FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.
 
-1. Enable L7 log collection in Felix. To do this cluster-wide, modify the
-`default` FelixConfiguration to set the field `l7LogsFileEnabled` to `true`.
-
-```bash
-kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent","l7LogsFileEnabled":true}}'
-```
+    ```bash
+    kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
+    ```
 
 1. (Optional) Configure L7 log aggregation, retention, and reporting. See the
 [Felix Configuration documentation]({{site.baseurl}}/reference/felix/configuration#calico-enterprise-specific-configuration)

@@ -52,7 +52,7 @@ Have a running {{site.prodname}} cluster with `calicoctl` installed.
 To enable automatic host endpoints, edit the default KubeControllersConfiguration instance, and set `spec.controllers.node.hostEndpoint.autoCreate` to `true`:
 
 ```bash
-calicoctl patch kubecontrollersconfiguration default --patch='{"spec": {"controllers": {"node": {"hostEndpoint": {"autoCreate": "Enabled"}}}}}'
+kubectl patch kubecontrollersconfiguration default --patch='{"spec": {"controllers": {"node": {"hostEndpoint": {"autoCreate": "Enabled"}}}}}'
 ```
 
 If successful, host endpoints are created for each of your cluster's nodes:
@@ -138,7 +138,7 @@ If you have not modified the failsafe ports, you should still have SSH access to
 Now apply the ingress policy for the Kubernetes masters:
 
 ```
-calicoctl apply -f - << EOF
+kubectl apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
@@ -187,7 +187,7 @@ the worker nodes need to access their localhost kubelet API and calico/node heal
 The second rule allows the masters to access the workers kubelet API. Now apply the policy:
 
 ```
-calicoctl apply -f - << EOF
+kubectl apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:

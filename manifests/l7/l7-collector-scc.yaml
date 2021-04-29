@@ -2,9 +2,18 @@ apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
 metadata:
   name: l7-collector
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: false
+allowPrivilegedContainer: false
 allowedCapabilities:
 - 'NET_RAW'
 - 'NET_ADMIN'
+- 'SETGID'
+- 'SETUID'
 fsGroup:
   type: MustRunAs
 priority: null
@@ -16,4 +25,7 @@ seLinuxContext:
 supplementalGroups:
   type: RunAsAny
 volumes:
+- 'configMap'
+- 'emptyDir'
 - 'flexVolume'
+- 'secret'

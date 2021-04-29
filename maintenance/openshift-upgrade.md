@@ -3,12 +3,15 @@ title: Upgrade Calico Enterprise from an earlier release on OpenShift
 description: Upgrading from an earlier release of Calico Enterprise on OpenShift.
 canonical_url: /maintenance/openshift-upgrade
 show_toc: false
+openshift_manifests_ignore_pullsecret: true
+openshift_manifests_ignore_apiserver_cr: true
+openshift_manifests_ignore_installation_cr: true
 ---
 
 ## Prerequisites
 
-Ensure that your {{site.prodname}} OpenShift cluster is running OpenShift
-version {{site.ocpMinVersion}} or {{site.ocpMaxVersion}}, and the {{site.prodname}} operator version is v1.2.4 or greater.
+Ensure that your {{site.prodname}} OpenShift cluster is running OpenShift Container Platform 
+{{site.ocpMinVersion}} or {{site.ocpMaxVersion}}, and the {{site.prodname}} operator version is v1.2.4 or greater.
 
 **Note**: You can check if you are running the operator by checking for the existence of the operator namespace
 with `oc get ns tigera-operator` or issuing `oc get tigerastatus`; a successful return means your installation is
@@ -26,6 +29,10 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated
 during upgrade).
 
+If your cluster has Windows nodes and uses custom TLS certificates for log storage, prior to upgrade, prepare and apply new certificates for [log storage]({{site.baseurl}}/security/comms/log-storage-tls) that include the required service DNS names.
+
+For {{site.prodname}} v3.5, upgrading multi-cluster management setups must include updating all managed and management clusters.
+
 ### Download the new manifests
 
 Make a manifests directory.
@@ -36,8 +43,6 @@ mkdir manifests
 
 {% include content/openshift-manifests.md %}
 
-{% include content/openshift-prometheus-operator.md %}
-
 ## Upgrade from 3.0 or later
 **Note**: The steps differ based on your cluster type. If you are unsure of your cluster type, look at the field `clusterManagementType` when you run `oc get installation -o yaml` before you proceed.
 {: .alert .alert-info}
@@ -46,6 +51,8 @@ mkdir manifests
    ```bash
    oc apply -f manifests/
    ```
+
+1. {% include content/openshift-prometheus-operator.md %}
 
 1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
    CR to your cluster.

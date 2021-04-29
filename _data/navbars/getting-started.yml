@@ -11,7 +11,7 @@ section:
     - title: System requirements
       path: /getting-started/openshift/requirements
     - title: Installation
-      path: /getting-started/openshift/installation/ 
+      path: /getting-started/openshift/installation
   - title: Kubernetes
     path: /getting-started/kubernetes/
     section:
@@ -25,6 +25,11 @@ section:
       path: /getting-started/kubernetes/helm
     - title: Rancher Kubernetes Engine
       path: /getting-started/kubernetes/rancher
+    - title: Self Managed Public Cloud
+      path: /getting-started/kubernetes/self-managed-public-cloud/
+      section:
+        - title: AWS using kOps
+          path: /getting-started/kubernetes/self-managed-public-cloud/aws
   - title: AKS 
     path: /getting-started/kubernetes/aks
   - title: EKS 

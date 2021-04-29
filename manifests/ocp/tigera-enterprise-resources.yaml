@@ -1,0 +1,65 @@
+---
+layout: null
+---
+
+{% include content/ocp/01-cr-manager.yaml %}
+
+{% include content/ocp/01-cr-compliance.yaml %}
+
+{% include content/ocp/01-cr-intrusiondetection.yaml %}
+
+{% include content/ocp/01-cr-logstorage.yaml %}
+
+{% include content/ocp/01-cr-logcollector.yaml %}
+
+{% helm tigera-operator --execute templates/prometheus/00-namespace-tigera-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/prometheus/04-clusterrolebinding-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/prometheus/04-clusterrole-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/prometheus/04-serviceaccount-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/misc/99-alertmanager-secret.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/misc/99-alertmanager-service.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/misc/99-prometheus-service.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/crs/prometheus/alertmanager.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}
+
+{% helm tigera-operator --execute templates/crs/prometheus/prometheus.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}
+
+{% helm tigera-operator --execute templates/crs/prometheus/prometheusrule.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}
+
+{% helm tigera-operator --execute templates/crs/prometheus/servicemonitor.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}
+
+{% helm tigera-operator --execute templates/crs/prometheus/elasticsearch_servicemonitor.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}
+
+{% helm tigera-operator --execute templates/crs/prometheus/fluentd_podmonitor.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}

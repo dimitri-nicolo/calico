@@ -39,18 +39,65 @@ and in particular, pushing the networking capabilities of the latest Linux kerne
 
 EKS is Amazon's managed Kubernetes offering.
 
-> **Note**: The EKS docs include instructions for installing {{site.prodname}}. However, those instructions use
-> a version of {{site.prodname}} that pre-dates eBPF mode GA.  The instructions below use a pre-release manifest
-> in order to install a suitable version of {{site.prodname}}.
-{: .alert .alert-info}
-
 ### How to
 
 #### Create an eBPF compatible EKS cluster
 
-By default, EKS uses Amazon Linux 2 as its base image for EKS, which does not meet the kernel version requirement for
-eBPF mode.  Unfortunately, {{site.prodname}} does not work on Amazon's Bottlerocket OS due to an incompatibility with 
-its read only file system. Here's how to get the cluster running with a suitable image based on Ubuntu 20.04:
+By default, EKS uses Amazon Linux 2 as its base image for EKS, which does not meet the kernel version requirement for 
+eBPF mode.  Below, we give a couple of options for how to get the cluster running with a suitable kernel:
+
+{% tabs tab-group:grp1 %}
+<label:Bottlerocket,active:true>
+<%
+
+The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's 
+[Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a 
+container-optimised OS with an emphasis on security; it has a version of the kernel which is compatible with eBPF mode.
+
+* To create a 4-node test cluster with a Bottlerocket node group, run the command below.  It is important to use the config-file
+  approach to creating a cluster in order to set the additional IAM permissions for Bottlerocket.
+
+  ```
+  eksctl create cluster --config-file - <<EOF
+  apiVersion: eksctl.io/v1alpha5
+  kind: ClusterConfig
+  metadata:
+    name: my-calico-cluster
+    region: us-west-2
+    version: '1.18'
+  nodeGroups:
+    - name: ng-my-calico-cluster
+      instanceType: t3.xlarge
+      minSize: 0
+      maxSize: 4
+      desiredCapacity: 4
+      amiFamily: Bottlerocket
+      iam:
+        attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  EOF
+  ```
+  
+* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/eks) to install {{site.prodname}}
+  using the Amazon VPC CNI (Calico CNI cannot be installed on Bottlerocket at this time), with the following tweak:
+  
+  Set `spec.flexVolumePath` to `/var/lib/kubelet/plugins` in the `Installation` resource in the `custom-resources.yaml`.  
+  This can be done by editing `custom-resources.yaml` or by applying the YAML and then immediately running the following command to 
+  patch the `Installation` resource:
+  ```bash
+  kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"flexVolumePath":"/var/lib/kubelet/plugins"}}'
+  ```
+  This tweak is required for Bottlerocket compatibility.
+
+%>
+<label:Custom AMI>
+<%
+
+If you are familiar with the AMI creation process, it is also possible to create a custom AMI based on Ubuntu 20.04, 
+which is suitable:
 
 * Create an EKS cluster with a nodeGroup that uses `amiFamily=Ubuntu1804`
 
@@ -61,7 +108,9 @@ its read only file system. Here's how to get the cluster running with a suitable
 
 * Delete the EKS cluster.
 
-* Using `eksctl`: start your cluster as normal:
+* Using `eksctl`: start your cluster without an initial node group; this allows for customising the CNI configuration before
+  it is rolled out:
+  
   ```
   eksctl create cluster \
    --name my-calico-cluster \
@@ -70,52 +119,9 @@ its read only file system. Here's how to get the cluster running with a suitable
    --without-nodegroup
   ```
 
-* To use {{site.prodname}} with the AWS VPC CNI:
-
-  * install {{site.prodname}} using the following manifest from the AWS VPC CNI project:
-    ```bash
-    kubectl apply -f https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/ae02a103b091f38b0aafd0ff6dd0e8f611cf9e67/config/master/calico.yaml
-    ```
-
-    > **Note**: It's important to use this manifest because the version linked from the
-    > [<u>current EKS docs</u>](https://docs.aws.amazon.com/eks/latest/userguide/calico.html) uses a version of {{site.prodname}}
-    > that is too old and only has partial support for eBPF mode.
-    {: .alert .alert-info}
-
-  * [Install `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/install); it is needed for the following step.
-
-  * Create a {{site.prodname}} IP pool that matches your VPC subnet and has the `natOutgoing` flag set.
-    The IP pool will now be used for IPAM since AWS VPC CNI has its own IPAM, but it will tell {{site.prodname}}
-    to SNAT traffic that is leaving the confines of your VPC.
-
-    ```
-    calicoctl apply -f - <<EOF
-    apiVersion: projectcalico.org/v3
-    kind: IPPool
-    metadata:
-      name: vpc-subnet
-    spec:
-      cidr: <your VPC subnet>
-      natOutgoing: true
-      nodeSelector: !all()
-    EOF
-    ```
-
-* Alternatively, to use {{site.prodname}} networking:
-
-  * Delete the `aws-node` daemon set to disable AWS VPC networking for pods.
-
-    ```bash
-    kubectl delete daemonset -n kube-system aws-node
-    ```
-
-  * Install {{site.prodname}}.
-
-    ```bash
-    kubectl apply -f {{ "/manifests/calico-vxlan.yaml" | absolute_url }}
-    ```
-
-* Create a nodegroup, using the AMI ID you noted above.
+* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/eks) to install {{site.prodname}}
+  but when instructed to create the node group, use the AMI saved off above:
+  
   * `--node-ami` should be set to the AMI ID of the image built above.
   * `--node-ami-family` should be set to `Ubuntu1804` (despite the upgrade).
 
@@ -123,85 +129,56 @@ its read only file system. Here's how to get the cluster running with a suitable
     ```
     eksctl create nodegroup \
       --cluster my-calico-cluster \
-      --node-type t3.medium \
-      --node-ami auto \
+      --node-type t3.xlarge \
       --max-pods-per-node 100 \
       --node-ami-family Ubuntu1804 \
-      --node-ami <AMI ID>
+      --node-ami <AMI ID> \
+      --max-pods-per-node 100
     ```
+  
+    > **Tip**: Without the `--max-pods-per-node` option above, EKS will limit the 
+    > {% include open-new-window.html text='number of pods based on node-type' url='https://github.com/awslabs/amazon-eks-ami/blob/master/files/eni-max-pods.txt' %}. 
+    > See `eksctl create nodegroup --help` for the full set of node group options.
+
+%>
+{% endtabs %}
 
 #### Configure {{site.prodname}} to connect directly to the API server
-* When configuring {{site.prodname}} to connect to the API server, we need to use the load balanced domain name
-  created by EKS.  It can be extracted from `kube-proxy`'s config map by running:
-  ```
-  kubectl get cm -n kube-system kube-proxy -o yaml | grep server
-  ```
-  which should show the server name, for example:
-  ```
-      server: https://d881b853ae9313e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com
-  ```
-  In this example, you would use `d881b853ae9313e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com` for `KUBERNETES_SERVICE_HOST`
-  and `443` (the default for HTTPS) for `KUBERNETES_SERVICE_PORT` when creating the config map.
 
-  Create the following config map in the `kube-system` namespace using the host and port determined above:
+When configuring {{site.prodname}} to connect to the API server, we need to use the load balanced domain name 
+created by EKS.  It can be extracted from `kube-proxy`'s config map by running:
 
-  ```
-  kubectl apply -f - <<EOF
-  kind: ConfigMap
-  apiVersion: v1
-  metadata:
-    name: kubernetes-services-endpoint
-    namespace: kube-system
-  data:
-    KUBERNETES_SERVICE_HOST: "<API server host>"
-    KUBERNETES_SERVICE_PORT: "443"
-  EOF
-  ```
+```
+kubectl get cm -n kube-system kube-proxy -o yaml | grep server
+```
+which should show the server name, for example:
+```
+    server: https://d881b853ae9313e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com
+```
+In this example, you would use `d881b853ae9313e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com` for `KUBERNETES_SERVICE_HOST`
+and `443` (the default for HTTPS) for `KUBERNETES_SERVICE_PORT` when creating the config map.
 
-* Wait 60s for kubelet to pick up the `ConfigMap` (see Kubernetes [issue #30189](https://github.com/kubernetes/kubernetes/issues/30189){:target="_blank"}); then, restart the {{site.prodname}} pods to pick up the change:
+Since we used the operator to install {{site.prodname}}, create the following config map in the 
+`calico-system` namespace using the host and port determined above:
 
-  ```
-  kubectl delete pod -n kube-system -l k8s-app=calico-node
-  ```
+```
+kubectl apply -f - <<EOF
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kubernetes-services-endpoint
+  namespace: calico-system
+data:
+  KUBERNETES_SERVICE_HOST: "<API server host>"
+  KUBERNETES_SERVICE_PORT: "443"
+EOF
+```
 
-  And, if using Typha and/or calico-kube-controllers (if you're not sure if you're running these, run the commands
-  anyway, they will fail with "No resources found" if the pods aren't present):
-  ```
-  kubectl delete pod -n kube-system -l k8s-app=calico-typha
-  kubectl delete pod -n kube-system -l k8s-app=calico-kube-controllers
-  ```
+Wait 60s for kubelet to pick up the `ConfigMap` (see Kubernetes [issue #30189](https://github.com/kubernetes/kubernetes/issues/30189){:target="_blank"}); then, restart the operator to pick up the change:
 
-* Confirm that pods restart and reach the `Running` state with the following command:
-
-  ```
-  watch "kubectl get pods -n kube-system | grep calico"
-  ```
-
-  You can verify that the change was picked up by checking the logs of one of the {{ site.nodecontainer }} pods.
-
-  ```
-  kubectl get po -n kube-system -l k8s-app=calico-node
-  ```
-
-  Should show one or more pods:
-
-  ```
-  NAME                                       READY   STATUS    RESTARTS   AGE
-  {{site.noderunning}}-d6znw                          1/1     Running   0          48m
-  ...
-  ```
-
-  Then, to search the logs, choose a pod and run:
-
-  ```
-  kubectl logs -n kube-system <pod name> | grep KUBERNETES_SERVICE_HOST
-  ```
-
-  You should see the following log, with the correct `KUBERNETES_SERVICE_...` values.
-
-  ```
-  2020-08-26 12:26:29.025 [INFO][7] daemon.go 182: Kubernetes server override env vars. KUBERNETES_SERVICE_HOST="172.16.101.157" KUBERNETES_SERVICE_PORT="6443"
-  ```
+```
+kubectl delete pod -n tigera-operator -l k8s-app=tigera-operator
+```
 
 #### Disable kube-proxy
 
@@ -215,36 +192,34 @@ Then, should you want to start `kube-proxy` again, you can simply remove the nod
 
 #### Enable eBPF mode
 
-To enable eBPF mode, change the Felix configuration parameter `BPFEnabled` to `true`.  This can be done with `calicoctl`, as follows:
+To enable eBPF mode, change the `spec.calicoNetwork.linuxDataplane` parameter in
+the operator's `Installation` resource to `"BPF"`; you must also clear the hostPorts setting because host ports are not supported in BPF mode:
 
-```
-calicoctl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": true}}'
-```
-
-Enabling eBPF node can disrupt existing workload connections.  After enabling eBPF mode you may need to restart
-workload pods in order for them to restart connections.  In particular, it's a good idea to restart `kube-dns`
-since its connection to the API server can be disrupted:
-
-```
-kubectl delete pod -n kube-system -l k8s-app=kube-dns
+```bash
+kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"BPF", "hostPorts":null}}}'
 ```
 
-#### How to disable eBPF mode
+> **Note**: the operator rolls out the change with a rolling update which means that some nodes will be in eBPF mode
+> before others.  This can disrupt the flow of traffic through node ports.  We plan to improve this in an upcoming release
+> by having the operator do the update in two phases.
+{: .alert .alert-info}
+
+### How to disable eBPF mode
 
 Follow these steps if you want to switch from Calico's eBPF dataplane back to standard Linux networking:
 
-1. Disable Calico eBPF mode:
+* Revert the changes to the operator's installation resource:
 
-   ```
-   calicoctl patch felixconfiguration default --patch='{"spec": {"bpfEnabled": false}}'
-   ```
+  ```bash
+  kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"Iptables"}}}'
+  ```
 
-1. If you disabled `kube-proxy`, re-enable it (for example, by removing the node selector added above).
-   ```
-   kubectl patch ds -n kube-system kube-proxy --type merge -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": null}}}}}'
-   ```
+* If you disabled `kube-proxy`, re-enable it (for example, by removing the node selector added above).
+  ```
+  kubectl patch ds -n kube-system kube-proxy --type merge -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": null}}}}}'
+  ```
 
-1. Monitor existing workloads to make sure they reestablish connections.
+* Since disabling eBPF mode is disruptive, monitor existing workloads to make sure they reestablish connections.
 
 ### Send us feedback
 

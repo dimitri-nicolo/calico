@@ -1,7 +1,0 @@
-{%- if page.version == "master" && include.component == "calicoctl" -%}
-calicoctl binaries not published for master
-{%- elsif include.component == "calicoctl" -%}
-https://github.com/tigera/operator/releases/download/{{site.data.versions.first.tigera-operator.version}}/calicoctl
-{%- else -%}
-{% comment %} Invalid case {% endcomment %}
-{%- endif -%}

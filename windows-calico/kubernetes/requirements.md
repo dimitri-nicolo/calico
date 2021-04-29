@@ -38,7 +38,7 @@ The following table summarizes the networking options and considerations.
 
 #### Kubernetes version 
 
-- Versions 1.19, 1.18, 1.17
+- Versions 1.20, 1.19, or 1.18
 
 Earlier versions may work, but we do not actively test {{site.prodnameWindows}} against them, and they may have known issues and incompatibilities.
 

@@ -96,13 +96,17 @@ section:
     - title: License metrics
       path: /maintenance/monitor/license-agent
     - title: Policy metrics 
-      path: /maintenance/monitor/metrics    
+      path: /maintenance/monitor/metrics
+    - title: Monitor Elasticsearch and Fluentd Metrics
+      path: /maintenance/monitor/elasticsearch-and-fluentd-metrics
 - title: Performance and scaling
   path: /maintenance/performance/
   section:
   - title: eBPF
     path: /maintenance/performance/ebpf/
     section: 
+    - title: About eBPF
+      path: /maintenance/performance/ebpf/about-ebpf
     - title: Enable the eBPF dataplane
       path: /maintenance/performance/ebpf/enabling-ebpf
     - title: Create an EKS cluster for eBPF mode

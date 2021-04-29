@@ -26,8 +26,8 @@ repository: projectcalico/calico
 
 noderunning: calico-node
 
-ocpMinVersion: 4.5.8
-ocpMaxVersion: 4.6.1
+ocpMinVersion: 4.6
+ocpMaxVersion: 4.7
 
 # DEPRECATED: This list of imageNames is not to be used or updated.
 # Docs and manifests should use the image names in versions.yml instead.
@@ -161,11 +161,11 @@ defaults:
         envoy-init: tigera/envoy-init
         envoy: tigera/envoy
         key-cert-provisioner: tigera/key-cert-provisioner
-        anomaly_detection_jobs: tigera/anomaly_detection_jobs
+        elasticsearch-metrics: tigera/elasticsearch-metrics
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
         alertManager: quay.io/prometheus/alertmanager
         prometheus: quay.io/prometheus/prometheus
         elasticsearchOperator: upmcenterprises/elasticsearch-operator
         prometheusOperator: quay.io/coreos/prometheus-operator
-        anomaly-detection-jobs: tigera/anomaly_detection_jobs
+        anomaly_detection_jobs: tigera/anomaly_detection_jobs

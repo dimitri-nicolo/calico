@@ -41,11 +41,11 @@ to enable IPIP and set the mode to "CrossSubnet".
 >
 {: .alert .alert-info}
 
-The following `calicoctl` command will create or modify an IPv4 pool with
+The following `kubectl` command will create or modify an IPv4 pool with
 CIDR 192.168.0.0/16 using IPIP mode `CrossSubnet`. Adjust the pool CIDR for your deployment.
 
 ```bash
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
@@ -65,12 +65,12 @@ AWS will perform outbound NAT on any traffic which has the source address of an 
 machine instance.  By enabling outgoing NAT on your {{site.prodname}} IP pool, {{site.prodname}} will
 NAT any outbound traffic from the containers hosted on the EC2 virtual machine instances.
 
-The following `calicoctl` command will create or modify an IPv4 pool with
+The following `kubectl` command will create or modify an IPv4 pool with
 CIDR 192.168.0.0/16 using IPIP mode `CrossSubnet` and enables outgoing NAT.
 Adjust the pool CIDR for your deployment.
 
 ```bash
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
@@ -166,4 +166,4 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
    kubectl apply -f aws-k8s-cni.yaml
    ```
 
-1. Follow the instructions to install [{{site.prodname}} on AWS]({{site.baseurl}}/getting-started/kubernetes/self-managed-public-cloud/aws).
+1. Follow the instructions to install [{{site.prodname}} on AWS]({{site.baseurl}}/getting-started/kubernetes/aws).

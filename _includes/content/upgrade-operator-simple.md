@@ -21,6 +21,11 @@
    ```bash
    kubectl apply -f tigera-operator.yaml
    ```
+{%- if include.upgradeFrom != "OpenSource" %}
+   **Note**: If you intend to update any `operator.tigera.io` or `projectcalico.org` resources to utilize new fields available in the update you must make sure you make those changes after applying the `tigera-operator.yaml`.
+   {: .alert .alert-info}
+{%- endif %}
+
 
 1. If you downloaded the manifests for Prometheus operator from the earlier step, then apply them now.
    ```bash

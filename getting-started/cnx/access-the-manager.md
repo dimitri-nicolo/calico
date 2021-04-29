@@ -23,7 +23,9 @@ For security, the {{site.prodname}} Manager UI is not exposed outside of the clu
 | ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Kubernetes ingress | Configure your cluster with an ingress controller to implement the `Ingress` resource using {% include open-new-window.html text='Kubernetes ingress' url='https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer' %}. | Ensure the {{site.prodname}} Manager receives a HTTPS (TLS) connection (not unencrypted HTTP). If you require TLS termination at your ingress, you must use a proxy that supports transparent HTTP/2 proxying, (for example, Envoy), or re-originate a TLS connection from your proxy to the {{site.prodname}} Manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} Manager. |
 | Load balancer      | Configure your cluster with a service load balancer controller to implement the external load balancer. See {% include open-new-window.html text='Kubernetes loadbalancer' url='https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/' %} | Ensure the {{site.prodname}} Manager receives a HTTPS (TLS) connection (not unencrypted HTTP). If you require TLS termination at your load balancer, you must use a load balancer that supports transparent HTTP/2 proxying, or re-originate a TLS connection from your load balancer to the {{site.prodname}} Manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} Manager. |
-| Port forwarding    | Forward traffic from a local port to the Kubernetes API server, where it is proxied to the Manager UI. This approach is **not recommended for production**, but is useful if you do not have a load balancer or ingress infrastructure configured, or you need to get started quickly. |
+| Port forwarding    | Forward traffic from a local port to the Kubernetes API server, where it is proxied to the Manager UI. This approach is **not recommended for production**, but is useful if you do not have a load balancer or ingress infrastructure configured, or you need to get started quickly. | n/a                                                          |
+| OpenShift routes   | Use OpenShift routes to expose a service by giving it an externally-reachable hostname (for example, `www.example.com`) . | n/a                                                          |
+
 
 ### How to
 
@@ -113,6 +115,45 @@ kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443
 #### Log in to {{site.prodname}} Manager UI 
 
 Access the {{site.prodname}} Manager UI in your browser at: `https://localhost:9443`
+
+%>
+
+%>
+
+<label: OpenShift routes>
+<%
+
+To expose Manager UI using OpenShift routes, create the following route with these required parameters:
+
+- host: `<clustername>.<URL>`
+- name: `tigera-manager`
+- targetPort: `9443`
+
+**Example**
+
+```
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: tigera-manager
+  namespace: tigera-manager
+spec:
+  host: manager.apps.demo-ocp.tigera-solutions.io
+  to:
+    kind: Service
+    name: tigera-manager
+    weight: 100
+  port:
+    targetPort: 9443
+  tls:
+    termination: passthrough
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+```  
+
+#### Log in to {{site.prodname}} Manager UI 
+
+Access the {{site.prodname}} Manager UI in your browser using the URL with clustername. For example: `https://manager.apps.demo-ocp.tigera-solutions.io:9443`
 
 %>
 

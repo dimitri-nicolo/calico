@@ -12,7 +12,7 @@ order, as follows.
 
 1.  Environment variables.
 2.  The Felix configuration file.
-3.  Host-specific `FelixConfiguration` resources.
+3.  Host-specific `FelixConfiguration` resources (`node.<nodename>`).
 4.  The global `FelixConfiguration` resource (`default`).
 
 The value of any configuration parameter is the value read from the
@@ -21,6 +21,10 @@ contains a value, it takes top precedence.
 
 If not set in any of these locations, most configuration parameters have
 defaults, and it should be rare to have to explicitly set them.
+
+When creating a host-specific `FelixConfiguration` resource called `node.<nodename>`, 
+the `<nodename>` part must match the value for the nodename in the calico 
+datastore - i.e. it must be present in the output of `calicoctl get nodes`
 
 The full list of parameters which can be set is as follows.
 
@@ -41,8 +45,8 @@ The full list of parameters which can be set is as follows.
 | `EndpointReportingDelaySecs`      | `FELIX_ENDPOINTREPORTINGDELAYSECS`      | Set the endpoint reporting delay between status check intervals, in seconds. Only used if endpoint reporting is enabled. [Default: `1`] | int ]
 | `EndpointReportingEnabled`        | `FELIX_ENDPOINTREPORTINGENABLED`        | Enable the endpoint status reporter. [Default: `false`] | boolean |
 | `ExternalNodesCIDRList`           | `FELIX_EXTERNALNODESCIDRLIST`           | Comma-delimited list of IPv4 or CIDR of external-non-calico-nodes from which IPIP traffic is accepted by calico-nodes. [Default: ""] | string |
-| `FailsafeInboundHostPorts`        | `FELIX_FAILSAFEINBOUNDHOSTPORTS`        | Comma-delimited list of UDP/TCP/SCTP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each port should be specified as `tcp|udp|sctp:<port-number>`. For backwards compatibility, if the protocol is not specified, it defaults to "tcp". To disable all inbound host ports, use the value `none`. The default value allows ssh access, DHCP, BGP, etcd and the Kubernetes API. [Default: `tcp:22, udp:68, tcp:179, tcp:2379, tcp:2380, tcp:5473, tcp:6443, tcp:6666, tcp:6667`] | string |
-| `FailsafeOutboundHostPorts`       | `FELIX_FAILSAFEOUTBOUNDHOSTPORTS`       | Comma-delimited list of UDP/TCP/SCTP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as `tcp|udp|sctp:<port-number>`.  For backwards compatibility, if the protocol is not specified, it defaults to "tcp". To disable all outbound host ports, use the value `none`. The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP, DNS, BGP and the Kubernetes API. [Default: `udp:53, udp:67, tcp:179, tcp:2379, tcp:2380, tcp:5473, tcp:6443, tcp:6666, tcp:6667`]  | string |
+| `FailsafeInboundHostPorts`        | `FELIX_FAILSAFEINBOUNDHOSTPORTS`        | Comma-delimited list of UDP/TCP/SCTP ports and CIDRs that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each port should be specified as `tcp|udp|sctp:<cidr>:<port-number>`. For backwards compatibility, if the protocol is not specified, it defaults to "tcp". If a CIDR is not specified, it will default to `0.0.0.0/0`. To disable all inbound host ports, use the value `none`. The default value allows ssh access, DHCP, BGP, etcd and the Kubernetes API. [Default: `tcp:0.0.0.0/0:22, udp:0.0.0.0/0:68, tcp:0.0.0.0/0:179, tcp:0.0.0.0/0:2379, tcp:0.0.0.0/0:2380, tcp:0.0.0.0/0:5473, tcp:0.0.0.0/0:6443, tcp:0.0.0.0/0:6666, tcp:0.0.0.0/0:6667`] | string |
+| `FailsafeOutboundHostPorts`       | `FELIX_FAILSAFEOUTBOUNDHOSTPORTS`       | Comma-delimited list of UDP/TCP/SCTP ports and CIDRs that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as `tcp|udp|sctp:<cidr>:<port-number>`.  For backwards compatibility, if the protocol is not specified, it defaults to "tcp". If a CIDR is not specified, it will default to `0.0.0.0/0`. To disable all outbound host ports, use the value `none`. The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP, DNS, BGP and the Kubernetes API. [Default: `udp:0.0.0.0/0:53, udp:0.0.0.0/0:67, tcp:0.0.0.0/0:179, tcp:0.0.0.0/0:2379, tcp:0.0.0.0/0:2380, tcp:0.0.0.0/0:5473, tcp:0.0.0.0/0:6443, tcp:0.0.0.0/0:6666, tcp:0.0.0.0/0:6667`]  | string |
 | `FelixHostname`                   | `FELIX_FELIXHOSTNAME`                   | The hostname Felix reports to the plugin. Should be used if the hostname Felix autodetects is incorrect or does not match what the plugin will expect. [Default: `socket.gethostname()`] | string |
 | `GenericXDPEnabled`               | `FELIX_GENERICXDPENABLED`               | When enabled, Felix can fallback to the non-optimized `generic` XDP mode. This should only be used for testing since it doesn't improve performance over the non-XDP mode. [Default: `false`] | boolean |
 | `HealthEnabled`                   | `FELIX_HEALTHENABLED`                   | When enabled, exposes felix health information via an http endpoint. | boolean |
@@ -128,9 +132,9 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 eBPF dataplane mode uses the Linux Kernel's eBPF virtual machine to implement networking and policy instead of iptables.  When BPFEnabled is set to `true`, Felix will:
 
 * Require a v5.3 Linux kernel.
-* Implement workload endpoint policy with eBPF programs instead of iptables.
+* Implement policy with eBPF programs instead of iptables.
 * Activate its embedded implementation of `kube-proxy` to implement Kubernetes service load balancing.
-* Disable support for IPv6 and host endpoints.
+* Disable support for IPv6.
 
 See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/enabling-ebpf) for step-by step instructions to enable this feature.
 
@@ -199,6 +203,7 @@ See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/
 | `FlowLogsPositionFilePath` | `FELIX_FLOWLOGSPOSITIONPATH` | `/var/log/calico/flows.log.pos` | Default path of the position file. It is used to read the current state of pipeline for flow logs. This parameter will be used only when `FlowLogsDynamicAggregationEnabled` is set to `true` |
 | `FlowLogsAggregationThresholdBytes` | `FELIX_FLOWLOGSAGGREGATIONTHRESHOLDBYTES` | `8192` | Default threshold to determine how far behind the pipeline for flow logs can get before aggregation starts in. Detecting a difference of 8192 bytes means increase 1 level, while a difference of 16384 means increasing two levels. This parameter will be used only when `FlowLogsDynamicAggregationEnabled` is set to `true`. |
 | `FlowLogsCollectProcessInfo` | `FELIX_FLOWLOGSCOLLECTPROCESSINFO` | `false` | If enabled Felix will load the kprobe BPF programs to collect process info. |
+| `FlowLogsCollectTcpStats` | `FELIX_FLOWLOGSCOLLECTTCPSTATS` | `false` | If enabled Felix will collect TCP socket stats using BPF and requires a recent kernel that supports BPF |
 | `FlowLogsFilePerFlowProcessLimit` | `FELIX_FLOWLOGSFILEPERFLOWPROCESSLIMIT` | `2` | Specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated. |
 | `DNSCacheFile`         | `FELIX_DNSCACHEFILE`         | `/var/run/calico/felix-dns-cache.txt` | The name of the file that Felix uses to preserve learnt DNS information when restarting. |
 | `DNSCacheSaveInterval` | `FELIX_DNSCACHESAVEINTERVAL` | `60` | The periodic interval at which Felix saves learnt DNS information to the cache file. |
@@ -218,7 +223,7 @@ See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/
 | `EgressIPVXLANPort`          | `FELIX_EGRESSIPVXLANPORT`         | `4097` | Port to use for egress gateway VXLAN traffic. A value of `0` means "use the kernel default". |
 | `EgressIPVXLANVNI`           | `FELIX_EGRESSIPVXLANVNI`          | `4790` | Virtual network ID to use for egress gateway VXLAN traffic. A value of `0` means "use the kernel default". |
 | `EgressIPRoutingRulePriority` | `FELIX_EGRESSIPROUTINGRULEPRIORITY` | `100` | Priority value to use for the egress gateway routing rule. |
-| `L7LogsFileEnabled`          | `FELIX_L7LOGSFILEENABLED`              | `false` | Set to `true`, enables L7 logs. If set to `false` no L7 logging will occur. L7 logs are written to a file `l7.log` and sent to Elasticsearch. The location of this file can be configured using the `L7LogsFileDirectory` field. File rotation settings for this `l7.log` file can be configured using the fields `L7LogsFileMaxFiles` and `L7LogsFileMaxFileSizeMB`. Note that L7 log exports to Elasticsearch are dependent on L7 logs getting written to this file. |
+| `L7LogsFileEnabled`          | `FELIX_L7LOGSFILEENABLED`              | `true` | If set to `false` no L7 logging will occur. L7 logs are written to a file `l7.log` and sent to Elasticsearch. The location of this file can be configured using the `L7LogsFileDirectory` field. File rotation settings for this `l7.log` file can be configured using the fields `L7LogsFileMaxFiles` and `L7LogsFileMaxFileSizeMB`. Note that L7 log exports to Elasticsearch are dependent on L7 logs getting written to this file. |
 | `L7LogsFileDirectory`        | `FELIX_L7LOGSFILEDIRECTORY`            | `/var/log/calico/l7logs` | The directory where L7 log files are stored. This parameter only takes effect when `L7LogsFileEnabled` is `true`. |
 | `L7LogsFileMaxFiles`         | `FELIX_L7LOGSFILEMAXFILES`             | `5`     | The number of files to keep when rotating L7 log files. This parameter only takes effect when `L7LogsFileEnabled` is `true`. |
 | `L7LogsFileMaxFileSizeMB`    | `FELIX_L7LOGSFILEMAXFILESIZEMB`        | `100`   | The max size in MB of L7 log files before rotation. This parameter only takes effect when `L7LogsFileEnabled` is `true`. |
@@ -348,7 +353,7 @@ a global setting and a per-host override.
    vim felix.yaml
    ```
    > **Tip**: For a global change set name to "default".
-   > For a node-specific change: set name to the node name, e.g. "{{site.prodname}}-Node-1"
+   > For a node-specific change: set name to `node.<nodename>`, e.g. "node.{{site.prodname}}-node-1"
    {: .alert .alert-success}
 
 1. Replace the current felixconfig settings

@@ -28,6 +28,9 @@ OPERATOR_MAPPED_IMAGES = {
 }
 
 EXCLUDED_IMAGES = [
+    # Tigera images common to both Calico and Enterprise.
+    'key-cert-provisioner',
+
     # Calico images
     'cnx-node',
     'cnx-kube-controllers',
@@ -68,7 +71,7 @@ EXCLUDED_IMAGES = [
     'envoy-init',
     'envoy',
     'anomaly_detection_jobs',
-    'key-cert-provisioner',
+    'elasticsearch-metrics',
 
     # third party images
     'elasticsearch',

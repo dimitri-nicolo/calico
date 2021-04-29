@@ -96,7 +96,7 @@ default-ipv4-ippool   192.168.0.0/16   true   Always     false      all()
    for the entire `/16` block, we will have to delete this first:
 
    ```bash
-   calicoctl delete ippools default-ipv4-ippool
+   kubectl delete ippools default-ipv4-ippool
    ```
 
 2. Label the nodes.
@@ -114,7 +114,7 @@ default-ipv4-ippool   192.168.0.0/16   true   Always     false      all()
 3. Create an IP pool for each rack.
 
    ```bash
-   calicoctl create -f -<<EOF
+   kubectl create -f -<<EOF
    apiVersion: projectcalico.org/v3
    kind: IPPool
    metadata:
@@ -128,7 +128,7 @@ default-ipv4-ippool   192.168.0.0/16   true   Always     false      all()
    ```
 
    ```bash
-   calicoctl create -f -<<EOF
+   kubectl create -f -<<EOF
    apiVersion: projectcalico.org/v3
    kind: IPPool
    metadata:
@@ -145,8 +145,8 @@ default-ipv4-ippool   192.168.0.0/16   true   Always     false      all()
 
    ```
    NAME                  CIDR             NAT    IPIPMODE   DISABLED   SELECTOR
-   rack-1-ippool         192.168.0.0/24   true   Always     false      rack == "0"
-   rack-2-ippool         192.168.1.0/24   true   Always     false      rack == "1"
+   rack-0-ippool         192.168.0.0/24   true   Always     false      rack == "0"
+   rack-1-ippool         192.168.1.0/24   true   Always     false      rack == "1"
    ```
    {: .no-select-button}
 

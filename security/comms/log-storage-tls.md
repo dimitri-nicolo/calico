@@ -21,7 +21,9 @@ This how-to guide uses the following features:
 
 By default, the {{site.prodname}} log storage uses self-signed certificates on connections. To provide TLS certificates,
 get the certificate and key pair for the {{site.prodname}} log storage using any X.509-compatible tool or from your organization's 
-Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `calico-enterprise-es-http.tigera-elasticsearch.svc`.
+Certificate Authority. The certificate must include the following Subject Alternate Name or DNS name `tigera-secure-es-http.tigera-elasticsearch.svc`.
+
+If your cluster has Windows nodes, the certificate must additionally include `tigera-secure-es-http.tigera-elasticsearch.svc.<cluster_domain>` where `<cluster_domain>` is the local domain specified for in-cluster DNS.
 
 ### How to
 
@@ -40,6 +42,6 @@ kubectl create secret generic tigera-secure-elasticsearch-cert -n tigera-operato
 ```
 
 > **Note**: If the {{site.prodname}} log storage already exists, you must manually delete the log storage pods one by one
-after updating the secret. These pods will be in the `tigera-elasticsearch` namespace with the prefix, `calico-enterprise`.
+after updating the secret. These pods will be in the `tigera-elasticsearch` namespace with the prefix, `tigera-secure-es`.
 Other {{site.prodname}} components will not be unable to communicate with log storage until the pods are restarted.
 {: .alert .alert-info}

@@ -40,30 +40,31 @@ in general:
 
 ```bash
 kubectl apply -f - <<EOF
-- apiVersion: projectcalico.org/v3
-  kind: GlobalNetworkPolicy
-  metadata:
-    name: allow-cluster-internal-ingress
-  spec:
-    order: 10
-    preDNAT: true
-    applyOnForward: true
-    ingress:
-      - action: Allow
-        source:
-          nets: [10.240.0.0/16, 192.168.0.0/16]
-    selector: has(host-endpoint)
-- apiVersion: projectcalico.org/v3
-  kind: GlobalNetworkPolicy
-  metadata:
-    name: drop-other-ingress
-  spec:
-    order: 20
-    preDNAT: true
-    applyOnForward: true
-    ingress:
-      - action: Deny
-    selector: has(host-endpoint)
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-cluster-internal-ingress
+spec:
+  order: 10
+  preDNAT: true
+  applyOnForward: true
+  ingress:
+    - action: Allow
+      source:
+        nets: [10.240.0.0/16, 192.168.0.0/16]
+  selector: has(host-endpoint)
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: drop-other-ingress
+spec:
+  order: 20
+  preDNAT: true
+  applyOnForward: true
+  ingress:
+    - action: Deny
+  selector: has(host-endpoint)
 EOF
 ```
 
@@ -92,15 +93,15 @@ rule for forwarded traffic, forwarded traffic will be allowed for host endpoints
 
 ```
 kubectl apply -f - <<EOF
-- apiVersion: projectcalico.org/v3
-  kind: GlobalNetworkPolicy
-  metadata:
-    name: allow-outbound-external
-  spec:
-    order: 10
-    egress:
-      - action: Allow
-    selector: has(host-endpoint)
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-outbound-external
+spec:
+  order: 10
+  egress:
+    - action: Allow
+  selector: has(host-endpoint)
 EOF
 ```
 
@@ -127,15 +128,15 @@ definitions.  For example, for `eth0` on `node1`:
 
 ```bash
 kubectl apply -f - <<EOF
-- apiVersion: projectcalico.org/v3
-  kind: HostEndpoint
-  metadata:
-    name: node1-eth0
-    labels:
-      host-endpoint: ingress
-  spec:
-    interfaceName: eth0
-    node: node1
+apiVersion: projectcalico.org/v3
+kind: HostEndpoint
+metadata:
+  name: node1-eth0
+  labels:
+    host-endpoint: ingress
+spec:
+  interfaceName: eth0
+  node: node1
 EOF
 ```
 
@@ -143,7 +144,7 @@ After defining host endpoints for each node, you should find that internal
 cluster communications are all still working as normal—for example, that you
 can successfully execute commands like `kubectl get hostendpoints.p` and `kubectl get
 globalnetworkpolicy.p`—but that it is impossible to connect into the cluster from outside
-(except for any [failsafe rules]({{site.baseurl}}/reference/host-endpoints/failsafe).  
+(except for any [failsafe rules]({{site.baseurl}}/reference/host-endpoints/failsafe).
 For example, if the
 cluster includes a Kubernetes Service that is exposed as NodePort 31852, you
 should find, at this point, that that NodePort works from within the cluster,
@@ -154,21 +155,21 @@ pre-DNAT policy like this:
 
 ```bash
 kubectl apply -f - <<EOF
-- apiVersion: projectcalico.org/v3
-  kind: GlobalNetworkPolicy
-  metadata:
-    name: allow-nodeport
-  spec:
-    preDNAT: true
-    applyOnForward: true
-    order: 10
-    ingress:
-      - action: Allow
-        protocol: TCP
-        destination:
-          selector: has(host-endpoint)
-          ports: [31852]
-    selector: has(host-endpoint)
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-nodeport
+spec:
+  preDNAT: true
+  applyOnForward: true
+  order: 10
+  ingress:
+    - action: Allow
+      protocol: TCP
+      destination:
+        selector: has(host-endpoint)
+        ports: [31852]
+  selector: has(host-endpoint)
 EOF
 ```
 

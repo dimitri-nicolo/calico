@@ -126,12 +126,12 @@ information about the policies for endpoints on a given host.
    - The third policy and the following profile are created automatically by the
      policy controller.
 
-1. Use calicoctl to see the detail of any particular policy or profile.  For
+1. Use kubectl to see the detail of any particular policy or profile.  For
    example, for the `kns.policy-demo` profile, which defines default behavior for
    pods in the `policy-demo` namespace:
 
    ```
-   ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoctl get profile kns.policy-demo -o yaml
+   kubectl get profile kns.policy-demo -o yaml
    ```
 
    You should see the following output.

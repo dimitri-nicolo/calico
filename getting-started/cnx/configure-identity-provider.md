@@ -176,6 +176,76 @@ When configuring your cluster, you may be asked for the following inputs:
    ```
    
 %>
+
+  '<label:LDAP>'
+
+<%
+
+1. Apply the Authentication CR to your cluster to let the operator configure your login. 
+
+
+   ```
+   apiVersion: operator.tigera.io/v1
+   kind: Authentication
+   metadata:
+     name: tigera-secure
+   spec:
+     managerDomain: https://<manager-host>:<port>
+     ldap:
+       # The host and port of the LDAP server. Example: ad.example.com:636.
+       host: <ldap-host>:<ldap-port>
+       # (optional) StartTLS whether to enable the startTLS feature for establishing TLS on an existing LDAP session.
+       # If true, the ldap protocol is used and then issues a StartTLS command, otherwise, connections will use
+       # the ldaps: protocol.
+       startTLS: true
+
+       # User entry search configuration.   
+       userSearch: 
+         # To start the user search from. Example: "cn=users,dc=example,dc=com".
+         baseDN: <base-dn>
+
+         # Optional filter to apply when searching the directory. Example: "(objectClass=posixAccount)"
+         filter: <filter>
+
+         # A mapping of attributes to the username. This value can be used for applying RBAC to a user.
+         # Default: uid
+         nameAttribute: <name-attribute>
+
+       # (Optional) Group search configuration. This value can be used to apply RBAC to a user group.
+       groupSearch:
+
+         # BaseDN to start the search from. Example: "cn=groups,dc=example,dc=com".
+         baseDN: <base-dn>
+
+         # Optional filter to apply when searching the directory. Example: "(objectClass=posixGroup)"
+         filter: <filter>
+
+         # A mapping of attributes to the group name. This value can be used for applying RBAC to a user group. Example: "cn".
+         nameAttribute: <name-attribute>
+
+         # Following list contains field pairs that are used to match a user to a group. It adds an additional
+         # requirement to the filter that an attribute in the group must match the user's attribute value.
+         userMatchers:
+           - userAttribute: <user-attribute>
+             groupAttribute: <group-attribute>
+   ```
+
+1. Apply the secret to your cluster with your LDAP credentials. To obtain the values, consult the documentation of your provider.
+
+   ```
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: tigera-ldap-credentials
+     namespace: tigera-operator
+   data:
+     bindDN: <your-base64-bind-dn>
+     bindPW: <your-base64-bind-password>
+     rootCA: <your-base64-ca-cert-pem>
+   ```
+   
+%>
+
 {% endtabs %}
 
 #### Grant user login privileges
@@ -193,12 +263,22 @@ For basic users with view-only permissions, apply this role.
   kubectl create clusterrolebinding <user>-tigera-ui-user --user=<user> --clusterrole=tigera-ui-user
   ```
 
+Or use the groups flag to assign cluster role to a group of users.
+  ```bash
+  kubectl create clusterrolebinding all-developers-tigera-ui-user --groups=<group> --clusterrole=tigera-ui-user
+  ```
+
 #### (Optional) Allow {{site.prodname}} URIs in your IdP
 
 Most IdPs require redirect URIs to be allowed to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. Consult your IdP documentation for authorizing your domain for the respective origins and destinations.
 
 **Authorized redirect URIs**
 - `https://<host><port>/dex/callback`
+
+### Troubleshooting
+- ManagerDomain `localhost` and `127.0.0.1` are not the same. If you configure `localhost:9443` as your managerDomain, while navigating to `https://127.0.0.1:9443`, the OIDC security checks will deny you access.
+- When your `usernameClaim` is not `email` and `usernamePrefix` is omitted, we have implemented a default prefix identical to how Kubernetes has for their kube-apiserver, see the [oidc-username-claim documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver).
+- When you encounter problems while configuring your IdP, we encourage you to use the network tab of the browser dev tools to inspect requests with error codes and to decode authorization headers of the HTTP requests.
 
 ### Above and beyond
 

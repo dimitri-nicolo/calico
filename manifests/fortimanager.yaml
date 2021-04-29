@@ -29,7 +29,7 @@ rules:
     verbs: ["get","watch","list","create","update","delete"]
   - apiGroups: ["projectcalico.org"]
     resources: ["tiers"]
-    verbs: ["get","watch","list"]
+    verbs: ["get","watch","list","update"]
 
 ---
 

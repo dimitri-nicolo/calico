@@ -8,7 +8,7 @@ Calico network policies **extend** the functionalities of Kubernetes network pol
 
 ### Requirements
 
-- A working Kubernetes cluster and access to it using kubectl and calicoctl
+- A working Kubernetes cluster and access to it using kubectl
 - Your Kubernetes nodes have connectivity to the public internet
 - You are familiar with [Calico NetworkPolicy]({{ site.baseurl }}/security/calico-network-policy)
 
@@ -70,7 +70,7 @@ It returns the HTML of the google.com home page.
 We will begin by using a default deny [Global Calico Network Policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy) (which you can only do using Calico) that will help us adopt best practices in using a [zero trust network model]({{ site.baseurl }}/security/adopt-zero-trust) to secure our workloads. Note that Global Calico Network Policies are not namespaced and effect all pods that match the policy selector. In contrast, Kubernetes Network Policies are namespaced, so you would need to create a default deny policy per namespace to achieve the same effect. Note that to simplify this tutorial we exclude pods in the kube-system namespace, so we don't have to consider the policies required to keep Kubernetes itself running smoothly when we apply our default deny.
 
 ```bash
-calicoctl create -f - <<EOF
+kubectl create -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
@@ -120,7 +120,7 @@ wget: bad address 'google.com'
 Let's create a Calico Network Policy which allows egress traffic from the busybox "access" pod. For a production workload you would typically want to make this egress rule more restrictive, to only allow egress to the specific services you want the workload to talk to. But as this is just our dummy access pod we will allow all egress traffic from it so we can probe to see what traffic is allowed in this case.
 
 ```bash
-calicoctl create -f - <<EOF
+kubectl create -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -171,7 +171,7 @@ Access to google is allowed because we have allowed all egress traffic from the 
 Let's create a Calico Network Policy that allows ingress traffic into the nginx service from the busybox access pod.
 
 ```bash
-calicoctl create -f - <<EOF
+kubectl create -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -224,8 +224,8 @@ We have allowed our access pod access to the outside internet and the nginx serv
 To clean up this tutorial session run the following commands to clean up the network policies and remove the demo namespace.
 
 ```bash
-calicoctl delete policy allow-busybox-egress -n advanced-policy-demo
-calicoctl delete policy allow-nginx-ingress -n advanced-policy-demo
-calicoctl delete gnp default-deny
+kubectl delete networkpolicy.p allow-busybox-egress -n advanced-policy-demo
+kubectl delete networkpolicy.p allow-nginx-ingress -n advanced-policy-demo
+kubectl delete globalnetworkpolicy default-deny
 kubectl delete ns advanced-policy-demo
 ```

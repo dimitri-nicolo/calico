@@ -156,7 +156,7 @@ A number of problems can reduce the performance of the eBPF dataplane.
   
   To examine the configuration:
   ```bash
-  calicoctl get felixconfiguration -o yaml
+  kubectl get felixconfiguration -o yaml
   ```
   
   ```yaml

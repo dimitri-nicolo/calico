@@ -8,21 +8,21 @@ canonical_url: '/windows-calico/limitations'
 
 | Feature                        |                                                              |
 | ------------------------------ | ------------------------------------------------------------ |
-| Kubernetes platforms           | **Supported:** EKS, AWS, GCE, and Azure. <br />**Note**: EKS, [non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy) |
-| Install method                 | **Supported**: Only manifest with manual upgrade             |
-| Networking                     | **Supported**:<br />- Calico Enterprise VXLAN without cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise BGP with [limitations](#bgp-networking-limitations)<br />- IPv4 |
-|                                | **Not supported**: IPv6, dual-ToR, service advertisement, multiple networks to pods |
-| Policy                         | **Supported**: Tiered policy with [limitations](#network-policy-with-tiers), policy recommendations, policy impact preview |
-|                                | **Not supported**: Staged network-policy, DNS policy, firewall integrations, Istio, non-cluster hosts |
+| Install                        | **Supported:** EKS ([non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy)), AWS, GCE, Azure, Kubernetes on-premises, OpenShift. <br /><br />**Not supported**: AKS, GKE, IKS, and Typha component for scaling (Linux-based feature) |
+| Install method                 | **Supported**: Manifest with manual upgrade<br /><br />**Not supported**: Operator install |
+| Networking                     | **Supported**:<br />- Calico Enterprise VXLAN, no cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise non-overlay mode with BGP peering with [limitations](#bgp-networking-limitations)<br />- IPv4 |
+|                                | **Not supported**: <br />- Overlay mode with BGP peering<br />- IP in IP overlay with BPG routing<br />- Cross-subnet support and MTU setting for VXLAN<br />- IPv6 and dual stack<br />- Dual-ToR<br />- Service advertisement<br />- Multiple networks to pods |
+| Policy                         | **Supported**: <br />- Tiered policy with [limitations](#network-policy-with-tiers)<br />- Policy recommendations<br />- Policy impact preview |
+|                                | **Not supported**: <br />- Staged network-policy<br />- DNS policy<br />- Firewall integrations<br />- Application Layer Policy (ALP) for Istio<br />- Non-cluster hosts, including automatic host endpoints |
 | Visibility and troubleshooting | **Supported**:<br />- Flow logs for traffic to/from windows pods with [limitations](#flow-log-limitations)           <br />- Audit logs<br />- Alerts |
-|                                | **Not supported**: Packet capture, DNS logs, iptable logs, L7 metrics |
+|                                | **Not supported**: <br />- Packet capture<br />- DNS logs<br />- iptable logs<br />- L7 metrics |
 | Threat defense                 | **Supported**: Block traffic to/from src/dst based on a threat feed |
-|                                | **Not supported**: Honeypods, anomaly detection              |
+|                                | **Not supported**: <br />- Honeypods<br />- Anomaly detection |
 | Multi-cluster management       | **Not supported**, including federated identity endpoints and services |
-| Compliance and security        | **Supported**: Compliance reports: network-access, inventory, policy-audit only |
-|                                | **Not supported**: CIS benchmark and other reports, encryption |
+| Compliance and security        | **Supported**: <br />- Compliance reports: network-access, inventory, policy-audit only |
+|                                | **Not supported**: <br />- CIS benchmark and other reports<br />- Encryption with Wireguard |
 | Metrics                        | **Not supported**: Prometheus monitoring                     |
-| eBPF                           | **Not applicable**                                           |
+| eBPF                           | **Not supported**: (Linux-based feature)                     |
 
 
 ### BGP networking limitations 
@@ -95,7 +95,7 @@ Because of differences between the Linux and Windows dataplane feature sets, the
 
 If you create a Windows host with a cloud provider (AWS for example), the creation of the vSwitch at {{site.prodname}} install time can remove the cloud provider's metadata route. If your application relies on the metadata service, you may need to examine the routing table before and after installing {{site.prodname}} in order to reinstate any lost routes.
 
-**VXLAN limitations**
+### VXLAN limitations
 
 **VXLAN support**
 

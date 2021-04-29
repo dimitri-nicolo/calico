@@ -24,8 +24,8 @@ Other versions may work, but we do not actively test {{site.prodname}}
 We test {{site.prodname}} {{page.version}} against the following managed Kubernetes versions.
 
 - AKS: 1.19 
-- GKE: 1.18 (rapid)
-- EKS: 1.18
+- GKE: 1.18
+- EKS: 1.19
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.

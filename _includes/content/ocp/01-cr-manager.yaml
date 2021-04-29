@@ -1,3 +1,4 @@
+---
 # This section configures the Tigera manager.
 apiVersion: operator.tigera.io/v1
 kind: Manager

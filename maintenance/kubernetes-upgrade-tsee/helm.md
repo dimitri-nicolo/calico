@@ -16,15 +16,17 @@ If your cluster has a Calico installation, contact Tigera support to upgrade.
 
 ## Prepare your cluster for the upgrade
 
-During the upgrade the controller that manages Elasticsearch is updated. Because of this, the {{site.prodname}} LogStorage 
+During the upgrade the controller that manages Elasticsearch is updated. Because of this, the {{site.prodname}} LogStorage
 CR is temporarily removed during upgrade. Features that depend on LogStorage are temporarily unavailable, among which
 are the dashboards in the Manager UI. Data ingestion is temporarily paused and will continue when the LogStorage is
 up and running again.
 
-To retain data from your current installation (optional), ensure that the currently mounted persistent volumes 
+To retain data from your current installation (optional), ensure that the currently mounted persistent volumes
 have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/){:target="_blank"}.
-Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
+Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during
 the upgrade.
+
+If your cluster has Windows nodes and uses custom TLS certificates for log storage then, prior to upgrade, prepare and apply new certificates for [log storage]({{site.baseurl}}/security/comms/log-storage-tls) that include the required service DNS names.
 
 ## Upgrade from 3.0 or later
 
@@ -32,32 +34,25 @@ the upgrade.
 {: .alert .alert-info}
 
 1. Get the Helm chart.
-   
+
    ```bash
    curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-operator-{% include chart_version_name %}.tgz
    ```
 
-1. Find the Helm installation name. This will be used in the following upgrade steps
-   
-   ```bash
-   helm list
-   ```
+1. Install the operator custom resource definitions.
 
-   The output should look like the following
-   
    ```bash
-   NAME                    REVISION        UPDATED                         STATUS          CHART                           APP VERSION     NAMESPACE
-   calico-enterprise       1               Tue Jan 26 17:38:07 2021        DEPLOYED        tigera-operator-v3.3.2-0        v3.3.2          default
+   kubectl apply -f {{ "/manifests/operator-crds.yaml" | absolute_url }}
    ```
 
 1. Run the Helm upgrade command for `tigera-operator`
-   
+
    ```bash
-   helm upgrade <helm installation name for tigera-operator> tigera-operator-{% include chart_version_name %}.tgz
+   helm upgrade calico-enterprise tigera-operator-{% include chart_version_name %}.tgz
    ```
 
 1. If your cluster has OIDC login configured, follow these steps:
-   
+
    a.  Save a copy of your Manager for reference.
    ```bash
    kubectl get manager tigera-secure -o yaml > manager.yaml
@@ -91,17 +86,17 @@ the upgrade.
 1. Install the new network policies to secure {{site.prodname}} component communications.
 
    If your cluster is a **managed** cluster, apply this manifest.
-   
+
    ```bash
    kubectl apply -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
    ```
-   
+
    For other clusters, use this manifest.
-   
+
    ```bash
    kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```
-   
+
 1. You can monitor progress with the following command:
    ```bash
    watch kubectl get tigerastatus

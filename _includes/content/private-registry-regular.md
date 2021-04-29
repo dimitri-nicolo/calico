@@ -2,9 +2,6 @@
 
 In order to install images from your private registry, you must first pull the images from Tigera's registry, re-tag them with your own registry, and then push the newly tagged images to your own registry.
 
-   **Note**: The {{ operator-init.registry }}/{{ operator-init.image }}:{{ operator-init.version }} image is only required for Openshift platforms deployed on AWS.
-   {: .alert .alert-info}
-
 1. Use the following commands to pull the required {{site.prodname}} images.
 
    ```bash

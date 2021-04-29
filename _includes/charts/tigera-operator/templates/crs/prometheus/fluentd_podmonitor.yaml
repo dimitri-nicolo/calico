@@ -1,0 +1,21 @@
+{{ if .Values.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: fluentd-metrics
+  namespace: tigera-prometheus
+  labels:
+    team: network-operators
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluentd-node
+  namespaceSelector:
+    matchNames:
+      - tigera-fluentd
+  podMetricsEndpoints:
+    - port: metrics-port
+      interval: 5s
+      scrapeTimeout: 5s
+      honorLabels: true
+{{ end }}

@@ -32,7 +32,9 @@ def test_tigera_image_registry_updated():
         if ver_image[0] == 'operator':
           expected_ver = release.get('tigera-operator').get('version')
         if ver_image[0] == 'kibana':
-          expected_ver = str(release['components'].get('kibana').get('version'))
+          expected_ver = release['components'].get('kibana').get('version')
+        if ver_image[0] == 'key-cert-provisioner':
+          expected_ver = release['components'].get('key-cert-provisioner').get('version')
         print '[INFO] checking registry image %s references %s' % (ver_image[0], expected_ver)
         assert ver_image[1] == expected_ver
 

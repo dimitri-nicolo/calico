@@ -55,12 +55,12 @@
       image: tigera/es-proxy
       version: master
     eck-kibana:
-      version: 7.6.2
+      version: 7.10.1
     kibana:
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 7.6.2
+      version: 7.10.1
     elasticsearch:
       image: tigera/elasticsearch
       version: master
@@ -123,6 +123,9 @@
       version: master
     anomaly_detection_jobs:
       image: tigera/anomaly_detection_jobs
+      version: master
+    elasticsearch-metrics:
+      image: tigera/elasticsearch-metrics
       version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.

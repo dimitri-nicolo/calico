@@ -26,7 +26,9 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
 the upgrade.
 
-## Upgrade from 3.0 or later
+If your cluster has Windows nodes and uses custom TLS certificates for log storage, prior to upgrade, prepare and apply new certificates for [log storage]({{site.baseurl}}/security/comms/log-storage-tls) that include the required service DNS names.
+
+For {{site.prodname}} v3.5, upgrading multi-cluster management setups must include updating all managed and management clusters.
 
 **Note**: These steps differ based on your cluster type. If you are unsure of your cluster type, look at the field `clusterManagementType` when you run `kubectl get installation -o yaml` before you proceed.
 {: .alert .alert-info}

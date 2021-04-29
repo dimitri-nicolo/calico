@@ -24,7 +24,11 @@ There are two options, the anomaly detection in the **managed** cluster and in t
     curl {{ "/manifests/threatdef/ad-jobs-deployment-managed.yaml" | absolute_url }} -O
     ```
 
-2. Optional. Configure the jobs by setting the environment variables (see below).
+2. Configure the jobs by setting the environment variables (see below).
+   
+   If it is a managed cluster, you have to set up the **CLUSTER_NAME** environment variable.
+   
+   All other settings are optional.
    
 3. Apply the manifest
    
@@ -87,9 +91,27 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
     Decrease it if you want more alerts.
 
 #### process_restarts Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector.
 -   **AD_ProcessRestarts_IsolationForest_score_threshold** - Default: -0.78. Note: it is a negative value!
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 -   **AD_ProcessRestarts_threshold** - Default: 4. Increase this parameter if you want fewer alerts.  
     Decrease it if you want more alerts.
 
+#### dns_latency Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
+-   **AD_DnsLatency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
+    estimators needed. 
+-   **AD_DnsLatency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number! 
+    Decrease this parameter if you want fewer alerts.  
+    Increase it if you want more alerts.
+
+#### l7_latency Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
+-   **AD_L7Latency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
+    estimators needed. 
+-   **AD_L7Latency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number! 
+    Decrease this parameter if you want fewer alerts.  
+    Increase it if you want more alerts.
+
 [Multi-cluster management]: /multicluster/index
+[IsolationForest model]: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html

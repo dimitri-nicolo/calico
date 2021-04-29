@@ -43,12 +43,28 @@ section:
       section:
       - title: Overview
         path: /reference/calicoctl/ipam/overview
+      - title: check
+        path: /reference/calicoctl/ipam/check
       - title: release
         path: /reference/calicoctl/ipam/release
       - title: show
         path: /reference/calicoctl/ipam/show
       - title: configure
         path: /reference/calicoctl/ipam/configure
+    - title: datastore
+      path: /reference/calicoctl/datastore/
+      section:
+      - title: Overview
+        path: /reference/calicoctl/datastore/overview
+      - title: Migrate
+        path: /reference/calicoctl/datastore/migrate/
+        section:
+        - title: Overview
+          path: /reference/calicoctl/datastore/migrate/overview
+        - title: lock
+          path: /reference/calicoctl/datastore/migrate/lock
+        - title: unlock
+          path: /reference/calicoctl/datastore/migrate/unlock
     - title: label
       path: /reference/calicoctl/label
     - title: node
@@ -173,7 +189,12 @@ section:
   - title: Calico Enterprise CNI plugins
     path: /reference/cni-plugin/configuration
   - title: Calico Enterprise Kubernetes controllers
-    path: /reference/kube-controllers/configuration
+    path: /reference/kube-controllers/
+    section:
+    - title: Configuration
+      path: /reference/kube-controllers/configuration
+    - title: Prometheus statistics
+      path: /reference/kube-controllers/prometheus
   - title: Calico Enterprise node (cnx-node)
     path: /reference/node/
     section: 
@@ -227,20 +248,6 @@ section:
     path: /reference/host-endpoints/conntrack
 - title: Attribution
   path: /reference/attribution/attribution
-- title: Architecture
-  path: /reference/architecture/
-  section:
-  - title: Component architecture
-    path: /reference/architecture/overview
-  - title: Data path
-    path: /reference/architecture/data-path
-  - title: Network design
-    path: /reference/architecture/design/
-    section: 
-    - title: Calico over Ethernet fabrics
-      path: /reference/architecture/design/l2-interconnect-fabric
-    - title: Calico over IP fabrics
-      path: /reference/architecture/design/l3-interconnect-fabric
 - title: REST API
   path: /reference/apidocs/
 - title: Frequently asked questions

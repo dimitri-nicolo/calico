@@ -1,14 +1,6 @@
-Download the {{site.prodname}} manifests for OpenShift specific to Prometheus operator and add them to the generated manifests directory:
+Apply the {{site.prodname}} manifests for the Prometheus operator.
 ```bash
-curl {{ "/manifests/ocp/crds/01-crd-alertmanager.yaml" | absolute_url }} -o manifests/01-crd-alertmanager.yaml
-curl {{ "/manifests/ocp/crds/01-crd-prometheusrule.yaml" | absolute_url }} -o manifests/01-crd-prometheusrule.yaml
-curl {{ "/manifests/ocp/crds/01-crd-thanosrulers.yaml" | absolute_url }} -o manifests/01-crd-thanosrulers.yaml
-curl {{ "/manifests/ocp/crds/01-crd-prometheus.yaml" | absolute_url }} -o manifests/01-crd-prometheus.yaml
-curl {{ "/manifests/ocp/crds/01-crd-servicemonitor.yaml" | absolute_url }} -o manifests/01-crd-servicemonitor.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus-operator.yaml" | absolute_url }} -o manifests/04-clusterrolebinding-prometheus-operator.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-clusterrole-prometheus-operator.yaml" | absolute_url }} -o manifests/04-clusterrole-prometheus-operator.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-deployment-prometheus-operator.yaml" | absolute_url }} -o manifests/04-deployment-prometheus-operator.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus-operator.yaml" | absolute_url }} -o manifests/04-serviceaccount-prometheus-operator.yaml
+oc apply -f {{ "/manifests/ocp/tigera-prometheus-operator.yaml" | absolute_url }}
 ```
 
 > **Note**: If you have a different Prometheus operator separate from {{site.prodname}} in your cluster that you want to use, skip this section. To work with {{site.prodname}}, your Prometheus operator must be v0.30.0 or higher.

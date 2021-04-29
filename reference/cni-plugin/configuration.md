@@ -406,7 +406,7 @@ Example:
    contains a label `rack=0`.
 
    ```bash
-   calicoctl create -f -<<EOF
+   kubectl create -f -<<EOF
    apiVersion: projectcalico.org/v3
    kind: IPPool
    metadata:

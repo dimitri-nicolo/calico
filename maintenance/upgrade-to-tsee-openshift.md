@@ -2,8 +2,7 @@
 title: Upgrade from Calico to Calico Enterprise on OpenShift
 description: Steps to upgrade from open source Calico to Calico Enterprise on OpenShift.
 canonical_url: /maintenance/upgrade-to-tsee-openshift
-ignore_installation_cr: true
-cr_directory: manifests_cr
+openshift_manifests_ignore_installation_cr: true
 ---
 
 {% assign calico_minor_version = site.data.versions.first["calico"].minor_version %}
@@ -39,17 +38,13 @@ If your cluster already has {{site.prodname}} installed, follow the [Upgrading {
 
 __Download the new manifests__
 
-Make the manifests directories.
+Make the manifests directory.
 
 ```bash
-mkdir manifests manifests_cr
+mkdir manifests
 ```
 
 {% include content/openshift-manifests.md %}
-
-{% include content/openshift-prometheus-operator.md %}
-
-{% include content/openshift-resources.md %}
 
 __Add an image pull secret__
 
@@ -65,12 +60,12 @@ __Install {{site.prodname}}__
    oc apply -f manifests/
    ```
 
-2. (Optional) If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+2. (Optional) If your cluster architecture requires any custom [Calico resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
-3. Apply the Tigera custom resources. For more information on configuration options available, see [the installation reference]({{site.baseurl}}/reference/installation/api).
+3. Apply the custom resources for enterprise features, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```bash
-   oc apply -f manifests_cr/
+   oc apply -f {{ "/manifests/ocp/tigera-enterprise-resources.yaml" | absolute_url }} 
    ```
 
 4. Patch installation.
@@ -97,6 +92,8 @@ Install the {{site.prodname}} license provided to you by Tigera.
 ```
 oc create -f </path/to/license.yaml>
 ```
+
+{% include content/openshift-prometheus-operator.md %}
 
 You can now monitor progress with the following command:
 

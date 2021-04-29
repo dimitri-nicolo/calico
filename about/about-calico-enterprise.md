@@ -30,10 +30,10 @@ Learn about the {{site.prodname}} features that remove these blockers.
             <li><a href="#visibility-and-troubleshooting">Visibility and troubleshooting</a></li>
             <li><a href="#enterprise-security-controls">Enterprise security controls</a></li>
             <li><a href="#extend-firewalls-to-kubernetes">Extend firewalls to Kubernetes</a></li>
-            <li><a href="#enable-self-service-network-security">Enable self service network security</a></li>
+            <li><a href="#enable-self-service-network-security">Enable self service security policy</a></li>
             <li><a href="#microsegmentation">Microsegmentation</a></li>
             <li><a href="#intrusion-detection">Intrusion detection</a></li>
-            <li><a href="#zero-trust-network-security">Zero trust network security</a></li>
+            <li><a href="#zero-trust-network-security">Zero trust security</a></li>
         </ul>
   </div>
 </div>
@@ -110,7 +110,7 @@ Most security teams are short-staffed and don’t have the capacity to take on n
 - [Extend Fortigate firewalls to Kubernetes]({{site.baseurl}}/security/fortinet-integration/overview)
 - [Egress gateways]({{site.baseurl}}/networking/egress-gateway)
 
-### Enable self service network security
+### Enable self service security policy
 
 When deploying a new microservice to a secure cluster, it needs to be deployed along with a network policy to enable the service to communicate with other services and APIs. Often this means having a central function that reviews or creates policies for every microservice deployment. Otherwise, a deployment may inadvertently override an important security policy implemented to protect sensitive workloads that process payment information, customer data, etc. This process does not scale when 100’s or 1000’s of microservices are being deployed daily and deployments are delayed.
 
@@ -144,7 +144,7 @@ Every cloud and hosting environment has a unique approach to segmentation, which
 
 ### Intrusion detection
 
-In addition to cloud microsegmentation and zero trust network security, {{site.prodname}} provides another layer of security through its Intrusion detection system (IDS).
+In addition to cloud microsegmentation and zero trust security, {{site.prodname}} provides another layer of security through its Intrusion detection system (IDS).
 
 {{site.prodname}} IDS identifies Advanced persistent threats (APTs) through behavior-based detection using machine learning and a rule-based engine that enables active monitoring.
 
@@ -160,9 +160,9 @@ In addition to cloud microsegmentation and zero trust network security, {{site.p
 - [Threat intelligence feeds]({{site.baseurl}}/threat/suspicious-ips)
 - [Honeypods]({{site.baseurl}}/threat/honeypod/)
 
-### Zero trust network security
+### Zero trust security
 
-Zero trust network security is a strong security posture that assumes that something in your application or infrastructure has been compromised and is currently hosting some form of malware.
+Zero trust security is a strong security posture that assumes that something in your application or infrastructure has been compromised and is currently hosting some form of malware.
 
 Kubernetes is particularly vulnerable to the spread of malware due to the open nature of cluster networking; by default, any pod can connect to any other pod, even across namespaces. It is very difficult to detect malware or its spread within a Kubernetes cluster without implementing a strong security framework like zero trust.
 
@@ -173,4 +173,4 @@ Kubernetes is particularly vulnerable to the spread of malware due to the open n
 
 **Documentation**
 
-- [Adopt zero trust network security model]({{site.baseurl}}/security/adopt-zero-trust)
+- [Adopt zero trust security model]({{site.baseurl}}/security/adopt-zero-trust)

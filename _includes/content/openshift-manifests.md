@@ -30,11 +30,17 @@ curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute
 curl {{ "/manifests/ocp/tigera-operator/02-serviceaccount-tigera-operator.yaml" | absolute_url }} -o manifests/02-serviceaccount-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-configmap-calico-resources.yaml" | absolute_url }} -o manifests/02-configmap-calico-resources.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-tigera-operator.yaml" | absolute_url }} -o manifests/02-tigera-operator.yaml
-curl {{ "/manifests/ocp/misc/00-namespace-tigera-prometheus.yaml" | absolute_url }} -o manifests/00-namespace-tigera-prometheus.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus.yaml" | absolute_url }} -o manifests/04-clusterrolebinding-prometheus.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-clusterrole-prometheus.yaml" | absolute_url }} -o manifests/04-clusterrole-prometheus.yaml
-curl {{ "/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus.yaml" | absolute_url }} -o manifests/04-serviceaccount-prometheus.yaml
-curl {{ "/manifests/ocp/misc/99-alertmanager-secret.yaml" | absolute_url }} -o manifests/99-alertmanager-secret.yaml
-curl {{ "/manifests/ocp/misc/99-alertmanager-service.yaml" | absolute_url }} -o manifests/99-alertmanager-service.yaml
-curl {{ "/manifests/ocp/misc/99-prometheus-service.yaml" | absolute_url }} -o manifests/99-prometheus-service.yaml
+{%- unless page.openshift_manifests_ignore_pullsecret %}
+curl {{ "/manifests/ocp/02-pull-secret.yaml" | absolute_url }} -o manifests/02-pull-secret.yaml
+{%- endunless %}
+{%- unless page.openshift_manifests_ignore_installation_cr %}
+curl {{ "/manifests/ocp/01-cr-installation.yaml" | absolute_url }} -o manifests/01-cr-installation.yaml
+{%- endunless %}
+{%- unless page.openshift_manifests_ignore_apiserver_cr %}
+curl {{ "/manifests/ocp/01-cr-apiserver.yaml" | absolute_url }} -o manifests/01-cr-apiserver.yaml
+{%- endunless %}
 ```
+{% unless page.openshift_manifests_ignore_installation_cr %}
+> **Note**: Read more about customizing the file `manifests/01-cr-installation.yaml` in the [Installation API Reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)
+{: .alert .alert-info}
+{% endunless %}

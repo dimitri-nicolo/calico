@@ -209,7 +209,8 @@ namespace where you plan to create your egress gateways.  It is typically named
 namespace would be:
 
 ```bash
-kubectl get secret tigera-pull-secret --namespace=calico-system --export -o yaml | \
+kubectl get secret tigera-pull-secret --namespace=calico-system -o yaml | \
+   grep -v '^[[:space:]]*namespace:[[:space:]]*calico-system' | \
    kubectl apply --namespace=default -f -
 ```
 

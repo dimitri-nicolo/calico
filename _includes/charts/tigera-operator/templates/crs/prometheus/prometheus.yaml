@@ -13,6 +13,9 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       team: network-operators
+  podMonitorSelector:
+    matchLabels:
+      team: network-operators
   version: {{ .Values.prometheus.tag }}
   retention: 24h
   resources:

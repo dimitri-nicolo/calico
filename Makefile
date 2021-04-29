@@ -424,6 +424,7 @@ RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
 RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
 RELEASE_DIR_OCP_MANIFESTS?=$(RELEASE_DIR)/ocp-manifests
+IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml
 
 # Determine where the manifests live. For older versions we used
 # a different location, but we still need to package them up for patch
@@ -442,6 +443,8 @@ $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/R
 	# collecting all ocp manifests to ocp-manifests folder
 	mkdir -p $(RELEASE_DIR_OCP_MANIFESTS)
 	find $(RELEASE_DIR_K8S_MANIFESTS)/ocp/ -name "*.yaml" | xargs -I{} cp {} $(RELEASE_DIR_OCP_MANIFESTS)
+	# find ignored manifests in the archive and delete them
+	$(foreach var,$(IGNORED_MANIFESTS), find $(RELEASE_DIR) -name $(var) -delete;)
 	# converting the generated html file to markdown format for manifest archive.
 	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
 	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
@@ -599,5 +602,5 @@ build-operator-reference:
 	           git clone --depth=1 -b $(API_GEN_BRANCH) https://github.com/$(API_GEN_REPO) api-gen && cd api-gen && \
 	           go mod edit -replace github.com/tigera/operator=github.com/$(OPERATOR_REPO)@$(OPERATOR_VERSION) && \
 	           go mod download && go build && \
-	           ./gen-crd-api-reference-docs -config ./example-config.json \
+	           ./gen-crd-api-reference-docs -config /go/src/$(PACKAGE_NAME)/reference/installation/config.json \
 	                   -api-dir github.com/tigera/operator/api -out-file /go/src/$(PACKAGE_NAME)/reference/installation/_api.html'
