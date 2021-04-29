@@ -29,7 +29,7 @@ replace (
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20210428220243-ebfc6476063f
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210422172746-298d7d17efb3
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210427184708-630dc792f684
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210428213214-15c1878d8dc3
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210429204248-7f77c375c303
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210428214913-b593e23d6bcd
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
