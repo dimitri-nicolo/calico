@@ -193,7 +193,7 @@ The operator will pick up the change to the config map automatically and do a ro
 watch kubectl get pods -n calico-system
 ```
 
-If you do not see the pods restart then it's possible that the `ConfigMap` wasn't picked up (sometimes Kubernetes is slow to propagate `ConfigMap`s (see Kubernetes issue #30189{:target="_blank"}). You can try restarting the operator.
+If you do not see the pods restart then it's possible that the `ConfigMap` wasn't picked up (sometimes Kubernetes is slow to propagate `ConfigMap`s (see Kubernetes [issue #30189](https://github.com/kubernetes/kubernetes/issues/30189){:target="_blank"})). You can try restarting the operator.
 
 #### Configure kube-proxy
 
