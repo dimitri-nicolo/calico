@@ -11,7 +11,7 @@ Archive logs to Amazon S3, Syslog, or Splunk to meet data storage requirements f
 ### Value
 
 Archiving your {{site.prodname}} Elasticsearch logs to storage services like Amazon S3, Syslog, or Splunk are reliable 
-options for maintaining and consolidating your compliance data long term
+options for maintaining and consolidating your compliance data long term.
 
 ### Features
 
@@ -20,13 +20,9 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### How to
 
-* [Archive logs to Amazon S3](#archive-logs-to-amazon-s3)
-* [Archive logs to Syslog](#archive-logs-to-syslog)
-* [Archive logs to Splunk](#archive-logs-to-splunk)
-
-
-#### Archive logs to Amazon S3
-
+{% tabs %}
+  <label:Amazon S3,active:true>
+<%
 1. Create an AWS bucket to store your logs.
    You will need the bucket name, region, key, secret key, and the path in the following steps.
 
@@ -45,7 +41,7 @@ This how-to guide uses the following {{site.prodname}} features:
    with your information noted from above.
    Example:
 
-   ```
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
@@ -60,19 +56,19 @@ This how-to guide uses the following {{site.prodname}} features:
    This can be done during installation by editing the custom-resources.yaml
    by applying it, or after installation by editing the resource with the command:
 
-   ```
+   ```bash
    kubectl edit logcollector tigera-secure
    ```
 
-#### Archive logs to Syslog
+%>
+  '<label:Syslog>'
 
-1. Update the
-   [LogCollector]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
-   resource named `tigera-secure` to include
-   a [Syslog section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec)
+<%
+1. Update the [LogCollector]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
+   resource named `tigera-secure` to include a [Syslog section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec)
    with your syslog information.
    Example:
-   ```
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
@@ -86,7 +82,7 @@ This how-to guide uses the following {{site.prodname}} features:
          packetSize: 1024
    ```
    This can be done during installation by editing the custom-resources.yaml by applying it or after installation by editing the resource with the command:
-   ```
+   ```bash
    kubectl edit logcollector tigera-secure
    ```
 2. You can control which types of {{site.prodname}} log data you would like to send to syslog. 
@@ -101,7 +97,7 @@ This how-to guide uses the following {{site.prodname}} features:
    Refer to the [Syslog section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec) for more details on what data each log type represents.
 
    Building on the example from the previous step:
-   ```
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
@@ -125,8 +121,14 @@ This how-to guide uses the following {{site.prodname}} features:
    {: .alert .alert-info}
 
    The `logTypes` field is a required, which means you must specify at least one type of log to export to syslog.
+%>
 
-#### Archive logs to Splunk
+ <label: Splunk>
+  <%
+
+**Support**
+
+In this release, only {% include open-new-window.html text='Splunk Enterprise' url='https://www.splunk.com/en_us/download/splunk-enterprise.html?utm_campaign=google_amer_en_search_brand&utm_source=google&utm_medium=cpc&utm_content=Splunk_Enterprise_Demo&utm_term=splunk%20enterprise&_bk=splunk%20enterprise&_bt=439715964910&_bm=e&_bn=g&_bg=43997960527&device=c&gclid=Cj0KCQjw9_mDBhCGARIsAN3PaFMDEaiLqaUcE1vGv7bnUe5qclx81iydekBjibZ0ueN5w08Y45rXHE0aAmu8EALw_wcB' %} is supported.
 
 {{site.prodname}} uses Splunk's **HTTP Event Collector** to send data to Splunk server. To copy the flow, audit, and dns logs to Splunk, follow these steps:
 
@@ -147,7 +149,8 @@ This how-to guide uses the following {{site.prodname}} features:
    a [Splunk section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SplunkStoreSpec)
    with your Splunk information.
    Example:
-   ```
+
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
@@ -163,3 +166,6 @@ This how-to guide uses the following {{site.prodname}} features:
    ```
    kubectl edit logcollector tigera-secure
    ```
+%>
+
+{% endtabs %}
