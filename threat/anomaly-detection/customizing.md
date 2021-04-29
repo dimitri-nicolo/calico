@@ -86,4 +86,10 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
 -   **AD_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts.  
     Decrease it if you want more alerts.
 
+#### process_restarts Job:
+-   **AD_ProcessRestarts_IsolationForest_score_threshold** - Default: -0.78. Note: it is a negative value!
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
+-   **AD_ProcessRestarts_threshold** - Default: 4. Increase this parameter if you want fewer alerts.  
+    Decrease it if you want more alerts.
+
 [Multi-cluster management]: /multicluster/index
