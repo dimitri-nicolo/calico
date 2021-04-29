@@ -24,12 +24,13 @@ import (
 type Alert struct {
 	alert       *v3.GlobalAlert
 	calicoCLI   calicoclient.Interface
-	es          *es.Service
+	es          es.Service
 	clusterName string
 }
 
 const (
-	DefaultPeriod = 5 * time.Minute
+	DefaultPeriod      = 5 * time.Minute
+	MinimumAlertPeriod = 5 * time.Second
 )
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
@@ -55,35 +56,56 @@ func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, esCli *el
 // If parent context is cancelled, updates the GlobalAlert status and returns.
 // It also deletes any existing elastic watchers for the cluster.
 func (a *Alert) Execute(ctx context.Context) {
-	ticker := time.NewTicker(a.getAlertDuration())
 	a.es.DeleteElasticWatchers(ctx)
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
 	}
+
 	for {
+		timer := time.NewTimer(a.getDurationUntilNextAlert())
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			a.alert.Status = a.es.ExecuteAlert(a.alert)
 			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 				log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
 			}
+			timer.Stop()
 		case <-ctx.Done():
 			a.alert.Status.Active = false
 			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 				log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
 			}
-			ticker.Stop()
+			timer.Stop()
 			return
 		}
 	}
 }
 
-// getAlertDuration returns the duration interval at which Elasticsearch should be queried.
-func (a *Alert) getAlertDuration() time.Duration {
-	if a.alert.Spec.Period == nil {
-		return DefaultPeriod
+// getDurationUntilNextAlert returns the duration after which next alert should run.
+// If Status.LastExecuted is set on alert use that to calculate time for next alert execution,
+// else uses Spec.Period value.
+func (a *Alert) getDurationUntilNextAlert() time.Duration {
+	alertPeriod := DefaultPeriod
+	if a.alert.Spec.Period != nil {
+		alertPeriod = a.alert.Spec.Period.Duration
 	}
-	return a.alert.Spec.Period.Duration
+
+	if a.alert.Status.LastExecuted != nil {
+		now := time.Now()
+		durationSinceLastExecution := now.Sub(a.alert.Status.LastExecuted.Local())
+		if durationSinceLastExecution < 0 {
+			log.Errorf("last executed alert is in the future")
+			return MinimumAlertPeriod
+		}
+		timeUntilNextRun := alertPeriod - durationSinceLastExecution
+		if timeUntilNextRun <= 0 {
+			// return MinimumAlertPeriod instead of 0s to guarantee that we would never have a tight loop
+			// that burns through our pod resources and spams Elasticsearch.
+			return MinimumAlertPeriod
+		}
+		return timeUntilNextRun
+	}
+	return alertPeriod
 }
 
 // updateStatus gets the latest GlobalAlert and updates its status.

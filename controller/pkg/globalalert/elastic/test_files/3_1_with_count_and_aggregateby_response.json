@@ -23,7 +23,7 @@
             "source_namespace": "tigera-prometheus",
             "source_name_aggr": "calico-prometheus-operator-7dd764bcfd-*"
           },
-          "doc_count": 2
+          "doc_count": 100
         },
         {
           "key": {

@@ -4,6 +4,7 @@ package elastic
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -67,7 +68,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
@@ -96,7 +97,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", a)
+			e, err := GetTestElasticService(ecli, "test-cluster", a)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_dns.test-cluster.*"))
@@ -120,12 +121,12 @@ var _ = Describe("GlobalAlert", func() {
 					Metric:      "count",
 					AggregateBy: []string{"source_namespace"},
 					Threshold:   100,
-					Condition:   "gt",
+					Condition:   "gte",
 					Query:       "action=allow",
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
@@ -146,12 +147,12 @@ var _ = Describe("GlobalAlert", func() {
 					Metric:      "count",
 					AggregateBy: []string{"source_namespace", "source_name_aggr"},
 					Threshold:   100,
-					Condition:   "gt",
+					Condition:   "not_eq",
 					Query:       "action=allow",
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
@@ -181,7 +182,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
@@ -208,7 +209,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
@@ -238,7 +239,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := NewService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
@@ -249,6 +250,29 @@ var _ = Describe("GlobalAlert", func() {
 	})
 
 })
+
+func GetTestElasticService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert) (*service, error) {
+	e := &service{
+		esCLI:       esCLI,
+		clusterName: clusterName,
+	}
+	e.buildIndexName(alert)
+
+	err := e.buildEsQuery(alert)
+	if err != nil {
+		return nil, err
+	}
+
+	e.esBulkProcessor, err = e.esCLI.BulkProcessor().
+		BulkActions(AutoBulkFlush).
+		Do(context.Background())
+	if err != nil {
+		Expect(err).ShouldNot(HaveOccurred())
+		return nil, err
+	}
+
+	return e, nil
+}
 
 type elasticQuery struct {
 	Aggs  map[string]interface{} `json:"aggs,omitempty"`

@@ -193,6 +193,10 @@ clean-bin:
 	rm -rf $(BINDIR) \
 			docker-image/bin
 
+# Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
+MOCKERY_FILE_PATHS= \
+    pkg/globalalert/elastic/Service \
+
 ###############################################################################
 # CI/CD
 ###############################################################################

@@ -37,7 +37,12 @@ const (
 	CompositeAggregationName = "composite_aggs"
 )
 
-type Service struct {
+type Service interface {
+	DeleteElasticWatchers(context.Context)
+	ExecuteAlert(*v3.GlobalAlert) libcalicov3.GlobalAlertStatus
+}
+
+type service struct {
 	// esCLI is an Elasticsearch client.
 	esCLI *elastic.Client
 	// esBulkProcessor used for sending bulk Elasticsearch request.
@@ -55,8 +60,8 @@ type Service struct {
 }
 
 // NewService builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert) (*Service, error) {
-	e := &Service{
+func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert) (Service, error) {
+	e := &service{
 		esCLI:       esCLI,
 		clusterName: clusterName,
 	}
@@ -79,7 +84,7 @@ func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert
 }
 
 // buildIndexName updates the events index name and name of the source index to query.
-func (e *Service) buildIndexName(alert *v3.GlobalAlert) {
+func (e *service) buildIndexName(alert *v3.GlobalAlert) {
 	e.eventIndexName = fmt.Sprintf(EventIndexPattern, e.clusterName)
 
 	switch alert.Spec.DataSet {
@@ -99,7 +104,7 @@ func (e *Service) buildIndexName(alert *v3.GlobalAlert) {
 // Builds a composite aggregation query if spec.aggregateBy is set.
 // The size parameter for Elasticsearch query is 0 if either composite or metric aggregation is set, or
 // if GlobalAlert spec.metric is 0, as individual index documents are not needed to generate events.
-func (e *Service) buildEsQuery(alert *v3.GlobalAlert) error {
+func (e *service) buildEsQuery(alert *v3.GlobalAlert) error {
 	aggs := e.buildMetricAggregation(alert.Spec.Field, alert.Spec.Metric)
 	aggs = e.buildCompositeAggregation(alert, aggs)
 
@@ -132,7 +137,7 @@ func (e *Service) buildEsQuery(alert *v3.GlobalAlert) error {
 }
 
 // buildCompositeAggregation builds and returns a composite aggregation query for the GlobalAlert
-func (e *Service) buildCompositeAggregation(alert *v3.GlobalAlert, aggs JsonObject) JsonObject {
+func (e *service) buildCompositeAggregation(alert *v3.GlobalAlert, aggs JsonObject) JsonObject {
 	var src []JsonObject
 	if len(alert.Spec.AggregateBy) != 0 {
 		for i := len(alert.Spec.AggregateBy) - 1; i >= 0; i-- {
@@ -163,7 +168,7 @@ func (e *Service) buildCompositeAggregation(alert *v3.GlobalAlert, aggs JsonObje
 }
 
 // convertAlertSpecQueryToEsQuery converts GlobalAlert's spec.query to Elasticsearch query.
-func (e *Service) convertAlertSpecQueryToEsQuery(alert *v3.GlobalAlert) (JsonObject, error) {
+func (e *service) convertAlertSpecQueryToEsQuery(alert *v3.GlobalAlert) (JsonObject, error) {
 	q, err := query.ParseQuery(alert.Spec.Query)
 	if err != nil {
 		log.WithError(err).Errorf("failed to parse spec.query in %s", alert.Name)
@@ -202,7 +207,7 @@ func (e *Service) convertAlertSpecQueryToEsQuery(alert *v3.GlobalAlert) (JsonObj
 }
 
 // buildMetricAggregation builds and returns a metric aggregation query for the GlobalAlert
-func (e *Service) buildMetricAggregation(field string, metric string) JsonObject {
+func (e *service) buildMetricAggregation(field string, metric string) JsonObject {
 	if metric == libcalicov3.GlobalAlertMetricCount || metric == "" {
 		return nil
 	}
@@ -218,7 +223,7 @@ func (e *Service) buildMetricAggregation(field string, metric string) JsonObject
 
 // buildLookBackRange builds the Elasticsearch range query from GlobalAlert's spec.lookback if it exists,
 // else uses the default lookback duration.
-func (e *Service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) {
+func (e *service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) {
 	var timeField string
 	switch alert.Spec.DataSet {
 	case libcalicov3.GlobalAlertDataSetDNS, libcalicov3.GlobalAlertDataSetFlows:
@@ -246,8 +251,8 @@ func (e *Service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) 
 	}, nil
 }
 
-// DeleteElasticWatchers deletes all the Service watchers related to the given cluster.
-func (e *Service) DeleteElasticWatchers(ctx context.Context) {
+// DeleteElasticWatchers deletes all the service watchers related to the given cluster.
+func (e *service) DeleteElasticWatchers(ctx context.Context) {
 	res, err := e.esCLI.Search().Index(".watches").Do(ctx)
 	if err != nil {
 		if eerr, ok := err.(*elastic.Error); ok && eerr.Status == http.StatusNotFound {
@@ -275,7 +280,7 @@ func (e *Service) DeleteElasticWatchers(ctx context.Context) {
 // scroll through them to generate events.
 // If spec.metric is set and spec.aggregateBy is not set, the result has only metric aggregation,
 // verify it against spec.threshold to generate events.
-func (e *Service) ExecuteAlert(alert *v3.GlobalAlert) libcalicov3.GlobalAlertStatus {
+func (e *service) ExecuteAlert(alert *v3.GlobalAlert) libcalicov3.GlobalAlertStatus {
 	log.Infof("Executing Elasticsearch query and processing result for GlobalAlert %s in cluster %s", alert.Name, e.clusterName)
 
 	var status libcalicov3.GlobalAlertStatus
@@ -307,7 +312,7 @@ func (e *Service) ExecuteAlert(alert *v3.GlobalAlert) libcalicov3.GlobalAlertSta
 // Maximum number of buckets retrieved is based on AggregationBucketSize, if there are more buckets left it logs warning.
 // For each bucket retrieved, verifies the values against the metrics in GlobalAlert and creates a document in events index if alert conditions are satisfied.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *Service) executeCompositeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
+func (e *service) executeCompositeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
 	query := e.query
 	status := alert.Status
 	var afterKey JsonObject
@@ -409,7 +414,7 @@ func (e *Service) executeCompositeQuery(alert *v3.GlobalAlert) (libcalicov3.Glob
 
 // executeQueryWithScroll executes the Elasticsearch query using scroll and for each document in the search result adds a document into events index.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *Service) executeQueryWithScroll(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
+func (e *service) executeQueryWithScroll(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
 	status := alert.Status
 	scroll := e.esCLI.Scroll(e.sourceIndexName).Body(e.query).Size(PaginationSize)
 	for {
@@ -451,7 +456,7 @@ func (e *Service) executeQueryWithScroll(alert *v3.GlobalAlert) (libcalicov3.Glo
 
 // executeQuery execute the Elasticsearch query, adds a document into events index is query result satisfies alert conditions.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *Service) executeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
+func (e *service) executeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
 	status := alert.Status
 	result, err := e.esCLI.Search().Index(e.sourceIndexName).Source(e.query).Do(context.Background())
 	status.LastExecuted = &metav1.Time{Time: time.Now()}
@@ -510,7 +515,7 @@ func (e *Service) executeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertSt
 }
 
 // bulkFlush flushes any remaining data in the BulkProcessor, if there is error during flush update the error condition in status before retuning.
-func (e *Service) bulkFlush(status libcalicov3.GlobalAlertStatus, err error) (libcalicov3.GlobalAlertStatus, error) {
+func (e *service) bulkFlush(status libcalicov3.GlobalAlertStatus, err error) (libcalicov3.GlobalAlertStatus, error) {
 	if err := e.esBulkProcessor.Flush(); err != nil {
 		log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
 		status.Healthy = false
@@ -521,7 +526,7 @@ func (e *Service) bulkFlush(status libcalicov3.GlobalAlertStatus, err error) (li
 }
 
 // buildEventsIndexDoc builds an object that can be sent to events index.
-func (e *Service) buildEventsIndexDoc(alert *v3.GlobalAlert, record JsonObject) JsonObject {
+func (e *service) buildEventsIndexDoc(alert *v3.GlobalAlert, record JsonObject) JsonObject {
 	description := alert.Spec.Summary
 	if alert.Spec.Summary == "" {
 		description = alert.Spec.Description
@@ -541,7 +546,7 @@ func compare(left, right float64, operation string) bool {
 	switch operation {
 	case "eq":
 		return left == right
-	case "ne":
+	case "not_eq":
 		return left != right
 	case "lt":
 		return left < right
