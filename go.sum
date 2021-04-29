@@ -774,8 +774,8 @@ github.com/tigera/cni-plugin-private v1.11.1-0.20210422172746-298d7d17efb3 h1:zN
 github.com/tigera/cni-plugin-private v1.11.1-0.20210422172746-298d7d17efb3/go.mod h1:NVc7aUymrUX+F9Z3I1jz6Tj6KiifO4iaJYNdUaUBSxk=
 github.com/tigera/confd-private v1.0.1-0.20210428220243-ebfc6476063f h1:RC4AkqxXii1+EwQnkiYkZmAjjZUiFmsSzDjtaGgX5qc=
 github.com/tigera/confd-private v1.0.1-0.20210428220243-ebfc6476063f/go.mod h1:STwg/t6uoaidMmdl/zbIhhUwd6N3REP6kj6yvy16Ucw=
-github.com/tigera/felix-private v0.0.0-20210427184708-630dc792f684 h1:cJwY50KYphKDryLTujiMP2fnwAaDeVMAFdz89h4n1m4=
-github.com/tigera/felix-private v0.0.0-20210427184708-630dc792f684/go.mod h1:/9/73zmrvJXVaf+Ht5/xZIewYs2Q0fjwVtuuifVvXmE=
+github.com/tigera/felix-private v0.0.0-20210429211207-5bd2ed42b4c3 h1:p0ojV6os9bc7DKgXX/4lXnyww1h6BaEMjqjPZ767Lj4=
+github.com/tigera/felix-private v0.0.0-20210429211207-5bd2ed42b4c3/go.mod h1:OQLcLuVJ/RKopnvhg1et8VxtQqnpCATdBe3Jm0ltwKY=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210429204248-7f77c375c303 h1:iiVXtgd4/HU4CeG2dqBWi4aF8H/o0EBJTjX45iDG7qI=
@@ -788,8 +788,8 @@ github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133 h1:/y3vUmVwRQiLX0
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210428214913-b593e23d6bcd h1:lJ+dTOe12Ldj3nFLmSjTBRcOR3qwRm2w3Kk6NU3+zlY=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210428214913-b593e23d6bcd/go.mod h1:3b0zQHDUp1aiiznpi3jZe71whQshAO3mvO0YbytT5mI=
-github.com/tigera/windows-networking v0.0.0-20210419160444-f5561401fe3c h1:MwpCw7gaUI6e27OU3xgtwpyM7+UFS2kA3LvV35rZXkY=
-github.com/tigera/windows-networking v0.0.0-20210419160444-f5561401fe3c/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
+github.com/tigera/windows-networking v0.0.0-20210429153057-93a015addafc h1:M8wCpKIdFL2WgNn4qMDuA7Mw9q87neJx68gkztbYVb4=
+github.com/tigera/windows-networking v0.0.0-20210429153057-93a015addafc/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
