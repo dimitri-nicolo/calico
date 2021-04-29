@@ -76,7 +76,6 @@ spec:
 | lastUpdate | When the alert was last modified on the backend. |
 | active | Whether the alert is active on the backend. |
 | healthy | Whether the alert is in an error state or not. |
-| executionState | The raw execution state of the generated Elastic watcher. |
 | lastExecuted | When the query for the alert last ran. |
 | lastEvent | When the condition of the alert was last satisfied and an alert was successfully generated. |
 | errorConditions | List of errors preventing operation of the updates or search. |
