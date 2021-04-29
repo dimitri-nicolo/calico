@@ -154,6 +154,8 @@ type WindowsDataplane struct {
 	// Channel used when the Felix top level wants the dataplane to stop.
 	stopChan chan *sync.WaitGroup
 
+	vfpInfoReader *vfp.InfoReader
+
 	// DNS policy components
 	domainInfoReader  *domainInfoReader
 	domainInfoStore   *common.DomainInfoStore
@@ -219,6 +221,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 	if config.Collector != nil {
 		log.Debug("Stats collection is required, create VFP info reader")
 		vfpInfoReader := vfp.NewInfoReader(config.LookupsCache, felixconfig.DefaultConntrackPollingInterval)
+		dp.vfpInfoReader = vfpInfoReader
 
 		config.Collector.SetPacketInfoReader(vfpInfoReader)
 		config.Collector.SetConntrackInfoReader(vfpInfoReader)
@@ -386,6 +389,11 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 			if err := d.domainInfoStore.SaveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
 			}
+
+			if d.vfpInfoReader != nil {
+				d.vfpInfoReader.Stop()
+			}
+			d.domainInfoReader.Stop()
 			return
 		}
 

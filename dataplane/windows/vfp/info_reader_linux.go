@@ -19,6 +19,10 @@ func (r *InfoReader) Start() error {
 	return nil
 }
 
+func (r *InfoReader) Stop() {
+	return
+}
+
 // PacketInfoChan returns the channel with converted PacketInfo.
 func (r *InfoReader) PacketInfoChan() <-chan collector.PacketInfo {
 	return nil

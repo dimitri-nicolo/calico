@@ -78,6 +78,7 @@ func (r *domainInfoReader) Start(msgChan chan common.DataWithTimestamp) {
 
 func (r *domainInfoReader) Stop() {
 	r.stopChannel <- struct{}{}
+	r.etwOps.WaitForSessionClose()
 }
 
 func (r *domainInfoReader) loop() {

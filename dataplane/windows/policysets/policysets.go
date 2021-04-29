@@ -16,6 +16,7 @@ package policysets
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -42,7 +43,7 @@ type HNSAPI interface {
 
 // PolicySets manages a whole plane of policies/profiles
 type PolicySets struct {
-	IpSets []IPSetCache
+	IpSetCaches []IPSetCache
 
 	supportedFeatures      hns.HNSSupportedFeatures
 	priorityLimit          uint16
@@ -52,12 +53,12 @@ type PolicySets struct {
 	staticACLRules []*hns.ACLPolicy
 }
 
-func NewPolicySets(hns HNSAPI, ipsets []IPSetCache, reader StaticRulesReader) *PolicySets {
+func NewPolicySets(hns HNSAPI, ipsetCaches []IPSetCache, reader StaticRulesReader) *PolicySets {
 	supportedFeatures := hns.GetHNSSupportedFeatures()
 	return &PolicySets{
 		policySetIdToPolicySet: map[string]*policySet{},
 
-		IpSets:            ipsets,
+		IpSetCaches:       ipsetCaches,
 		supportedFeatures: supportedFeatures,
 		priorityLimit:     PolicyRuleMaxPriority,
 		staticACLRules:    readStaticRules(reader),
@@ -668,25 +669,36 @@ func ruleHasNegativeMatches(pRule *proto.Rule) bool {
 // IP sets.
 func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 	var addresses []string
-	var found bool
 
+	ips := set.New()
 	for _, ipsetId := range setIds {
-		found = false
-		for _, ipSets := range s.IpSets {
-			ipSet := ipSets.GetIPSetMembers(ipsetId)
-			if ipSet == nil {
+		for _, cache := range s.IpSetCaches {
+			ipList := cache.GetIPSetMembers(ipsetId)
+			if ipList == nil {
 				continue
 			}
-			addresses = append(addresses, ipSet...)
-			found = true
-			break
-		}
+			ips.AddAll(ipList)
 
-		if !found {
-			log.WithField("ipsetId", ipsetId).Info("IPSet could not be found")
-			return nil, ErrMissingIPSet
+			if len(ipList) > 0 {
+				// Found ips in one cache, skip the rest.
+				break
+			}
 		}
 	}
+
+	ips.Iter(func(item interface{}) error {
+		ip := item.(string)
+		addresses = append(addresses, ip)
+		return nil
+	})
+
+	if len(addresses) == 0 {
+		log.WithField("ipsetIds", setIds).Info("No IP found in IPSets")
+		return nil, ErrMissingIPSet
+	}
+
+	// Make it more deterministic.
+	sort.Strings(addresses)
 
 	return addresses, nil
 }
