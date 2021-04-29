@@ -57,7 +57,6 @@ type GlobalAlertStatus struct {
 	LastUpdate      *metav1.Time     `json:"lastUpdate,omitempty"`
 	Active          bool             `json:"active"`
 	Healthy         bool             `json:"healthy"`
-	ExecutionState  string           `json:"executionState,omitempty"`
 	LastExecuted    *metav1.Time     `json:"lastExecuted,omitempty"`
 	LastEvent       *metav1.Time     `json:"lastEvent,omitempty"`
 	ErrorConditions []ErrorCondition `json:"errorConditions,omitempty"`

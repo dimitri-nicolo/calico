@@ -6494,12 +6494,6 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref common.ReferenceCallb
 							Format:  "",
 						},
 					},
-					"executionState": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
 					"lastExecuted": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),

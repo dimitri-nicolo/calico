@@ -81,8 +81,6 @@ spec:
                   - type
                   type: object
                 type: array
-              executionState:
-                type: string
               healthy:
                 type: boolean
               lastEvent:
