@@ -4,9 +4,6 @@ description: Review requirements for the standard install for Calico Enterprise 
 canonical_url: '/windows-calico/kubernetes/requirements'
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 ### About {{site.prodnameWindows}}
 
 Because the Kubernetes and {{site.prodname}} control components do not run on Windows yet, a hybrid Linux/Windows cluster is required. {{site.prodnameWindows}} standard installation is distributed as a **.zip archive**. 

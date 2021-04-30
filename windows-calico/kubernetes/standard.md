@@ -4,9 +4,6 @@ description: Install Calico Enterprise for Windows to enable a workload-to-workl
 canonical_url: '/windows-calico/kubernetes/standard'
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 ### Big picture
 
 Install {{site.prodnameWindows}} on Kubernetes clusters. The standard installation for {{site.prodnameWindows}} requires more time and expertise to configure. If you need to get started quickly, we recommend the [Quickstart]({{site.baseurl}}/windows-calico/quickstart)

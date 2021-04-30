@@ -4,9 +4,6 @@ description: Help for troubleshooting Calico Enterprise for Windows issues.
 canonical_url: /windows-calico/troubleshoot
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 ### Useful troubleshooting commands
 
 **Examine the HNS network(s)**

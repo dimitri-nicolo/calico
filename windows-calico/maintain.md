@@ -4,10 +4,6 @@ description: Tasks to manage Calico services and uninstall Calico Enterprise for
 canonical_url: '/windows-calico/maintain'
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
-
 ### Big picture
 
 Start, stop, and update {{site.prodnameWindows}} services on the Linux master node, and uninstall for {{site.prodnameWindows}}.

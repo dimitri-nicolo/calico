@@ -19,6 +19,8 @@ section:
     path: /windows-calico/kubernetes/rancher
 - title: Flow logs for Windows workloads
   path: /windows-calico/flowlogs
+- title: Configure DNS policy for workloads
+  path: /windows-calico/dnspolicy
 - title: Create kubeconfig for Windows nodes
   path: /windows-calico/kubeconfig
 - title: Start and stop Calico Enterprise for Windows services
