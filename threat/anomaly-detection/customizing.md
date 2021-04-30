@@ -90,6 +90,13 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
 -   **AD_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts.  
     Decrease it if you want more alerts.
 
+#### process_restarts Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector.
+-   **AD_ProcessRestarts_IsolationForest_score_threshold** - Default: -0.78. Note: it is a negative value!
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
+-   **AD_ProcessRestarts_threshold** - Default: 4. Increase this parameter if you want fewer alerts.  
+    Decrease it if you want more alerts.
+
 #### dns_latency Job:
 Now the [IsolationForest model] from scikit-learn is used in this detector. 
 -   **AD_DnsLatency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
