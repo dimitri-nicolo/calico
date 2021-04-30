@@ -149,8 +149,10 @@ nodeLoop:
 		}
 	}
 
-	// Change interface-specific addresses to be scope link.
-	ensureNodeAddressesAndRoutes(thisNode)
+	// Change interface-specific addresses to be scope link.  Also, if OpenShift bootstrapIP is
+	// specified and we are directly connected to it, create a specific route to ensure that we
+	// will use our stable address as the source.
+	ensureNodeAddressesAndRoutes(thisNode, cfg.Spec.OpenShift.BootstrapIP)
 
 	// Use multiple ECMP paths based on hashing 5-tuple.  These are not necessarily fatal, if
 	// setting fails.
@@ -217,7 +219,7 @@ func monitorOngoing(thisNode *ConfigNode) {
 			}
 		case <-periodicCheckC:
 			// Recheck interface addresses and routes.
-			ensureNodeAddressesAndRoutes(thisNode)
+			ensureNodeAddressesAndRoutes(thisNode, "")
 		}
 	}
 }
@@ -264,7 +266,7 @@ func monitorNormalBird(earlyBirdWantedC chan<- bool) {
 	}
 }
 
-func ensureNodeAddressesAndRoutes(thisNode *ConfigNode) {
+func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIP string) {
 	links, err := netlink.LinkList()
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to list all links")
@@ -280,6 +282,21 @@ func ensureNodeAddressesAndRoutes(thisNode *ConfigNode) {
 					ensureLinkAddressAndRoutes(link, addr, peering.PeerIP)
 					break
 				}
+			}
+			if bootstrapIP != "" && sameSubnet(addr, bootstrapIP) {
+				_, ipNet, err := net.ParseCIDR(bootstrapIP + "/32")
+				if err == nil {
+					ensureRoute(&netlink.Route{
+						Dst:       ipNet,
+						LinkIndex: link.Attrs().Index,
+						Type:      syscall.RTN_UNICAST,
+						Table:     syscall.RT_TABLE_MAIN,
+						Src:       net.ParseIP(thisNode.StableAddress.Address),
+					})
+				} else {
+					logrus.WithError(err).Warningf("Failed to parse OpenShift bootstrap IP (%v)", bootstrapIP)
+				}
+
 			}
 		}
 	}
