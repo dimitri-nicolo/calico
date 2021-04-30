@@ -252,6 +252,8 @@ type Config struct {
 	hostMTU         int
 	MTUIfacePattern *regexp.Regexp
 
+	RouteSource string
+
 	LookupsCache *calc.LookupsCache
 }
 
@@ -733,7 +735,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 		if err := installKprobes(); err != nil {
 			log.WithError(err).Error("error installing kprobes. skipping it")
-			config.FlowLogsCollectProcessInfo = false;
+			config.FlowLogsCollectProcessInfo = false
 		} else {
 			log.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
@@ -1000,7 +1002,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			return nil
 		},
 		dp.loopSummarizer)
-	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard)
+	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard, config)
 	dp.RegisterManager(dp.wireguardManager) // IPv4-only
 
 	dp.RegisterManager(newServiceLoopManager(filterTableV4, ruleRenderer, 4))
@@ -1479,6 +1481,7 @@ func (d *InternalDataplane) doStaticDataplaneConfig() {
 }
 
 func (d *InternalDataplane) setUpIptablesBPF() {
+	rulesConfig := d.config.RulesConfig
 	for _, t := range d.iptablesFilterTables {
 		fwdRules := []iptables.Rule{
 			{
@@ -1522,7 +1525,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			},
 		)
 
-		for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+		for _, prefix := range rulesConfig.WorkloadIfacePrefixes {
 			fwdRules = append(fwdRules,
 				// Drop packets that have come from a workload but have not been through our BPF program.
 				iptables.Rule{
@@ -1532,7 +1535,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 				},
 			)
 
-			if d.config.RulesConfig.EndpointToHostAction == "ACCEPT" {
+			if rulesConfig.EndpointToHostAction == "ACCEPT" {
 				// Only need to worry about ACCEPT here.  Drop gets compiled into the BPF program and
 				// RETURN would be a no-op since there's nothing to RETURN from.
 				inputRules = append(inputRules, iptables.Rule{
@@ -1549,7 +1552,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 		}
 
 		if t.IPVersion == 6 {
-			for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+			for _, prefix := range rulesConfig.WorkloadIfacePrefixes {
 				// In BPF mode, we don't support IPv6 yet.  Drop it.
 				fwdRules = append(fwdRules, iptables.Rule{
 					Match:   iptables.Match().OutInterface(prefix + "+"),
@@ -1573,7 +1576,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			// The packet may be about to go to a local workload.  However, the local workload may not have a BPF
 			// program attached (yet).  To catch that case, we send the packet through a dispatch chain.  We only
 			// add interfaces to the dispatch chain if the BPF program is in place.
-			for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+			for _, prefix := range rulesConfig.WorkloadIfacePrefixes {
 				// Make sure iptables rules don't drop packets that we're about to process through BPF.
 				fwdRules = append(fwdRules,
 					iptables.Rule{
@@ -1587,7 +1590,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			// Otherwise, if iptables has a DROP policy on the forward chain, the packet will get dropped.
 			// This rule must come after the to-workload jump rules above to ensure that we don't accept too
 			// early before the destination is checked.
-			for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+			for _, prefix := range rulesConfig.WorkloadIfacePrefixes {
 				// Make sure iptables rules don't drop packets that we're about to process through BPF.
 				fwdRules = append(fwdRules,
 					iptables.Rule{
@@ -1626,7 +1629,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 		})
 
 		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, tc.MarkSeen, tc.MarkSeenMask,
-			d.config.RulesConfig.OpenStackSpecialCasesEnabled, false)...)
+			rulesConfig.OpenStackSpecialCasesEnabled, false)...)
 
 		rpfChain := []*iptables.Chain{{
 			Name:  rules.ChainNamePrefix + "RPF",
@@ -1634,11 +1637,26 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 		}}
 		t.UpdateChains(rpfChain)
 
+		var rawRules []iptables.Rule
+		// Set a mark on encapsulated packets coming from WireGuard to ensure the RPF check allows it
+		if t.IPVersion == 4 && rulesConfig.WireguardEnabled && len(rulesConfig.WireguardInterfaceName) > 0 &&
+			rulesConfig.RouteSource == "WorkloadIPs" {
+			log.Debug("Adding Wireguard iptables rule")
+			rawRules = append(rawRules, iptables.Rule{
+				Match: iptables.Match().Protocol("udp").
+					DestPorts(uint16(rulesConfig.WireguardListeningPort)).
+					NotSrcAddrType(iptables.AddrTypeLocal, false),
+				Action: iptables.SetMarkAction{Mark: rulesConfig.WireguardIptablesMark},
+			})
+		}
+
+		rawRules = append(rawRules, iptables.Rule{
+			Action: iptables.JumpAction{Target: rpfChain[0].Name},
+		})
+
 		rawChains := []*iptables.Chain{{
-			Name: rules.ChainRawPrerouting,
-			Rules: []iptables.Rule{{
-				Action: iptables.JumpAction{Target: rpfChain[0].Name},
-			}},
+			Name:  rules.ChainRawPrerouting,
+			Rules: rawRules,
 		}}
 		t.UpdateChains(rawChains)
 

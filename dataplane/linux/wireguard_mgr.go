@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,15 +37,18 @@ import (
 type wireguardManager struct {
 	// Our dependencies.
 	wireguardRouteTable *wireguard.Wireguard
+	dpConfig            Config
 }
 
 type WireguardStatusUpdateCallback func(ipVersion uint8, id interface{}, status string)
 
 func newWireguardManager(
 	wireguardRouteTable *wireguard.Wireguard,
+	dpConfig Config,
 ) *wireguardManager {
 	return &wireguardManager{
 		wireguardRouteTable: wireguardRouteTable,
+		dpConfig:            dpConfig,
 	}
 }
 
@@ -66,6 +69,13 @@ func (m *wireguardManager) OnUpdate(protoBufMsg interface{}) {
 			return
 		}
 		switch msg.Type {
+		case proto.RouteType_REMOTE_HOST:
+			log.Debug("RouteUpdate is a remote host update")
+			// This can only be done in WorkloadIPs mode, because this breaks networking during upgrade in CalicoIPAM
+			// mode.
+			if m.dpConfig.RouteSource == "WorkloadIPs" {
+				m.wireguardRouteTable.RouteUpdate(msg.DstNodeName, cidr)
+			}
 		case proto.RouteType_LOCAL_WORKLOAD, proto.RouteType_REMOTE_WORKLOAD:
 			// CIDR is for a workload.
 			log.Debug("RouteUpdate is a workload update")
