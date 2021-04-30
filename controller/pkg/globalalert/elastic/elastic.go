@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -527,10 +528,8 @@ func (e *service) bulkFlush(status libcalicov3.GlobalAlertStatus, err error) (li
 
 // buildEventsIndexDoc builds an object that can be sent to events index.
 func (e *service) buildEventsIndexDoc(alert *v3.GlobalAlert, record JsonObject) JsonObject {
-	description := alert.Spec.Summary
-	if alert.Spec.Summary == "" {
-		description = alert.Spec.Description
-	}
+	description := e.substituteDescriptionOrSummaryContents(alert, record)
+
 	return JsonObject{
 		"type":        AlertEventType,
 		"description": description,
@@ -539,6 +538,58 @@ func (e *service) buildEventsIndexDoc(alert *v3.GlobalAlert, record JsonObject) 
 		"record":      record,
 		"alert":       alert.Name,
 	}
+}
+
+// substituteDescriptionOrSummaryContents substitute bracketed variables in summary/description with it's value.
+// If there is an error in substitution log error and return the partly substituted value.
+func (e *service) substituteDescriptionOrSummaryContents(alert *v3.GlobalAlert, record JsonObject) string {
+	description := alert.Spec.Summary
+	if alert.Spec.Summary == "" {
+		description = alert.Spec.Description
+	}
+
+	vars, err := extractVariablesFromDescriptionTemplate(description)
+	if err != nil {
+		log.WithError(err).Warnf("failed to build summary or description for alert %s due to invalid formatting of bracketed variables", alert.Name)
+	}
+
+	// replace extracted variables with it's value
+	for _, v := range vars {
+		if value, ok := record[v]; !ok {
+			log.Warnf("failed to build summary or description for alert %s due to missing value for variable %s", alert.Name, v)
+		} else {
+			switch value.(type) {
+			case string:
+				description = strings.Replace(description, fmt.Sprintf("${%s}", v), value.(string), 1)
+			case int64:
+				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatInt(value.(int64), 10), 1)
+			case float64:
+				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatFloat(value.(float64), 'f', 1, 64), 1)
+			default:
+				log.Warnf("failed to build summary or description for alert %s due to unsupported value type for variable %s", alert.Name, v)
+			}
+		}
+	}
+	return description
+}
+
+// extractVariablesFromDescriptionTemplate extracts and returns array of variables in the template string.
+func extractVariablesFromDescriptionTemplate(s string) ([]string, error) {
+	var res []string
+	for s != "" {
+		start := strings.Index(s, "${")
+		if start < 0 {
+			break
+		}
+		s = s[start+2:]
+		end := strings.Index(s, "}")
+		if end < 0 {
+			return nil, fmt.Errorf("unterminated }")
+		}
+		res = append(res, s[:end])
+		s = s[end+1:]
+	}
+	return res, nil
 }
 
 // compare returns a boolean after comparing the given input.

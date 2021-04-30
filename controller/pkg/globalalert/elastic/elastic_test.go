@@ -115,7 +115,7 @@ var _ = Describe("GlobalAlert", func() {
 					Name: alertName,
 				},
 				Spec: calicov3.GlobalAlertSpec{
-					Description: fmt.Sprintf("test alert: %s", alertName),
+					Summary:     "test alert summary ${source_namespace} ${count}",
 					Severity:    100,
 					DataSet:     "flows",
 					Metric:      "count",
@@ -170,7 +170,7 @@ var _ = Describe("GlobalAlert", func() {
 					Name: alertName,
 				},
 				Spec: calicov3.GlobalAlertSpec{
-					Description: fmt.Sprintf("test alert: %s", alertName),
+					Description: "test alert description ${source_namespace}/${source_name_aggr} ${max}",
 					Severity:    100,
 					DataSet:     "flows",
 					Metric:      "max",
