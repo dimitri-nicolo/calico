@@ -1061,12 +1061,11 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 			Severity:    100,
 		},
 		Status: calico.GlobalAlertStatus{
-			LastUpdate:     &v1.Time{Time: time.Now()},
-			Active:         false,
-			Healthy:        false,
-			ExecutionState: "test",
-			LastExecuted:   &v1.Time{Time: time.Now()},
-			LastEvent:      &v1.Time{Time: time.Now()},
+			LastUpdate:   &v1.Time{Time: time.Now()},
+			Active:       false,
+			Healthy:      false,
+			LastExecuted: &v1.Time{Time: time.Now()},
+			LastEvent:    &v1.Time{Time: time.Now()},
 			ErrorConditions: []calico.ErrorCondition{
 				{Type: "foo", Message: "bar"},
 			},
