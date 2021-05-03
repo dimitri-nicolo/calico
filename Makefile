@@ -46,7 +46,6 @@ endif
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
-include Makefile.common
 
 ##############################################################################
 # Define some constants
@@ -97,6 +96,8 @@ LDFLAGS:=-ldflags "\
 		-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(PKG_VERSION_GIT_DESCRIPTION) \
 		-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(PKG_VERSION_REVISION) \
 		-B 0x$(BUILD_ID)"
+
+include Makefile.common
 
 NON_SRC_DIRS = test
 # All Honeypod Controller go files.
