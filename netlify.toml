@@ -36,6 +36,12 @@
   '''
 
 [[redirects]]
+  from = "/v3.7/*"
+  to = "https://tigera-v3-7.netlify.app/v3.7/:splat"
+  status = 200
+  headers = {X-From = "Netlify"}
+
+[[redirects]]
   from = "/v3.6/*"
   to = "https://tigera-v3-6.netlify.app/v3.6/:splat"
   status = 200
