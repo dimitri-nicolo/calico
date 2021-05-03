@@ -55,10 +55,10 @@ K8S_VERSION     		?= v1.11.3
 ETCD_VERSION			?= v3.3.7
 KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 
-# Override VALIDARCHES inferenced in common Makefile.
+# Override ARCHES inferenced in common Makefile.
 #   This repo differs in how ARCHES are determined compared to common logic.
 #   overriding the value with the only platform supported ATM.
-VALIDARCHES = amd64
+ARCHES = amd64
 
 BUILD_IMAGE_CONTROLLER=honeypod-controller
 GCR_REPO?=gcr.io/unique-caldron-775/cnx/tigera
