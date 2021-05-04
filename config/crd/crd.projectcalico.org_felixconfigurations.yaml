@@ -881,6 +881,15 @@ spec:
                 type: string
               syslogReporterNetwork:
                 type: string
+              tproxyMode:
+                description: 'TPROXYMode sets whether traffic is directed through
+                  a transparent proxy for further processing or not and how is the
+                  proxying done. [Default: Disabled]'
+                type: string
+              tproxyPort:
+                description: 'TPROXYPort sets to which port proxied traffic should
+                  be redirected. [Default: 16001]'
+                type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
                   number and cluster size to projectcalico.org. Logs warnings returned

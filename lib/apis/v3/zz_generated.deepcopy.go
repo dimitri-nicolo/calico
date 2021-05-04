@@ -2060,6 +2060,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(AWSSrcDstCheckOption)
 		**out = **in
 	}
+	if in.TPROXYPort != nil {
+		in, out := &in.TPROXYPort, &out.TPROXYPort
+		*out = new(int)
+		**out = **in
+	}
 	return
 }
 
