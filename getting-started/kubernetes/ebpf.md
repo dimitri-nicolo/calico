@@ -77,7 +77,7 @@ See the tabs below for more detail on how to set up a suitable cluster with each
 <%
 
 `kubeadm` supports a number of base OSes; as long as the base OS chosen (such as Ubuntu 20.04) meets the kernel 
-requirements, `kubeadm`-provisioned clusters are fully supported.
+requirements, `kubeadm`-provisioned clusters are supported.
 
 Since `kube-proxy` is not required in eBPF mode, you may wish to disable `kube-proxy` at install time.  With `kubeadm`
 you can do that by passing the ` --skip-phases=addon/kube-proxy` flag to `kubeadm init`: 
@@ -91,7 +91,7 @@ kubeadm init --skip-phases=addon/kube-proxy
 <%
 
 `kops` supports a number of base OSes; as long as the base OS chosen (such as Ubuntu 20.04 or RHEL 8.2) meets the kernel
-requirements, `kops`-provisioned clusters are fully supported.
+requirements, `kops`-provisioned clusters are supported.
 
 Since `kube-proxy` is not required in eBPF mode, you may wish to disable `kube-proxy` at install time.  With `kops` you
 can do that by setting the follwing in your `kops` configuration:
@@ -163,6 +163,20 @@ Since Bottlerocket places the Kubelet's plugin directory in a different location
 the `flexVolumePath` setting to the operator `Installation` resource as described below.
 
 %>
+<label:MKE>
+<%
+
+Mirantis' MKE supports a number of base OSes; as long as the base OS chosen (such as Ubuntu 20.04) meets the kernel
+requirements, MKE-provisioned clusters are supported.
+
+%>
+<label:RKE>
+<%
+
+Rancher's RKE supports a number of base OSes; as long as the base OS chosen (such as Ubuntu 20.04) meets the kernel
+requirements, RKE-provisioned clusters are supported.
+
+%>
 {% endtabs %}
 
 #### Create kubernetes-service-endpoint config map
@@ -213,39 +227,44 @@ API server. Use that (filling in the `<cluster_name>` and `<base_domain>` as app
 %>
 <label:AKS>
 <%
-For AKS clusters, you should use the FQDN of your API server.  This can be found in the `kubeconfig` file used to access
-the cluster, the line in the `kubeconfig` should look like this:
+For AKS clusters, you should use the FQDN of your API server.  This can be found by running the following command:
+```
+kubectl cluster-info
+```
+which should give output similar to the following:
+```
+Kubernetes master is running at https://mycalicocl-calicodemorg-03a087-36558dbb.hcp.canadaeast.azmk8s.io:443
+```
+In this example, you would use `mycalicocl-calicodemorg-03a087-36558dbb.hcp.canadaeast.azmk8s.io` for
+`KUBERNETES_SERVICE_HOST` and `443` for `KUBERNETES_SERVICE_PORT` when creating the config map.
 
-```yaml
-server: https://cluster-name-1234567.hcp.region.azmk8s.io:443
-```
-
-Alternatively, the FQDN can be found via the AKS command line, for example:
-```bash
-aq aks show --resource-group <resource group> --name <name> --query fqdn
-```
-outputs the following:
-```
-"cluster-name-1234567.hcp.region.azmk8s.io",
-```
-(The port should be 443.)
 %>
 <label:EKS>
 <%
-For an EKS cluster, it's important to use the domain nameof the EKS-provided load balancer that is in front of the API
-server.  One way to find the correct address is to extract it from `kube-proxy`'s config map.  This can be done by running
-the following command:
+For an EKS cluster, it's important to use the domain name of the EKS-provided load balancer that is in front of the API
+server.  This can be found by running the following command:
+```
+kubectl cluster-info
+```
+which should give output similar to the following:
+```
+Kubernetes master is running at https://60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com
+...
+```
+In this example, you would use `60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com` for
+`KUBERNETES_SERVICE_HOST` and `443` for `KUBERNETES_SERVICE_PORT` when creating the config map.
 
-```
-kubectl get cm -n kube-system kube-proxy -o yaml | grep server
-```
-which should show the server name, for example:
-```
-    server: https://d881b853ae9313e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com
-```
-In this example, you would use `d881b853ae9313e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com` for
-`KUBERNETES_SERVICE_HOST` and `443` (the default for HTTPS) for `KUBERNETES_SERVICE_PORT` when creating the
-config map.
+%>
+<label:MKE>
+<%
+
+# FIXME How to find URL for MKE?
+
+%>
+<label:RKE>
+<%
+
+# FIXME How to find URL for RKE?
 
 %>
 {% endtabs %}
@@ -281,7 +300,7 @@ to enable eBPF mode in the next step...
 #### Tweak and apply installation Custom Resources
 
 When the main install guide tells you to apply the `custom-resources.yaml`, typically by running `kubectl create` with 
-the URL of the file directly, you should instead download the file so it can be edited:
+the URL of the file directly, you should instead download the file, so that you can edit it:
 
 ```bash
 curl -o custom-resources.yaml <url of the file from the main install guide>
@@ -289,7 +308,9 @@ curl -o custom-resources.yaml <url of the file from the main install guide>
 
 Edit the file in your editor of choice and find the `Installation` resource, which should be at the top of the file.
 To enable eBPF mode, we need to add a new `calicoNetwork` section inside the `spec` of the Installation resource,
-including the `linuxDataplane` field.  For example:
+including the `linuxDataplane` field.  For EKS only, you should also add the `flexVolumePath` setting as shown below. 
+
+For example:
 
 ```yaml
 # This section includes base Calico Enterprise installation configuration.
@@ -302,6 +323,9 @@ spec:
   # Added calicoNetwork section with linuxDataplane field
   calicoNetwork:
     linuxDataplane: BPF
+    
+  # EKS with Bottlerocket as node image only:
+  # flexVolumePath: /var/lib/kubelet/plugins
     
   # Install Calico Enterprise
   variant: TigeraSecureEnterprise
@@ -403,6 +427,18 @@ kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nod
 ```
 
 Then, should you want to start `kube-proxy` again, you can simply remove the node selector.
+
+%>
+<label:MKE>
+<%
+
+# FIXME disable kube-proxy for MKE?
+
+%>
+<label:RKE>
+<%
+
+# FIXME disable kube-proxy for RKE?
 
 %>
 {% endtabs %}
