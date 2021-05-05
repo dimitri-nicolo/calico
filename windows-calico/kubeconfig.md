@@ -4,9 +4,6 @@ description: Configure kubeconfig for Calico Enterprise for Windows.
 canonical_url: '/windows-calico/kubeconfig'
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 ### Big picture
 
 Create kubeconfig for Windows nodes.

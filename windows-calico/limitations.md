@@ -12,8 +12,8 @@ canonical_url: '/windows-calico/limitations'
 | Install method                 | **Supported**: Manifest with manual upgrade<br /><br />**Not supported**: Operator install |
 | Networking                     | **Supported**:<br />- Calico Enterprise VXLAN, no cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise non-overlay mode with BGP peering with [limitations](#bgp-networking-limitations)<br />- IPv4 |
 |                                | **Not supported**: <br />- Overlay mode with BGP peering<br />- IP in IP overlay with BPG routing<br />- Cross-subnet support and MTU setting for VXLAN<br />- IPv6 and dual stack<br />- Dual-ToR<br />- Service advertisement<br />- Multiple networks to pods |
-| Policy                         | **Supported**: <br />- Tiered policy with [limitations](#network-policy-with-tiers)<br />- Policy recommendations<br />- Policy impact preview |
-|                                | **Not supported**: <br />- Staged network-policy<br />- DNS policy<br />- Firewall integrations<br />- Application Layer Policy (ALP) for Istio<br />- Non-cluster hosts, including automatic host endpoints |
+| Policy                         | **Supported**: <br />- Tiered policy with [limitations](#network-policy-with-tiers)<br />- DNS policy with [limitations](#dns-policy-limitations)<br />- Policy recommendations<br />- Policy impact preview |
+|                                | **Not supported**: <br />- Staged network-policy<br />- Firewall integrations<br />- Application Layer Policy (ALP) for Istio<br />- Non-cluster hosts, including automatic host endpoints |
 | Visibility and troubleshooting | **Supported**:<br />- Flow logs for traffic to/from windows pods with [limitations](#flow-log-limitations)           <br />- Audit logs<br />- Alerts |
 |                                | **Not supported**: <br />- Packet capture<br />- DNS logs<br />- iptable logs<br />- L7 metrics |
 | Threat defense                 | **Supported**: Block traffic to/from src/dst based on a threat feed |
@@ -188,13 +188,24 @@ Because of the way the Windows dataplane handles rules, the following limitation
 
 ### Flow log limitations
 
-{{site.prodname}} support flow logs with these limitations:
+{{site.prodname}} supports flow logs with these limitations:
 
 - No packet/bytes stats for denied traffic
 - No DNS stats
 - No Http stats
 - No RuleTrace for tiers
 - No BGP logs
+
+### DNS Policy limitations
+
+>**Note**: DNS Policy is a tech preview feature. Tech preview features may be subject to significant changes before they become GA.
+{: .alert .alert-info}
+
+{{site.prodname}} supports DNS policy on Windows with these limitations:
+
+- It could take up to 5 seconds for the first TCP SYN packet to go through, for a connection to a DNS domain name. This is because DNS policies are dynamically programmed. The first TCP packet could be dropped since there is no policy to allow it until {{site.prodnameWindows}} detects domain IPs from DNS response and programs DNS policy rules. The Windows TCPIP stack will send SYN again after TCP Retransmission timeout (RTO) if previous SYN has been dropped.
+- Some runtime libraries do not honour DNS TTL. Instead, they manage their own DNS cache which has a different TTL value for DNS entries. On .NET Framework, the value to control DNS TTL is ServicePointManager.DnsRefreshTimeout which has default value of 120 seconds  - [DNS refresh timeout](https://docs.microsoft.com/en-us/dotnet/api/system.net.servicepointmanager.dnsrefreshtimeout). It is important that {{site.prodnameWindows}} uses a longer TTL value than the one used by the application, so that DNS policy will be in place when the application is making outbound connections. The configuration item “WindowsDNSExtraTTL” should have a value bigger than the maximum value of DNS TTL used by the runtime libraries for your applications.
+- Due to the limitations of Windows container networking, a policy update could have an impact on performance. Programming DNS policy may result in more policy updates. Setting “WindowsDNSExtraTTL” to a bigger number will reduce the performance impact.
 
 ### Next steps
 

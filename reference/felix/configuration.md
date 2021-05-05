@@ -150,6 +150,18 @@ See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/
 | BPFKubeProxyMinSyncPeriod          / <br/> FELIX_BPFKUBEPROXYMINSYNCPERIOD            | Controls the minimum time between dataplane updates for Felix's embedded `kube-proxy` implementation. | seconds | `1` |
 | BPFKubeProxyEndpointSlicesEnabled  / <br/> FELIX_BPFKUBEPROXYENDPOINTSLICESENABLED    | Controls whether Felix's embedded kube-proxy derives its services from Kubernetes' EndpointSlices resources. Using EndpointSlices is more efficient but it requires EndpointSlices support to be enabled at the Kubernetes API server. | true,false | false |
 
+
+#### Windows-specific configuration
+
+| Configuration parameter | Environment variable    | Description | Schema | Default |
+| ----------------------- | ----------------------- | ----------- | ------ | ------ |
+| windowsFlowLogsFileDirectory    | <br/> FELIX_WINDOWSFLOWLOGSFILEDIRECTORY            | Set the directory where flow logs files are stored on Windows nodes. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | string | `c:\\TigeraCalico\\flowlogs` |
+| windowsFlowLogsPositionFilePath | <br/> FELIX_WINDOWSFLOWLOGSPOSITIONFILEPATH         | Specify the position of the external pipeline that reads flow logs on Windows nodes. This parameter only takes effect when `FlowLogsDynamicAggregationEnabled` is set to `true`. | string | `c:\\TigeraCalico\\flowlogs\\flows.log.pos` |
+| windowsStatsDumpFilePath        | <br/> FELIX_WINDOWSTATSDUMPFILEPATH                 | Specify the position of the file used for dumping flow log statistics on Windows nodes. Note this is an internal setting that users shouldn't need to modify.| string | `c:\\TigeraCalico\\stats\\dump` |
+| WindowsDNSCacheFile             | <br/> FELIX_WINDOWSDNSCACHEFILE                     | Specify the name of the file that Felix uses to preserve learned DNS information when restarting. | string | `c:\\TigeraCalico\\felix-dns-cache.txt` |
+| WindowsDNSExtraTTL              | <br/> FELIX_WINDOWSDNSEXTRATTL                      | Specify extra time in seconds to keep IPs and alias names that are learned from DNS, in addition to each name or IP's advertised TTL. | seconds | `120` |
+
+
 #### Kubernetes-specific configuration
 
 | Configuration parameter | Environment variable       | Description  | Schema |
@@ -205,10 +217,10 @@ See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/
 | `FlowLogsCollectProcessInfo` | `FELIX_FLOWLOGSCOLLECTPROCESSINFO` | `false` | If enabled Felix will load the kprobe BPF programs to collect process info. |
 | `FlowLogsCollectTcpStats` | `FELIX_FLOWLOGSCOLLECTTCPSTATS` | `false` | If enabled Felix will collect TCP socket stats using BPF and requires a recent kernel that supports BPF |
 | `FlowLogsFilePerFlowProcessLimit` | `FELIX_FLOWLOGSFILEPERFLOWPROCESSLIMIT` | `2` | Specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated. |
-| `DNSCacheFile`         | `FELIX_DNSCACHEFILE`         | `/var/run/calico/felix-dns-cache.txt` | The name of the file that Felix uses to preserve learnt DNS information when restarting. |
-| `DNSCacheSaveInterval` | `FELIX_DNSCACHESAVEINTERVAL` | `60` | The periodic interval at which Felix saves learnt DNS information to the cache file. |
-| `DNSCacheEpoch` | `FELIX_DNSCACHEEPOCH` | `0` | An arbitrary number that can be changed, at runtime, to tell Felix to discard all its learnt DNS information.  |
-| `DNSExtraTTL` | `FELIX_DNSEXTRATTL` | `0` | Extra time, in seconds, to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL.  |
+| `DNSCacheFile`         | `FELIX_DNSCACHEFILE`         | `/var/run/calico/felix-dns-cache.txt` | The name of the file that Felix uses to preserve learned DNS information when restarting. |
+| `DNSCacheSaveInterval` | `FELIX_DNSCACHESAVEINTERVAL` | `60` | The periodic interval at which Felix saves learned DNS information to the cache file. |
+| `DNSCacheEpoch` | `FELIX_DNSCACHEEPOCH` | `0` | An arbitrary number that can be changed, at runtime, to tell Felix to discard all its learned DNS information.  |
+| `DNSExtraTTL` | `FELIX_DNSEXTRATTL` | `0` | Extra time, in seconds, to keep IPs and alias names that are learned from DNS, in addition to each name or IP's advertised TTL.  |
 | `DNSTrustedServers`    | `FELIX_DNSTRUSTEDSERVERS`    | `k8s-service:kube-dns` | The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS service. `<port>` defaults to the first service port, or 53 for an IP, and `<namespace>` to `kube-system`. An IPv6 address with a port must use the square brackets convention, for example `[fd00:83a6::12]:5353`. Note that Felix (calico-node) will need RBAC permission to read the details of each service specified by a `k8s-service:...` form. |
 | `DNSLogsFileEnabled`         | `FELIX_DNSLOGSFILEENABLED`        	| `false` | Set to `true`, enables DNS logs. If set to `false` no DNS logging will occur. DNS logs are written to a file `dns.log` and sent to Elasticsearch. The location of this file can be configured using the `DNSLogsFileDirectory` field. File rotation settings for this `dns.log` file can be configured using the fields `DNSLogsFileMaxFiles` and `DNSLogsFileMaxFileSizeMB`. Note that DNS log exports to Elasticsearch are dependent on DNS logs getting written to this file. Setting this parameter to `false` will disable DNS logs. |
 | `DNSLogsFileDirectory`       | `FELIX_DNSLOGSFILEDIRECTORY`      	| `/var/log/calico/dnslogs` | The directory where DNS logs files are stored. This parameter only takes effect when `DNSLogsFileEnabled` is `true`. |

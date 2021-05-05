@@ -4,17 +4,14 @@ description: An interactive demo to show how to apply basic network policy to po
 canonical_url: '/windows-calico/demo'
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 This guide provides a simple demo to illustrate basic pod-to-pod connectivity and the application of network policy in a {{site.prodnameWindows}} cluster. We will create client and server pods on Linux and Windows nodes, verify connectivity between the pods, and then we'll apply a basic network policy to isolate pod traffic.
 
 ## Prerequisites
 
-To run this demo, you will need a [{{site.prodnameWindows}} cluster]({{site.baseurl}}/windows-calico/quickstart) with
-Windows Server 1809 (build 10.0.17763). More recent versions of Windows Server can be used with a change to the demo manifests.
+To run this demo, you will need a [{{site.prodnameWindows}} cluster]({{site.baseurl}}/getting-started/windows-calico/quickstart) with
+Windows Server 1809 (build 17763.1432 August 2020 update or newer). More recent versions of Windows Server can be used with a change to the demo manifests.
 
->**Note**: Windows Server 1809 (build 10.0.17763) does not currently support [direct server return](https://techcommunity.microsoft.com/t5/networking-blog/direct-server-return-dsr-in-a-nutshell/ba-p/693710){:target="_blank"}. This means that policy support is limited to only pod IP addresses.
+>**Note**: Windows Server 1809 (build older than 17763.1432) do not support [direct server return](https://techcommunity.microsoft.com/t5/networking-blog/direct-server-return-dsr-in-a-nutshell/ba-p/693710){:target="_blank"}. This means that policy support is limited to only pod IP addresses.
 {: .alert .alert-info}
 
 {% tabs %}
