@@ -1015,6 +1015,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3-node 
 			}
 		}
 
+		for i, _ := range hostNetworkedWls {
+			hostNetworkedWls[i].Stop()
+		}
+
 		externalClient.Stop()
 
 		for _, tcpdump := range tcpdumps {
