@@ -41,6 +41,57 @@ const (
 	PortIKE     = 500
 )
 
+func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []Rule {
+	rules := []Rule{}
+
+	// N.B. we do not snoop on DNS in input towards proxy, we defer it to output from proxy
+
+	// Jump to from-host-endpoint dispatch chains.
+	rules = append(rules, r.filterFromHEP(ipVersion)...)
+
+	// Jump to workload dispatch chains - from wl only as we we are in INPUT to proxy and
+	// we do not know the output ifaces, thus the to-wl must be done after proxy.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
+		ifaceMatch := prefix + "+"
+		rules = append(rules,
+			Rule{
+				Match:  Match().InInterface(ifaceMatch),
+				Action: JumpAction{Target: ChainFromWorkloadDispatch},
+			},
+		)
+	}
+
+	// Accept packet if policies above set ACCEPT mark.
+	rules = append(rules,
+		Rule{
+			Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
+			Action:  r.filterAllowAction,
+			Comment: []string{"Policy explicitly accepted packet."},
+		},
+	)
+
+	return rules
+}
+
+func (r *DefaultRuleRenderer) tproxyOutputPolicyRules(ipVersion uint8) []Rule {
+	rules := []Rule{}
+
+	// Jump to workload dispatch chains.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
+		ifaceMatch := prefix + "+"
+		rules = append(rules,
+			Rule{
+				Match:  Match().OutInterface(ifaceMatch),
+				Action: JumpAction{Target: ChainToWorkloadDispatch},
+			},
+		)
+	}
+
+	return rules
+}
+
 func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
 	result := []*Chain{}
 	result = append(result,
@@ -50,6 +101,13 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain 
 	)
 	if r.KubeIPVSSupportEnabled {
 		result = append(result, r.StaticFilterInputForwardCheckChain(ipVersion))
+	}
+	if r.TPROXYModeEnabled() && r.BPFEnabled == false {
+		result = append(result,
+			&Chain{
+				Name:  ChainFilterInputTProxy,
+				Rules: r.tproxyInputPolicyRules(ipVersion),
+			})
 	}
 	return result
 }
@@ -209,6 +267,17 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *Chai
 
 func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
+
+	if r.TPROXYModeEnabled() {
+		mark := r.IptablesMarkProxy
+		inputRules = append(inputRules,
+			Rule{
+				Comment: []string{"Police packets towards proxy"},
+				Match:   Match().MarkMatchesWithMask(mark, mark),
+				Action:  JumpAction{Target: ChainFilterInputTProxy},
+			},
+		)
+	}
 
 	// Snoop DNS responses to a client directly on this host (e.g. bare metal, or a
 	// host-networked workload).  Place this first as it only snoops and does not accept or
@@ -578,6 +647,23 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string, ipVersion uint8) *C
 	}
 }
 
+func (r *DefaultRuleRenderer) filterFromHEP(ipVersion uint8) []Rule {
+	return []Rule{
+		{
+			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
+			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
+			// Similarly, the IPsec bit is used across multiple tables.
+			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
+		},
+		{
+			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
+			// was not accepted in a previous raw or pre-DNAT chain.
+			Match:  Match().MarkClear(r.IptablesMarkAccept),
+			Action: JumpAction{Target: ChainDispatchFromHostEndPointForward},
+		},
+	}
+}
+
 func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chain {
 	rules := []Rule{}
 
@@ -604,20 +690,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	}
 
 	// Jump to from-host-endpoint dispatch chains.
-	rules = append(rules,
-		Rule{
-			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
-			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
-			// Similarly, the IPsec bit is used across multiple tables.
-			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
-		},
-		Rule{
-			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
-			// was not accepted in a previous raw or pre-DNAT chain.
-			Match:  Match().MarkClear(r.IptablesMarkAccept),
-			Action: JumpAction{Target: ChainDispatchFromHostEndPointForward},
-		},
-	)
+	rules = append(rules, r.filterFromHEP(ipVersion)...)
 
 	// Jump to workload dispatch chains.
 	for _, prefix := range r.WorkloadIfacePrefixes {
@@ -754,11 +827,32 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain
 		result = append(result, r.StaticFilterOutputForwardEndpointMarkChain())
 	}
 
+	if r.TPROXYModeEnabled() && r.BPFEnabled == false {
+		result = append(result,
+			&Chain{
+				Name:  ChainFilterOutputTProxy,
+				Rules: r.tproxyOutputPolicyRules(ipVersion),
+			})
+	}
+
 	return result
 }
 
 func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 	var rules []Rule
+
+	if r.TPROXYModeEnabled() {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Police packets from proxy"},
+				// Atm any traffic from local host that does not have a local source.
+				// XXX that would not work well for nodeports if we let proxy to use local
+				// XXX source instead of passing it through MASQUERADE
+				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
+				Action: JumpAction{Target: ChainFilterOutputTProxy},
+			},
+		)
+	}
 
 	// Accept immediately if we've already accepted this packet in the raw or mangle table.
 	rules = append(rules, r.acceptAlreadyAccepted()...)
@@ -1071,6 +1165,66 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		}
 	}
 
+	if r.TPROXYModeEnabled() {
+		mark := r.IptablesMarkProxy
+
+		// We match in this chain if the packet is either on an established
+		// connection that is proxied and marked accordingly.
+		tproxyEstablRules := []Rule{
+			{
+				Comment: []string{"Restore proxy mark from connection if not set"},
+				Match:   Match().MarkClear(mark),
+				Action:  RestoreConnMarkAction{RestoreMask: mark},
+			},
+			{
+				Comment: []string{"Accept packets destined to proxy on existing connection"},
+				Match:   Match().MarkMatchesWithMask(mark, mark),
+				Action:  AcceptAction{}, // XXX should this be r.mangleAllowAction ?
+			},
+		}
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyEstabl, Rules: tproxyEstablRules})
+
+		tproxyRules := []Rule{
+			{
+				Comment: []string{"Mark the connection so that subsequent packets go to proxy"},
+				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			},
+			{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("tcp"),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
+			},
+			{
+				Comment: []string{"Divert the UDP connection to proxy"},
+				Match:   Match().Protocol("udp"),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
+			},
+			{
+				Comment: []string{"Unmark non-proxied"},
+				Action:  SetConnMarkAction{Mark: 0, Mask: mark},
+			},
+		}
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxy, Rules: tproxyRules})
+
+		nameForIPSet := func(ipsetID string) string {
+			if ipVersion == 4 {
+				return r.IPSetConfigV4.NameForMainIPSet(ipsetID)
+			} else {
+				return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
+			}
+		}
+		chains = append(chains, &Chain{
+			Name: ChainManglePreroutingTProxySelect,
+			Rules: []Rule{{
+				Comment: []string{"Proxy selected destinations"},
+				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
+			}},
+		})
+	}
+
 	chains = append(chains,
 		r.failsafeInChain("mangle", ipVersion),
 		r.failsafeOutChain("mangle", ipVersion),
@@ -1093,6 +1247,16 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 	// for dropping packets, so it is very unlikely that we would be circumventing someone
 	// else's rule to drop a packet.  (And in that case, the user can configure
 	// IptablesMangleAllowAction to be RETURN.)
+	if r.TPROXYModeEnabled() {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Check if should be proxied when established"},
+				Match:   Match().ConntrackState("RELATED,ESTABLISHED"),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+			},
+		)
+	}
+
 	rules = append(rules,
 		Rule{
 			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1127,6 +1291,15 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
 	)
+
+	if r.TPROXYModeEnabled() {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Check if it is a new connection to be proxied"},
+				Action:  JumpAction{Target: ChainManglePreroutingTProxySelect},
+			},
+		)
+	}
 
 	return &Chain{
 		Name:  ChainManglePrerouting,

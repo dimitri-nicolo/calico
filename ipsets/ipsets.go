@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -260,9 +260,11 @@ func (s *IPSets) filterAndCanonicaliseMembers(ipSetType IPSetType, members []str
 	filtered := set.New()
 	wantIPV6 := s.IPVersionConfig.Family == IPFamilyV6
 	for _, member := range members {
-		isIPV6 := ipSetType.IsMemberIPV6(member)
-		if wantIPV6 != isIPV6 {
-			continue
+		if ipSetType != IPSetTypeBitmapPort { // ports do not have a family
+			isIPV6 := ipSetType.IsMemberIPV6(member)
+			if wantIPV6 != isIPV6 {
+				continue
+			}
 		}
 		filtered.Add(ipSetType.CanonicaliseMember(member))
 	}
@@ -763,7 +765,7 @@ func (s *IPSets) writeUpdates(ipSet *ipSet, w io.Writer) error {
 
 // writeFullRewrite calculates the ipset restore input required to do a full, atomic, idempotent
 // rewrite of the IP set and writes it to the given io.Writer.
-func (s *IPSets) writeFullRewrite(ipSet *ipSet, out io.Writer, logCxt log.FieldLogger) (err error) {
+func (s *IPSets) writeFullRewrite(ips *ipSet, out io.Writer, logCxt log.FieldLogger) (err error) {
 	// writeLine until an error occurs, writeLine writes a line to the output, after an error,
 	// it is a no-op.
 	writeLine := func(format string, a ...interface{}) {
@@ -783,24 +785,34 @@ func (s *IPSets) writeFullRewrite(ipSet *ipSet, out io.Writer, logCxt log.FieldL
 		countNumIPSetLinesExecuted.Inc()
 	}
 
+	createSet := func(name string, family IPFamily, ips *ipSet) {
+		switch ips.Type {
+		case IPSetTypeBitmapPort:
+			writeLine("create %s %s range %d-%d",
+				name, ips.Type, ips.RangeMin, ips.RangeMax)
+		default:
+			// assumes hash
+			writeLine("create %s %s family %s maxelem %d",
+				name, ips.Type, s.IPVersionConfig.Family, ips.MaxSize)
+		}
+	}
+
 	// Our general approach is to create a temporary IP set with the right contents, then
 	// atomically swap it into place.
-	mainSetName := ipSet.MainIPSetName
+	mainSetName := ips.MainIPSetName
 	if !s.existingIPSetNames.Contains(mainSetName) {
 		// Create empty main IP set so we can share the atomic swap logic below.
 		// Note: we can't use the -exist flag (which should make the create idempotent)
 		// because it still fails if the IP set was previously created with different
 		// parameters.
-		logCxt.WithField("setID", ipSet.SetID).Debug("Pre-creating main IP set")
-		writeLine("create %s %s family %s maxelem %d",
-			mainSetName, ipSet.Type, s.IPVersionConfig.Family, ipSet.MaxSize)
+		logCxt.WithField("setID", ips.SetID).Debug("Pre-creating main IP set")
+		createSet(mainSetName, s.IPVersionConfig.Family, ips)
 	}
 	tempSetName := s.nextFreeTempIPSetName()
 	// Create the temporary IP set with the current parameters.
-	writeLine("create %s %s family %s maxelem %d",
-		tempSetName, ipSet.Type, s.IPVersionConfig.Family, ipSet.MaxSize)
+	createSet(tempSetName, s.IPVersionConfig.Family, ips)
 	// Write all the members into the temporary IP set.
-	ipSet.pendingReplace.Iter(func(item interface{}) error {
+	ips.pendingReplace.Iter(func(item interface{}) error {
 		member := item.(ipSetMember)
 		writeLine("add %s %s", tempSetName, member)
 		return nil

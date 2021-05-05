@@ -57,13 +57,16 @@ import (
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/felix/netlinkshim"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/throttle"
@@ -757,6 +760,22 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
+	ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
+	ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
+	dp.ipSets = append(dp.ipSets, ipSetsV6)
+
+	if config.RulesConfig.TPROXYModeEnabled() {
+		// add empty ipsets in data plan for felix ip table programming
+		ipSetsV4.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
+			[]string{},
+		)
+		ipSetsV6.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
+			[]string{},
+		)
+	}
+
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 		// Register map managers first since they create the maps that will be used by the endpoint manager.
@@ -1049,9 +1068,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			iptablesOptions,
 		)
 
-		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
-		dp.ipSets = append(dp.ipSets, ipSetsV6)
 		dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV6)
 		dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV6)
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
@@ -1750,6 +1766,64 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			Action: iptables.JumpAction{Target: rules.ChainManglePostrouting},
 		})
 		t.InsertOrAppendRules("POSTROUTING", rs)
+
+		if d.config.RulesConfig.TPROXYModeEnabled() {
+			mark := d.config.RulesConfig.IptablesMarkProxy
+			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{
+				{
+					// Proxied connections for regular services do not have
+					// local source nor destination. This is how we can easily
+					// identify the upstream part and mark it.
+					Comment: []string{"Mark any non-local connection as local for return"},
+					Match: iptables.Match().
+						NotSrcAddrType(iptables.AddrTypeLocal, false).
+						NotDestAddrType(iptables.AddrTypeLocal, false),
+					Action: iptables.SetConnMarkAction{Mark: mark, Mask: mark},
+				},
+			})
+
+			// XXX rt and rr should not be GC I guess, so we will need to
+			// XXX maintain a reference
+			rt := routetable.New(
+				nil,
+				4,     // XXX we should for both
+				false, // vxlan
+				d.config.NetlinkTimeout,
+				nil, // deviceRouteSourceAddress
+				d.config.DeviceRouteProtocol,
+				true, // removeExternalRoutes
+				0xe0, // XXX to be configurable
+				d.loopSummarizer,
+			)
+			rr, err := routerule.New(
+				4,
+				1, // routing priority
+				set.From(0xe0),
+				routerule.RulesMatchSrcFWMarkTable,
+				routerule.RulesMatchSrcFWMarkTable,
+				d.config.NetlinkTimeout,
+				func() (routerule.HandleIface, error) {
+					return netlinkshim.NewRealNetlink()
+				},
+				d.loopSummarizer,
+			)
+			if err != nil {
+				log.WithError(err).Panic("Unexpected error creating rule manager")
+			}
+
+			anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
+			rt.RouteUpdate("lo", routetable.Target{
+				Type: routetable.TargetTypeLocal,
+				CIDR: anyV4,
+			})
+			rt.Apply()
+
+			rr.SetRule(routerule.NewRule(4, 1).
+				GoToTable(0xe0).
+				MatchFWMarkWithMask(uint32(mark), uint32(mark)),
+			)
+			rr.Apply()
+		}
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {

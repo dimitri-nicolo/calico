@@ -157,6 +157,19 @@ func StartDataplaneDriver(configParams *config.Config,
 			}
 		}
 
+		var markProxy uint32
+
+		if configParams.TPROXYModeEnabled() {
+			log.Infof("TPROXYMode %s, allocating a mark bit", configParams.TPROXYMode)
+			markProxy, _ = markBitsManager.NextSingleBitMark()
+			if markProxy == 0 {
+				log.WithFields(log.Fields{
+					"Name":     "felix-iptables",
+					"MarkMask": allowedMarkBits,
+				}).Panic("Failed to allocate a mark bit for proxy, not enough mark bits available.")
+			}
+		}
+
 		// markPass and the scratch-1 bits are only used in iptables mode.
 		if markAccept == 0 || markScratch0 == 0 || !configParams.BPFEnabled && (markPass == 0 || markScratch1 == 0) {
 			log.WithFields(log.Fields{
@@ -338,6 +351,10 @@ func StartDataplaneDriver(configParams *config.Config,
 				NATOutgoingAddress:                 configParams.NATOutgoingAddress,
 				BPFEnabled:                         configParams.BPFEnabled,
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
+
+				TPROXYMode:        configParams.TPROXYMode,
+				TPROXYPort:        configParams.TPROXYPort,
+				IptablesMarkProxy: markProxy,
 			},
 
 			Wireguard: wireguard.Config{
