@@ -144,6 +144,7 @@ happens to be on the same node as the client).
 -  [Copy pull secret into egress gateway namespace](#copy-pull-secret-into-egress-gateway-namespace)
 -  [Deploy a group of egress gateways](#deploy-a-group-of-egress-gateways)
 -  [Configure a Namespace or Pod to use egress gateways](#configure-a-namespace-or-pod-to-use-egress-gateways)
+-  [Optionally enable ECMP load balancing](#optionally-enable-ecmp-load-balancing)
 -  [Verify the feature operation](#verify-the-feature-operation)
 
 #### Enable egress gateway support
@@ -321,6 +322,20 @@ spec:
   ...
 EOF
 ```
+
+#### Optionally enable ECMP load balancing
+
+If you are provisioning multiple egress gateways for a given client pod, and you want
+traffic from that client to load balance across the available gateways, set the
+`fib_multipath_hash_policy`
+[sysctl](https://sysctl-explorer.net/net/ipv4/fib_multipath_hash_policy/) to allow that:
+
+```bash
+sudo sysctl -w net.ipv4.fib_multipath_hash_policy=1
+```
+
+You will need this on each node with clients that you want to load balance across multiple
+egress gateways.
 
 #### Verify the feature operation
 
