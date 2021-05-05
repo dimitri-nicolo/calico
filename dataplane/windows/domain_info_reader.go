@@ -71,7 +71,7 @@ func (r *domainInfoReader) Start(msgChan chan common.DataWithTimestamp) {
 
 	r.storeMsgChannel = msgChan
 
-	r.etwOps.SubscribeToPktMon(r.msgChannel, r.stopChannel, r.trustedServers)
+	r.etwOps.SubscribeToPktMon(r.msgChannel, r.stopChannel, r.trustedServers, true, "")
 
 	go r.loop()
 }
