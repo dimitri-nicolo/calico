@@ -463,32 +463,68 @@ EarlyNetworkConfiguration prepared above, so that EarlyNetworkConfiguration YAML
 copied into a file on the node (here, `/calico-early/cfg.yaml`) and mapped into the
 {{site.nodecontainer}} container.
 
-Exactly **how** to arrange for this container to run will depend on your platform's
-workflow for adding a node to the cluster.
+We recommend defining systemd services to ensure that early networking runs on each boot,
+and before kubelet starts on the node.  Following is an example that may need tweaking for
+your particular platform, but that illustrates the important points.
 
--  If the workflow allows intervention before Kubernetes starts installing on the new
-   node, you can create a service to run the container, enabled to run on subsequent
-   boots.  For example, as a systemd unit:
+Firstly, a "calico-early" service that runs the Calico early networking on each boot:
 
-   ```
-   [Service]
-   ExecStartPre=-/bin/podman rm -f calico-early
-   ExecStartPre=/bin/mkdir -p /calico-early
-   ExecStartPre=/bin/curl -o /calico-early/cfg.yaml http://172.31.1.1:8080/calico-early/cfg.yaml
-   ExecStart=/bin/podman run --privileged --net=host --name=calico-early -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml {{page.registry}}{{site.imageNames["node"]}}:latest
-   [Install]
-   WantedBy=multi-user.target
-   ```
+```
+[Unit]
+Wants=network-online.target
+After=network-online.target
+After=nodeip-configuration.service
+[Service]
+ExecStartPre=/bin/sh -c "rm -f /etc/systemd/system/kubelet.service.d/20-nodenet.conf /etc/systemd/system/crio.service.d/20-nodenet.conf; systemctl daemon-reload"
+ExecStartPre=-/bin/podman rm -f calico-early
+ExecStartPre=/bin/mkdir -p /etc/calico-early
+ExecStartPre=/bin/sh -c "test -f /etc/calico-early/details.yaml || /bin/curl -o /etc/calico-early/details.yaml http://172.31.1.1:8080/calico-early/details.yaml"
+ExecStart=/bin/podman run --rm --privileged --net=host --name=calico-early -v /etc/calico-early:/etc/calico-early -e CALICO_EARLY_NETWORKING=/etc/calico-early/details.yaml {{page.registry}}{{site.imageNames["node"]}}:latest
+[Install]
+WantedBy=multi-user.target
+```
 
-   This example also shows how you could serve the EarlyNetworkConfiguration for your
-   deployment from a central location.
+> **Note**:
+>
+> - You must also install your Tigera-issued pull secret at `/root/.docker/config.json`,
+>   on each node, to enable pulling from {{page.registry}}.
+>
+> - Some OpenShift versions have a `nodeip-configuration` service that configures
+>   kubelet's `--node-ip` option **wrongly** for a dual ToR setup.  The
+>   `After=nodeip-configuration.service` setting and the deletion of `20-nodenet.conf`
+>   undo that service's work so that kubelet can choose its own IP correctly (using a
+>   reverse DNS lookup).
+>
+> - The `/bin/curl ...` line shows how you can download the EarlyNetworkConfiguration
+>   YAML from a central hosting point within your cluster.
+{: .alert .alert-info}
 
-   Then reboot, so that the dual ToR setup happens, and then allow Kubernetes installation
-   to continue.
+Secondly, a "calico-early-wait" service that delays kubelet until after the Calico early
+networking setup is in place:
 
--  If the workflow does not allow, the platform may have an abstraction for achieving the
-   same thing.  For example, OpenShift's `MachineConfig` API can be used to specify files
-   and a systemd unit (as above) to be installed and enabled on each new node.
+```
+[Unit]
+After=calico-early.service
+Before=kubelet.service
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "while sleep 5; do grep -q 00000000:1FF3 /proc/net/tcp && break; done"
+[Install]
+WantedBy=multi-user.target
+```
+
+> **Note**:
+>
+> - The `ExecStart` line here arranges that kubelet will not start running until the
+>   calico-early service has started listening on port 8179 (hex `1FF3`).  8179 is the
+>   port that the calico-early service uses for pre-Kubernetes BGP.
+{: .alert .alert-info}
+
+On OpenShift you should wrap the above service definitions in `MachineConfig` resources
+for the control and worker nodes.
+
+On other platforms either define and enable the above services directly, or use
+whatever API the platform provides to define and enable services on new nodes.
 
 #### Configure your ToR routers and infrastructure
 
