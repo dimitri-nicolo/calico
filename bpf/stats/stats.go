@@ -15,6 +15,7 @@ package stats
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/projectcalico/felix/bpf/tc"
 )
@@ -24,6 +25,12 @@ func AttachTcpStatsBpfProgram(ifaceName, logLevel string, nsID uint16) error {
 	if err != nil {
 		return err
 	}
+
+	logLevel = strings.ToLower(logLevel)
+	if logLevel == "off" {
+		logLevel = "no_log"
+	}
+
 	fileName := fmt.Sprintf("tcp_%s_stats.o", logLevel)
 	return tc.AttachTcpStatsProgram(ifaceName, fileName, nsID)
 }
