@@ -1070,6 +1070,58 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		}
 	}
 
+	if r.TPROXYMode == "Enabled" {
+		mark := r.IptablesMarkProxy
+
+		// We match in this chain if the packet is either on an established
+		// connection that is proxied and marked accordingly.
+		tproxyEstablRules := []Rule{
+			{
+				Comment: []string{"Restore proxy mark from connection if not set"},
+				Match:   Match().MarkClear(mark),
+				Action:  RestoreConnMarkAction{RestoreMask: mark},
+			},
+			{
+				Comment: []string{"Accept packets destined to proxy on existing connection"},
+				Match:   Match().MarkMatchesWithMask(mark, mark),
+				Action:  AcceptAction{}, // XXX should this be r.mangleAllowAction ?
+			},
+		}
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTPROXYEstabl, Rules: tproxyEstablRules})
+
+		tproxyRules := []Rule{
+			{
+				Comment: []string{"Mark packet of a new proxied connection"},
+				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			},
+			{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("tcp"),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
+			},
+			{
+				Comment: []string{"Divert the UDP connection to proxy"},
+				Match:   Match().Protocol("udp"),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
+			},
+		}
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTPROXY, Rules: tproxyRules})
+
+		if !r.BPFEnabled {
+			chains = append(chains, &Chain{
+				Name: ChainManglePreroutingTPROXYSelect,
+				// XXX just for prototyping XXX
+				Rules: []Rule{{
+					Comment: []string{"Proxy all tcp port 8090"},
+					Match:   Match().Protocol("tcp"),
+					Action:  JumpAction{Target: ChainManglePreroutingTPROXY},
+				}},
+			})
+		}
+	}
+
 	chains = append(chains,
 		r.failsafeInChain("mangle", ipVersion),
 		r.failsafeOutChain("mangle", ipVersion),
@@ -1092,6 +1144,16 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 	// for dropping packets, so it is very unlikely that we would be circumventing someone
 	// else's rule to drop a packet.  (And in that case, the user can configure
 	// IptablesMangleAllowAction to be RETURN.)
+	if r.TPROXYMode == "Enabled" {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Check if should be proxied when established"},
+				Match:   Match().ConntrackState("RELATED,ESTABLISHED"),
+				Action:  JumpAction{Target: ChainManglePreroutingTPROXYEstabl},
+			},
+		)
+	}
+
 	rules = append(rules,
 		Rule{
 			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1126,6 +1188,15 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
 	)
+
+	if r.TPROXYMode == "Enabled" {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Check if it is a new connection to be proxied"},
+				Action:  JumpAction{Target: ChainManglePreroutingTPROXYSelect},
+			},
+		)
+	}
 
 	return &Chain{
 		Name:  ChainManglePrerouting,

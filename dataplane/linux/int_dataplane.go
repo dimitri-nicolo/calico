@@ -733,7 +733,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 		if err := installKprobes(); err != nil {
 			log.WithError(err).Error("error installing kprobes. skipping it")
-			config.FlowLogsCollectProcessInfo = false;
+			config.FlowLogsCollectProcessInfo = false
 		} else {
 			log.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
@@ -1731,6 +1731,21 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			Action: iptables.JumpAction{Target: rules.ChainManglePostrouting},
 		})
 		t.InsertOrAppendRules("POSTROUTING", rs)
+
+		if d.config.RulesConfig.TPROXYMode == "Enabled" {
+			mark := d.config.RulesConfig.IptablesMarkProxy
+			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{
+				{
+					Comment: []string{"Mark the connection if it is marked as from proxy"},
+					Match:   iptables.Match().MarkMatchesWithMask(mark, mark),
+					Action:  iptables.SaveConnMarkAction{SaveMask: mark},
+				},
+				{
+					Comment: []string{"Clear the proxy mark not to tamper with routing"},
+					Action:  iptables.ClearMarkAction{Mark: mark},
+				},
+			})
+		}
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {

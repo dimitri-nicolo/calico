@@ -53,10 +53,13 @@ const (
 	ChainNATOutput           = ChainNamePrefix + "OUTPUT"
 	ChainNATOutgoing         = ChainNamePrefix + "nat-outgoing"
 
-	ChainManglePrerouting        = ChainNamePrefix + "PREROUTING"
-	ChainManglePostrouting       = ChainNamePrefix + "POSTROUTING"
-	ChainManglePreroutingEgress  = ChainNamePrefix + "pre-egress"
-	ChainManglePostroutingEgress = ChainNamePrefix + "post-egress"
+	ChainManglePrerouting             = ChainNamePrefix + "PREROUTING"
+	ChainManglePostrouting            = ChainNamePrefix + "POSTROUTING"
+	ChainManglePreroutingEgress       = ChainNamePrefix + "pre-egress"
+	ChainManglePostroutingEgress      = ChainNamePrefix + "post-egress"
+	ChainManglePreroutingTPROXY       = ChainNamePrefix + "TPROXY"
+	ChainManglePreroutingTPROXYEstabl = ChainNamePrefix + "TPROXY-establ"
+	ChainManglePreroutingTPROXYSelect = ChainNamePrefix + "TPROXY-selec"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -339,6 +342,9 @@ type Config struct {
 	// to mark non-calico (workload or host) endpoint.
 	IptablesMarkNonCaliEndpoint uint32
 
+	// IptablesMarkProxy marks packets that are to/from proxy.
+	IptablesMarkProxy uint32
+
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
 
@@ -392,6 +398,9 @@ type Config struct {
 	EgressIPInterface string
 
 	DNSTrustedServers []config.ServerPort
+
+	TPROXYMode string
+	TPROXYPort int
 }
 
 var unusedBitsInBPFMode = map[string]bool{
@@ -415,6 +424,10 @@ func (c *Config) validate() {
 			fieldName == "IptablesMarkEgress" {
 			// These mark bits are only used when needed (by IPVS, IPsec and Egress IP support, respectively) so we allow them to
 			// be zero.
+			continue
+		}
+		// Not set if Proxy is not enabled
+		if fieldName == "IptablesMarkProxy" && c.TPROXYMode != "Enabled" {
 			continue
 		}
 		if strings.HasPrefix(fieldName, "IptablesMark") {
