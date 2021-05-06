@@ -70,7 +70,17 @@ The basic requirement for eBPF mode is to have a recent-enough kernel:
 If {{site.prodname}} does not detect a compatible kernel, {{site.prodname}} will emit a warning and
 fall back to standard linux networking.
 
-See the tabs below for more detail on how to set up a suitable cluster with each distribution:
+eBPF mode is compatible with most of the Kubernetes distributions that {{site.prodname}} supports. However, there are
+some exceptions:
+
+* GKE is not supported.  This is because of an incompatibility with the GKE CNI plugin.  A fix for the 
+  issue has already been accepted upstream but at the time of writing it is not publicly available.
+  
+* Docker Enterprise is not supported.  This is because there is no suitable way to configure {{site.prodname}} to 
+  reach the API server.  (Docker Enterprise uses a per-node proxy between `kube-proxy` and the API server rather
+  than, for example, a DNS record.)
+
+See the tabs below for more detail on how to set up a suitable cluster with the supported distributions:
 
 {% tabs tab-group:grp1 %}
 <label:Generic or kubeadm,active:true>
@@ -163,13 +173,6 @@ Since Bottlerocket places the Kubelet's plugin directory in a different location
 the `flexVolumePath` setting to the operator `Installation` resource as described below.
 
 %>
-<label:MKE>
-<%
-
-Mirantis' MKE supports a number of base OSes; as long as the base OS chosen (such as Ubuntu 20.04) meets the kernel
-requirements, MKE-provisioned clusters are supported.
-
-%>
 <label:RKE>
 <%
 
@@ -253,12 +256,6 @@ Kubernetes master is running at https://60F939227672BC3D5A1B3EC9744B2B21.gr7.us-
 ```
 In this example, you would use `60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com` for
 `KUBERNETES_SERVICE_HOST` and `443` for `KUBERNETES_SERVICE_PORT` when creating the config map.
-
-%>
-<label:MKE>
-<%
-
-# FIXME How to find URL for MKE?
 
 %>
 <label:RKE>
@@ -429,16 +426,16 @@ kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nod
 Then, should you want to start `kube-proxy` again, you can simply remove the node selector.
 
 %>
-<label:MKE>
-<%
-
-# FIXME disable kube-proxy for MKE?
-
-%>
 <label:RKE>
 <%
 
-# FIXME disable kube-proxy for RKE?
+In an RKE system, `kube-proxy` runs outside of Kubernetes as a Docker container and RKE does not provide a way to 
+disable it.  To ensure `kube-proxy` and {{site.prodname}} don't fight, set the Felix configuration parameter `bpfKubeProxyIptablesCleanupEnabled` to false.  This can be done with
+`kubectl` as follows:
+
+```
+kubectl patch felixconfiguration.p default --type merge --patch='{"spec": {"bpfKubeProxyIptablesCleanupEnabled": false}}'
+```
 
 %>
 {% endtabs %}
