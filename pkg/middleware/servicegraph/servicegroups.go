@@ -4,6 +4,7 @@ package servicegraph
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
@@ -12,7 +13,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-// This file implements a service group organizer and pre-request cache. It effectively defines the concept of a service
+// This file implements a service group organizer per-request cache. It effectively defines the concept of a service
 // group which is a group of services that are related by a common set of endpoints. It is careful with HostEndpoints,
 // NetworkSets, GlobalNetworkSets and networks - ensuring that when included in a service, they are unrelated to the
 // same endpoint not in a service (i.e. A "pub" Network in service X will be a separate graph node from a "pub"
@@ -65,7 +66,7 @@ type ServiceGroups interface {
 // ServiceGroup contains the endpoint and service information for a single service group.
 type ServiceGroup struct {
 	// The ID for this service group.
-	ID string
+	ID v1.GraphNodeID
 
 	// The set of services in this group.
 	Services []types.NamespacedName
@@ -307,22 +308,21 @@ func (s *serviceGroups) migrateReferences(from, to *ServiceGroup) {
 // set of names.
 type nameCalculator struct {
 	names map[string]bool
-	name  string
 }
 
 // Add a name to the calculator.
 func (nc *nameCalculator) add(name string) {
-	if nc.name == "" {
-		nc.name = name
-	} else if nc.names[name] {
-		nc.name += "/" + name
-	}
 	nc.names[name] = true
 }
 
 // Return a name constructed from a  unique combination of the names.
 func (nc *nameCalculator) combined() string {
-	return nc.name
+	names := make([]string, 0, len(nc.names))
+	for name := range nc.names {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return strings.Join(names, "/")
 }
 
 // Return the unique name. If there are multiple different names then return a "*".
@@ -330,5 +330,8 @@ func (nc *nameCalculator) uniq() string {
 	if len(nc.names) > 1 {
 		return "*"
 	}
-	return nc.name
+	for name := range nc.names {
+		return name
+	}
+	return ""
 }

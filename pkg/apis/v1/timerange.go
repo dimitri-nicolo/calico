@@ -11,8 +11,13 @@ import (
 )
 
 type TimeRange struct {
-	From *time.Time `json:"from"`
-	To   *time.Time `json:"to"`
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+}
+
+type timeRangeInternal struct {
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 // UnmarshalJSON implements the unmarshalling interface for JSON.
@@ -20,10 +25,7 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 	var err error
 
 	// Just extract the timestamp and kind fields from the blob.
-	s := new(struct {
-		From string `json:"from"`
-		To   string `json:"to"`
-	})
+	s := new(timeRangeInternal)
 	if err = json.Unmarshal(b, s); err != nil {
 		log.WithError(err).Debug("Unable to unmarshal time")
 		return err
@@ -37,8 +39,8 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 		log.WithError(err).Debug("Unable to parse 'to' time")
 		return err
 	} else {
-		t.From = from
-		t.To = to
+		t.From = *from
+		t.To = *to
 	}
 	return nil
 }
@@ -47,15 +49,9 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 // implementation doesn't honor the "inline" directive when the parameter is an interface type.
 func (t *TimeRange) MarshalJSON() ([]byte, error) {
 	// Just extract the timestamp and kind fields from the blob.
-	s := new(struct {
-		From string `json:"from"`
-		To   string `json:"to"`
-	})
-	if t.From != nil {
-		s.From = t.From.UTC().Format(time.RFC3339)
-	}
-	if t.To != nil {
-		s.To = t.To.UTC().Format(time.RFC3339)
+	s := timeRangeInternal{
+		From: t.From.UTC().Format(time.RFC3339),
+		To:   t.To.UTC().Format(time.RFC3339),
 	}
 	return json.Marshal(s)
 }

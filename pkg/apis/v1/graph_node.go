@@ -24,18 +24,18 @@ const (
 	GraphNodeTypeNetwork      GraphNodeType = "net"
 	GraphNodeTypeNetworkSet   GraphNodeType = "ns"
 	GraphNodeTypeNode         GraphNodeType = "node"
-	GraphNodeTypeNodeGroup    GraphNodeType = "nodegp"
 	GraphNodeTypePort         GraphNodeType = "port"
-	GraphNodeTypeProcess      GraphNodeType = "process"
 	GraphNodeTypeUnknown      GraphNodeType = ""
 )
 
+type GraphNodeID string
+
 type GraphNode struct {
 	// The ID of this graph node. See doc file in /pkg/apis/es for details on the node ID construction.
-	ID string `json:"id"`
+	ID GraphNodeID `json:"id"`
 
 	// The parent (or outer) node.
-	ParentID string `json:"parent_id"`
+	ParentID GraphNodeID `json:"parent_id"`
 
 	// Node metadata.
 	Type        GraphNodeType `json:"type"`
@@ -53,9 +53,9 @@ type GraphNode struct {
 	// graph because they are part of an expanded service are not included in this aggregated set.
 	AggregatedProtoPorts *AggregatedProtoPorts `json:"aggregated_proto_ports,omitempty"`
 
-	// Traffic stats for packets flowing between endpoints within this graph node. Each entry corresponds to the
+	// Stats for packets flowing between endpoints within this graph node. Each entry corresponds to the
 	// a time slice as specified in the main response object.
-	TrafficStats []GraphTrafficStats `json:"traffic_stats,omitempty"`
+	Stats []GraphStats `json:"stats,omitempty"`
 
 	// Whether this node is further expandable. In other words if this node is added as an `Expanded` node to
 	// the `GraphView` then the results will return additional nodes and edges.
@@ -70,14 +70,17 @@ type GraphNode struct {
 	// The selectors provide the set of selector expressions used to access the raw data that corresponds to this
 	// graph node.
 	Selectors GraphSelectors `json:"selectors"`
+
+	// The set of events correlated to this node
+	EventIDs GraphEventIDs `json:"event_ids,omitempty"`
 }
 
-func (n *GraphNode) Include(ts []GraphTrafficStats) {
-	if n.TrafficStats == nil {
-		n.TrafficStats = ts
+func (n *GraphNode) IncludeStats(ts []GraphStats) {
+	if n.Stats == nil {
+		n.Stats = ts
 	} else if ts != nil {
-		for i := range n.TrafficStats {
-			n.TrafficStats[i] = n.TrafficStats[i].Combine(ts[i])
+		for i := range n.Stats {
+			n.Stats[i] = n.Stats[i].Combine(ts[i])
 		}
 	}
 }
@@ -137,6 +140,13 @@ func (n *GraphNode) IncludeService(s types.NamespacedName) {
 		n.Services = make(Services)
 	}
 	n.Services[s] = struct{}{}
+}
+
+func (n *GraphNode) IncludeEvent(id string) {
+	if n.EventIDs == nil {
+		n.EventIDs = make(GraphEventIDs)
+	}
+	n.EventIDs[id] = struct{}{}
 }
 
 func (n GraphNode) String() string {
@@ -216,4 +226,15 @@ func (s SortableServices) Less(i, j int) bool {
 }
 func (s SortableServices) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
+}
+
+type GraphEventIDs map[string]struct{}
+
+func (e GraphEventIDs) MarshalJSON() ([]byte, error) {
+	var ids []string
+	for id := range e {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return json.Marshal(ids)
 }

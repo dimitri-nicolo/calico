@@ -14,7 +14,7 @@ import (
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/flows"
+	"github.com/tigera/es-proxy/pkg/middleware/common"
 )
 
 // This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given
@@ -70,38 +70,71 @@ var (
 		{Name: "source_type", Field: "source_type"},
 		{Name: "source_namespace", Field: "source_namespace"},
 		{Name: "source_name_aggr", Field: "source_name_aggr"},
-		{Name: "process_name", Field: "source_name_aggr"},
+		{Name: "process_name", Field: "process_name"},
 		{Name: "reporter", Field: "reporter"},
 		{Name: "action", Field: "action"},
 	}
 	zeroGraphTCPStats = v1.GraphTCPStats{}
 )
 
+const (
+	//TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
+	//           memory footprint.  Possibly a significant saving with large clusters or long time ranges.  These
+	//           could be anything really as long as each is unique.
+	flowAggSumNumFlows                 = "sum_num_flows"
+	flowAggSumNumFlowsStarted          = "sum_num_flows_started"
+	flowAggSumNumFlowsCompleted        = "sum_num_flows_completed"
+	flowAggSumPacketsIn                = "sum_packets_in"
+	flowAggSumBytesIn                  = "sum_bytes_in"
+	flowAggSumPacketsOut               = "sum_packets_out"
+	flowAggSumBytesOut                 = "sum_bytes_out"
+	flowAggSumTCPRetranmissions        = "sum_tcp_total_retransmissions"
+	flowAggSumTCPLostPackets           = "sum_tcp_lost_packets"
+	flowAggSumTCPUnrecoveredTO         = "sum_tcp_unrecovered_to"
+	flowAggMinProcessNames             = "process_names_min_num"
+	flowAggMinProcessIds               = "process_ids_min_num"
+	flowAggMinTCPSendCongestionWindow  = "tcp_min_send_congestion_window"
+	flowAggMinTCPMSS                   = "tcp_min_mss"
+	flowAggMaxProcessNames             = "process_names_max_num"
+	flowAggMaxProcessIds               = "process_ids_max_num"
+	flowAggMaxTCPSmoothRTT             = "tcp_max_smooth_rtt"
+	flowAggMaxTCPMinRTT                = "tcp_max_min_rtt"
+	flowAggMeanTCPSendCongestionWindow = "tcp_mean_send_congestion_window"
+	flowAggMeanTCPSmoothRTT            = "tcp_mean_smooth_rtt"
+	flowAggMeanTCPMinRTT               = "tcp_mean_min_rtt"
+	flowAggMeanTCPMSS                  = "tcp_mean_mss"
+)
+
 var (
 	flowAggregationSums = []lmaelastic.AggSumInfo{
-		{Name: "sum_num_flows_started", Field: "num_flows_started"},
-		{Name: "sum_num_flows_completed", Field: "num_flows_completed"},
-		{Name: "sum_packets_in", Field: "packets_in"},
-		{Name: "sum_bytes_in", Field: "bytes_in"},
-		{Name: "sum_packets_out", Field: "packets_out"},
-		{Name: "sum_bytes_out", Field: "bytes_out"},
-		{Name: "sum_tcp_total_retransmissions", Field: "tcp_total_retransmissions"},
-		{Name: "sum_tcp_lost_packets", Field: "tcp_lost_packets"},
-		{Name: "sum_tcp_unrecovered_to", Field: "tcp_unrecovered_to"},
+		{Name: flowAggSumNumFlows, Field: "num_flows"},
+		{Name: flowAggSumNumFlowsStarted, Field: "num_flows_started"},
+		{Name: flowAggSumNumFlowsCompleted, Field: "num_flows_completed"},
+		{Name: flowAggSumPacketsIn, Field: "packets_in"},
+		{Name: flowAggSumBytesIn, Field: "bytes_in"},
+		{Name: flowAggSumPacketsOut, Field: "packets_out"},
+		{Name: flowAggSumBytesOut, Field: "bytes_out"},
+		{Name: flowAggSumTCPRetranmissions, Field: "tcp_total_retransmissions"},
+		{Name: flowAggSumTCPLostPackets, Field: "tcp_lost_packets"},
+		{Name: flowAggSumTCPUnrecoveredTO, Field: "tcp_unrecovered_to"},
 	}
 	flowAggregationMin = []lmaelastic.AggMaxMinInfo{
-		{Name: "tcp_min_send_congestion_window", Field: "tcp_min_send_congestion_window"},
-		{Name: "tcp_min_mss", Field: "tcp_min_mss"},
+		{Name: flowAggMinProcessNames, Field: "num_process_names"},
+		{Name: flowAggMinProcessIds, Field: "num_process_ids"},
+		{Name: flowAggMinTCPSendCongestionWindow, Field: "tcp_min_send_congestion_window"},
+		{Name: flowAggMinTCPMSS, Field: "tcp_min_mss"},
 	}
 	flowAggregationMax = []lmaelastic.AggMaxMinInfo{
-		{Name: "tcp_max_smooth_rtt", Field: "tcp_max_smooth_rtt"},
-		{Name: "tcp_max_min_rtt", Field: "tcp_max_min_rtt"},
+		{Name: flowAggMaxProcessNames, Field: "num_process_names"},
+		{Name: flowAggMaxProcessIds, Field: "num_process_ids"},
+		{Name: flowAggMaxTCPSmoothRTT, Field: "tcp_max_smooth_rtt"},
+		{Name: flowAggMaxTCPMinRTT, Field: "tcp_max_min_rtt"},
 	}
 	flowAggregationMean = []lmaelastic.AggMeanInfo{
-		{Name: "tcp_mean_send_congestion_window", Field: "tcp_mean_send_congestion_window"},
-		{Name: "tcp_mean_smooth_rtt", Field: "tcp_mean_smooth_rtt"},
-		{Name: "tcp_mean_min_rtt", Field: "tcp_mean_min_rtt"},
-		{Name: "tcp_mean_mss", Field: "tcp_mean_mss"},
+		{Name: flowAggMeanTCPSendCongestionWindow, Field: "tcp_mean_send_congestion_window"},
+		{Name: flowAggMeanTCPSmoothRTT, Field: "tcp_mean_smooth_rtt"},
+		{Name: flowAggMeanTCPMinRTT, Field: "tcp_mean_min_rtt"},
+		{Name: flowAggMeanTCPMSS, Field: "tcp_mean_mss"},
 	}
 )
 
@@ -122,6 +155,7 @@ type L3Flow struct {
 	Edge                 FlowEdge
 	AggregatedProtoPorts *v1.AggregatedProtoPorts
 	Stats                v1.GraphL3Stats
+	Processes            *v1.GraphProcesses
 }
 
 func (f L3Flow) String() string {
@@ -163,13 +197,16 @@ type L3FlowData struct {
 	Flows []L3Flow
 }
 
-func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, t v1.TimeRange) ([]L3Flow, error) {
+func GetL3FlowData(
+	ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange, config *FlowConfig,
+) ([]L3Flow, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 
+	index := common.GetFlowsIndex(cluster)
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   flows.GetTimeRangeQuery(t),
+		Query:                   common.GetEndTimeRangeQuery(t),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: flowCompositeSources,
 		AggSumInfos:             flowAggregationSums,
@@ -189,6 +226,7 @@ func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, 
 		reporter := key[flowReporterIdx].String()
 		action := key[flowActionIdx].String()
 		proto := singleDashToBlank(key[flowProtoIdx].String())
+		processName := singleDashToBlank(key[flowProcessIdx].String())
 		source := FlowEndpoint{
 			Type:      mapRawTypeToGraphNodeType(key[flowSourceTypeIdx].String(), true),
 			NameAggr:  singleDashToBlank(key[flowSourceNameAggrIdx].String()),
@@ -211,36 +249,40 @@ func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, 
 		}
 		destGp := GetServiceGroupFlowEndpointKey(dest)
 		gcs := v1.GraphConnectionStats{
-			Started:   int64(bucket.AggregatedSums["sum_num_flows_started"]),
-			Completed: int64(bucket.AggregatedSums["sum_num_flows_completed"]),
+			TotalPerSampleInterval: int64(bucket.AggregatedSums[flowAggSumNumFlows]),
+			Started:                int64(bucket.AggregatedSums[flowAggSumNumFlowsStarted]),
+			Completed:              int64(bucket.AggregatedSums[flowAggSumNumFlowsCompleted]),
 		}
 		gps := &v1.GraphPacketStats{
-			PacketsIn:  int64(bucket.AggregatedSums["sum_packets_in"]),
-			PacketsOut: int64(bucket.AggregatedSums["sum_packets_out"]),
-			BytesIn:    int64(bucket.AggregatedSums["sum_bytes_in"]),
-			BytesOut:   int64(bucket.AggregatedSums["sum_bytes_out"]),
+			PacketsIn:  int64(bucket.AggregatedSums[flowAggSumPacketsIn]),
+			PacketsOut: int64(bucket.AggregatedSums[flowAggSumPacketsOut]),
+			BytesIn:    int64(bucket.AggregatedSums[flowAggSumBytesIn]),
+			BytesOut:   int64(bucket.AggregatedSums[flowAggSumBytesOut]),
 		}
 
 		var tcp *v1.GraphTCPStats
 		if proto == "tcp" {
 			tcp = &v1.GraphTCPStats{
-				SumTotalRetransmissions:  int64(bucket.AggregatedSums["sum_tcp_total_retransmissions"]),
-				SumLostPackets:           int64(bucket.AggregatedSums["sum_tcp_lost_packets"]),
-				SumUnrecoveredTo:         int64(bucket.AggregatedSums["sum_tcp_unrecovered_to"]),
-				MinSendCongestionWindow:  bucket.AggregatedMin["tcp_min_send_congestion_window"],
-				MinSendMSS:               bucket.AggregatedMin["tcp_min_mss"],
-				MaxSmoothRTT:             bucket.AggregatedMax["tcp_max_smooth_rtt"],
-				MaxMinRTT:                bucket.AggregatedMax["tcp_max_min_rtt"],
-				MeanSendCongestionWindow: bucket.AggregatedMean["tcp_mean_send_congestion_window"],
-				MeanSmoothRTT:            bucket.AggregatedMean["tcp_mean_smooth_rtt"],
-				MeanMinRTT:               bucket.AggregatedMean["tcp_mean_min_rtt"],
-				MeanMSS:                  bucket.AggregatedMean["tcp_mean_mss"],
+				SumTotalRetransmissions:  int64(bucket.AggregatedSums[flowAggSumTCPRetranmissions]),
+				SumLostPackets:           int64(bucket.AggregatedSums[flowAggSumTCPLostPackets]),
+				SumUnrecoveredTo:         int64(bucket.AggregatedSums[flowAggSumTCPUnrecoveredTO]),
+				MinSendCongestionWindow:  bucket.AggregatedMin[flowAggMinTCPSendCongestionWindow],
+				MinSendMSS:               bucket.AggregatedMin[flowAggMinTCPMSS],
+				MaxSmoothRTT:             bucket.AggregatedMax[flowAggMaxTCPSmoothRTT],
+				MaxMinRTT:                bucket.AggregatedMax[flowAggMaxTCPMinRTT],
+				MeanSendCongestionWindow: bucket.AggregatedMean[flowAggMeanTCPSendCongestionWindow],
+				MeanSmoothRTT:            bucket.AggregatedMean[flowAggMeanTCPSmoothRTT],
+				MeanMinRTT:               bucket.AggregatedMean[flowAggMeanTCPMinRTT],
+				MeanMSS:                  bucket.AggregatedMean[flowAggMeanTCPMSS],
 			}
+
+			// TCP stats have min and means which could be adversely impacted by zero data which indicates
+			// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
+			// diluting when merging with non-zero data.
 			if *tcp != zeroGraphTCPStats {
-				// TCP stats have min and means which could be adversely impacted by zero data which indicates
-				// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
-				// diluting when merging with non-zero data.
 				tcp.Count = bucket.DocCount
+			} else {
+				tcp = nil
 			}
 		}
 
@@ -249,6 +291,20 @@ func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, 
 		if dgd != nil && (destGp == nil || lastDestGp == nil || *destGp != *lastDestGp) {
 			fs = append(fs, dgd.getFlows(lastDestGp)...)
 			dgd = nil
+		}
+
+		// Determine the process info if available in the logs.
+		var processes v1.GraphEndpointProcesses
+		if processName != "" {
+			processes = v1.GraphEndpointProcesses{
+				processName: v1.GraphEndpointProcess{
+					Name:               processName,
+					MinNumNamesPerFlow: bucket.AggregatedMin[flowAggMinProcessNames],
+					MaxNumNamesPerFlow: bucket.AggregatedMax[flowAggMaxProcessNames],
+					MinNumIDsPerFlow:   bucket.AggregatedMin[flowAggMinProcessIds],
+					MaxNumIDsPerFlow:   bucket.AggregatedMax[flowAggMaxProcessIds],
+				},
+			}
 		}
 
 		// The enumeration order ensures that for any endpoint pair we'll enumerate services before no-services for all
@@ -264,7 +320,9 @@ func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, 
 				log.Debugf("- Processing %s reported flow: %s -> %s", reporter, source, dest)
 			}
 		}
-		dgd.add(reporter, action, source, svc, dest, flowStats{packetStats: gps, connStats: gcs, tcpStats: tcp})
+		dgd.add(reporter, action, source, svc, dest,
+			flowStats{packetStats: gps, connStats: gcs, tcpStats: tcp, processes: processes},
+		)
 
 		// Store the last dest group.
 		lastDestGp = destGp
@@ -274,6 +332,13 @@ func GetL3FlowData(ctx context.Context, client lmaelastic.Client, index string, 
 	if dgd != nil {
 		fs = append(fs, dgd.getFlows(lastDestGp)...)
 		dgd = nil
+	}
+
+	// Adjust some of the statistics based on the aggregation interval.
+	timeInterval := t.To.Sub(t.From)
+	l3Flushes := float64(timeInterval) / float64(config.L3FlowFlushInterval)
+	for i := range fs {
+		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
 	}
 
 	return fs, <-rcvdL3Errors
@@ -541,6 +606,7 @@ type flowStats struct {
 	packetStats *v1.GraphPacketStats
 	connStats   v1.GraphConnectionStats
 	tcpStats    *v1.GraphTCPStats
+	processes   v1.GraphEndpointProcesses
 }
 
 func (f flowStats) add(f2 flowStats) flowStats {
@@ -548,6 +614,7 @@ func (f flowStats) add(f2 flowStats) flowStats {
 		packetStats: f.packetStats.Add(f2.packetStats),
 		connStats:   f.connStats.Add(f2.connStats),
 		tcpStats:    f.tcpStats.Combine(f2.tcpStats),
+		processes:   f.processes.Combine(f2.processes),
 	}
 }
 
@@ -593,19 +660,21 @@ func (d *flowReconciliationData) add(
 func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 	var f []L3Flow
 
-	addFlow := func(svc ServicePort, stats v1.GraphL3Stats) {
+	addFlow := func(svc ServicePort, stats v1.GraphL3Stats, processes *v1.GraphProcesses) {
 		log.Debugf("  Including flow for service: %s", svc)
 		var spp *ServicePort
 		if svc.Name != "" {
 			spp = &svc
 		}
+
 		f = append(f, L3Flow{
 			Edge: FlowEdge{
 				Source:      source,
 				Dest:        dest,
 				ServicePort: spp,
 			},
-			Stats: stats,
+			Stats:     stats,
+			Processes: processes,
 		})
 	}
 
@@ -628,13 +697,26 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 				Allowed:     allowed[svc].packetStats,
 				TCP:         allowed[svc].tcpStats,
 			}
+			epProcesses := allowed[svc].processes.Combine(denied[svc].processes)
+			var processes *v1.GraphProcesses
+
 			if rep == reportedAtSource {
 				stats.DeniedAtSource = denied[svc].packetStats
+				if len(epProcesses) > 0 {
+					processes = &v1.GraphProcesses{
+						Source: epProcesses,
+					}
+				}
 			} else {
 				stats.DeniedAtDest = denied[svc].packetStats
+				if len(epProcesses) > 0 {
+					processes = &v1.GraphProcesses{
+						Dest: epProcesses,
+					}
+				}
 			}
 
-			addFlow(svc, stats)
+			addFlow(svc, stats, processes)
 			return nil
 		})
 	}
@@ -656,7 +738,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 		}
 	}
 
-	// The flow will be reported at source and dest, which most importantly means the allow flows at dest need to be
+	// The flow will be reported at source and dest, which most importantly means the allowed flows at source need to be
 	// divvied up to be allowed or denied at dest.
 	log.Debug("  L3Flow reported at source and dest")
 	allServices(d.sourceReportedAllowed, d.sourceReportedDenied).Iter(func(item interface{}) error {
@@ -681,6 +763,21 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 			deniedAtDest = d.sourceReportedAllowed[svc].packetStats.Sub(allowed)
 		}
 
+		// Determine graph processes.
+		var processes *v1.GraphProcesses
+		sourceProcesses := d.sourceReportedAllowed[svc].processes.
+			Combine(d.sourceReportedDenied[svc].processes)
+		destProcesses := d.destReportedAllowed[ServicePort{Proto: svc.Proto}].processes.
+			Combine(d.destReportedAllowed[svc].processes).
+			Combine(d.destReportedDenied[ServicePort{Proto: svc.Proto}].processes).
+			Combine(d.destReportedDenied[svc].processes)
+		if len(destProcesses) > 0 && len(sourceProcesses) > 0 {
+			processes = &v1.GraphProcesses{
+				Source: sourceProcesses,
+				Dest:   destProcesses,
+			}
+		}
+
 		addFlow(svc, v1.GraphL3Stats{
 			Allowed:        allowed,
 			DeniedAtSource: d.sourceReportedDenied[svc].packetStats,
@@ -688,7 +785,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 			Connections:    d.sourceReportedAllowed[svc].connStats.Add(d.sourceReportedDenied[svc].connStats),
 			TCP: d.sourceReportedAllowed[svc].tcpStats.Combine(d.sourceReportedDenied[svc].tcpStats).
 				Combine(d.destReportedAllowed[svc].tcpStats).Combine(d.destReportedDenied[svc].tcpStats),
-		})
+		}, processes)
 		return nil
 	})
 	return f

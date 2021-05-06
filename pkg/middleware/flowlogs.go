@@ -333,7 +333,6 @@ func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
 		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
 		filters = append(filters, destLabelsFilter)
 	}
-	//TODO(rlb): Should this be a filter?  Filters are cached an
 	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
 		filter := elastic.NewRangeQuery("end_time")
 		if params.startDateTimeESParm != nil {

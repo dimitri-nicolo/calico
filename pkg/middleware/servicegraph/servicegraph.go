@@ -12,7 +12,7 @@ import (
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/pkg/middleware/authorization"
-	"github.com/tigera/es-proxy/pkg/middleware/flows"
+	"github.com/tigera/es-proxy/pkg/middleware/common"
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service
@@ -23,15 +23,15 @@ type ServiceGraph interface {
 	Handler() http.HandlerFunc
 }
 
-func NewServiceGraph(client lmaelastic.Client) ServiceGraph {
+func NewServiceGraph(elasticClient lmaelastic.Client) ServiceGraph {
 	return &serviceGraph{
-		flowCache: NewFlowCache(client),
+		flowCache: NewServiceGraphCache(elasticClient),
 	}
 }
 
 type serviceGraph struct {
 	// Flows cache.
-	flowCache FlowCache
+	flowCache ServiceGraphCache
 	// TODO(rlb): Probably worth caching some data for faster response times.
 }
 
@@ -50,12 +50,11 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 		ctx := req.Context()
 
 		// Parse the view IDs.
-		indexL3 := flows.GetFlowsIndex(req)
-		indexL7 := flows.GetL7FlowsIndex(req)
 		rbacFilter := s.getRBACFilter(req)
+		cluster := common.GetCluster(req)
 
 		// Get the filtered flow from the cache.
-		if f, err := s.flowCache.GetFilteredFlowData(ctx, indexL3, indexL7, sgr.TimeRange, rbacFilter); err != nil {
+		if f, err := s.flowCache.GetFilteredServiceGraphData(ctx, cluster, sgr.TimeRange, rbacFilter); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if pv, err := ParseViewIDs(sgr, f.ServiceGroups); err != nil {

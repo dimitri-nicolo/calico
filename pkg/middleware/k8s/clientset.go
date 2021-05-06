@@ -16,8 +16,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/transport"
 
-	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	clientv3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 // Unexported type to avoid context key collisions.

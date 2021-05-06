@@ -105,11 +105,16 @@ func GetServicePortNodeSelectors(sp ServicePort) v1.GraphSelectors {
 	}
 
 	return v1.GraphSelectors{
+		// L3 source selector is calculated in graphconstructor by ORing together all of the ingress sources to the
+		// service.  We need to do this because flows arae recorded at source and dest and may therefore not have
+		// service information available.
 		L3Flows: v1.GraphSelector{
 			Dest: l3Parts.String(),
 		},
+		// L3 service selector is the same for source and dest.
 		L7Flows: v1.GraphSelector{
-			Dest: l7Parts.String(),
+			Source: l7Parts.String(),
+			Dest:   l7Parts.String(),
 		},
 	}
 }

@@ -26,22 +26,23 @@ type GraphSelectors struct {
 
 // GetEdgeSelectors returns a set of selectors for a graph edge from the supplied node selectors.
 func GetEdgeSelectors(source, dest GraphSelectors) GraphSelectors {
+	// DNS logs are a little tricky, so for now just exclude from the edge statistics completely.
+	// L7 logs require both source and dest selectors. If either is missing, exclude the L7 selector.
+	var l7Flows GraphSelector
+	if source.L7Flows.Source != "" && dest.L7Flows.Dest != "" {
+		l7Flows = GraphSelector{
+			Source: source.L7Flows.Source,
+			Dest:   dest.L7Flows.Dest,
+			isEdge: true,
+		}
+	}
 	return GraphSelectors{
 		L3Flows: GraphSelector{
 			Source: source.L3Flows.Source,
 			Dest:   dest.L3Flows.Dest,
 			isEdge: true,
 		},
-		L7Flows: GraphSelector{
-			Source: source.L7Flows.Source,
-			Dest:   dest.L7Flows.Dest,
-			isEdge: true,
-		},
-		DNSLogs: GraphSelector{
-			Source: source.DNSLogs.Source,
-			Dest:   dest.DNSLogs.Dest,
-			isEdge: true,
-		},
+		L7Flows: l7Flows,
 	}
 }
 
@@ -114,7 +115,7 @@ func graphSelectorOp(s, s2, op string) string {
 
 // maybeWithParens adds parenthesis to a selector string if required depending on the operator.
 //
-// Note that the graph contructor processing already puts groups of ANDed selectors in parenthesis, so if joining two
+// Note that the graph constructor processing already puts groups of ANDed selectors in parenthesis, so if joining two
 // selectors together using OR, it is not necessary to add additional parenthesis.  Otherwise, if joining together using
 // AND, it is only necessary to add additional parenthesis if the selector contains an OR operation.
 //

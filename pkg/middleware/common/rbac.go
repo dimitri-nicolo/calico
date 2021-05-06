@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-package flows
+package common
 
 import (
 	"github.com/olivere/elastic/v7"

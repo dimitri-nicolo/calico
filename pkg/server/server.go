@@ -20,6 +20,8 @@ import (
 	celastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/list"
 
+	"github.com/projectcalico/apiserver/pkg/authentication"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
@@ -45,6 +47,10 @@ var (
 		Verbs: []string{"list"},
 	}, {
 		APIGroup:  "",
+		Resources: []string{"pods"},
+		Verbs:     []string{"list"},
+	}, {
+		APIGroup:  "lma.tigera.io",
 		Resources: []string{"pods"},
 		Verbs:     []string{"list"},
 	}}

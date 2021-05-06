@@ -10,7 +10,7 @@ import (
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/flows"
+	"github.com/tigera/es-proxy/pkg/middleware/common"
 )
 
 type L7Flow struct {
@@ -51,30 +51,45 @@ var (
 	}
 )
 
+const (
+	//TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
+	//           memory footprint.  Possibly a significant saving with large clusters or long time ranges.
+	flowL7AggSumBytesIn   = "sum_bytes_in"
+	flowL7AggSumBytesOut  = "sum_bytes_out"
+	flowL7AggSumCount     = "count"
+	flowL7AggMinDuration  = "duration_min_mean"
+	flowL7AggMaxDuration  = "duration_max"
+	flowL7AggMeanDuration = "duration_mean"
+)
+
 var (
 	l7AggregationSums = []lmaelastic.AggSumInfo{
-		{Name: "sum_bytes_in", Field: "bytes_in"},
-		{Name: "sum_bytes_out", Field: "bytes_out"},
-		{Name: "count", Field: "count"},
+		{Name: flowL7AggSumBytesIn, Field: "bytes_in"},
+		{Name: flowL7AggSumBytesOut, Field: "bytes_out"},
+		{Name: flowL7AggSumCount, Field: "count"},
+	}
+	l7AggregationMin = []lmaelastic.AggMaxMinInfo{
+		{Name: flowL7AggMinDuration, Field: "duration_mean"},
 	}
 	l7AggregationMax = []lmaelastic.AggMaxMinInfo{
-		{Name: "duration_max", Field: "duration_max"},
+		{Name: flowL7AggMaxDuration, Field: "duration_max"},
 	}
 	l7AggregationMean = []lmaelastic.AggMeanInfo{
-		{Name: "duration_mean", Field: "duration_mean"},
+		{Name: flowL7AggMeanDuration, Field: "duration_mean"},
 	}
 )
 
-func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, index string, t v1.TimeRange) ([]L7Flow, error) {
+func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange) ([]L7Flow, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
-
+	index := common.GetL7FlowsIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   flows.GetTimeRangeQuery(t),
+		Query:                   common.GetEndTimeRangeQuery(t),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: l7CompositeSources,
 		AggSumInfos:             l7AggregationSums,
+		AggMinInfos:             l7AggregationMin,
 		AggMaxInfos:             l7AggregationMax,
 		AggMeanInfos:            l7AggregationMean,
 	}
@@ -104,7 +119,7 @@ func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, index strin
 			if svc.Name != "" {
 				log.Debugf("- Adding L7 flow: %s -> %s -> %s (stats %#v)", source, svc, dest, stats)
 			} else {
-				log.Debugf("- Adding L7 flow: %s -> %s (code %#v)", source, dest, stats)
+				log.Debugf("- Adding L7 flow: %s -> %s (stats %#v)", source, dest, stats)
 			}
 		}
 	}
@@ -150,12 +165,13 @@ func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, index strin
 
 		l7PacketStats := v1.GraphL7PacketStats{
 			GraphByteStats: v1.GraphByteStats{
-				BytesIn:  int64(bucket.AggregatedSums["sum_bytes_in"]),
-				BytesOut: int64(bucket.AggregatedSums["sum_bytes_out"]),
+				BytesIn:  int64(bucket.AggregatedSums[flowL7AggSumBytesIn]),
+				BytesOut: int64(bucket.AggregatedSums[flowL7AggSumBytesOut]),
 			},
-			MeanDuration: bucket.AggregatedSums["duration_mean"],
-			MaxDuration:  bucket.AggregatedSums["duration_max"],
-			Count:        int64(bucket.AggregatedSums["count"]),
+			MeanDuration: bucket.AggregatedMean[flowL7AggMeanDuration],
+			MinDuration:  bucket.AggregatedMin[flowL7AggMinDuration],
+			MaxDuration:  bucket.AggregatedMax[flowL7AggMaxDuration],
+			Count:        int64(bucket.AggregatedSums[flowL7AggSumCount]),
 		}
 
 		if log.IsLevelEnabled(log.DebugLevel) {

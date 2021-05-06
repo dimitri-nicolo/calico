@@ -97,12 +97,14 @@ func (p *GraphPacketStats) Multiply(p2 *GraphPacketStats) *GraphPacketStats {
 
 // GraphConnectionStats contains connection statistics.
 type GraphConnectionStats struct {
-	Started   int64 `json:"started"`
-	Completed int64 `json:"completed"`
+	TotalPerSampleInterval int64 `json:"total_per_sample_interval"`
+	Started                int64 `json:"started"`
+	Completed              int64 `json:"completed"`
 }
 
 // Add returns a pointer to a GraphConnectionStats that contains the sum of the stats: c+c2.
 func (c GraphConnectionStats) Add(c2 GraphConnectionStats) GraphConnectionStats {
+	c.TotalPerSampleInterval += c2.TotalPerSampleInterval
 	c.Started += c2.Started
 	c.Completed += c2.Completed
 	return c
@@ -125,7 +127,7 @@ type GraphTCPStats struct {
 	MeanMinRTT               float64 `json:"mean_min_mss"`
 	MeanMSS                  float64 `json:"mean_mss"`
 
-	Count int64 `json:"count"`
+	Count int64 `json:"-"`
 }
 
 // Combine returns a pointer to a GraphPacketStats that combines the stats from t and t2. Depending on the stat
@@ -171,21 +173,28 @@ type GraphL3Stats struct {
 
 // Combine returns a pointer to a GraphL3Stats that combines the stats from t and t2. Depending on the stat
 // this may either be the max or min value, the average (weighted by count) or the sum.
-func (t GraphL3Stats) Combine(t2 GraphL3Stats) GraphL3Stats {
-	t.Allowed = t.Allowed.Add(t2.Allowed)
-	t.DeniedAtSource = t.DeniedAtSource.Add(t2.DeniedAtSource)
-	t.DeniedAtDest = t.DeniedAtDest.Add(t2.DeniedAtDest)
-	t.Connections = t.Connections.Add(t2.Connections)
-	t.TCP = t.TCP.Combine(t2.TCP)
-	return t
+func (l *GraphL3Stats) Combine(l2 *GraphL3Stats) *GraphL3Stats {
+	if l == nil {
+		return l2
+	} else if l2 == nil {
+		return l
+	}
+	return &GraphL3Stats{
+		Allowed:        l.Allowed.Add(l2.Allowed),
+		DeniedAtSource: l.DeniedAtSource.Add(l2.DeniedAtSource),
+		DeniedAtDest:   l.DeniedAtDest.Add(l2.DeniedAtDest),
+		Connections:    l.Connections.Add(l2.Connections),
+		TCP:            l.TCP.Combine(l2.TCP),
+	}
 }
 
 // GraphL7PacketStats contains L7 statistics.
 type GraphL7PacketStats struct {
 	GraphByteStats `json:",inline"`
 	MeanDuration   float64 `json:"mean_duration,omitempty"`
+	MinDuration    float64 `json:"min_duration,omitempty"`
 	MaxDuration    float64 `json:"max_duration,omitempty"`
-	Count          int64   `json:"count,omitempty"`
+	Count          int64   `json:"-"`
 }
 
 // Combine returns a GraphL7PacketStats that combines the stats from l and l2. Depending on the stat
@@ -199,6 +208,7 @@ func (l GraphL7PacketStats) Combine(l2 GraphL7PacketStats) GraphL7PacketStats {
 	}
 
 	l.GraphByteStats = l.GraphByteStats.Add(l2.GraphByteStats)
+	l.MinDuration = math.Min(l.MinDuration, l2.MinDuration)
 	l.MaxDuration = math.Max(l.MaxDuration, l2.MaxDuration)
 	totalCount := l.Count + l2.Count
 	l.MeanDuration =
@@ -219,36 +229,17 @@ type GraphL7Stats struct {
 
 // Combine returns a GraphL7Stats that combines the stats from l and l2. Depending on the stat
 // this may either be the max or min value, the average (weighted by count) or the sum.
-func (l GraphL7Stats) Combine(l2 GraphL7Stats) GraphL7Stats {
-	l.ResponseCode1xx = l.ResponseCode1xx.Combine(l2.ResponseCode1xx)
-	l.ResponseCode2xx = l.ResponseCode2xx.Combine(l2.ResponseCode2xx)
-	l.ResponseCode3xx = l.ResponseCode3xx.Combine(l2.ResponseCode3xx)
-	l.ResponseCode4xx = l.ResponseCode4xx.Combine(l2.ResponseCode4xx)
-	l.ResponseCode5xx = l.ResponseCode5xx.Combine(l2.ResponseCode5xx)
-	return l
-}
-
-// GraphTrafficStats contains L3 and L7 statistics.  If there were no L3 or L7 statistics recorded then the associated
-// value will be nil and omitted entirely from the JSON response.
-type GraphTrafficStats struct {
-	L3 *GraphL3Stats `json:"l3,omitempty"`
-	L7 *GraphL7Stats `json:"l7,omitempty"`
-}
-
-// Combine returns a GraphTrafficStats that combines the stats from t and t2.
-func (t GraphTrafficStats) Combine(t2 GraphTrafficStats) GraphTrafficStats {
-	if t.L3 == nil {
-		t.L3 = t2.L3
-	} else if t2.L3 != nil {
-		l3 := t.L3.Combine(*t2.L3)
-		t.L3 = &l3
+func (l *GraphL7Stats) Combine(l2 *GraphL7Stats) *GraphL7Stats {
+	if l == nil {
+		return l2
+	} else if l2 == nil {
+		return l
 	}
-
-	if t.L7 == nil {
-		t.L7 = t2.L7
-	} else if t2.L7 != nil {
-		l7 := t.L7.Combine(*t2.L7)
-		t.L7 = &l7
+	return &GraphL7Stats{
+		ResponseCode1xx: l.ResponseCode1xx.Combine(l2.ResponseCode1xx),
+		ResponseCode2xx: l.ResponseCode2xx.Combine(l2.ResponseCode2xx),
+		ResponseCode3xx: l.ResponseCode3xx.Combine(l2.ResponseCode3xx),
+		ResponseCode4xx: l.ResponseCode4xx.Combine(l2.ResponseCode4xx),
+		ResponseCode5xx: l.ResponseCode5xx.Combine(l2.ResponseCode5xx),
 	}
-	return t
 }

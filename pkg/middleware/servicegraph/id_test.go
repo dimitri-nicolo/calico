@@ -19,15 +19,15 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			serviceGp, service, servicePort,
 			aggrEndpoint, endpoint, aggrEndpointPort, endpointPort string,
 		) {
-			Expect(idi.GetLayerID()).To(Equal(layer))
-			Expect(idi.GetNamespaceID()).To(Equal(namespace))
-			Expect(idi.GetServiceGroupID()).To(Equal(serviceGp))
-			Expect(idi.GetServiceID()).To(Equal(service))
-			Expect(idi.GetServicePortID()).To(Equal(servicePort))
-			Expect(idi.GetAggrEndpointID()).To(Equal(aggrEndpoint))
-			Expect(idi.GetEndpointID()).To(Equal(endpoint))
-			Expect(idi.GetAggrEndpointPortID()).To(Equal(aggrEndpointPort))
-			Expect(idi.GetEndpointPortID()).To(Equal(endpointPort))
+			Expect(idi.GetLayerID()).To(BeEquivalentTo(layer))
+			Expect(idi.GetNamespaceID()).To(BeEquivalentTo(namespace))
+			Expect(idi.GetServiceGroupID()).To(BeEquivalentTo(serviceGp))
+			Expect(idi.GetServiceID()).To(BeEquivalentTo(service))
+			Expect(idi.GetServicePortID()).To(BeEquivalentTo(servicePort))
+			Expect(idi.GetAggrEndpointID()).To(BeEquivalentTo(aggrEndpoint))
+			Expect(idi.GetEndpointID()).To(BeEquivalentTo(endpoint))
+			Expect(idi.GetAggrEndpointPortID()).To(BeEquivalentTo(aggrEndpointPort))
+			Expect(idi.GetEndpointPortID()).To(BeEquivalentTo(endpointPort))
 		},
 		Entry("Layer",
 			IDInfo{

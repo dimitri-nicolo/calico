@@ -3,10 +3,10 @@ package v1
 
 type ServiceGraphRequest struct {
 	// Time range.
-	TimeRange TimeRange `json:"time_range,omitempty"`
+	TimeRange TimeRange `json:"time_range"`
 
 	// The selected view.
-	SelectedView GraphView `json:"selected_view,omitempty"`
+	SelectedView GraphView `json:"selected_view"`
 }
 
 type ServiceGraphResponse struct {

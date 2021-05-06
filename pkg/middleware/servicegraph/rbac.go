@@ -15,6 +15,11 @@ import (
 
 type RBACFilter interface {
 	IncludeFlow(f FlowEdge) bool
+	IncludeEndpoint(f FlowEndpoint) bool
+	IncludeHostEndpoints() bool
+	IncludeGlobalNetworkSets() bool
+	IncludeNetworkSets(namespace string) bool
+	IncludePods(namespace string) bool
 }
 
 // NewRBACFilterFromAuth creates a new RBAC filter from a set of AuthorizedResourceVerbs.
@@ -67,32 +72,48 @@ type rbacFilter struct {
 }
 
 func (f *rbacFilter) IncludeFlow(e FlowEdge) bool {
-	if f.includeEndpoint(e.Source) {
+	if f.IncludeEndpoint(e.Source) {
 		return true
 	}
-	if f.includeEndpoint(e.Dest) {
+	if f.IncludeEndpoint(e.Dest) {
 		return true
 	}
 	return false
 }
 
-func (f *rbacFilter) includeEndpoint(e FlowEndpoint) bool {
+func (f *rbacFilter) IncludeEndpoint(e FlowEndpoint) bool {
 	// L3Flow data should only consists of the endpoint types contained in the flow logs, and not any of the generated
 	// types for the graph.
 	switch e.Type {
 	case v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
-		return f.listAllPods || f.listPodNamespaces[e.Namespace]
+		return f.IncludePods(e.Namespace)
 	case v1.GraphNodeTypeNetwork:
 		return false
 	case v1.GraphNodeTypeNetworkSet:
 		if e.Namespace == "" {
-			return f.listAllGlobalNetworkSets
+			return f.IncludeGlobalNetworkSets()
 		}
-		return f.listAllNetworkSets || f.listNetworkSetNamespaces[e.Namespace]
+		return f.IncludeNetworkSets(e.Namespace)
 	case v1.GraphNodeTypeHostEndpoint:
-		return f.listAllHostEndpoints
+		return f.IncludeHostEndpoints()
 	default:
 		log.Panicf("Unexpected endpoint type in parsed flows: %s", e.Type)
 	}
 	return false
+}
+
+func (f *rbacFilter) IncludeHostEndpoints() bool {
+	return f.listAllHostEndpoints
+}
+
+func (f *rbacFilter) IncludeGlobalNetworkSets() bool {
+	return f.listAllGlobalNetworkSets
+}
+
+func (f *rbacFilter) IncludeNetworkSets(namespace string) bool {
+	return f.listAllNetworkSets || f.listNetworkSetNamespaces[namespace]
+}
+
+func (f *rbacFilter) IncludePods(namespace string) bool {
+	return f.listAllPods || f.listPodNamespaces[namespace]
 }

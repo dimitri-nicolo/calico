@@ -14,11 +14,12 @@ import (
 
 // ParsedViewIDs contains the view specified in the service graph request, parsed into an internally useful format.
 type ParsedViewIDs struct {
-	Focus           *ParsedNodes
-	Expanded        *ParsedNodes
-	FollowedIngress *ParsedNodes
-	FollowedEgress  *ParsedNodes
-	Layers          *ParsedLayers
+	Focus                     *ParsedNodes
+	Expanded                  *ParsedNodes
+	FollowedIngress           *ParsedNodes
+	FollowedEgress            *ParsedNodes
+	Layers                    *ParsedLayers
+	FollowConnectionDirection bool
 }
 
 // ParsedNodes contains details about a set of parsed node IDs in the view. The different aggregation levels are split
@@ -72,7 +73,9 @@ func newParsedLayers() *ParsedLayers {
 func ParseViewIDs(sgr *v1.ServiceGraphRequest, sgs ServiceGroups) (*ParsedViewIDs, error) {
 	// Parse the Focus and Expanded node IDs.
 	log.Debug("Parse view data")
-	p := &ParsedViewIDs{}
+	p := &ParsedViewIDs{
+		FollowConnectionDirection: sgr.SelectedView.FollowConnectionDirection,
+	}
 	var err error
 	if p.Focus, err = parseNodes(sgr.SelectedView.Focus, sgs); err != nil {
 		return nil, err
@@ -89,7 +92,7 @@ func ParseViewIDs(sgr *v1.ServiceGraphRequest, sgs ServiceGroups) (*ParsedViewID
 	return p, nil
 }
 
-func parseNodes(ids []string, sgs ServiceGroups) (pn *ParsedNodes, err error) {
+func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err error) {
 	pn = newParsedNodes()
 	for _, id := range ids {
 		log.Debugf("Processing ID in view: %s", id)

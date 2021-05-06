@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -25,7 +26,7 @@ var _ = Describe("ServicePort relationships test", func() {
 				srh.AddMapping(sgi.ServicePort, sgi.FlowEndpoint)
 			}
 			srh.FinishMappings()
-			actualMap := make(map[string]ServiceGroup)
+			actualMap := make(map[v1.GraphNodeID]ServiceGroup)
 			err := srh.Iter(func(sg *ServiceGroup) error {
 				actualMap[sg.ID] = *sg
 				return nil
@@ -148,7 +149,7 @@ var _ = Describe("ServicePort relationships test", func() {
 			}},
 			[]ServiceGroup{{
 				ID:        "svcgp;svc/namespace1/service1;svc/namespace1/service2;svc/namespace1/service3",
-				Name:      "*",
+				Name:      "service1/service2/service3",
 				Namespace: "namespace1",
 				Services: []types.NamespacedName{{
 					Namespace: "namespace1", Name: "service1",
@@ -349,6 +350,3 @@ var _ = Describe("ServicePort relationships test", func() {
 		),
 	)
 })
-
-//TODO(rlb): Test wep - > rep handling with aggregation.  Will need some code changes to use the IDInfo helper to
-//           construct the aggregated endpoint from the workload endpoint.
