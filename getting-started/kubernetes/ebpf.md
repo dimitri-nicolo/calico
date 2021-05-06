@@ -75,10 +75,14 @@ some exceptions:
 
 * GKE is not supported.  This is because of an incompatibility with the GKE CNI plugin.  A fix for the 
   issue has already been accepted upstream but at the time of writing it is not publicly available.
+
+* Docker Enterprise: eBPF mode cannot be enabled at install time because Docker Enterprise doesn't provide
+  a stable address for the API server.  However, by following [these instructions](../../maintenance/performance/ebpf/enabling-ebpf),
+  it can be enabled as a post-install step.
   
-* Docker Enterprise is not supported.  This is because there is no suitable way to configure {{site.prodname}} to 
-  reach the API server.  (Docker Enterprise uses a per-node proxy between `kube-proxy` and the API server rather
-  than, for example, a DNS record.)
+* RKE: eBPF mode cannot be enabled at install time because RKE doesn't provide
+  a stable address for the API server.  However, by following [these instructions](../../maintenance/performance/ebpf/enabling-ebpf), 
+  it can be enabled as a post-install step.
 
 See the tabs below for more detail on how to set up a suitable cluster with the supported distributions:
 
@@ -171,14 +175,6 @@ that Bottlerocket requires.
 
 Since Bottlerocket places the Kubelet's plugin directory in a different location to other OSes, it's necessary to add 
 the `flexVolumePath` setting to the operator `Installation` resource as described below.
-
-%>
-<label:RKE>
-<%
-
-Rancher's RKE supports a number of base OSes; as long as the base OS chosen (such as Ubuntu 20.04) meets the kernel
-requirements, RKE-provisioned clusters are supported.
-
 %>
 {% endtabs %}
 
@@ -256,12 +252,6 @@ Kubernetes master is running at https://60F939227672BC3D5A1B3EC9744B2B21.gr7.us-
 ```
 In this example, you would use `60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com` for
 `KUBERNETES_SERVICE_HOST` and `443` for `KUBERNETES_SERVICE_PORT` when creating the config map.
-
-%>
-<label:RKE>
-<%
-
-# FIXME How to find URL for RKE?
 
 %>
 {% endtabs %}
@@ -424,19 +414,6 @@ kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nod
 ```
 
 Then, should you want to start `kube-proxy` again, you can simply remove the node selector.
-
-%>
-<label:RKE>
-<%
-
-In an RKE system, `kube-proxy` runs outside of Kubernetes as a Docker container and RKE does not provide a way to 
-disable it.  To ensure `kube-proxy` and {{site.prodname}} don't fight, set the Felix configuration parameter `bpfKubeProxyIptablesCleanupEnabled` to false.  This can be done with
-`kubectl` as follows:
-
-```
-kubectl patch felixconfiguration.p default --type merge --patch='{"spec": {"bpfKubeProxyIptablesCleanupEnabled": false}}'
-```
-
 %>
 {% endtabs %}
 

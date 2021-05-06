@@ -13,37 +13,7 @@ description: Step-by-step instructions for enabling the eBPF dataplane.
 
 This guide explains how to enable the eBPF dataplane; a high-performance alternative to the standard (iptables based) dataplane for both {{site.prodname}} and kube-proxy.
 
-### Value
-
-The eBPF dataplane mode has several advantages over standard linux networking pipeline mode:
-
-* It scales to higher throughput.
-* It uses less CPU per GBit.
-* It has native support for Kubernetes services (without needing kube-proxy) that:
-
-    * Reduces first packet latency for packets to services.
-    * Preserves external client source IP addresses all the way to the pod.
-    * Supports DSR (Direct Server Return) for more efficient service routing.
-    * Uses less CPU than kube-proxy to keep the dataplane in sync.
-
-To learn more and see performance metrics from our test environment, see the blog, {% include open-new-window.html text='Introducing the Calico eBPF dataplane' url='https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/' %}.
-
-### Limitations
-
-eBPF mode currently has some limitations relative to the standard Linux pipeline mode:
-
-- eBPF mode only supports x86-64.  (The eBPF programs are not currently built for the other platforms.)
-- eBPF mode does not yet support IPv6.
-- eBPF mode does not yet support host endpoint `doNotTrack` policy (but it does support normal, pre-DNAT and apply-on-forward policy for host endpoints).
-- When enabling eBPF mode, pre-existing connections continue to use the non-BPF datapath; such connections should not be disrupted, but they do not benefit from eBPF mode's advantages.
-- Disabling eBPF mode _is_ disruptive; connections that were handled through the eBPF dataplane may be broken and services that do not detect and recover may need to be restarted.
-- Hybrid clusters (with some eBPF nodes and some standard dataplane nodes) are not supported.  (In such a cluster, NodePort traffic from eBPF nodes to non-eBPF nodes will be dropped.)  This includes clusters with Windows nodes.
-- eBPF mode does not support floating IPs.
-- eBPF mode does not support host ports (these are normally implemented by the "portmap" CNI plugin, which is incompatible with eBPF mode).
-- eBPF mode does not support SCTP, either for policy or services.
-- eBPF mode requires that node  [IP autodetection]({{site.baseurl}}/networking/ip-autodetection) is enabled even in environments where {{site.prodname}} CNI and BGP are not in use.  In eBPF mode, the node IP is used to originate VXLAN packets when forwarding traffic from external sources to services.
-- eBPF mode does not support the "Log" action in policy rules. This limitation also applies to the Drop Action Override feature: `LOGandDROP` and `LOGandACCEPT` are interpreted as `DROP` and `ACCEPT`, respectively.
-- eBPF mode does not support Egress Gateways.
+{% include content/ebpf-value-and-limitations.md %}
 
 ### Features
 
@@ -75,6 +45,7 @@ Kubernetes cluster that meets pre-requisites for eBPF mode:
   when {{site.prodname}} is restarted.  If the filesystem does not persist then pods will temporarily lose connectivity when
   {{site.prodname}} is restarted and host endpoints may be left unsecured (because their attached policy program will be
   discarded).
+
 - For best pod-to-pod performance, an underlying network that doesn't require Calico to use an overlay.  For example:
 
   - A cluster within a single AWS subnet.
@@ -87,8 +58,7 @@ Kubernetes cluster that meets pre-requisites for eBPF mode:
 - The underlying network must be configured to allow VXLAN packets between {{site.prodname}} hosts (even if you normally
   use IPIP or non-overlay for Calico traffic).  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic,
   while preserving source IP.  eBPF mode honours the Felix `VXLANMTU` setting (see [Configuring MTU]({{ site.baseurl }}/networking/mtu)).
-- A stable way to address the Kubernetes API server. Since eBPF mode takes over from kube-proxy, {{site.prodname}}
-  needs a way to reach the API server directly.
+  
 - The base [requirements]({{site.baseurl}}/getting-started/kubernetes/requirements) also apply.
 
 > **Note**: The default kernel used by EKS is not compatible with eBPF mode.  If you wish to try eBPF mode with EKS,
@@ -144,39 +114,58 @@ This section explains how to make sure your cluster is suitable for eBPF mode.
 
 #### Configure {{site.prodname}} to talk directly to the API server
 
-In eBPF mode, {{site.prodname}} implements Kubernetes service networking directly (rather than relying on `kube-proxy`).  This means that, like `kube-proxy`,  {{site.prodname}} must connect _directly_ to the Kubernetes API server rather than via the API server's ClusterIP.
+In eBPF mode, {{site.prodname}} implements Kubernetes service networking directly (rather than relying on `kube-proxy`).
+Of course, this makes it highly desirable to disable `kube-proxy` when running in eBPF mode in order to save resources
+and avoid confusion over which component is handling services.
 
-First, make a note of the address of the API server:
+To be able to disable `kube-proxy`, {{site.prodname}} needs to communicate to the API server _directly_ rather than 
+going through `kube-proxy`.  To make _that_ possible, we need to find a persistent, static way to reach the API server.
+The best way to do that varies by Kubernetes distribution:
 
-   * If you have a single API server, you can use its IP address and port.  The IP can be found by running:
+* If you created a cluster manually (for example by using `kubeadm`) then the right address to use depends on whether you
+  opted for a high-availability cluster with multiple API servers or a simple one-node API server.
 
-     ```
-     kubectl get endpoints kubernetes -o wide
-     ```
+  * If you opted to set up a high availability cluster then you should use the address of the load balancer that you
+    used in front of your API servers.  As noted in the Kubernetes documentation, a load balancer is required for a
+    HA set-up but the precise type of load balancer is not specified.
+    
+  * If you opted for a single control plane node then you can use the address of the control plane node itself.  However,
+    it's important that you use a _stable_ address for that node such as a dedicated DNS record, or a static IP address.
+    If you use a dynamic IP address (such as an EC2 private IP) then the address may change when the node is restarted
+    causing {{ site.prodname }} to lose connectivity to the API server.
+    
+* `kops` typically sets up a load balancer of some sort in front of the API server.  You should use
+  the FQDN and port of the API load balancer, for example `api.internal.<clustername>` as the `KUBERNETES_SERVICE_HOST` 
+  below and 443 as the `KUBERNETES_SERVICE_PORT`.
+  
+* OpenShift requires various DNS records to be created for the cluster; one of these is exactly what we need:
+  `api-int.<cluster_name>.<base_domain>` should point to the API server or to the load balancer in front of the
+  API server. Use that (filling in the `<cluster_name>` and `<base_domain>` as appropriate for your cluster) for the
+  `KUBERNETES_SERVICE_HOST` below.  Openshift uses 6443 for the `KUBERNETES_SERVICE_PORT`.
+  
+* For AKS and EKS clusters you should use the FQDN of the API server's load balancer.  This can be found with
+  ```
+  kubectl cluster-info 
+  ```
+  which gives output like the following:
+  ```
+  Kubernetes master is running at https://60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com
+  ...
+  ```
+  In this example, you would use `60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com` for
+  `KUBERNETES_SERVICE_HOST` and `443` for `KUBERNETES_SERVICE_PORT` when creating the config map.
+  
+* Docker Enterprise and Rancher neither allow `kube-proxy` to be disabled nor provide a stable address for the 
+  API server that is suitable for the next step.  The best option on these platforms is to 
+  
+  * Let {{site.prodname}} connect to the API server as through `kube-proxy` (by skipping the step below to create the
+    `kubernetes-services-endpoint` config map).
+    
+  * Then, follow the instructions in [Avoiding conflicts with kube-proxy](#avoiding-conflicts-with-kube-proxy) below, 
+    or connectivity will fail when eBPF mode is enabled.
 
-     The output should look like the following, with a single IP address and port under "ENDPOINTS":
-
-     ```
-     NAME         ENDPOINTS             AGE
-     kubernetes   172.16.101.157:6443   40m
-     ```
-
-     If there are multiple entries under "ENDPOINTS" then your cluster must have more than one API server.  In that case, you should try to determine the load balancing approach used by your cluster and use the appropriate option below.
-
-   * If using DNS load balancing (as used by `kops`), use the FQDN and port of the API server `api.internal.<clustername>`.
-   * If you have multiple API servers with a load balancer in front, you should use the IP and port of the load balancer.
-
-> **Tip**: If your cluster uses a ConfigMap to configure `kube-proxy` you can find the "right" way to reach the API
-> server by examining the config map.  For example:
-> ```
-> $ kubectl get configmap -n kube-system kube-proxy -o yaml | grep server`
->     server: https://d881b853ae312e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com
-> ```
-> In this case, the server is `d881b853aea312e00302a84f1e346a77.gr7.us-west-2.eks.amazonaws.com` and the port is
-> 443 (the standard HTTPS port).
-{: .alert .alert-success}
-
-Then, create the following config map in the `tigera-operator` namespace using the host and port determined above:
+Once you've found the correct address for your API server, create the following config map in the `tigera-operator` 
+namespace using the host and port that you found above:
 
 ```
 kind: ConfigMap
@@ -218,13 +207,10 @@ kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nod
 
 Then, should you want to start `kube-proxy` again, you can simply remove the node selector.
 
-If you choose not to disable `kube-proxy` (for example, because it is managed by your Kubernetes distribution), then you *must* change Felix configuration parameter `BPFKubeProxyIptablesCleanupEnabled` to `false`.  This can be done with `kubectl` as follows:
-
-```
-kubectl patch felixconfiguration.p default --patch='{"spec": {"bpfKubeProxyIptablesCleanupEnabled": false}}'
-```
-
-If both `kube-proxy` and `BPFKubeProxyIptablesCleanupEnabled` is enabled then `kube-proxy` will write its iptables rules and Felix will try to clean them up resulting in iptables flapping between the two.
+> **Note**: This approach is not suitable for AKS since that platform makes use of the Kubernetes add-on manager.
+> the change will be reverted by the system.  For AKS, you should follow [Avoiding conflicts with kube-proxy](#avoiding-conflicts-with-kube-proxy)
+> below.
+{: .alert .alert-info}
 
 ##### OpenShift
 
@@ -239,6 +225,16 @@ To re-enable it:
 ```
 kubectl patch networks.operator.openshift.io cluster --type merge -p '{"spec":{"deployKubeProxy": true}}'
 ```
+
+#### Avoiding conflicts with kube-proxy
+
+If you cannot disable `kube-proxy` (for example, because it is managed by your Kubernetes distribution), then you *must* change Felix configuration parameter `BPFKubeProxyIptablesCleanupEnabled` to `false`.  This can be done with `kubectl` as follows:
+
+```
+kubectl patch felixconfiguration.p default --patch='{"spec": {"bpfKubeProxyIptablesCleanupEnabled": false}}'
+```
+
+If both `kube-proxy` and `BPFKubeProxyIptablesCleanupEnabled` is enabled then `kube-proxy` will write its iptables rules and Felix will try to clean them up resulting in iptables flapping between the two.
 
 #### Enable eBPF mode
 
