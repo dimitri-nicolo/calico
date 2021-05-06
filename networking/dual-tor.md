@@ -377,20 +377,26 @@ longer matters if there is any other programming of the true default route on th
 1.  Prepare an EarlyNetworkConfiguration resource to specify the additional information
     that is needed for each node in a multi-rack dual ToR cluster:
 
-	-  The stable address for the node.
-	-  Its BGP AS number.
-	-  The IPs that the node should peer with, when {{site.nodecontainer}} runs
+    -  The stable address for the node.
+    -  Its BGP AS number.
+    -  The IPs that the node should peer with, when {{site.nodecontainer}} runs
        as a container for early networking setup after each node boot.
-	-  Any labels that the node should have, so as to match the right BGPPeer definitions
+    -  Any labels that the node should have, so as to match the right BGPPeer definitions
        for its rack, when {{site.nodecontainer}} runs as a Kubernetes pod.
 
-	<br>
+    <br>
+    With OpenShift you should also configure the IP address of the bootstrap node.  This
+    is a global setting for the entire cluster and so at the top-level of the
+    EarlyNetworkConfiguration, rather than per-node.
+
     For example, with IP addresses and AS numbers similar as for other resources above:
 
     ```
     apiVersion: projectcalico.org/v3
     kind: EarlyNetworkConfiguration
     spec:
+      openshift:
+        bootstrapIP: 172.31.21.1
       nodes:
         # worker1
         - interfaceAddresses:
@@ -430,12 +436,12 @@ longer matters if there is any other programming of the true default route on th
       namespace: calico-system
     data:
       earlyNetworkConfiguration: |
-	    apiVersion: projectcalico.org/v3
-	    kind: EarlyNetworkConfiguration
-	    spec:
-	      nodes:
-	        # worker1
-	        - interfaceAddresses:
+        apiVersion: projectcalico.org/v3
+        kind: EarlyNetworkConfiguration
+        spec:
+          nodes:
+            # worker1
+            - interfaceAddresses:
         ...
     ```
 
