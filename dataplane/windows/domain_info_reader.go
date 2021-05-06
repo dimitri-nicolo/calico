@@ -28,11 +28,15 @@ type domainInfoReader struct {
 	// Trusted Servers for DNS packet.
 	trustedServers []etw.ServerPort
 
+	// If pktMonStartArgs is not empty, it will be used as the preferred option to start pktmon.
+	// This is useful when we would like to override the existing arguments on future OS versions.
+	pktMonStartArgs string
+
 	// ETW operations
 	etwOps *etw.EtwOperations
 }
 
-func NewDomainInfoReader(trustedServers []fc.ServerPort) *domainInfoReader {
+func NewDomainInfoReader(trustedServers []fc.ServerPort, pktMonStartArgs string) *domainInfoReader {
 	log.WithField("serverports", trustedServers).Info("Creating Windows domain info reader")
 	if len(trustedServers) == 0 {
 		log.Fatal("Should have at least one DNS trusted server.")
@@ -59,9 +63,10 @@ func NewDomainInfoReader(trustedServers []fc.ServerPort) *domainInfoReader {
 		// hence the channel capacity for domainInfoReader to forward messages to domainInfoStore could be small
 		// without blocking ETW event reader.
 		// Set channel capacity to 10.
-		msgChannel:     make(chan *etw.PktEvent, 10),
-		trustedServers: serverPorts,
-		etwOps:         etwOps,
+		msgChannel:      make(chan *etw.PktEvent, 10),
+		trustedServers:  serverPorts,
+		pktMonStartArgs: pktMonStartArgs,
+		etwOps:          etwOps,
 	}
 }
 
@@ -71,7 +76,7 @@ func (r *domainInfoReader) Start(msgChan chan common.DataWithTimestamp) {
 
 	r.storeMsgChannel = msgChan
 
-	r.etwOps.SubscribeToPktMon(r.msgChannel, r.stopChannel, r.trustedServers, true, "")
+	r.etwOps.SubscribeToPktMon(r.msgChannel, r.stopChannel, r.trustedServers, true, r.pktMonStartArgs)
 
 	go r.loop()
 }

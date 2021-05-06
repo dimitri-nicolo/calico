@@ -58,6 +58,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 		DNSLogsLatency:       configParams.DNSLogsLatency,
 		DNSTrustedServers:    configParams.DNSTrustedServers,
+		PktMonStartArgs:      configParams.DebugWindowsPktMonStartArgs,
 	}
 
 	stopChan := make(chan *sync.WaitGroup, 1)
