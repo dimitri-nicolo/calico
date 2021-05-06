@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,9 +24,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -49,8 +51,8 @@ const (
 	wireguardMTUDefault                 = 1420
 	wireguardRoutingRulePriorityDefault = "99"
 	wireguardListeningPortDefault       = 51820
-
-	fakeWireguardPubKey = "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="
+	defaultWorkloadPort                 = "8055"
+	fakeWireguardPubKey                 = "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="
 )
 
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
@@ -73,13 +75,20 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []api
 		}
 
 		infra = getInfra()
-		felixes, client = infrastructure.StartNNodeTopology(nodeCount, wireguardTopologyOptions(), infra)
+		topologyOptions := wireguardTopologyOptions("CalicoIPAM", true)
+		felixes, client = infrastructure.StartNNodeTopology(nodeCount, topologyOptions, infra)
 
 		// To allow all ingress and egress, in absence of any Policy.
 		infra.AddDefaultAllow()
 
 		for i := range wls {
-			wls[i] = createWorkloadWithAssignedIP(&infra, &client, fmt.Sprintf("10.65.%d.2", i), fmt.Sprintf("wl%d", i), felixes[i])
+			wls[i] = createWorkloadWithAssignedIP(
+				&infra,
+				&topologyOptions,
+				&client,
+				fmt.Sprintf("10.65.%d.2", i),
+				fmt.Sprintf("wl%d", i),
+				felixes[i])
 
 			// Prepare route entry.
 			routeEntries[i] = fmt.Sprintf("10.65.%d.0/26 dev %s scope link", i, wireguardInterfaceNameDefault)
@@ -594,7 +603,7 @@ var _ = infrastructure.DatastoreDescribe("WireGuard-Unsupported", []apiconfig.Da
 		const nodeCount = 1
 
 		infra = getInfra()
-		felixes, _ = infrastructure.StartNNodeTopology(nodeCount, wireguardTopologyOptions(), infra)
+		felixes, _ = infrastructure.StartNNodeTopology(nodeCount, wireguardTopologyOptions("CalicoIPAM", true), infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
@@ -653,19 +662,38 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 		}
 
 		infra = getInfra()
-		felixes, client = infrastructure.StartNNodeTopology(nodeCount, wireguardTopologyOptions(), infra)
+		topologyOptions := wireguardTopologyOptions("CalicoIPAM", true)
+		felixes, client = infrastructure.StartNNodeTopology(nodeCount, topologyOptions, infra)
 
 		// To allow all ingress and egress, in absence of any Policy.
 		infra.AddDefaultAllow()
 
 		for i := range wls {
-			wls[i] = createWorkloadWithAssignedIP(&infra, &client, fmt.Sprintf("10.65.%d.2", i), fmt.Sprintf("wl%d", i), felixes[i])
+			wls[i] = createWorkloadWithAssignedIP(
+				&infra,
+				&topologyOptions,
+				&client,
+				fmt.Sprintf("10.65.%d.2", i),
+				fmt.Sprintf("wl%d", i),
+				felixes[i])
 		}
 
 		// Create 'borrowed' workloads e.g. create workload on felix-0 with IP
 		// borrowed from IPAM block from felix-1.
-		_ = createWorkloadWithAssignedIP(&infra, &client, "10.65.0.4", "borrowed-0", felixes[1])
-		_ = createWorkloadWithAssignedIP(&infra, &client, "10.65.1.4", "borrowed-1", felixes[0])
+		_ = createWorkloadWithAssignedIP(
+			&infra,
+			&topologyOptions,
+			&client,
+			"10.65.0.4",
+			"borrowed-0",
+			felixes[1])
+		_ = createWorkloadWithAssignedIP(
+			&infra,
+			&topologyOptions,
+			&client,
+			"10.65.1.4",
+			"borrowed-1",
+			felixes[0])
 
 		for i := range felixes {
 			felixes[i].TriggerDelayedStart()
@@ -729,7 +757,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 		for i := range []int{0, 1} {
 			Eventually(func() string {
 				return getWireguardRouteEntry(felixes[i])
-			}, "10s", "100ms").Should(ContainSubstring("dev wireguard.cali scope link"))
+			}, "10s", "100ms").Should(ContainSubstring(fmt.Sprintf("dev %s scope link", wireguardInterfaceNameDefault)))
 		}
 
 		By("verifying WireGuard route table should show 'throw' entry on felix 0 and 1")
@@ -757,7 +785,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 			}, "10s", "100ms").Should(BeEmpty())
 			Eventually(func() string {
 				return getWireguardRouteEntry(felixes[2])
-			}, "10s", "100ms").ShouldNot(ContainSubstring("dev wireguard.cali scope link"))
+			}, "10s", "100ms").ShouldNot(ContainSubstring(fmt.Sprintf("dev %s scope link", wireguardInterfaceNameDefault)))
 
 			// Check felix-0, felix-1 is ready for tests.
 			Eventually(func() error {
@@ -783,7 +811,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 				// Check the route entry exists.
 				Eventually(func() string {
 					return getWireguardRouteEntry(felixes[i])
-				}, "10s", "100ms").Should(ContainSubstring("dev wireguard.cali scope link"))
+				}, "10s", "100ms").Should(ContainSubstring(fmt.Sprintf("dev %s scope link", wireguardInterfaceNameDefault)))
 			}
 
 			tcpdumps = nil
@@ -877,7 +905,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3 node 
 
 // Setup cluster topology options.
 // mainly, enable Wireguard with delayed start option.
-func wireguardTopologyOptions() infrastructure.TopologyOptions {
+func wireguardTopologyOptions(routeSource string, ipipEnabled bool) infrastructure.TopologyOptions {
 	topologyOptions := infrastructure.DefaultTopologyOptions()
 
 	// Waiting for calico-node to be ready.
@@ -888,6 +916,12 @@ func wireguardTopologyOptions() infrastructure.TopologyOptions {
 	topologyOptions.IPIPRoutesEnabled = false
 	// Indicate wireguard is enabled
 	topologyOptions.WireguardEnabled = true
+	// RouteSource
+	if routeSource == "WorkloadIPs" {
+		topologyOptions.UseIPPools = false
+	}
+	topologyOptions.ExtraEnvVars["FELIX_ROUTESOURCE"] = routeSource
+	topologyOptions.IPIPEnabled = ipipEnabled
 
 	// Enable Wireguard.
 	felixConfig := api.NewFelixConfiguration()
@@ -957,22 +991,63 @@ func disableWireguardForFelix(client clientv3.Interface, felixName string) {
 
 func createWorkloadWithAssignedIP(
 	infra *infrastructure.DatastoreInfra,
+	infraOpts *infrastructure.TopologyOptions,
 	client *clientv3.Interface,
 	wlIP, wlName string,
 	felix *infrastructure.Felix) *workload.Workload {
 
-	err := (*client).IPAM().AssignIP(utils.Ctx, ipam.AssignIPArgs{
-		IP:       net.MustParseIP(wlIP),
-		HandleID: &wlName,
-		Attrs: map[string]string{
-			ipam.AttributeNode: felix.Hostname,
-		},
-		Hostname: felix.Hostname,
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	wl := workload.Run(felix, wlName, "default", wlIP, "8055", "tcp")
+	wl := workload.Run(felix, wlName, "default", wlIP, defaultWorkloadPort, "tcp")
 	wl.ConfigureInInfra(*infra)
 
+	if infraOpts.UseIPPools {
+		err := (*client).IPAM().AssignIP(utils.Ctx, ipam.AssignIPArgs{
+			IP:       net.MustParseIP(wlIP),
+			HandleID: &wlName,
+			Attrs: map[string]string{
+				ipam.AttributeNode: felix.Hostname,
+			},
+			Hostname: felix.Hostname,
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
+
 	return wl
+}
+
+func createHostNetworkedWorkload(wlName string, felix *infrastructure.Felix) *workload.Workload {
+	return workload.Run(felix, wlName, "default", felix.IP, defaultWorkloadPort, "tcp")
+}
+
+func k8sServiceWireguard(name, clusterIP string, w *workload.Workload, port,
+	tgtPort int, nodePort int32, protocol string) *v1.Service {
+	k8sProto := v1.ProtocolTCP
+	if protocol == "udp" {
+		k8sProto = v1.ProtocolUDP
+	}
+
+	svcType := v1.ServiceTypeClusterIP
+	if nodePort != 0 {
+		svcType = v1.ServiceTypeNodePort
+	}
+
+	return &v1.Service{
+		TypeMeta:   typeMetaV1("Service"),
+		ObjectMeta: objectMetaV1(name),
+		Spec: v1.ServiceSpec{
+			ClusterIP: clusterIP,
+			Type:      svcType,
+			Selector: map[string]string{
+				"name": w.Name,
+			},
+			Ports: []v1.ServicePort{
+				{
+					Protocol:   k8sProto,
+					Port:       int32(port),
+					NodePort:   nodePort,
+					Name:       fmt.Sprintf("port-%d", tgtPort),
+					TargetPort: intstr.FromInt(tgtPort),
+				},
+			},
+		},
+	}
 }

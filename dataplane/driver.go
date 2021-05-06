@@ -303,6 +303,9 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				WireguardEnabled:       configParams.WireguardEnabled,
 				WireguardInterfaceName: configParams.WireguardInterfaceName,
+				WireguardIptablesMark:  markWireguard,
+				WireguardListeningPort: configParams.WireguardListeningPort,
+				RouteSource:            configParams.RouteSource,
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
@@ -334,6 +337,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				RoutingTableIndex:   wireguardTableIndex,
 				InterfaceName:       configParams.WireguardInterfaceName,
 				MTU:                 configParams.WireguardMTU,
+				RouteSource:         configParams.RouteSource,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
@@ -415,6 +419,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			KubeClientSet: k8sClientSet,
 
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
+
+			RouteSource: configParams.RouteSource,
 
 			Collector:            collector,
 			DNSCacheFile:         configParams.GetDNSCacheFile(),
