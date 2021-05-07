@@ -385,9 +385,11 @@ longer matters if there is any other programming of the true default route on th
        for its rack, when {{site.nodecontainer}} runs as a Kubernetes pod.
 
     <br>
-    With OpenShift you should also configure the IP address of the bootstrap node.  This
-    is a global setting for the entire cluster and so at the top-level of the
-    EarlyNetworkConfiguration, rather than per-node.
+    With OpenShift, also add a toplevel `platform: openshift` setting.
+
+    > **Note**: `platform: openshift` triggers additional per-node setup that is needed
+    > during OpenShift's bootstrapping phase.
+    {: .alert .alert-info}
 
     For example, with IP addresses and AS numbers similar as for other resources above:
 
@@ -395,8 +397,7 @@ longer matters if there is any other programming of the true default route on th
     apiVersion: projectcalico.org/v3
     kind: EarlyNetworkConfiguration
     spec:
-      openshift:
-        bootstrapIP: 172.31.21.1
+      platform: openshift
       nodes:
         # worker1
         - interfaceAddresses:
