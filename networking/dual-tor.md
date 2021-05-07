@@ -515,7 +515,7 @@ After=calico-early.service
 Before=kubelet.service
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c "while sleep 5; do grep -q 00000000:1FF3 /proc/net/tcp && break; done"
+ExecStart=/bin/sh -c "while sleep 5; do grep -q 00000000:1FF3 /proc/net/tcp && break; done; sleep 15"
 [Install]
 WantedBy=multi-user.target
 ```
@@ -525,6 +525,10 @@ WantedBy=multi-user.target
 > - The `ExecStart` line here arranges that kubelet will not start running until the
 >   calico-early service has started listening on port 8179 (hex `1FF3`).  8179 is the
 >   port that the calico-early service uses for pre-Kubernetes BGP.
+>
+> - We have sometimes observed issues if kubelet starts immediately after Calico's early
+>   networking setup, because of NetworkManager toggling the hostname.  The final `sleep
+>   15` allows for such changes to settle down before kubelet starts.
 {: .alert .alert-info}
 
 On OpenShift you should wrap the above service definitions in `MachineConfig` resources
