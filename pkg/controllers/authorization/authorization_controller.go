@@ -29,18 +29,14 @@ import (
 // creates the appropriate role mappings in Elasticsearch so that an authenticated Elasticsearch user will have the permissions
 // designated to them through kubernetes RBAC.
 type authorizationController struct {
-	k8sCLI          kubernetes.Interface
-	esClientBuilder elasticsearch.ClientBuilder
-	numWorkers      int
-	resyncPeriod    time.Duration
-	usernamePrefix  string
-	groupPrefix     string
-	esLicenseType   string
+	k8sCLI                 kubernetes.Interface
+	esClientBuilder        elasticsearch.ClientBuilder
+	numWorkers             int
+	resyncPeriod           time.Duration
+	usernamePrefix         string
+	groupPrefix            string
+	enableESOIDCWorkaround bool
 }
-
-const (
-	ElasticsearchLicenseTypeBasic = "basic"
-)
 
 func New(k8sCLI kubernetes.Interface, esClientBuilder elasticsearch.ClientBuilder, config *config.AuthorizationControllerCfg) controller.Controller {
 	// TODO remove this default when this is properly hooked up to using KubeControllerConfiguration
@@ -50,13 +46,13 @@ func New(k8sCLI kubernetes.Interface, esClientBuilder elasticsearch.ClientBuilde
 	}
 
 	return &authorizationController{
-		k8sCLI:          k8sCLI,
-		esClientBuilder: esClientBuilder,
-		numWorkers:      config.NumberOfWorkers,
-		resyncPeriod:    resyncPeriod,
-		usernamePrefix:  config.OIDCAuthUsernamePrefix,
-		groupPrefix:     config.OIDCAuthGroupPrefix,
-		esLicenseType:   config.ElasticsearchLicenseType,
+		k8sCLI:                 k8sCLI,
+		esClientBuilder:        esClientBuilder,
+		numWorkers:             config.NumberOfWorkers,
+		resyncPeriod:           resyncPeriod,
+		usernamePrefix:         config.OIDCAuthUsernamePrefix,
+		groupPrefix:            config.OIDCAuthGroupPrefix,
+		enableESOIDCWorkaround: config.EnableElasticsearchOIDCWorkaround,
 	}
 }
 
@@ -112,7 +108,7 @@ func (c *authorizationController) Run(stop chan struct{}) {
 	go clusterRoleWorker.Run(c.numWorkers, stop)
 	go clusterRoleBindingWorker.Run(c.numWorkers, stop)
 
-	if c.esLicenseType == ElasticsearchLicenseTypeBasic {
+	if c.enableESOIDCWorkaround {
 
 		configMapWorker := worker.New(&configMapReconciler{
 			k8sCLI:          c.k8sCLI,
@@ -169,7 +165,7 @@ func (c *authorizationController) Run(stop chan struct{}) {
 func (c *authorizationController) initializeK8sUpdateHandler(stop chan struct{}, esCLI elasticsearch.Client, resourceUpdatesChan chan resourceUpdate) *k8sUpdateHandler {
 	var synchronizer k8sRBACSynchronizer
 
-	if c.esLicenseType == ElasticsearchLicenseTypeBasic {
+	if c.enableESOIDCWorkaround {
 		synchronizer = newNativeUserSynchronizer(stop, esCLI, c.k8sCLI)
 	} else {
 		synchronizer = newRoleMappingSynchronizer(stop, esCLI, c.k8sCLI, c.usernamePrefix, c.groupPrefix)
