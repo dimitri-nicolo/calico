@@ -48,6 +48,19 @@ type AggSumInfo struct {
 	Field string
 }
 
+// Structure encapsulating info about a aggregated max/min query.
+type AggMaxMinInfo struct {
+	Name  string
+	Field string
+}
+
+// Structure encapsulating info about a aggregated mean query.
+type AggMeanInfo struct {
+	Name        string
+	Field       string
+	WeightField string
+}
+
 // CompositeAggregationQuery encapsulates and provides helper functions for a composite aggregation query. This
 // assumes we require a very specific type of query which means we can simplify the otherwise richer Elasticsearch API
 // into something a little easier to process.
@@ -114,6 +127,15 @@ type CompositeAggregationQuery struct {
 	// The aggregated sums info.
 	AggSumInfos []AggSumInfo
 
+	// The aggregated max info.
+	AggMaxInfos []AggMaxMinInfo
+
+	// The aggregated min info.
+	AggMinInfos []AggMaxMinInfo
+
+	// The aggregated means info.
+	AggMeanInfos []AggMeanInfo
+
 	// The max buckets each iteration. Defaults to resultsBucketSize. Generally this should not need to be modified
 	// but it may become necessary to query smaller buckets if the amount of data is large, or could be incremented
 	// if there are no sub aggregations.
@@ -145,9 +167,24 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 		Sources(compiledCompositeSources...).
 		Size(q.getMaxBuckets())
 
-	// Add the aggregated sums.
+	// Add the aggregated sums, max, min and means.
 	for _, a := range q.AggSumInfos {
 		compiledCompositeAgg.SubAggregation(a.Name, elastic.NewSumAggregation().Field(a.Field))
+	}
+	for _, a := range q.AggMaxInfos {
+		compiledCompositeAgg.SubAggregation(a.Name, elastic.NewMaxAggregation().Field(a.Field))
+	}
+	for _, a := range q.AggMinInfos {
+		compiledCompositeAgg.SubAggregation(a.Name, elastic.NewMinAggregation().Field(a.Field))
+	}
+	for _, a := range q.AggMeanInfos {
+		if a.WeightField != "" {
+			compiledCompositeAgg.SubAggregation(a.Name, elastic.NewWeightedAvgAggregation().
+				Value(&elastic.MultiValuesSourceFieldConfig{FieldName: a.Field}).
+				Weight(&elastic.MultiValuesSourceFieldConfig{FieldName: a.WeightField}))
+		} else {
+			compiledCompositeAgg.SubAggregation(a.Name, elastic.NewAvgAggregation().Field(a.Field))
+		}
 	}
 
 	// Add the aggregated terms.
@@ -234,16 +271,46 @@ func (q *CompositeAggregationQuery) ConvertBucket(item *elastic.AggregationBucke
 		cab.CompositeAggregationKey = append(cab.CompositeAggregationKey, CompositeAggregationSourceValue{Name: name, Value: val})
 	}
 
-	// Extract the aggregated sum data.
+	// Extract the aggregated sum, max, min and mean data.
 	for i := range q.AggSumInfos {
 		name := q.AggSumInfos[i].Name
 		val, ok := item.Sum(name)
 		if !ok || val.Value == nil {
 			// We don't need the sum value, so if not present log and continue.
-			log.Infof("Error fetching aggregated sum results: %s", name)
+			log.Debugf("Error fetching aggregated sum results: %s", name)
 			continue
 		}
 		cab.AggregatedSums[name] = *val.Value
+	}
+	for i := range q.AggMaxInfos {
+		name := q.AggMaxInfos[i].Name
+		val, ok := item.Max(name)
+		if !ok || val.Value == nil {
+			// We don't need the value, so if not present log and continue.
+			log.Debugf("Error fetching aggregated max results: %s", name)
+			continue
+		}
+		cab.AggregatedMax[name] = *val.Value
+	}
+	for i := range q.AggMinInfos {
+		name := q.AggMinInfos[i].Name
+		val, ok := item.Min(name)
+		if !ok || val.Value == nil {
+			// We don't need the value, so if not present log and continue.
+			log.Debugf("Error fetching aggregated min results: %s", name)
+			continue
+		}
+		cab.AggregatedMin[name] = *val.Value
+	}
+	for i := range q.AggMeanInfos {
+		name := q.AggMeanInfos[i].Name
+		val, ok := item.Avg(name)
+		if !ok || val.Value == nil {
+			// We don't need the value, so if not present log and continue.
+			log.Debugf("Error fetching aggregated mean results: %s", name)
+			continue
+		}
+		cab.AggregatedMean[name] = *val.Value
 	}
 
 	// Extract the aggregated terms.
@@ -280,6 +347,9 @@ func NewCompositeAggregationBucket(dc int64) *CompositeAggregationBucket {
 		DocCount:        dc,
 		AggregatedTerms: make(map[string]*AggregatedTerm),
 		AggregatedSums:  make(map[string]float64),
+		AggregatedMax:   make(map[string]float64),
+		AggregatedMin:   make(map[string]float64),
+		AggregatedMean:  make(map[string]float64),
 	}
 }
 
@@ -322,12 +392,15 @@ type CompositeAggregationBucket struct {
 	//          },
 	AggregatedTerms map[string]*AggregatedTerm
 
-	// The set of aggregated sums.
+	// The set of aggregated sums, max, min and means.
 	// Wire format:
 	//          "sum_bytes_out": {
 	//            "value": 1858761
 	//          },
 	AggregatedSums map[string]float64
+	AggregatedMax  map[string]float64
+	AggregatedMin  map[string]float64
+	AggregatedMean map[string]float64
 }
 
 // Aggregate aggregates in the values from cin. Both cout and cin should represent the same aggregation bucket, but
@@ -616,8 +689,23 @@ func compositeAggregationBucketToMap(
 		"key":       key,
 	}
 
-	// Add in the aggregated sums.
+	// Add in the aggregated sums, max, min and means.
 	for name, value := range bucket.AggregatedSums {
+		bucketMap[name] = map[string]interface{}{
+			"value": value,
+		}
+	}
+	for name, value := range bucket.AggregatedMax {
+		bucketMap[name] = map[string]interface{}{
+			"value": value,
+		}
+	}
+	for name, value := range bucket.AggregatedMin {
+		bucketMap[name] = map[string]interface{}{
+			"value": value,
+		}
+	}
+	for name, value := range bucket.AggregatedMean {
 		bucketMap[name] = map[string]interface{}{
 			"value": value,
 		}
