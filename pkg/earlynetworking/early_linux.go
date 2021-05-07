@@ -149,8 +149,18 @@ nodeLoop:
 		}
 	}
 
-	// Change interface-specific addresses to be scope link.
-	ensureNodeAddressesAndRoutes(thisNode)
+	var bootstrapIPs []string
+	if strings.ToLower(cfg.Spec.Platform) == PlatformOpenShift {
+		// Look up the IP of the bootstrap node.  On nodes that are directly connected to
+		// the bootstrap node, we want to create a specific route to ensure that we will use
+		// our stable address as the source.
+		bootstrapIPs, err = net.LookupHost("bootstrap")
+		logrus.WithError(err).Infof("DNS lookup for bootstrap node returned %v", bootstrapIPs)
+	}
+
+	// Change interface-specific addresses to be scope link, and create specific routes where
+	// directly connected to a bootstrap IP.
+	ensureNodeAddressesAndRoutes(thisNode, bootstrapIPs)
 
 	// Use multiple ECMP paths based on hashing 5-tuple.  These are not necessarily fatal, if
 	// setting fails.
@@ -217,7 +227,7 @@ func monitorOngoing(thisNode *ConfigNode) {
 			}
 		case <-periodicCheckC:
 			// Recheck interface addresses and routes.
-			ensureNodeAddressesAndRoutes(thisNode)
+			ensureNodeAddressesAndRoutes(thisNode, nil)
 		}
 	}
 }
@@ -264,7 +274,7 @@ func monitorNormalBird(earlyBirdWantedC chan<- bool) {
 	}
 }
 
-func ensureNodeAddressesAndRoutes(thisNode *ConfigNode) {
+func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string) {
 	links, err := netlink.LinkList()
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to list all links")
@@ -279,6 +289,23 @@ func ensureNodeAddressesAndRoutes(thisNode *ConfigNode) {
 				if sameSubnet(addr, peering.PeerIP) {
 					ensureLinkAddressAndRoutes(link, addr, peering.PeerIP)
 					break
+				}
+			}
+			for _, bootstrapIP := range bootstrapIPs {
+				if sameSubnet(addr, bootstrapIP) {
+					_, ipNet, err := net.ParseCIDR(bootstrapIP + "/32")
+					if err == nil {
+						ensureRoute(&netlink.Route{
+							Dst:       ipNet,
+							LinkIndex: link.Attrs().Index,
+							Type:      syscall.RTN_UNICAST,
+							Table:     syscall.RT_TABLE_MAIN,
+							Src:       net.ParseIP(thisNode.StableAddress.Address),
+						})
+					} else {
+						logrus.WithError(err).Warningf("Failed to parse OpenShift bootstrap IP (%v)", bootstrapIP)
+					}
+
 				}
 			}
 		}

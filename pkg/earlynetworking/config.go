@@ -24,8 +24,13 @@ type EarlyNetworkConfiguration struct {
 }
 
 type EarlyNetworkConfigurationSpec struct {
-	Nodes []ConfigNode
+	Nodes    []ConfigNode
+	Platform string
 }
+
+const (
+	PlatformOpenShift = "openshift"
+)
 
 type ConfigNode struct {
 	InterfaceAddresses []string            `yaml:"interfaceAddresses"`
