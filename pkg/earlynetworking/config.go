@@ -24,9 +24,13 @@ type EarlyNetworkConfiguration struct {
 }
 
 type EarlyNetworkConfigurationSpec struct {
-	Nodes     []ConfigNode
-	OpenShift ConfigOpenShift
+	Nodes    []ConfigNode
+	Platform string
 }
+
+const (
+	PlatformOpenShift = "openshift"
+)
 
 type ConfigNode struct {
 	InterfaceAddresses []string            `yaml:"interfaceAddresses"`
@@ -43,10 +47,6 @@ type ConfigStableAddress struct {
 type ConfigPeering struct {
 	PeerIP       string `yaml:"peerIP"`
 	PeerASNumber int    `yaml:"peerASNumber"`
-}
-
-type ConfigOpenShift struct {
-	BootstrapIP string `yaml:"bootstrapIP"`
 }
 
 func GetEarlyNetworkConfig(yamlFileName string) (*EarlyNetworkConfiguration, error) {
