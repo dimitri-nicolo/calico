@@ -377,20 +377,27 @@ longer matters if there is any other programming of the true default route on th
 1.  Prepare an EarlyNetworkConfiguration resource to specify the additional information
     that is needed for each node in a multi-rack dual ToR cluster:
 
-	-  The stable address for the node.
-	-  Its BGP AS number.
-	-  The IPs that the node should peer with, when {{site.nodecontainer}} runs
+    -  The stable address for the node.
+    -  Its BGP AS number.
+    -  The IPs that the node should peer with, when {{site.nodecontainer}} runs
        as a container for early networking setup after each node boot.
-	-  Any labels that the node should have, so as to match the right BGPPeer definitions
+    -  Any labels that the node should have, so as to match the right BGPPeer definitions
        for its rack, when {{site.nodecontainer}} runs as a Kubernetes pod.
 
-	<br>
+    <br>
+    With OpenShift, also add a toplevel `platform: openshift` setting.
+
+    > **Note**: `platform: openshift` triggers additional per-node setup that is needed
+    > during OpenShift's bootstrapping phase.
+    {: .alert .alert-info}
+
     For example, with IP addresses and AS numbers similar as for other resources above:
 
     ```
     apiVersion: projectcalico.org/v3
     kind: EarlyNetworkConfiguration
     spec:
+      platform: openshift
       nodes:
         # worker1
         - interfaceAddresses:
@@ -430,12 +437,12 @@ longer matters if there is any other programming of the true default route on th
       namespace: calico-system
     data:
       earlyNetworkConfiguration: |
-	    apiVersion: projectcalico.org/v3
-	    kind: EarlyNetworkConfiguration
-	    spec:
-	      nodes:
-	        # worker1
-	        - interfaceAddresses:
+        apiVersion: projectcalico.org/v3
+        kind: EarlyNetworkConfiguration
+        spec:
+          nodes:
+            # worker1
+            - interfaceAddresses:
         ...
     ```
 
@@ -508,7 +515,7 @@ After=calico-early.service
 Before=kubelet.service
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c "while sleep 5; do grep -q 00000000:1FF3 /proc/net/tcp && break; done"
+ExecStart=/bin/sh -c "while sleep 5; do grep -q 00000000:1FF3 /proc/net/tcp && break; done; sleep 15"
 [Install]
 WantedBy=multi-user.target
 ```
@@ -518,6 +525,10 @@ WantedBy=multi-user.target
 > - The `ExecStart` line here arranges that kubelet will not start running until the
 >   calico-early service has started listening on port 8179 (hex `1FF3`).  8179 is the
 >   port that the calico-early service uses for pre-Kubernetes BGP.
+>
+> - We have sometimes observed issues if kubelet starts immediately after Calico's early
+>   networking setup, because of NetworkManager toggling the hostname.  The final `sleep
+>   15` allows for such changes to settle down before kubelet starts.
 {: .alert .alert-info}
 
 On OpenShift you should wrap the above service definitions in `MachineConfig` resources
