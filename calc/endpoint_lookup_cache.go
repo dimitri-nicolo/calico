@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dispatcher"
@@ -25,6 +26,17 @@ import (
 const (
 	endpointDataTTLAfterMarkedAsRemovedSeconds = 2 * config.DefaultConntrackPollingInterval
 )
+
+var (
+	gaugeEndpointCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_lookupcache_endpoints",
+		Help: "Total number of entries currently residing in the endpoints lookup cache.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeEndpointCacheLength)
+}
 
 // ===== A note on data structures for storing policy matches =====
 //
@@ -123,8 +135,8 @@ func (e *EndpointData) IsHostEndpoint() (isHep bool) {
 // cache appropriately.
 type EndpointLookupsCache struct {
 	epMutex       sync.RWMutex
-	ipToEndpoints map[[16]byte][]*EndpointData
 	endpointData  map[model.Key]*EndpointData
+	ipToEndpoints map[[16]byte][]*EndpointData
 
 	endpointDeletionTimers map[model.Key]*time.Timer
 
@@ -144,6 +156,7 @@ func NewEndpointLookupsCache() *EndpointLookupsCache {
 		nodeIPToNames:          make(map[[16]byte][]string),
 		nodes:                  make(map[string]v3.NodeSpec),
 	}
+
 	return ec
 }
 
@@ -178,7 +191,6 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 		}
 	}
 	log.Infof("Updating endpoint cache with local endpoint data %v", key)
-	return
 }
 
 // CreateEndpointData creates the endpoint data based on tier
@@ -303,6 +315,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 		return
 	}
 	log.Debugf("Updating endpoint cache with remote endpoint data %v", epUpdate.Key)
+
 	return
 }
 
@@ -331,7 +344,7 @@ func (ec *EndpointLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 // addOrUpdateEndpoint tracks endpoint to IP mapping as well as IP to endpoint reverse mapping
 // for a workload or host endpoint.
 func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpointData *EndpointData, ipsOfIncomingEndpoint [][16]byte) {
-	// If the endpoint exists, and it was updated, then we might have to add or
+	// If the endpoint exists, it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
 	var ipsToRemove set.Set = set.New()
@@ -389,6 +402,8 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 			ec.removeEndpointDataIpMapping(key, ip)
 			return set.RemoveItem
 		})
+
+	ec.reportEndpointCacheMetrics()
 }
 
 // updateIPToEndpointMapping creates or appends the EndpointData to a corresponding
@@ -471,8 +486,6 @@ func (ec *EndpointLookupsCache) removeEndpointWithDelay(key model.Key) {
 
 // removeEndpoint removes all EndpointData markedToBeDeleted from the slice
 // captures all IPs and removes all correspondoing IP to EndpointData mapping as well.
-// This method acquires (and releases) the EndpointLookupsCache.epMutex before (and after)
-// manipulating the maps.
 func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 	ec.epMutex.Lock()
 	defer ec.epMutex.Unlock()
@@ -507,6 +520,7 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 
 	delete(ec.endpointData, key)
 	delete(ec.endpointDeletionTimers, key)
+	ec.reportEndpointCacheMetrics()
 }
 
 // removeEndpointDataIpMapping checks if  there is an existing
@@ -583,6 +597,11 @@ func (ec *EndpointLookupsCache) GetAllEndpointData() []*EndpointData {
 		allEds = append(allEds, ed)
 	}
 	return allEds
+}
+
+//reportEndpointCacheMetrics reports endpoint cache performance metrics to prometheus
+func (ec *EndpointLookupsCache) reportEndpointCacheMetrics() {
+	gaugeEndpointCacheLength.Set(float64(len(ec.endpointData)))
 }
 
 func (ec *EndpointLookupsCache) GetNode(ip [16]byte) (string, bool) {

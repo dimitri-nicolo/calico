@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dispatcher"
@@ -16,6 +17,17 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
+
+var (
+	gaugeNetworkSetCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_lookupcache_networksets",
+		Help: "Total number of entries currently residing in the network set lookup cache.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeNetworkSetCacheLength)
+}
 
 // Networkset data is stored in the EndpointData object for easier type processing for flow logs.
 type NetworksetLookupsCache struct {
@@ -30,6 +42,7 @@ func NewNetworksetLookupsCache() *NetworksetLookupsCache {
 		nsMutex:           sync.RWMutex{},
 		ipTree:            NewIpTrie(),
 	}
+
 	return nc
 }
 
@@ -105,6 +118,7 @@ func (nc *NetworksetLookupsCache) addOrUpdateNetworkset(key model.Key, ed *Endpo
 	})
 	if newCIDRs.Len() != 0 {
 		nc.networksetToCidrs[key] = newCIDRs
+		nc.reportNetworksetCacheMetrics()
 	}
 
 	// At this point, we can check if we need to update endpoint data
@@ -150,6 +164,7 @@ func (nc *NetworksetLookupsCache) removeNetworkset(key model.Key) {
 		return nil
 	})
 	delete(nc.networksetToCidrs, key)
+	nc.reportNetworksetCacheMetrics()
 }
 
 func (nc *NetworksetLookupsCache) removeNetworksetCidrMapping(key model.Key, cidr ip.CIDR) {
@@ -170,6 +185,7 @@ func (nc *NetworksetLookupsCache) removeNetworksetCidrMapping(key model.Key, cid
 		existingCidrs.Discard(cidr)
 		nc.networksetToCidrs[key] = existingCidrs
 	}
+	nc.reportNetworksetCacheMetrics()
 }
 
 // GetNetworkset finds Longest Prefix Match CIDR from given IP ADDR and return last observed
@@ -198,4 +214,9 @@ func (nc *NetworksetLookupsCache) DumpNetworksets() string {
 		lines = append(lines, key.(model.NetworkSetKey).Name, ": ", strings.Join(cidrStr, ","))
 	}
 	return strings.Join(lines, "\n")
+}
+
+//reportNetworksetCacheMetrics reports networkset cache performance metrics to prometheus
+func (nc *NetworksetLookupsCache) reportNetworksetCacheMetrics() {
+	gaugeNetworkSetCacheLength.Set(float64(len(nc.networksetToCidrs)))
 }

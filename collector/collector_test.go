@@ -856,7 +856,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered",
 				func() {
 					pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
-					c.ApplyPacketInfo(pktinfo)
+					c.applyPacketInfo(pktinfo)
 				},
 			)
 
@@ -913,7 +913,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered",
 				func() {
 					pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
-					c.ApplyPacketInfo(pktinfo)
+					c.applyPacketInfo(pktinfo)
 				},
 			)
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
@@ -933,8 +933,8 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.isDNAT).Should(BeTrue())
 
 			By("handling nflog updates for destination matching on policy - all policy info is now gathered, but no service")
-			c.ApplyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
-			c.ApplyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirEgress, localPktEgress))
+			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirEgress, localPktEgress))
 			Expect(c.epStats).Should(HaveKey(*t))
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
@@ -951,13 +951,13 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
-			c.ApplyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 		It("handle pre-DNAT info on nflog update", func() {
 			By("handling egress nflog updates for destination matching on policy - this contains pre-DNAT info")
 			t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			c.ApplyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngressWithDNAT))
+			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngressWithDNAT))
 
 			// Flagging as expired will attempt to expire the data when NFLOGs and service info are gathered.
 			By("flagging the data as expired")
@@ -966,7 +966,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.isDNAT).Should(BeTrue())
 
 			By("handling ingree nflog updates for destination matching on policy - all policy info is now gathered, but no service")
-			c.ApplyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirEgress, localPktEgress))
+			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirEgress, localPktEgress))
 			Expect(c.epStats).Should(HaveKey(*t))
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
@@ -983,7 +983,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
-			c.ApplyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.convertNflogPkt(rules.RuleDirIngress, localPktIngress))
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})
@@ -1712,7 +1712,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
-		c.ApplyPacketInfo(pktinfo)
+		c.applyPacketInfo(pktinfo)
 	}
 }
 
