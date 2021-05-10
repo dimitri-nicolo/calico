@@ -42,14 +42,14 @@ const (
 	voltronCAPathEnv = "VOLTRON_CA_PATH"
 
 	// Dex settings for authentication.
-	dexEnabledEnv        = "DEX_ENABLED"
-	dexIssuerEnv         = "DEX_ISSUER"
-	dexClientIDEnv       = "DEX_CLIENT_ID"
-	dexJWKSURLEnv        = "DEX_JWKS_URL"
-	dexUsernameClaimEnv  = "DEX_USERNAME_CLAIM"
-	dexGroupsClaimEnv    = "DEX_GROUPS_CLAIM"
-	dexUsernamePrefixEnv = "DEX_USERNAME_PREFIX"
-	dexGroupsPrefixEnv   = "DEX_GROUPS_PREFIX"
+	oidcAuthEnabledEnv        = "OIDC_AUTH_ENABLED"
+	oidcAuthIssuerEnv         = "OIDC_AUTH_ISSUER"
+	oidcAuthClientIDEnv       = "OIDC_AUTH_CLIENT_ID"
+	oidcAuthJWKSURLEnv        = "OIDC_AUTH_JWKSURL"
+	oidcAuthUsernameClaimEnv  = "OIDC_AUTH_USERNAME_CLAIM"
+	oidcAuthGroupsClaimEnv    = "OIDC_AUTH_GROUPS_CLAIM"
+	oidcAuthUsernamePrefixEnv = "OIDC_AUTH_USERNAME_PREFIX"
+	oidcAuthGroupsPrefixEnv   = "OIDC_AUTH_GROUPS_PREFIX"
 )
 
 const (
@@ -153,14 +153,14 @@ type Config struct {
 	VoltronCAPath string
 
 	// Dex settings for authentication.
-	DexEnabled        bool
-	DexIssuer         string
-	DexClientID       string
-	DexJWKSURL        string
-	DexUsernameClaim  string
-	DexGroupsClaim    string
-	DexUsernamePrefix string
-	DexGroupsPrefix   string
+	OIDCAuthEnabled        bool
+	OIDCAuthIssuer         string
+	OIDCAuthClientID       string
+	OIDCAuthJWKSURL        string
+	OIDCAuthUsernameClaim  string
+	OIDCAuthGroupsClaim    string
+	OIDCAuthUsernamePrefix string
+	OIDCAuthGroupsPrefix   string
 }
 
 func NewConfigFromEnv() (*Config, error) {
@@ -225,7 +225,7 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 	voltronCAPath := getEnvOrDefaultString(voltronCAPathEnv, defaultVoltronCAPath)
 
-	dexEnabled, err := getEnvOrDefaultBool(dexEnabledEnv, false)
+	oidcAuthEnabled, err := getEnvOrDefaultBool(oidcAuthEnabledEnv, false)
 	if err != nil {
 		return nil, err
 	}
@@ -254,14 +254,14 @@ func NewConfigFromEnv() (*Config, error) {
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
 		ProxyIdleConnTimeout:      idleConnTimeout,
 		VoltronCAPath:             voltronCAPath,
-		DexEnabled:                dexEnabled,
-		DexIssuer:                 getEnv(dexIssuerEnv),
-		DexClientID:               getEnv(dexClientIDEnv),
-		DexJWKSURL:                getEnvOrDefaultString(dexJWKSURLEnv, defaultJWSKURL),
-		DexUsernameClaim:          getEnvOrDefaultString(dexUsernameClaimEnv, defaultUsernameClaim),
-		DexGroupsClaim:            getEnv(dexGroupsClaimEnv),
-		DexUsernamePrefix:         getEnv(dexUsernamePrefixEnv),
-		DexGroupsPrefix:           getEnv(dexGroupsPrefixEnv),
+		OIDCAuthEnabled:           oidcAuthEnabled,
+		OIDCAuthIssuer:            getEnv(oidcAuthIssuerEnv),
+		OIDCAuthClientID:          getEnv(oidcAuthClientIDEnv),
+		OIDCAuthJWKSURL:           getEnvOrDefaultString(oidcAuthJWKSURLEnv, defaultJWSKURL),
+		OIDCAuthUsernameClaim:     getEnvOrDefaultString(oidcAuthUsernameClaimEnv, defaultUsernameClaim),
+		OIDCAuthGroupsClaim:       getEnv(oidcAuthGroupsClaimEnv),
+		OIDCAuthUsernamePrefix:    getEnv(oidcAuthUsernamePrefixEnv),
+		OIDCAuthGroupsPrefix:      getEnv(oidcAuthGroupsPrefixEnv),
 	}
 	err = validateConfig(config)
 	return config, err

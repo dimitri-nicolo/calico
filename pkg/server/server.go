@@ -71,18 +71,18 @@ func Start(cfg *Config) error {
 		log.WithError(err).Panic("Unable to create auth configuration")
 	}
 
-	if cfg.DexEnabled {
+	if cfg.OIDCAuthEnabled {
 		opts := []lmaauth.DexOption{
-			lmaauth.WithGroupsClaim(cfg.DexGroupsClaim),
-			lmaauth.WithJWKSURL(cfg.DexJWKSURL),
-			lmaauth.WithUsernamePrefix(cfg.DexUsernamePrefix),
-			lmaauth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
 
 		dex, err := lmaauth.NewDexAuthenticator(
-			cfg.DexIssuer,
-			cfg.DexClientID,
-			cfg.DexUsernameClaim,
+			cfg.OIDCAuthIssuer,
+			cfg.OIDCAuthClientID,
+			cfg.OIDCAuthUsernameClaim,
 			opts...)
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")
@@ -167,11 +167,11 @@ func Start(cfg *Config) error {
 						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
 		sm.Handle("/user",
 			middleware.AuthenticateRequest(authenticator,
-				middleware.NewUserHandler(k8sClientSet, cfg.DexEnabled, cfg.DexIssuer, cfg.ElasticLicenseType)))
+				middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 		sm.Handle("/kibana/login",
 			middleware.SetAuthorizationHeaderFromCookie(
 				middleware.AuthenticateRequest(authenticator,
-					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.DexEnabled, cfg.DexIssuer,
+					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
 						middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
 	case ServiceUserMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
@@ -207,11 +207,11 @@ func Start(cfg *Config) error {
 						middleware.NewFlowHandler(esClient, k8sClientFactory)))))
 		sm.Handle("/user",
 			middleware.AuthenticateRequest(authenticator,
-				middleware.NewUserHandler(k8sClientSet, cfg.DexEnabled, cfg.DexIssuer, cfg.ElasticLicenseType)))
+				middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 		sm.Handle("/kibana/login",
 			middleware.SetAuthorizationHeaderFromCookie(
 				middleware.AuthenticateRequest(authenticator,
-					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.DexEnabled, cfg.DexIssuer,
+					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
 						middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
