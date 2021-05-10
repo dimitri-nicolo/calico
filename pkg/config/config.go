@@ -78,14 +78,14 @@ type Config struct {
 	IncludeStagedNetworkPolicies bool `envconfig:"TIGERA_COMPLIANCE_INCLUDE_STAGED_NETWORK_POLICIES" default:"false"`
 
 	// Dex settings for authentication.
-	DexEnabled       bool   `envconfig:"TIGERA_COMPLIANCE_DEX_ENABLED" default:"false"`
-	DexIssuer        string `envconfig:"TIGERA_COMPLIANCE_DEX_ISSUER" default:"https://127.0.0.1:5556/dex"`
-	DexClientID      string `envconfig:"TIGERA_COMPLIANCE_DEX_CLIENT_ID" default:"tigera-manager"`
-	DexJWKSURL       string `envconfig:"TIGERA_COMPLIANCE_DEX_JWKS_URL" default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys"`
-	DexUsernameClaim string `envconfig:"TIGERA_COMPLIANCE_DEX_USERNAME_CLAIM" default:"email"`
-	DexGroupsClaim   string `envconfig:"TIGERA_COMPLIANCE_DEX_GROUPS_CLAIM"`
-	DexUsernamePrefix   string `envconfig:"TIGERA_COMPLIANCE_DEX_USERNAME_PREFIX"`
-	DexGroupsPrefix   string `envconfig:"TIGERA_COMPLIANCE_DEX_GROUPS_PREFIX"`
+	OIDCAuthEnabled        bool   `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_ENABLED" default:"false"`
+	OIDCAuthIssuer         string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_ISSUER" default:"https://127.0.0.1:5556/dex"`
+	OIDCAuthClientID       string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_CLIENT_ID" default:"tigera-manager"`
+	OIDCAuthJWKSURL        string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_JWKSURL" default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys"`
+	OIDCAuthUsernameClaim  string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_USERNAME_CLAIM" default:"email"`
+	OIDCAuthGroupsClaim    string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_GROUPS_CLAIM"`
+	OIDCAuthUsernamePrefix string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_USERNAME_PREFIX"`
+	OIDCAuthGroupsPrefix   string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_GROUPS_PREFIX"`
 }
 
 func MustLoadConfig() *Config {

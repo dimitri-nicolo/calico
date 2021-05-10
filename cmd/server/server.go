@@ -68,16 +68,16 @@ func main() {
 		log.WithError(err).Panic("Unable to create authenticator")
 	}
 
-	if cfg.DexEnabled {
+	if cfg.OIDCAuthEnabled {
 		dex, err := auth.NewDexAuthenticator(
-			cfg.DexIssuer,
-			cfg.DexClientID,
-			cfg.DexUsernameClaim,
+			cfg.OIDCAuthIssuer,
+			cfg.OIDCAuthClientID,
+			cfg.OIDCAuthUsernameClaim,
 			[]auth.DexOption{
-				auth.WithGroupsClaim(cfg.DexGroupsClaim),
-				auth.WithJWKSURL(cfg.DexJWKSURL),
-				auth.WithUsernamePrefix(cfg.DexUsernamePrefix),
-				auth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+				auth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+				auth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+				auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+				auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 			}...)
 
 		if err != nil {
