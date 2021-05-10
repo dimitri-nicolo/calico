@@ -66,11 +66,12 @@ and in particular, pushing the networking capabilities of the latest Linux kerne
   - Docker Enterprise: eBPF mode is incompatible with Docker Enterprise at this time. The Tigera team is investigating the issue.
 
 - Clusters with some eBPF nodes and some standard dataplane and/or Windows nodes.
-- IPv6
+- IPv6.
 - Host endpoint `doNotTrack` policy (other policy types are supported).
 - Floating IPs.
 - SCTP (either for policy or services).
 - `Log` action in policy rules.
+- Tagged VLAN devices.
 
 #### Performance
 
