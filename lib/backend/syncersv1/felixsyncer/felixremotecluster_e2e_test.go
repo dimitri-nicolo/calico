@@ -94,6 +94,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 	var be api.Client
 	var syncer api.Syncer
 	var syncTester *testutils.SyncerTester
+	var filteredSyncerTester api.SyncerCallbacks
 
 	BeforeEach(func() {
 		// Create the v3 client
@@ -128,7 +129,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
+			filteredSyncerTester = NewValidationFilter(syncTester)
+			syncer = felixsyncer.New(be, config.Spec, filteredSyncerTester, false, true)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -271,7 +273,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
+			filteredSyncerTester = NewValidationFilter(syncTester)
+			syncer = felixsyncer.New(be, config.Spec, filteredSyncerTester, false, true)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -384,7 +387,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
+			filteredSyncerTester = NewValidationFilter(syncTester)
+			syncer = felixsyncer.New(be, config.Spec, filteredSyncerTester, false, true)
 			syncer.Start()
 
 			By("Checking status is updated to resync in progress")
@@ -466,6 +470,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 	var localBackend api.Client
 	var syncer api.Syncer
 	var syncTester *testutils.SyncerTester
+	var filteredSyncerTester api.SyncerCallbacks
 	var remoteClient clientv3.Interface
 	var rcc *apiv3.RemoteClusterConfiguration
 	var expectedEvents []api.Update
@@ -695,7 +700,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 
 				By("Creating and starting a syncer")
 				syncTester = testutils.NewSyncerTester()
-				syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
+				filteredSyncerTester = NewValidationFilter(syncTester)
+				syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
 				syncer.Start()
 
 				By("Checking status is updated to sync'd at start of day")
@@ -771,7 +777,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 			BeforeEach(func() {
 				By("Creating and starting a syncer")
 				syncTester = testutils.NewSyncerTester()
-				syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
+				filteredSyncerTester = NewValidationFilter(syncTester)
+				syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
 				syncer.Start()
 
 				By("Checking status is updated to sync'd at start of day")
@@ -919,9 +926,10 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 			BeforeEach(func() {
 				By("Creating and starting a syncer")
 				syncTester = testutils.NewSyncerTester()
+				filteredSyncerTester = NewValidationFilter(syncTester)
 				restartCallbackCalled = false
 				restartCallbackMsg = ""
-				restartMonitor = remotecluster.NewRemoteClusterRestartMonitor(syncTester, func(reason string) {
+				restartMonitor = remotecluster.NewRemoteClusterRestartMonitor(filteredSyncerTester, func(reason string) {
 					restartCallbackCalled = true
 					restartCallbackMsg = reason
 				})
@@ -1047,6 +1055,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 			var remoteBackend api.Client
 			var syncer api.Syncer
 			var syncTester *testutils.SyncerTester
+			var filteredSyncerTester api.SyncerCallbacks
 			var remoteClient clientv3.Interface
 			var k8sClientset *kubernetes.Clientset
 			var remoteConfig apiconfig.CalicoAPIConfig
@@ -1367,9 +1376,10 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 
 						By("Creating and starting a syncer")
 						syncTester = testutils.NewSyncerTester()
+						filteredSyncerTester = NewValidationFilter(syncTester)
 
 						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
+						syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
 						defer os.Unsetenv("KUBERNETES_MASTER")
 						syncer.Start()
 
@@ -1411,9 +1421,10 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 
 						By("Creating and starting a syncer")
 						syncTester = testutils.NewSyncerTester()
+						filteredSyncerTester = NewValidationFilter(syncTester)
 
 						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
+						syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
 						defer os.Unsetenv("KUBERNETES_MASTER")
 						syncer.Start()
 
@@ -1433,9 +1444,10 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 
 						By("Creating and starting a syncer")
 						syncTester = testutils.NewSyncerTester()
+						filteredSyncerTester = NewValidationFilter(syncTester)
 
 						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
+						syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
 						defer os.Unsetenv("KUBERNETES_MASTER")
 						syncer.Start()
 
