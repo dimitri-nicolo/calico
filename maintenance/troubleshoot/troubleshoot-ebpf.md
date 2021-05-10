@@ -159,10 +159,6 @@ The tool is embedded in the {{site.nodecontainer}} container image. To run the t
   ...
   ```
 
-> **Tip**: If you find yourself needing to dive this deep, please reach out to support or the 
-> [Calico Users slack](https://slack.projectcalico.org/); we're always happy to help.
-{: .alert .alert-success}
-
 ## Poor performance
 
 A number of problems can reduce the performance of the eBPF dataplane.
