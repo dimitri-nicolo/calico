@@ -6,11 +6,11 @@ canonical_url: '/getting-started/kubernetes/ebpf'
 
 ### Big picture
 
-This guide explains how to enable the eBPF dataplane at install time; it is intended to accompany the main [installation 
-guides](../install-on-clusters). The [eBPF dataplane](../../maintenance/performance/ebpf/about-ebpf) is a high-performance alternative to the standard (iptables 
-based) dataplane for both {{site.prodname}} and kube-proxy.
+Install the eBPF dataplane during the initial installation of {{site.prodname}}.
 
-{% include content/ebpf-value-and-limitations.md %}
+### Value
+
+{% include content/ebpf-value.md %}
 
 ### Features
 
@@ -30,8 +30,58 @@ and in particular, pushing the networking capabilities of the latest Linux kerne
 
 ### Before you begin
 
-This guide is intended to be read alongside the main install guide for your platform.  You should familiarise yourself with 
-the [appropriate guide](../install-on-clusters) before continuing.
+#### Supported
+
+- x86-64
+
+- Distributions:  
+
+  - Generic or kubeadm
+  - kOps
+  - OpenShift
+  - EKS
+  - AKS
+
+- Linux distribution/kernel:
+
+  - Ubuntu 20.04.
+  - Red Hat v8.2 with Linux kernel v4.18.0-193 or above (Red Hat have backported the required features to that build).
+  - Another [supported distribution]({{site.baseurl}}/getting-started/kubernetes/requirements) with Linux kernel v5.3 or above.
+
+- An underlying network fabric that allows VXLAN traffic between hosts.  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic.
+
+#### Not supported
+
+- Other processor architectures.
+
+- Distributions:
+
+  - GKE.  This is because of an incompatibility with the GKE CNI plugin.  A fix for the
+    issue has already been accepted upstream but at the time of writing it is not publicly available.
+  
+  - RKE: eBPF mode cannot be enabled at install time because RKE doesn't provide
+    a stable address for the API server.  However, by following [these instructions](../../maintenance/performance/ebpf/enabling-ebpf),
+    it can be enabled as a post-install step.
+  
+  - Docker Enterprise: eBPF mode is incompatible with Docker Enterprise at this time. The Tigera team is investigating the issue.
+
+- Clusters with some eBPF nodes and some standard dataplane and/or Windows nodes.
+- IPv6
+- Host endpoint `doNotTrack` policy (other policy types are supported).
+- Floating IPs.
+- SCTP (either for policy or services).
+- `Log` action in policy rules.
+
+#### Performance
+
+For best pod-to-pod performance, we recommend using an underlying network that doesn't require Calico to use an overlay.  For example:
+
+- A cluster within a single AWS subnet.
+- A cluster using a compatible cloud provider's CNI (such as the AWS VPC CNI plugin).
+- An on-prem cluster with BGP peering configured.
+
+If you must use an overlay, we recommend that you use VXLAN, not IPIP.  VXLAN has better performance than IPIP in
+eBPF mode due to various kernel optimisations.
 
 ### How to
 
@@ -59,32 +109,9 @@ These steps are explained in more detail below.
 
 #### Create a suitable cluster
 
-The basic requirement for eBPF mode is to have a recent-enough kernel:
+The basic requirement for eBPF mode is to have a recent-enough kernel (see [above](#supported)).  
 
-* Ubuntu 20.04 (or Ubuntu 18.04.4+, which has an updated kernel).
-* Red Hat v8.2 with Linux kernel v4.18.0-193 or above (Red Hat have backported the required 
-  features to that build).
-* Another [supported distribution]({{site.baseurl}}/getting-started/kubernetes/requirements) with
-  Linux kernel v5.3 or above.
-
-If {{site.prodname}} does not detect a compatible kernel, {{site.prodname}} will emit a warning and
-fall back to standard linux networking.
-
-eBPF mode is compatible with most of the Kubernetes distributions that {{site.prodname}} supports. However, there are
-some exceptions:
-
-* GKE is not supported.  This is because of an incompatibility with the GKE CNI plugin.  A fix for the 
-  issue has already been accepted upstream but at the time of writing it is not publicly available.
-
-* Docker Enterprise: eBPF mode cannot be enabled at install time because Docker Enterprise doesn't provide
-  a stable address for the API server.  However, by following [these instructions](../../maintenance/performance/ebpf/enabling-ebpf),
-  it can be enabled as a post-install step.
-  
-* RKE: eBPF mode cannot be enabled at install time because RKE doesn't provide
-  a stable address for the API server.  However, by following [these instructions](../../maintenance/performance/ebpf/enabling-ebpf), 
-  it can be enabled as a post-install step.
-
-See the tabs below for more detail on how to set up a suitable cluster with the supported distributions:
+Select the appropriate tab below for distribution-specific instructions:
 
 {% tabs tab-group:grp1 %}
 <label:Generic or kubeadm,active:true>

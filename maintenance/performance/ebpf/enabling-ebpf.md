@@ -11,9 +11,11 @@ description: Step-by-step instructions for enabling the eBPF dataplane.
 
 ### Big picture
 
-This guide explains how to enable the eBPF dataplane; a high-performance alternative to the standard (iptables based) dataplane for both {{site.prodname}} and kube-proxy.
+Enable the eBPF dataplane on an existing cluster.
 
-{% include content/ebpf-value-and-limitations.md %}
+### Value 
+
+{% include content/ebpf-value.md %}
 
 ### Features
 
@@ -28,42 +30,58 @@ This how-to guide uses the following {{site.prodname}} features:
 
 eBPF (or "extended Berkeley Packet Filter"), is a technology that allows safe mini programs to be attached to various low-level hooks in the Linux kernel. eBPF has a wide variety of uses, including networking, security, and tracing. You’ll see a lot of non-networking projects leveraging eBPF, but for {{site.prodname}} our focus is on networking, and in particular, pushing the networking capabilities of the latest Linux kernels to the limit.
 
-### Before you begin...
+### Before you begin
 
-This document assumes that you have [installed {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/) on a 
-Kubernetes cluster that meets pre-requisites for eBPF mode:
+#### Supported
 
-- A supported Linux distribution:
+- x86-64
+
+- Distributions:
+
+  - Generic or kubeadm
+  - kOps
+  - OpenShift
+  - EKS (requires non-default OS image, as described in [Creating an EKS cluster for eBPF mode](./ebpf-and-eks))
+  - AKS
+  - RKE
+
+- Linux distribution/kernel:
 
   - Ubuntu 20.04.
   - Red Hat v8.2 with Linux kernel v4.18.0-193 or above (Red Hat have backported the required features to that build).
   - Another [supported distribution]({{site.baseurl}}/getting-started/kubernetes/requirements) with Linux kernel v5.3 or above.
 
-  If {{site.prodname}} does not detect a compatible kernel, {{site.prodname}} will emit a warning and fall back to standard linux networking.
+- An underlying network fabric that allows VXLAN traffic between hosts.  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic.
 
-- On each node, the BPF filesystem must be mounted at `/sys/fs/bpf`.  This is required so that the BPF filesystem persists
-  when {{site.prodname}} is restarted.  If the filesystem does not persist then pods will temporarily lose connectivity when
-  {{site.prodname}} is restarted and host endpoints may be left unsecured (because their attached policy program will be
-  discarded).
+#### Not supported
 
-- For best pod-to-pod performance, an underlying network that doesn't require Calico to use an overlay.  For example:
+- Other processor architectures.
 
-  - A cluster within a single AWS subnet.
-  - A cluster using a compatible cloud provider's CNI (such as the AWS VPC CNI plugin).
-  - An on-prem cluster with BGP peering configured.
+- Distributions:
 
-  If you must use an overlay, we recommend that you use VXLAN, not IPIP.  VXLAN has much better performance than IPIP in
-  eBPF mode due to various kernel optimisations.
+  - GKE.  This is because of an incompatibility with the GKE CNI plugin.  A fix for the issue has already been accepted upstream but at the time of writing it is not publicly available.
 
-- The underlying network must be configured to allow VXLAN packets between {{site.prodname}} hosts (even if you normally
-  use IPIP or non-overlay for Calico traffic).  In eBPF mode, VXLAN is used to forward Kubernetes NodePort traffic,
-  while preserving source IP.  eBPF mode honours the Felix `VXLANMTU` setting (see [Configuring MTU]({{ site.baseurl }}/networking/mtu)).
-  
-- The base [requirements]({{site.baseurl}}/getting-started/kubernetes/requirements) also apply.
+  - EKS using the default Ubuntu or Amazon Linux images.  At the time of writing, these do not have a recent enough kernel.
 
-> **Note**: The default kernel used by EKS is not compatible with eBPF mode.  If you wish to try eBPF mode with EKS,
-> follow the [Creating an EKS cluster for eBPF mode](./ebpf-and-eks) guide, which explain how to set up a suitable cluster.
-{: .alert .alert-info}
+  - Docker Enterprise: eBPF mode is incompatible with Docker Enterprise at this time. The Tigera team is investigating the issue.
+
+- Clusters with some eBPF nodes and some standard dataplane and/or Windows nodes.
+- IPv6
+- Host endpoint `doNotTrack` policy (other policy types are supported).
+- Floating IPs.
+- SCTP (either for policy or services).
+- `Log` action in policy rules.
+
+#### Performance
+
+For best pod-to-pod performance, we recommend using an underlying network that doesn't require Calico to use an overlay.  For example:
+
+- A cluster within a single AWS subnet.
+- A cluster using a compatible cloud provider's CNI (such as the AWS VPC CNI plugin).
+- An on-prem cluster with BGP peering configured.
+
+If you must use an overlay, we recommend that you use VXLAN, not IPIP.  VXLAN has better performance than IPIP in
+eBPF mode due to various kernel optimisations.
 
 ### How to
 
@@ -78,39 +96,25 @@ Kubernetes cluster that meets pre-requisites for eBPF mode:
 
 This section explains how to make sure your cluster is suitable for eBPF mode.
 
-1. To check that the kernel on a node is suitable, you can run
+To check that the kernel on a node is suitable, you can run
 
-   ```bash
-   uname -rv
-   ```
+```bash
+uname -rv
+```
 
-   The output should look like this:
+The output should look like this:
 
-   ```
-   5.4.0-42-generic #46-Ubuntu SMP Fri Jul 10 00:24:02 UTC 2020
-   ```
+```
+5.4.0-42-generic #46-Ubuntu SMP Fri Jul 10 00:24:02 UTC 2020
+```
 
-   In this case the kernel version is v5.4, which is suitable.
+In this case the kernel version is v5.4, which is suitable.
 
-   On Red Hat-derived distributions, you may see something like this:
-   ```
-   4.18.0-193.el8.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com)
-   ```
-   Since the Red Hat kernel is v4.18 with at least build number 193, this kernel is suitable.
-
-1. To verify that the BPF filesystem is mounted, on the host, you can run the following command:
-
-   ```
-   mount | grep "/sys/fs/bpf"
-   ```
-
-   If the BPF filesystem is mounted, you should see:
-
-   ```
-   none on /sys/fs/bpf type bpf (rw,nosuid,nodev,noexec,relatime,mode=700)
-   ```
-
-   If you see no output, then the BPF filesystem is not mounted; consult the documentation for your OS distribution to see how to make sure the file system is mounted at boot in its standard location  /sys/fs/bpf.  This may involve editing `/etc/fstab` or adding a `systemd` unit, depending on your distribution. If the file system is not mounted on the host then eBPF mode will work normally until {{site.prodname}} is restarted, at which point workload networking will be disrupted for several seconds.
+On Red Hat-derived distributions, you may see something like this:
+```
+4.18.0-193.el8.x86_64 (mockbuild@x86-vm-08.build.eng.bos.redhat.com)
+```
+Since the Red Hat kernel is v4.18 with at least build number 193, this kernel is suitable.
 
 #### Configure {{site.prodname}} to talk directly to the API server
 
