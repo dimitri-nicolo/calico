@@ -108,6 +108,6 @@ type HostEndpoint struct {
 	ExpectedIPv4Addrs []net.IP          `json:"expected_ipv4_addrs,omitempty" validate:"omitempty,dive,ipv4"`
 	ExpectedIPv6Addrs []net.IP          `json:"expected_ipv6_addrs,omitempty" validate:"omitempty,dive,ipv6"`
 	Labels            map[string]string `json:"labels,omitempty" validate:"omitempty,labels"`
-	ProfileIDs        []string          `json:"profile_ids,omitempty" validate:"omitempty,dive,name"`
+	ProfileIDs        []string          `json:"profile_ids,omitempty"`
 	Ports             []EndpointPort    `json:"ports,omitempty" validate:"dive"`
 }

@@ -16,9 +16,12 @@ package felixsyncer_test
 
 import (
 	"context"
+	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -36,6 +39,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
+	v1v "github.com/projectcalico/libcalico-go/lib/validator/v1"
+	v3v "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
 // Kubernetes will have a profile for each of the namespaces that is configured.
@@ -135,6 +140,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 	var c clientv3.Interface
 	var be api.Client
 	var syncTester *testutils.SyncerTester
+	var filteredSyncerTester api.SyncerCallbacks
 	var err error
 	var datamodelCleanups []func()
 
@@ -157,6 +163,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
 		// to assert state.
 		syncTester = testutils.NewSyncerTester()
+		filteredSyncerTester = NewValidationFilter(syncTester)
 
 		datamodelCleanups = nil
 	})
@@ -181,7 +188,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 
 	Describe("Felix syncer functionality", func() {
 		It("should receive the synced after return all current data", func() {
-			syncer := felixsyncer.New(be, config.Spec, syncTester, false, true)
+			syncer := felixsyncer.New(be, config.Spec, filteredSyncerTester, false, true)
 			syncer.Start()
 			expectedCacheSize := 0
 
@@ -674,6 +681,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (KDD only)", testutils.DatastoreK8s, func(config apiconfig.CalicoAPIConfig) {
 	var be api.Client
 	var syncTester *testutils.SyncerTester
+	var filteredSyncerTester api.SyncerCallbacks
 	var err error
 
 	BeforeEach(func() {
@@ -686,11 +694,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (KDD only)", testutil
 		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
 		// to assert state.
 		syncTester = testutils.NewSyncerTester()
+		filteredSyncerTester = NewValidationFilter(syncTester)
 	})
 
 	It("should handle IPAM blocks properly for host-local IPAM", func() {
 		config.Spec.K8sUsePodCIDR = true
-		syncer := felixsyncer.New(be, config.Spec, syncTester, false, true)
+		syncer := felixsyncer.New(be, config.Spec, filteredSyncerTester, false, true)
 		syncer.Start()
 
 		// Verify we start a resync.
@@ -711,6 +720,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (KDD only)", testutil
 var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (passive mode)", testutils.DatastoreK8s, func(config apiconfig.CalicoAPIConfig) {
 	var be api.Client
 	var syncTester *testutils.SyncerTester
+	var filteredSyncerTester api.SyncerCallbacks
 	var err error
 	var c clientv3.Interface
 
@@ -726,10 +736,11 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (passive mode)", test
 		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
 		// to assert state.
 		syncTester = testutils.NewSyncerTester()
+		filteredSyncerTester = NewValidationFilter(syncTester)
 	})
 
 	It("should only receive config updates when in passive mode", func() {
-		syncer := felixsyncer.New(be, config.Spec, syncTester, false, false)
+		syncer := felixsyncer.New(be, config.Spec, filteredSyncerTester, false, false)
 		syncer.Start()
 
 		// Verify we start a resync.
@@ -760,3 +771,69 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (passive mode)", test
 		)
 	})
 })
+
+// --- This is a copy  of the validation filter defined in typha, but modified to expect no errors.
+
+func NewValidationFilter(sink api.SyncerCallbacks) *ValidationFilter {
+	return &ValidationFilter{
+		sink: sink,
+	}
+}
+
+type ValidationFilter struct {
+	sink api.SyncerCallbacks
+}
+
+func (v *ValidationFilter) OnStatusUpdated(status api.SyncStatus) {
+	// Pass through.
+	v.sink.OnStatusUpdated(status)
+}
+
+func (v *ValidationFilter) OnUpdates(updates []api.Update) {
+	defer GinkgoRecover()
+
+	filteredUpdates := make([]api.Update, len(updates))
+	for i, update := range updates {
+		logCxt := logrus.WithFields(logrus.Fields{
+			"key":   update.Key,
+			"value": update.Value,
+		})
+		logCxt.Debug("Validating KV pair.")
+		validatorFunc := v1v.Validate
+		if _, isV3 := update.Key.(model.ResourceKey); isV3 {
+			logCxt.Debug("Use v3 validator")
+			validatorFunc = v3v.Validate
+		} else {
+			logCxt.Debug("Use v1 validator")
+		}
+		if update.Value != nil {
+			val := reflect.ValueOf(update.Value)
+			if val.Kind() == reflect.Ptr {
+				elem := val.Elem()
+				if elem.Kind() == reflect.Struct {
+					err := validatorFunc(elem.Interface())
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}
+
+			switch k := update.Key.(type) {
+			case model.NodeKey:
+				// TODO: This should be in its own filter.
+				// Special case: we can't serialize Node keys but Felix only cares
+				// about the host metadata anyway.  Extract the Host IP.
+				update.Key = model.HostIPKey(k)
+				if update.Value != nil {
+					_, ok := update.Value.(*model.Node)
+					Expect(ok).To(BeTrue())
+				}
+			}
+
+			switch v := update.Value.(type) {
+			case *model.WorkloadEndpoint:
+				Expect(v.Name).NotTo(Equal(""))
+			}
+		}
+		filteredUpdates[i] = update
+	}
+	v.sink.OnUpdates(filteredUpdates)
+}
