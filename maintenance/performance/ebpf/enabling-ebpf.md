@@ -249,6 +249,9 @@ resource to `"BPF"`; you must also clear the `hostPorts` setting because host po
 kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"calicoNetwork":{"linuxDataplane":"BPF", "hostPorts":null}}}'
 ```
 
+When enabling eBPF mode, pre-existing connections continue to use the non-BPF datapath; such connections should
+not be disrupted, but they do not benefit from eBPF mode’s advantages.
+
 > **Note**: the operator rolls out the change with a rolling update which means that some nodes will be in eBPF mode
 > before others.  This can disrupt the flow of traffic through node ports.  We plan to improve this in an upcoming release
 > by having the operator do the update in two phases.
@@ -287,4 +290,4 @@ To revert to standard Linux networking:
    kubectl patch ds -n kube-system kube-proxy --type merge -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": null}}}}}'
    ```
 
-1. Monitor existing workloads to make sure they re-establish any connections disrupted by the switch.
+1. Since disabling eBPF mode is disruptive to existing connections, monitor existing workloads to make sure they re-establish any connections that were disrupted by the switch.
