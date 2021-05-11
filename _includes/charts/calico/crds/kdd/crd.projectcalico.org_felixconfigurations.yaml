@@ -79,6 +79,13 @@ spec:
                 description: 'BPFEnabled, if enabled Felix will use the BPF dataplane.
                   [Default: false]'
                 type: boolean
+              bpfExtToServiceConnmark:
+                description: 'BPFExtToServiceConnmark in BPF mode, control a 32bit
+                  mark that is set on connections from an external client to a local
+                  service. This mark allows us to control how packets of that connection
+                  are routed within the host and how is routing intepreted by RPF
+                  check. [Default: 0]'
+                type: integer
               bpfExternalServiceMode:
                 description: 'BPFExternalServiceMode in BPF mode, controls how connections
                   from outside the cluster to services (node ports and cluster IPs)
@@ -359,20 +366,18 @@ spec:
                   type: string
                 type: array
               failsafeInboundHostPorts:
-                description: 'FailsafeInboundHostPorts is a comma-delimited list of
-                  UDP/TCP ports and CIDRs that Felix will allow incoming traffic to
-                  host endpoints on irrespective of the security policy. This is useful
-                  to avoid accidentally cutting off a host with incorrect configuration.
-                  Each port should be specified as tcp:<cidr>:<port-number> or udp:<cidr>:<port-number>.
-                  For back-compatibility, if the protocol is not specified, it defaults
-                  to "tcp". If a CIDR is not specified, it will default to `0.0.0.0/0`.
-                  To disable all inbound host ports, use the value none. The default
-                  value allows ssh access and DHCP. [Default: tcp:0.0.0.0/0:22, udp:0.0.0.0/0:68,
-                  tcp:0.0.0.0/0:179, tcp:0.0.0.0/0:2379, tcp:0.0.0.0/0:2380, tcp:0.0.0.0/0:6443,
-                  tcp:0.0.0.0/0:6666, tcp:0.0.0.0/0:6667]'
+                description: 'FailsafeInboundHostPorts is a list of UDP/TCP ports
+                  and CIDRs that Felix will allow incoming traffic to host endpoints
+                  on irrespective of the security policy. This is useful to avoid
+                  accidentally cutting off a host with incorrect configuration. For
+                  back-compatibility, if the protocol is not specified, it defaults
+                  to "tcp". If a CIDR is not specified, it will allow traffic from
+                  all addresses. To disable all inbound host ports, use the value
+                  none. The default value allows ssh access and DHCP. [Default: tcp:22,
+                  udp:68, tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667]'
                 items:
                   description: ProtoPort is combination of protocol, port, and CIDR.
-                    All three must be specified.
+                    Protocol and port must be specified.
                   properties:
                     net:
                       type: string
@@ -381,28 +386,25 @@ spec:
                     protocol:
                       type: string
                   required:
-                  - net
                   - port
                   - protocol
                   type: object
                 type: array
               failsafeOutboundHostPorts:
-                description: 'FailsafeOutboundHostPorts is a comma-delimited list
-                  of UDP/TCP ports and CIDRs that Felix will allow outgoing traffic
-                  from host endpoints to irrespective of the security policy. This
-                  is useful to avoid accidentally cutting off a host with incorrect
-                  configuration. Each port should be specified as tcp:<port-number>
-                  or udp:<port-number>. For back-compatibility, if the protocol is
-                  not specified, it defaults to "tcp". If a CIDR is not specified,
-                  it will default to `0.0.0.0/0`. To disable all outbound host ports,
-                  use the value none. The default value opens etcd''s standard ports
-                  to ensure that Felix does not get cut off from etcd as well as allowing
-                  DHCP and DNS. [Default: tcp:0.0.0.0/0:179, tcp:0.0.0.0/0:2379, tcp:0.0.0.0/0:2380,
-                  tcp:0.0.0.0/0:6443, tcp:0.0.0.0/0:6666, tcp:0.0.0.0/0:6667, udp:0.0.0.0/0:53,
-                  udp:0.0.0.0/0:67]'
+                description: 'FailsafeOutboundHostPorts is a list of UDP/TCP ports
+                  and CIDRs that Felix will allow outgoing traffic from host endpoints
+                  to irrespective of the security policy. This is useful to avoid
+                  accidentally cutting off a host with incorrect configuration. For
+                  back-compatibility, if the protocol is not specified, it defaults
+                  to "tcp". If a CIDR is not specified, it will allow traffic from
+                  all addresses. To disable all outbound host ports, use the value
+                  none. The default value opens etcd''s standard ports to ensure that
+                  Felix does not get cut off from etcd as well as allowing DHCP and
+                  DNS. [Default: tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666,
+                  tcp:6667, udp:53, udp:67]'
                 items:
                   description: ProtoPort is combination of protocol, port, and CIDR.
-                    All three must be specified.
+                    Protocol and port must be specified.
                   properties:
                     net:
                       type: string
@@ -411,7 +413,6 @@ spec:
                     protocol:
                       type: string
                   required:
-                  - net
                   - port
                   - protocol
                   type: object
@@ -742,6 +743,11 @@ spec:
                   and the base URL only. ExcludeL7URL - Aggregate over all other fields
                   ignoring the URL entirely.'
                 type: string
+              l7LogsFileAggregationURLCharLimit:
+                description: 'Limit on the length of the URL collected in L7 logs.
+                  When a URL length reaches this limit it is sliced off, and the sliced
+                  URL is sent to log storage. [Default: 250]'
+                type: integer
               l7LogsFileDirectory:
                 description: 'L7LogsFileDirectory sets the directory where L7 log
                   files are stored. [Default: /var/log/calico/l7logs]'
@@ -763,7 +769,7 @@ spec:
                   each flush interval.  When this limit has been reached, Felix counts
                   the number of unloggable L7 responses within the flush interval,
                   and emits a WARNING log with that count at the same time as it flushes
-                  the buffered L7 logs.  [Default: 0, meaning no limit]'
+                  the buffered L7 logs. A value of 0 means no limit. [Default: 1500]'
                 type: integer
               l7LogsFlushInterval:
                 description: 'L7LogsFlushInterval configures the interval at which
@@ -972,6 +978,16 @@ spec:
                 type: integer
               vxlanVNI:
                 type: integer
+              windowsDnsCacheFile:
+                description: 'The name of the file that Felix uses to preserve learnt
+                  DNS information when restarting. [Default: "c:\\TigeraCalico\\felix-dns-cache.txt"].'
+                type: string
+              windowsDnsExtraTTL:
+                description: 'Extra time to keep IPs and alias names that are learnt
+                  from DNS, in addition to each name or IP''s advertised TTL. The
+                  default value is 120s which is same as the default value of ServicePointManager.DnsRefreshTimeout
+                  on .net framework. [Default: 120s].'
+                type: string
               windowsFlowLogsFileDirectory:
                 description: 'WindowsFlowLogsFileDirectory sets the directory where
                   flow logs files are stored on Windows nodes. [Default: "c:\\TigeraCalico\\flowlogs"].'
@@ -998,7 +1014,7 @@ spec:
                 type: boolean
               wireguardInterfaceName:
                 description: 'WireguardInterfaceName specifies the name to use for
-                  the Wireguard interface. [Default: wireguard.cali]'
+                  the Wireguard interface. [Default: wg.calico]'
                 type: string
               wireguardListeningPort:
                 description: 'WireguardListeningPort controls the listening port used
