@@ -415,7 +415,7 @@ type FelixConfigurationSpec struct {
 	// 0 - No aggregation
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggreagation.
-	FlowLogsFileAggregationKindForAllowed *int `json:"flowLogsFileAggregationKindForAllowed,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	FlowLogsFileAggregationKindForAllowed *int `json:"flowLogsFileAggregationKindForAllowed,omitempty" validate:"omitempty,flowLogAggregationKind"`
 	// FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for
 	// denied connections. [Default: 1 - source port based aggregation].
 	// Accepted values are 0, 1 and 2.
@@ -423,7 +423,7 @@ type FelixConfigurationSpec struct {
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggregation.
 	// 3 - No destination ports based aggregation
-	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,flowLogAggregationKind"`
 	// FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
 	FlowLogsFileEnabledForAllowed *bool `json:"flowLogsFileEnabledForAllowed,omitempty"`
