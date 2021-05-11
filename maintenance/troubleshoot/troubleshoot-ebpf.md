@@ -118,9 +118,9 @@ The parts of the log are explained below:
 Since BPF maps contain binary data, the {{site.prodname}} team wrote a tool to examine {{site.prodname}}'s BPF maps.
 The tool is embedded in the {{site.nodecontainer}} container image. To run the tool:
 
-* Find the name of {{site.nodecontainer}} Pod on the host of interest using
+* Find the name of the {{site.nodecontainer}} Pod on the host of interest using
   ```bash
-  kubectl get pod -n calico-system
+  kubectl get pod -o wide -n calico-system
   ```
   for example, `calico-node-abcdef`
 
