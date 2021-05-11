@@ -463,6 +463,9 @@ func removeEndpointDataFromSlice(s []*EndpointData, i int) []*EndpointData {
 // created for tentatively deleted endpoints as they are accessed by add/update
 //  operations.
 func (ec *EndpointLookupsCache) removeEndpointWithDelay(key model.Key) {
+	ec.epMutex.Lock()
+	defer ec.epMutex.Unlock()
+
 	endpointData, endpointExists := ec.endpointData[key]
 	if !endpointExists {
 		// for performance improvement - as time.AfterFunc creates a go routine
@@ -473,9 +476,6 @@ func (ec *EndpointLookupsCache) removeEndpointWithDelay(key model.Key) {
 	if isDeletionTimerForEndpointExists {
 		return
 	}
-
-	ec.epMutex.Lock()
-	defer ec.epMutex.Unlock()
 
 	// mark the endpoint to be deleted and attach a timer to delegate the actual deletion
 	endpointData.markedToBeDeleted = true
