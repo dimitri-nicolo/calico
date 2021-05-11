@@ -170,10 +170,10 @@ are incompatible with eBPF mode.  In particular, the kernel used by Amazon Linux
 EKS provides at the time of writing are too old for eBPF mode.
 
 The easiest way to start an EKS cluster that meets eBPF mode's requirements is to use Amazon's
-[Bottlerocket](https://aws.amazon.com/bottlerocket/) OS, instead of the default.  Bottlerocket is a
+{% include open-new-window.html text='Bottlerocket' url='https://aws.amazon.com/bottlerocket/' %} OS, instead of the default.  Bottlerocket is a
 container-optimised OS with an emphasis on security; it has a version of the kernel which is compatible with eBPF mode.
 
-for example, to create a 4-node test cluster with a Bottlerocket node group, run the command below.  When using `eksctl` 
+For example, to create a 4-node test cluster with a Bottlerocket node group, run the command below.  When using `eksctl` 
 it is important to use the config-file approach to creating a cluster in order to set the additional IAM permissions 
 that Bottlerocket requires.
 
@@ -300,7 +300,7 @@ EOF
 ```
 
 > **Tip**: If you forget to create the config map before installing the operator you can create it afterwards and
-> then wait 60s before restarting the operator:
+> then wait 60 seconds before restarting the operator:
 > ```
 > kubectl delete pod -n tigera-operator -l k8s-app=tigera-operator
 > ```
