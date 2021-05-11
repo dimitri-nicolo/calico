@@ -28,18 +28,18 @@ const (
 )
 
 type esBasicUserHandler struct {
-	k8sClient     datastore.ClientSet
-	dexEnabled    bool
-	dexIssuer     string
-	esLicenseType ElasticsearchLicenseType
+	k8sClient       datastore.ClientSet
+	oidcAuthEnabled bool
+	oidcAuthIssuer  string
+	esLicenseType   ElasticsearchLicenseType
 }
 
-func NewUserHandler(k8sClient datastore.ClientSet, dexEnabled bool, dexIssuer, elasticLicenseType string) http.Handler {
+func NewUserHandler(k8sClient datastore.ClientSet, oidcAuthEnabled bool, oidcAuthIssuer, elasticLicenseType string) http.Handler {
 	return &esBasicUserHandler{
-		k8sClient:     k8sClient,
-		dexEnabled:    dexEnabled,
-		dexIssuer:     dexIssuer,
-		esLicenseType: ElasticsearchLicenseType(elasticLicenseType),
+		k8sClient:       k8sClient,
+		oidcAuthEnabled: oidcAuthEnabled,
+		oidcAuthIssuer:  oidcAuthIssuer,
+		esLicenseType:   ElasticsearchLicenseType(elasticLicenseType),
 	}
 }
 
@@ -53,8 +53,8 @@ func (handler *esBasicUserHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 	}
 
 	log.WithFields(log.Fields{
-		"Dex Enabled":           handler.dexEnabled,
-		"Dex Issuer":            handler.dexIssuer,
+		"OIDC Auth Enabled":     handler.oidcAuthEnabled,
+		"OIDC Auth Issuer":      handler.oidcAuthIssuer,
 		"Elasticsearch License": handler.esLicenseType,
 	}).Debug("ServeHTTP called")
 
@@ -73,7 +73,7 @@ func (handler *esBasicUserHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	if handler.dexEnabled && handler.esLicenseType == ElasticsearchLicenseTypeBasic && oidcUser.Issuer == handler.dexIssuer {
+	if handler.oidcAuthEnabled && handler.esLicenseType == ElasticsearchLicenseTypeBasic && oidcUser.Issuer == handler.oidcAuthIssuer {
 		if err := handler.addOIDCUserToConfigMap(ctx, oidcUser); err != nil {
 			log.WithError(err).Debug("failed to add user to ConfigMap ", OIDCUsersConfigMapName)
 		}

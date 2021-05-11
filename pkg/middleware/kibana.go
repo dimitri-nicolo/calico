@@ -28,25 +28,25 @@ const (
 )
 
 type kibanaLoginHandler struct {
-	k8sCli     datastore.ClientSet
-	kibanaCli  kibana.Client
-	dexEnabled bool
-	dexIssuer  string
-	esLicense  ElasticsearchLicenseType
+	k8sCli          datastore.ClientSet
+	kibanaCli       kibana.Client
+	oidcAuthEnabled bool
+	oidcAuthIssuer  string
+	esLicense       ElasticsearchLicenseType
 }
 
 func NewKibanaLoginHandler(
 	k8sCli datastore.ClientSet,
 	kibanaCli kibana.Client,
-	dexEnabled bool,
-	dexIssuer string, esLicense ElasticsearchLicenseType) http.Handler {
+	oidcAuthEnabled bool,
+	oidcAuthIssuer string, esLicense ElasticsearchLicenseType) http.Handler {
 
 	return &kibanaLoginHandler{
-		k8sCli:     k8sCli,
-		kibanaCli:  kibanaCli,
-		dexEnabled: dexEnabled,
-		dexIssuer:  dexIssuer,
-		esLicense:  esLicense,
+		k8sCli:          k8sCli,
+		kibanaCli:       kibanaCli,
+		oidcAuthEnabled: oidcAuthEnabled,
+		oidcAuthIssuer:  oidcAuthIssuer,
+		esLicense:       esLicense,
 	}
 }
 
@@ -70,8 +70,8 @@ type kibanaErrorResponse struct {
 // query parameters.
 func (handler *kibanaLoginHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	log.WithFields(log.Fields{
-		"Dex Enabled":           handler.dexEnabled,
-		"Dex Issuer":            handler.dexIssuer,
+		"OIDC Auth Enabled":     handler.oidcAuthEnabled,
+		"OIDC Auth Issuer":      handler.oidcAuthIssuer,
 		"Elasticsearch License": handler.esLicense,
 	}).Debug("ServeHTTP called")
 
@@ -90,9 +90,9 @@ func (handler *kibanaLoginHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	// If Dex is enabled, Dex is the issuer, and the Elasticsearch license is basic then attempt to log into Kibana.
+	// If OIDC Auth is enabled and the Elasticsearch license is basic then attempt to log into Kibana.
 	// If any one of these conditions are false redirect the user to Kibana without logging in.
-	if handler.dexEnabled && oidcUser.Issuer == handler.dexIssuer && handler.esLicense == ElasticsearchLicenseTypeBasic {
+	if handler.oidcAuthEnabled && oidcUser.Issuer == handler.oidcAuthIssuer && handler.esLicense == ElasticsearchLicenseTypeBasic {
 		log.Debugf("Attempting to log user %s into Kibana.", oidcUser.Username)
 
 		credsSecret, err := handler.k8sCli.CoreV1().Secrets(ElasticsearchNamespace).Get(context.Background(), OIDCUsersElasticsearchCredentialsSecret, metav1.GetOptions{})
