@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -189,7 +189,7 @@ func (idx *InheritIndex) UpdateSelector(id interface{}, sel selector.Selector) {
 	// Since the selectorRoot struct has cache fields, the easiest way to compare two
 	// selectors is to compare their IDs.
 	if oldSel != nil && oldSel.UniqueID() == sel.UniqueID() {
-		log.WithField("selID", id).Info("Skipping unchanged selector")
+		log.WithField("selID", id).Debug("Skipping unchanged selector")
 		return
 	}
 	log.WithField("selID", id).Info("Updating selector")
