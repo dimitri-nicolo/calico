@@ -107,7 +107,9 @@ section:
     section: 
     - title: About eBPF
       path: /maintenance/performance/ebpf/about-ebpf
-    - title: Enable the eBPF dataplane
+    - title: Install eBPF on a new cluster
+      path: /maintenance/performance/ebpf/install
+    - title: Enable eBPF on an existing cluster
       path: /maintenance/performance/ebpf/enabling-ebpf
     - title: Create an EKS cluster for eBPF mode
       path: /maintenance/performance/ebpf/ebpf-and-eks
