@@ -15,7 +15,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/projectcalico/felix v0.0.0-20210416114942-f203238c77ee
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/typha v0.7.3-0.20210410010014-a43ccfa508a1
+	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
 	github.com/prometheus/client_golang v1.10.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
@@ -37,7 +37,7 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210507135432-85f1f01cf5e2
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210508003415-b3c714a79168
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210511155627-5e22236ec900
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210510230657-4f535f176bc5
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210511032650-4668667234a1
 
