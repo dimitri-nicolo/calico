@@ -7,8 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/projectcalico/felix/k8sutils"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/projectcalico/felix/k8sutils"
 
 	log "github.com/sirupsen/logrus"
 
