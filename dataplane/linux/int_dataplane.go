@@ -57,13 +57,16 @@ import (
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/felix/netlinkshim"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/throttle"
@@ -1736,15 +1739,49 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			mark := d.config.RulesConfig.IptablesMarkProxy
 			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{
 				{
-					Comment: []string{"Mark the connection if it is marked as from proxy"},
-					Match:   iptables.Match().MarkMatchesWithMask(mark, mark),
+					Comment: []string{"Mark any local connection as local for return"},
 					Action:  iptables.SaveConnMarkAction{SaveMask: mark},
 				},
-				{
-					Comment: []string{"Clear the proxy mark not to tamper with routing"},
-					Action:  iptables.ClearMarkAction{Mark: mark},
-				},
 			})
+			rt := routetable.New(
+				nil,
+				4,     // XXX we should for both
+				false, // vxlan
+				d.config.NetlinkTimeout,
+				nil, // deviceRouteSourceAddress
+				d.config.DeviceRouteProtocol,
+				true, // removeExternalRoutes
+				0xe0, // XXX to be configurable
+				d.loopSummarizer,
+			)
+			rr, err := routerule.New(
+				4,
+				1, // routing priority
+				set.From(0xe0),
+				routerule.RulesMatchSrcFWMarkTable,
+				routerule.RulesMatchSrcFWMarkTable,
+				d.config.NetlinkTimeout,
+				func() (routerule.HandleIface, error) {
+					return netlinkshim.NewRealNetlink()
+				},
+				d.loopSummarizer,
+			)
+			if err != nil {
+				log.WithError(err).Panic("Unexpected error creating rule manager")
+			}
+
+			anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
+			rt.RouteUpdate("lo", routetable.Target{
+				Type: "local",
+				CIDR: anyV4,
+			})
+			rt.Apply()
+
+			rr.SetRule(routerule.NewRule(4, 1).
+				GoToTable(0xe0).
+				MatchFWMarkWithMask(0, uint32(mark)),
+			)
+			rr.Apply()
 		}
 	}
 	if d.xdpState != nil {

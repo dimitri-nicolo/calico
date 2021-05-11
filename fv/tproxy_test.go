@@ -72,7 +72,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			if CurrentGinkgoTestDescription().Failed {
 				for _, felix := range felixes {
 					felix.Exec("iptables-save", "-c")
-					felix.Exec("ip", "r")
+					felix.Exec("ip", "rule")
+					felix.Exec("ip", "route")
+					felix.Exec("ip", "route", "show", "table", "224")
 					felix.Exec("ip", "route", "show", "cached")
 				}
 			}
