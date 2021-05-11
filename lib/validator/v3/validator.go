@@ -225,6 +225,7 @@ func init() {
 	registerFieldValidator("l7SourceAggregation", validateL7SourceAggregation)
 	registerFieldValidator("l7ResponseCodeAggregation", validateL7ResponseCodeAggregation)
 	registerFieldValidator("l7URLAggregation", validateL7URLAggregation)
+	registerFieldValidator("flowLogAggregationKind", validateFlowLogAggregationKind)
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("keyValueList", validateKeyValueList)
@@ -667,6 +668,12 @@ func validateSelector(fl validator.FieldLevel) bool {
 		return false
 	}
 	return true
+}
+
+func validateFlowLogAggregationKind(fl validator.FieldLevel) bool {
+	kind := int(fl.Field().Int())
+	log.Debugf("Validate FlowLogs aggregation kind: %d", kind)
+	return kind >= minAggregationKindValue && kind <= maxAggregationKindValue
 }
 
 func validateTag(fl validator.FieldLevel) bool {
