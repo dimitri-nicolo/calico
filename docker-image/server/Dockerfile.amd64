@@ -10,6 +10,10 @@ FROM scratch
 
 COPY --from=base /code/ /code/
 
+# Add the trusted certs from the ubi image.
+COPY --from=base /etc/pki /etc/pki
+COPY --from=base /usr/share/pki /usr/share/pki
+
 USER 999
 
 WORKDIR /code
