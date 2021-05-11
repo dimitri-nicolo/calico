@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -145,32 +145,31 @@ func main() {
 		})
 	}
 
-	if cfg.DexEnabled {
-
-		targetList = append(targetList, bootstrap.Target{
-			Path:         cfg.DexBasePath,
-			Dest:         cfg.DexURL,
-			CABundlePath: cfg.DexCABundlePath,
-		})
-
-		opts := []auth.DexOption{
-			auth.WithGroupsClaim(cfg.DexGroupsClaim),
-			auth.WithJWKSURL(cfg.DexJWKSURL),
-			auth.WithUsernamePrefix(cfg.DexUsernamePrefix),
-			auth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+	if cfg.OIDCAuthEnabled {
+		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will
+		// suffice.
+		if cfg.DexEnabled {
+			targetList = append(targetList, bootstrap.Target{
+				Path:         cfg.DexBasePath,
+				Dest:         cfg.DexURL,
+				CABundlePath: cfg.DexCABundlePath,
+			})
 		}
 
-		dex, err := auth.NewDexAuthenticator(
-			cfg.DexIssuer,
-			cfg.DexClientID,
-			cfg.DexUsernameClaim,
-			opts...)
+		oidcAuth, err := auth.NewDexAuthenticator(
+			cfg.OIDCAuthIssuer,
+			cfg.OIDCAuthClientID,
+			cfg.OIDCAuthUsernameClaim,
+			auth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			auth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix))
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}
-		// Make an aggregated authenticator that can deal with tokens from different issuers.
-		authn = auth.NewAggregateAuthenticator(dex, authn)
 
+		// Make an aggregated authenticator that can deal with tokens from different issuers.
+		authn = auth.NewAggregateAuthenticator(oidcAuth, authn)
 	}
 
 	targets, err := bootstrap.ProxyTargets(targetList)

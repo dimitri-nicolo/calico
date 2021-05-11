@@ -1,3 +1,5 @@
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+
 package config
 
 import (
@@ -55,17 +57,20 @@ type Config struct {
 	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
 
 	// Dex settings
-	DexEnabled        bool   `default:"false" split_words:"true"`
-	DexURL            string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/" split_words:"true"`
-	DexJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
-	DexBasePath       string `default:"/dex/" split_words:"true"`
-	DexCABundlePath   string `default:"/etc/ssl/certs/tls-dex.crt" split_words:"true"`
-	DexIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
-	DexClientID       string `default:"tigera-manager" split_words:"true"`
-	DexUsernameClaim  string `default:"email" split_words:"true"`
-	DexUsernamePrefix string `split_words:"true"`
-	DexGroupsClaim    string `default:"groups" split_words:"true"`
-	DexGroupsPrefix   string `split_words:"true"`
+	DexEnabled      bool   `default:"false" split_words:"true"`
+	DexURL          string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/" split_words:"true"`
+	DexBasePath     string `default:"/dex/" split_words:"true"`
+	DexCABundlePath string `default:"/etc/ssl/certs/tls-dex.crt" split_words:"true"`
+
+	// OIDC Authentication settings.
+	OIDCAuthEnabled        bool   `default:"false" split_words:"true"`
+	OIDCAuthJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
+	OIDCAuthIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
+	OIDCAuthClientID       string `default:"tigera-manager" split_words:"true"`
+	OIDCAuthUsernameClaim  string `default:"email" split_words:"true"`
+	OIDCAuthUsernamePrefix string `split_words:"true"`
+	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
+	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
 	// The DefaultForward parameters configure where connections from guardian should be forwarded to by default
 	ForwardingEnabled               bool          `default:"true" split_words:"true"`
