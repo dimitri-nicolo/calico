@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,11 +115,11 @@ type ElasticsearchCfgControllerCfg struct {
 }
 
 type AuthorizationControllerCfg struct {
-	NumberOfWorkers          int
-	ReconcilerPeriod         time.Duration
-	OIDCAuthUsernamePrefix   string
-	OIDCAuthGroupPrefix      string
-	ElasticsearchLicenseType string
+	NumberOfWorkers                   int
+	ReconcilerPeriod                  time.Duration
+	OIDCAuthUsernamePrefix            string
+	OIDCAuthGroupPrefix               string
+	EnableElasticsearchOIDCWorkaround bool
 }
 
 type ManagedClusterControllerConfig struct {
@@ -407,7 +407,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
 		rc.AuthorizationConfiguration.OIDCAuthUsernamePrefix = envCfg.OIDCAuthUsernamePrefix
 		rc.AuthorizationConfiguration.OIDCAuthGroupPrefix = envCfg.OIDCAuthGroupPrefix
-		rc.AuthorizationConfiguration.ElasticsearchLicenseType = envCfg.ElasticLicenseType
+		rc.AuthorizationConfiguration.EnableElasticsearchOIDCWorkaround = envCfg.EnableElasticsearchOIDCWorkaround
 	}
 
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
