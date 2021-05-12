@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,6 +48,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			cc           *Checker
 			options      infrastructure.TopologyOptions
 			calicoClient client.Interface
+			tproxyWg     sync.WaitGroup
 		)
 
 		BeforeEach(func() {
@@ -82,6 +84,10 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 		AfterEach(func() {
 			log.Info("AfterEach starting")
+			for _, felix := range felixes {
+				felix.Exec("killall", "tproxy")
+			}
+			tproxyWg.Wait()
 			infra.Stop()
 			log.Info("AfterEach done")
 		})
@@ -94,6 +100,16 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 		BeforeEach(func() {
 			felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+
+			for _, felix := range felixes {
+				tproxyWg.Add(1)
+				go func(f *infrastructure.Felix) {
+					f.EnsureBinary("tproxy")
+					out, _ := f.ExecCombinedOutput("/tproxy", "16001")
+					log.WithField("output", out).Infof("tproxy at %s", f.Name)
+					tproxyWg.Done()
+				}(felix)
+			}
 
 			createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
 				log.WithField("policy", dumpResource(policy)).Info("Creating policy")
