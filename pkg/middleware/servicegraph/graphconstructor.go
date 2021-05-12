@@ -159,7 +159,9 @@ func (t *trackedGroup) update(child v1.GraphNodeID, isInFocus, isFollowingEgress
 	t.isFollowingIngress = t.isFollowingIngress || isFollowingIngress
 }
 
-// Track the source and dest edges for each service node.
+// Track the source and dest edges for each service node. We need to do this to generate the source selectors for
+// flows originating from a service - for these flows we actually use the ORed set of source selectors for flows
+// terminating at the service.
 type serviceEdges struct {
 	sourceEdges set.Set
 	destEdges   set.Set
@@ -738,14 +740,8 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 				})
 				s.maybeOverlayEventID(nodesInView, eventID.ID, fep, sg)
 			default:
-				fep := FlowEndpoint{
-					Type:      ep.Type,
-					Namespace: ep.Namespace,
-					Name:      ep.Name,
-					NameAggr:  ep.NameAggr,
-					Port:      ep.Port,
-					Proto:     ep.Proto,
-				}
+				// Since FlowEndpoint and EventEndpoint have the same structure can cast between the two.
+				fep := FlowEndpoint(ep)
 				sg := s.flowData.ServiceGroups.GetByEndpoint(fep)
 				s.maybeOverlayEventID(nodesInView, eventID.ID, fep, sg)
 			}

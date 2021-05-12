@@ -126,7 +126,7 @@ func GetServiceGroupNodeSelectors(sg *ServiceGroup) v1.GraphSelectors {
 	allEps := make(map[FlowEndpoint]struct{})
 
 	for sp, eps := range sg.ServicePorts {
-		for ep, _ := range eps {
+		for ep := range eps {
 			switch ep.Type {
 			case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
 				allEps[ep] = struct{}{}

@@ -79,7 +79,8 @@ var (
 	}
 )
 
-func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange) ([]L7Flow, error) {
+// GetL7FlowData queries and returns the set of L7 flow data.
+func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange) ([]L7Flow, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 	index := common.GetL7FlowsIndex(cluster)
@@ -143,7 +144,7 @@ func GetRawL7FlowData(ctx context.Context, client lmaelastic.Client, cluster str
 				Name:      singleDashToBlank(key[l7DestServiceNameIdx].String()),
 				Namespace: singleDashToBlank(key[l7DestServiceNamespaceIdx].String()),
 			},
-			//Port:  singleDashToBlank(key[flowDestServicePortIdx].String()),
+			//Port:  singleDashToBlank(key[FlowDestServicePortIdx].String()),
 			Proto: l7Proto,
 		}
 		dest := FlowEndpoint{

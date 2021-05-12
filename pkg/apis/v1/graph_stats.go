@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package v1
 
-// GraphStats contains L3, L7 statistics.  If there were no associated statistics recorded then the
+// GraphStats contains L3, L7 and process statistics.  If there were no associated statistics recorded then the
 // value will be nil and omitted entirely from the JSON response.
 type GraphStats struct {
 	L3        *GraphL3Stats   `json:"l3,omitempty"`

@@ -314,7 +314,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 
 	DescribeTable("Test node id parsing",
 		func(id string, node IDInfo) {
-			n, e := ParseGraphNodeID(id)
+			n, e := ParseGraphNodeID(v1.GraphNodeID(id))
 			Expect(e).NotTo(HaveOccurred())
 			Expect(*n).To(Equal(node))
 		},
@@ -494,7 +494,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 
 	DescribeTable("Test invalid node id parsing",
 		func(id string) {
-			_, e := ParseGraphNodeID(id)
+			_, e := ParseGraphNodeID(v1.GraphNodeID(id))
 			Expect(e).To(HaveOccurred())
 		},
 		Entry("layer - extra /", "layer/my/layer"),

@@ -104,7 +104,7 @@ func GetEventIDs(ctx context.Context, client lmaelastic.Client, cluster string, 
 	// - the context indicates "done"
 	var searchAfterKeys []interface{}
 	for {
-		log.Debug("Issuing search query, start after %#v", searchAfterKeys)
+		log.Debugf("Issuing search query, start after %#v", searchAfterKeys)
 
 		// Query the document index.
 		search := client.Backend().Search(index).Query(query).Size(alertsQuerySize).Sort("time", true)

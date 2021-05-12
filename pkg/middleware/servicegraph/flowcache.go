@@ -95,7 +95,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	}()
 	wg.Add(1)
 	go func() {
-		rawL7, errL7 = GetRawL7FlowData(ctx, fc.elasticClient, cluster, tr)
+		rawL7, errL7 = GetL7FlowData(ctx, fc.elasticClient, cluster, tr)
 		wg.Done()
 	}()
 	wg.Add(1)

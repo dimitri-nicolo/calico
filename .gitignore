@@ -6,3 +6,4 @@ report
 cmd/server/server
 bin/
 Makefile.common*
+.DS_Store

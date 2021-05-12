@@ -86,6 +86,7 @@ type serviceGroups struct {
 	serviceGroups              set.Set
 	serviceGroupsByServiceName map[types.NamespacedName]*ServiceGroup
 	serviceGroupsByEndpointKey map[FlowEndpoint]*ServiceGroup
+	finished                   bool
 }
 
 func (sgs *serviceGroups) Iter(cb func(*ServiceGroup) error) error {
@@ -122,8 +123,15 @@ func NewServiceGroups() ServiceGroups {
 }
 
 // FinishMappings is called when all of the service<->endpoint mappings have been added to this cache. This method
-// calculates the service groupings by collecting services with common sets of endpoints.
+// calculates the service groupings by collecting services with common sets of endpoints. It should be called once
+// only.
 func (sd *serviceGroups) FinishMappings() {
+	// Check we haven't finished the mappings already.
+	if sd.finished {
+		log.Panic("FinishMappings called more than once")
+	}
+	sd.finished = true
+
 	// Calculate the service groups name and namespace.
 	sd.serviceGroups.Iter(func(item interface{}) error {
 		sg := item.(*ServiceGroup)
