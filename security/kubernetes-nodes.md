@@ -38,10 +38,6 @@ This means that policy targeting these automatic host endpoints will function co
 Automatic host endpoints are differentiated from other host endpoints by the label `projectcalico.org/created-by: calico-kube-controllers`.
 Enable or disable automatic host endpoints by configuring the default KubeControllersConfiguration resource.
 
-### Before you begin...
-
-Have a running {{site.prodname}} cluster with `calicoctl` installed.
-
 ### How to
 
 - [Enable automatic host endpoints](#enable-automatic-host-endpoints)
@@ -58,19 +54,19 @@ kubectl patch kubecontrollersconfiguration default --patch='{"spec": {"controlle
 If successful, host endpoints are created for each of your cluster's nodes:
 
 ```bash
-calicoctl get heps -owide
+kubectl get heps -o wide
 ```
 
 The output may look similar to this:
 
 ```
-$ calicoctl get heps -owide
-NAME                                                    NODE                                           INTERFACE   IPS                              PROFILES
-ip-172-16-101-147.us-west-2.compute.internal-auto-hep   ip-172-16-101-147.us-west-2.compute.internal   *           172.16.101.147,192.168.228.128   projectcalico-default-allow
-ip-172-16-101-54.us-west-2.compute.internal-auto-hep    ip-172-16-101-54.us-west-2.compute.internal    *           172.16.101.54,192.168.107.128    projectcalico-default-allow
-ip-172-16-101-79.us-west-2.compute.internal-auto-hep    ip-172-16-101-79.us-west-2.compute.internal    *           172.16.101.79,192.168.91.64      projectcalico-default-allow
-ip-172-16-101-9.us-west-2.compute.internal-auto-hep     ip-172-16-101-9.us-west-2.compute.internal     *           172.16.101.9,192.168.71.192      projectcalico-default-allow
-ip-172-16-102-63.us-west-2.compute.internal-auto-hep    ip-172-16-102-63.us-west-2.compute.internal    *           172.16.102.63,192.168.108.192    projectcalico-default-allow
+$ kubectl get heps -o wide
+NAME                                                    CREATED AT
+ip-172-16-101-147.us-west-2.compute.internal-auto-hep   2021-05-12T22:16:47Z
+ip-172-16-101-54.us-west-2.compute.internal-auto-hep    2021-05-12T22:16:47Z
+ip-172-16-101-79.us-west-2.compute.internal-auto-hep    2021-05-12T22:16:47Z
+ip-172-16-101-9.us-west-2.compute.internal-auto-hep     2021-05-12T22:16:47Z
+ip-172-16-102-63.us-west-2.compute.internal-auto-hep    2021-05-12T22:16:47Z
 ```
 
 #### Apply network policy to automatic host endpoints
