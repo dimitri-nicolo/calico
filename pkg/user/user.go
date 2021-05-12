@@ -2,6 +2,7 @@
 package user
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -51,4 +52,16 @@ func (o *OIDCUser) ToStr() (string, error) {
 		return string(payload), err
 	}
 	return string(payload), err
+}
+
+// Base64EncodedSubjectID uses base64.RawURLEncoding to encode SubjectID so that it only contains alphanumeric characters.
+// If SubjectID is already base64 encoded then it is returned unchanged.
+func (o *OIDCUser) Base64EncodedSubjectID() string {
+	var encodedUsername string
+	if _, err := base64.RawURLEncoding.DecodeString(o.SubjectID); err != nil {
+		encodedUsername = base64.RawURLEncoding.EncodeToString([]byte(o.SubjectID))
+	} else {
+		encodedUsername = o.SubjectID
+	}
+	return encodedUsername
 }
