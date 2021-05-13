@@ -25,6 +25,16 @@ export KUBECONFIG=~/.kube/kind-config-kind
 # Set up second plane.
 : ${DUAL:=true}
 
+# URL for an operator install.
+: ${OPERATOR_URL:=https://docs.tigera.io/master/manifests/tigera-operator.yaml}
+
+# Full name and tag of the cnx-node image that the preceding URL uses.
+# We need this because we will build the local node code into an image
+# and then retag it - inside the test cluster - with exactly this
+# name.  Then when the operator install proceeds it will pick up that
+# image instead of pulling from gcr.io.
+: ${CNX_NODE_IMAGE:=gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master}
+
 tmpd=$(mktemp -d -t calico.XXXXXX)
 
 function make_bird_graceful() {
@@ -151,12 +161,12 @@ function install_tsee() {
     # Inside the cluster, retag so that it appears to be the image that the operator will
     # look for.
     for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
-	docker exec $node ctr --namespace=k8s.io images tag docker.io/tigera/cnx-node:latest-amd64 gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+	docker exec $node ctr --namespace=k8s.io images tag docker.io/tigera/cnx-node:latest-amd64 ${CNX_NODE_IMAGE}
 	docker exec $node crictl images
     done
 
     # Prepare for an operator install.
-    ${kubectl} create -f https://docs.tigera.io/master/manifests/tigera-operator.yaml
+    ${kubectl} create -f ${OPERATOR_URL}
 
     # Install pull secret.
     ${kubectl} create secret generic tigera-pull-secret \
