@@ -255,7 +255,6 @@ func GetL3FlowData(
 			Port:      int(key[FlowDestPortIdx].Float64()),
 			Proto:     proto,
 		}
-		destGp := GetServiceGroupFlowEndpointKey(dest)
 		gcs := v1.GraphConnectionStats{
 			TotalPerSampleInterval: int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
 			Started:                int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
@@ -267,6 +266,21 @@ func GetL3FlowData(
 			BytesIn:    int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
 			BytesOut:   int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
 		}
+
+		// For HostEndpoints, we know the full name, but we actually want to be able to aggregate the endpoints. For
+		// these specific endpoint types we set the aggregated name to be "*" and the name to be the HEP name.
+		// Similar handling exists in flowl7.go and events.go.
+		if source.Type == v1.GraphNodeTypeHostEndpoint {
+			source.Name = source.NameAggr
+			source.NameAggr = "*"
+		}
+		if dest.Type == v1.GraphNodeTypeHostEndpoint {
+			dest.Name = dest.NameAggr
+			dest.NameAggr = "*"
+		}
+
+		// Determine the endpoint key used to group together service groups.
+		destGp := GetServiceGroupFlowEndpointKey(dest)
 
 		var tcp *v1.GraphTCPStats
 		if proto == "tcp" {
@@ -554,6 +568,7 @@ func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []L3Flo
 		dest := FlowEndpoint{
 			Type:      destGp.Type,
 			Namespace: destGp.Namespace,
+			Name:      destGp.Name,
 			NameAggr:  destGp.NameAggr,
 		}
 		if other := s.other.getFlows(source, dest); len(other) == 1 {
@@ -629,11 +644,11 @@ func (f flowStats) add(f2 flowStats) flowStats {
 // flowReconciliationData is used to temporarily collate source and dest statistics when the flow will be recorded by
 // both source and dest.
 //
-// Source side flows may have service information missing from the destination flows.  The destination flows have the
-// final verdict (allow or deny) that is missing from the source flow. This helper divvies up the destination allowed
-// and denied flows with the source reported allowed flows. We use the source data for the actual total packets stats
-// and the destination data for the proportional values of which flows were allowed and denied at dest. This is
-// obviously an approximation, but the best we can do without additional data to correlate.
+// Service information available in source reported flows may be missing from the destination flows. The destination
+// flows have the final verdict (allow or deny) that is missing from the source flow. This helper divvies up the
+// destination allowed and denied flows with the source reported allowed flows. We use the source data for the actual
+// total packets stats and the destination data for the proportional values of which flows were allowed and denied at
+// dest. This is obviously an approximation, but the best we can do without additional data to correlate.
 type flowReconciliationData struct {
 	sourceReportedDenied  map[ServicePort]flowStats
 	sourceReportedAllowed map[ServicePort]flowStats

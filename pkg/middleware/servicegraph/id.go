@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
 // This file provides the graph node ID handling. It defines an IDInfo struct that encapsulates all possible data that
@@ -38,27 +39,55 @@ type IDInfo struct {
 	ParsedIDType v1.GraphNodeType
 
 	// The following is extracted from an ID, or used to construct an ID.
-	Endpoint  FlowEndpoint
-	Service   ServicePort
-	Services  []types.NamespacedName
-	Layer     string
-	Direction Direction
+	Endpoint     FlowEndpoint
+	Service      ServicePort
+	ServiceGroup *ServiceGroup
+	Layer        string
+	Direction    Direction
+}
+
+// GetNormalizedID can be called on a parsed ID to return the same ID as originally parsed, but normalized for the
+// specific invocation. This allows us to tweak the original ID to use an updated service group or perhaps to handle
+// version migration.
+func (id *IDInfo) GetNormalizedID() v1.GraphNodeID {
+	switch id.ParsedIDType {
+	case v1.GraphNodeTypeLayer:
+		return id.GetLayerID()
+	case v1.GraphNodeTypeNamespace:
+		return id.GetNamespaceID()
+	case v1.GraphNodeTypeServiceGroup:
+		return id.GetServiceGroupID()
+	case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
+		return id.GetAggrEndpointID()
+	case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeWorkload:
+		return id.GetEndpointID()
+	case v1.GraphNodeTypePort:
+		if id := id.GetEndpointPortID(); id != "" {
+			return id
+		}
+		return id.GetAggrEndpointPortID()
+	case v1.GraphNodeTypeServicePort:
+		return id.GetServicePortID()
+	case v1.GraphNodeTypeService:
+		return id.GetServiceID()
+	}
+	return ""
 }
 
 // GetAggrEndpointID returns the aggregated endpoint ID used both internally by the script and externally by the
 // service graph.
 func (idf *IDInfo) GetAggrEndpointID() v1.GraphNodeID {
-	switch idf.Endpoint.Type {
-	case v1.GraphNodeTypeWorkload:
-		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s", v1.GraphNodeTypeReplicaSet, idf.Endpoint.Namespace, idf.Endpoint.NameAggr))
+	aggrType := idf.GetAggrEndpointType()
+
+	switch aggrType {
 	case v1.GraphNodeTypeReplicaSet:
-		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s", v1.GraphNodeTypeReplicaSet, idf.Endpoint.Namespace, idf.Endpoint.NameAggr))
-	case v1.GraphNodeTypeNetwork, v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeNetworkSet:
+		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s", aggrType, idf.Endpoint.Namespace, idf.Endpoint.NameAggr))
+	case v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeHosts:
 		var id string
 		if idf.Endpoint.Namespace == "" {
-			id = fmt.Sprintf("%s/%s", idf.Endpoint.Type, idf.Endpoint.NameAggr)
+			id = fmt.Sprintf("%s/%s", aggrType, idf.Endpoint.NameAggr)
 		} else {
-			id = fmt.Sprintf("%s/%s/%s", idf.Endpoint.Type, idf.Endpoint.Namespace, idf.Endpoint.NameAggr)
+			id = fmt.Sprintf("%s/%s/%s", aggrType, idf.Endpoint.Namespace, idf.Endpoint.NameAggr)
 		}
 		// If there is a service group then include the service group, otherwise if there is a Direction include that
 		// (this effectively separates out sources and sinks.
@@ -80,8 +109,11 @@ func (idf *IDInfo) GetAggrEndpointType() v1.GraphNodeType {
 }
 
 func ConvertEndpointTypeToAggrEndpointType(t v1.GraphNodeType) v1.GraphNodeType {
-	if t == v1.GraphNodeTypeWorkload {
+	switch t {
+	case v1.GraphNodeTypeWorkload:
 		return v1.GraphNodeTypeReplicaSet
+	case v1.GraphNodeTypeHostEndpoint:
+		return v1.GraphNodeTypeHosts
 	}
 	return t
 }
@@ -89,8 +121,20 @@ func ConvertEndpointTypeToAggrEndpointType(t v1.GraphNodeType) v1.GraphNodeType 
 // GetEndpointID returns the ID of the non-aggregated endpoint. If the endpoint only has aggregated name data then this
 // will return an empty string.
 func (idf *IDInfo) GetEndpointID() v1.GraphNodeID {
-	if idf.Endpoint.Type == v1.GraphNodeTypeWorkload {
+	switch idf.Endpoint.Type {
+	case v1.GraphNodeTypeWorkload:
 		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s/%s", v1.GraphNodeTypeWorkload, idf.Endpoint.Namespace, idf.Endpoint.Name, idf.Endpoint.NameAggr))
+	case v1.GraphNodeTypeHostEndpoint:
+		id := fmt.Sprintf("%s/%s/%s", idf.Endpoint.Type, idf.Endpoint.Name, idf.Endpoint.NameAggr)
+
+		// If there is a service group then include the service group, otherwise if there is a Direction include that
+		// (this effectively separates out sources and sinks.
+		if svcGpId := idf.GetServiceGroupID(); svcGpId != "" {
+			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, svcGpId))
+		} else if dirId := idf.getDirectionID(); dirId != "" {
+			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, dirId))
+		}
+		return v1.GraphNodeID(id)
 	}
 	return ""
 }
@@ -127,25 +171,15 @@ func (idf *IDInfo) GetServiceID() v1.GraphNodeID {
 	if idf.Service.Name == "" {
 		return ""
 	}
-	return v1.GraphNodeID(idf.getServiceID(idf.Service.Namespace, idf.Service.Name))
+	return v1.GraphNodeID(getServiceID(idf.Service.Namespace, idf.Service.Name))
 }
 
-// getServiceID returns the destination service ID of the service contained in this node.
-func (idf *IDInfo) getServiceID(namespace, name string) string {
-	return fmt.Sprintf("%s/%s/%s", v1.GraphNodeTypeService, namespace, name)
-}
-
-// GetServiceGroupID returns the internal service group ID for this node. If the internal service group index
-// is not known and is not found by looking up the service name then this returns an empty string.
+// GetServiceGroupID returns the service group ID for this node.
 func (idf *IDInfo) GetServiceGroupID() v1.GraphNodeID {
-	if len(idf.Services) == 0 {
+	if idf.ServiceGroup == nil {
 		return ""
 	}
-	serviceIds := make([]string, len(idf.Services))
-	for i, s := range idf.Services {
-		serviceIds[i] = idf.getServiceID(s.Namespace, s.Name)
-	}
-	return v1.GraphNodeID(fmt.Sprintf("%s;%s", v1.GraphNodeTypeServiceGroup, strings.Join(serviceIds, ";")))
+	return idf.ServiceGroup.ID
 }
 
 // GetServicePortID returns the ID of the service Port. This contains the parent service ID embedded in it. This returns
@@ -208,8 +242,9 @@ var (
 		v1.GraphNodeTypeNamespace:    {{idpType, idpNamespace}},
 		v1.GraphNodeTypeServiceGroup: {{idpType}},
 		v1.GraphNodeTypeReplicaSet:   {{idpType, idpNamespace, idpNameAggr}},
-		v1.GraphNodeTypeHostEndpoint: {{idpType, idpNameAggr}},
+		v1.GraphNodeTypeHostEndpoint: {{idpType, idpName, idpNameAggr}},
 		v1.GraphNodeTypeNetwork:      {{idpType, idpNameAggr}},
+		v1.GraphNodeTypeHosts:        {{idpType, idpNameAggr}},
 		v1.GraphNodeTypeNetworkSet:   {{idpType, idpNameAggr}, {idpType, idpNamespace, idpNameAggr}},
 		v1.GraphNodeTypeWorkload:     {{idpType, idpNamespace, idpName, idpNameAggr}},
 		v1.GraphNodeTypePort:         {{idpType, idpProtocol, idpPort}},
@@ -234,13 +269,13 @@ var (
 	}
 
 	// All segments should adhere to this simple regex. Further restrictions may be imposed on a field by field basis.
-	valueRegex             = regexp.MustCompile("^[0-9a-zA-Z_.-]+$")
-	valueAllowedEmptyRegex = regexp.MustCompile("^[0-9a-zA-Z_.-]*$")
+	valueRegex             = regexp.MustCompile("^[*0-9a-zA-Z_.-]+$")
+	valueAllowedEmptyRegex = regexp.MustCompile("^[*0-9a-zA-Z_.-]*$")
 	firstSplitRegex        = regexp.MustCompile("[;/]")
 )
 
 // ParseGraphNodeID parses an external node ID and returns the data in an ID.
-func ParseGraphNodeID(id v1.GraphNodeID) (*IDInfo, error) {
+func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 	parts := firstSplitRegex.Split(string(id), 2)
 
 	// Names are hierarchical in nature, with components separated by semicolons: sub-component -> parent component.
@@ -276,10 +311,11 @@ func ParseGraphNodeID(id v1.GraphNodeID) (*IDInfo, error) {
 		// endpoint specified.
 		switch thisType {
 		case v1.GraphNodeTypeReplicaSet,
+			v1.GraphNodeTypeWorkload,
+			v1.GraphNodeTypeHosts,
 			v1.GraphNodeTypeHostEndpoint,
 			v1.GraphNodeTypeNetwork,
-			v1.GraphNodeTypeNetworkSet,
-			v1.GraphNodeTypeWorkload:
+			v1.GraphNodeTypeNetworkSet:
 			idf.Endpoint.Type = thisType
 		}
 
@@ -339,10 +375,17 @@ func ParseGraphNodeID(id v1.GraphNodeID) (*IDInfo, error) {
 			break
 		}
 
-		// If we are parsing a service group and the last segment was a service then append to the set of services
-		// in the group.
+		// If we are parsing a service group and the last segment was a service then lookup the group from the service.
+		// It is possible that our logs are missing one or more of the services in the group - that is fine. However,
+		// if the group contains services across multiple groups then that's not fine.
 		if isServiceGroup && thisType == v1.GraphNodeTypeService {
-			idf.Services = append(idf.Services, idf.Service.NamespacedName)
+			sg := sgs.GetByService(idf.Service.NamespacedName)
+			if idf.ServiceGroup != nil && sg != nil && idf.ServiceGroup != sg {
+				return nil, fmt.Errorf("invalid format of graph node ID %s: unrelated services specified as a group", id)
+			}
+			if sg != nil {
+				idf.ServiceGroup = sg
+			}
 			idf.Service = ServicePort{}
 		}
 
@@ -354,4 +397,22 @@ func ParseGraphNodeID(id v1.GraphNodeID) (*IDInfo, error) {
 	}
 
 	return idf, nil
+}
+
+// getServiceID returns the destination service ID of the service contained in this node.
+func getServiceID(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", v1.GraphNodeTypeService, namespace, name)
+}
+
+// GetServiceGroupID returns the service group ID for the supplied service group. This information is actually stored
+// in the service group.
+func GetServiceGroupID(svcs []types.NamespacedName) v1.GraphNodeID {
+	if len(svcs) == 0 {
+		return ""
+	}
+	serviceIds := make([]string, len(svcs))
+	for i, s := range svcs {
+		serviceIds[i] = getServiceID(s.Namespace, s.Name)
+	}
+	return v1.GraphNodeID(fmt.Sprintf("%s;%s", v1.GraphNodeTypeServiceGroup, strings.Join(serviceIds, ";")))
 }

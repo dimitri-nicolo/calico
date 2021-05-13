@@ -20,6 +20,7 @@ type ParsedViewIDs struct {
 	FollowedEgress            *ParsedNodes
 	Layers                    *ParsedLayers
 	FollowConnectionDirection bool
+	SplitIngressEgress        bool
 }
 
 // ParsedNodes contains details about a set of parsed node IDs in the view. The different aggregation levels are split
@@ -28,7 +29,7 @@ type ParsedNodes struct {
 	Layers        map[string]bool
 	Namespaces    map[string]bool
 	ServiceGroups map[*ServiceGroup]bool
-	Endpoints     map[FlowEndpoint]bool
+	Endpoints     map[v1.GraphNodeID]bool
 }
 
 // isEmpty returns true if there are no entries in the data.
@@ -45,16 +46,18 @@ func newParsedNodes() *ParsedNodes {
 		Layers:        make(map[string]bool),
 		Namespaces:    make(map[string]bool),
 		ServiceGroups: make(map[*ServiceGroup]bool),
-		Endpoints:     make(map[FlowEndpoint]bool),
+		Endpoints:     make(map[v1.GraphNodeID]bool),
 	}
 }
 
 // ParsedLayers contains the details about the parsed layers. The different aggregation levels are split
 // out for easier lookup in the graph constructor.
 type ParsedLayers struct {
-	NamespaceToLayer     map[string]string
-	ServiceGroupToLayer  map[*ServiceGroup]string
-	EndpointToLayer      map[FlowEndpoint]string
+	NamespaceToLayer    map[string]string
+	ServiceGroupToLayer map[*ServiceGroup]string
+	EndpointToLayer     map[v1.GraphNodeID]string
+
+	// Store layer contents - we use this for constructing selector strings.
 	LayerToNamespaces    map[string][]string
 	LayerToServiceGroups map[string][]*ServiceGroup
 	LayerToEndpoints     map[string][]FlowEndpoint
@@ -65,7 +68,7 @@ func newParsedLayers() *ParsedLayers {
 	return &ParsedLayers{
 		NamespaceToLayer:    make(map[string]string),
 		ServiceGroupToLayer: make(map[*ServiceGroup]string),
-		EndpointToLayer:     make(map[FlowEndpoint]string),
+		EndpointToLayer:     make(map[v1.GraphNodeID]string),
 	}
 }
 
@@ -75,6 +78,7 @@ func ParseViewIDs(sgr *v1.ServiceGraphRequest, sgs ServiceGroups) (*ParsedViewID
 	log.Debug("Parse view data")
 	p := &ParsedViewIDs{
 		FollowConnectionDirection: sgr.SelectedView.FollowConnectionDirection,
+		SplitIngressEgress:        sgr.SelectedView.SplitIngressEgress,
 	}
 	var err error
 	if p.Focus, err = parseNodes(sgr.SelectedView.Focus, sgs); err != nil {
@@ -96,7 +100,7 @@ func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err e
 	pn = newParsedNodes()
 	for _, id := range ids {
 		log.Debugf("Processing ID in view: %s", id)
-		if pid, err := ParseGraphNodeID(id); err != nil {
+		if pid, err := ParseGraphNodeID(id, sgs); err != nil {
 			return nil, fmt.Errorf("invalid id '%s': %v", id, err)
 		} else {
 			switch pid.ParsedIDType {
@@ -109,17 +113,9 @@ func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err e
 					pn.ServiceGroups[sg] = true
 				}
 			case v1.GraphNodeTypeServiceGroup:
-				for _, s := range pid.Services {
-					if sg := sgs.GetByService(s); sg != nil {
-						pn.ServiceGroups[sg] = true
-					}
-				}
+				pn.ServiceGroups[pid.ServiceGroup] = true
 			default:
-				// Otherwise assume it's the endpoint we parsed - and in that case we use the service group
-				// endpoint key - which may or may not include port and protocol based on what is available.
-				if ep := GetServiceGroupFlowEndpointKey(pid.Endpoint); ep != nil {
-					pn.Endpoints[*ep] = true
-				}
+				pn.Endpoints[pid.GetNormalizedID()] = true
 			}
 		}
 	}
@@ -131,7 +127,7 @@ func parseLayers(layers v1.Layers, sgs ServiceGroups) (pn *ParsedLayers, err err
 	for layer, ids := range layers {
 		for _, id := range ids {
 			log.Debugf("Processing ID in view: %s", id)
-			if pid, err := ParseGraphNodeID(id); err != nil {
+			if pid, err := ParseGraphNodeID(id, sgs); err != nil {
 				return nil, fmt.Errorf("invalid id '%s': %v", id, err)
 			} else {
 				switch pid.ParsedIDType {
@@ -148,22 +144,17 @@ func parseLayers(layers v1.Layers, sgs ServiceGroups) (pn *ParsedLayers, err err
 						}
 					}
 				case v1.GraphNodeTypeServiceGroup:
-					for _, s := range pid.Services {
-						if sg := sgs.GetByService(s); sg != nil {
-							if _, ok := pn.ServiceGroupToLayer[sg]; !ok {
-								pn.ServiceGroupToLayer[sg] = layer
-								pn.LayerToServiceGroups[layer] = append(pn.LayerToServiceGroups[layer], sg)
-							}
-						}
+					if _, ok := pn.ServiceGroupToLayer[pid.ServiceGroup]; !ok {
+						pn.ServiceGroupToLayer[pid.ServiceGroup] = layer
+						pn.LayerToServiceGroups[layer] = append(pn.LayerToServiceGroups[layer], pid.ServiceGroup)
 					}
 				default:
-					// Otherwise assume it's the endpoint we parsed - and in that case we use the service group
-					// endpoint key - which may or may not include port and protocol based on what is available.
-					if ep := GetServiceGroupFlowEndpointKey(pid.Endpoint); ep != nil {
-						if _, ok := pn.EndpointToLayer[*ep]; !ok {
-							pn.EndpointToLayer[*ep] = layer
-							pn.LayerToEndpoints[layer] = append(pn.LayerToEndpoints[layer], *ep)
-						}
+					// Otherwise assume it's the endpoint we parsed. In this case we also need to include the service
+					// group to disambiguate.
+					id := pid.GetNormalizedID()
+					if _, ok := pn.EndpointToLayer[id]; !ok {
+						pn.EndpointToLayer[id] = layer
+						pn.LayerToEndpoints[layer] = append(pn.LayerToEndpoints[layer], pid.Endpoint)
 					}
 				}
 			}

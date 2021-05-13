@@ -155,6 +155,18 @@ func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string
 			Proto: l7Proto,
 		}
 
+		// For HostEndpoints, we know the full name, but we actually want to be able to aggregate the endpoints. For
+		// these specific endpoint types we set the aggregated name to be "*" and the name to be the HEP name.
+		// Similar handling exists in flowl3.go and events.go.
+		if source.Type == v1.GraphNodeTypeHostEndpoint {
+			source.Name = source.NameAggr
+			source.NameAggr = "*"
+		}
+		if dest.Type == v1.GraphNodeTypeHostEndpoint {
+			dest.Name = dest.NameAggr
+			dest.NameAggr = "*"
+		}
+
 		if !foundFlow {
 			// For the first entry we need to store off the first flow details.
 			lastSource, lastDest, lastSvc = source, dest, svc

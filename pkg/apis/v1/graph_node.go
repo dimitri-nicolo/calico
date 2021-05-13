@@ -20,6 +20,7 @@ const (
 	GraphNodeTypeServicePort  GraphNodeType = "svcport"
 	GraphNodeTypeReplicaSet   GraphNodeType = "rep"
 	GraphNodeTypeWorkload     GraphNodeType = "wep"
+	GraphNodeTypeHosts        GraphNodeType = "hosts"
 	GraphNodeTypeHostEndpoint GraphNodeType = "hep"
 	GraphNodeTypeNetwork      GraphNodeType = "net"
 	GraphNodeTypeNetworkSet   GraphNodeType = "ns"
@@ -156,13 +157,14 @@ func (n GraphNode) String() string {
 	return fmt.Sprintf("Node(%s; parent=%s; expandable=%v)", n.ID, n.ParentID, n.Expandable)
 }
 
+// AggregatedProtoPorts holds info about an aggregated set of protocols and ports.
 type AggregatedProtoPorts struct {
 	ProtoPorts        []AggregatedPorts `json:"protoPorts,omitempty"`
 	NumOtherProtocols int               `json:"numOtherProtocols,omitempty"`
 }
 
 func (a AggregatedProtoPorts) String() string {
-	return fmt.Sprintf("AggregatedProtoPorts protocol and ports: %#v", a)
+	return fmt.Sprintf("Aggregated protocol and ports: %#v", a)
 }
 
 type AggregatedPorts struct {
@@ -180,6 +182,7 @@ func (p PortRange) Num() int {
 	return p.MaxPort - p.MinPort + 1
 }
 
+// Services is the set of services associated with a node. This is JSON marshaled as a slice.
 type Services map[types.NamespacedName]struct{}
 
 func (s Services) MarshalJSON() ([]byte, error) {
@@ -211,6 +214,7 @@ func (s Services) MarshalJSON() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
+// SortableServices is used to sort a set of services.
 type SortableServices []types.NamespacedName
 
 func (s SortableServices) Len() int {
@@ -228,6 +232,7 @@ func (s SortableServices) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
+// GraphEventIDs is used to store event IDs. This is JSON marshaled as a slice.
 type GraphEventIDs map[string]struct{}
 
 func (e GraphEventIDs) MarshalJSON() ([]byte, error) {

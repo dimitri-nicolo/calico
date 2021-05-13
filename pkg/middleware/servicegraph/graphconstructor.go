@@ -217,8 +217,13 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 	// the appropriate intra-node statistics. Note source will not include a service Port since that is an ingress
 	// only concept.
 	log.Debugf("Processing: %s", flow)
-	srcGp, srcEp, _ := s.trackNodes(flow.Edge.Source, nil, DirectionEgress)
-	dstGp, dstEp, servicePortDst := s.trackNodes(flow.Edge.Dest, flow.Edge.ServicePort, DirectionIngress)
+	var egress, ingress Direction
+	if s.view.SplitIngressEgress {
+		egress, ingress = DirectionEgress, DirectionIngress
+	}
+
+	srcGp, srcEp, _ := s.trackNodes(flow.Edge.Source, nil, egress)
+	dstGp, dstEp, servicePortDst := s.trackNodes(flow.Edge.Dest, flow.Edge.ServicePort, ingress)
 
 	// Include any aggregated port proto info in either the group or the endpoint.  Include the service in the group if
 	// it is not expanded.
@@ -327,33 +332,40 @@ func (s *serviceGraphConstructionData) trackNodes(
 	} else {
 		sg = s.flowData.ServiceGroups.GetByEndpoint(endpoint)
 	}
-	epg := GetServiceGroupFlowEndpointKey(endpoint)
-	var layerName, layerNameEndpoint, layerNameServiceGroup, layerNameNamespace string
-	if epg != nil {
-		layerNameEndpoint = s.view.Layers.EndpointToLayer[*epg]
-		layerName = layerNameEndpoint
-	}
-	if layerName == "" && sg != nil {
-		layerNameServiceGroup = s.view.Layers.ServiceGroupToLayer[sg]
-		layerName = layerNameServiceGroup
-	}
-	if layerName == "" && endpoint.Namespace != "" {
-		layerNameNamespace = s.view.Layers.NamespaceToLayer[endpoint.Namespace]
-		layerName = layerNameNamespace
-	}
-
 	// Create an ID handler.
 	idi := IDInfo{
-		Endpoint:  endpoint,
-		Services:  nil,
-		Layer:     layerName,
-		Direction: dir,
+		Endpoint:     endpoint,
+		ServiceGroup: sg,
+		Direction:    dir,
 	}
 	if svc != nil {
 		idi.Service = *svc
 	}
-	if sg != nil {
-		idi.Services = sg.Services
+
+	// Determine the aggregated and full endpoint IDs and check if contained in a layer.
+	nonAggrEndpointId := idi.GetEndpointID()
+	aggrEndpointId := idi.GetAggrEndpointID()
+
+	var layerName, layerNameEndpoint, layerNameAggrEndpoint, layerNameServiceGroup, layerNameNamespace string
+
+	if nonAggrEndpointId != "" {
+		layerNameEndpoint = s.view.Layers.EndpointToLayer[nonAggrEndpointId]
+		layerName = layerNameEndpoint
+	}
+
+	if layerName == "" && aggrEndpointId != "" {
+		layerNameAggrEndpoint = s.view.Layers.EndpointToLayer[aggrEndpointId]
+		layerName = layerNameAggrEndpoint
+	}
+
+	if layerName == "" && sg != nil {
+		layerNameServiceGroup = s.view.Layers.ServiceGroupToLayer[sg]
+		layerName = layerNameServiceGroup
+	}
+
+	if layerName == "" && endpoint.Namespace != "" {
+		layerNameNamespace = s.view.Layers.NamespaceToLayer[endpoint.Namespace]
+		layerName = layerNameNamespace
 	}
 
 	// If the layer is not Expanded then return the layer node.
@@ -382,8 +394,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 		id := idi.GetNamespaceID()
 		if _, ok := s.nodesMap[id]; !ok {
 			s.nodesMap[id] = &v1.GraphNode{
-				ID:         id,
 				Type:       v1.GraphNodeTypeNamespace,
+				ID:         id,
 				Name:       endpoint.Namespace,
 				Layer:      layerNameNamespace,
 				Expandable: true,
@@ -401,21 +413,19 @@ func (s *serviceGraphConstructionData) trackNodes(
 
 	// If the service group is not Expanded then return the service group node. If the service group is part of an
 	// Expanded layer then include the layer name.
-	var parentId v1.GraphNodeID
 	if sg != nil {
-		id := sg.ID
-		if _, ok := s.nodesMap[id]; !ok {
-			s.nodesMap[id] = &v1.GraphNode{
-				ID:         id,
+		if _, ok := s.nodesMap[sg.ID]; !ok {
+			s.nodesMap[sg.ID] = &v1.GraphNode{
 				Type:       v1.GraphNodeTypeServiceGroup,
+				ID:         sg.ID,
 				Namespace:  sg.Namespace,
 				Name:       sg.Name,
 				Layer:      layerNameServiceGroup,
 				Expandable: true,
 				Selectors:  GetServiceGroupNodeSelectors(sg),
 			}
-			s.groupsMap[id] = newTrackedGroup(
-				id,
+			s.groupsMap[sg.ID] = newTrackedGroup(
+				sg.ID,
 				s.view.Focus.ServiceGroups[sg] ||
 					s.view.Focus.Namespaces[endpoint.Namespace] ||
 					s.view.Focus.Layers[layerName],
@@ -429,23 +439,22 @@ func (s *serviceGraphConstructionData) trackNodes(
 		}
 
 		if !s.view.Expanded.ServiceGroups[sg] {
-			return id, id, ""
+			return sg.ID, sg.ID, ""
 		}
 
-		groupId = id
-		parentId = id
+		groupId = sg.ID
 
 		// If there is a service we will need to add that node too, and return the ID.
 		if svc != nil {
 			serviceId = idi.GetServicePortID()
 			if _, ok := s.nodesMap[serviceId]; !ok {
 				s.nodesMap[serviceId] = &v1.GraphNode{
-					ID:          serviceId,
 					Type:        v1.GraphNodeTypeServicePort,
+					ID:          serviceId,
+					ParentID:    sg.ID,
 					Namespace:   svc.Namespace,
 					Name:        svc.Name,
 					ServicePort: svc.Port,
-					ParentID:    parentId,
 					Selectors:   GetServicePortNodeSelectors(*svc),
 				}
 				s.groupsMap[groupId].update(serviceId, false, false, false)
@@ -454,11 +463,11 @@ func (s *serviceGraphConstructionData) trackNodes(
 	}
 
 	// Combine the aggregated endpoint node - this should  always be available for a flow.
-	id := idi.GetAggrEndpointID()
-	if _, ok := s.nodesMap[id]; !ok {
-		s.nodesMap[id] = &v1.GraphNode{
-			ID:         id,
+	if _, ok := s.nodesMap[aggrEndpointId]; !ok {
+		s.nodesMap[aggrEndpointId] = &v1.GraphNode{
 			Type:       idi.GetAggrEndpointType(),
+			ID:         aggrEndpointId,
+			ParentID:   groupId,
 			Namespace:  endpoint.Namespace,
 			Name:       endpoint.NameAggr,
 			Layer:      layerNameEndpoint,
@@ -467,23 +476,20 @@ func (s *serviceGraphConstructionData) trackNodes(
 				NoProto, NoPort, idi.Direction),
 		}
 
-		var isInFocus, isFollowingEgress, isFollowingIngress bool
-		if epg != nil {
-			isInFocus = s.view.Focus.Endpoints[*epg] ||
-				s.view.Focus.Namespaces[endpoint.Namespace] ||
-				s.view.Focus.Layers[layerName]
-			isFollowingEgress = s.view.FollowedEgress.Endpoints[*epg] ||
-				s.view.FollowedEgress.Namespaces[endpoint.Namespace] ||
-				s.view.FollowedEgress.Layers[layerName]
-			isFollowingIngress = s.view.FollowedIngress.Endpoints[*epg] ||
-				s.view.FollowedIngress.Namespaces[endpoint.Namespace] ||
-				s.view.FollowedIngress.Layers[layerName]
-		}
+		isInFocus := s.view.Focus.Endpoints[aggrEndpointId] ||
+			s.view.Focus.Namespaces[endpoint.Namespace] ||
+			s.view.Focus.Layers[layerName]
+		isFollowingEgress := s.view.FollowedEgress.Endpoints[aggrEndpointId] ||
+			s.view.FollowedEgress.Namespaces[endpoint.Namespace] ||
+			s.view.FollowedEgress.Layers[layerName]
+		isFollowingIngress := s.view.FollowedIngress.Endpoints[aggrEndpointId] ||
+			s.view.FollowedIngress.Namespaces[endpoint.Namespace] ||
+			s.view.FollowedIngress.Layers[layerName]
 
 		if groupId == "" {
 			// The endpoint is also the group, so track it.
-			s.groupsMap[id] = newTrackedGroup(
-				id,
+			s.groupsMap[aggrEndpointId] = newTrackedGroup(
+				aggrEndpointId,
 				isInFocus,
 				isFollowingEgress,
 				isFollowingIngress,
@@ -491,73 +497,72 @@ func (s *serviceGraphConstructionData) trackNodes(
 		} else {
 			// The endpoint is not the group. Update the view details for the group and include the endpoint as
 			// a child.
-			s.groupsMap[groupId].update(id, isInFocus, isFollowingEgress, isFollowingIngress)
+			s.groupsMap[groupId].update(aggrEndpointId, isInFocus, isFollowingEgress, isFollowingIngress)
 		}
 	}
-	parentId = id
 	if groupId == "" {
 		// If there is no service group for this endpoint, then the endpoint becomes the owning group.
-		groupId = id
+		groupId = aggrEndpointId
 	}
 
 	// If the endpoint is not Expanded, or is not expandable then add the port if present.
-	nonAggEndpointId := idi.GetEndpointID()
-	if epg == nil || !s.view.Expanded.Endpoints[*epg] || nonAggEndpointId == "" {
-		if id := idi.GetAggrEndpointPortID(); id != "" {
-			if _, ok := s.nodesMap[id]; !ok {
-				s.nodesMap[id] = &v1.GraphNode{
-					ID:       id,
+	if !s.view.Expanded.Endpoints[aggrEndpointId] || nonAggrEndpointId == "" {
+		log.Debugf("Group is not expanded or not expandable: %s; %s, %s, %#v", groupId, aggrEndpointId, nonAggrEndpointId, s.view.Expanded.Endpoints)
+
+		if aggrEndpointPortId := idi.GetAggrEndpointPortID(); aggrEndpointPortId != "" {
+			if _, ok := s.nodesMap[aggrEndpointPortId]; !ok {
+				s.nodesMap[aggrEndpointPortId] = &v1.GraphNode{
 					Type:     v1.GraphNodeTypePort,
+					ID:       aggrEndpointPortId,
+					ParentID: aggrEndpointId,
 					Port:     endpoint.Port,
 					Protocol: endpoint.Proto,
-					ParentID: parentId,
 					Selectors: GetEndpointNodeSelectors(
 						idi.GetAggrEndpointType(), endpoint.Namespace, endpoint.NameAggr,
 						endpoint.Proto, endpoint.Port, idi.Direction,
 					),
 				}
-				s.groupsMap[groupId].update(id, false, false, false)
+				s.groupsMap[groupId].update(aggrEndpointPortId, false, false, false)
 			}
-			endpointId = id
+			endpointId = aggrEndpointPortId
 		} else {
-			endpointId = parentId
+			endpointId = aggrEndpointId
 		}
 		return
 	}
 
-	if _, ok := s.nodesMap[nonAggEndpointId]; !ok {
-		s.nodesMap[id] = &v1.GraphNode{
-			ID:        nonAggEndpointId,
+	if _, ok := s.nodesMap[nonAggrEndpointId]; !ok {
+		s.nodesMap[nonAggrEndpointId] = &v1.GraphNode{
 			Type:      idi.Endpoint.Type,
+			ID:        nonAggrEndpointId,
+			ParentID:  aggrEndpointId,
 			Namespace: endpoint.Namespace,
 			Name:      endpoint.Name,
-			ParentID:  parentId,
 			Selectors: GetEndpointNodeSelectors(
 				idi.Endpoint.Type, endpoint.Namespace, endpoint.NameAggr, NoProto, NoPort, idi.Direction,
 			),
 		}
-		s.groupsMap[groupId].update(nonAggEndpointId, false, false, false)
+		s.groupsMap[groupId].update(nonAggrEndpointId, false, false, false)
 	}
-	parentId = nonAggEndpointId
 
-	if id := idi.GetEndpointPortID(); id != "" {
-		if _, ok := s.nodesMap[nonAggEndpointId]; !ok {
-			s.nodesMap[id] = &v1.GraphNode{
-				ID:       id,
+	if nonAggrEndpointPortId := idi.GetEndpointPortID(); nonAggrEndpointPortId != "" {
+		if _, ok := s.nodesMap[nonAggrEndpointId]; !ok {
+			s.nodesMap[nonAggrEndpointPortId] = &v1.GraphNode{
 				Type:     v1.GraphNodeTypePort,
+				ID:       nonAggrEndpointPortId,
+				ParentID: nonAggrEndpointId,
 				Port:     endpoint.Port,
 				Protocol: endpoint.Proto,
-				ParentID: parentId,
 				Selectors: GetEndpointNodeSelectors(
 					idi.Endpoint.Type, endpoint.Namespace, endpoint.NameAggr,
 					endpoint.Proto, endpoint.Port, idi.Direction,
 				),
 			}
-			s.groupsMap[groupId].update(id, false, false, false)
+			s.groupsMap[groupId].update(nonAggrEndpointPortId, false, false, false)
 		}
-		endpointId = id
+		endpointId = nonAggrEndpointPortId
 	} else {
-		endpointId = parentId
+		endpointId = nonAggrEndpointId
 	}
 
 	return
@@ -751,11 +756,23 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 
 func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, eventID string, ep FlowEndpoint, sg *ServiceGroup) {
 	// Determine which layer this endpoint might be part of.
-	var layerName, layerNameEndpoint, layerNameServiceGroup, layerNameNamespace string
-	epg := GetServiceGroupFlowEndpointKey(ep)
-	if epg != nil {
-		layerNameEndpoint = s.view.Layers.EndpointToLayer[*epg]
+	var layerName, layerNameEndpoint, layerNameAggrEndpoint, layerNameServiceGroup, layerNameNamespace string
+
+	idi := IDInfo{
+		Endpoint:     ep,
+		ServiceGroup: sg,
+		Direction:    "",
+	}
+
+	aggrEndpointId := idi.GetAggrEndpointID()
+	endpointId := idi.GetEndpointID()
+	if aggrEndpointId != "" {
+		layerNameEndpoint = s.view.Layers.EndpointToLayer[aggrEndpointId]
 		layerName = layerNameEndpoint
+	}
+	if layerName == "" && endpointId != "" {
+		layerNameAggrEndpoint = s.view.Layers.EndpointToLayer[endpointId]
+		layerName = layerNameAggrEndpoint
 	}
 	if layerName == "" && sg != nil {
 		layerNameServiceGroup = s.view.Layers.ServiceGroupToLayer[sg]
@@ -766,52 +783,45 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 		layerName = layerNameNamespace
 	}
 
+	// Set the layer.
+	idi.Layer = layerName
+
 	// Check if the layer is in view, if so add the event to the layer.
 	if layerName != "" {
-		idi := IDInfo{
-			Layer: layerName,
-		}
-		id := idi.GetLayerID()
-		if s.nodesMap[id] != nil && (nodesInView == nil || nodesInView.Contains(id)) {
-			log.Debugf("  - Including in node %s", id)
-			s.nodesMap[id].IncludeEvent(eventID)
+		layerId := idi.GetLayerID()
+		if s.nodesMap[layerId] != nil && (nodesInView == nil || nodesInView.Contains(layerId)) {
+			log.Debugf("  - Including event in node %s", layerId)
+			s.nodesMap[layerId].IncludeEvent(eventID)
 			return
 		}
 	}
 
-	// Check if namespace layer is in view, if so add the event to the namespace.
-	idi := IDInfo{
-		Endpoint: ep,
-	}
 	if ep.Namespace != "" {
-		id := idi.GetNamespaceID()
-		if s.nodesMap[id] != nil && (nodesInView == nil || nodesInView.Contains(id)) {
-			log.Debugf("  - Including in node %s", id)
-			s.nodesMap[id].IncludeEvent(eventID)
+		namespaceId := idi.GetNamespaceID()
+		if s.nodesMap[namespaceId] != nil && (nodesInView == nil || nodesInView.Contains(namespaceId)) {
+			log.Debugf("  - Including event in node %s", namespaceId)
+			s.nodesMap[namespaceId].IncludeEvent(eventID)
 			return
 		}
 	}
 
 	// Check if service group is in view, if so add the event to the service group.
 	if sg != nil {
-		id := sg.ID
-		if s.nodesMap[id] != nil && (nodesInView == nil || nodesInView.Contains(id)) {
-			log.Debugf("  - Including in node %s", id)
-			s.nodesMap[id].IncludeEvent(eventID)
+		if s.nodesMap[sg.ID] != nil && (nodesInView == nil || nodesInView.Contains(sg.ID)) {
+			log.Debugf("  - Including event in node %s", sg.ID)
+			s.nodesMap[sg.ID].IncludeEvent(eventID)
 			return
 		}
 	}
 	// Check if endpoint is in view, if so add the event to the endpoint.
-	id := idi.GetAggrEndpointID()
-	if id != "" && s.nodesMap[id] != nil && (nodesInView == nil || nodesInView.Contains(id)) {
-		log.Debugf("  - Including in node %s", id)
-		s.nodesMap[id].IncludeEvent(eventID)
+	if endpointId != "" && s.nodesMap[endpointId] != nil && (nodesInView == nil || nodesInView.Contains(endpointId)) {
+		log.Debugf("  - Including event in node %s", endpointId)
+		s.nodesMap[endpointId].IncludeEvent(eventID)
 		return
 	}
-	id = idi.GetEndpointID()
-	if id != "" && s.nodesMap[id] != nil && (nodesInView == nil || nodesInView.Contains(id)) {
-		log.Debugf("  - Including in node %s", id)
-		s.nodesMap[id].IncludeEvent(eventID)
+	if aggrEndpointId != "" && s.nodesMap[aggrEndpointId] != nil && (nodesInView == nil || nodesInView.Contains(aggrEndpointId)) {
+		log.Debugf("  - Including event in node %s", aggrEndpointId)
+		s.nodesMap[aggrEndpointId].IncludeEvent(eventID)
 		return
 	}
 	log.Debug("  - No matching node in graph")

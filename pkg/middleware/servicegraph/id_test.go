@@ -13,6 +13,14 @@ import (
 )
 
 var _ = Describe("Elasticsearch script interface tests", func() {
+	var dummySg = &ServiceGroup{
+		ID: GetServiceGroupID([]types.NamespacedName{{
+			Namespace: "my-service-namespace",
+			Name:      "my-service-name",
+		}}),
+	}
+	var dummyServiceGroups = mockServiceGroups{sg: dummySg}
+
 	DescribeTable("Test possible data sets returned by elasticsearch",
 		func(idi IDInfo,
 			layer, namespace,
@@ -49,13 +57,12 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 		),
 		Entry("ServiceGroup",
 			IDInfo{
-				Services: []types.NamespacedName{{
-					Namespace: "service-namespace",
-					Name:      "service-name",
-				}, {
-					Namespace: "service-namespace2",
-					Name:      "service-name2",
-				}},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace2", Name: "service-name2"},
+					}),
+				},
 			},
 			"", "",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace2/service-name2", "", "",
@@ -90,12 +97,13 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			IDInfo{
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeHostEndpoint,
-					NameAggr: "hepname",
+					Name:     "hepname",
+					NameAggr: "*",
 				},
 			},
 			"", "",
 			"", "", "",
-			"hep/hepname", "", "", "",
+			"hosts/*", "hep/hepname/*", "", "",
 		),
 		Entry("Global network set",
 			IDInfo{
@@ -127,9 +135,11 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Namespace: "n1",
 					NameAggr:  "n1-ns",
 				},
-				Services: []types.NamespacedName{{
-					Namespace: "sns", Name: "sn",
-				}},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{{
+						Namespace: "sns", Name: "sn",
+					}}),
+				},
 			},
 			"", "namespace/n1",
 			"svcgp;svc/sns/sn", "", "",
@@ -176,9 +186,11 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Port:  "http",
 					Proto: "udp",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "service-namespace", Name: "service-name"},
-					{Namespace: "service-namespace", Name: "service-name2"},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace", Name: "service-name2"},
+					}),
 				},
 			},
 			"", "namespace/namespace1",
@@ -202,9 +214,11 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					},
 					Proto: "tcp",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "service-namespace", Name: "service-name"},
-					{Namespace: "service-namespace", Name: "service-name2"},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace", Name: "service-name2"},
+					}),
 				},
 			},
 			"", "namespace/ns",
@@ -216,7 +230,8 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			IDInfo{
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeHostEndpoint,
-					NameAggr: "hepname",
+					Name:     "hepname",
+					NameAggr: "*",
 					Proto:    "sctp",
 				},
 				Service: ServicePort{
@@ -226,15 +241,18 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					},
 					Proto: "sctp",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "service-namespace", Name: "service-name"},
-					{Namespace: "service-namespace", Name: "service-name2"},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace", Name: "service-name2"},
+					}),
 				},
 			},
 			"", "",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/sctp/;svc/service-namespace/service-name",
-			"hep/hepname;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
+			"hosts/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
+			"hep/hepname/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "",
 		),
 		Entry("Global network set with service",
 			IDInfo{
@@ -250,9 +268,11 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					},
 					Proto: "udp",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "service-namespace", Name: "service-name"},
-					{Namespace: "service-namespace", Name: "service-name2"},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace", Name: "service-name2"},
+					}),
 				},
 			},
 			"", "",
@@ -275,9 +295,11 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					},
 					Proto: "udp",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "service-namespace", Name: "service-name"},
-					{Namespace: "service-namespace", Name: "service-name2"},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace", Name: "service-name2"},
+					}),
 				},
 			},
 			"", "namespace/n1",
@@ -300,9 +322,11 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Port:  "http",
 					Proto: "udp",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "service-namespace", Name: "service-name"},
-					{Namespace: "service-namespace", Name: "service-name2"},
+				ServiceGroup: &ServiceGroup{
+					ID: GetServiceGroupID([]types.NamespacedName{
+						{Namespace: "service-namespace", Name: "service-name"},
+						{Namespace: "service-namespace", Name: "service-name2"},
+					}),
 				},
 			},
 			"", "",
@@ -314,7 +338,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 
 	DescribeTable("Test node id parsing",
 		func(id string, node IDInfo) {
-			n, e := ParseGraphNodeID(v1.GraphNodeID(id))
+			n, e := ParseGraphNodeID(v1.GraphNodeID(id), dummyServiceGroups)
 			Expect(e).NotTo(HaveOccurred())
 			Expect(*n).To(Equal(node))
 		},
@@ -333,15 +357,9 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 		),
 		Entry("service group",
-			"svcgp;svc/svc-namespace/svc-name;svc/svc-namespace/svc-name2", IDInfo{
+			"svcgp;svc/my-service-namespace/my-service-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeServiceGroup,
-				Services: []types.NamespacedName{{
-					Namespace: "svc-namespace",
-					Name:      "svc-name",
-				}, {
-					Namespace: "svc-namespace",
-					Name:      "svc-name2",
-				}},
+				ServiceGroup: dummySg,
 			},
 		),
 		Entry("service Port with no port name",
@@ -391,25 +409,24 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 		),
 		Entry("host endpoint",
-			"hep/na1", IDInfo{
+			"hep/na1/*", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeHostEndpoint,
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeHostEndpoint,
-					NameAggr: "na1",
+					Name:     "na1",
+					NameAggr: "*",
 				},
 			},
 		),
 		Entry("host endpoint with service group",
-			"hep/na1;svcgp;svc/sns1/sn1;svc/sns2/sn2", IDInfo{
+			"hep/na1/*;svcgp;svc/my-service-namespace/my-service-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeHostEndpoint,
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeHostEndpoint,
-					NameAggr: "na1",
+					Name:     "na1",
+					NameAggr: "*",
 				},
-				Services: []types.NamespacedName{
-					{Namespace: "sns1", Name: "sn1"},
-					{Namespace: "sns2", Name: "sn2"},
-				},
+				ServiceGroup: dummySg,
 			},
 		),
 		Entry("network",
@@ -451,50 +468,50 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 		),
 		Entry("network with service group",
-			"net/na1;svcgp;svc/my-service-namespace/my-service", IDInfo{
+			"net/na1;svcgp;svc/my-service-namespace/my-service-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeNetwork,
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeNetwork,
 					NameAggr: "na1",
 				},
-				Services: []types.NamespacedName{{
-					Namespace: "my-service-namespace",
-					Name:      "my-service",
-				}},
+				ServiceGroup: dummySg,
 			},
 		),
 		Entry("global network set with service group",
-			"ns/na1;svcgp;svc/my-service-namespace/my-service", IDInfo{
+			"ns/na1;svcgp;svc/my-service-namespace/my-service-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeNetworkSet,
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeNetworkSet,
 					NameAggr: "na1",
 				},
-				Services: []types.NamespacedName{{
-					Namespace: "my-service-namespace",
-					Name:      "my-service",
-				}},
+				ServiceGroup: dummySg,
 			},
 		),
 		Entry("namespaced network set with service",
-			"ns/ns1/na1;svcgp;svc/my-service-namespace/my-service", IDInfo{
+			"ns/ns1/na1;svcgp;svc/my-service-namespace/my-service-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeNetworkSet,
 				Endpoint: FlowEndpoint{
 					Type:      v1.GraphNodeTypeNetworkSet,
 					Namespace: "ns1",
 					NameAggr:  "na1",
 				},
-				Services: []types.NamespacedName{{
-					Namespace: "my-service-namespace",
-					Name:      "my-service",
-				}},
+				ServiceGroup: dummySg,
+			},
+		),
+		Entry("wildcarded hosts",
+			"hosts/*", IDInfo{
+				ParsedIDType: v1.GraphNodeTypeHosts,
+				Endpoint: FlowEndpoint{
+					Type:     v1.GraphNodeTypeHosts,
+					NameAggr: "*",
+				},
 			},
 		),
 	)
 
 	DescribeTable("Test invalid node id parsing",
 		func(id string) {
-			_, e := ParseGraphNodeID(v1.GraphNodeID(id))
+			_, e := ParseGraphNodeID(v1.GraphNodeID(id), dummyServiceGroups)
 			Expect(e).To(HaveOccurred())
 		},
 		Entry("layer - extra /", "layer/my/layer"),
@@ -504,3 +521,12 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 		Entry("network set - with too many segments", "ns/a/b/c"),
 	)
 })
+
+type mockServiceGroups struct {
+	ServiceGroups
+	sg *ServiceGroup
+}
+
+func (m mockServiceGroups) GetByService(svc types.NamespacedName) *ServiceGroup {
+	return m.sg
+}

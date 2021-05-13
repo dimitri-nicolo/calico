@@ -23,7 +23,8 @@ import (
 // relationships - if we held a persistent cache of service group info then we'd need to age out expired endpoints.
 
 // GetServiceGroupFlowEndpointKey returns an aggregated FlowEndpoint associated with the endpoint, protocol and port.
-// This is the natural grouping of the endpoint for service groups.
+// This is the natural grouping of the endpoint for service groups (i.e. endpoints falling within the same
+// aggregation level defined here will be part of the same service group).
 func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 	switch ep.Type {
 	case v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
@@ -35,14 +36,13 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 			NameAggr:  ep.NameAggr,
 		}
 	case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeNetwork:
-		// For host Endpoints and network sets we also want to match the Port since a host endpoint or a network set
-		// do not represent a single service. This allows us to connect inbound connections that go via the service
-		// and that go directly. This will not assist in determining outbound connections from such service Endpoints.
-		// TODO(rlb): for HEPs we can use the process name rather than the Port - this will allow us to determine
-		// outbound connections for these Endpoints.
+		// Match on port and proto for these endpoint types since they do not truly represent a single microservice
+		// endpoint.  Also use the full name since the aggregated set does not represent a sensible grouping for
+		// services.
 		return &FlowEndpoint{
 			Type:      ep.Type,
 			Namespace: ep.Namespace,
+			Name:      ep.Name,
 			NameAggr:  ep.NameAggr,
 			Port:      ep.Port,
 			Proto:     ep.Proto,
@@ -177,9 +177,8 @@ func (sd *serviceGroups) FinishMappings() {
 		sg.Services = append(sg.Services, sn)
 	}
 
-	// Update the ID for each group, and simplify the groups to use the replica set instead of the workload if the
+	// Update the ID for each group, and simplify the groups to use the aggregated name instead of the full name if the
 	// port is common across replicas.
-	f := IDInfo{}
 	sd.serviceGroups.Iter(func(item interface{}) error {
 		sg := item.(*ServiceGroup)
 
@@ -187,11 +186,10 @@ func (sd *serviceGroups) FinishMappings() {
 		sort.Sort(v1.SortableServices(sg.Services))
 
 		// Construct the id using the IDInfo.
-		f.Services = sg.Services
-		sg.ID = f.GetServiceGroupID()
+		sg.ID = GetServiceGroupID(sg.Services)
 
 		// Update the service group to not include the full name if the port/proto is fixed across all endpoints in the
-		// replica set for a given service port.
+		// replica set for a given service port (and there is more than one endpoint)
 		aggrs := make(map[FlowEndpoint]map[ServicePort][]FlowEndpoint)
 		for sp, eps := range sg.ServicePorts {
 			for ep := range eps {
@@ -232,8 +230,8 @@ func (sd *serviceGroups) FinishMappings() {
 	})
 }
 
-// AddMapping adds a service port <-> endpoint mapping to the cache.  When all mappings have been added, the caller should call
-// FinishMappings.
+// AddMapping adds a service port <-> endpoint mapping to the cache.  When all mappings have been added, the caller
+// should call FinishMappings.
 func (s *serviceGroups) AddMapping(svc ServicePort, ep FlowEndpoint) {
 	// If there is an existing service group either by service or endpoint then apply updates to that service
 	// group, otherwise create a new service group.

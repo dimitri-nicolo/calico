@@ -29,6 +29,11 @@ type GraphView struct {
 	// Whether or not to automatically follow directly connected nodes.
 	FollowConnectionDirection bool `json:"follow_connection_direction"`
 
+	// Whether to split HostEndpoints, NetworkSets and Networks into separate ingress and egress nodes or to combine
+	// them. In a service-centric view, splitting these makes the graph clearer. This never splits pods which represent
+	// a true microservice which has ingress and egress connections.
+	SplitIngressEgress bool `json:"split_ingress_egress"`
+
 	// Followed nodes. These are nodes on the periphery of the graph that we follow further out of the scope of the
 	// graph focus. For example a Node N may have egress connections to X and Y, but neither X nor Y are displayed in
 	// the graph because they are not explicitly in focus. The service graph response will indicate that Node N has

@@ -78,8 +78,8 @@ type RawEventRecord struct {
 	Protocol           string `json:"proto"`
 }
 
-// GetEventIDs returns events IDs and associated endpoints for each ID for the specified time range
-////.
+// GetEventIDs returns events IDs and associated endpoints for each ID for the specified time range.
+//
 // Since events contain info that may not always map to a service graph node we do what we can to filter in advance, but
 // then let the graphconstructor add in the event information once the graph has been filtered down into the required
 // view. If we have insufficient information in the event log to accurately pin the event to a service graph node then
@@ -278,11 +278,24 @@ func getEventEndpointsFromEndpoint(epType, epNamespace, epName, epNameAggr strin
 
 	eps := make([]EventEndpoint, len(epTypes))
 	for i, epType := range epTypes {
+		eventEndpointType := mapRawTypeToGraphNodeType(epType, epName == "")
+		eventEndpointName := epName
+		eventEndpointNameAggr := epNameAggr
+		if eventEndpointType == v1.GraphNodeTypeHostEndpoint {
+			// Tweak the host endpoint name to have an aggregated name of "*" - we do this because we by default
+			// aggregate host endpoints together under a common "*" aggregated host endpoint.
+			// Similar handling exists in flowsl3.go and flowsl7.go.
+			if eventEndpointName == "" && eventEndpointNameAggr != "*" {
+				eventEndpointName = eventEndpointNameAggr
+				eventEndpointNameAggr = "*"
+			}
+		}
+
 		eps[i] = EventEndpoint{
-			Type:      mapRawTypeToGraphNodeType(epType, epName == ""),
+			Type:      eventEndpointType,
 			Namespace: epNamespace,
-			Name:      epName,
-			NameAggr:  epNameAggr,
+			Name:      eventEndpointName,
+			NameAggr:  eventEndpointNameAggr,
 			Port:      epPort,
 			Proto:     proto,
 		}
@@ -300,10 +313,12 @@ func getEventEndpointsFromObject(objResource, objNamespace, objName string) []Ev
 			Name:      objName,
 			NameAggr:  getAggrNameFromName(objName),
 		}}
-	case "hostendoints", "HostEndpoint":
+	case "hostendpoints", "HostEndpoint":
+		// For HostEndpoints we set the aggregated name to "*" in line with the processing in flowl3.go and flowl7.go.
 		return []EventEndpoint{{
 			Type:     v1.GraphNodeTypeHostEndpoint,
-			NameAggr: objName,
+			Name:     objName,
+			NameAggr: "*",
 		}}
 	case "networksets", "NetworkSet":
 		return []EventEndpoint{{
