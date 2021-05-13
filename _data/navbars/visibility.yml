@@ -24,8 +24,6 @@ section:
       path: /visibility/elastic/flow/filtering
     - title: Configure flow log aggregation
       path: /visibility/elastic/flow/aggregation  
-    - title: Enable process information
-      path: /visibility/elastic/flow/process
     - title: Enable TCP socket stats
       path: /visibility/elastic/flow/tcpstats
   - title: Audit logs
