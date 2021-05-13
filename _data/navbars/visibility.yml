@@ -24,6 +24,8 @@ section:
       path: /visibility/elastic/flow/filtering
     - title: Configure flow log aggregation
       path: /visibility/elastic/flow/aggregation  
+    - title: Enabling HostEndpoint reporting in flow logs
+      path: /visibility/elastic/flow/hep
     - title: Enable TCP socket stats
       path: /visibility/elastic/flow/tcpstats
   - title: Audit logs
