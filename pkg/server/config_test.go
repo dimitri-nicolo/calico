@@ -3,6 +3,7 @@ package server
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 func extendMap(src, extraMap map[string]string) map[string]string {
@@ -18,8 +19,12 @@ func extendMap(src, extraMap map[string]string) map[string]string {
 
 type mockEnv map[string]string
 
-func (m mockEnv) getEnv(key string) string {
-	return m[key]
+func (m mockEnv) setenv() {
+	os.Clearenv()
+	for k, v := range m {
+		err := os.Setenv(k, v)
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 var _ = Describe("Test configuration validation", func() {
@@ -27,7 +32,7 @@ var _ = Describe("Test configuration validation", func() {
 	It("Validates elastic configuration properly", func() {
 		By("Catching error for incorrect URL")
 		me = make(mockEnv)
-		getEnv = me.getEnv
+		me.setenv()
 		_, err := NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
@@ -37,7 +42,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_HOST":   "127.0.0.1",
 			"ELASTIC_PORT":   "9200",
 		})
-		getEnv = me.getEnv
+		me.setenv()
 		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
@@ -46,7 +51,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_USERNAME": "bob",
 			"ELASTIC_PASSWORD": "cannotsetapassword",
 		})
-		getEnv = me.getEnv
+		me.setenv()
 		cfg, err := NewConfigFromEnv()
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cfg).ShouldNot(BeNil())
@@ -55,7 +60,7 @@ var _ = Describe("Test configuration validation", func() {
 		me = extendMap(me, map[string]string{
 			"ELASTIC_SCHEME": "https",
 		})
-		getEnv = me.getEnv
+		me.setenv()
 		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
@@ -63,7 +68,7 @@ var _ = Describe("Test configuration validation", func() {
 		me = extendMap(me, map[string]string{
 			"ELASTIC_CA": "/some/path",
 		})
-		getEnv = me.getEnv
+		me.setenv()
 		cfg, err = NewConfigFromEnv()
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cfg).ShouldNot(BeNil())
@@ -72,7 +77,7 @@ var _ = Describe("Test configuration validation", func() {
 		me = extendMap(me, map[string]string{
 			"ELASTIC_CA": "/some/path",
 		})
-		getEnv = me.getEnv
+		me.setenv()
 		cfg, err = NewConfigFromEnv()
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cfg).ShouldNot(BeNil())

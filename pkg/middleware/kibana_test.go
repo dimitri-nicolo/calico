@@ -4,9 +4,10 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"github.com/tigera/es-proxy/pkg/kibana"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/tigera/es-proxy/pkg/kibana"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -16,8 +16,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/compliance/pkg/datastore"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
