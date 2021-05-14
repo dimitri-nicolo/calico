@@ -897,8 +897,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apiserver v0.0.0-20210514222227-aadcfc544a5c h1:r1Pv4TfmKtWQKpgOWZrqsNcaZxgnNsKpboTNMY9vyPY=
 github.com/tigera/apiserver v0.0.0-20210514222227-aadcfc544a5c/go.mod h1:5ssOQAPKw3v1jP0U18D2XL1JH0Y3t8yNZZ2Ip+OZcCc=
-github.com/tigera/compliance v0.0.0-20210514223302-516f02561aac h1:ItPcu4/pA1rKjdSHsZTRYPzBq+xGmPMUIB9X0iwQLpY=
-github.com/tigera/compliance v0.0.0-20210514223302-516f02561aac/go.mod h1:+XCLbh3H+TYDE4cHrTSCevLIP1UmivkVK5z8nApgDOw=
+github.com/tigera/compliance v0.0.0-20210514225326-e4dfbb88c520 h1:0Tl3fyd/HiLePeIkPW0PsaYoLN2y/ZSKASjEaewNBas=
+github.com/tigera/compliance v0.0.0-20210514225326-e4dfbb88c520/go.mod h1:vtPK/e+zziTL6FwX85F3x0noFcbmMsx5D+4SSiUUwj4=
 github.com/tigera/felix-private v0.0.0-20210511195521-99eb57ea3ef9 h1:pRVbru1sp8RHWXJHMDE571VVGsUreB2fhAJTp9hxX8I=
 github.com/tigera/felix-private v0.0.0-20210511195521-99eb57ea3ef9/go.mod h1:cZzGd6aJl+pkg0aismqCuIPlQosm/du3MF8PHPu0Lm8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210511163730-078ad1161770 h1:VQg8pEI8Et9xBANZXDUaHKXqo012L+oc6CQetyB0OWw=
@@ -907,8 +907,6 @@ github.com/tigera/licensing v1.0.1-0.20210428213812-1013ca7dbb37 h1:Bmh2JGm+2fkV
 github.com/tigera/licensing v1.0.1-0.20210428213812-1013ca7dbb37/go.mod h1:rpv7wsrJFL9XLrAHYskkpkS2/bZrTQZskVLtAwZcMrE=
 github.com/tigera/licensing v1.0.1-0.20210503002620-829ccb98cfb4 h1:NvVS5uAfHTvte9sPr615OxM2JRrtAx/AnGkjFyYx4sg=
 github.com/tigera/licensing v1.0.1-0.20210503002620-829ccb98cfb4/go.mod h1:rpv7wsrJFL9XLrAHYskkpkS2/bZrTQZskVLtAwZcMrE=
-github.com/tigera/lma v0.0.0-20210511170025-64ef8d158b76 h1:x19d/gEpcQMABeZroZro/rCFkiu9tlfExeS6ZPqAtnM=
-github.com/tigera/lma v0.0.0-20210511170025-64ef8d158b76/go.mod h1:OVkc8Wnp72Sv+jVFuzr+Hd/H5idweGPzYXGrNfphqAU=
 github.com/tigera/lma v0.0.0-20210514222803-51e7e1362a18 h1:KgJpMRMFYZ6lRM90bdi2F2Wv/tuUlBDrY6sB6I98830=
 github.com/tigera/lma v0.0.0-20210514222803-51e7e1362a18/go.mod h1:Pl7xe8P9icnY2lkAQaw0Uvxt5r83f8tUq/xKtP7wVf4=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
