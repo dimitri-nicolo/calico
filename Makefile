@@ -17,7 +17,17 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_LMA_PROJECT_ID) $(SEMAPHORE_COMPLIANCE_PROJECT_ID) \
 	 $(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID) $(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
-build: image
+build: local_build image
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../licensing:/go/src/github.com/projectcalico/licensing:rw
+local_build:
+	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	go mod edit -replace=github.com/tigera/licensing=../licensing
+else
+local_build:
+endif
 
 ##############################################################################
 # Download and include Makefile.common before anything else
