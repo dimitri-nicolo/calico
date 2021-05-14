@@ -84,7 +84,8 @@ spec:
           requests:
             memory: 1G
         securityContext:
-          allowPrivilegeEscalation: false
+          privileged: true
+          allowPrivilegeEscalation: true
         env:
           - name: CLUSTER_NAME
             value: "cluster"
