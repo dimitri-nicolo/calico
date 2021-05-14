@@ -137,87 +137,45 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
-	switch cfg.AccessMode {
-	case InsecureMode:
-		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
-		sm.Handle("/recommend",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
-		sm.Handle("/.kibana/_search",
-			middleware.KibanaIndexPattern(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						proxy))))
-		sm.Handle("/",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						proxy))))
-		sm.Handle("/flowLogNamespaces",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
-		sm.Handle("/flowLogNames",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
-		sm.Handle("/user",
+	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
+	sm.Handle("/recommend",
+		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,
-				middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
-		sm.Handle("/kibana/login",
-			middleware.SetAuthorizationHeaderFromCookie(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
-						middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
-	case ServiceUserMode:
-		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
-		sm.Handle("/recommend",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
-		sm.Handle("/.kibana/_search",
-			middleware.KibanaIndexPattern(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
-		sm.Handle("/",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
-		sm.Handle("/flowLogNamespaces",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
-		sm.Handle("/flowLogNames",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
-		sm.Handle("/flow",
-			middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authz,
-						middleware.NewFlowHandler(esClient, k8sClientFactory)))))
-		sm.Handle("/user",
+				middleware.AuthorizeRequest(authz,
+					middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
+	sm.Handle("/flowLogNamespaces",
+		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,
-				middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
-		sm.Handle("/kibana/login",
-			middleware.SetAuthorizationHeaderFromCookie(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
-						middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
-	case PassThroughMode:
-		log.Fatal("PassThroughMode not implemented yet")
-	default:
-		log.WithField("AccessMode", cfg.AccessMode).Fatal("Indeterminate Elasticsearch access mode.")
-	}
+				middleware.AuthorizeRequest(authz,
+					middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
+	sm.Handle("/flowLogNames",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
+	sm.Handle("/flow",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.NewFlowHandler(esClient, k8sClientFactory)))))
+	sm.Handle("/user",
+		middleware.AuthenticateRequest(authenticator,
+			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
+	sm.Handle("/kibana/login",
+		middleware.SetAuthorizationHeaderFromCookie(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
+					middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
+	sm.Handle("/.kibana/_search",
+		middleware.KibanaIndexPattern(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
+	sm.Handle("/",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 
 	server = &http.Server{
 		Addr:    cfg.ListenAddr,

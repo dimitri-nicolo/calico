@@ -23,7 +23,6 @@ const (
 
 	keyCertGenPathEnv = "KEY_CERT_GEN_PATH"
 
-	elasticAccessModeEnv         = "ELASTIC_ACCESS_MODE"
 	elasticSchemeEnv             = "ELASTIC_SCHEME"
 	elasticHostEnv               = "ELASTIC_HOST"
 	elasticPortEnv               = "ELASTIC_PORT"
@@ -69,23 +68,6 @@ const (
 	defaultKibanaEndpoint = "https://tigera-secure-kb-http.tigera-kibana.svc:5601"
 )
 
-type ElasticAccessMode string
-
-const (
-	// In PassThroughMode users are managed in Elasticsearch
-	// and the proxy will pass this information over.
-	PassThroughMode ElasticAccessMode = "passthrough"
-
-	// In ServiceUserMode the users are authorized and the
-	// Elasticsearch is accessed on behalf of the user using
-	// the service's Elasticsearch credentials.
-	ServiceUserMode = "serviceuser"
-
-	// In InsecureMode access to Elasticsearch is not password
-	// protected.
-	InsecureMode = "insecure"
-)
-
 const (
 	// Certificate file paths. If explicit certificates aren't provided
 	// then self-signed certificates are generated and stored on these
@@ -119,10 +101,6 @@ type Config struct {
 	// Default cert and key file paths calculated from the DefaultSSLPath
 	DefaultCertFile string
 	DefaultKeyFile  string
-
-	// AccessMode controls how we access es-proxy is configured to enforce
-	// Elasticsearch access.
-	AccessMode ElasticAccessMode
 
 	// The URL that we should proxy requests to.
 	ElasticURL                *url.URL
@@ -172,10 +150,6 @@ func NewConfigFromEnv() (*Config, error) {
 	defaultCertFile := keyCertGenPath + defaultCertFileName
 	defaultKeyFile := keyCertGenPath + defaultKeyFileName
 
-	accessMode, err := parseAccessMode(getEnv(elasticAccessModeEnv))
-	if err != nil {
-		return nil, err
-	}
 	elasticScheme := getEnvOrDefaultString(elasticSchemeEnv, defaultElasticScheme)
 	elasticHost := getEnv(elasticHostEnv)
 	elasticPort := getEnv(elasticPortEnv)
@@ -237,7 +211,6 @@ func NewConfigFromEnv() (*Config, error) {
 		DefaultSSLPath:            keyCertGenPath,
 		DefaultCertFile:           defaultCertFile,
 		DefaultKeyFile:            defaultKeyFile,
-		AccessMode:                accessMode,
 		ElasticURL:                elasticURL,
 		ElasticCAPath:             elasticCAPath,
 		ElasticInsecureSkipVerify: elasticInsecureSkipVerify,
@@ -307,30 +280,12 @@ func getEnvOrDefaultBool(key string, defaultValue bool) (bool, error) {
 	return defaultValue, nil
 }
 
-func parseAccessMode(am string) (ElasticAccessMode, error) {
-	switch am {
-	case "serviceuser":
-		return ServiceUserMode, nil
-	case "passthrough":
-		return PassThroughMode, nil
-	case "insecure":
-		return InsecureMode, nil
-	default:
-		return ElasticAccessMode(""), fmt.Errorf("Indeterminate access mode %v", am)
-	}
-}
-
 func validateConfig(config *Config) error {
 	if config.ElasticURL.Scheme == "" || config.ElasticURL.Host == "" {
 		return errors.New("Invalid Elasticsearch backend URL specified")
 	}
-	if (config.AccessMode == PassThroughMode || config.AccessMode == InsecureMode) &&
-		(config.ElasticUsername != "" || config.ElasticPassword != "") {
-		return errors.New("Cannot set Elasticsearch credentials in Passthrough or Insecure mode")
-	}
-	if config.AccessMode == ServiceUserMode &&
-		(config.ElasticUsername == "" || config.ElasticPassword == "") {
-		return errors.New("Elasticsearch credentials not provided for Service user mode")
+	if config.ElasticUsername == "" || config.ElasticPassword == "" {
+		return errors.New("Elasticsearch credentials not provided")
 	}
 	if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {
 		return errors.New("Elasticsearch CA not provided")
