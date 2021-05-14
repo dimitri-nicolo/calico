@@ -895,8 +895,8 @@ github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/apiserver v0.0.0-20210503005150-88d7e2ca53c4 h1:RLcJih+b22sPIyLluDTYiUw6bSf43i4WY058zTjP2NE=
-github.com/tigera/apiserver v0.0.0-20210503005150-88d7e2ca53c4/go.mod h1:5ssOQAPKw3v1jP0U18D2XL1JH0Y3t8yNZZ2Ip+OZcCc=
+github.com/tigera/apiserver v0.0.0-20210514222227-aadcfc544a5c h1:r1Pv4TfmKtWQKpgOWZrqsNcaZxgnNsKpboTNMY9vyPY=
+github.com/tigera/apiserver v0.0.0-20210514222227-aadcfc544a5c/go.mod h1:5ssOQAPKw3v1jP0U18D2XL1JH0Y3t8yNZZ2Ip+OZcCc=
 github.com/tigera/compliance v0.0.0-20210511230907-24324abdd665 h1:Unq51DA9OD74kJ+xajHkznXIoAECPKJdmsMQzsrdKKA=
 github.com/tigera/compliance v0.0.0-20210511230907-24324abdd665/go.mod h1:rWy9Qc9g4ugkFaz7U90QAw7SaioBytdVBB1zGBN6Ttg=
 github.com/tigera/felix-private v0.0.0-20210511195521-99eb57ea3ef9 h1:pRVbru1sp8RHWXJHMDE571VVGsUreB2fhAJTp9hxX8I=
@@ -910,8 +910,8 @@ github.com/tigera/licensing v1.0.1-0.20210503002620-829ccb98cfb4/go.mod h1:rpv7w
 github.com/tigera/lma v0.0.0-20210511170025-64ef8d158b76 h1:x19d/gEpcQMABeZroZro/rCFkiu9tlfExeS6ZPqAtnM=
 github.com/tigera/lma v0.0.0-20210511170025-64ef8d158b76/go.mod h1:OVkc8Wnp72Sv+jVFuzr+Hd/H5idweGPzYXGrNfphqAU=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210511170719-e0be329d1a60 h1:3BpfpeEm/LG2CrhFq+z0/sw97JXvYzgFVMgjw95h0pY=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210511170719-e0be329d1a60/go.mod h1:MdOS8rCB4hULqnLyy37bbq07HxbRUhlaOcgvrCsr31A=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210513005647-366239b8ed7a h1:0P+kME6QOpT5z0bD4j53gt1LNUpvs9updc4BL1O0y8g=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210513005647-366239b8ed7a/go.mod h1:MdOS8rCB4hULqnLyy37bbq07HxbRUhlaOcgvrCsr31A=
 github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
