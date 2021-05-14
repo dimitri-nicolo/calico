@@ -31,7 +31,7 @@ during upgrade).
 
 If your cluster has Windows nodes and uses custom TLS certificates for log storage, prior to upgrade, prepare and apply new certificates for [log storage]({{site.baseurl}}/security/comms/log-storage-tls) that include the required service DNS names.
 
-For {{site.prodname}} v3.5, upgrading multi-cluster management setups must include updating all managed and management clusters.
+For {{site.prodname}} v3.5 and v3.7, upgrading multi-cluster management setups must include updating all managed and management clusters.
 
 ### Download the new manifests
 
