@@ -12,8 +12,8 @@ import (
 // This file is used to process the view data supplied in the service graph request and convert it to sets of parsed
 // data in a format that makes it more useful for the graph constructor and other internal components.
 
-// ParsedViewIDs contains the view specified in the service graph request, parsed into an internally useful format.
-type ParsedViewIDs struct {
+// ParsedView contains the view specified in the service graph request, parsed into an internally useful format.
+type ParsedView struct {
 	Focus                     *ParsedNodes
 	Expanded                  *ParsedNodes
 	FollowedIngress           *ParsedNodes
@@ -72,11 +72,11 @@ func newParsedLayers() *ParsedLayers {
 	}
 }
 
-// ParseViewIDs converts the IDs contained in the view to a ParsedViewIDs.
-func ParseViewIDs(sgr *v1.ServiceGraphRequest, sgs ServiceGroups) (*ParsedViewIDs, error) {
+// ParseViewIDs converts the IDs contained in the view to a ParsedView.
+func ParseViewIDs(sgr *v1.ServiceGraphRequest, sgs ServiceGroups) (*ParsedView, error) {
 	// Parse the Focus and Expanded node IDs.
 	log.Debug("Parse view data")
-	p := &ParsedViewIDs{
+	p := &ParsedView{
 		FollowConnectionDirection: sgr.SelectedView.FollowConnectionDirection,
 		SplitIngressEgress:        sgr.SelectedView.SplitIngressEgress,
 	}

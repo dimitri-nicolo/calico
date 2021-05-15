@@ -269,9 +269,9 @@ var (
 	}
 
 	// All segments should adhere to this simple regex. Further restrictions may be imposed on a field by field basis.
-	valueRegex             = regexp.MustCompile("^[*0-9a-zA-Z_.-]+$")
-	valueAllowedEmptyRegex = regexp.MustCompile("^[*0-9a-zA-Z_.-]*$")
-	firstSplitRegex        = regexp.MustCompile("[;/]")
+	IDValueRegex             = regexp.MustCompile("^[|*0-9a-zA-Z_.-]+$")
+	IDValueAllowedEmptyRegex = regexp.MustCompile("^[|*0-9a-zA-Z_.-]*$")
+	firstSplitRegex          = regexp.MustCompile("[;/]")
 )
 
 // ParseGraphNodeID parses an external node ID and returns the data in an ID.
@@ -330,11 +330,11 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				// Check the segment syntax. Only the service Port is allowed to be empty.
 				switch field {
 				case idpServicePort:
-					if !valueAllowedEmptyRegex.MatchString(parts[idx]) {
+					if !IDValueAllowedEmptyRegex.MatchString(parts[idx]) {
 						return nil, fmt.Errorf("invalid format of graph node ID %s: unexpected empty segment", id)
 					}
 				default:
-					if !valueRegex.MatchString(parts[idx]) {
+					if !IDValueRegex.MatchString(parts[idx]) {
 						return nil, fmt.Errorf("invalid format of graph node ID %s: badly formatted segment", id)
 					}
 				}

@@ -1,6 +1,12 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package v1
 
+import (
+	"encoding/json"
+
+	"github.com/projectcalico/libcalico-go/lib/selector"
+)
+
 // GraphView provides the configuration for what is included in the service graph response.
 //
 // The flows are aggregated based on the layers and expanded nodes defined in this view. The graph is then pruned
@@ -34,6 +40,9 @@ type GraphView struct {
 	// a true microservice which has ingress and egress connections.
 	SplitIngressEgress bool `json:"split_ingress_egress"`
 
+	// The set of selectors used to aggregate hosts (Kubernetes nodes).
+	HostAggregationSelectors NamedSelectors `json:"host_aggregation_selectors,omitempty"`
+
 	// Followed nodes. These are nodes on the periphery of the graph that we follow further out of the scope of the
 	// graph focus. For example a Node N may have egress connections to X and Y, but neither X nor Y are displayed in
 	// the graph because they are not explicitly in focus. The service graph response will indicate that Node N has
@@ -49,3 +58,24 @@ type GraphView struct {
 }
 
 type Layers map[string][]GraphNodeID
+
+type NamedSelectors map[string]selector.Selector
+
+func (v *NamedSelectors) UnmarshalJSON(b []byte) error {
+	// Unmarshal into a map[string]string first
+	var m map[string]string
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+
+	*v = make(map[string]selector.Selector)
+	for n, s := range m {
+		sel, err := selector.Parse(s)
+		if err != nil {
+			return err
+		}
+		(*v)[n] = sel
+	}
+
+	return nil
+}

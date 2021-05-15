@@ -3,6 +3,7 @@ package servicegraph
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -54,7 +55,7 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 		cluster := common.GetCluster(req)
 
 		// Get the filtered flow from the cache.
-		if f, err := s.flowCache.GetFilteredServiceGraphData(ctx, cluster, sgr.TimeRange, rbacFilter); err != nil {
+		if f, err := s.flowCache.GetFilteredServiceGraphData(ctx, cluster, sgr, rbacFilter); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if pv, err := ParseViewIDs(sgr, f.ServiceGroups); err != nil {
@@ -85,6 +86,20 @@ func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGra
 	if err := json.NewDecoder(req.Body).Decode(&sgr); err != nil {
 		return nil, err
 	}
+
+	// Sanity check any user configuration that may potentially break the API. In particular all user defined names
+	// that may be embedded in an ID should adhere to the IDValueRegex.
+	for layer := range sgr.SelectedView.Layers {
+		if !IDValueRegex.MatchString(layer) {
+			return nil, fmt.Errorf("invalid layer name: %s", layer)
+		}
+	}
+	for aggrName := range sgr.SelectedView.HostAggregationSelectors {
+		if !IDValueRegex.MatchString(aggrName) {
+			return nil, fmt.Errorf("invalid aggregated host name: %s", aggrName)
+		}
+	}
+
 	return sgr, nil
 }
 

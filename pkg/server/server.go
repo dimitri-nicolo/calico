@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
@@ -21,16 +19,14 @@ import (
 	"github.com/tigera/lma/pkg/list"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
-
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/middleware/authorization"
 	"github.com/tigera/es-proxy/pkg/middleware/k8s"
+	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )

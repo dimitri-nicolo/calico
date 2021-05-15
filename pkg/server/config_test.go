@@ -1,9 +1,10 @@
 package server
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
 )
 
 func extendMap(src, extraMap map[string]string) map[string]string {

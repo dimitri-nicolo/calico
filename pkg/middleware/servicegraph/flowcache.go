@@ -48,7 +48,7 @@ type ServiceGraphData struct {
 
 type ServiceGraphCache interface {
 	GetFilteredServiceGraphData(
-		ctx context.Context, cluster string, tr v1.TimeRange, rbacFilter RBACFilter,
+		ctx context.Context, cluster string, sgr *v1.ServiceGraphRequest, rbacFilter RBACFilter,
 	) (*ServiceGraphData, error)
 }
 
@@ -70,7 +70,7 @@ type serviceGraphCache struct {
 //            presence of a graph node or not is used to determine whether or not an event is included. This will likely
 //            need to be revisited when we refine RBAC control of events.
 func (fc *serviceGraphCache) GetFilteredServiceGraphData(
-	ctx context.Context, cluster string, tr v1.TimeRange, rbacFilter RBACFilter,
+	ctx context.Context, cluster string, sgr *v1.ServiceGraphRequest, rbacFilter RBACFilter,
 ) (*ServiceGraphData, error) {
 	// At the moment there is no cache and only a single data point in the flow. Kick off the L3 and L7 queries at the
 	// same time.
@@ -79,7 +79,8 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	var rawL3 []L3Flow
 	var rawL7 []L7Flow
 	var rawEvents []EventID
-	var errFlowConfig, errL3, errL7, errEvents error
+	var nameFormatter *NameFormatter
+	var errFlowConfig, errL3, errL7, errEvents, errNameFormatter error
 
 	// Extract the cluster specific k8s client.
 	k8sClient := k8s.GetClientSetApplicationFromContext(ctx)
@@ -91,17 +92,24 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 
 	wg.Add(1)
 	go func() {
-		rawL3, errL3 = GetL3FlowData(ctx, fc.elasticClient, cluster, tr, flowConfig)
+		rawL3, errL3 = GetL3FlowData(ctx, fc.elasticClient, cluster, sgr.TimeRange, flowConfig)
 		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {
-		rawL7, errL7 = GetL7FlowData(ctx, fc.elasticClient, cluster, tr)
+		rawL7, errL7 = GetL7FlowData(ctx, fc.elasticClient, cluster, sgr.TimeRange)
 		wg.Done()
 	}()
 	wg.Add(1)
 	go func() {
-		rawEvents, errEvents = GetEventIDs(ctx, fc.elasticClient, cluster, tr)
+		rawEvents, errEvents = GetEventIDs(ctx, fc.elasticClient, cluster, sgr.TimeRange)
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		// The name formatter is used to adjust names based on user supplied configuration.  We do this here rather
+		// than updating the cached data.
+		nameFormatter, errNameFormatter = GetNameFormatter(ctx, k8sClient, sgr.SelectedView)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -114,14 +122,13 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	if errEvents != nil {
 		return nil, errEvents
 	}
+	if errNameFormatter != nil {
+		return nil, errNameFormatter
+	}
 
 	fd := &ServiceGraphData{
-		TimeIntervals: []v1.TimeRange{tr},
+		TimeIntervals: []v1.TimeRange{sgr.TimeRange},
 		ServiceGroups: NewServiceGroups(),
-
-		// We don't currently have an agreed approach to how RBAC should be done for events. Therefore, just include
-		// everything and we'll assign what we can to graph nodes in the graphconstructor.
-		EventIDs: rawEvents,
 	}
 
 	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning.
@@ -129,6 +136,10 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 		if !rbacFilter.IncludeFlow(rf.Edge) {
 			continue
 		}
+
+		// Update the names in the flow (if required).
+		nameFormatter.UpdateL3Flow(&rf)
+
 		if rf.Edge.ServicePort != nil {
 			fd.ServiceGroups.AddMapping(*rf.Edge.ServicePort, rf.Edge.Dest)
 		}
@@ -150,6 +161,10 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 		if !rbacFilter.IncludeFlow(rf.Edge) {
 			continue
 		}
+
+		// Update the names in the flow (if required).
+		nameFormatter.UpdateL7Flow(&rf)
+
 		stats := rf.Stats
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
 			Edge: rf.Edge,
@@ -157,6 +172,14 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 				L7: &stats,
 			}},
 		})
+	}
+
+	// Filter the events.
+	for _, ev := range rawEvents {
+		// Update the names in the events (if required).
+		nameFormatter.UpdateEvent(&ev)
+
+		fd.EventIDs = append(fd.EventIDs, ev)
 	}
 
 	return fd, nil

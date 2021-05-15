@@ -29,7 +29,7 @@ import (
 //                                                 E will be included if the ingress connections for D are being followed
 
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
-func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedViewIDs) (*v1.ServiceGraphResponse, error) {
+func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
 	sgr := &v1.ServiceGraphResponse{
 		// Response should include the time range actually used to perform these queries.
 		TimeIntervals: f.TimeIntervals,
@@ -193,11 +193,11 @@ type serviceGraphConstructionData struct {
 	flowData *ServiceGraphData
 
 	// The supplied view data.
-	view *ParsedViewIDs
+	view *ParsedView
 }
 
 // newServiceGraphConstructor intializes a new serviceGraphConstructionData.
-func newServiceGraphConstructor(f *ServiceGraphData, v *ParsedViewIDs) *serviceGraphConstructionData {
+func newServiceGraphConstructor(f *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
 	return &serviceGraphConstructionData{
 		groupsMap:    make(map[v1.GraphNodeID]*trackedGroup),
 		nodesMap:     make(map[v1.GraphNodeID]*v1.GraphNode),

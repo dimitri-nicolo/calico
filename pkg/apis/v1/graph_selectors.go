@@ -3,15 +3,12 @@ package v1
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 )
 
 const (
-	OpAnd           = "AND"
-	OpOr            = "OR"
-	OpAndWithSpaces = " " + OpAnd + " "
-	OpOrWithSpaces  = " " + OpOr + " "
+	OpAnd = " && "
+	OpOr  = " || "
 )
 
 // GraphSelectors provides selectors used to asynchronously perform associated queries for an edge or a node.
@@ -110,7 +107,7 @@ func graphSelectorOp(s, s2, op string) string {
 	} else if s2 == "" {
 		return s
 	}
-	return fmt.Sprintf("%s %s %s", maybeWithParens(s, op), op, maybeWithParens(s2, op))
+	return maybeWithParens(s, op) + op + maybeWithParens(s2, op)
 }
 
 // maybeWithParens adds parenthesis to a selector string if required depending on the operator.
@@ -128,7 +125,7 @@ func maybeWithParens(s, op string) string {
 	}
 
 	// If the string contains an Or, then we'll need to encase in parens.
-	if strings.Contains(s, OpOrWithSpaces) {
+	if strings.Contains(s, OpOr) {
 		return "(" + s + ")"
 	}
 	return s

@@ -44,11 +44,11 @@ func (kvs keyEqValueOpAnd) String() string {
 	}
 
 	// Enclose multiple and-ed key==val in parens.
-	return "(" + strings.Join(parts, v1.OpAndWithSpaces) + ")"
+	return "(" + strings.Join(parts, v1.OpAnd) + ")"
 }
 
-//
-func GetLayerNodeSelectors(layer string, view *ParsedViewIDs) v1.GraphSelectors {
+// GetLayerNodeSelectors returns the selectors for a layer node (as specified on the request).
+func GetLayerNodeSelectors(layer string, view *ParsedView) v1.GraphSelectors {
 	gs := v1.GraphSelectors{}
 	for _, n := range view.Layers.LayerToNamespaces[layer] {
 		gs = gs.Or(GetNamespaceNodeSelectors(n))
@@ -67,6 +67,7 @@ func GetLayerNodeSelectors(layer string, view *ParsedViewIDs) v1.GraphSelectors 
 	return gs
 }
 
+// GetNamespaceNodeSelectors returns the selectors for a namespace node.
 func GetNamespaceNodeSelectors(namespace string) v1.GraphSelectors {
 	return v1.GraphSelectors{
 		L3Flows: v1.GraphSelector{
@@ -83,6 +84,7 @@ func GetNamespaceNodeSelectors(namespace string) v1.GraphSelectors {
 	}
 }
 
+// GetServiceNodeSelectors returns the selectors for a service node.
 func GetServiceNodeSelectors(svc types.NamespacedName) v1.GraphSelectors {
 	return v1.GraphSelectors{
 		L3Flows: v1.GraphSelector{
@@ -94,6 +96,7 @@ func GetServiceNodeSelectors(svc types.NamespacedName) v1.GraphSelectors {
 	}
 }
 
+// GetServicePortNodeSelectors returns the selectors for a service port node.
 func GetServicePortNodeSelectors(sp ServicePort) v1.GraphSelectors {
 	l3Parts := keyEqValueOpAnd{{"proto", sp.Proto}, {"dest_service_namespace", sp.Namespace}, {"dest_service_name", sp.Name}}
 	if sp.Port != "" {
@@ -120,6 +123,7 @@ func GetServicePortNodeSelectors(sp ServicePort) v1.GraphSelectors {
 	}
 }
 
+// GetServiceGroupNodeSelectors returns the selectors for a service group node.
 func GetServiceGroupNodeSelectors(sg *ServiceGroup) v1.GraphSelectors {
 	// Selectors depend on whether the service endpoints record the flow. If only the source records the flow then we
 	// limit the search based on the service selectors.
@@ -152,6 +156,7 @@ func GetServiceGroupNodeSelectors(sg *ServiceGroup) v1.GraphSelectors {
 	return gs
 }
 
+// GetEndpointNodeSelectors returns the selectors for an endpoint node.
 func GetEndpointNodeSelectors(epType v1.GraphNodeType, namespace, name, proto string, port int, dir Direction) v1.GraphSelectors {
 	rawType, isAgg := mapGraphNodeTypeToRawType(epType)
 	namespace = blankToSingleDash(namespace)
