@@ -42,7 +42,7 @@ func (c *ResourceChange) UnmarshalJSON(b []byte) error {
 
 	// If this is a Calico tiered network policy, configure an empty tier to be default and verify the name matches
 	// the tier.
-	var tier *string  // Use a pointer so that we can set the defalt value in the policy resource if necessary.
+	var tier *string // Use a pointer so that we can set the defalt value in the policy resource if necessary.
 	var name string
 	switch np := c.Resource.(type) {
 	case *v3.NetworkPolicy:

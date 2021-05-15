@@ -7,8 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	lmaauth "github.com/tigera/lma/pkg/auth"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 // AuthenticateRequest uses the given Authenticator to authenticate the request then passes the request to the next Handler

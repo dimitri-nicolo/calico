@@ -9,10 +9,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	fv "github.com/tigera/es-proxy/test"
 	"github.com/tigera/lma/pkg/auth"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
