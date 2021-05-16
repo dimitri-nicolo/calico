@@ -731,9 +731,9 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 }
 
 func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
-	for _, eventID := range s.flowData.EventIDs {
-		log.Debugf("Checking event ID %s", eventID.ID)
-		for _, ep := range eventID.EventEndpoints {
+	for _, event := range s.flowData.Events {
+		log.Debugf("Checking event %#v", event)
+		for _, ep := range event.EventEndpoints {
 			log.Debugf("  - Checking event endpoint: %#v", ep)
 			switch ep.Type {
 			case v1.GraphNodeTypeService:
@@ -744,18 +744,18 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 				sg := s.flowData.ServiceGroups.GetByService(types.NamespacedName{
 					Namespace: ep.Namespace, Name: ep.Name,
 				})
-				s.maybeOverlayEventID(nodesInView, eventID.ID, fep, sg)
+				s.maybeOverlayEventID(nodesInView, event, fep, sg)
 			default:
 				// Since FlowEndpoint and EventEndpoint have the same structure can cast between the two.
 				fep := FlowEndpoint(ep)
 				sg := s.flowData.ServiceGroups.GetByEndpoint(fep)
-				s.maybeOverlayEventID(nodesInView, eventID.ID, fep, sg)
+				s.maybeOverlayEventID(nodesInView, event, fep, sg)
 			}
 		}
 	}
 }
 
-func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, eventID string, ep FlowEndpoint, sg *ServiceGroup) {
+func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, event Event, ep FlowEndpoint, sg *ServiceGroup) {
 	// Determine which layer this endpoint might be part of.
 	var layerName, layerNameEndpoint, layerNameAggrEndpoint, layerNameServiceGroup, layerNameNamespace string
 
@@ -792,16 +792,17 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 		layerId := idi.GetLayerID()
 		if s.nodesMap[layerId] != nil && (nodesInView == nil || nodesInView.Contains(layerId)) {
 			log.Debugf("  - Including event in node %s", layerId)
-			s.nodesMap[layerId].IncludeEvent(eventID)
+			s.nodesMap[layerId].IncludeEvent(event.GraphEventID, event.GraphEvent)
 			return
 		}
 	}
 
+	// Check if the layer is in view, if so add the event to the namespace.
 	if ep.Namespace != "" {
 		namespaceId := idi.GetNamespaceID()
 		if s.nodesMap[namespaceId] != nil && (nodesInView == nil || nodesInView.Contains(namespaceId)) {
 			log.Debugf("  - Including event in node %s", namespaceId)
-			s.nodesMap[namespaceId].IncludeEvent(eventID)
+			s.nodesMap[namespaceId].IncludeEvent(event.GraphEventID, event.GraphEvent)
 			return
 		}
 	}
@@ -810,19 +811,19 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 	if sg != nil {
 		if s.nodesMap[sg.ID] != nil && (nodesInView == nil || nodesInView.Contains(sg.ID)) {
 			log.Debugf("  - Including event in node %s", sg.ID)
-			s.nodesMap[sg.ID].IncludeEvent(eventID)
+			s.nodesMap[sg.ID].IncludeEvent(event.GraphEventID, event.GraphEvent)
 			return
 		}
 	}
 	// Check if endpoint is in view, if so add the event to the endpoint.
 	if endpointId != "" && s.nodesMap[endpointId] != nil && (nodesInView == nil || nodesInView.Contains(endpointId)) {
 		log.Debugf("  - Including event in node %s", endpointId)
-		s.nodesMap[endpointId].IncludeEvent(eventID)
+		s.nodesMap[endpointId].IncludeEvent(event.GraphEventID, event.GraphEvent)
 		return
 	}
 	if aggrEndpointId != "" && s.nodesMap[aggrEndpointId] != nil && (nodesInView == nil || nodesInView.Contains(aggrEndpointId)) {
 		log.Debugf("  - Including event in node %s", aggrEndpointId)
-		s.nodesMap[aggrEndpointId].IncludeEvent(eventID)
+		s.nodesMap[aggrEndpointId].IncludeEvent(event.GraphEventID, event.GraphEvent)
 		return
 	}
 	log.Debug("  - No matching node in graph")

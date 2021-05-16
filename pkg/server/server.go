@@ -161,9 +161,12 @@ func Start(cfg *Config) error {
 	sm.Handle("/serviceGraph",
 		// Add k8s clientset tied to the user.
 		k8sClientSetHandlers.AddClientSetForUser(
-			// Perform an authorization review.
-			authorization.AuthorizationReviewHandler(authReviewAttrListEndpoints,
-				serviceGraph.Handler())))
+			// Add k8s clientset tied to the application.
+			k8sClientSetHandlers.AddClientSetForApplication(
+				// Perform an authorization review (which requires client set for user)
+				authorization.AuthorizationReviewHandler(authReviewAttrListEndpoints,
+					// Service graph requires client set for app.
+					serviceGraph.Handler()))))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,

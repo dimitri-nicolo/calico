@@ -43,7 +43,7 @@ type ServiceGraphData struct {
 	TimeIntervals []v1.TimeRange
 	FilteredFlows []TimeSeriesFlow
 	ServiceGroups ServiceGroups
-	EventIDs      []EventID
+	Events        []Event
 }
 
 type ServiceGraphCache interface {
@@ -78,7 +78,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	var flowConfig *FlowConfig
 	var rawL3 []L3Flow
 	var rawL7 []L7Flow
-	var rawEvents []EventID
+	var rawEvents []Event
 	var nameFormatter *NameFormatter
 	var errFlowConfig, errL3, errL7, errEvents, errNameFormatter error
 
@@ -102,7 +102,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	}()
 	wg.Add(1)
 	go func() {
-		rawEvents, errEvents = GetEventIDs(ctx, fc.elasticClient, cluster, sgr.TimeRange)
+		rawEvents, errEvents = GetEvents(ctx, fc.elasticClient, cluster, sgr.TimeRange)
 		wg.Done()
 	}()
 	wg.Add(1)
@@ -179,7 +179,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 		// Update the names in the events (if required).
 		nameFormatter.UpdateEvent(&ev)
 
-		fd.EventIDs = append(fd.EventIDs, ev)
+		fd.Events = append(fd.Events, ev)
 	}
 
 	return fd, nil

@@ -74,7 +74,7 @@ func (nf *NameFormatter) UpdateL7Flow(f *L7Flow) {
 	}
 }
 
-func (nf *NameFormatter) UpdateEvent(e *EventID) {
+func (nf *NameFormatter) UpdateEvent(e *Event) {
 	if nf == nil {
 		return
 	}

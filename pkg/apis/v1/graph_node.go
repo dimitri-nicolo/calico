@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -73,7 +74,7 @@ type GraphNode struct {
 	Selectors GraphSelectors `json:"selectors"`
 
 	// The set of events correlated to this node
-	EventIDs GraphEventIDs `json:"event_ids,omitempty"`
+	Events GraphEvents `json:"events,omitempty"`
 }
 
 func (n *GraphNode) IncludeStats(ts []GraphStats) {
@@ -143,11 +144,11 @@ func (n *GraphNode) IncludeService(s types.NamespacedName) {
 	n.Services[s] = struct{}{}
 }
 
-func (n *GraphNode) IncludeEvent(id string) {
-	if n.EventIDs == nil {
-		n.EventIDs = make(GraphEventIDs)
+func (n *GraphNode) IncludeEvent(id GraphEventID, event GraphEvent) {
+	if n.Events == nil {
+		n.Events = make(GraphEvents)
 	}
-	n.EventIDs[id] = struct{}{}
+	n.Events[id] = event
 }
 
 func (n GraphNode) String() string {
@@ -232,14 +233,42 @@ func (s SortableServices) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-// GraphEventIDs is used to store event IDs. This is JSON marshaled as a slice.
-type GraphEventIDs map[string]struct{}
+// The ID for the event.  This allows the particular event to be cross referenced with the event source.
+type GraphEventID struct {
+	TigeraEventID     string
+	KubernetesEventID types.NamespacedName
+}
 
-func (e GraphEventIDs) MarshalJSON() ([]byte, error) {
-	var ids []string
-	for id := range e {
-		ids = append(ids, id)
+// Details of the event. This does not contain the full event details, but the original event may be cross referenced
+// from the ID.
+type GraphEvent struct {
+	Description string       `json:"description,omitempty"`
+	Timestamp   *metav1.Time `json:"time,omitempty"`
+}
+
+// GraphEvents is used to store event details. Stored as a map to handle deduplication, this is JSON marshaled as a
+// slice.
+type GraphEvents map[GraphEventID]GraphEvent
+
+type graphEventWithID struct {
+	TigeraEventID            string `json:"tiger_event_id,omitempty"`
+	KubernetesEventName      string `json:"kubernetes_event_name,omitempty"`
+	KubernetesEventNamespace string `json:"kubernetes_event_namespace,omitempty"`
+	GraphEvent               `json:",inline"`
+}
+
+func (e GraphEvents) MarshalJSON() ([]byte, error) {
+	var ids []graphEventWithID
+	for id, ev := range e {
+		ids = append(ids, graphEventWithID{
+			TigeraEventID:            id.TigeraEventID,
+			KubernetesEventName:      id.KubernetesEventID.Name,
+			KubernetesEventNamespace: id.KubernetesEventID.Namespace,
+			GraphEvent:               ev,
+		})
 	}
-	sort.Strings(ids)
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i].Timestamp.Before(ids[j].Timestamp)
+	})
 	return json.Marshal(ids)
 }
