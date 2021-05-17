@@ -172,6 +172,9 @@ enum calico_skb_mark {
 	 * flows at start of day. */
 	CALI_SKB_MARK_CT_ESTABLISHED         = CALI_MARK_CALICO      | 0x08000000,
 	CALI_SKB_MARK_CT_ESTABLISHED_MASK    = CALI_MARK_CALICO      | 0x08000000,
+
+	/* Hack! */
+	CALI_SKB_MARK_EGRESS = 0x40000,
 };
 
 /* bpf_exit inserts a BPF exit instruction with the given return value. In a fully-inlined

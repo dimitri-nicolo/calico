@@ -34,13 +34,14 @@ union cali_rt_lpm_key {
 };
 
 enum cali_rt_flags {
-	CALI_RT_UNKNOWN     = 0x00,
-	CALI_RT_IN_POOL     = 0x01,
-	CALI_RT_NAT_OUT     = 0x02,
-	CALI_RT_WORKLOAD    = 0x04,
-	CALI_RT_LOCAL       = 0x08,
-	CALI_RT_HOST        = 0x10,
-	CALI_RT_SAME_SUBNET = 0x20,
+	CALI_RT_UNKNOWN       = 0x00,
+	CALI_RT_IN_POOL       = 0x01,
+	CALI_RT_NAT_OUT       = 0x02,
+	CALI_RT_WORKLOAD      = 0x04,
+	CALI_RT_LOCAL         = 0x08,
+	CALI_RT_HOST          = 0x10,
+	CALI_RT_SAME_SUBNET   = 0x20,
+	CALI_RT_EGRESS_CLIENT = 0x40,
 };
 
 struct cali_rt {
@@ -83,6 +84,7 @@ static CALI_BPF_INLINE enum cali_rt_flags cali_rt_lookup_flags(__be32 addr)
 #define cali_rt_flags_local_workload(t) (((t) & CALI_RT_LOCAL) && ((t) & CALI_RT_WORKLOAD))
 #define cali_rt_flags_remote_workload(t) (!((t) & CALI_RT_LOCAL) && ((t) & CALI_RT_WORKLOAD))
 #define cali_rt_flags_remote_host(t) (((t) & (CALI_RT_LOCAL | CALI_RT_HOST)) == CALI_RT_HOST)
+#define cali_rt_flags_outside_cluster(t) (((t) & (CALI_RT_LOCAL | CALI_RT_HOST | CALI_RT_WORKLOAD)) == 0)
 
 static CALI_BPF_INLINE bool rt_addr_is_local_host(__be32 addr)
 {

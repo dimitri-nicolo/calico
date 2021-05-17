@@ -183,6 +183,11 @@ create:
 		/* src is the from the WEP, policy whitelisted this side */
 		src_to_dst->whitelisted = 1;
 		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
+
+		if (ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW) {
+			CALI_DEBUG("CT-ALL Whitelisted dest side - egress gateway flow\n");
+			dst_to_src->whitelisted = 1;
+		}
 	} else if (CALI_F_FROM_HEP) {
 		/* src is the from the HEP, policy whitelisted this side */
 		src_to_dst->whitelisted = 1;

@@ -150,6 +150,12 @@ skip_redir_ifindex:
 		CALI_DEBUG("FIB ipv4_dst=%x\n", bpf_ntohl(fib_params.ipv4_dst));
 
 		CALI_DEBUG("Traffic is towards the host namespace, doing Linux FIB lookup\n");
+		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+			CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
+			ctx->skb->mark |= CALI_SKB_MARK_EGRESS;
+			rc = TC_ACT_UNSPEC;
+			goto cancel_fib;
+		}
 		rc = bpf_fib_lookup(ctx->skb, &fib_params, sizeof(fib_params), ctx->fwd.fib_flags);
 		if (rc == 0) {
 			CALI_DEBUG("FIB lookup succeeded\n");
@@ -215,7 +221,8 @@ skip_fib:
 		 * can do a 16-bit store instead of a 32-bit load/modify/store,
 		 * which trips up the validator.
 		 */
-		ctx->skb->mark = ctx->fwd.mark; /* make sure that each pkt has SEEN mark */
+		__u32 non_calico_mark = ctx->skb->mark & 0xfffff;
+		ctx->skb->mark = ctx->fwd.mark | non_calico_mark; /* make sure that each pkt has SEEN mark */
 	}
 
 	if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_INFO) {

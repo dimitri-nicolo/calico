@@ -360,6 +360,13 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			goto deny;
 		}
 
+		if (r->flags & CALI_RT_EGRESS_CLIENT) {
+			if (cali_rt_flags_outside_cluster(cali_rt_lookup_flags(ctx.state->post_nat_ip_dst))) {
+				CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
+				ctx.state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
+			}
+		}
+
 		// Check whether the workload needs outgoing NAT to this address.
 		if (r->flags & CALI_RT_NAT_OUT) {
 			if (!(cali_rt_lookup_flags(ctx.state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
@@ -742,6 +749,9 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		// got a CT miss for this flow and then used the state->ct_result.flags
 		// field to record that the flow _should_ be trusted for DNS.
 		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
+
+		// Similarly for the egress gateway flow flag.
+		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW);
 
 		if (state->ip_proto == IPPROTO_TCP) {
 			if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
