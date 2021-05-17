@@ -3,7 +3,6 @@ title: Helm
 description: Install Calico Enterprise using Helm application package manager.
 canonical_url: '/getting-started/kubernetes/helm'
 ---
-
 ### Big picture
 
 Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
@@ -23,9 +22,16 @@ The geeky details of what you get:
 1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Get the Helm chart.
+{%- if page.version == "master" -%}
    ```
-   curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-operator-{% include chart_version_name %}.tgz
+   curl -O -L {{site.url}}/download/charts/master/tigera-operator-v0.0.tgz
    ```
+{% else %}
+   ```
+   curl -O -L {{site.url}}/download/charts/tigera-operator-{% include chart_version_name %}.tgz
+   ```
+{% endif %}
+
 1. Install the chart, passing in your image pull secrets.
    ```
    helm install ./tigera-operator-{% include chart_version_name %}.tgz \
