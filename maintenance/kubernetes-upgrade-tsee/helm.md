@@ -36,7 +36,7 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
 1. Get the Helm chart.
 
    ```bash
-   curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-operator-{% include chart_version_name %}.tgz
+   curl -O -L {{site.url}}/download/charts/tigera-operator-{% include chart_version_name %}.tgz
    ```
 
 1. Install the operator custom resource definitions.

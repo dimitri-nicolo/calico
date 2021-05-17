@@ -15,7 +15,7 @@ To select a different version, click **Releases** in the top navigation bar.
 ## Calico Enterprise {{ release.title }}
 
 {% unless release.title == "master" %} 
-[Release archive](https://s3.amazonaws.com/tigera-public/ee/archives/release-{{release.title}}-{{release.tigera-operator.version}}.tgz){: data-proofer-ignore=""} with Kubernetes manifests. Based on Calico {{site.data.versions.first.calico.minor_version}}.
+[Release archive]({{site.url}}/download/archives/release-{{release.title}}-{{release.tigera-operator.version}}.tgz) {: data-proofer-ignore=""} with Kubernetes manifests. Based on Calico {{site.data.versions.first.calico.minor_version}}.
 {% endunless %}
 
 {% if release.note %}

@@ -16,9 +16,9 @@ corresponds to your desired deployment.
 
 <!--- Change download URL to latest release if user browsing master branch.  --->
 {%- if page.version == "master" -%}
-{% assign version = "latest/download" %}
+{% assign version = "master" %}
 {% else %}
-{% assign version = "download/" | append: site.data.versions.first.tigera-operator.version %}
+{% assign version = site.data.versions.first.tigera-operator.version %}
 {% endif %}
 
 ## Install calicoq as a binary on a single host
@@ -33,7 +33,7 @@ you want to install the binary.
 1. Use the following command to download the `calicoq` binary.
 
    ```
-   curl -o calicoq -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoq"
+   curl -o calicoq -O -L {{site.url}}/download/binaries/{{ version }}/calicoq
    ```
 
 1. Set the file to be executable.

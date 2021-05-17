@@ -27,9 +27,9 @@ corresponds to your desired deployment.
 
 <!--- Change download URL to latest release if user browsing master branch.  --->
 {%- if page.version == "master" -%}
-{% assign version = "latest/download" %}
+{% assign version = "master" %}
 {% else %}
-{% assign version = "download/" | append: site.data.versions.first.tigera-operator.version %}
+{% assign version = site.data.versions.first.tigera-operator.version %}
 {% endif %}
 
 ## Install calicoctl as a binary on a single host
@@ -47,7 +47,7 @@ you want to install the binary.
 1. Use the following command to download the `calicoctl` binary.
 
    ```bash
-   curl -o calicoctl -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl"
+   curl -o calicoctl -O -L {{site.url}}/download/binaries/{{ version }}/calicoctl
    ```
 
 1. Set the file to be executable.
@@ -74,7 +74,7 @@ you want to install the binary.
 1. Use the following command to download the `calicoctl` binary.
 
    ```bash
-   curl -o calicoctl -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-darwin-amd64"
+   curl -o calicoctl -O -L  {{site.url}}/download/binaries/{{ version }}/calicoctl-darwin-amd64
    ```
 
 1. Set the file to be executable.
@@ -101,7 +101,7 @@ you want to install the binary.
    {: .alert .alert-success}
 
 ```
-Invoke-WebRequest -Uri "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "calicocttl.exe"
+Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "calicocttl.exe"
 ```
 
 %>
@@ -121,7 +121,7 @@ you want to install the binary.
 1. Use the following command to download the `calicoctl` binary.
 
    ```bash
-   curl -o kubectl-calico -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl"
+   curl -o kubectl-calico -O -L  {{site.url}}/download/binaries/{{ version }}/calicoctl
    ```
 
 1. Set the file to be executable.
@@ -148,7 +148,7 @@ you want to install the binary.
 1. Use the following command to download the `calicoctl` binary.
 
    ```bash
-   curl -o kubectl-calico -O -L  "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-darwin-amd64"
+   curl -o kubectl-calico -O -L  {{site.url}}/download/binaries/{{ version }}/calicoctl-darwin-amd64
    ```
 
 1. Set the file to be executable.
@@ -176,7 +176,7 @@ you want to install the binary.
    {: .alert .alert-success}
 
 ```
-Invoke-WebRequest -Uri "https://github.com/tigera/operator/releases/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "kubectl-calico.exe"
+Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "kubectl-calico.exe"
 ```
 
 %>
