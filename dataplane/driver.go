@@ -178,6 +178,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			"scratch1Mark":        markScratch1,
 			"endpointMark":        markEndpointMark,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
+			"wireguardMark":       markWireguard,
+			"ipsecMark":           markIPsec,
+			"egressMark":          markEgressIP,
 		}).Info("Calculated iptables mark bits")
 
 		// Create a routing table manager. There are certain components that should take specific indices in the range
