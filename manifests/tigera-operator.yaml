@@ -16,9 +16,9 @@ logStorage:
   enabled: false
 manager:
   enabled: false
-compliance:
+monitor:
   enabled: false
-prometheus:
+compliance:
   enabled: false
 includePrometheusOperator: false
 {% endhelm %}

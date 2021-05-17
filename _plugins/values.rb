@@ -256,29 +256,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
           cpu: #"500m"
           memory: #"1024Mi"
     
-    alertmanager:
-      image: #{versions["alertmanager"].registry}/#{versions["alertmanager"].image}
-      tag: #{versions["alertmanager"].version}
-      # Configuration for the service which exposes the Prometheus alertmanager.
-      service:
-        type: NodePort
-        nodePort:
-    
-    prometheus:
-      image: #{versions["prometheus"].registry}/#{versions["prometheus"].image}
-      tag: #{versions["prometheus"].version}
-      scrapeTargets:
-        # Node settings grant control over the Prometheus instance tasked with
-        # scraping Calico Enterprise node.
-        node:
-          # Configuration for the service which fronts the Prometheus instance scraping Calico Enterprise node.
-          service:
-            type: NodePort
-            nodePort:
-    
-      # Create RBAC roles to enable PrometheusOperator to create finalizers.
-      createFinalizers: false
-    
     kibana:
       image: #{imageRegistry}#{versions["kibana"].image}
       tag: #{versions["kibana"].version}
@@ -432,13 +409,11 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     manager:
       enabled: true
 
-    compliance:
+    monitor:
       enabled: true
 
-    prometheus:
+    compliance:
       enabled: true
-      image: #{versions["prometheus"].registry}/#{versions["prometheus"].image}
-      tag: #{versions["prometheus"].version}
 
     # Optional configuration for setting custom BGP templates where
     # key is the filename of the template and value is the contents of the template.
@@ -481,10 +456,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{imageRegistry}#{versions["calicoctl"].image}
       tag: #{versions["calicoctl"].version}
       binPath: /bin
-
-    alertmanager:
-      image: #{versions["alertmanager"].registry}/#{versions["alertmanager"].image}
-      tag: #{versions["alertmanager"].version}
 
     includeCoreChart: false
     includePrometheusOperator: true

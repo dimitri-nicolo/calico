@@ -85,6 +85,17 @@ mkdir manifests
    oc apply -f {{ "/manifests/ocp/tigera-policies.yaml" | absolute_url }}
    ```
 
+1. If your cluster is v3.7 or older, apply a new [Monitor]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Monitor)
+   CR to your cluster.
+   ```bash
+   oc apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: Monitor
+   metadata:
+     name: tigera-secure
+   EOF
+   ```
+
 1. You can now monitor the upgrade progress with the following command:
    ```bash
    watch oc get tigerastatus
