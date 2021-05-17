@@ -29,7 +29,7 @@ corresponds to your desired deployment.
 {%- if page.version == "master" -%}
 {% assign version = "master" %}
 {% else %}
-{% assign version = site.data.versions.first.tigera-operator.version %}
+{% assign version = site.data.versions.first.title %}
 {% endif %}
 
 ## Install calicoctl as a binary on a single host
