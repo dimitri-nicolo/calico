@@ -142,22 +142,18 @@ func (t *GraphTCPStats) Combine(t2 *GraphTCPStats) *GraphTCPStats {
 
 	totalCount := t.Count + t2.Count
 	return &GraphTCPStats{
-		SumTotalRetransmissions: t.SumTotalRetransmissions + t2.SumTotalRetransmissions,
-		SumLostPackets:          t.SumLostPackets + t2.SumLostPackets,
-		SumUnrecoveredTo:        t.SumUnrecoveredTo + t2.SumUnrecoveredTo,
-		MinSendCongestionWindow: math.Min(t.MinSendCongestionWindow, t2.MinSendCongestionWindow),
-		MinSendMSS:              math.Min(t.MinSendMSS, t2.MinSendMSS),
-		MaxSmoothRTT:            math.Max(t.MaxSmoothRTT, t2.MaxSmoothRTT),
-		MaxMinRTT:               math.Max(t.MaxMinRTT, t2.MaxMinRTT),
-		MeanSendCongestionWindow: ((float64(t.Count) * t.MeanSendCongestionWindow) / float64(totalCount)) +
-			((float64(t2.Count) * t2.MeanSendCongestionWindow) / float64(totalCount)),
-		MeanSmoothRTT: ((float64(t.Count) * t.MeanSmoothRTT) / float64(totalCount)) +
-			((float64(t2.Count) * t2.MeanSmoothRTT) / float64(totalCount)),
-		MeanMinRTT: ((float64(t.Count) * t.MeanMinRTT) / float64(totalCount)) +
-			((float64(t2.Count) * t2.MeanMinRTT) / float64(totalCount)),
-		MeanMSS: ((float64(t.Count) * t.MeanMSS) / float64(totalCount)) +
-			((float64(t2.Count) * t2.MeanMSS) / float64(totalCount)),
-		Count: totalCount,
+		SumTotalRetransmissions:  t.SumTotalRetransmissions + t2.SumTotalRetransmissions,
+		SumLostPackets:           t.SumLostPackets + t2.SumLostPackets,
+		SumUnrecoveredTo:         t.SumUnrecoveredTo + t2.SumUnrecoveredTo,
+		MinSendCongestionWindow:  math.Min(t.MinSendCongestionWindow, t2.MinSendCongestionWindow),
+		MinSendMSS:               math.Min(t.MinSendMSS, t2.MinSendMSS),
+		MaxSmoothRTT:             math.Max(t.MaxSmoothRTT, t2.MaxSmoothRTT),
+		MaxMinRTT:                math.Max(t.MaxMinRTT, t2.MaxMinRTT),
+		MeanSendCongestionWindow: ((float64(t.Count) * t.MeanSendCongestionWindow) + (float64(t2.Count) * t2.MeanSendCongestionWindow)) / float64(totalCount),
+		MeanSmoothRTT:            ((float64(t.Count) * t.MeanSmoothRTT) + (float64(t2.Count) * t2.MeanSmoothRTT)) / float64(totalCount),
+		MeanMinRTT:               ((float64(t.Count) * t.MeanMinRTT) + (float64(t2.Count) * t2.MeanMinRTT)) / float64(totalCount),
+		MeanMSS:                  ((float64(t.Count) * t.MeanMSS) + (float64(t2.Count) * t2.MeanMSS)) / float64(totalCount),
+		Count:                    totalCount,
 	}
 }
 
@@ -212,8 +208,7 @@ func (l GraphL7PacketStats) Combine(l2 GraphL7PacketStats) GraphL7PacketStats {
 	l.MaxDuration = math.Max(l.MaxDuration, l2.MaxDuration)
 	totalCount := l.Count + l2.Count
 	l.MeanDuration =
-		((float64(l.Count) * l.MeanDuration) / float64(totalCount)) +
-			((float64(l2.Count) * l2.MeanDuration) / float64(totalCount))
+		((float64(l.Count) * l.MeanDuration) + (float64(l2.Count) * l2.MeanDuration)) / float64(totalCount)
 	l.Count = totalCount
 	return l
 }

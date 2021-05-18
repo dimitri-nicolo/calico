@@ -322,10 +322,10 @@ func GetL3FlowData(
 			processes = v1.GraphEndpointProcesses{
 				processName: v1.GraphEndpointProcess{
 					Name:               processName,
-					MinNumNamesPerFlow: bucket.AggregatedMin[FlowAggMinProcessNames],
-					MaxNumNamesPerFlow: bucket.AggregatedMax[FlowAggMaxProcessNames],
-					MinNumIDsPerFlow:   bucket.AggregatedMin[FlowAggMinProcessIds],
-					MaxNumIDsPerFlow:   bucket.AggregatedMax[FlowAggMaxProcessIds],
+					MinNumNamesPerFlow: int(bucket.AggregatedMin[FlowAggMinProcessNames]),
+					MaxNumNamesPerFlow: int(bucket.AggregatedMax[FlowAggMaxProcessNames]),
+					MinNumIDsPerFlow:   int(bucket.AggregatedMin[FlowAggMinProcessIds]),
+					MaxNumIDsPerFlow:   int(bucket.AggregatedMax[FlowAggMaxProcessIds]),
 				},
 			}
 		}

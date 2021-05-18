@@ -3,8 +3,9 @@ package v1
 
 import (
 	"encoding/json"
-	"math"
 	"sort"
+
+	"github.com/tigera/es-proxy/pkg/math"
 )
 
 // GraphProcesses encapsulates the set of processes associated with a particular node or edge in the graph.
@@ -70,10 +71,10 @@ func (p GraphEndpointProcesses) Combine(p2 GraphEndpointProcesses) GraphEndpoint
 		}
 		p[gp.Name] = GraphEndpointProcess{
 			Name:               gp.Name,
-			MinNumNamesPerFlow: minExcludeZero(existing.MinNumNamesPerFlow, gp.MinNumNamesPerFlow),
-			MaxNumNamesPerFlow: math.Max(existing.MaxNumNamesPerFlow, gp.MaxNumNamesPerFlow),
-			MinNumIDsPerFlow:   minExcludeZero(existing.MinNumIDsPerFlow, gp.MinNumIDsPerFlow),
-			MaxNumIDsPerFlow:   math.Max(existing.MaxNumIDsPerFlow, gp.MaxNumIDsPerFlow),
+			MinNumNamesPerFlow: math.MinIntGtZero(existing.MinNumNamesPerFlow, gp.MinNumNamesPerFlow),
+			MaxNumNamesPerFlow: math.MaxIntGtZero(existing.MaxNumNamesPerFlow, gp.MaxNumNamesPerFlow),
+			MinNumIDsPerFlow:   math.MinIntGtZero(existing.MinNumIDsPerFlow, gp.MinNumIDsPerFlow),
+			MaxNumIDsPerFlow:   math.MaxIntGtZero(existing.MaxNumIDsPerFlow, gp.MaxNumIDsPerFlow),
 		}
 	}
 
@@ -85,23 +86,14 @@ type GraphEndpointProcess struct {
 	Name string `json:"name"`
 
 	// The minimum number of process names per flow.
-	MinNumNamesPerFlow float64 `json:"min_num_names_per_flow"`
+	MinNumNamesPerFlow int `json:"min_num_names_per_flow"`
 
 	// The max number of process names per flow.
-	MaxNumNamesPerFlow float64 `json:"max_num_names_per_flow"`
+	MaxNumNamesPerFlow int `json:"max_num_names_per_flow"`
 
 	// The minimum number of process IDs per flow.
-	MinNumIDsPerFlow float64 `json:"min_num_ids_per_flow"`
+	MinNumIDsPerFlow int `json:"min_num_ids_per_flow"`
 
 	// The max number of process IDs per flow.
-	MaxNumIDsPerFlow float64 `json:"max_num_ids_per_flow"`
-}
-
-func minExcludeZero(a, b float64) float64 {
-	if a == 0 {
-		return b
-	} else if b == 0 {
-		return a
-	}
-	return math.Min(a, b)
+	MaxNumIDsPerFlow int `json:"max_num_ids_per_flow"`
 }

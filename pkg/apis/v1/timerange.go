@@ -3,6 +3,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -41,6 +42,10 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 	} else {
 		t.From = *from
 		t.To = *to
+	}
+	if t.From.After(t.To) {
+		log.Debug("From is after To")
+		return fmt.Errorf("incorrect time range specified: from (%s) is after to (%s)", s.From, s.To)
 	}
 	return nil
 }

@@ -16,9 +16,23 @@ const (
 // node. The format of these selectors is the Kibana-style selector.  For example,
 //   source_namespace == "namespace1 OR (dest_type == "wep" AND dest_namespace == "namespace2")
 type GraphSelectors struct {
-	L3Flows GraphSelector `json:"l3_flows,omitempty"`
-	L7Flows GraphSelector `json:"l7_flows,omitempty"`
-	DNSLogs GraphSelector `json:"dns_logs,omitempty"`
+	L3Flows GraphSelector
+	L7Flows GraphSelector
+	DNSLogs GraphSelector
+}
+
+// When marshalled to JSON we only include the non-empty values.
+func (s GraphSelectors) MarshalJSON() ([]byte, error) {
+	val := struct {
+		L3Flows string `json:"l3_flows,omitempty"`
+		L7Flows string `json:"l7_flows,omitempty"`
+		DNSLogs string `json:"dns_logs,omitempty"`
+	}{
+		L3Flows: s.L3Flows.SelectorString(),
+		L7Flows: s.L7Flows.SelectorString(),
+		DNSLogs: s.DNSLogs.SelectorString(),
+	}
+	return json.Marshal(val)
 }
 
 // GetEdgeSelectors returns a set of selectors for a graph edge from the supplied node selectors.
@@ -74,14 +88,11 @@ type GraphSelector struct {
 
 // When marshalled to JSON, the source and dest selectors are combined to return a single selector string. They are
 // either ANDed or ORed depending on whether the selectors are for an Edge or a Node respectively.
-func (s GraphSelector) MarshalJSON() ([]byte, error) {
-	var val string
+func (s GraphSelector) SelectorString() string {
 	if s.isEdge {
-		val = graphSelectorOp(s.Source, s.Dest, OpAnd)
-	} else {
-		val = graphSelectorOp(s.Source, s.Dest, OpOr)
+		return graphSelectorOp(s.Source, s.Dest, OpAnd)
 	}
-	return json.Marshal(val)
+	return graphSelectorOp(s.Source, s.Dest, OpOr)
 }
 
 // And combines two selectors by ANDing them together.
