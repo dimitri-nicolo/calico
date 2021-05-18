@@ -2,129 +2,157 @@
 package servicegraph
 
 import (
-	"fmt"
-	"strings"
-
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// The following set of functions is used to construct node selectors.  These selectors can be used to query
-// additional data for a node. The edge selectors is constructed from the node selectors in the graphconstructor.
+const (
+	maxSelectorItemsPerGroup = 50
+)
+
+// SelectorPairs contains source and dest pairs of graph node selectors.
+// The source selector represents the selector used when an edge originates from that node.
+// The dest selector represents the selector used when an edge terminates at that node.
 //
-// Selector format is similar to the kibana selector, e.g.
-//   source_namespace == "namespace1 OR (dest_type == "wep" AND dest_namespace == "namespace2")
-
-// Helper structs/methods for constructing the string for single "X == Y" selector and for ANDed sets of selectors.
-// Note that ORed groups of selectors is handled in the GraphSelectors struct since that can handle the ORing of
-// the full set in one operation.
-type keyEqValue struct {
-	key string
-	val interface{}
+// This is a convenience since most of the selectors can be split into source and dest related queries. It is not
+// required for the API.
+type SelectorPairs struct {
+	Source v1.GraphSelectors
+	Dest   v1.GraphSelectors
 }
 
-func (kv keyEqValue) String() string {
-	if s, ok := kv.val.(string); ok {
-		return fmt.Sprintf("%s == \"%s\"", kv.key, s)
-	}
-	return fmt.Sprintf("%s == %v", kv.key, kv.val)
+func (s SelectorPairs) ToNodeSelectors() v1.GraphSelectors {
+	return s.Source.Or(s.Dest)
 }
 
-// keyEqValueOpAnd is used to collate ANDed groups of "X == Y" selectors.  Note that ORed groups is handled by the
-// GraphSelectors methods.
-type keyEqValueOpAnd []keyEqValue
+func (s SelectorPairs) ToEdgeSelectors() v1.GraphSelectors {
+	return s.Source.And(s.Dest)
+}
 
-func (kvs keyEqValueOpAnd) String() string {
-	parts := make([]string, len(kvs))
-	for i := range kvs {
-		parts[i] = kvs[i].String()
+// And combines two sets of selectors by ANDing them together.
+func (s SelectorPairs) And(s2 SelectorPairs) SelectorPairs {
+	return SelectorPairs{
+		Source: s.Source.And(s2.Source),
+		Dest:   s.Dest.And(s2.Dest),
 	}
-	if len(parts) == 1 {
-		return parts[0]
-	}
+}
 
-	// Enclose multiple and-ed key==val in parens.
-	return "(" + strings.Join(parts, v1.OpAnd) + ")"
+// Or combines two sets of selectors by ORing them together.
+func (s SelectorPairs) Or(s2 SelectorPairs) SelectorPairs {
+	return SelectorPairs{
+		Source: s.Source.Or(s2.Source),
+		Dest:   s.Dest.Or(s2.Dest),
+	}
+}
+
+func NewSelectorHelper(view *ParsedView, aggHelper AggregationHelper) *SelectorHelper {
+	return &SelectorHelper{
+		view:      view,
+		aggHelper: aggHelper,
+	}
+}
+
+type SelectorHelper struct {
+	view      *ParsedView
+	aggHelper AggregationHelper
 }
 
 // GetLayerNodeSelectors returns the selectors for a layer node (as specified on the request).
-func GetLayerNodeSelectors(layer string, view *ParsedView) v1.GraphSelectors {
-	gs := v1.GraphSelectors{}
-	for _, n := range view.Layers.LayerToNamespaces[layer] {
-		gs = gs.Or(GetNamespaceNodeSelectors(n))
+func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
+	gs := SelectorPairs{}
+	for _, n := range s.view.Layers.LayerToNamespaces[layer] {
+		gs = gs.Or(s.GetNamespaceNodeSelectors(n))
 	}
-	for _, sg := range view.Layers.LayerToServiceGroups[layer] {
-		gs = gs.Or(GetServiceGroupNodeSelectors(sg))
+	for _, sg := range s.view.Layers.LayerToServiceGroups[layer] {
+		gs = gs.Or(s.GetServiceGroupNodeSelectors(sg))
 	}
-	for _, ep := range view.Layers.LayerToEndpoints[layer] {
+	for _, ep := range s.view.Layers.LayerToEndpoints[layer] {
 		_, isAgg := mapGraphNodeTypeToRawType(ep.Type)
 		if isAgg {
-			gs = gs.Or(GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
+			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
 		} else {
-			gs = gs.Or(GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
+			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
 		}
 	}
 	return gs
 }
 
 // GetNamespaceNodeSelectors returns the selectors for a namespace node.
-func GetNamespaceNodeSelectors(namespace string) v1.GraphSelectors {
-	return v1.GraphSelectors{
-		L3Flows: v1.GraphSelector{
-			Source: keyEqValue{"source_namespace", namespace}.String(),
-			Dest:   keyEqValue{"dest_namespace", namespace}.String(),
+func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPairs {
+	return SelectorPairs{
+		Source: v1.GraphSelectors{
+			L3Flows: v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
+			L7Flows: v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
+			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
 		},
-		L7Flows: v1.GraphSelector{
-			Source: keyEqValue{"src_namespace", namespace}.String(),
-			Dest:   keyEqValue{"dest_namespace", namespace}.String(),
-		},
-		DNSLogs: v1.GraphSelector{
-			Source: keyEqValue{"client_namespace", namespace}.String(),
+		Dest: v1.GraphSelectors{
+			L3Flows: v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			L7Flows: v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
 		},
 	}
 }
 
 // GetServiceNodeSelectors returns the selectors for a service node.
-func GetServiceNodeSelectors(svc types.NamespacedName) v1.GraphSelectors {
-	return v1.GraphSelectors{
-		L3Flows: v1.GraphSelector{
-			Dest: keyEqValueOpAnd{{"dest_service_namespace", svc.Namespace}, {"dest_service_name", svc.Name}}.String(),
-		},
-		L7Flows: v1.GraphSelector{
-			Dest: keyEqValueOpAnd{{"dest_service_namespace", svc.Namespace}, {"dest_service_name", svc.Name}}.String(),
+func (s *SelectorHelper) GetServiceNodeSelectors(svc types.NamespacedName) SelectorPairs {
+	return SelectorPairs{
+		Dest: v1.GraphSelectors{
+			L3Flows: v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", svc.Name),
+			),
+			L7Flows: v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", svc.Name),
+			),
 		},
 	}
 }
 
 // GetServicePortNodeSelectors returns the selectors for a service port node.
-func GetServicePortNodeSelectors(sp ServicePort) v1.GraphSelectors {
-	l3Parts := keyEqValueOpAnd{{"proto", sp.Proto}, {"dest_service_namespace", sp.Namespace}, {"dest_service_name", sp.Name}}
+func (s *SelectorHelper) GetServicePortNodeSelectors(sp ServicePort) SelectorPairs {
+	l3Sel := v1.NewGraphSelector(v1.OpAnd,
+		v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.Namespace),
+		v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.Name),
+	)
 	if sp.Port != "" {
-		l3Parts = append(l3Parts, keyEqValue{"dest_service_port", sp.Port})
+		l3Sel = v1.NewGraphSelector(v1.OpAnd,
+			l3Sel,
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
+		)
 	}
 
-	var l7Parts keyEqValueOpAnd
+	if sp.Port != "" {
+		l3Sel = v1.NewGraphSelector(v1.OpAnd,
+			l3Sel,
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
+		)
+	}
+
+	var l7Sel *v1.GraphSelector
 	if sp.Proto == "tcp" {
-		l7Parts = keyEqValueOpAnd{{"dest_service_namespace", sp.Namespace}, {"dest_service_name", sp.Name}}
+		l7Sel = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.Namespace),
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.Name),
+		)
 	}
 
-	return v1.GraphSelectors{
-		// L3 source selector is calculated in graphconstructor by ORing together all of the ingress sources to the
-		// service.  We need to do this because flows arae recorded at source and dest and may therefore not have
-		// service information available.
-		L3Flows: v1.GraphSelector{
-			Dest: l3Parts.String(),
+	return SelectorPairs{
+		Source: v1.GraphSelectors{
+			// L3 source selector is calculated in graphconstructor by ORing together all of the ingress sources to the
+			// service.  We need to do this because flows are recorded at source and dest and may not have service
+			// information available in the dest recorded flows.
+			// L7 service selector is the same for source and dest.
+			L7Flows: l7Sel,
 		},
-		// L3 service selector is the same for source and dest.
-		L7Flows: v1.GraphSelector{
-			Source: l7Parts.String(),
-			Dest:   l7Parts.String(),
+		Dest: v1.GraphSelectors{
+			L3Flows: l3Sel,
+			L7Flows: l7Sel,
 		},
 	}
 }
 
 // GetServiceGroupNodeSelectors returns the selectors for a service group node.
-func GetServiceGroupNodeSelectors(sg *ServiceGroup) v1.GraphSelectors {
+func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) SelectorPairs {
 	// Selectors depend on whether the service endpoints record the flow. If only the source records the flow then we
 	// limit the search based on the service selectors.
 	allSvcs := make(map[types.NamespacedName]struct{})
@@ -141,80 +169,150 @@ func GetServiceGroupNodeSelectors(sg *ServiceGroup) v1.GraphSelectors {
 		}
 	}
 
-	gs := v1.GraphSelectors{}
+	var gs SelectorPairs
 	for svc := range allSvcs {
-		gs = gs.Or(GetServiceNodeSelectors(svc))
+		gs = gs.Or(s.GetServiceNodeSelectors(svc))
 	}
 	for ep := range allEps {
 		_, isAgg := mapGraphNodeTypeToRawType(ep.Type)
 		if isAgg {
-			gs = gs.Or(GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
+			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
 		} else {
-			gs = gs.Or(GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
+			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
 		}
 	}
 	return gs
 }
 
 // GetEndpointNodeSelectors returns the selectors for an endpoint node.
-func GetEndpointNodeSelectors(epType v1.GraphNodeType, namespace, name, proto string, port int, dir Direction) v1.GraphSelectors {
+func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, namespace, name, proto string, port int, dir Direction) SelectorPairs {
 	rawType, isAgg := mapGraphNodeTypeToRawType(epType)
 	namespace = blankToSingleDash(namespace)
 
-	var l3, l7, dns v1.GraphSelector
+	var l3Dest, l7Dest, l3Source, l7Source, dnsSource *v1.GraphSelector
 	if rawType == "wep" {
 		// DNS logs are only recorded for wep types.
 		if isAgg {
-			dns.Source = keyEqValueOpAnd{{"client_namespace", namespace}, {"client_name_aggr", name}}.String()
+			dnsSource = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "client_name_aggr", name),
+			)
 		} else {
-			dns.Source = keyEqValueOpAnd{{"client_namespace", namespace}, {"client_name", name}}.String()
+			dnsSource = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "client_name", name),
+			)
 		}
 
 		// Similarly, L7 logs are only recorded for wep types and also only with aggregated names. If the protocol is
 		// known then only include for TCP.
 		if isAgg && (proto == "" || proto == "tcp") {
-			l7 = v1.GraphSelector{
-				Source: keyEqValueOpAnd{{"src_namespace", namespace}, {"src_name_aggr", name}}.String(),
-				Dest:   keyEqValueOpAnd{{"dest_namespace", namespace}, {"dest_name_aggr", name}}.String(),
-			}
+			l7Source = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "src_name_aggr", name),
+			)
+			l7Dest = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+			)
 		}
 	}
 
-	var l3SrcParts, l3DstParts keyEqValueOpAnd
-	if isAgg {
-		l3SrcParts = keyEqValueOpAnd{{"source_type", rawType}, {"source_namespace", namespace}, {"source_name_aggr", name}}
-		l3DstParts = keyEqValueOpAnd{{"dest_type", rawType}, {"dest_namespace", namespace}, {"dest_name_aggr", name}}
+	if epType == v1.GraphNodeTypeHosts {
+		// Handle hosts separately. We provide an internal aggregation for these types, so when constructing a selector
+		// we have do do a rather brutal list of all host endpoints. We can at least skip namespace since hep types
+		// are only non-namespaced.
+		hosts := s.aggHelper.GetHostNamesFromAggregatedName(name)
+		if len(hosts) > maxSelectorItemsPerGroup {
+			// Too many individual items. Don't filter on the hosts.
+			l3Source = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+			)
+			l3Dest = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+			)
+		} else if len(hosts) == 1 {
+			// Only one host, just use equals.
+			l3Source = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+				v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", name),
+			)
+			l3Dest = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+			)
+		} else {
+			// Multiple (or no) host names, use "in" operator.  The in operator will not include a zero length
+			// comparison (which would be the case if there are no node selectors specified).
+			l3Source = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+				v1.NewGraphSelector(v1.OpIn, "source_name_aggr", hosts),
+			)
+			l3Dest = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+				v1.NewGraphSelector(v1.OpIn, "dest_name_aggr", hosts),
+			)
+		}
+	} else if isAgg {
+		l3Source = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
+			v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", name),
+		)
+		l3Dest = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+		)
 	} else {
-		l3SrcParts = keyEqValueOpAnd{{"source_type", rawType}, {"source_namespace", namespace}, {"source_name", name}}
-		l3DstParts = keyEqValueOpAnd{{"dest_type", rawType}, {"dest_namespace", namespace}, {"dest_name", name}}
+		l3Source = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
+			v1.NewGraphSelector(v1.OpEqual, "source_name", name),
+		)
+		l3Dest = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			v1.NewGraphSelector(v1.OpEqual, "dest_name", name),
+		)
 	}
 	if port != 0 {
-		l3DstParts = append(l3DstParts, keyEqValue{"dest_port", port})
+		l3Dest = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "dest_port", port),
+			l3Dest,
+		)
 	}
 	if proto != "" {
-		l3SrcParts = append(l3SrcParts, keyEqValue{"proto", proto})
-		l3DstParts = append(l3DstParts, keyEqValue{"proto", proto})
-	}
-	l3 = v1.GraphSelector{
-		Source: l3SrcParts.String(),
-		Dest:   l3DstParts.String(),
-	}
-
-	// If a direction has been specified, blank out the source or dest values appropriately.  It's easier to do this
-	// once here rather than in each of the branches above.
-	if dir == DirectionIngress {
-		l3.Source = ""
-		l7.Source = ""
-		dns.Source = ""
-	} else if dir == DirectionEgress {
-		l3.Dest = ""
-		l7.Dest = ""
-		dns.Dest = ""
+		l3Source = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "proto", proto),
+			l3Source,
+		)
+		l3Dest = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "proto", proto),
+			l3Dest,
+		)
 	}
 
-	return v1.GraphSelectors{
-		L3Flows: l3,
-		L7Flows: l7,
-		DNSLogs: dns,
+	gsp := SelectorPairs{
+		Source: v1.GraphSelectors{},
+		Dest:   v1.GraphSelectors{},
 	}
+
+	// If a direction has been specified then we only include one side of the flow.
+	if dir != DirectionIngress {
+		gsp.Source = v1.GraphSelectors{
+			L3Flows: l3Source,
+			L7Flows: l7Source,
+			DNSLogs: dnsSource,
+		}
+	}
+	if dir != DirectionEgress {
+		gsp.Dest = v1.GraphSelectors{
+			L3Flows: l3Dest,
+			L7Flows: l7Dest,
+		}
+	}
+
+	return gsp
 }

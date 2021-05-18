@@ -77,7 +77,25 @@ type GraphNode struct {
 	// graph node.
 	Selectors GraphSelectors `json:"selectors"`
 
-	// The set of events correlated to this node
+	// The set of events correlated to this node. The json is rendered in the following format (which differs from the
+	// struct definitions):
+	// 			"events": [
+	//				{
+	//					"tiger_event_id": "abcde",
+	//					"description": "A thing occurred, not sure when"
+	//				},
+	//				{
+	//					"kubernetes_event_name": "n2",
+	//					"kubernetes_event_namespace": "n",
+	//					"description": "A k8s thing occurred",
+	//					"time": "1973-03-14T00:00:00Z"
+	//                }
+	//			]
+	// This contains two type of event:
+	// Kubernetes events - id is using namespace and name
+	// Tigera event - id is an id that corresponds to an entry in elasticsearch.
+	//
+	// This may be subject to change as the current event structure is poorly defined.
 	Events GraphEvents `json:"events,omitempty"`
 }
 

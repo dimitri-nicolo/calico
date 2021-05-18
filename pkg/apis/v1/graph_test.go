@@ -1101,4 +1101,83 @@ var _ = Describe("Graph API tests", func() {
 			}`), &tr)
 		Expect(err).To(HaveOccurred())
 	})
+
+	It("Can process selectors", func() {
+		By("creating a selector with all ORs")
+		sel1 := NewGraphSelector(OpOr,
+			NewGraphSelector(OpEqual, "a", "b"),
+			NewGraphSelector(OpEqual, "b", 2),
+			nil,
+		)
+		Expect(sel1.SelectorString()).To(Equal("a == \"b\" || b == 2"))
+
+		By("ORing with another selector with all ORs and a duplicate entry")
+		sel2 := NewGraphSelector(OpOr,
+			NewGraphSelector(OpEqual, "a", "b2"),
+			NewGraphSelector(OpEqual, "b", 2),
+			nil,
+		)
+		sel3 := NewGraphSelector(OpOr, sel1, sel2)
+		Expect(sel3.SelectorString()).To(Equal("a == \"b\" || a == \"b2\" || b == 2"))
+
+		By("ANDing with another selector")
+		sel4 := NewGraphSelector(OpAnd,
+			sel3,
+			sel1,
+		)
+		Expect(sel4.SelectorString()).To(Equal("(a == \"b\" || a == \"b2\" || b == 2) && (a == \"b\" || b == 2)"))
+
+		By("ANDing with another selector")
+		sel5 := NewGraphSelector(OpAnd,
+			NewGraphSelector(OpNotEqual, "x", "y"),
+			nil,
+		)
+		sel6 := NewGraphSelector(OpAnd,
+			sel5,
+			sel4,
+		)
+		Expect(sel6.SelectorString()).To(Equal("(a == \"b\" || a == \"b2\" || b == 2) && (a == \"b\" || b == 2) && x != \"y\""))
+
+		By("Checking the JSON renders with no selectors")
+		js, err := json.Marshal(GraphSelectors{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(js).To(MatchJSON(`{}`))
+
+		By("Checking the JSON renders with valid selectors")
+		gsel1 := GraphSelectors{
+			L3Flows: NewGraphSelector(OpEqual, "a", "b"),
+			L7Flows: NewGraphSelector(OpEqual, "c", "d"),
+			DNSLogs: NewGraphSelector(OpEqual, "e", "f"),
+		}.And(GraphSelectors{
+			L3Flows: NewGraphSelector(OpEqual, "a1", "b1"),
+			L7Flows: NewGraphSelector(OpEqual, "c1", "d1"),
+			DNSLogs: NewGraphSelector(OpEqual, "e1", "f1"),
+		}).Or(GraphSelectors{
+			L3Flows: NewGraphSelector(OpEqual, "a2", "b2"),
+			L7Flows: NewGraphSelector(OpEqual, "c2", "d2"),
+			DNSLogs: NewGraphSelector(OpEqual, "e2", "f2"),
+		})
+
+		js, err = json.Marshal(gsel1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(js).To(MatchJSON(`{
+			"l3_flows": "(a == \"b\" && a1 == \"b1\") || a2 == \"b2\"",
+			"l7_flows": "(c == \"d\" && c1 == \"d1\") || c2 == \"d2\"",
+			"dns_logs": "(e == \"f\" && e1 == \"f1\") || e2 == \"f2\""
+        }`))
+
+		By("Checking in-operator")
+		selIn := NewGraphSelector(OpIn,
+			"a",
+			[]string{"b", "c", "d"},
+		)
+		Expect(selIn.SelectorString()).To(Equal("a in {\"b\", \"c\", \"d\"}"))
+
+		selIn = NewGraphSelector(OpIn,
+			"a",
+			[]string{},
+		)
+		Expect(selIn).To(BeNil())
+		Expect(selIn.SelectorString()).To(Equal(""))
+	})
 })

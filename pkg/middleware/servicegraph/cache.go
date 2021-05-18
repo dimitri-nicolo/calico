@@ -40,10 +40,11 @@ func (t TimeSeriesFlow) String() string {
 }
 
 type ServiceGraphData struct {
-	TimeIntervals []v1.TimeRange
-	FilteredFlows []TimeSeriesFlow
-	ServiceGroups ServiceGroups
-	Events        []Event
+	TimeIntervals     []v1.TimeRange
+	FilteredFlows     []TimeSeriesFlow
+	ServiceGroups     ServiceGroups
+	Events            []Event
+	AggregationHelper AggregationHelper
 }
 
 type ServiceGraphCache interface {
@@ -79,7 +80,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	var rawL3 []L3Flow
 	var rawL7 []L7Flow
 	var rawEvents []Event
-	var nameFormatter *NameFormatter
+	var aggHelper AggregationHelper
 	var errFlowConfig, errL3, errL7, errEvents, errNameFormatter error
 
 	// Extract the cluster specific k8s client.
@@ -109,7 +110,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	go func() {
 		// The name formatter is used to adjust names based on user supplied configuration.  We do this here rather
 		// than updating the cached data.
-		nameFormatter, errNameFormatter = GetNameFormatter(ctx, k8sClient, sgr.SelectedView)
+		aggHelper, errNameFormatter = GetAggregationHelper(ctx, k8sClient, sgr.SelectedView)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -127,8 +128,9 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	}
 
 	fd := &ServiceGraphData{
-		TimeIntervals: []v1.TimeRange{sgr.TimeRange},
-		ServiceGroups: NewServiceGroups(),
+		TimeIntervals:     []v1.TimeRange{sgr.TimeRange},
+		ServiceGroups:     NewServiceGroups(),
+		AggregationHelper: aggHelper,
 	}
 
 	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning.
@@ -138,7 +140,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 		}
 
 		// Update the names in the flow (if required).
-		nameFormatter.UpdateL3Flow(&rf)
+		aggHelper.ProcessL3Flow(&rf)
 
 		if rf.Edge.ServicePort != nil {
 			fd.ServiceGroups.AddMapping(*rf.Edge.ServicePort, rf.Edge.Dest)
@@ -163,7 +165,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 		}
 
 		// Update the names in the flow (if required).
-		nameFormatter.UpdateL7Flow(&rf)
+		aggHelper.ProcessL7Flow(&rf)
 
 		stats := rf.Stats
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
@@ -177,7 +179,7 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	// Filter the events.
 	for _, ev := range rawEvents {
 		// Update the names in the events (if required).
-		nameFormatter.UpdateEvent(&ev)
+		aggHelper.ProcessEvent(&ev)
 
 		fd.Events = append(fd.Events, ev)
 	}

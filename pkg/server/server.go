@@ -45,10 +45,6 @@ var (
 		APIGroup:  "",
 		Resources: []string{"pods"},
 		Verbs:     []string{"list"},
-	}, {
-		APIGroup:  "lma.tigera.io",
-		Resources: []string{"pods"},
-		Verbs:     []string{"list"},
 	}}
 )
 

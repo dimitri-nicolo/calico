@@ -404,8 +404,10 @@ func mapGraphNodeTypeToRawType(val v1.GraphNodeType) (string, bool) {
 		return "wep", false
 	case v1.GraphNodeTypeReplicaSet:
 		return "wep", true
-	case v1.GraphNodeTypeHostEndpoint:
+	case v1.GraphNodeTypeHosts:
 		return "hep", true
+	case v1.GraphNodeTypeHostEndpoint:
+		return "hep", false
 	case v1.GraphNodeTypeNetwork:
 		return "net", true
 	case v1.GraphNodeTypeNetworkSet:

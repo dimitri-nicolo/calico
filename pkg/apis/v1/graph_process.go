@@ -28,6 +28,21 @@ func (p *GraphProcesses) Combine(p2 *GraphProcesses) *GraphProcesses {
 	}
 }
 
+// GraphEndpointProcesses stores a map of process info keyed off the process name.
+//
+// This is actually JSON marshalled as a slice, so the JSON will appear in the format:
+// [
+//   {
+//     "name": "p1",
+//     "min_num_names_per_flow": 1,
+//     "max_num_names_per_flow": 2,
+//     "min_num_ids_per_flow": 10,
+//     "max_num_ids_per_flow": 12
+//   }, {
+//     "name": "p2"
+//     ...
+//   }
+// ]
 type GraphEndpointProcesses map[string]GraphEndpointProcess
 
 func (p GraphEndpointProcesses) Copy() GraphEndpointProcesses {
@@ -81,6 +96,11 @@ func (p GraphEndpointProcesses) Combine(p2 GraphEndpointProcesses) GraphEndpoint
 	return p
 }
 
+// GraphEndpointProcess contains useful details recorded about a process.
+// Provided there is one pod per host, the number of processes (names and IDs) per flow is the same as the number of
+// processes per pod - which for most pods should be fixed.  Large variations could be normal if, for example, the
+// pod internally runs short-lived processes - but for most cases large variations could indicate a cyclically
+// restarting pod (error) or additional commands being run from within a compromised pod.
 type GraphEndpointProcess struct {
 	// The process name. If aggregated it will be set to "*"
 	Name string `json:"name"`

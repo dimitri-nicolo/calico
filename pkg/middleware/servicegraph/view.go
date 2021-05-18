@@ -66,9 +66,12 @@ type ParsedLayers struct {
 // newParsedLayers initializes a new ParsedLayers struct.
 func newParsedLayers() *ParsedLayers {
 	return &ParsedLayers{
-		NamespaceToLayer:    make(map[string]string),
-		ServiceGroupToLayer: make(map[*ServiceGroup]string),
-		EndpointToLayer:     make(map[v1.GraphNodeID]string),
+		NamespaceToLayer:     make(map[string]string),
+		ServiceGroupToLayer:  make(map[*ServiceGroup]string),
+		EndpointToLayer:      make(map[v1.GraphNodeID]string),
+		LayerToNamespaces:    make(map[string][]string),
+		LayerToServiceGroups: make(map[string][]*ServiceGroup),
+		LayerToEndpoints:     make(map[string][]FlowEndpoint),
 	}
 }
 
