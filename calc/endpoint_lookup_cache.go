@@ -344,10 +344,14 @@ func (ec *EndpointLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 // addOrUpdateEndpoint tracks endpoint to IP mapping as well as IP to endpoint reverse mapping
 // for a workload or host endpoint.
 func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpointData *EndpointData, ipsOfIncomingEndpoint [][16]byte) {
-	// If the endpoint exists, it was updated, then we might have to add or
+	ec.epMutex.Lock()
+	defer ec.epMutex.Unlock()
+
+	// If the endpoint exists, and it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
 	var ipsToRemove set.Set = set.New()
+
 	currentEndpoint, endpointAlreadyExists := ec.endpointData[key]
 	// Create a copy so that we can figure out which IPs to keep and
 	// which ones to remove.
@@ -375,8 +379,6 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 		ipsToUpdate.Add(ip)
 	}
 
-	ec.epMutex.Lock()
-	defer ec.epMutex.Unlock()
 	// update endpoint data lookup by key
 
 	// if there was a previous endpoint with the same key to be deleted,
