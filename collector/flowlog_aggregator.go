@@ -14,6 +14,28 @@ import (
 	"github.com/projectcalico/felix/rules"
 )
 
+type FlowLogGetter interface {
+	GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog
+}
+
+type FlowLogAggregator interface {
+	FlowLogGetter
+	IncludeLabels(bool) FlowLogAggregator
+	IncludePolicies(bool) FlowLogAggregator
+	IncludeService(bool) FlowLogAggregator
+	IncludeProcess(bool) FlowLogAggregator
+	IncludeTcpStats(bool) FlowLogAggregator
+	MaxOriginalIPsSize(int) FlowLogAggregator
+	AggregateOver(FlowAggregationKind) FlowLogAggregator
+	ForAction(rules.RuleAction) FlowLogAggregator
+	PerFlowProcessLimit(limit int) FlowLogAggregator
+	FeedUpdate(*MetricUpdate) error
+	HasAggregationLevelChanged() bool
+	GetCurrentAggregationLevel() FlowAggregationKind
+	GetDefaultAggregationLevel() FlowAggregationKind
+	AdjustLevel(newLevel FlowAggregationKind)
+}
+
 // FlowAggregationKind determines the flow log key
 type FlowAggregationKind int
 
@@ -56,7 +78,7 @@ type flowLogAggregator struct {
 	current              FlowAggregationKind
 	previous             FlowAggregationKind
 	initial              FlowAggregationKind
-	flowStore            map[FlowMeta]flowEntry
+	flowStore            map[FlowMeta]*flowEntry
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	includePolicies      bool
@@ -108,7 +130,7 @@ func NewFlowLogAggregator() FlowLogAggregator {
 	return &flowLogAggregator{
 		current:              FlowDefault,
 		initial:              FlowDefault,
-		flowStore:            make(map[FlowMeta]flowEntry),
+		flowStore:            make(map[FlowMeta]*flowEntry),
 		flMutex:              sync.RWMutex{},
 		maxOriginalIPsSize:   defaultMaxOrigIPSize,
 		aggregationStartTime: time.Now(),
@@ -162,33 +184,38 @@ func (c *flowLogAggregator) PerFlowProcessLimit(n int) FlowLogAggregator {
 }
 
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
-func (fa *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
+func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	defer fa.reportFlowLogStoreMetrics()
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no last rule id present")
-		return fmt.Errorf("Invalid metric update")
+		return fmt.Errorf("invalid metric update")
 	}
 	// Filter out any action that we aren't configured to handle.
 	if fa.handledAction != noRuleActionDefined && fa.handledAction != lastRuleID.Action {
-		log.Debugf("Update %v not handled", mu)
+		log.Debugf("Update %v not handled", *mu)
 		return nil
 	}
 
-	log.WithField("update", mu).Debug("Flow Log Aggregator got Metric Update")
-	flowMeta, err := NewFlowMeta(mu, fa.current, fa.includeService)
+	flowMeta, err := NewFlowMeta(*mu, fa.current, fa.includeService)
 	if err != nil {
 		return err
 	}
 	fa.flMutex.Lock()
 	defer fa.flMutex.Unlock()
 
+	fa.flMutex.Lock()
+	defer fa.flMutex.Unlock()
+
+	log.Debugf("Flow Log Aggregator got Metric Update: %+v", *mu)
+
 	fl, ok := fa.flowStore[flowMeta]
+
 	if !ok {
-		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, mu)
+		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
 		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit)
 
-		fl = flowEntry{
+		newEntry := &flowEntry{
 			spec:         spec,
 			aggregation:  fa.current,
 			shouldExport: true,
@@ -197,15 +224,16 @@ func (fa *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 			for flowMeta, flowEntry := range fa.flowStore {
 				//TODO: Instead of iterating through all the entries, we should store the reverse mappings
 				if !flowEntry.shouldExport && flowEntry.spec.ContainsActiveRefs(mu) {
-					fl.spec.MergeWith(mu, flowEntry.spec)
+					newEntry.spec.MergeWith(*mu, flowEntry.spec)
 					delete(fa.flowStore, flowMeta)
 				}
 			}
 		}
 
-		fa.flowStore[flowMeta] = fl
+		fa.flowStore[flowMeta] = newEntry
 	} else {
-		log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, mu)
+		log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, *mu)
+
 		fl.spec.AggregateMetricUpdate(mu)
 		fl.shouldExport = true
 		fa.flowStore[flowMeta] = fl
@@ -222,25 +250,26 @@ func (fa *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 // be set. By changing aggregation levels, all previous entries with a different level will be marked accordingly as not
 // be exported at the next call for GetAndCalibrate().They will be kept in the store flow in order to provide an
 // accurate number for numFlowCounts.
-func (c *flowLogAggregator) GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog {
+func (fa *flowLogAggregator) GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog {
 	log.Debug("Get from flow log aggregator")
-	resp := make([]*FlowLog, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
 
-	c.flMutex.Lock()
-	defer c.flMutex.Unlock()
+	fa.flMutex.Lock()
+	defer fa.flMutex.Unlock()
 
-	c.AdjustLevel(newLevel)
+	resp := make([]*FlowLog, 0, len(fa.flowStore))
+	fa.AdjustLevel(newLevel)
 
-	for flowMeta, flowEntry := range c.flowStore {
+	for flowMeta, flowEntry := range fa.flowStore {
 		if flowEntry.shouldExport {
 			log.Debug("Converting to flowlogs")
-			flowLogs := flowEntry.spec.ToFlowLogs(flowMeta, c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.includePolicies)
+			flowLogs := flowEntry.spec.ToFlowLogs(flowMeta, fa.aggregationStartTime, aggregationEndTime, fa.includeLabels, fa.includePolicies)
 			resp = append(resp, flowLogs...)
 		}
-		c.calibrateFlowStore(flowMeta, c.current)
+		fa.calibrateFlowStore(flowMeta, fa.current)
 	}
-	c.aggregationStartTime = aggregationEndTime
+
+	fa.aggregationStartTime = aggregationEndTime
 
 	return resp
 }
@@ -269,7 +298,7 @@ func (fa *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel Flow
 		return
 	}
 
-	if entry.shouldExport == false {
+	if !entry.shouldExport {
 		return
 	}
 
@@ -279,9 +308,15 @@ func (fa *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel Flow
 	}
 
 	log.Debugf("Resetting %v", flowMeta)
+
 	// reset flow stats for the next interval
 	entry.spec.Reset()
-	fa.flowStore[flowMeta] = flowEntry{entry.spec, entry.aggregation, entry.shouldExport}
+
+	fa.flowStore[flowMeta] = &flowEntry{
+		spec:         entry.spec,
+		aggregation:  entry.aggregation,
+		shouldExport: entry.shouldExport,
+	}
 }
 
 // reportFlowLogStoreMetrics reporting of current FlowStore cache metrics to Prometheus

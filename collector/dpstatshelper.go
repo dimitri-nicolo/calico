@@ -90,7 +90,8 @@ func New(
 			offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.GetFlowLogsPositionFilePath()),
 				int64(configParams.FlowLogsAggregationThresholdBytes))
 		}
-		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator, configParams.FlowLogsEnableHostEndpoint, offsetReader)
+		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator,
+			configParams.FlowLogsEnableHostEndpoint, offsetReader)
 		configureFlowAggregation(configParams, cw)
 		rm.RegisterMetricsReporter(cw)
 	}

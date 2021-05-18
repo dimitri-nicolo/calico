@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018, 2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -44,7 +44,7 @@ func (c *cloudWatchMetricsAggregator) FeedUpdate(mu MetricUpdate) error {
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no last rule id present")
-		return fmt.Errorf("Invalid metric update")
+		return fmt.Errorf("invalid metric update")
 	}
 	switch lastRuleID.Action {
 	case rules.RuleActionDeny:
@@ -69,9 +69,10 @@ func (c *cloudWatchMetricsAggregator) FeedUpdate(mu MetricUpdate) error {
 	} else {
 		resultMetrics.mMap[dpm.Name].Value += dpm.Value
 	}
-	resultMetrics.mu.Unlock()
 
 	log.WithField("Metric value", resultMetrics.mMap[dpm.Name].Value).Debugf("current aggregated packet count for action: %s", lastRuleID.Action)
+
+	resultMetrics.mu.Unlock()
 	return nil
 }
 
@@ -80,6 +81,7 @@ func (c *cloudWatchMetricsAggregator) Get() []MetricData {
 
 	// Grab the lock so we get a consistent values if they're being written by FeedUpdate.
 	resultMetrics.mu.Lock()
+
 	for _, val := range resultMetrics.mMap {
 		if val != nil {
 			result = append(result, *val)
@@ -88,9 +90,9 @@ func (c *cloudWatchMetricsAggregator) Get() []MetricData {
 			val.Value = float64(0)
 		}
 	}
-	resultMetrics.mu.Unlock()
 
 	log.WithField("MetricData", result).Debug("aggregating metric count")
-	return result
+	resultMetrics.mu.Unlock()
 
+	return result
 }

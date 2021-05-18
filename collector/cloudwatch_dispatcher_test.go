@@ -117,12 +117,12 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			flowLabels = FlowLabels{}
 			flowPolicies = make(FlowPolicies)
 			flowExtras = flowExtrasRef{}
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, false, false)
 			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* - wep default nginx-412354-5123451 nginx-412354-* - 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow - - 0 - - - - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowLabels = FlowLabels{SrcLabels: map[string]string{"test-app": "true"}, DstLabels: map[string]string{"k8s-app": "true"}}
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, true, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, true, false)
 			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* [test-app=true] wep default nginx-412354-5123451 nginx-412354-* [k8s-app=true] 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow - - 0 - - - - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
@@ -130,12 +130,12 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			flowMeta, err = NewFlowMeta(muWithEndpointMetaWithService, FlowSourcePort, true)
 			Expect(err).To(BeNil())
 			flowLabels = FlowLabels{}
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, false, false)
 			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* - wep default nginx-412354-5123451 nginx-412354-* - 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 foo-ns foo-svc foo-port - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowLabels = FlowLabels{SrcLabels: map[string]string{"test-app": "true"}, DstLabels: map[string]string{"k8s-app": "true"}}
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, true, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, true, false)
 			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* [test-app=true] wep default nginx-412354-5123451 nginx-412354-* [k8s-app=true] 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 foo-ns foo-svc foo-port - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
@@ -143,13 +143,13 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowPrefixName, true)
 			Expect(err).To(BeNil())
 			flowLabels = FlowLabels{}
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, false, false)
 			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 - - - - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, FlowPrefixName, true)
 			Expect(err).To(BeNil())
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, false, false)
 			expectedFlowLog = "1510948860 1510948920 net - - pvt - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 - - - - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
@@ -157,7 +157,7 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			muWithoutPublicDstEndpointMeta.tuple.dst = ipStrTo16Byte("198.17.8.43")
 			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, FlowPrefixName, true)
 			Expect(err).To(BeNil())
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, false, false)
 			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - net - - pub - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 - - - - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
@@ -165,16 +165,17 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			flowMeta, err = NewFlowMeta(muWithOrigSourceIPs, FlowPrefixName, true)
 			Expect(err).To(BeNil())
 			flowExtras = NewFlowExtrasRef(muWithOrigSourceIPs, testMaxBoundedSetSize)
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
+			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, &flowStats, flowExtras, startTime, endTime, false, false)
 			expectedFlowLog = "1510948860 1510948920 net - - pvt - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - [1.0.0.1] 1 - - - - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 		})
 	})
 })
 
-func testSerialize(fm FlowMeta, fl FlowLabels, fp FlowPolicies, fs FlowStats, fe flowExtrasRef, st, et time.Time, labels bool, policies bool) string {
-	psbn := make(map[string]FlowStats)
+func testSerialize(fm FlowMeta, fl FlowLabels, fp FlowPolicies, fs *FlowStats, fe flowExtrasRef, st, et time.Time, labels bool, policies bool) string {
+	psbn := make(map[string]*FlowStats)
 	psbn["-"] = fs
+
 	fsbyp := FlowStatsByProcess{
 		statsByProcessName: psbn,
 	}

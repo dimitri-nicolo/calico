@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018,2020-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -56,12 +56,12 @@ func expectRuleAggregates(
 var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 	var pa *PolicyRulesAggregator
 	mt := &mockTime{}
-	registry := prometheus.NewRegistry()
 	BeforeEach(func() {
 		// Create a PolicyRulesAggregator
 		pa = NewPolicyRulesAggregator(retentionTime, "testHost")
-		pa.timeNowFn = mt.getMockTime
+		registry := prometheus.NewRegistry()
 		pa.RegisterMetrics(registry)
+		pa.timeNowFn = mt.getMockTime
 	})
 	AfterEach(func() {
 		counterRulePackets.Reset()

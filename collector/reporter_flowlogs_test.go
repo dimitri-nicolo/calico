@@ -412,7 +412,7 @@ var _ = Describe("FlowLog per minute verification", func() {
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 
-			Expect(GetAndResetFlowsPerMinute()).Should(Equal(0.0))
+			Expect(cr.GetAndResetFlowLogsAvgPerMinute()).Should(Equal(0.0))
 		})
 		It("Usage report is triggered post flushIntervalDuration", func() {
 			By("Triggering report post flushIntervalDuration by mocking flushInterval")
@@ -429,8 +429,51 @@ var _ = Describe("FlowLog per minute verification", func() {
 			cr.Report(muNoConn1Rule1AllowUpdate)
 			time.Sleep(1 * time.Second)
 
-			Expect(GetAndResetFlowsPerMinute()).Should(BeNumerically(">", 0))
+			Expect(cr.GetAndResetFlowLogsAvgPerMinute()).Should(BeNumerically(">", 0))
 		})
+	})
+})
+
+var _ = Describe("FlowLogAvg reporting for a FlowLogReporter", func() {
+	var (
+		cr *FlowLogsReporter
+		ca FlowLogAggregator
+		cl cloudwatchlogsiface.CloudWatchLogsAPI
+	)
+
+	BeforeEach(func() {
+		cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
+		ca = NewFlowLogAggregator()
+		ca.IncludePolicies(true)
+		cd := NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+		ds := map[string]LogDispatcher{CWDispatcher: cd}
+		cr = NewFlowLogsReporter(ds, flushInterval, nil, false, &NoOpLogOffset{})
+	})
+
+	It("updateFlowLogsAvg does not cause a data race contention  with resetFlowLogsAvg", func() {
+		previousTotal := 10
+		newTotal := previousTotal + 5
+
+		cr.updateFlowLogsAvg(previousTotal)
+
+		var timeResetStart time.Time
+		var timeResetEnd time.Time
+
+		time.AfterFunc(2*time.Second, func() {
+			timeResetStart = time.Now()
+			cr.resetFlowLogsAvg()
+			timeResetEnd = time.Now()
+		})
+
+		// ok  update is a little after resetFlowLogsAvg because feedupdate has some preprocesssing
+		// before ti accesses flowAvg
+		time.AfterFunc(2*time.Second+10*time.Millisecond, func() {
+			cr.updateFlowLogsAvg(newTotal)
+		})
+
+		Eventually(func() int { return cr.flowLogAvg.totalFlows }, "6s", "2s").Should(Equal(newTotal))
+		Expect(cr.flowLogAvg.lastReportTime.Before(timeResetEnd)).To(BeTrue())
+		Expect(cr.flowLogAvg.lastReportTime.After(timeResetStart)).To(BeTrue())
 	})
 })
 

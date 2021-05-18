@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018, 2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -224,6 +224,7 @@ func (pa *PolicyRulesAggregator) markRuleAggregateForDeletion(key RuleAggregateK
 // supplied key.
 func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey) {
 	log.WithField("key", key).Debug("Cleaning up rule aggregate metric previously marked to be deleted.")
+
 	_, ok := pa.ruleAggStats[key]
 	if !ok {
 		// Nothing to do here.
@@ -246,5 +247,6 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 		counterRuleBytes.Delete(pbInLabels)
 		counterRuleConns.Delete(cLabels)
 	}
+
 	delete(pa.ruleAggStats, key)
 }
