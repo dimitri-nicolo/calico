@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -77,6 +78,33 @@ func main() {
 	}
 }
 
+func getPreDNATDest(c net.Conn) net.Addr {
+	tcpConn, ok := c.(*net.TCPConn)
+	if !ok {
+		log.Fatalf("Connection of type %T", c)
+	}
+
+	f, err := tcpConn.File()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to get listener fd")
+	}
+	defer f.Close()
+
+	// GetsockoptIPv6Mreq returns more bytes then we want. First 16 as a slice - it is a hack that works ;-)
+	// The underlying getsockopt is unfortunately, who knows why, unexported :'(
+	addr, err := syscall.GetsockoptIPv6Mreq(int(f.Fd()), syscall.IPPROTO_IP, 80 /* SO_ORIGINAL_DST */)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to get SO_ORIGINAL_DST")
+	}
+
+	var ret net.TCPAddr
+
+	ret.Port = int(binary.BigEndian.Uint16(addr.Multiaddr[2:4]))
+	ret.IP = net.IP(addr.Multiaddr[4:8])
+
+	return &ret
+}
+
 func handleConnection(down net.Conn) {
 	defer down.Close()
 
@@ -96,12 +124,6 @@ func handleConnection(down net.Conn) {
 		log.WithError(err).Fatal("Failed to create TCP socket")
 	}
 
-	/*
-		if err = syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-			log.WithError(err).Fatal("Failed create TCP socket")
-		}
-	*/
-
 	if err = syscall.SetsockoptInt(s, syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
 		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on socket")
 	}
@@ -117,11 +139,13 @@ func handleConnection(down net.Conn) {
 	fd := os.NewFile(uintptr(s), fmt.Sprintf("proxy-conn-%s-%s", down.LocalAddr(), down.RemoteAddr()))
 	up, err := net.FileConn(fd)
 	if err != nil {
-		log.WithError(err).Fatalf("Failed to conver socket to connection %v - %v", clientAddr, serverAddr)
+		log.WithError(err).Fatalf("Failed to convert socket to connection %v - %v", clientAddr, serverAddr)
 	}
 	defer up.Close()
 
-	log.Infof("Connection from %s to %s", up.LocalAddr(), up.RemoteAddr())
+	preDNATDest := getPreDNATDest(down)
+
+	log.Infof("Proxying from %s to %s orig dest %s", down.RemoteAddr(), up.RemoteAddr(), preDNATDest)
 	proxyConnection(down, up)
 }
 
