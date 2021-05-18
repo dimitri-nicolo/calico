@@ -66,56 +66,63 @@ func main() {
 	f.Close()
 
 	for {
+		log.Infof("Accepting on port %d", port)
 		down, err := listener.Accept()
 		if err != nil {
 			log.WithError(err).Errorf("Failed to accept connection")
 			continue
 		}
 
-		go func() {
-			clientNetAddr := down.LocalAddr().(*net.TCPAddr)
-			clientIP := [4]byte{}
-			copy(clientIP[:], clientNetAddr.IP.To4())
-			clientAddr := syscall.SockaddrInet4{Addr: clientIP, Port: 0 /* pick a random port */}
-
-			serverNetAddr := down.RemoteAddr().(*net.TCPAddr)
-			serverIP := [4]byte{}
-			copy(serverIP[:], serverNetAddr.IP.To4())
-			serverAddr := syscall.SockaddrInet4{Addr: serverIP, Port: serverNetAddr.Port}
-
-			s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
-			if err != nil {
-				log.WithError(err).Fatal("Failed to create TCP socket")
-			}
-
-			/*
-				if err = syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
-					log.WithError(err).Fatal("Failed create TCP socket")
-				}
-			*/
-
-			if err = syscall.SetsockoptInt(s, syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
-				log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on socket")
-			}
-
-			if err = syscall.Bind(s, &clientAddr); err != nil {
-				log.WithError(err).Fatalf("Failed to bind socket to %v", clientAddr)
-			}
-
-			if err = syscall.Connect(s, &serverAddr); err != nil {
-				log.WithError(err).Fatalf("Failed to connect socket to %v", serverAddr)
-			}
-
-			fd := os.NewFile(uintptr(s), fmt.Sprintf("proxy-conn-%s-%s", down.LocalAddr(), down.RemoteAddr()))
-			up, err := net.FileConn(fd)
-			if err != nil {
-				log.WithError(err).Fatalf("Failed to conver socket to connection %v - %v", clientAddr, serverAddr)
-			}
-
-			log.Infof("Connection from %s to %s", down.LocalAddr(), down.RemoteAddr())
-			proxyConnection(down, up)
-		}()
+		go handleConnection(down)
 	}
+}
+
+func handleConnection(down net.Conn) {
+	defer down.Close()
+
+	log.Infof("Accepted Connection from %s to %s", down.RemoteAddr(), down.LocalAddr())
+	clientNetAddr := down.RemoteAddr().(*net.TCPAddr)
+	clientIP := [4]byte{}
+	copy(clientIP[:], clientNetAddr.IP.To4())
+	clientAddr := syscall.SockaddrInet4{Addr: clientIP, Port: 0 /* pick a random port */}
+
+	serverNetAddr := down.LocalAddr().(*net.TCPAddr)
+	serverIP := [4]byte{}
+	copy(serverIP[:], serverNetAddr.IP.To4())
+	serverAddr := syscall.SockaddrInet4{Addr: serverIP, Port: serverNetAddr.Port}
+
+	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create TCP socket")
+	}
+
+	/*
+		if err = syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+			log.WithError(err).Fatal("Failed create TCP socket")
+		}
+	*/
+
+	if err = syscall.SetsockoptInt(s, syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
+		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on socket")
+	}
+
+	if err = syscall.Bind(s, &clientAddr); err != nil {
+		log.WithError(err).Fatalf("Failed to bind socket to %v", clientAddr)
+	}
+
+	if err = syscall.Connect(s, &serverAddr); err != nil {
+		log.WithError(err).Fatalf("Failed to connect socket to %v", serverAddr)
+	}
+
+	fd := os.NewFile(uintptr(s), fmt.Sprintf("proxy-conn-%s-%s", down.LocalAddr(), down.RemoteAddr()))
+	up, err := net.FileConn(fd)
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to conver socket to connection %v - %v", clientAddr, serverAddr)
+	}
+	defer up.Close()
+
+	log.Infof("Connection from %s to %s", up.LocalAddr(), up.RemoteAddr())
+	proxyConnection(down, up)
 }
 
 func proxyConnection(down, up net.Conn) {
@@ -131,4 +138,6 @@ func proxyConnection(down, up net.Conn) {
 		io.Copy(up, down)
 		wg.Done()
 	}()
+
+	wg.Wait()
 }

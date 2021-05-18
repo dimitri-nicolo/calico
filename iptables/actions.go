@@ -100,13 +100,25 @@ func (g RejectAction) String() string {
 	return "Reject"
 }
 
+type TraceAction struct {
+	TypeTrace struct{}
+}
+
+func (g TraceAction) ToFragment(features *Features) string {
+	return "--jump TRACE"
+}
+
+func (g TraceAction) String() string {
+	return "Trace"
+}
+
 type LogAction struct {
 	Prefix  string
 	TypeLog struct{}
 }
 
 func (g LogAction) ToFragment(features *Features) string {
-	return fmt.Sprintf(`--jump LOG --log-prefix "%s: " --log-level 5`, g.Prefix)
+	return fmt.Sprintf(`--jump LOG --log-prefix "%s: "`, g.Prefix)
 }
 
 func (g LogAction) String() string {

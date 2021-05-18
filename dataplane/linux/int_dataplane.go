@@ -1740,9 +1740,18 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{
 				{
 					Comment: []string{"Mark any local connection as local for return"},
-					Action:  iptables.SaveConnMarkAction{SaveMask: mark},
+					Action:  iptables.SetConnMarkAction{Mark: mark, Mask: mark},
 				},
 			})
+			t.InsertOrAppendRules("INPUT", []iptables.Rule{
+				{
+					Comment: []string{"Mark any local connection as local for return"},
+					Action:  iptables.SetConnMarkAction{Mark: mark, Mask: mark},
+				},
+			})
+
+			// XXX rt and rr should not be GC I guess, so we will need to
+			// XXX maintain a reference
 			rt := routetable.New(
 				nil,
 				4,     // XXX we should for both
@@ -1772,14 +1781,14 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 
 			anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
 			rt.RouteUpdate("lo", routetable.Target{
-				Type: "local",
+				Type: routetable.TargetTypeLocal,
 				CIDR: anyV4,
 			})
 			rt.Apply()
 
 			rr.SetRule(routerule.NewRule(4, 1).
 				GoToTable(0xe0).
-				MatchFWMarkWithMask(0, uint32(mark)),
+				MatchFWMarkWithMask(uint32(mark), uint32(mark)),
 			)
 			rr.Apply()
 		}

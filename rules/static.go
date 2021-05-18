@@ -209,6 +209,19 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *Chai
 func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
 
+	if r.TPROXYMode == "Enabled" {
+		mark := r.IptablesMarkProxy
+
+		inputRules = append(inputRules,
+			Rule{
+				// XXX needs to jump in a proper policy chain XXX
+				Comment: []string{"Accept packets destined to proxy on existing connection"},
+				Match:   Match().MarkMatchesWithMask(mark, mark),
+				Action:  AcceptAction{},
+			},
+		)
+	}
+
 	// Snoop DNS responses to a client directly on this host (e.g. bare metal, or a
 	// host-networked workload).  Place this first as it only snoops and does not accept or
 	// drop.  There are cases where we can snoop some DNS info and the packet is then dropped,
@@ -1092,10 +1105,6 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		tproxyRules := []Rule{
 			{
-				Comment: []string{"Mark packet of a new proxied connection"},
-				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
-			},
-			{
 				Comment: []string{"Divert the TCP connection to proxy"},
 				Match:   Match().Protocol("tcp"),
 				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
@@ -1115,7 +1124,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				// XXX just for prototyping XXX
 				Rules: []Rule{{
 					Comment: []string{"Proxy all tcp port 8090"},
-					Match:   Match().Protocol("tcp"),
+					Match:   Match().Protocol("tcp").DestPorts(8090),
 					Action:  JumpAction{Target: ChainManglePreroutingTPROXY},
 				}},
 			})
