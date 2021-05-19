@@ -101,9 +101,6 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				proxy := tproxy.New(felix, 16001)
 				proxy.Start()
 				proxies = append(proxies, proxy)
-				tcpdump := felix.AttachTCPDump("any")
-				tcpdump.SetLogEnabled(true)
-				tcpdump.Start("-v", "tcp", "port", "8090")
 			}
 
 			createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
