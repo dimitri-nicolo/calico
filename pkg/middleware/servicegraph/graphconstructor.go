@@ -497,6 +497,10 @@ func (s *serviceGraphConstructionData) trackNodes(
 		}
 	}
 
+	// Determine if the non-aggregated node is expanded or expandable.
+	aggrEndpointExpandable := nonAggrEndpointId != ""
+	aggrEndpointExpanded := s.view.Expanded.Endpoints[aggrEndpointId]
+
 	// Combine the aggregated endpoint node - this should  always be available for a flow.
 	if _, ok := s.nodesMap[aggrEndpointId]; !ok {
 		sel := s.selh.GetEndpointNodeSelectors(
@@ -514,7 +518,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 				Namespace:  endpoint.Namespace,
 				Name:       endpoint.NameAggr,
 				Layer:      layerNameEndpoint,
-				Expandable: true,
+				Expandable: aggrEndpointExpandable && !aggrEndpointExpanded,
 				Selectors:  sel.ToNodeSelectors(),
 			},
 			Selectors: sel,
@@ -549,8 +553,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 		groupId = aggrEndpointId
 	}
 
-	// If the endpoint is not Expanded, or is not expandable then add the port if present.
-	if !s.view.Expanded.Endpoints[aggrEndpointId] || nonAggrEndpointId == "" {
+	// If the endpoint is not expandable or expanded then add the port if present.
+	if !aggrEndpointExpandable || !aggrEndpointExpanded {
 		log.Debugf("Group is not expanded or not expandable: %s; %s, %s, %#v", groupId, aggrEndpointId, nonAggrEndpointId, s.view.Expanded.Endpoints)
 
 		if aggrEndpointPortId := idi.GetAggrEndpointPortID(); aggrEndpointPortId != "" {
@@ -583,6 +587,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 		return
 	}
 
+	// The endpoint is expanded and expandable.
 	if _, ok := s.nodesMap[nonAggrEndpointId]; !ok {
 		sel := s.selh.GetEndpointNodeSelectors(
 			idi.Endpoint.Type,
