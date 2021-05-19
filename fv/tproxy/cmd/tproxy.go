@@ -129,11 +129,13 @@ func handleConnection(down net.Conn) {
 	}
 
 	if err = syscall.Bind(s, &clientAddr); err != nil {
-		log.WithError(err).Fatalf("Failed to bind socket to %v", clientAddr)
+		log.WithError(err).Infof("Failed to bind socket to %v", clientAddr)
+		return
 	}
 
 	if err = syscall.Connect(s, &serverAddr); err != nil {
-		log.WithError(err).Fatalf("Failed to connect socket to %v", serverAddr)
+		log.WithError(err).Infof("Failed to connect socket to %v", serverAddr)
+		return
 	}
 
 	fd := os.NewFile(uintptr(s), fmt.Sprintf("proxy-conn-%s-%s", down.LocalAddr(), down.RemoteAddr()))

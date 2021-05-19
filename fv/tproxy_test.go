@@ -147,8 +147,8 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 			for ii := range felixes {
 				// Two workloads on each host so we can check the same host and other host cases.
-				w[ii][0] = addWorkload(true, ii, 0, 8090, nil)
-				w[ii][1] = addWorkload(true, ii, 1, 8090, nil)
+				w[ii][0] = addWorkload(true, ii, 0, 8055, nil)
+				w[ii][1] = addWorkload(true, ii, 1, 8055, nil)
 			}
 
 			var (
@@ -183,20 +183,38 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			_ = k8sClient
 		})
 
-		It("connectivity from all workloads via workload 0's main IP", func() {
-			cc.ExpectSome(w[0][1], w[0][0])
-			cc.ExpectSome(w[1][0], w[0][0])
-			cc.ExpectSome(w[1][1], w[0][0])
-			cc.CheckConnectivity()
+		Context("ClusterIP", func() {
+			clusterIP := "10.101.0.10"
+			BeforeEach(func() {
+				// Mimic the kube-proxy service iptable clusterIP rule.
+				for _, f := range felixes {
+					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+						"-p", "tcp",
+						"-d", clusterIP,
+						"-m", "tcp", "--dport", "8090",
+						"-j", "DNAT", "--to-destination",
+						w[0][0].IP+":8055")
+				}
+			})
 
-			for _, p := range proxies {
-				p.Stop()
-			}
+			It("connectivity from all workloads via ClusterIP", func() {
+				cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
+				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
+				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
+				cc.CheckConnectivity()
 
-			Expect(proxies[0].ConnCount(w[0][1].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
-			Expect(proxies[0].ConnCount(w[1][0].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
-			Expect(proxies[0].ConnCount(w[1][1].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
-			Expect(proxies[1].ConnCount(w[1][0].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
-			Expect(proxies[1].ConnCount(w[1][1].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
+				for _, p := range proxies {
+					p.Stop()
+				}
+
+				// Connection should be proxied on the pod's local node
+				Expect(proxies[0].ConnCount(w[0][1].IP, w[0][0].IP+":8055", clusterIP+":8090")).To(BeNumerically(">", 0))
+				Expect(proxies[1].ConnCount(w[1][0].IP, w[0][0].IP+":8055", clusterIP+":8090")).To(BeNumerically(">", 0))
+				Expect(proxies[1].ConnCount(w[1][1].IP, w[0][0].IP+":8055", clusterIP+":8090")).To(BeNumerically(">", 0))
+
+				// Connection should not be proxied on the backend pod's node
+				Expect(proxies[0].ConnCount(w[1][0].IP, w[0][0].IP+":8055", clusterIP+":8090")).To(Equal(0))
+				Expect(proxies[0].ConnCount(w[1][1].IP, w[0][0].IP+":8055", clusterIP+":8090")).To(Equal(0))
+			})
 		})
 	})
