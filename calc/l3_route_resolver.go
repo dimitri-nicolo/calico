@@ -65,6 +65,7 @@ type L3RouteResolver struct {
 	nodeRoutes             nodeRoutes
 	allPools               map[string]model.IPPool
 	workloadIDToCIDRs      map[model.WorkloadEndpointKey][]cnet.IPNet
+	workloadIDToRefType    map[model.WorkloadEndpointKey]RefType
 	useNodeResourceUpdates bool
 	routeSource            string
 }
@@ -151,6 +152,7 @@ func NewL3RouteResolver(hostname string, callbacks PipelineCallbacks, useNodeRes
 		blockToRoutes:          map[string]set.Set{},
 		allPools:               map[string]model.IPPool{},
 		workloadIDToCIDRs:      map[model.WorkloadEndpointKey][]cnet.IPNet{},
+		workloadIDToRefType:    map[model.WorkloadEndpointKey]RefType{},
 		useNodeResourceUpdates: useNodeResourceUpdates,
 		routeSource:            routeSource,
 		nodeRoutes:             newNodeRoutes(),
@@ -188,40 +190,49 @@ func (c *L3RouteResolver) OnWorkloadUpdate(update api.Update) (_ bool) {
 
 	// Look up the (possibly nil) old CIDRs.
 	oldCIDRs := c.workloadIDToCIDRs[key]
+	oldRefType := c.workloadIDToRefType[key]
 
 	// Get the new CIDRs (again, may be nil if this is a deletion).
 	var newCIDRs []cnet.IPNet
+	var newRefType RefType
 	if update.Value != nil {
 		newWorkload := update.Value.(*model.WorkloadEndpoint)
 		newCIDRs = newWorkload.IPv4Nets
+		if newWorkload.EgressSelector != "" {
+			newRefType = RefTypeWEPEgressGatewayClient
+		} else {
+			newRefType = RefTypeWEP
+		}
 		logrus.WithField("workload", key).WithField("newCIDRs", newCIDRs).Debug("Workload update")
 	}
 
-	if reflect.DeepEqual(oldCIDRs, newCIDRs) {
+	if reflect.DeepEqual(oldCIDRs, newCIDRs) && oldRefType == newRefType {
 		// No change, ignore.
-		logrus.Debug("No change to CIDRs, ignore.")
+		logrus.Debug("No change to CIDRs or ref type, ignore.")
 		return
 	}
 
 	// Incref the new CIDRs.
 	for _, newCIDR := range newCIDRs {
 		cidr := ip.CIDRFromCalicoNet(newCIDR).(ip.V4CIDR)
-		c.trie.AddRef(cidr, key.Hostname, RefTypeWEP)
+		c.trie.AddRef(cidr, key.Hostname, newRefType)
 		c.nodeRoutes.Add(nodenameRoute{key.Hostname, cidr})
 	}
 
 	// Decref the old.
 	for _, oldCIDR := range oldCIDRs {
 		cidr := ip.CIDRFromCalicoNet(oldCIDR).(ip.V4CIDR)
-		c.trie.RemoveRef(cidr, key.Hostname, RefTypeWEP)
+		c.trie.RemoveRef(cidr, key.Hostname, oldRefType)
 		c.nodeRoutes.Remove(nodenameRoute{key.Hostname, cidr})
 	}
 
 	if len(newCIDRs) > 0 {
 		// Only store an entry if there are some CIDRs.
 		c.workloadIDToCIDRs[key] = newCIDRs
+		c.workloadIDToRefType[key] = newRefType
 	} else {
 		delete(c.workloadIDToCIDRs, key)
+		delete(c.workloadIDToRefType, key)
 	}
 
 	return
@@ -686,11 +697,14 @@ func (c *L3RouteResolver) flush() {
 				// multiple workload, or workload and tunnel, or multiple node Refs with the same IP. Since this will be
 				// transient, we can always just use the first entry (and related tunnel entries)
 				rt.DstNodeName = ri.Refs[0].NodeName
-				if ri.Refs[0].RefType == RefTypeWEP {
-					// This is not a tunnel ref, so must be a workload.
+				if ri.Refs[0].RefType == RefTypeWEP || ri.Refs[0].RefType == RefTypeWEPEgressGatewayClient {
+					// This is a workload.
 					if ri.Refs[0].NodeName == c.myNodeName {
 						rt.Type = proto.RouteType_LOCAL_WORKLOAD
 						rt.LocalWorkload = true
+						if ri.Refs[0].RefType == RefTypeWEPEgressGatewayClient {
+							rt.LocalEgressGatewayClient = true
+						}
 					} else {
 						rt.Type = proto.RouteType_REMOTE_WORKLOAD
 					}
@@ -1000,10 +1014,12 @@ type RouteInfo struct {
 type RefType byte
 
 const (
-	RefTypeWEP RefType = iota
+	RefTypeZero RefType = iota
+	RefTypeWEP
 	RefTypeWireguard
 	RefTypeIPIP
 	RefTypeVXLAN
+	RefTypeWEPEgressGatewayClient
 )
 
 type Ref struct {
