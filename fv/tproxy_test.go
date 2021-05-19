@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"sync"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,6 +34,7 @@ import (
 
 	. "github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/tproxy"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 )
@@ -45,10 +45,10 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		var (
 			infra        infrastructure.DatastoreInfra
 			felixes      []*infrastructure.Felix
+			proxies      []*tproxy.TProxy
 			cc           *Checker
 			options      infrastructure.TopologyOptions
 			calicoClient client.Interface
-			tproxyWg     sync.WaitGroup
 		)
 
 		BeforeEach(func() {
@@ -84,10 +84,6 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 		AfterEach(func() {
 			log.Info("AfterEach starting")
-			for _, felix := range felixes {
-				felix.Exec("killall", "tproxy")
-			}
-			tproxyWg.Wait()
 			infra.Stop()
 			log.Info("AfterEach done")
 		})
@@ -102,13 +98,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
 			for _, felix := range felixes {
-				tproxyWg.Add(1)
-				go func(f *infrastructure.Felix) {
-					f.EnsureBinary("tproxy")
-					out, _ := f.ExecCombinedOutput("/tproxy", "16001")
-					log.WithField("output", out).Infof("tproxy at %s", f.Name)
-					tproxyWg.Done()
-				}(felix)
+				proxy := tproxy.New(felix, 16001)
+				proxy.Start()
+				proxies = append(proxies, proxy)
 				tcpdump := felix.AttachTCPDump("any")
 				tcpdump.SetLogEnabled(true)
 				tcpdump.Start("-v", "tcp", "port", "8090")
@@ -199,5 +191,15 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			cc.ExpectSome(w[1][0], w[0][0])
 			cc.ExpectSome(w[1][1], w[0][0])
 			cc.CheckConnectivity()
+
+			for _, p := range proxies {
+				p.Stop()
+			}
+
+			Expect(proxies[0].ConnCount(w[0][1].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
+			Expect(proxies[0].ConnCount(w[1][0].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
+			Expect(proxies[0].ConnCount(w[1][1].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
+			Expect(proxies[1].ConnCount(w[1][0].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
+			Expect(proxies[1].ConnCount(w[1][1].IP, w[0][0].IP+":8090", w[0][0].IP+":8090")).To(BeNumerically(">", 0))
 		})
 	})

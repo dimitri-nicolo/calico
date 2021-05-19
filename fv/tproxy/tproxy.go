@@ -12,156 +12,138 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package tproxy
 
 import (
-	"encoding/binary"
-	"fmt"
+	"bufio"
 	"io"
-	"net"
-	"os"
+	"os/exec"
+	"regexp"
 	"strconv"
-	"sync"
-	"syscall"
+	"strings"
+	"time"
 
-	"github.com/docopt/docopt-go"
+	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/utils"
 )
 
-const usage = `tproxy: acts as a transparent proxy for Felix fv testing.
+var connRegexp = regexp.MustCompile(`Proxying from (\d+\.\d+\.\d+\.\d+):\d+ to (\d+\.\d+\.\d+\.\d+:\d+) orig dest (\d+\.\d+\.\d+\.\d+:\d+)`)
 
-Usage:
-  tproxy <port>`
+type TProxy struct {
+	cmd              *exec.Cmd
+	out              io.ReadCloser
+	err              io.ReadCloser
+	listeningStarted chan struct{}
 
-func main() {
-	log.SetLevel(log.InfoLevel)
-	args, err := docopt.ParseArgs(usage, nil, "v0.1")
+	cname string
+	port  uint16
+
+	connections map[ConnKey]int
+}
+
+type ConnKey struct {
+	ClientIP      string
+	ServiceIPPort string
+	PodIPPort     string
+}
+
+func New(f *infrastructure.Felix, port uint16) *TProxy {
+	f.EnsureBinary("tproxy")
+	return &TProxy{
+		cname: f.Name,
+		port:  port,
+
+		listeningStarted: make(chan struct{}),
+
+		connections: make(map[ConnKey]int),
+	}
+}
+
+func (t *TProxy) Start() {
+	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy", strconv.Itoa(int(t.port)))
+
+	var err error
+	t.out, err = t.cmd.StdoutPipe()
+	Expect(err).NotTo(HaveOccurred())
+
+	t.err, err = t.cmd.StderrPipe()
+	Expect(err).NotTo(HaveOccurred())
+
+	go t.readStdout()
+	go t.readStderr()
+
+	err = t.cmd.Start()
+
+	select {
+	case <-t.listeningStarted:
+	case <-time.After(60 * time.Second):
+		ginkgo.Fail("Failed to start tproxy: it never reported that it was listening")
+	}
+
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func (t *TProxy) Stop() {
+	err := t.cmd.Process.Kill()
 	if err != nil {
-		println(usage)
-		log.WithError(err).Fatal("Failed to parse usage")
+		log.WithError(err).Error("Failed to kill tproxy; maybe it failed to start?")
+	}
+}
+
+func (t *TProxy) readStdout() {
+	s := bufio.NewScanner(t.out)
+	for s.Scan() {
+		line := s.Text()
+
+		log.Infof("[tproxy %s] %s", t.cname, line)
+	}
+	log.WithError(s.Err()).Info("TProxy stdout finished")
+}
+
+func (t *TProxy) readStderr() {
+	defer ginkgo.GinkgoRecover()
+
+	s := bufio.NewScanner(t.err)
+	closedChan := false
+	safeClose := func() {
+		if !closedChan {
+			close(t.listeningStarted)
+			closedChan = true
+		}
 	}
 
-	log.WithField("args", args).Info("Parsed arguments")
+	listening := false
 
-	port, err := strconv.Atoi(args["<port>"].(string))
-	if err != nil {
-		log.WithError(err).Fatal("port not a number")
-	}
+	defer func() {
+		Expect(listening).To(BeTrue())
+		safeClose()
+	}()
 
-	listener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: port})
-	if err != nil {
-		log.WithError(err).Fatalf("Failed to listen on port %d", port)
-	}
-
-	f, err := listener.File()
-	if err != nil {
-		log.WithError(err).Fatal("Failed to get listener fd")
-	}
-
-	if err = syscall.SetsockoptInt(int(f.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
-		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on listener")
-	}
-
-	log.Infof("Listening on port %d", port)
-
-	f.Close()
-
-	for {
-		log.Infof("Accepting on port %d", port)
-		down, err := listener.Accept()
-		if err != nil {
-			log.WithError(err).Errorf("Failed to accept connection")
+	for s.Scan() {
+		line := s.Text()
+		log.Infof("[tproxy %s] ERR: %s", t.cname, line)
+		if !listening && strings.Contains(line, "Listening") {
+			listening = true
+			safeClose()
 			continue
 		}
 
-		go handleConnection(down)
+		m := connRegexp.FindStringSubmatch(line)
+		if len(m) == 4 {
+			t.connections[ConnKey{ClientIP: m[1], PodIPPort: m[2], ServiceIPPort: m[3]}]++
+		}
 	}
+	log.WithError(s.Err()).Info("TProxy stderr finished")
 }
 
-func getPreDNATDest(c net.Conn) net.Addr {
-	tcpConn, ok := c.(*net.TCPConn)
-	if !ok {
-		log.Fatalf("Connection of type %T", c)
-	}
-
-	f, err := tcpConn.File()
-	if err != nil {
-		log.WithError(err).Fatal("Failed to get listener fd")
-	}
-	defer f.Close()
-
-	// GetsockoptIPv6Mreq returns more bytes then we want. First 16 as a slice - it is a hack that works ;-)
-	// The underlying getsockopt is unfortunately, who knows why, unexported :'(
-	addr, err := syscall.GetsockoptIPv6Mreq(int(f.Fd()), syscall.IPPROTO_IP, 80 /* SO_ORIGINAL_DST */)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to get SO_ORIGINAL_DST")
-	}
-
-	var ret net.TCPAddr
-
-	ret.Port = int(binary.BigEndian.Uint16(addr.Multiaddr[2:4]))
-	ret.IP = net.IP(addr.Multiaddr[4:8])
-
-	return &ret
+func (t *TProxy) ConnCount(client, pod, service string) int {
+	return t.connections[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
 }
 
-func handleConnection(down net.Conn) {
-	defer down.Close()
-
-	log.Infof("Accepted Connection from %s to %s", down.RemoteAddr(), down.LocalAddr())
-	clientNetAddr := down.RemoteAddr().(*net.TCPAddr)
-	clientIP := [4]byte{}
-	copy(clientIP[:], clientNetAddr.IP.To4())
-	clientAddr := syscall.SockaddrInet4{Addr: clientIP, Port: 0 /* pick a random port */}
-
-	serverNetAddr := down.LocalAddr().(*net.TCPAddr)
-	serverIP := [4]byte{}
-	copy(serverIP[:], serverNetAddr.IP.To4())
-	serverAddr := syscall.SockaddrInet4{Addr: serverIP, Port: serverNetAddr.Port}
-
-	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create TCP socket")
-	}
-
-	if err = syscall.SetsockoptInt(s, syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
-		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on socket")
-	}
-
-	if err = syscall.Bind(s, &clientAddr); err != nil {
-		log.WithError(err).Fatalf("Failed to bind socket to %v", clientAddr)
-	}
-
-	if err = syscall.Connect(s, &serverAddr); err != nil {
-		log.WithError(err).Fatalf("Failed to connect socket to %v", serverAddr)
-	}
-
-	fd := os.NewFile(uintptr(s), fmt.Sprintf("proxy-conn-%s-%s", down.LocalAddr(), down.RemoteAddr()))
-	up, err := net.FileConn(fd)
-	if err != nil {
-		log.WithError(err).Fatalf("Failed to convert socket to connection %v - %v", clientAddr, serverAddr)
-	}
-	defer up.Close()
-
-	preDNATDest := getPreDNATDest(down)
-
-	log.Infof("Proxying from %s to %s orig dest %s", down.RemoteAddr(), up.RemoteAddr(), preDNATDest)
-	proxyConnection(down, up)
-}
-
-func proxyConnection(down, up net.Conn) {
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		io.Copy(down, up)
-		wg.Done()
-	}()
-
-	go func() {
-		io.Copy(up, down)
-		wg.Done()
-	}()
-
-	wg.Wait()
+func (t *TProxy) Connections() map[ConnKey]int {
+	return t.connections
 }
