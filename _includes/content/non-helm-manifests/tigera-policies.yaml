@@ -426,6 +426,12 @@ spec:
     destination:
       # Egress access for BGP metrics
       ports: [9900]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # Egress access to alertmanager
+      selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
+      ports: [9093]
 ---
 
 # This manifest creates a network policy to allow the prometheus-operator
