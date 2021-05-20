@@ -758,15 +758,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
+	ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
+	ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
+	dp.ipSets = append(dp.ipSets, ipSetsV6)
+
 	if config.RulesConfig.TPROXYMode == "Enabled" {
 		maxsize := 1000
 		ipSetsV4.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
 			[]string{"10.101.0.10,tcp:8090"},
 		)
-		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
-		dp.ipSets = append(dp.ipSets, ipSetsV6)
 		ipSetsV6.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
 			[]string{},
@@ -1064,9 +1065,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			iptablesOptions,
 		)
 
-		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
-		dp.ipSets = append(dp.ipSets, ipSetsV6)
 		dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV6)
 		dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV6)
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
