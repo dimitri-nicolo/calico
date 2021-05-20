@@ -62,7 +62,7 @@ var _ = Describe("Flow log types tests", func() {
 	Context("FlowStatsByProcess from MetricUpdate", func() {
 		It("stores the correct FlowStatsByProcess when storing process is enabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(muWithProcessName, true, 2)
+			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -98,7 +98,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with same process name but different process ID")
-			fsp.aggregateFlowStatsByProcess(muWithSameProcessNameDifferentID)
+			fsp.aggregateFlowStatsByProcess(&muWithSameProcessNameDifferentID)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats = []FlowProcessReportedStats{
@@ -134,7 +134,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with a different process name and ID")
-			fsp.aggregateFlowStatsByProcess(muWithDifferentProcessNameDifferentID)
+			fsp.aggregateFlowStatsByProcess(&muWithDifferentProcessNameDifferentID)
 			Expect(fsp.statsByProcessName).Should(HaveLen(2))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
@@ -198,7 +198,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with same process name with update type expire")
-			fsp.aggregateFlowStatsByProcess(muWithProcessNameExpire)
+			fsp.aggregateFlowStatsByProcess(&muWithProcessNameExpire)
 			Expect(fsp.statsByProcessName).Should(HaveLen(2))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
@@ -262,7 +262,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("cleaning up the stats for the process name")
-			fsp.aggregateFlowStatsByProcess(muWithSameProcessNameDifferentIDExpire)
+			fsp.aggregateFlowStatsByProcess(&muWithSameProcessNameDifferentIDExpire)
 			fsp.reset()
 			remainingActiveFlowsCount := fsp.gc()
 			Expect(remainingActiveFlowsCount).Should(Equal(1))
@@ -292,7 +292,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("Adding a new metric update after a reset, the new process ID information is exported")
-			fsp.aggregateFlowStatsByProcess(muWithProcessName2)
+			fsp.aggregateFlowStatsByProcess(&muWithProcessName2)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
 			expectedReportedStats = []FlowProcessReportedStats{
@@ -330,7 +330,7 @@ var _ = Describe("Flow log types tests", func() {
 
 		It("stores the correct FlowStatsByProcess with including process information is disabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(muWithEndpointMeta, false, 0)
+			fsp := NewFlowStatsByProcess(&muWithEndpointMeta, false, 0)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -366,7 +366,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update")
-			fsp.aggregateFlowStatsByProcess(muWithEndpointMetaWithService)
+			fsp.aggregateFlowStatsByProcess(&muWithEndpointMetaWithService)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats = []FlowProcessReportedStats{
@@ -402,7 +402,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with update type expire")
-			fsp.aggregateFlowStatsByProcess(muWithEndpointMetaExpire)
+			fsp.aggregateFlowStatsByProcess(&muWithEndpointMetaExpire)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats = []FlowProcessReportedStats{
@@ -445,7 +445,7 @@ var _ = Describe("Flow log types tests", func() {
 
 		It("limits the process name information when converting FlowStatsByProcess when process information collection is enabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(muWithProcessName, true, 2)
+			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -481,7 +481,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with different process name")
-			fsp.aggregateFlowStatsByProcess(muWithProcessName2)
+			fsp.aggregateFlowStatsByProcess(&muWithProcessName2)
 			Expect(fsp.statsByProcessName).Should(HaveLen(2))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))
@@ -545,8 +545,8 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with a two additional process names")
-			fsp.aggregateFlowStatsByProcess(muWithProcessName3)
-			fsp.aggregateFlowStatsByProcess(muWithProcessName4)
+			fsp.aggregateFlowStatsByProcess(&muWithProcessName3)
+			fsp.aggregateFlowStatsByProcess(&muWithProcessName4)
 			Expect(fsp.statsByProcessName).Should(HaveLen(4))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process-2"))

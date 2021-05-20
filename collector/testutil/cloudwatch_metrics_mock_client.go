@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018, 2021 Tigera, Inc. All rights reserved.
 
 package testutil
 
@@ -11,10 +11,7 @@ import (
 )
 
 var (
-	fakeToken         = "somerandom-token"
-	emptyStr          = ""
-	lastMetricPutTime time.Time
-	updateFreq        time.Duration
+	fakeToken = "somerandom-token"
 )
 
 type mockCloudWatchMetricsClient struct {
@@ -25,7 +22,6 @@ type mockCloudWatchMetricsClient struct {
 }
 
 func NewMockCloudWatchMetricsClient(cmName, cmNamespace string, uf time.Duration) cloudwatchiface.CloudWatchAPI {
-	updateFreq = uf
 	return &mockCloudWatchMetricsClient{
 		name:       cmName,
 		namespace:  cmNamespace,
@@ -46,7 +42,7 @@ func (m *mockCloudWatchMetricsClient) ListMetrics(input *cloudwatch.ListMetricsI
 	log.Infof("CloudWatch metrics ListMetrics for namespace: %s and metric name: %s", m.namespace, m.name)
 
 	return &cloudwatch.ListMetricsOutput{
-		Metrics: []*cloudwatch.Metric{&cloudwatch.Metric{
+		Metrics: []*cloudwatch.Metric{{
 			Dimensions: m.dimensions,
 			Namespace:  &m.namespace,
 			MetricName: &m.name,
