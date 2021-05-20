@@ -42,6 +42,8 @@ import (
 var _ = infrastructure.DatastoreDescribe("tproxy tests",
 	[]apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
+		const numNodes = 2
+
 		var (
 			infra        infrastructure.DatastoreInfra
 			felixes      []*infrastructure.Felix
@@ -49,17 +51,17 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			cc           *Checker
 			options      infrastructure.TopologyOptions
 			calicoClient client.Interface
+			w            [numNodes][2]*workload.Workload
 		)
 
 		BeforeEach(func() {
-			infra = getInfra()
+			options = infrastructure.DefaultTopologyOptions()
 
 			cc = &Checker{
 				CheckSNAT: true,
 			}
 			cc.Protocol = "tcp"
 
-			options = infrastructure.DefaultTopologyOptions()
 			options.FelixLogSeverity = "debug"
 			options.NATOutgoingEnabled = true
 			options.AutoHEPsEnabled = true
@@ -68,37 +70,14 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			options.IPIPRoutesEnabled = false
 
 			options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
-			options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.101.0.10:8090"
 		})
 
-		JustAfterEach(func() {
-			if CurrentGinkgoTestDescription().Failed {
-				for _, felix := range felixes {
-					felix.Exec("iptables-save", "-c")
-					felix.Exec("ipset", "list", "cali40tproxy-services")
-					felix.Exec("ip", "rule")
-					felix.Exec("ip", "route")
-					felix.Exec("ip", "route", "show", "table", "224")
-					felix.Exec("ip", "route", "show", "cached")
-				}
-			}
-		})
+		JustBeforeEach(func() {
+			infra = getInfra()
 
-		AfterEach(func() {
-			log.Info("AfterEach starting")
-			infra.Stop()
-			log.Info("AfterEach done")
-		})
-
-		const numNodes = 2
-
-		var (
-			w [numNodes][2]*workload.Workload
-		)
-
-		BeforeEach(func() {
 			felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
+			proxies = []*tproxy.TProxy{}
 			for _, felix := range felixes {
 				proxy := tproxy.New(felix, 16001)
 				proxy.Start()
@@ -185,9 +164,57 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			_ = k8sClient
 		})
 
+		JustAfterEach(func() {
+			if CurrentGinkgoTestDescription().Failed {
+				for _, felix := range felixes {
+					felix.Exec("iptables-save", "-c")
+					felix.Exec("ipset", "list", "cali40tproxy-services")
+					felix.Exec("ip", "rule")
+					felix.Exec("ip", "route")
+					felix.Exec("ip", "route", "show", "table", "224")
+					felix.Exec("ip", "route", "show", "cached")
+				}
+			}
+		})
+
+		AfterEach(func() {
+			log.Info("AfterEach starting")
+			infra.Stop()
+			log.Info("AfterEach done")
+		})
+
+		Context("Pod-Pod", func() {
+			BeforeEach(func() {
+				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.65.0.2:8055"
+			})
+
+			It("connectivity from all workloads via ClusterIP", func() {
+				cc.ExpectSome(w[0][1], w[0][0], 8055)
+				cc.ExpectSome(w[1][0], w[0][0], 8055)
+				cc.ExpectSome(w[1][1], w[0][0], 8055)
+				cc.CheckConnectivity()
+
+				for _, p := range proxies {
+					p.Stop()
+				}
+
+				// Connection is proxied both on the client and server node
+				Expect(proxies[0].ConnCount(w[0][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
+				Expect(proxies[0].ConnCount(w[1][0].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
+				Expect(proxies[0].ConnCount(w[1][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
+				Expect(proxies[1].ConnCount(w[1][0].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
+				Expect(proxies[1].ConnCount(w[1][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
+			})
+		})
+
 		Context("ClusterIP", func() {
 			clusterIP := "10.101.0.10"
+
 			BeforeEach(func() {
+				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.101.0.10:8090"
+			})
+
+			It("connectivity from all workloads via ClusterIP", func() {
 				// Mimic the kube-proxy service iptable clusterIP rule.
 				for _, f := range felixes {
 					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
@@ -197,9 +224,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						"-j", "DNAT", "--to-destination",
 						w[0][0].IP+":8055")
 				}
-			})
 
-			It("connectivity from all workloads via ClusterIP", func() {
 				cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
 				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
 				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
