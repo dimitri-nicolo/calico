@@ -390,8 +390,3 @@ Verify that the `managementClusterAddr` in the manifest is correct.
 {: .alert .alert-info}
 
 {% endif %}
-
-{% if include.clusterType == "standalone" %}
-The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:AWS,CNI:AWS,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
-{% endif %}
