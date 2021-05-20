@@ -72,11 +72,20 @@ type GraphNode struct {
 	//   "events": [
 	//     {
 	//       "id": {
-	//         "type":
+	//         "type": "kubernetes"
+	//         "name": "n2",
+	//         "namespace": "n",
 	//       },
-	//       "event_name": "n2",
-	//       "event_namespace": "n",
 	//       "description": "A k8s thing occurred",
+	//       "time": "1973-03-14T00:00:00Z"
+	//     },
+	//     {
+	//       "id": {
+	//         "type": "alert"
+	//         "id": "aifn93hrbv_Ds",
+	//         "name": "policy.pod",
+	//       },
+	//       "description": "A pod was modified occurred",
 	//       "time": "1973-03-14T00:00:00Z"
 	//     }
 	//   ]

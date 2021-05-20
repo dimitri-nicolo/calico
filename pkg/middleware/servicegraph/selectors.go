@@ -44,16 +44,18 @@ func (s SelectorPairs) Or(s2 SelectorPairs) SelectorPairs {
 	}
 }
 
-func NewSelectorHelper(view *ParsedView, aggHelper AggregationHelper) *SelectorHelper {
+func NewSelectorHelper(view *ParsedView, aggHelper AggregationHelper, sgs ServiceGroups) *SelectorHelper {
 	return &SelectorHelper{
-		view:      view,
-		aggHelper: aggHelper,
+		view:          view,
+		aggHelper:     aggHelper,
+		serviceGroups: sgs,
 	}
 }
 
 type SelectorHelper struct {
-	view      *ParsedView
-	aggHelper AggregationHelper
+	view          *ParsedView
+	aggHelper     AggregationHelper
+	serviceGroups ServiceGroups
 }
 
 // GetLayerNodeSelectors returns the selectors for a layer node (as specified on the request).
@@ -87,13 +89,24 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 		Dest: v1.GraphSelectors{
 			L3Flows: v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
 			L7Flows: v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
 		},
 	}
 }
 
-// GetServiceNodeSelectors returns the selectors for a service node.
+// GetServiceNodeSelectors returns the selectors for a service node.  Service nodes are not directly exposed in the
+// API, this is just used for constructing service group selectors and does not need to contain DNS selectors as they
+// are handled separately.
 func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) SelectorPairs {
 	return SelectorPairs{
+		// L7 selectors for service are the same for source and dest since we always have the service when it is
+		// available.
+		Source: v1.GraphSelectors{
+			L7Flows: v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", svc.Name),
+			),
+		},
 		Dest: v1.GraphSelectors{
 			L3Flows: v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
@@ -109,45 +122,45 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 
 // GetServicePortNodeSelectors returns the selectors for a service port node.
 func (s *SelectorHelper) GetServicePortNodeSelectors(sp ServicePort) SelectorPairs {
-	l3Sel := v1.NewGraphSelector(v1.OpAnd,
-		v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.Namespace),
-		v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.Name),
+	svc := s.GetServiceNodeSelectors(sp.NamespacedName)
+
+	if sp.Proto != "tcp" {
+		// L7 flows are TCP only.
+		svc.Source.L7Flows = v1.NewGraphSelector(v1.OpNoMatch)
+		svc.Dest.L7Flows = v1.NewGraphSelector(v1.OpNoMatch)
+	}
+
+	svc.Dest.L3Flows = v1.NewGraphSelector(v1.OpAnd,
+		svc.Dest.L3Flows,
+		v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
+		v1.NewGraphSelector(v1.OpEqual, "proto", sp.Proto),
 	)
-	if sp.Port != "" {
-		l3Sel = v1.NewGraphSelector(v1.OpAnd,
-			l3Sel,
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
-		)
+
+	// Also include the actual service endpoints in the destination selectors. Construct the ORed set of endpoints.
+	var epsp SelectorPairs
+	allEps := make(map[FlowEndpoint]struct{})
+	sg := s.serviceGroups.GetByService(sp.NamespacedName)
+	if sg != nil {
+		for ep := range sg.ServicePorts[sp] {
+			switch ep.Type {
+			case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+				allEps[ep] = struct{}{}
+			}
+		}
+	}
+	for ep := range allEps {
+		_, isAgg := mapGraphNodeTypeToRawType(ep.Type)
+		if isAgg {
+			epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
+		} else {
+			epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
+		}
 	}
 
-	if sp.Port != "" {
-		l3Sel = v1.NewGraphSelector(v1.OpAnd,
-			l3Sel,
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
-		)
-	}
+	// Only include the endpoint dest selectors, not the source.
+	svc.Dest = svc.Dest.Or(epsp.Dest)
 
-	var l7Sel *v1.GraphSelector
-	if sp.Proto == "tcp" {
-		l7Sel = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.Namespace),
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.Name),
-		)
-	}
-
-	return SelectorPairs{
-		Source: v1.GraphSelectors{
-			// L3 source selector is calculated in graphconstructor by ORing together all of the ingress sources to the
-			// service.  We need to do this because flows are recorded at source and dest and may not have service
-			// information available in the dest recorded flows.
-			// L7 service selector is the same for source and dest.
-			L7Flows: l7Sel,
-		},
-		Dest: v1.GraphSelectors{
-			L3Flows: l3Sel,
-			L7Flows: l7Sel,
-		},
-	}
+	return svc
 }
 
 // GetServiceGroupNodeSelectors returns the selectors for a service group node.
@@ -188,7 +201,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 	rawType, isAgg := mapGraphNodeTypeToRawType(epType)
 	namespace = blankToSingleDash(namespace)
 
-	var l3Dest, l7Dest, l3Source, l7Source, dnsSource *v1.GraphSelector
+	var l3Dest, l7Dest, l3Source, l7Source, dnsSource, dnsDest *v1.GraphSelector
 	if rawType == "wep" {
 		// DNS logs are only recorded for wep types.
 		if isAgg {
@@ -196,10 +209,14 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 				v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
 				v1.NewGraphSelector(v1.OpEqual, "client_name_aggr", name),
 			)
+			dnsDest = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "servers.name_aggr", name),
+			)
 		} else {
-			dnsSource = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "client_name", name),
+			dnsDest = v1.NewGraphSelector(v1.OpAnd,
+				v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "servers.name", name),
 			)
 		}
 
@@ -214,7 +231,15 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
 				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
 			)
+		} else {
+			l7Source = v1.NewGraphSelector(v1.OpNoMatch)
+			l7Dest = v1.NewGraphSelector(v1.OpNoMatch)
 		}
+	} else {
+		l7Source = v1.NewGraphSelector(v1.OpNoMatch)
+		l7Dest = v1.NewGraphSelector(v1.OpNoMatch)
+		dnsSource = v1.NewGraphSelector(v1.OpNoMatch)
+		dnsDest = v1.NewGraphSelector(v1.OpNoMatch)
 	}
 
 	if epType == v1.GraphNodeTypeHosts {
@@ -310,6 +335,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 		gsp.Dest = v1.GraphSelectors{
 			L3Flows: l3Dest,
 			L7Flows: l7Dest,
+			DNSLogs: dnsDest,
 		}
 	}
 

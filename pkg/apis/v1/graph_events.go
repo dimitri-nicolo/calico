@@ -17,8 +17,19 @@ const (
 )
 
 type GraphEventID struct {
-	Type           GraphEventType `json:"type,omitempty"`
-	ID             string         `json:"id,omitempty"`
+	// The type of event.
+	// - kubernetes event type corresponds to a kubernetes generated warning event.
+	// - alert is an enterprise generated global alert
+	// all other event types will be generated through intrusion detection and threat defense.
+	Type GraphEventType `json:"type,omitempty"`
+
+	// The ID of the event. Only valid for non-Kubernetes events, this corresponds to the elasticsearch ID of the
+	// event document.
+	ID string `json:"id,omitempty"`
+
+	// The namespaced name of the event.
+	// - For kubernetes event types this refers directly to the namespace and name of the Event resource.
+	// - For global alerts the name will be set to the name of the alert.
 	NamespacedName `json:",inline"`
 }
 
@@ -32,13 +43,38 @@ func (g GraphEventID) String() string {
 // Details of the event. This does not contain the full event details, but the original event may be cross referenced
 // from the ID.
 type GraphEventDetails struct {
-	Severity    *int         `json:"severity,omitempty"`
-	Description string       `json:"description,omitempty"`
-	Timestamp   *metav1.Time `json:"time,omitempty"`
+	// The severity of the event. This is not set for Kubernetes events.
+	Severity *int `json:"severity,omitempty"`
+
+	// A summary of the event.
+	Description string `json:"description,omitempty"`
+
+	// The timestamp that the event (last) occurred at.
+	Timestamp *metav1.Time `json:"time,omitempty"`
 }
 
 // GraphEvents is used to store event details. Stored as a map to handle deduplication, this is JSON marshaled as a
 // slice.
+//   [
+//     {
+//       "id": {
+//         "type": "kubernetes"
+//         "name": "n2",
+//         "namespace": "n",
+//       },
+//       "description": "A k8s thing occurred",
+//       "time": "1973-03-14T00:00:00Z"
+//     },
+//     {
+//       "id": {
+//         "type": "alert"
+//         "id": "aifn93hrbv_Ds",
+//         "name": "policy.pod",
+//       },
+//       "description": "A pod was modified occurred",
+//       "time": "1973-03-14T00:00:00Z"
+//     }
+//   ]
 type GraphEvents map[GraphEventID]GraphEventDetails
 
 type graphEventWithID struct {

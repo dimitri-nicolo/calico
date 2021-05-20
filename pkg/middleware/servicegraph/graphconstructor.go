@@ -54,9 +54,11 @@ func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGra
 			return nil
 		})
 
-		// It's only the L3 selectors that we care about for now.
+		// It's only the L3 and DNS selectors that we care about for now. The L7 selectors will always have the service
+		// available if it is available at all.
 		sourceEdgeSelector = v1.GraphSelectors{
 			L3Flows: sourceEdgeSelector.L3Flows,
+			DNSLogs: sourceEdgeSelector.DNSLogs,
 		}
 
 		// Update the egress edges from the service to use the calculated selector.
@@ -219,7 +221,7 @@ func newServiceGraphConstructor(f *ServiceGraphData, v *ParsedView) *serviceGrap
 		serviceEdges: make(map[v1.GraphNodeID]*serviceEdges),
 		flowData:     f,
 		view:         v,
-		selh:         NewSelectorHelper(v, f.AggregationHelper),
+		selh:         NewSelectorHelper(v, f.AggregationHelper, f.ServiceGroups),
 	}
 }
 

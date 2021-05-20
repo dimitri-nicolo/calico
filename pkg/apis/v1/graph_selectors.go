@@ -62,11 +62,16 @@ func (s GraphSelectors) MarshalJSON() ([]byte, error) {
 type GraphSelectorOperator string
 
 const (
-	OpIn       GraphSelectorOperator = " in "
-	OpAnd      GraphSelectorOperator = " && "
-	OpOr       GraphSelectorOperator = " || "
+	OpAll      GraphSelectorOperator = "*"
+	OpIn       GraphSelectorOperator = " IN "
+	OpAnd      GraphSelectorOperator = " AND "
+	OpOr       GraphSelectorOperator = " OR "
 	OpEqual    GraphSelectorOperator = " == "
 	OpNotEqual GraphSelectorOperator = " != "
+
+	// Special case internal operator used to indicate an impossible match. This is used to simplify the construction
+	// of the selectors.
+	OpNoMatch GraphSelectorOperator = " *NOMATCH* "
 )
 
 type GraphSelector struct {
@@ -81,24 +86,37 @@ type GraphSelector struct {
 }
 
 func (s *GraphSelector) SelectorString() string {
-	return s.selectorString(false)
+	if ss, noMatch := s.selectorString(false); noMatch {
+		return ""
+	} else if ss == "" {
+		return string(OpAll)
+	} else {
+		return ss
+	}
 }
 
-func (s *GraphSelector) selectorString(nested bool) string {
+func (s *GraphSelector) selectorString(nested bool) (sel string, noMatch bool) {
 	if s == nil {
-		return ""
+		return "", false
 	}
 
 	sb := strings.Builder{}
 	switch s.operator {
 	case OpAnd, OpOr:
 		parts := make(map[string]struct{})
+		var foundNoMatch bool
 		var ordered []string
 		for i := 0; i < len(s.selectors); i++ {
-			s := s.selectors[i].selectorString(true)
-			if _, ok := parts[s]; !ok {
-				parts[s] = struct{}{}
-				ordered = append(ordered, s)
+			if ss, noMatch := s.selectors[i].selectorString(true); noMatch {
+				// The process selector indicates "not valid". If this is an OpAnd then then entire selector is not
+				// valid, otherwise we just skip this
+				if s.operator == OpAnd {
+					return "", true
+				}
+				foundNoMatch = true
+			} else if _, ok := parts[ss]; !ok {
+				parts[ss] = struct{}{}
+				ordered = append(ordered, ss)
 			}
 		}
 		sort.Strings(ordered)
@@ -114,6 +132,9 @@ func (s *GraphSelector) selectorString(nested bool) string {
 			if nested {
 				sb.WriteString(")")
 			}
+		} else if foundNoMatch {
+			// We found one or more no matches with no valid selectors, so the full selector is non-matching.
+			return "", true
 		}
 	case OpEqual, OpNotEqual:
 		sb.WriteString(s.key)
@@ -134,8 +155,10 @@ func (s *GraphSelector) selectorString(nested bool) string {
 		}
 		sb.WriteString(value[len(value)-1])
 		sb.WriteString("\"}")
+	case OpNoMatch:
+		return "", true
 	}
-	return sb.String()
+	return sb.String(), false
 }
 
 func NewGraphSelector(op GraphSelectorOperator, parts ...interface{}) *GraphSelector {
@@ -143,6 +166,8 @@ func NewGraphSelector(op GraphSelectorOperator, parts ...interface{}) *GraphSele
 		operator: op,
 	}
 	switch op {
+	case OpNoMatch:
+		// Nothing to extract for the no-match operator.
 	case OpAnd, OpOr:
 		for _, part := range parts {
 			egs, ok := part.(*GraphSelector)
