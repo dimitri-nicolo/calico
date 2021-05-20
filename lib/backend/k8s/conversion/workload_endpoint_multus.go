@@ -326,6 +326,7 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 
 	wep.Spec.Endpoint = podInterface.InsidePodIfaceName
 	wep.Spec.InterfaceName = podInterface.HostSideIfaceName
+	wep.Spec.ServiceAccountName = pod.Spec.ServiceAccountName
 
 	// If this is the default interface the calculations done with the IPs are correct by default, otherwise, some things
 	// need to be recalculated

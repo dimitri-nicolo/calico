@@ -11591,7 +11591,40 @@ func schema_libcalico_go_lib_apis_v3_StagedNetworkPolicySpec(ref common.Referenc
 							},
 						},
 					},
+<<<<<<< HEAD
 					"serviceAccountSelector": {
+=======
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ProtoPort(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProtoPort is combination of protocol, port, and CIDR. Protocol and port must be specified.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"protocol": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"port": {
+						SchemaProps: spec.SchemaProps{
+							Default: 0,
+							Type:    []string{"integer"},
+							Format:  "int32",
+						},
+					},
+					"net": {
+>>>>>>> open-source/master
 						SchemaProps: spec.SchemaProps{
 							Description: "ServiceAccountSelector is an optional field for an expression used to select a pod based on service accounts.",
 							Type:        []string{"string"},
@@ -11599,6 +11632,10 @@ func schema_libcalico_go_lib_apis_v3_StagedNetworkPolicySpec(ref common.Referenc
 						},
 					},
 				},
+<<<<<<< HEAD
+=======
+				Required: []string{"protocol", "port"},
+>>>>>>> open-source/master
 			},
 		},
 		Dependencies: []string{
@@ -11987,6 +12024,13 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 					"endpoint": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The Endpoint name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"serviceAccountName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccountName, if specified, is the name of the k8s ServiceAccount  for this pod.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
