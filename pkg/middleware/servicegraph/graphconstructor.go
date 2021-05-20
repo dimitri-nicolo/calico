@@ -885,7 +885,7 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 		}
 	}
 
-	// Check if the layer is in view, if so add the event to the namespace.
+	// Check if the namespace is in view, if so add the event to the namespace.
 	if ep.Namespace != "" {
 		namespaceId := idi.GetNamespaceID()
 		if _, ok := s.nodesMap[namespaceId]; ok && (nodesInView == nil || nodesInView.Contains(namespaceId)) {

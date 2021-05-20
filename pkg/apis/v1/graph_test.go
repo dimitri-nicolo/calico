@@ -1052,19 +1052,30 @@ var _ = Describe("Graph API tests", func() {
 
 	It("Can parse named selector", func() {
 		By("Parsing a valid set of named selectors")
-		var ns NamedSelectors
-		err := json.Unmarshal([]byte(`{
-			"name": "x == 'a'",
-			"name2": "has(y)"
-		}`), &ns)
+		var ns []NamedSelector
+		err := json.Unmarshal([]byte(`[{
+			"name": "name",
+			"selector": "x == 'a'"
+		}, {
+			"name": "name2",
+			"selector": "has(y)"
+		}]`), &ns)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ns).To(HaveKey("name"))
-		Expect(ns).To(HaveKey("name2"))
+		Expect(ns).To(HaveLen(2))
+		Expect(ns[0].Name).To(Equal("name"))
+		Expect(ns[0].Selector).NotTo(BeNil())
+		Expect(ns[1].Name).To(Equal("name2"))
+		Expect(ns[1].Selector).NotTo(BeNil())
 
 		By("Parsing an invalid set of named selectors")
-		err = json.Unmarshal([]byte(`{
-			"name": "x == a",   // Missing quotes around the a
+		// missing quotes around the "a"
+		err = json.Unmarshal([]byte(`[{
+			"name": "name",
+			"selector": "x == a"
+		}, {
+			"name": "name2",
+			"selector": "has(y)"
 		}`), &ns)
 		Expect(err).To(HaveOccurred())
 	})

@@ -125,10 +125,10 @@ func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err e
 	return
 }
 
-func parseLayers(layers v1.Layers, sgs ServiceGroups) (pn *ParsedLayers, err error) {
+func parseLayers(layers []v1.Layer, sgs ServiceGroups) (pn *ParsedLayers, err error) {
 	pn = newParsedLayers()
-	for layer, ids := range layers {
-		for _, id := range ids {
+	for _, layer := range layers {
+		for _, id := range layer.Nodes {
 			log.Debugf("Processing ID in view: %s", id)
 			if pid, err := ParseGraphNodeID(id, sgs); err != nil {
 				return nil, fmt.Errorf("invalid id '%s': %v", id, err)
@@ -136,28 +136,28 @@ func parseLayers(layers v1.Layers, sgs ServiceGroups) (pn *ParsedLayers, err err
 				switch pid.ParsedIDType {
 				case v1.GraphNodeTypeNamespace:
 					if _, ok := pn.NamespaceToLayer[pid.Endpoint.Namespace]; !ok {
-						pn.NamespaceToLayer[pid.Endpoint.Namespace] = layer
-						pn.LayerToNamespaces[layer] = append(pn.LayerToNamespaces[layer], pid.Endpoint.Namespace)
+						pn.NamespaceToLayer[pid.Endpoint.Namespace] = layer.Name
+						pn.LayerToNamespaces[layer.Name] = append(pn.LayerToNamespaces[layer.Name], pid.Endpoint.Namespace)
 					}
 				case v1.GraphNodeTypeService, v1.GraphNodeTypeServicePort:
 					if sg := sgs.GetByService(pid.Service.NamespacedName); sg != nil {
 						if _, ok := pn.ServiceGroupToLayer[sg]; !ok {
-							pn.ServiceGroupToLayer[sg] = layer
-							pn.LayerToServiceGroups[layer] = append(pn.LayerToServiceGroups[layer], sg)
+							pn.ServiceGroupToLayer[sg] = layer.Name
+							pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], sg)
 						}
 					}
 				case v1.GraphNodeTypeServiceGroup:
 					if _, ok := pn.ServiceGroupToLayer[pid.ServiceGroup]; !ok {
-						pn.ServiceGroupToLayer[pid.ServiceGroup] = layer
-						pn.LayerToServiceGroups[layer] = append(pn.LayerToServiceGroups[layer], pid.ServiceGroup)
+						pn.ServiceGroupToLayer[pid.ServiceGroup] = layer.Name
+						pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], pid.ServiceGroup)
 					}
 				default:
 					// Otherwise assume it's the endpoint we parsed. In this case we also need to include the service
 					// group to disambiguate.
 					id := pid.GetNormalizedID()
 					if _, ok := pn.EndpointToLayer[id]; !ok {
-						pn.EndpointToLayer[id] = layer
-						pn.LayerToEndpoints[layer] = append(pn.LayerToEndpoints[layer], pid.Endpoint)
+						pn.EndpointToLayer[id] = layer.Name
+						pn.LayerToEndpoints[layer.Name] = append(pn.LayerToEndpoints[layer.Name], pid.Endpoint)
 					}
 				}
 			}

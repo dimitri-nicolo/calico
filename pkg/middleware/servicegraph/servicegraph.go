@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
+
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -89,15 +91,26 @@ func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGra
 
 	// Sanity check any user configuration that may potentially break the API. In particular all user defined names
 	// that may be embedded in an ID should adhere to the IDValueRegex.
-	for layer := range sgr.SelectedView.Layers {
-		if !IDValueRegex.MatchString(layer) {
-			return nil, fmt.Errorf("invalid layer name: %s", layer)
+	allLayers := set.New()
+	for _, layer := range sgr.SelectedView.Layers {
+		if !IDValueRegex.MatchString(layer.Name) {
+			return nil, fmt.Errorf("invalid layer name: %s", layer.Name)
 		}
+		if allLayers.Contains(layer.Name) {
+			return nil, fmt.Errorf("duplicate layer name specified: %s", layer.Name)
+		}
+		allLayers.Add(layer.Name)
 	}
-	for aggrName := range sgr.SelectedView.HostAggregationSelectors {
-		if !IDValueRegex.MatchString(aggrName) {
-			return nil, fmt.Errorf("invalid aggregated host name: %s", aggrName)
+
+	allAggrHostnames := set.New()
+	for _, selector := range sgr.SelectedView.HostAggregationSelectors {
+		if !IDValueRegex.MatchString(selector.Name) {
+			return nil, fmt.Errorf("invalid aggregated host name: %s", selector.Name)
 		}
+		if allAggrHostnames.Contains(selector.Name) {
+			return nil, fmt.Errorf("duplicate aggregated host name specified: %s", selector.Name)
+		}
+		allAggrHostnames.Add(selector.Name)
 	}
 
 	return sgr, nil

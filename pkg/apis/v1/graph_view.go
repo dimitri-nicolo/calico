@@ -41,7 +41,7 @@ type GraphView struct {
 	SplitIngressEgress bool `json:"split_ingress_egress"`
 
 	// The set of selectors used to aggregate hosts (Kubernetes nodes).
-	HostAggregationSelectors NamedSelectors `json:"host_aggregation_selectors,omitempty"`
+	HostAggregationSelectors []NamedSelector `json:"host_aggregation_selectors,omitempty"`
 
 	// Followed nodes. These are nodes on the periphery of the graph that we follow further out of the scope of the
 	// graph focus. For example a Node N may have egress connections to X and Y, but neither X nor Y are displayed in
@@ -54,28 +54,34 @@ type GraphView struct {
 	// The layers - this is the set of nodes that will be aggregated into a single layer. If a layer is also
 	// flagged as "expanded" then the nodes will not be aggregated into the layer, but the nodes will be flagged as
 	// being contained in the layer.
-	Layers Layers `json:"layers,omitempty"`
+	Layers []Layer `json:"layers,omitempty"`
 }
 
-type Layers map[string][]GraphNodeID
+type Layer struct {
+	Name  string        `json:"name"`
+	Nodes []GraphNodeID `json:"nodes"`
+}
 
-type NamedSelectors map[string]selector.Selector
+type NamedSelector struct {
+	Name     string            `json:"name"`
+	Selector selector.Selector `json:"selector"`
+}
 
-func (v *NamedSelectors) UnmarshalJSON(b []byte) error {
+func (ns *NamedSelector) UnmarshalJSON(b []byte) error {
 	// Unmarshal into a map[string]string first
-	var m map[string]string
-	if err := json.Unmarshal(b, &m); err != nil {
+	ss := struct {
+		Name     string `json:"name"`
+		Selector string `json:"selector"`
+	}{}
+	if err := json.Unmarshal(b, &ss); err != nil {
 		return err
 	}
 
-	*v = make(map[string]selector.Selector)
-	for n, s := range m {
-		sel, err := selector.Parse(s)
-		if err != nil {
-			return err
-		}
-		(*v)[n] = sel
+	if sel, err := selector.Parse(ss.Selector); err != nil {
+		return err
+	} else {
+		ns.Name = ss.Name
+		ns.Selector = sel
+		return nil
 	}
-
-	return nil
 }

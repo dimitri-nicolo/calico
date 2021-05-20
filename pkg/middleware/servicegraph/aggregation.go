@@ -42,11 +42,11 @@ func GetAggregationHelper(ctx context.Context, client k8s.ClientSet, sgv v1.Grap
 
 	next_node:
 		for _, node := range nodes.Items {
-			for aggrName, s := range sgv.HostAggregationSelectors {
-				if s.Evaluate(node.Labels) {
-					log.Debugf("Host to aggregated name mapping: %s -> %s", node.Name, aggrName)
-					af.nodeNameToAggrName[node.Name] = aggrName
-					af.aggrNodeNameToNodes[aggrName] = append(af.aggrNodeNameToNodes[aggrName], node.Name)
+			for _, selector := range sgv.HostAggregationSelectors {
+				if selector.Selector.Evaluate(node.Labels) {
+					log.Debugf("Host to aggregated name mapping: %s -> %s", node.Name, selector.Name)
+					af.nodeNameToAggrName[node.Name] = selector.Name
+					af.aggrNodeNameToNodes[selector.Name] = append(af.aggrNodeNameToNodes[selector.Name], node.Name)
 					continue next_node
 				}
 			}
