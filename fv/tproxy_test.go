@@ -68,6 +68,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			options.IPIPRoutesEnabled = false
 
 			options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
+			options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.101.0.10:8090"
 		})
 
 		JustAfterEach(func() {

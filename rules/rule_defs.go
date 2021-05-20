@@ -399,8 +399,9 @@ type Config struct {
 
 	DNSTrustedServers []config.ServerPort
 
-	TPROXYMode string
-	TPROXYPort int
+	TPROXYMode  string
+	TPROXYPort  int
+	TPROXYDests []config.ServerPort
 }
 
 var unusedBitsInBPFMode = map[string]bool{

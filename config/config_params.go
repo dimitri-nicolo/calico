@@ -443,8 +443,9 @@ type Config struct {
 	// Configures MTU auto-detection.
 	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
 
-	TPROXYMode string `config:"oneof(Disabled,Enabled);Disabled"`
-	TPROXYPort int    `config:"int;16001"`
+	TPROXYMode  string       `config:"oneof(Disabled,Enabled);Disabled"`
+	TPROXYPort  int          `config:"int;16001"`
+	TPROXYDests []ServerPort `config:"server-list;"`
 
 	// State tracking.
 

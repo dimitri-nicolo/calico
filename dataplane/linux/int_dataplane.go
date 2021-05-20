@@ -764,9 +764,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.RulesConfig.TPROXYMode == "Enabled" {
 		maxsize := 1000
+		svcs := []string{}
+		for _, serverPort := range config.RulesConfig.TPROXYDests {
+			svcs = append(svcs, fmt.Sprintf("%v,tcp:%v", serverPort.IP, serverPort.Port))
+		}
 		ipSetsV4.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			[]string{"10.101.0.10,tcp:8090"},
+			svcs,
 		)
 		ipSetsV6.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},

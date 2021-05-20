@@ -340,6 +340,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				TPROXYMode:        configParams.TPROXYMode,
 				TPROXYPort:        configParams.TPROXYPort,
+				TPROXYDests:       configParams.TPROXYDests,
 				IptablesMarkProxy: markProxy,
 			},
 
