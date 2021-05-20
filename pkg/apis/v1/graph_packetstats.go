@@ -187,9 +187,9 @@ func (l *GraphL3Stats) Combine(l2 *GraphL3Stats) *GraphL3Stats {
 // GraphL7PacketStats contains L7 statistics.
 type GraphL7PacketStats struct {
 	GraphByteStats `json:",inline"`
-	MeanDuration   float64 `json:"mean_duration,omitempty"`
-	MinDuration    float64 `json:"min_duration,omitempty"`
-	MaxDuration    float64 `json:"max_duration,omitempty"`
+	MeanDuration   float64 `json:"mean_duration"`
+	MinDuration    float64 `json:"min_duration"`
+	MaxDuration    float64 `json:"max_duration"`
 	Count          int64   `json:"-"`
 }
 

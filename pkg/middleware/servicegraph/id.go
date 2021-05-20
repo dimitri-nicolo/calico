@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
@@ -406,7 +404,7 @@ func getServiceID(namespace, name string) string {
 
 // GetServiceGroupID returns the service group ID for the supplied service group. This information is actually stored
 // in the service group.
-func GetServiceGroupID(svcs []types.NamespacedName) v1.GraphNodeID {
+func GetServiceGroupID(svcs []v1.NamespacedName) v1.GraphNodeID {
 	if len(svcs) == 0 {
 		return ""
 	}

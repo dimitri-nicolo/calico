@@ -3,7 +3,6 @@ package servicegraph
 
 import (
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -93,7 +92,7 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 }
 
 // GetServiceNodeSelectors returns the selectors for a service node.
-func (s *SelectorHelper) GetServiceNodeSelectors(svc types.NamespacedName) SelectorPairs {
+func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) SelectorPairs {
 	return SelectorPairs{
 		Dest: v1.GraphSelectors{
 			L3Flows: v1.NewGraphSelector(v1.OpAnd,
@@ -155,7 +154,7 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp ServicePort) SelectorPai
 func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) SelectorPairs {
 	// Selectors depend on whether the service endpoints record the flow. If only the source records the flow then we
 	// limit the search based on the service selectors.
-	allSvcs := make(map[types.NamespacedName]struct{})
+	allSvcs := make(map[v1.NamespacedName]struct{})
 	allEps := make(map[FlowEndpoint]struct{})
 
 	for sp, eps := range sg.ServicePorts {

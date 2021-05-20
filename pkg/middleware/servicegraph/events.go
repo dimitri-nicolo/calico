@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -37,15 +35,15 @@ var (
 // is a bit of guesswork here - so the graphconstructor will use this as best effort to track down the appropriate
 // node in the graph.
 type Event struct {
-	GraphEventID   v1.GraphEventID
-	GraphEvent     v1.GraphEvent
-	EventEndpoints []EventEndpoint
+	ID        v1.GraphEventID
+	Details   v1.GraphEventDetails
+	Endpoints []OverlayEndpoint
 }
 
-// The endpoint associated with an event.
+// The endpoint associated with an alert or event that will be overlaid on the service graph.
 // This looks identical to a FlowEndpoint, but this is kept separate to avoid confusion. The Type of this endpoint
 // may include namespaces and services, and so covers a broader range of endpoints than a flow.
-type EventEndpoint struct {
+type OverlayEndpoint struct {
 	Type      v1.GraphNodeType
 	Namespace string
 	Name      string
@@ -203,8 +201,8 @@ func getTigeraEvents(
 		for i := range results {
 			log.Debugf(
 				"-  Event %s: %s",
-				results[i].GraphEventID.TigeraEventID,
-				results[i].GraphEvent.Description,
+				results[i].ID,
+				results[i].Details.Description,
 			)
 		}
 	}
@@ -232,12 +230,7 @@ func getKubernetesEvents(
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.Debug("Kubernetes events:")
 		for i := range results {
-			log.Debugf(
-				"-  Event %s/%s: %s",
-				results[i].GraphEventID.KubernetesEventID.Namespace,
-				results[i].GraphEventID.KubernetesEventID.Name,
-				results[i].GraphEvent.Description,
-			)
+			log.Debugf("-  Event %s: %s", results[i].ID, results[i].Details.Description)
 		}
 	}
 
@@ -279,17 +272,18 @@ func parseKubernetesEvent(rawEvent corev1.Event, t v1.TimeRange, hostEndpointsTo
 	}
 
 	event := &Event{
-		GraphEventID: v1.GraphEventID{
-			KubernetesEventID: types.NamespacedName{
+		ID: v1.GraphEventID{
+			Type: v1.GraphEventTypeKubernetes,
+			NamespacedName: v1.NamespacedName{
 				Namespace: rawEvent.Namespace,
 				Name:      rawEvent.Name,
 			},
 		},
-		GraphEvent: v1.GraphEvent{
+		Details: v1.GraphEventDetails{
 			Description: rawEvent.Message,
 			Timestamp:   chosenTime,
 		},
-		EventEndpoints: ee,
+		Endpoints: ee,
 	}
 	return event
 }
@@ -319,10 +313,12 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 	}
 
 	event := &Event{
-		GraphEventID: v1.GraphEventID{
-			TigeraEventID: id,
+		ID: v1.GraphEventID{
+			Type:           v1.GraphEventType(rawEvent.Type),
+			ID:             id,
+			NamespacedName: v1.NamespacedName{Name: rawEvent.Alert},
 		},
-		GraphEvent: v1.GraphEvent{
+		Details: v1.GraphEventDetails{
 			Description: rawEvent.Description,
 			Timestamp:   &metav1.Time{Time: time.Unix(0, rawEvent.Time)},
 		},
@@ -336,7 +332,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 		0, "",
 		hostEndpointsToHostname,
 	); len(eps) > 0 {
-		event.EventEndpoints = append(event.EventEndpoints, eps...)
+		event.Endpoints = append(event.Endpoints, eps...)
 	}
 	if eps := getEventEndpointsFromFlowEndpoint(
 		"",
@@ -347,7 +343,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 		rawEvent.Protocol,
 		hostEndpointsToHostname,
 	); len(eps) > 0 {
-		event.EventEndpoints = append(event.EventEndpoints, eps...)
+		event.Endpoints = append(event.Endpoints, eps...)
 	}
 	if rawEvent.Record != nil {
 		log.Debugf("Parsing fields from Record: %#v", *rawEvent.Record)
@@ -359,7 +355,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			0, "",
 			hostEndpointsToHostname,
 		); len(eps) > 0 {
-			event.EventEndpoints = append(event.EventEndpoints, eps...)
+			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromFlowEndpoint(
 			rawEvent.Record.DestType,
@@ -370,7 +366,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			rawEvent.Record.Protocol,
 			hostEndpointsToHostname,
 		); len(eps) > 0 {
-			event.EventEndpoints = append(event.EventEndpoints, eps...)
+			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromFlowEndpoint(
 			"wep",
@@ -380,7 +376,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			0, "",
 			hostEndpointsToHostname,
 		); len(eps) > 0 {
-			event.EventEndpoints = append(event.EventEndpoints, eps...)
+			event.Endpoints = append(event.Endpoints, eps...)
 		}
 		if eps := getEventEndpointsFromObject(
 			nonEmptyString(rawEvent.Record.ObjectRefResource, rawEvent.Record.ResponseObjectKind),
@@ -388,12 +384,12 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			rawEvent.Record.ObjectRefName,
 			hostEndpointsToHostname,
 		); len(eps) > 0 {
-			event.EventEndpoints = append(event.EventEndpoints, eps...)
+			event.Endpoints = append(event.Endpoints, eps...)
 		}
 	}
 
 	// Only return event IDs that we are able to correlate to a node.
-	if len(event.EventEndpoints) == 0 {
+	if len(event.Endpoints) == 0 {
 		return nil
 	}
 	return event
@@ -401,7 +397,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 
 func getEventEndpointsFromFlowEndpoint(
 	epType, epNamespace, epName, epNameAggr string, epPort int, proto string, hostEndpointsToHostname map[string]string,
-) []EventEndpoint {
+) []OverlayEndpoint {
 	if epType == "" && epNamespace == "" && epName == "" && epNameAggr == "" {
 		return nil
 	}
@@ -421,7 +417,7 @@ func getEventEndpointsFromFlowEndpoint(
 
 	// If we only have a namespace then return a namespace type since that is the best we can do.
 	if epType == "" && epName == "" && epNameAggr == "" {
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type: v1.GraphNodeTypeNamespace,
 			Name: epNamespace,
 		}}
@@ -440,7 +436,7 @@ func getEventEndpointsFromFlowEndpoint(
 		}
 	}
 
-	eps := make([]EventEndpoint, len(epTypes))
+	eps := make([]OverlayEndpoint, len(epTypes))
 	for i, epType := range epTypes {
 		eventEndpointType := mapRawTypeToGraphNodeType(epType, epName == "")
 		eventEndpointName := epName
@@ -455,7 +451,7 @@ func getEventEndpointsFromFlowEndpoint(
 			}
 		}
 
-		eps[i] = EventEndpoint{
+		eps[i] = OverlayEndpoint{
 			Type:      eventEndpointType,
 			Namespace: epNamespace,
 			Name:      eventEndpointName,
@@ -470,10 +466,10 @@ func getEventEndpointsFromFlowEndpoint(
 // Return an endpoint from a resource.
 func getEventEndpointsFromObject(
 	objResource, objNamespace, objName string, hostEndpointsToHostname map[string]string,
-) []EventEndpoint {
+) []OverlayEndpoint {
 	switch objResource {
 	case "pods", "Pod":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeWorkload,
 			Namespace: objNamespace,
 			Name:      objName,
@@ -482,61 +478,61 @@ func getEventEndpointsFromObject(
 	case "hostendpoints", "HostEndpoint":
 		// For HostEndpoints we set the aggregated name to "*" in line with the processing in flowl3.go and flowl7.go.
 		// Convert the HEP name to the appropriate host that it is configured on.
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:     v1.GraphNodeTypeHostEndpoint,
 			Name:     hostEndpointsToHostname[objName],
 			NameAggr: "*",
 		}}
 	case "networksets", "NetworkSet":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeNetworkSet,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "globalnetworksets", "GlobalNetworkSet":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeNetworkSet,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "replicasets", "ReplicaSet":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeReplicaSet,
 			Namespace: objNamespace,
 			Name:      objName + "-*",
 		}}
 	case "daemonsets", "DaemonSet":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeReplicaSet,
 			Namespace: objNamespace,
 			Name:      objName + "-*",
 		}}
 	case "endpoints", "Endpoints":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeService,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "services", "Service":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeService,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "namespaces", "Namespace":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type: v1.GraphNodeTypeNamespace,
 			Name: objName,
 		}}
 	case "nodes", "Node":
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:     v1.GraphNodeTypeHostEndpoint,
 			Name:     objName,
 			NameAggr: "*",
 		}}
 	}
 	if objNamespace != "" {
-		return []EventEndpoint{{
+		return []OverlayEndpoint{{
 			Type:      v1.GraphNodeTypeNamespace,
 			Namespace: objNamespace,
 		}}

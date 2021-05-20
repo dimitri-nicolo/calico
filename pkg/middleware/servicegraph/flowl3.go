@@ -8,8 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -179,7 +177,7 @@ func (e FlowEdge) String() string {
 }
 
 type ServicePort struct {
-	types.NamespacedName
+	v1.NamespacedName
 	Port  string
 	Proto string
 }
@@ -242,7 +240,7 @@ func GetL3FlowData(
 			Namespace: singleDashToBlank(key[FlowSourceNamespaceIdx].String()),
 		}
 		svc := ServicePort{
-			NamespacedName: types.NamespacedName{
+			NamespacedName: v1.NamespacedName{
 				Name:      singleDashToBlank(key[FlowDestServiceNameIdx].String()),
 				Namespace: singleDashToBlank(key[FlowDestServiceNamespaceIdx].String()),
 			},

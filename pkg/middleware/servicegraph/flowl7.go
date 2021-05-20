@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/types"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
@@ -141,7 +140,7 @@ func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string
 			Namespace: singleDashToBlank(key[l7SourceNamespaceIdx].String()),
 		}
 		svc := ServicePort{
-			NamespacedName: types.NamespacedName{
+			NamespacedName: v1.NamespacedName{
 				Name:      singleDashToBlank(key[l7DestServiceNameIdx].String()),
 				Namespace: singleDashToBlank(key[l7DestServiceNamespaceIdx].String()),
 			},

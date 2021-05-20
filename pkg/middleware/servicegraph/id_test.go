@@ -7,14 +7,12 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 )
 
 var _ = Describe("Elasticsearch script interface tests", func() {
 	var dummySg = &ServiceGroup{
-		ID: GetServiceGroupID([]types.NamespacedName{{
+		ID: GetServiceGroupID([]v1.NamespacedName{{
 			Namespace: "my-service-namespace",
 			Name:      "my-service-name",
 		}}),
@@ -58,7 +56,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 		Entry("ServiceGroup",
 			IDInfo{
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace2", Name: "service-name2"},
 					}),
@@ -136,7 +134,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr:  "n1-ns",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{{
+					ID: GetServiceGroupID([]v1.NamespacedName{{
 						Namespace: "sns", Name: "sn",
 					}}),
 				},
@@ -179,7 +177,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto:     "udp",
 				},
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
@@ -187,7 +185,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
@@ -208,14 +206,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto:     "tcp",
 				},
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
 					Proto: "tcp",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
@@ -235,14 +233,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto:    "sctp",
 				},
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
 					Proto: "sctp",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
@@ -262,14 +260,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto:    "udp",
 				},
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
@@ -289,14 +287,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto:     "udp",
 				},
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
@@ -315,7 +313,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto:    "udp",
 				},
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
@@ -323,7 +321,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
-					ID: GetServiceGroupID([]types.NamespacedName{
+					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
@@ -366,7 +364,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			"svcport/udp/;svc/svc-namespace/svc-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeServicePort,
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "svc-namespace",
 						Name:      "svc-name",
 					},
@@ -378,7 +376,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			"svcport/sctp/po.rt-name;svc/svc-namespace/svc-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeServicePort,
 				Service: ServicePort{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: v1.NamespacedName{
 						Namespace: "svc-namespace",
 						Name:      "svc-name",
 					},
@@ -527,6 +525,6 @@ type mockServiceGroups struct {
 	sg *ServiceGroup
 }
 
-func (m mockServiceGroups) GetByService(svc types.NamespacedName) *ServiceGroup {
+func (m mockServiceGroups) GetByService(svc v1.NamespacedName) *ServiceGroup {
 	return m.sg
 }

@@ -130,14 +130,14 @@ func (ah *aggregationHelper) ProcessEvent(e *Event) {
 		return
 	}
 
-	for i := range e.EventEndpoints {
-		if e.EventEndpoints[i].Type == v1.GraphNodeTypeHostEndpoint {
-			if nameAggr := ah.nodeNameToAggrName[e.EventEndpoints[i].Name]; nameAggr != "" {
-				e.EventEndpoints[i].NameAggr = nameAggr
+	for i := range e.Endpoints {
+		if e.Endpoints[i].Type == v1.GraphNodeTypeHostEndpoint {
+			if nameAggr := ah.nodeNameToAggrName[e.Endpoints[i].Name]; nameAggr != "" {
+				e.Endpoints[i].NameAggr = nameAggr
 			} else {
 				// The node name in the event is not currently configured - include in the "*" bucket.
-				e.EventEndpoints[i].NameAggr = "*"
-				ah.addAdditionalWildcardAggregatedNode(e.EventEndpoints[i].Name)
+				e.Endpoints[i].NameAggr = "*"
+				ah.addAdditionalWildcardAggregatedNode(e.Endpoints[i].Name)
 			}
 		}
 	}

@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -59,7 +58,7 @@ type ServiceGroups interface {
 
 	// Accessor methods used to lookup service groups.
 	Iter(cb func(*ServiceGroup) error) error
-	GetByService(svc types.NamespacedName) *ServiceGroup
+	GetByService(svc v1.NamespacedName) *ServiceGroup
 	GetByEndpoint(ep FlowEndpoint) *ServiceGroup
 }
 
@@ -69,7 +68,7 @@ type ServiceGroup struct {
 	ID v1.GraphNodeID
 
 	// The set of services in this group.
-	Services []types.NamespacedName
+	Services []v1.NamespacedName
 
 	// The NameAggr and Namespace for this service group, and the set of underlying services. The name and/or namespace may
 	// be set to "*" to indicate it has been aggregated from the set of underlying services.
@@ -84,7 +83,7 @@ func (s ServiceGroup) String() string {
 
 type serviceGroups struct {
 	serviceGroups              set.Set
-	serviceGroupsByServiceName map[types.NamespacedName]*ServiceGroup
+	serviceGroupsByServiceName map[v1.NamespacedName]*ServiceGroup
 	serviceGroupsByEndpointKey map[FlowEndpoint]*ServiceGroup
 	finished                   bool
 }
@@ -100,7 +99,7 @@ func (sgs *serviceGroups) Iter(cb func(*ServiceGroup) error) error {
 	return err
 }
 
-func (sgs *serviceGroups) GetByService(svc types.NamespacedName) *ServiceGroup {
+func (sgs *serviceGroups) GetByService(svc v1.NamespacedName) *ServiceGroup {
 	return sgs.serviceGroupsByServiceName[svc]
 }
 
@@ -115,7 +114,7 @@ func NewServiceGroups() ServiceGroups {
 	// Create a ServiceGroups helper.
 	sd := &serviceGroups{
 		serviceGroups:              set.New(),
-		serviceGroupsByServiceName: make(map[types.NamespacedName]*ServiceGroup),
+		serviceGroupsByServiceName: make(map[v1.NamespacedName]*ServiceGroup),
 		serviceGroupsByEndpointKey: make(map[FlowEndpoint]*ServiceGroup),
 	}
 
@@ -183,7 +182,7 @@ func (sd *serviceGroups) FinishMappings() {
 		sg := item.(*ServiceGroup)
 
 		// Sort the services for easier testing.
-		sort.Sort(v1.SortableServices(sg.Services))
+		sort.Sort(v1.SortableNamespacedNames(sg.Services))
 
 		// Construct the id using the IDInfo.
 		sg.ID = GetServiceGroupID(sg.Services)

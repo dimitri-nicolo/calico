@@ -849,7 +849,7 @@ var _ = Describe("Graph API tests", func() {
 		}
 		node.IncludeEvent(GraphEventID{
 			TigeraEventID: "abcde",
-		}, GraphEvent{
+		}, GraphEventDetails{
 			Description: "A thing occurred, not sure when",
 			Timestamp:   nil,
 		})
@@ -859,7 +859,7 @@ var _ = Describe("Graph API tests", func() {
 				Namespace: "n",
 				Name:      "n2",
 			},
-		}, GraphEvent{
+		}, GraphEventDetails{
 			Description: "A k8s thing occurred",
 			Timestamp:   &t,
 		})
@@ -868,7 +868,7 @@ var _ = Describe("Graph API tests", func() {
 				Namespace: "n",
 				Name:      "n2",
 			},
-		}, GraphEvent{
+		}, GraphEventDetails{
 			Description: "A k8s thing occurred",
 			Timestamp:   &t,
 		})

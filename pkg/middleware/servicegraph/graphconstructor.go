@@ -3,7 +3,6 @@ package servicegraph
 
 import (
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
@@ -821,7 +820,7 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 	for _, event := range s.flowData.Events {
 		log.Debugf("Checking event %#v", event)
-		for _, ep := range event.EventEndpoints {
+		for _, ep := range event.Endpoints {
 			log.Debugf("  - Checking event endpoint: %#v", ep)
 			switch ep.Type {
 			case v1.GraphNodeTypeService:
@@ -829,12 +828,12 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 					Type:      ep.Type,
 					Namespace: ep.Namespace,
 				}
-				sg := s.flowData.ServiceGroups.GetByService(types.NamespacedName{
+				sg := s.flowData.ServiceGroups.GetByService(v1.NamespacedName{
 					Namespace: ep.Namespace, Name: ep.Name,
 				})
 				s.maybeOverlayEventID(nodesInView, event, fep, sg)
 			default:
-				// Since FlowEndpoint and EventEndpoint have the same structure can cast between the two.
+				// Since FlowEndpoint and OverlayEndpoint have the same structure can cast between the two.
 				fep := FlowEndpoint(ep)
 				sg := s.flowData.ServiceGroups.GetByEndpoint(fep)
 				s.maybeOverlayEventID(nodesInView, event, fep, sg)
@@ -880,7 +879,7 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 		layerId := idi.GetLayerID()
 		if _, ok := s.nodesMap[layerId]; ok && (nodesInView == nil || nodesInView.Contains(layerId)) {
 			log.Debugf("  - Including event in node %s", layerId)
-			s.nodesMap[layerId].Node.IncludeEvent(event.GraphEventID, event.GraphEvent)
+			s.nodesMap[layerId].Node.IncludeEvent(event.ID, event.Details)
 			return
 		}
 	}
@@ -890,7 +889,7 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 		namespaceId := idi.GetNamespaceID()
 		if _, ok := s.nodesMap[namespaceId]; ok && (nodesInView == nil || nodesInView.Contains(namespaceId)) {
 			log.Debugf("  - Including event in node %s", namespaceId)
-			s.nodesMap[namespaceId].Node.IncludeEvent(event.GraphEventID, event.GraphEvent)
+			s.nodesMap[namespaceId].Node.IncludeEvent(event.ID, event.Details)
 			return
 		}
 	}
@@ -899,7 +898,7 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 	if sg != nil {
 		if _, ok := s.nodesMap[sg.ID]; ok && (nodesInView == nil || nodesInView.Contains(sg.ID)) {
 			log.Debugf("  - Including event in node %s", sg.ID)
-			s.nodesMap[sg.ID].Node.IncludeEvent(event.GraphEventID, event.GraphEvent)
+			s.nodesMap[sg.ID].Node.IncludeEvent(event.ID, event.Details)
 			return
 		}
 	}
@@ -907,14 +906,14 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 	if endpointId != "" {
 		if _, ok := s.nodesMap[endpointId]; ok && (nodesInView == nil || nodesInView.Contains(endpointId)) {
 			log.Debugf("  - Including event in node %s", endpointId)
-			s.nodesMap[endpointId].Node.IncludeEvent(event.GraphEventID, event.GraphEvent)
+			s.nodesMap[endpointId].Node.IncludeEvent(event.ID, event.Details)
 			return
 		}
 	}
 	if aggrEndpointId != "" {
 		if _, ok := s.nodesMap[aggrEndpointId]; ok && (nodesInView == nil || nodesInView.Contains(aggrEndpointId)) {
 			log.Debugf("  - Including event in node %s", aggrEndpointId)
-			s.nodesMap[aggrEndpointId].Node.IncludeEvent(event.GraphEventID, event.GraphEvent)
+			s.nodesMap[aggrEndpointId].Node.IncludeEvent(event.ID, event.Details)
 			return
 		}
 	}
