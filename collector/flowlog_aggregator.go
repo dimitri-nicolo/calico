@@ -186,6 +186,7 @@ func (c *flowLogAggregator) PerFlowProcessLimit(n int) FlowLogAggregator {
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
 func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	defer fa.reportFlowLogStoreMetrics()
+
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no last rule id present")
@@ -201,8 +202,6 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	if err != nil {
 		return err
 	}
-	fa.flMutex.Lock()
-	defer fa.flMutex.Unlock()
 
 	fa.flMutex.Lock()
 	defer fa.flMutex.Unlock()

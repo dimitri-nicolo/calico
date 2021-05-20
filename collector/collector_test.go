@@ -972,7 +972,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	})
 
 	Describe("Test data race", func() {
-		It("getDataAndUpdateEndpoints does not cause a data race contention  with deleteData after deleteData removes it from epstats", func() {
+		It("getDataAndUpdateEndpoints does not cause a data race contention  with deleteDataFromEpStats after deleteDataFromEpStats removes it from epstats", func() {
 			existingTuple := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			testData := c.getDataAndUpdateEndpoints(*existingTuple, false)
 
@@ -981,7 +981,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			var resultantNewTupleData *Data
 
 			time.AfterFunc(2*time.Second, func() {
-				c.deleteData(testData)
+				c.deleteDataFromEpStats(testData)
 			})
 
 			// ok Get is a little after feedupdate because feedupdate has some preprocesssing
