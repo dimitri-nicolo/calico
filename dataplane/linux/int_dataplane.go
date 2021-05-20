@@ -758,6 +758,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
+	if config.RulesConfig.TPROXYMode == "Enabled" {
+		maxsize := 1000
+		ipSetsV4.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
+			[]string{"10.101.0.10,tcp:8090"},
+		)
+		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
+		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
+		dp.ipSets = append(dp.ipSets, ipSetsV6)
+		ipSetsV6.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
+			[]string{},
+		)
+	}
+
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 		// Register map managers first since they create the maps that will be used by the endpoint manager.

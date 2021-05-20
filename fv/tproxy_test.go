@@ -74,6 +74,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			if CurrentGinkgoTestDescription().Failed {
 				for _, felix := range felixes {
 					felix.Exec("iptables-save", "-c")
+					felix.Exec("ipset", "list", "cali40tproxy-services")
 					felix.Exec("ip", "rule")
 					felix.Exec("ip", "route")
 					felix.Exec("ip", "route", "show", "table", "224")
