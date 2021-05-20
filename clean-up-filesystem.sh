@@ -234,6 +234,8 @@ packages_to_keep=(
   libcrypto
   libelf
   libgcc
+  libibverbs
+  libnl
   libmnl
   libnetfilter
   libnfnetlink
