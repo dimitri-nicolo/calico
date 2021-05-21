@@ -204,6 +204,8 @@ func (eds *EtcdDatastoreInfra) DumpErrorData() {
 }
 
 func (eds *EtcdDatastoreInfra) Stop() {
+	eds.bpfLog.StopLogs()
+	eds.etcdContainer.StopLogs()
 	eds.bpfLog.Stop()
 	eds.etcdContainer.Stop()
 }
