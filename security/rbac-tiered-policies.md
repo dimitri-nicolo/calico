@@ -210,12 +210,22 @@ In this example, we give user 'john' permission to read the default tier.
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: tier-default-reader
+  name: tier-default-tier-reader
 rules:
+# To access Calico policy in a tier, the user requires get access to that tier, globally.
 - apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["default"]
   verbs: ["get"]
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tier-default-policy-reader
+rules:
+# This allows get and list of the Calico NetworkPolicy resources in the default tier, namespaced.
 - apiGroups: ["projectcalico.org"]
   resources: ["tier.networkpolicies"]
   resourceNames: ["default.*"]
@@ -223,6 +233,7 @@ rules:
 
 ---
 
+# Applied globally
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -233,7 +244,23 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: tier-default-reader
+  name: tier-default-tier-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# Applied per-namespace
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-tier-default-in-this-namespace
+subjects:
+- kind: User
+  name: john
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tier-default-policy-reader
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -266,19 +293,28 @@ Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: U
 #### User can read policies only in a specific tier
 
 Let's assume that the kubernetes-admin gives user 'john' the permission to read tier, **net-sec**.
-To provide permission to user 'john' to read policies under 'net-sec' tier, use the following `ClusterRole` and `ClusterRolebindings`.
+To provide permission to user 'john' to read policies under 'net-sec' tier, use the following `ClusterRoles`,`ClusterRoleBinding` and `RoleBinding`.
 
 ```yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  # "namespace" omitted since ClusterRoles are not namespaced
-  name: tier-net-sec-reader
+  name: tier-net-sec-tier-reader
 rules:
+# To access Calico policy in a tier, the user requires get access to that tier, globally.
 - apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["net-sec"]
   verbs: ["get"]
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tier-net-sec-policy-reader
+rules:
+# This allows get and list of the Calico NetworkPolicy resources in the net-sec tier, namespaced.
 - apiGroups: ["projectcalico.org"]
   resources: ["tier.networkpolicies"]
   resourceNames: ["net-sec.*"]
@@ -286,6 +322,7 @@ rules:
 
 ---
 
+# Applied globally
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -296,7 +333,23 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: tier-net-sec-reader
+  name: tier-net-sec-tier-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# Applied per-namespace
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-tier-net-sec-in-this-namespace
+subjects:
+- kind: User
+  name: john
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tier-net-sec-policy-reader
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -319,7 +372,7 @@ rules:
 
 #### User can read all policies across all tiers
 
-In this example, the `ClusterRole` is used to provide read access to all policy resource types across all tiers.
+In this example, the `ClusterRole` is used to provide read access to all policy resource types across all tiers. In this case, there is no need to use both `ClusterRoleBindings` and `RoleBindings`, because this will apply across all namespaces to which the user has access
 
 ```yaml
 kind: ClusterRole
@@ -340,6 +393,22 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["tier.networkpolicies","tier.globalnetworkpolicies"]
   verbs: ["get","watch","list"]
+
+---
+
+# Applied globally
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-all-tier
+subjects:
+- kind: User
+  name: john
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: all-tier-policy-reader
+  apiGroup: rbac.authorization.k8s.io
 ```
 
 #### User has full control over NetworkPolicy resources in a specific tier
@@ -360,7 +429,7 @@ resource types in the **net-sec** tier:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: net-sec-tier-policy-reader
+  name: net-sec-tier-tier-reader
 rules:
 # To access Calico policy in a tier, the user requires get access to that tier, globally.
 - apiGroups: ["projectcalico.org"]
@@ -394,7 +463,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: net-sec-tier-policy-reader
+  name: net-sec-tier-tier-reader
   apiGroup: rbac.authorization.k8s.io
 
 ---
