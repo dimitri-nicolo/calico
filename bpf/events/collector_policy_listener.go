@@ -90,7 +90,7 @@ func (c *CollectorPolicyListener) run() {
 			pktInfo.RuleHits[i] = collector.RuleHit{
 				RuleID: rid,
 				Hits:   1,
-				Bytes:  1, // XXX we do not know the bytes, so we at least increment by one
+				Bytes:  int(e.IPSize),
 			}
 
 			// All directions should be the same

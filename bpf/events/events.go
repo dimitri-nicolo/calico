@@ -194,6 +194,7 @@ func ParsePolicyVerdict(data []byte) PolicyVerdict {
 		DstPort:        binary.LittleEndian.Uint16(data[28:30]),
 		PostNATDstPort: binary.LittleEndian.Uint16(data[30:32]),
 		IPProto:        uint8(data[32]),
+		IPSize:         binary.LittleEndian.Uint16(data[34:36]),
 		RulesHit:       binary.LittleEndian.Uint32(data[36:40]),
 	}
 
@@ -223,6 +224,7 @@ type PolicyVerdict struct {
 	PostNATDstPort uint16
 	IPProto        uint8
 	pad8           uint8
+	IPSize         uint16
 	RulesHit       uint32
 	RuleIDs        [state.MaxRuleIDs]uint64
 }

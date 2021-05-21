@@ -82,7 +82,8 @@ struct cali_tc_state {
 	__u8 ip_proto;
 	/* Flags from enum cali_state_flags. */
 	__u8 flags;
-
+	/* Packet size filled from iphdr->tot_len in tc_state_fill_from_iphdr(). */
+	__be16 ip_size;
 	/* Count of rules that were hit while processing policy. */
 	__u32 rules_hit;
 	/* Record of the rule IDs of the rules that were hit. */

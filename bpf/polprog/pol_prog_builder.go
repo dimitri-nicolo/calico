@@ -113,6 +113,7 @@ var (
 	stateOffPostNATDstPort int16 = stateEventHdrSize + 30
 	stateOffIPProto        int16 = stateEventHdrSize + 32
 	stateOffFlags          int16 = stateEventHdrSize + 33
+	stateOffIPSize         int16 = stateEventHdrSize + 34
 
 	stateOffRulesHit int16 = stateEventHdrSize + 36
 	stateOffRuleIDs  int16 = stateEventHdrSize + 40
