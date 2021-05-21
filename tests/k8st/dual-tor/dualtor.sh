@@ -548,7 +548,7 @@ EOF
 
     # Edit the calico-node DaemonSet so we can make calico-node restarts take longer.
     ${KIND} get nodes | xargs -n1 -I {} kubectl label no {} ctd=f
-    ${kubectl} patch ds calico-node -n calico-system --patch $(cat -) <<EOF
+    cat <<EOF | ${kubectl} patch ds calico-node -n calico-system --patch "$(cat -)"
 metadata:
   annotations:
     unsupported.operator.tigera.io/ignore: "true"
