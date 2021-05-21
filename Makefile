@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER=v0.51
+GO_BUILD_VER=v0.52
 
 GIT_USE_SSH = true
 
@@ -110,6 +110,16 @@ ifeq ($(ARCH),amd64)
 BIN_WIN=bin/windows
 build: $(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe
 endif
+# If ARCH is arm based, find the requested version/variant
+ifeq ($(word 1,$(subst v, ,$(ARCH))),arm)
+ARM_VERSION := $(word 2,$(subst v, ,$(ARCH)))
+endif
+# Define go architecture flags to support arm variants
+GOARCH_FLAGS :=-e GOARCH=$(ARCH)
+ifdef ARM_VERSION
+GOARCH_FLAGS :=-e GOARCH=arm -e GOARM=$(ARM_VERSION)
+endif
+
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -120,7 +130,7 @@ $(BIN)/install binary: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	-mkdir -p $(BIN)
 	$(DOCKER_RUN) \
 	-e ARCH=$(ARCH) \
-	-e GOARCH=$(ARCH) \
+	$(GOARCH_FLAGS) \
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
@@ -160,7 +170,7 @@ fetch-cni-bins: $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap 
 
 $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth:
 	mkdir -p $(BIN)
-	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/$(CNI_VERSION)/cni-plugins-linux-$(ARCH)-$(CNI_VERSION).tgz | tar -xz -C $(BIN) ./flannel ./loopback ./host-local ./portmap ./tuning ./bandwidth
+	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/$(CNI_VERSION)/cni-plugins-linux-$(subst v7,,$(ARCH))-$(CNI_VERSION).tgz | tar -xz -C $(BIN) ./flannel ./loopback ./host-local ./portmap ./tuning ./bandwidth
 
 ###############################################################################
 # Static checks
