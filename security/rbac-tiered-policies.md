@@ -131,11 +131,11 @@ RBAC examples include:
 
 - [User can view all policies, and modify policies in the default namespace and tier](#user-can-view-all-policies-and-modify-policies-in-the-default-namespace-and-tier)
 - [User cannot read policies in any tier](#user-cannot-read-policies-in-any-tier)
-- [User can read policies in the default tier](#user-can-read-policies-in-the-default-tier) 
-- [User can read policies only in a specific tier](#user-can-read-policies-only-in-a-specific-tier)
+- [User can read policies in the default tier and namespace](#user-can-read-policies-in-the-default-tier-and-namespace)
+- [User can read policies only in a specific tier and in the default namespace](#user-can-read-policies-only-in-a-specific-tier-and-in-the-default-namespace)
 - [User can view only a specific tier](#user-can-view-only-a-specific-tier)
-- [User can read all policies across all tiers](#user-can-read-all-policies-across-all-tiers)
-- [User has full control over NetworkPolicy resources in a specific tier](#user-has-full-control-over-networkpolicy-resources-in-a-specific-tier)
+- [User can read all policies across all tiers and namespaces](#user-can-read-all-policies-across-all-tiers-and-namespaces)
+- [User has full control over NetworkPolicy resources in a specific tier and in the default namespace](#user-has-full-control-over-networkpolicy-resources-in-a-specific-tier-and-in-the-default-namespace)
 
 #### User can view all policies, and modify policies in the default namespace and tier
 
@@ -202,7 +202,7 @@ Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: U
   ```
 {: .alert .alert-info}
 
-#### User can read policies in the default tier
+#### User can read policies in the default tier and namespace
 
 In this example, we give user 'john' permission to read the default tier.
 
@@ -290,7 +290,7 @@ Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: U
 ```
 {: .no-select-button}
 
-#### User can read policies only in a specific tier
+#### User can read policies only in a specific tier and in the default namespace
 
 Let's assume that the kubernetes-admin gives user 'john' the permission to read tier, **net-sec**.
 To provide permission to user 'john' to read policies under 'net-sec' tier, use the following `ClusterRoles`,`ClusterRoleBinding` and `RoleBinding`.
@@ -370,7 +370,7 @@ rules:
   resourceNames: ["net-sec"]
 ```
 
-#### User can read all policies across all tiers
+#### User can read all policies across all tiers and namespaces
 
 In this example, the `ClusterRole` is used to provide read access to all policy resource types across all tiers. In this case, there is no need to use both `ClusterRoleBindings` and `RoleBindings`, because this will apply across all namespaces to which the user has access.
 
@@ -411,7 +411,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-#### User has full control over NetworkPolicy resources in a specific tier
+#### User has full control over NetworkPolicy resources in a specific tier and in the default namespace
 
 In this example, two `ClusterRole` objects are used to provide full access control of Calico NetworkPolicy
 resource types in the **net-sec** tier:
