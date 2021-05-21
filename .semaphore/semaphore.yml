@@ -18,7 +18,7 @@ global_job_config:
     - name: tigera-dev-ci-pull-credentials
   prologue:
     commands:
-      # Clean up
+      # make some room on the disk
       - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
       # Correct permissions since they are too open by default:
