@@ -89,18 +89,21 @@ func schema_libcalico_go_lib_apis_v1_BGPPeer(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Metadata for a BGPPeer.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification for a BGPPeer.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec"),
 						},
 					},
@@ -122,12 +125,14 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerList(ref common.ReferenceCallback) c
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -136,7 +141,8 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerList(ref common.ReferenceCallback) c
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer"),
 									},
 								},
 							},
@@ -160,12 +166,14 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"scope": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The scope of the peer.  This may be global or node.  A global peer is a BGP device that peers with all Calico nodes.  A node peer is a BGP device that peers with the specified Calico node (specified by the node hostname).",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -180,6 +188,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref common.ReferenceCallbac
 					"peerIP": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The IP address of the peer.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
 						},
 					},
@@ -202,6 +211,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref common.ReferenceCallback) c
 					"asNumber": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The AS Number of the peer.",
+							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
@@ -222,17 +232,20 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec"),
 						},
 					},
 				},
@@ -253,7 +266,8 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfigMetadata(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 				},
@@ -274,19 +288,22 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfigSpec(ref common.ReferenceCal
 				Properties: map[string]spec.Schema{
 					"datastoreType": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"EtcdConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Inline the ectd config fields",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig"),
 						},
 					},
 					"KubeConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Inline the k8s config fields.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig"),
 						},
 					},
@@ -307,19 +324,22 @@ func schema_libcalico_go_lib_apis_v1_EndpointPort(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"protocol": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
 						},
 					},
 					"port": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+							Default: 0,
+							Type:    []string{"integer"},
+							Format:  "int32",
 						},
 					},
 				},
@@ -378,7 +398,8 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
 									},
 								},
 							},
@@ -424,7 +445,8 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
 									},
 								},
 							},
@@ -446,56 +468,65 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"etcdScheme": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdAuthority": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdEndpoints": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdDiscoverySrv": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdUsername": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdPassword": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdKeyFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdCertFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"etcdCACertFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 				},
@@ -514,17 +545,20 @@ func schema_libcalico_go_lib_apis_v1_HostEndpoint(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec"),
 						},
 					},
 				},
@@ -545,12 +579,14 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointList(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -559,7 +595,8 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointList(ref common.ReferenceCallba
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint"),
 									},
 								},
 							},
@@ -583,7 +620,8 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"name": {
@@ -608,8 +646,9 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref common.ReferenceCa
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -645,7 +684,8 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallba
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
 									},
 								},
 							},
@@ -658,8 +698,9 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallba
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -672,7 +713,8 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallba
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
 									},
 								},
 							},
@@ -749,12 +791,14 @@ func schema_libcalico_go_lib_apis_v1_IPNAT(ref common.ReferenceCallback) common.
 					"internalIP": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The internal IP address which must be associated with the owning endpoint via the configured IPNetworks for the endpoint.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
 						},
 					},
 					"externalIP": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The external IP address.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
 						},
 					},
@@ -776,17 +820,20 @@ func schema_libcalico_go_lib_apis_v1_IPPool(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec"),
 						},
 					},
 				},
@@ -807,12 +854,14 @@ func schema_libcalico_go_lib_apis_v1_IPPoolList(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -821,7 +870,8 @@ func schema_libcalico_go_lib_apis_v1_IPPoolList(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool"),
 									},
 								},
 							},
@@ -845,12 +895,14 @@ func schema_libcalico_go_lib_apis_v1_IPPoolMetadata(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"cidr": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
 						},
 					},
 				},
@@ -905,50 +957,58 @@ func schema_libcalico_go_lib_apis_v1_KubeConfig(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"kubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"k8sAPIEndpoint": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"k8sKeyFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"k8sCertFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"k8sCAFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"k8sAPIToken": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"k8sInsecureSkipTLSVerify": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Default: false,
+							Type:    []string{"boolean"},
+							Format:  "",
 						},
 					},
 					"k8sDisableNodePoll": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Default: false,
+							Type:    []string{"boolean"},
+							Format:  "",
 						},
 					},
 				},
@@ -967,17 +1027,20 @@ func schema_libcalico_go_lib_apis_v1_Node(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec"),
 						},
 					},
 				},
@@ -1032,12 +1095,14 @@ func schema_libcalico_go_lib_apis_v1_NodeList(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -1046,7 +1111,8 @@ func schema_libcalico_go_lib_apis_v1_NodeList(ref common.ReferenceCallback) comm
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Node"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Node"),
 									},
 								},
 							},
@@ -1070,7 +1136,8 @@ func schema_libcalico_go_lib_apis_v1_NodeMetadata(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"name": {
@@ -1109,7 +1176,8 @@ func schema_libcalico_go_lib_apis_v1_NodeSpec(ref common.ReferenceCallback) comm
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef"),
 									},
 								},
 							},
@@ -1140,6 +1208,7 @@ func schema_libcalico_go_lib_apis_v1_OrchRef(ref common.ReferenceCallback) commo
 					"orchestrator": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Orchestrator represents the orchestrator using this node.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -1160,17 +1229,20 @@ func schema_libcalico_go_lib_apis_v1_Policy(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec"),
 						},
 					},
 				},
@@ -1191,12 +1263,14 @@ func schema_libcalico_go_lib_apis_v1_PolicyList(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -1205,7 +1279,8 @@ func schema_libcalico_go_lib_apis_v1_PolicyList(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Policy"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Policy"),
 									},
 								},
 							},
@@ -1229,7 +1304,8 @@ func schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"name": {
@@ -1254,8 +1330,9 @@ func schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref common.ReferenceCallback
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -1291,7 +1368,8 @@ func schema_libcalico_go_lib_apis_v1_PolicySpec(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
 									},
 								},
 							},
@@ -1304,7 +1382,8 @@ func schema_libcalico_go_lib_apis_v1_PolicySpec(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
 									},
 								},
 							},
@@ -1313,6 +1392,7 @@ func schema_libcalico_go_lib_apis_v1_PolicySpec(ref common.ReferenceCallback) co
 					"selector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -1338,8 +1418,9 @@ func schema_libcalico_go_lib_apis_v1_PolicySpec(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -1363,17 +1444,20 @@ func schema_libcalico_go_lib_apis_v1_Profile(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec"),
 						},
 					},
 				},
@@ -1394,12 +1478,14 @@ func schema_libcalico_go_lib_apis_v1_ProfileList(ref common.ReferenceCallback) c
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -1408,7 +1494,8 @@ func schema_libcalico_go_lib_apis_v1_ProfileList(ref common.ReferenceCallback) c
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Profile"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Profile"),
 									},
 								},
 							},
@@ -1432,7 +1519,8 @@ func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"name": {
@@ -1449,8 +1537,9 @@ func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallbac
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -1464,8 +1553,9 @@ func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallbac
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -1494,7 +1584,8 @@ func schema_libcalico_go_lib_apis_v1_ProfileSpec(ref common.ReferenceCallback) c
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
 									},
 								},
 							},
@@ -1507,7 +1598,8 @@ func schema_libcalico_go_lib_apis_v1_ProfileSpec(ref common.ReferenceCallback) c
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
 									},
 								},
 							},
@@ -1530,8 +1622,9 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"action": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
 						},
 					},
 					"ipVersion": {
@@ -1568,12 +1661,14 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 					"source": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Source contains the match criteria that apply to source entity.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule"),
 						},
 					},
 					"destination": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Destination contains the match criteria that apply to destination entity.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule"),
 						},
 					},
@@ -1595,17 +1690,20 @@ func schema_libcalico_go_lib_apis_v1_Tier(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec"),
 						},
 					},
 				},
@@ -1626,12 +1724,14 @@ func schema_libcalico_go_lib_apis_v1_TierList(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -1640,7 +1740,8 @@ func schema_libcalico_go_lib_apis_v1_TierList(ref common.ReferenceCallback) comm
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Tier"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Tier"),
 									},
 								},
 							},
@@ -1664,7 +1765,8 @@ func schema_libcalico_go_lib_apis_v1_TierMetadata(ref common.ReferenceCallback) 
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"name": {
@@ -1710,17 +1812,20 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec"),
 						},
 					},
 				},
@@ -1741,12 +1846,14 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
 						},
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
 						},
 					},
 					"items": {
@@ -1755,7 +1862,8 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref common.ReferenceCa
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint"),
 									},
 								},
 							},
@@ -1779,7 +1887,8 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref common.Referen
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
 						},
 					},
 					"name": {
@@ -1825,8 +1934,9 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref common.Referen
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -1855,7 +1965,8 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
 									},
 								},
 							},
@@ -1868,7 +1979,8 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT"),
 									},
 								},
 							},
@@ -1893,8 +2005,9 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -1920,7 +2033,8 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
 									},
 								},
 							},
