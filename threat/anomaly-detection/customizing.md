@@ -113,5 +113,20 @@ Now the [IsolationForest model] from scikit-learn is used in this detector.
     Decrease this parameter if you want fewer alerts.  
     Increase it if you want more alerts.
 
+#### http_connection_spike Job:
+Now the [IsolationForest model] from scikit-learn is used in this detector. 
+-   **AD_HttpConnectionSpike_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train 
+    model, the more estimators needed. 
+-   **AD_HttpConnectionSpike_IsolationForest_score_threshold** - Default: -0.64. It is a negative number! 
+    Decrease this parameter if you want fewer alerts.  
+    Increase it if you want more alerts.
+
+#### dga Job:
+Now the CatBoostClassifier model from the [CatBoost] package is used in this detector. 
+-   **AD_DGA_SCORE_THRESHOLD** - Default: 0.5. It separates the DGA domain names from "good" domain names.
+    Increase this parameter if you want fewer alerts.  
+    Decrease it if you want more alerts.
+
 [Multi-cluster management]: /multicluster/index
 [IsolationForest model]: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html
+[CatBoost]: https://catboost.ai/docs
