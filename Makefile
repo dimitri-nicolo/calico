@@ -13,6 +13,10 @@ GIT_USE_SSH = true
 # This var contains some default values that the common makefile may append to.
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/typha
 
+BUILD_IMAGE=tigera/typha
+
+RELEASE_IMAGES?=
+
 ###############################################################################
 # Download and include Makefile.common
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -45,9 +49,6 @@ endif
 include Makefile.common
 
 ###############################################################################
-BUILD_IMAGE=tigera/typha
-
-RELEASE_IMAGES?=
 
 # Linker flags for building Typha.
 #
