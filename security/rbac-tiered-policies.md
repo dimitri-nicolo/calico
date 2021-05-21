@@ -372,7 +372,7 @@ rules:
 
 #### User can read all policies across all tiers
 
-In this example, the `ClusterRole` is used to provide read access to all policy resource types across all tiers. In this case, there is no need to use both `ClusterRoleBindings` and `RoleBindings`, because this will apply across all namespaces to which the user has access
+In this example, the `ClusterRole` is used to provide read access to all policy resource types across all tiers. In this case, there is no need to use both `ClusterRoleBindings` and `RoleBindings`, because this will apply across all namespaces to which the user has access.
 
 ```yaml
 kind: ClusterRole
