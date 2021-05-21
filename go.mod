@@ -7,11 +7,11 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
-	github.com/projectcalico/cni-plugin v1.11.1-0.20210419132530-70c653b45e92
-	github.com/projectcalico/felix v0.0.0-20210420092053-6cab83fb61ad
+	github.com/projectcalico/cni-plugin v1.11.1-0.20210513162645-527a6aea2a07
+	github.com/projectcalico/felix v0.0.0-20210518114716-31a1f2adfdec
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
-	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
+	github.com/projectcalico/typha v0.7.3-0.20210512195227-b25be64ff3a2
 	github.com/prometheus/client_golang v1.10.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/vishvananda/netlink v1.1.0
