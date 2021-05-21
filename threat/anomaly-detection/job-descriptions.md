@@ -53,3 +53,21 @@ denial of service attack.
 
 The job looks for the pods that have too high latency of the L7 requests. All HTTP requests measured here. 
 This anomaly could indicate a denial of service attack or other attacks.
+
+
+### HTTP connection spike anomaly 
+**Job ID**: `http_connection_spike`
+
+The job looks for the services that get too many HTTP inbound connections.
+This anomaly could indicate a denial of service attack.
+
+
+### Domain Generation Algorithms detection 
+**Job ID**: `dga`
+
+The job looks for the domain names that could be created by the Domain Generation Algorithms.
+The [Domain Generation Algorithms (DGA)] are frequently used by the malware. 
+Generated domain names (URLs) are used to communicate between the malware code and the malware servers.
+Presence of the DGA could indicate presence of the malware code.
+
+[Domain Generation Algorithms (DGA)]: https://en.wikipedia.org/wiki/Domain_generation_algorithm
