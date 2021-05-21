@@ -548,14 +548,16 @@ EOF
 
     # Edit the calico-node DaemonSet so we can make calico-node restarts take longer.
     ${KIND} get nodes | xargs -n1 -I {} kubectl label no {} ctd=f
-    ${kubectl} get ds calico-node -n calico-system -o yaml > ${tmpd}/ds.yaml
-    sed -i '/^  annotations:$/r /dev/stdin' ${tmpd}/ds.yaml <<EOF
+    cat <<EOF | ${kubectl} patch ds calico-node -n calico-system --patch "$(cat -)"
+metadata:
+  annotations:
     unsupported.operator.tigera.io/ignore: "true"
-EOF
-    sed -i '/^      nodeSelector:$/r /dev/stdin' ${tmpd}/ds.yaml <<EOF
+spec:
+  template:
+    spec:
+      nodeSelector:
         ctd: f
 EOF
-    ${kubectl} apply -f ${tmpd}/ds.yaml
 
     # Check readiness again.
     for k8sapp in calico-node calico-kube-controllers calico-typha; do
