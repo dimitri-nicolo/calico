@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	log "github.com/sirupsen/logrus"
@@ -14,53 +15,91 @@ import (
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/authorization"
-	"github.com/tigera/es-proxy/pkg/middleware/common"
+	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service
 // graph in es-proxy. The handler pulls together various components to parse the request, query the flow data,
 // filter and aggregate the flows. All HTTP request processing is handled here.
 
+var (
+	authReviewAttrListEndpoints = []apiv3.AuthorizationReviewResourceAttributes{{
+		APIGroup: "projectcalico.org",
+		Resources: []string{
+			"hostendpoints", "networksets", "globalnetworksets",
+		},
+		Verbs: []string{"list"},
+	}, {
+		APIGroup:  "",
+		Resources: []string{"pods"},
+		Verbs:     []string{"list"},
+	}}
+)
+
 type ServiceGraph interface {
 	Handler() http.HandlerFunc
 }
 
-func NewServiceGraph(elasticClient lmaelastic.Client) ServiceGraph {
+func NewServiceGraph(elasticClient lmaelastic.Client, clientSetFactory k8s.ClientSetFactory) ServiceGraph {
 	return &serviceGraph{
-		flowCache: NewServiceGraphCache(elasticClient),
+		flowCache:        NewServiceGraphCache(elasticClient),
+		clientSetFactory: clientSetFactory,
 	}
 }
 
+// serviceGraph implements the ServiceGraph interface.
 type serviceGraph struct {
 	// Flows cache.
-	flowCache ServiceGraphCache
-	// TODO(rlb): Probably worth caching some data for faster response times.
+	flowCache        ServiceGraphCache
+	clientSetFactory k8s.ClientSetFactory
+}
+
+// RequestData encapsulates data parsed from the request that is shared between the various components that construct
+// the service graph.
+type RequestData struct {
+	request        *v1.ServiceGraphRequest
+	appCluster     k8s.ClientSet
+	userManagement k8s.ClientSet
+	userCluster    k8s.ClientSet
 }
 
 func (s *serviceGraph) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		start := time.Now()
 
-		// Extract the request from the body.
-		sgr, err := s.getServiceGraphRequest(req)
-		if err != nil {
+		ctx := req.Context()
+		var err error
+		rd := &RequestData{}
+
+		// Extract the request specific data used to collate and filter the data.
+		// - The parsed service graph request
+		// - A bunch of client sets:
+		//   - App/Cluster:     Query host names
+		//   - User/Management: Determine which ES tables the user has access to
+		//   - User/Cluster:    Flow endpoint RBAC, Events
+		// - RBAC filter.
+		if rd.request, err = s.getServiceGraphRequest(req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else if rd.appCluster, err = s.clientSetFactory.NewClientSetForApplication(rd.request.Cluster); err != nil {
+			log.WithError(err).Error("failed to authenticate")
+			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
+			return
+		} else if rd.userManagement, err = s.clientSetFactory.NewClientSetForUser(req, ""); err != nil {
+			log.WithError(err).Error("failed to authenticate")
+			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
+			return
+		} else if rd.userCluster, err = s.clientSetFactory.NewClientSetForUser(req, rd.request.Cluster); err != nil {
+			log.WithError(err).Error("failed to authenticate")
+			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
 			return
 		}
 
-		// Extract the request context.
-		ctx := req.Context()
-
-		// Parse the view IDs.
-		rbacFilter := s.getRBACFilter(req)
-		cluster := common.GetCluster(req)
-
 		// Get the filtered flow from the cache.
-		if f, err := s.flowCache.GetFilteredServiceGraphData(ctx, cluster, sgr, rbacFilter); err != nil {
+		if f, err := s.flowCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-		} else if pv, err := ParseViewIDs(sgr, f.ServiceGroups); err != nil {
+		} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if sg, err := GetServiceGraphResponse(f, pv); err != nil {
@@ -114,13 +153,4 @@ func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGra
 	}
 
 	return sgr, nil
-}
-
-// getRBACFilter creates an RBACFilter from the authorized resource verbs attached to the HTTP request context.
-// It is assumed an earlier HTTP handler is included in the handler chain that will perform this query and add it to
-// the context.
-func (s *serviceGraph) getRBACFilter(req *http.Request) RBACFilter {
-	// Extract the auth review from the context.
-	verbs := authorization.GetAuthorizedResourceVerbs(req)
-	return NewRBACFilterFromAuth(verbs)
 }

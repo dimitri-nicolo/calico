@@ -2,6 +2,11 @@
 package v1
 
 type ServiceGraphRequest struct {
+	// The cluster name.
+	// For standalone deployments this may be omitted or set to "cluster.
+	// For a multi-cluster deployments, this defaults to the management cluster if omitted.
+	Cluster string `json:"cluster"`
+
 	// Time range.
 	TimeRange TimeRange `json:"time_range"`
 

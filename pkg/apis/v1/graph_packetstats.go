@@ -190,7 +190,7 @@ type GraphL7PacketStats struct {
 	MeanDuration   float64 `json:"mean_duration"`
 	MinDuration    float64 `json:"min_duration"`
 	MaxDuration    float64 `json:"max_duration"`
-	Count          int64   `json:"-"`
+	Count          int64   `json:"count"`
 }
 
 // Combine returns a GraphL7PacketStats that combines the stats from l and l2. Depending on the stat

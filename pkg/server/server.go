@@ -19,13 +19,11 @@ import (
 	"github.com/tigera/lma/pkg/list"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/es-proxy/pkg/handler"
+	"github.com/tigera/es-proxy/pkg/k8s"
 	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
-	"github.com/tigera/es-proxy/pkg/middleware/authorization"
-	"github.com/tigera/es-proxy/pkg/middleware/k8s"
 	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
@@ -34,18 +32,6 @@ import (
 var (
 	server *http.Server
 	wg     sync.WaitGroup
-
-	authReviewAttrListEndpoints = []apiv3.AuthorizationReviewResourceAttributes{{
-		APIGroup: "projectcalico.org",
-		Resources: []string{
-			"hostendpoints", "networksets", "globalnetworksets",
-		},
-		Verbs: []string{"list"},
-	}, {
-		APIGroup:  "",
-		Resources: []string{"pods"},
-		Verbs:     []string{"list"},
-	}}
 )
 
 // Some constants that we pass to our elastic client library.
@@ -132,6 +118,8 @@ func Start(cfg *Config) error {
 
 	restConfig := datastore.MustGetConfig()
 
+	//TODO(rlb): I think we can remove this factory in favor of the user and cluster aware factory that can do user based
+	//  authorization review that performs multiple checks in a single request.
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, voltronServiceURL)
 	k8sCli, err := k8sClientFactory.ClientSetForCluster(datastore.DefaultCluster)
 	if err != nil {
@@ -139,12 +127,12 @@ func Start(cfg *Config) error {
 	}
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
-	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetHandlers provide
-	// cluster and user aware k8s clients, adding the client to the request context for subsequent chained handlers.
-	k8sClientSetHandlers := k8s.NewClientSetHandlers(cfg.VoltronCAPath, voltronServiceURL)
+	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetFactory provide
+	// cluster and user aware k8s clients.
+	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, voltronServiceURL)
 
 	// Create a service graph handler.
-	serviceGraph := servicegraph.NewServiceGraph(esClient)
+	serviceGraph := servicegraph.NewServiceGraph(esClient, k8sClientSetFactory)
 
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
@@ -155,13 +143,9 @@ func Start(cfg *Config) error {
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 	sm.Handle("/serviceGraph",
-		// Add k8s clientset tied to the user.
-		k8sClientSetHandlers.AddClientSetForUser(
-			// Add k8s clientset tied to the application.
-			k8sClientSetHandlers.AddClientSetForApplication(
-				// Perform an authorization review (which requires client set for user)
-				authorization.AuthorizationReviewHandler(authReviewAttrListEndpoints,
-					// Service graph requires client set for app.
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
 					serviceGraph.Handler()))))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(

@@ -18,8 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/common"
-	"github.com/tigera/es-proxy/pkg/middleware/k8s"
+	"github.com/tigera/es-proxy/pkg/elastic"
 )
 
 const (
@@ -35,21 +34,14 @@ var (
 // is a bit of guesswork here - so the graphconstructor will use this as best effort to track down the appropriate
 // node in the graph.
 type Event struct {
-	ID        v1.GraphEventID
-	Details   v1.GraphEventDetails
-	Endpoints []OverlayEndpoint
-}
+	ID      v1.GraphEventID
+	Details v1.GraphEventDetails
 
-// The endpoint associated with an alert or event that will be overlaid on the service graph.
-// This looks identical to a FlowEndpoint, but this is kept separate to avoid confusion. The Type of this endpoint
-// may include namespaces and services, and so covers a broader range of endpoints than a flow.
-type OverlayEndpoint struct {
-	Type      v1.GraphNodeType
-	Namespace string
-	Name      string
-	NameAggr  string
-	Port      int
-	Proto     string
+	// The set of flow endpoints may contain additional types than returned by L3 and L7 flows:
+	// - Namespaces (so that we can alert on non-flow related resources)
+	// - HostEndpoints (flows essentially return Hosts, but this may return HostEndpoints from resource changes which
+	//                  will get mapped to Hosts in the cache processing).
+	Endpoints []FlowEndpoint
 }
 
 // RawEvent used to unmarshaling the event.
@@ -96,25 +88,17 @@ type RawEventRecord struct {
 // view. If we have insufficient information in the event log to accurately pin the event to a service graph node then
 // we will not include it in the node. The unfiltered alerts table will still provide the user with the opportunity to
 // see all events.
-func GetEvents(ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange) ([]Event, error) {
+func GetEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
+	defer cancel()
 
-	// Close the two channels when the go routine completes.
-	defer func() {
-		defer cancel()
-	}()
-
-	// Extract the cluster specific k8s client.
-	k8sClient := k8s.GetClientSetApplicationFromContext(ctx)
-
-	// Get the HostEndpoints to determine a HostEndpoint -> Host name mapping.
-	hostEndpointsToHostname := make(map[string]string)
-	if hostEndpoints, err := k8sClient.HostEndpoints().List(ctx, metav1.ListOptions{}); err != nil {
-		return nil, err
-	} else {
-		for _, hep := range hostEndpoints.Items {
-			hostEndpointsToHostname[hep.Name] = hep.Spec.Node
-		}
+	// Trace stats at debug level.
+	if log.IsLevelEnabled(log.DebugLevel) {
+		start := time.Now()
+		log.Debug("GetEvents called")
+		defer func() {
+			log.Debugf("GetEvents took %s", time.Since(start))
+		}()
 	}
 
 	var tigeraEvents, kubernetesEvents []Event
@@ -125,14 +109,14 @@ func GetEvents(ctx context.Context, client lmaelastic.Client, cluster string, t 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		kubernetesEvents, kubernetesErr = getKubernetesEvents(ctx, k8sClient, t, hostEndpointsToHostname)
+		kubernetesEvents, kubernetesErr = getKubernetesEvents(ctx, rd)
 	}()
 
 	// Query the Tigera events.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		tigeraEvents, tigeraErr = getTigeraEvents(ctx, client, cluster, t, hostEndpointsToHostname)
+		tigeraEvents, tigeraErr = getTigeraEvents(ctx, es, rd)
 	}()
 
 	wg.Wait()
@@ -146,28 +130,26 @@ func GetEvents(ctx context.Context, client lmaelastic.Client, cluster string, t 
 	return append(tigeraEvents, kubernetesEvents...), nil
 }
 
-func getTigeraEvents(
-	ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange, hostEndpointsToHostname map[string]string,
-) ([]Event, error) {
+func getTigeraEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]Event, error) {
 	// Issue the query to Elasticsearch and send results out through the results channel. We terminate the search if:
 	// - there are no more "buckets" returned by Elasticsearch or the equivalent no-or-empty "after_key" in the
 	//   aggregated search results,
 	// - we hit an error, or
 	// - the context indicates "done"
 	var results []Event
-	query := common.GetTimeRangeQuery(t)
-	index := common.GetEventsIndex(cluster)
+	query := elastic.GetTimeRangeQuery(rd.request.TimeRange)
+	index := elastic.GetEventsIndex(rd.request.Cluster)
 	var searchAfterKeys []interface{}
 	for {
 		log.Debugf("Issuing search query, start after %#v", searchAfterKeys)
 
 		// Query the document index.
-		search := client.Backend().Search(index).Query(query).Size(alertsQuerySize).Sort("time", true)
+		search := es.Backend().Search(index).Query(query).Size(alertsQuerySize).Sort("time", true)
 		if searchAfterKeys != nil {
 			search = search.SearchAfter(searchAfterKeys...)
 		}
 
-		searchResults, err := client.Do(ctx, search)
+		searchResults, err := es.Do(ctx, search)
 		if err != nil {
 			// We hit an error, exit. This may be a context done error, but that's fine, pass the error on.
 			log.WithError(err).Debugf("Error searching %s", index)
@@ -185,7 +167,7 @@ func getTigeraEvents(
 		// Loop through each of the items in the buckets and convert to a result bucket.
 		for _, item := range searchResults.Hits.Hits {
 			searchAfterKeys = item.Sort
-			if event := parseTigeraEvent(item.Id, item.Source, hostEndpointsToHostname); event != nil {
+			if event := parseTigeraEvent(item.Id, item.Source); event != nil {
 				results = append(results, *event)
 			}
 		}
@@ -210,19 +192,17 @@ func getTigeraEvents(
 	return results, nil
 }
 
-func getKubernetesEvents(
-	ctx context.Context, k8sClient k8s.ClientSet, t v1.TimeRange, hostEndpointsToHostname map[string]string,
-) ([]Event, error) {
+func getKubernetesEvents(ctx context.Context, rd *RequestData) ([]Event, error) {
 	var results []Event
 
 	// Query the Kubernetes events
-	k8sEvents, err := k8sClient.CoreV1().Events("").List(ctx, metav1.ListOptions{})
+	k8sEvents, err := rd.appCluster.CoreV1().Events("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	for _, ke := range k8sEvents.Items {
-		if e := parseKubernetesEvent(ke, t, hostEndpointsToHostname); e != nil {
+		if e := parseKubernetesEvent(ke, rd); e != nil {
 			results = append(results, *e)
 		}
 	}
@@ -237,7 +217,7 @@ func getKubernetesEvents(
 	return results, nil
 }
 
-func parseKubernetesEvent(rawEvent corev1.Event, t v1.TimeRange, hostEndpointsToHostname map[string]string) *Event {
+func parseKubernetesEvent(rawEvent corev1.Event, rd *RequestData) *Event {
 	// We only care about warning events where the first/last event time falls within our time window.
 	if rawEvent.Type != K8sEventTypeWarning {
 		return nil
@@ -250,22 +230,20 @@ func parseKubernetesEvent(rawEvent corev1.Event, t v1.TimeRange, hostEndpointsTo
 	eventTime := rawEvent.EventTime
 
 	if !firstTime.IsZero() && !lastTime.IsZero() {
-		if !firstTime.Time.Before(t.To) || !lastTime.Time.After(t.From) {
+		if !rd.request.TimeRange.Overlaps(firstTime.Time, lastTime.Time) {
 			log.Debugf("Skipping event, time range outside request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
 			return nil
 		}
-		chosenTime = &firstTime
+		chosenTime = &lastTime
 	} else if !eventTime.IsZero() {
-		if !firstTime.Time.Before(t.To) || !lastTime.Time.After(t.From) {
+		if !rd.request.TimeRange.InRange(eventTime.Time) {
 			log.Debugf("Skipping event, time outside request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
 			return nil
 		}
 		chosenTime = &metav1.Time{Time: eventTime.Time}
 	}
 
-	ee := getEventEndpointsFromObject(
-		rawEvent.InvolvedObject.Kind, rawEvent.InvolvedObject.Namespace, rawEvent.InvolvedObject.Name, hostEndpointsToHostname,
-	)
+	ee := getEventEndpointsFromObject(rawEvent.InvolvedObject.Kind, rawEvent.InvolvedObject.Namespace, rawEvent.InvolvedObject.Name)
 	if len(ee) == 0 {
 		log.Debugf("Skipping event, no involved object: %s/%s", rawEvent.Namespace, rawEvent.Name)
 		return nil
@@ -290,7 +268,7 @@ func parseKubernetesEvent(rawEvent corev1.Event, t v1.TimeRange, hostEndpointsTo
 
 // parseTigeraEvent parses the raw JSON event and converts it to an Event.  Returns nil if the format was not recognized or
 // if the event could not be attributed a graph node.
-func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname map[string]string) *Event {
+func parseTigeraEvent(id string, item json.RawMessage) *Event {
 	rawEvent := &RawEvent{}
 	if err := json.Unmarshal(item, rawEvent); err != nil {
 		log.WithError(err).Warning("Unable to parse event")
@@ -312,6 +290,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 		rawEvent.Record.DestName = singleDashToBlank(rawEvent.Record.DestName)
 	}
 
+	sev := rawEvent.Severity
 	event := &Event{
 		ID: v1.GraphEventID{
 			Type:           v1.GraphEventType(rawEvent.Type),
@@ -319,6 +298,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			NamespacedName: v1.NamespacedName{Name: rawEvent.Alert},
 		},
 		Details: v1.GraphEventDetails{
+			Severity:    &sev,
 			Description: rawEvent.Description,
 			Timestamp:   &metav1.Time{Time: time.Unix(0, rawEvent.Time)},
 		},
@@ -330,7 +310,6 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 		rawEvent.SourceName,
 		"",
 		0, "",
-		hostEndpointsToHostname,
 	); len(eps) > 0 {
 		event.Endpoints = append(event.Endpoints, eps...)
 	}
@@ -341,7 +320,6 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 		"",
 		rawEvent.DestPort,
 		rawEvent.Protocol,
-		hostEndpointsToHostname,
 	); len(eps) > 0 {
 		event.Endpoints = append(event.Endpoints, eps...)
 	}
@@ -353,7 +331,6 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			rawEvent.Record.SourceName,
 			rawEvent.Record.SourceNameAggr,
 			0, "",
-			hostEndpointsToHostname,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
@@ -364,7 +341,6 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			rawEvent.Record.DestNameAggr,
 			rawEvent.Record.DestPort,
 			rawEvent.Record.Protocol,
-			hostEndpointsToHostname,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
@@ -374,7 +350,6 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			rawEvent.Record.ClientName,
 			rawEvent.Record.ClientNameAggr,
 			0, "",
-			hostEndpointsToHostname,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
@@ -382,7 +357,6 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 			nonEmptyString(rawEvent.Record.ObjectRefResource, rawEvent.Record.ResponseObjectKind),
 			rawEvent.Record.ObjectRefNamespace,
 			rawEvent.Record.ObjectRefName,
-			hostEndpointsToHostname,
 		); len(eps) > 0 {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
@@ -395,9 +369,7 @@ func parseTigeraEvent(id string, item json.RawMessage, hostEndpointsToHostname m
 	return event
 }
 
-func getEventEndpointsFromFlowEndpoint(
-	epType, epNamespace, epName, epNameAggr string, epPort int, proto string, hostEndpointsToHostname map[string]string,
-) []OverlayEndpoint {
+func getEventEndpointsFromFlowEndpoint(epType, epNamespace, epName, epNameAggr string, epPort int, proto string) []FlowEndpoint {
 	if epType == "" && epNamespace == "" && epName == "" && epNameAggr == "" {
 		return nil
 	}
@@ -417,7 +389,7 @@ func getEventEndpointsFromFlowEndpoint(
 
 	// If we only have a namespace then return a namespace type since that is the best we can do.
 	if epType == "" && epName == "" && epNameAggr == "" {
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type: v1.GraphNodeTypeNamespace,
 			Name: epNamespace,
 		}}
@@ -436,22 +408,13 @@ func getEventEndpointsFromFlowEndpoint(
 		}
 	}
 
-	eps := make([]OverlayEndpoint, len(epTypes))
+	eps := make([]FlowEndpoint, len(epTypes))
 	for i, epType := range epTypes {
 		eventEndpointType := mapRawTypeToGraphNodeType(epType, epName == "")
 		eventEndpointName := epName
 		eventEndpointNameAggr := epNameAggr
-		if eventEndpointType == v1.GraphNodeTypeHostEndpoint {
-			// Tweak the host endpoint name to have an aggregated name of "*" - we do this because we by default
-			// aggregate host endpoints together under a common "*" aggregated host endpoint.
-			// Similar handling exists in flowsl3.go and flowsl7.go.
-			if eventEndpointName == "" && eventEndpointNameAggr != "*" {
-				eventEndpointName = hostEndpointsToHostname[eventEndpointNameAggr]
-				eventEndpointNameAggr = "*"
-			}
-		}
 
-		eps[i] = OverlayEndpoint{
+		eps[i] = FlowEndpoint{
 			Type:      eventEndpointType,
 			Namespace: epNamespace,
 			Name:      eventEndpointName,
@@ -464,12 +427,10 @@ func getEventEndpointsFromFlowEndpoint(
 }
 
 // Return an endpoint from a resource.
-func getEventEndpointsFromObject(
-	objResource, objNamespace, objName string, hostEndpointsToHostname map[string]string,
-) []OverlayEndpoint {
+func getEventEndpointsFromObject(objResource, objNamespace, objName string) []FlowEndpoint {
 	switch objResource {
 	case "pods", "Pod":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeWorkload,
 			Namespace: objNamespace,
 			Name:      objName,
@@ -478,61 +439,61 @@ func getEventEndpointsFromObject(
 	case "hostendpoints", "HostEndpoint":
 		// For HostEndpoints we set the aggregated name to "*" in line with the processing in flowl3.go and flowl7.go.
 		// Convert the HEP name to the appropriate host that it is configured on.
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:     v1.GraphNodeTypeHostEndpoint,
-			Name:     hostEndpointsToHostname[objName],
-			NameAggr: "*",
+			Name:     objName,
+			NameAggr: objName,
 		}}
 	case "networksets", "NetworkSet":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeNetworkSet,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "globalnetworksets", "GlobalNetworkSet":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeNetworkSet,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "replicasets", "ReplicaSet":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeReplicaSet,
 			Namespace: objNamespace,
 			Name:      objName + "-*",
 		}}
 	case "daemonsets", "DaemonSet":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeReplicaSet,
 			Namespace: objNamespace,
 			Name:      objName + "-*",
 		}}
 	case "endpoints", "Endpoints":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeService,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "services", "Service":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeService,
 			Namespace: objNamespace,
 			NameAggr:  objName,
 		}}
 	case "namespaces", "Namespace":
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type: v1.GraphNodeTypeNamespace,
 			Name: objName,
 		}}
 	case "nodes", "Node":
-		return []OverlayEndpoint{{
-			Type:     v1.GraphNodeTypeHostEndpoint,
+		return []FlowEndpoint{{
+			Type:     v1.GraphNodeTypeHost,
 			Name:     objName,
-			NameAggr: "*",
+			NameAggr: objName,
 		}}
 	}
 	if objNamespace != "" {
-		return []OverlayEndpoint{{
+		return []FlowEndpoint{{
 			Type:      v1.GraphNodeTypeNamespace,
 			Namespace: objNamespace,
 		}}

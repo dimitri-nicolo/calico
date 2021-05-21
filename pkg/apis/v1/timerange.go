@@ -52,11 +52,23 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 
 // MarshalJSON implements the marshalling interface for JSON. We need to implement this explicitly because the default
 // implementation doesn't honor the "inline" directive when the parameter is an interface type.
-func (t *TimeRange) MarshalJSON() ([]byte, error) {
+func (t TimeRange) MarshalJSON() ([]byte, error) {
 	// Just extract the timestamp and kind fields from the blob.
 	s := timeRangeInternal{
 		From: t.From.UTC().Format(time.RFC3339),
 		To:   t.To.UTC().Format(time.RFC3339),
 	}
 	return json.Marshal(s)
+}
+
+func (t TimeRange) Duration() time.Duration {
+	return t.To.Sub(t.From)
+}
+
+func (t TimeRange) InRange(t1 time.Time) bool {
+	return !(t1.Before(t.From) || t1.After(t.To))
+}
+
+func (t TimeRange) Overlaps(from, to time.Time) bool {
+	return !(to.Before(t.From) || from.After(t.To))
 }

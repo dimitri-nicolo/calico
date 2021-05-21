@@ -169,6 +169,8 @@ func (t *trackedGroup) update(child v1.GraphNodeID, isInFocus, isFollowingEgress
 	t.isFollowingIngress = t.isFollowingIngress || isFollowingIngress
 }
 
+// trackedNode encpasulates details of a node returned by the API, and additional data required to do some post
+// graph-construction updates.
 type trackedNode struct {
 	Node      *v1.GraphNode
 	Selectors SelectorPairs
@@ -221,7 +223,7 @@ func newServiceGraphConstructor(f *ServiceGraphData, v *ParsedView) *serviceGrap
 		serviceEdges: make(map[v1.GraphNodeID]*serviceEdges),
 		flowData:     f,
 		view:         v,
-		selh:         NewSelectorHelper(v, f.AggregationHelper, f.ServiceGroups),
+		selh:         NewSelectorHelper(v, f.HostnameHelper, f.ServiceGroups),
 	}
 }
 
@@ -507,6 +509,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 		sel := s.selh.GetEndpointNodeSelectors(
 			idi.GetAggrEndpointType(),
 			endpoint.Namespace,
+			endpoint.Name,
 			endpoint.NameAggr,
 			NoProto,
 			NoPort, idi.Direction,
@@ -563,6 +566,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 				sel := s.selh.GetEndpointNodeSelectors(
 					idi.GetAggrEndpointType(),
 					endpoint.Namespace,
+					endpoint.Name,
 					endpoint.NameAggr,
 					endpoint.Proto,
 					endpoint.Port,
@@ -593,6 +597,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 		sel := s.selh.GetEndpointNodeSelectors(
 			idi.Endpoint.Type,
 			endpoint.Namespace,
+			endpoint.Name,
 			endpoint.NameAggr,
 			NoProto,
 			NoPort,
@@ -617,6 +622,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 			sel := s.selh.GetEndpointNodeSelectors(
 				idi.Endpoint.Type,
 				endpoint.Namespace,
+				endpoint.Name,
 				endpoint.NameAggr,
 				endpoint.Proto,
 				endpoint.Port,
@@ -819,6 +825,8 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 	return nodes
 }
 
+// overlayEvents iterates through all the events and overlays them on the existing graph nodes. This never adds more
+// nodes to the graph.
 func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 	for _, event := range s.flowData.Events {
 		log.Debugf("Checking event %#v", event)
@@ -835,15 +843,15 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 				})
 				s.maybeOverlayEventID(nodesInView, event, fep, sg)
 			default:
-				// Since FlowEndpoint and OverlayEndpoint have the same structure can cast between the two.
-				fep := FlowEndpoint(ep)
-				sg := s.flowData.ServiceGroups.GetByEndpoint(fep)
-				s.maybeOverlayEventID(nodesInView, event, fep, sg)
+				sg := s.flowData.ServiceGroups.GetByEndpoint(ep)
+				s.maybeOverlayEventID(nodesInView, event, ep, sg)
 			}
 		}
 	}
 }
 
+// maybeOverlayEventID attempts to overlay an event on to one of the graph nodes. It applies the event to the top
+// level parent containing the impacted endpoint. If there is no node visible the event is discarded.
 func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, event Event, ep FlowEndpoint, sg *ServiceGroup) {
 	// Determine which layer this endpoint might be part of.
 	var layerName, layerNameEndpoint, layerNameAggrEndpoint, layerNameServiceGroup, layerNameNamespace string

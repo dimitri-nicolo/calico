@@ -13,7 +13,7 @@ import (
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/common"
+	"github.com/tigera/es-proxy/pkg/elastic"
 )
 
 // This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given
@@ -204,16 +204,27 @@ type L3FlowData struct {
 // - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
 //   when an endpoint is subjected to a port scan.
 // - Stats for TCP and Processes are aggregated for each flow.
-func GetL3FlowData(
-	ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange, config *FlowConfig,
-) ([]L3Flow, error) {
+func GetL3FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData, config *FlowConfig) ([]L3Flow, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 
-	index := common.GetFlowsIndex(cluster)
+	// Track the total buckets queried and the response flows.
+	var totalBuckets int
+	var fs []L3Flow
+
+	// Trace stats at debug level.
+	if log.IsLevelEnabled(log.DebugLevel) {
+		start := time.Now()
+		log.Debug("GetL3FlowData called")
+		defer func() {
+			log.Debugf("GetL3FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+		}()
+	}
+
+	index := elastic.GetFlowsIndex(rd.request.Cluster)
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   common.GetEndTimeRangeQuery(t),
+		Query:                   elastic.GetEndTimeRangeQuery(rd.request.TimeRange),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: flowCompositeSources,
 		AggSumInfos:             flowAggregationSums,
@@ -223,12 +234,12 @@ func GetL3FlowData(
 	}
 
 	// Perform the L3 composite aggregation query.
-	var fs []L3Flow
-	rcvdL3Buckets, rcvdL3Errors := client.SearchCompositeAggregations(ctx, aggQueryL3, nil)
+	rcvdL3Buckets, rcvdL3Errors := es.SearchCompositeAggregations(ctx, aggQueryL3, nil)
 
 	var lastDestGp *FlowEndpoint
 	var dgd *destinationGroupData
 	for bucket := range rcvdL3Buckets {
+		totalBuckets++
 		key := bucket.CompositeAggregationKey
 		reporter := key[FlowReporterIdx].String()
 		action := key[FlowActionIdx].String()
@@ -264,18 +275,6 @@ func GetL3FlowData(
 			PacketsOut: int64(bucket.AggregatedSums[FlowAggSumPacketsOut]),
 			BytesIn:    int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
 			BytesOut:   int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
-		}
-
-		// For HostEndpoints, we know the full name, but we actually want to be able to aggregate the endpoints. For
-		// these specific endpoint types we set the aggregated name to be "*" and the name to be the HEP name.
-		// Similar handling exists in flowl7.go and events.go.
-		if source.Type == v1.GraphNodeTypeHostEndpoint {
-			source.Name = source.NameAggr
-			source.NameAggr = "*"
-		}
-		if dest.Type == v1.GraphNodeTypeHostEndpoint {
-			dest.Name = dest.NameAggr
-			dest.NameAggr = "*"
 		}
 
 		// Determine the endpoint key used to group together service groups.
@@ -356,7 +355,7 @@ func GetL3FlowData(
 	}
 
 	// Adjust some of the statistics based on the aggregation interval.
-	timeInterval := t.To.Sub(t.From)
+	timeInterval := rd.request.TimeRange.Duration()
 	l3Flushes := float64(timeInterval) / float64(config.L3FlowFlushInterval)
 	for i := range fs {
 		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
@@ -387,7 +386,7 @@ func mapRawTypeToGraphNodeType(val string, agg bool) v1.GraphNodeType {
 		}
 		return v1.GraphNodeTypeWorkload
 	case "hep":
-		return v1.GraphNodeTypeHostEndpoint
+		return v1.GraphNodeTypeHost
 	case "net":
 		return v1.GraphNodeTypeNetwork
 	case "ns":
@@ -404,7 +403,7 @@ func mapGraphNodeTypeToRawType(val v1.GraphNodeType) (string, bool) {
 		return "wep", true
 	case v1.GraphNodeTypeHosts:
 		return "hep", true
-	case v1.GraphNodeTypeHostEndpoint:
+	case v1.GraphNodeTypeHost:
 		return "hep", false
 	case v1.GraphNodeTypeNetwork:
 		return "net", true

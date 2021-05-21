@@ -16,7 +16,8 @@ const (
 	GraphNodeTypeReplicaSet   GraphNodeType = "rep"
 	GraphNodeTypeWorkload     GraphNodeType = "wep"
 	GraphNodeTypeHosts        GraphNodeType = "hosts"
-	GraphNodeTypeHostEndpoint GraphNodeType = "hep"
+	GraphNodeTypeHost         GraphNodeType = "host"
+	GraphNodeTypeHostEndpoint GraphNodeType = "hep" // Never exposed over the API, we expose these as Host
 	GraphNodeTypeNetwork      GraphNodeType = "net"
 	GraphNodeTypeNetworkSet   GraphNodeType = "ns"
 	GraphNodeTypeNode         GraphNodeType = "node"
@@ -85,6 +86,7 @@ type GraphNode struct {
 	//         "id": "aifn93hrbv_Ds",
 	//         "name": "policy.pod",
 	//       },
+	//       "severity": 100,
 	//       "description": "A pod was modified occurred",
 	//       "time": "1973-03-14T00:00:00Z"
 	//     }

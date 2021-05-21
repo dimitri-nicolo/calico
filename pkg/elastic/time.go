@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-package common
+package elastic
 
 import (
 	"github.com/olivere/elastic/v7"

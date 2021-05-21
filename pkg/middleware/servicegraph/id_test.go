@@ -94,14 +94,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 		Entry("Host endpoint",
 			IDInfo{
 				Endpoint: FlowEndpoint{
-					Type:     v1.GraphNodeTypeHostEndpoint,
+					Type:     v1.GraphNodeTypeHost,
 					Name:     "hepname",
 					NameAggr: "*",
 				},
 			},
 			"", "",
 			"", "", "",
-			"hosts/*", "hep/hepname/*", "", "",
+			"hosts/*", "host/hepname/*", "", "",
 		),
 		Entry("Global network set",
 			IDInfo{
@@ -227,7 +227,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 		Entry("Host endpoint with service",
 			IDInfo{
 				Endpoint: FlowEndpoint{
-					Type:     v1.GraphNodeTypeHostEndpoint,
+					Type:     v1.GraphNodeTypeHost,
 					Name:     "hepname",
 					NameAggr: "*",
 					Proto:    "sctp",
@@ -250,7 +250,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/sctp/;svc/service-namespace/service-name",
 			"hosts/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"hep/hepname/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "",
+			"host/hepname/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "",
 		),
 		Entry("Global network set with service",
 			IDInfo{
@@ -407,20 +407,20 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 		),
 		Entry("host endpoint",
-			"hep/na1/*", IDInfo{
-				ParsedIDType: v1.GraphNodeTypeHostEndpoint,
+			"host/na1/*", IDInfo{
+				ParsedIDType: v1.GraphNodeTypeHost,
 				Endpoint: FlowEndpoint{
-					Type:     v1.GraphNodeTypeHostEndpoint,
+					Type:     v1.GraphNodeTypeHost,
 					Name:     "na1",
 					NameAggr: "*",
 				},
 			},
 		),
 		Entry("host endpoint with service group",
-			"hep/na1/*;svcgp;svc/my-service-namespace/my-service-name", IDInfo{
-				ParsedIDType: v1.GraphNodeTypeHostEndpoint,
+			"host/na1/*;svcgp;svc/my-service-namespace/my-service-name", IDInfo{
+				ParsedIDType: v1.GraphNodeTypeHost,
 				Endpoint: FlowEndpoint{
-					Type:     v1.GraphNodeTypeHostEndpoint,
+					Type:     v1.GraphNodeTypeHost,
 					Name:     "na1",
 					NameAggr: "*",
 				},

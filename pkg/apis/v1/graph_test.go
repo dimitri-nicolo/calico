@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/tigera/es-proxy/pkg/apis/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -666,35 +664,40 @@ var _ = Describe("Graph API tests", func() {
                 "bytes_out": 576,
                 "mean_duration": 361,
                 "min_duration": 113,
-                "max_duration": 499
+                "max_duration": 499,
+                "count": 3
               },
               "response_code_2xx": {
                 "bytes_in": 964,
                 "bytes_out": 968,
                 "mean_duration": 666.5,
                 "min_duration": 151,
-                "max_duration": 857
+                "max_duration": 857,
+                "count": 4
               },
               "response_code_3xx": {
                 "bytes_in": 676,
                 "bytes_out": 694,
                 "mean_duration": 408.3333333333333,
                 "min_duration": 181,
-                "max_duration": 547
+                "max_duration": 547,
+                "count": 3
               },
               "response_code_4xx": {
                 "bytes_in": 1060,
                 "bytes_out": 1076,
                 "mean_duration": 713.5,
                 "min_duration": 223,
-                "max_duration": 887
+                "max_duration": 887,
+                "count": 4
               },
               "response_code_5xx": {
                 "bytes_in": 796,
                 "bytes_out": 808,
                 "mean_duration": 461,
                 "min_duration": 251,
-                "max_duration": 587
+                "max_duration": 587,
+                "count": 3
               }
             },
             "processes": {
@@ -799,21 +802,21 @@ var _ = Describe("Graph API tests", func() {
 	It("handles GraphNode.Services", func() {
 		node := GraphNode{
 			ID:   "a",
-			Type: GraphNodeTypeHostEndpoint,
+			Type: GraphNodeTypeHost,
 		}
-		node.IncludeService(types.NamespacedName{
+		node.IncludeService(NamespacedName{
 			Namespace: "b",
 			Name:      "c",
 		})
-		node.IncludeService(types.NamespacedName{
+		node.IncludeService(NamespacedName{
 			Namespace: "a",
 			Name:      "b",
 		})
-		node.IncludeService(types.NamespacedName{
+		node.IncludeService(NamespacedName{
 			Namespace: "a",
 			Name:      "b",
 		})
-		node.IncludeService(types.NamespacedName{
+		node.IncludeService(NamespacedName{
 			Namespace: "a",
 			Name:      "c",
 		})
@@ -822,7 +825,7 @@ var _ = Describe("Graph API tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(js).To(MatchJSON(`{
 			"id": "a",
-			"type": "hep",
+			"type": "host",
 			"selectors": {},
 			"services": [{"namespace":"a", "name":"b"}, {"namespace":"a", "name":"c"}, {"namespace":"b", "name":"c"}]
 		}`))
@@ -845,17 +848,17 @@ var _ = Describe("Graph API tests", func() {
 	It("handles GraphNode.IncludeEvent", func() {
 		node := GraphNode{
 			ID:   "a",
-			Type: GraphNodeTypeHostEndpoint,
+			Type: GraphNodeTypeHost,
 		}
 		node.IncludeEvent(GraphEventID{
-			TigeraEventID: "abcde",
+			ID: "abcde",
 		}, GraphEventDetails{
 			Description: "A thing occurred, not sure when",
 			Timestamp:   nil,
 		})
 		t := metav1.Time{Time: time.Date(1973, 3, 14, 0, 0, 0, 0, time.UTC)}
 		node.IncludeEvent(GraphEventID{
-			KubernetesEventID: types.NamespacedName{
+			NamespacedName: NamespacedName{
 				Namespace: "n",
 				Name:      "n2",
 			},
@@ -864,7 +867,7 @@ var _ = Describe("Graph API tests", func() {
 			Timestamp:   &t,
 		})
 		node.IncludeEvent(GraphEventID{
-			KubernetesEventID: types.NamespacedName{
+			NamespacedName: NamespacedName{
 				Namespace: "n",
 				Name:      "n2",
 			},
@@ -876,28 +879,33 @@ var _ = Describe("Graph API tests", func() {
 		js, err := json.Marshal(node)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(js).To(MatchJSON(`{
-			"id": "a",
-			"type": "hep",
-			"selectors": {},
-			"events": [
-				{
-					"tiger_event_id": "abcde",
-					"description": "A thing occurred, not sure when"
-				},
-				{
-					"kubernetes_event_name": "n2",
-					"kubernetes_event_namespace": "n",
-					"description": "A k8s thing occurred",
-					"time": "1973-03-14T00:00:00Z"
-                }
-			]
-		}`))
+        "id": "a",
+        "type": "host",
+        "selectors": {},
+        "events": [
+          {
+            "id": {
+              "id": "abcde",
+              "name": ""
+            },
+            "description": "A thing occurred, not sure when"
+          },
+          {
+            "id": {
+              "namespace": "n",
+              "name": "n2"
+            },
+            "description": "A k8s thing occurred",
+            "time": "1973-03-14T00:00:00Z"
+          }
+        ]
+      }`))
 	})
 
 	It("handles GraphNode.IncludeAggregatedProtoPorts", func() {
 		node := GraphNode{
 			ID:   "a",
-			Type: GraphNodeTypeHostEndpoint,
+			Type: GraphNodeTypeHost,
 		}
 
 		By("including a nil proto ports")
@@ -1015,7 +1023,7 @@ var _ = Describe("Graph API tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(js).To(MatchJSON(`{
 			"id": "a",
-			"type": "hep",
+			"type": "host",
 			"selectors": {},
 			"aggregated_proto_ports": {
 				"num_other_protocols": 1,
@@ -1120,7 +1128,7 @@ var _ = Describe("Graph API tests", func() {
 			NewGraphSelector(OpEqual, "b", 2),
 			nil,
 		)
-		Expect(sel1.SelectorString()).To(Equal("a == \"b\" || b == 2"))
+		Expect(sel1.SelectorString()).To(Equal("a == \"b\" OR b == 2"))
 
 		By("ORing with another selector with all ORs and a duplicate entry")
 		sel2 := NewGraphSelector(OpOr,
@@ -1129,14 +1137,14 @@ var _ = Describe("Graph API tests", func() {
 			nil,
 		)
 		sel3 := NewGraphSelector(OpOr, sel1, sel2)
-		Expect(sel3.SelectorString()).To(Equal("a == \"b\" || a == \"b2\" || b == 2"))
+		Expect(sel3.SelectorString()).To(Equal("a == \"b\" OR a == \"b2\" OR b == 2"))
 
 		By("ANDing with another selector")
 		sel4 := NewGraphSelector(OpAnd,
 			sel3,
 			sel1,
 		)
-		Expect(sel4.SelectorString()).To(Equal("(a == \"b\" || a == \"b2\" || b == 2) && (a == \"b\" || b == 2)"))
+		Expect(sel4.SelectorString()).To(Equal("(a == \"b\" OR a == \"b2\" OR b == 2) AND (a == \"b\" OR b == 2)"))
 
 		By("ANDing with another selector")
 		sel5 := NewGraphSelector(OpAnd,
@@ -1147,7 +1155,7 @@ var _ = Describe("Graph API tests", func() {
 			sel5,
 			sel4,
 		)
-		Expect(sel6.SelectorString()).To(Equal("(a == \"b\" || a == \"b2\" || b == 2) && (a == \"b\" || b == 2) && x != \"y\""))
+		Expect(sel6.SelectorString()).To(Equal("(a == \"b\" OR a == \"b2\" OR b == 2) AND (a == \"b\" OR b == 2) AND x != \"y\""))
 
 		By("Checking the JSON renders with no selectors")
 		js, err := json.Marshal(GraphSelectors{})
@@ -1172,9 +1180,9 @@ var _ = Describe("Graph API tests", func() {
 		js, err = json.Marshal(gsel1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(js).To(MatchJSON(`{
-			"l3_flows": "(a == \"b\" && a1 == \"b1\") || a2 == \"b2\"",
-			"l7_flows": "(c == \"d\" && c1 == \"d1\") || c2 == \"d2\"",
-			"dns_logs": "(e == \"f\" && e1 == \"f1\") || e2 == \"f2\""
+			"l3_flows": "(a == \"b\" AND a1 == \"b1\") OR a2 == \"b2\"",
+			"l7_flows": "(c == \"d\" AND c1 == \"d1\") OR c2 == \"d2\"",
+			"dns_logs": "(e == \"f\" AND e1 == \"f1\") OR e2 == \"f2\""
         }`))
 
 		By("Checking in-operator")
@@ -1182,7 +1190,7 @@ var _ = Describe("Graph API tests", func() {
 			"a",
 			[]string{"b", "c", "d"},
 		)
-		Expect(selIn.SelectorString()).To(Equal("a in {\"b\", \"c\", \"d\"}"))
+		Expect(selIn.SelectorString()).To(Equal("a IN (\"b\", \"c\", \"d\")"))
 
 		selIn = NewGraphSelector(OpIn,
 			"a",

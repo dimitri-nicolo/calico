@@ -4,13 +4,14 @@ package servicegraph
 import (
 	"context"
 	"strconv"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/common"
+	"github.com/tigera/es-proxy/pkg/elastic"
 )
 
 type L7Flow struct {
@@ -80,13 +81,27 @@ var (
 )
 
 // GetL7FlowData queries and returns the set of L7 flow data.
-func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string, t v1.TimeRange) ([]L7Flow, error) {
+func GetL7FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]L7Flow, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
-	index := common.GetL7FlowsIndex(cluster)
+
+	// Track the total buckets queried and the response flows.
+	var totalBuckets int
+	var fs []L7Flow
+
+	// Trace stats at debug level.
+	if log.IsLevelEnabled(log.DebugLevel) {
+		start := time.Now()
+		log.Debug("GetL7FlowData called")
+		defer func() {
+			log.Infof("GetL7FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+		}()
+	}
+
+	index := elastic.GetL7FlowsIndex(rd.request.Cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   common.GetEndTimeRangeQuery(t),
+		Query:                   elastic.GetEndTimeRangeQuery(rd.request.TimeRange),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: l7CompositeSources,
 		AggSumInfos:             l7AggregationSums,
@@ -96,7 +111,6 @@ func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string
 	}
 
 	// Perform the L3 and L7 composite aggregation queries together.
-	var fs []L7Flow
 	addFlow := func(source, dest FlowEndpoint, svc ServicePort, stats v1.GraphL7Stats) {
 		if svc.Name != "" {
 			fs = append(fs, L7Flow{
@@ -125,13 +139,14 @@ func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string
 		}
 	}
 
-	rcvdL7Buckets, rcvdL7Errors := client.SearchCompositeAggregations(ctx, aggQueryL7, nil)
+	rcvdL7Buckets, rcvdL7Errors := es.SearchCompositeAggregations(ctx, aggQueryL7, nil)
 
 	var foundFlow bool
 	var l7Stats v1.GraphL7Stats
 	var lastSource, lastDest FlowEndpoint
 	var lastSvc ServicePort
 	for bucket := range rcvdL7Buckets {
+		totalBuckets++
 		key := bucket.CompositeAggregationKey
 		code := key[l7ResponseCodeIdx].String()
 		source := FlowEndpoint{
@@ -153,18 +168,6 @@ func GetL7FlowData(ctx context.Context, client lmaelastic.Client, cluster string
 			Namespace: singleDashToBlank(key[l7DestNamespaceIdx].String()),
 			//Port:      int(key[l7DestPortIdx].Float64()),
 			Proto: l7Proto,
-		}
-
-		// For HostEndpoints, we know the full name, but we actually want to be able to aggregate the endpoints. For
-		// these specific endpoint types we set the aggregated name to be "*" and the name to be the HEP name.
-		// Similar handling exists in flowl3.go and events.go.
-		if source.Type == v1.GraphNodeTypeHostEndpoint {
-			source.Name = source.NameAggr
-			source.NameAggr = "*"
-		}
-		if dest.Type == v1.GraphNodeTypeHostEndpoint {
-			dest.Name = dest.NameAggr
-			dest.NameAggr = "*"
 		}
 
 		if !foundFlow {

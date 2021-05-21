@@ -57,7 +57,7 @@ func (id *IDInfo) GetNormalizedID() v1.GraphNodeID {
 		return id.GetServiceGroupID()
 	case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
 		return id.GetAggrEndpointID()
-	case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeWorkload:
+	case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
 		return id.GetEndpointID()
 	case v1.GraphNodeTypePort:
 		if id := id.GetEndpointPortID(); id != "" {
@@ -110,7 +110,7 @@ func ConvertEndpointTypeToAggrEndpointType(t v1.GraphNodeType) v1.GraphNodeType 
 	switch t {
 	case v1.GraphNodeTypeWorkload:
 		return v1.GraphNodeTypeReplicaSet
-	case v1.GraphNodeTypeHostEndpoint:
+	case v1.GraphNodeTypeHost:
 		return v1.GraphNodeTypeHosts
 	}
 	return t
@@ -122,7 +122,7 @@ func (idf *IDInfo) GetEndpointID() v1.GraphNodeID {
 	switch idf.Endpoint.Type {
 	case v1.GraphNodeTypeWorkload:
 		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s/%s", v1.GraphNodeTypeWorkload, idf.Endpoint.Namespace, idf.Endpoint.Name, idf.Endpoint.NameAggr))
-	case v1.GraphNodeTypeHostEndpoint:
+	case v1.GraphNodeTypeHost:
 		id := fmt.Sprintf("%s/%s/%s", idf.Endpoint.Type, idf.Endpoint.Name, idf.Endpoint.NameAggr)
 
 		// If there is a service group then include the service group, otherwise if there is a Direction include that
@@ -240,7 +240,7 @@ var (
 		v1.GraphNodeTypeNamespace:    {{idpType, idpNamespace}},
 		v1.GraphNodeTypeServiceGroup: {{idpType}},
 		v1.GraphNodeTypeReplicaSet:   {{idpType, idpNamespace, idpNameAggr}},
-		v1.GraphNodeTypeHostEndpoint: {{idpType, idpName, idpNameAggr}},
+		v1.GraphNodeTypeHost:         {{idpType, idpName, idpNameAggr}},
 		v1.GraphNodeTypeNetwork:      {{idpType, idpNameAggr}},
 		v1.GraphNodeTypeHosts:        {{idpType, idpNameAggr}},
 		v1.GraphNodeTypeNetworkSet:   {{idpType, idpNameAggr}, {idpType, idpNamespace, idpNameAggr}},
@@ -255,12 +255,12 @@ var (
 	// specific type.
 	allowedParentTypes = map[v1.GraphNodeType][]v1.GraphNodeType{
 		v1.GraphNodeTypePort: {
-			v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeHostEndpoint,
+			v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeHost,
 			v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet,
 		},
 		v1.GraphNodeTypeNetwork:      {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
 		v1.GraphNodeTypeNetworkSet:   {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
-		v1.GraphNodeTypeHostEndpoint: {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
+		v1.GraphNodeTypeHost:         {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
 		v1.GraphNodeTypeServicePort:  {v1.GraphNodeTypeService},
 		v1.GraphNodeTypeServiceGroup: {v1.GraphNodeTypeService},
 		v1.GraphNodeTypeService:      {v1.GraphNodeTypeService},
@@ -311,7 +311,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 		case v1.GraphNodeTypeReplicaSet,
 			v1.GraphNodeTypeWorkload,
 			v1.GraphNodeTypeHosts,
-			v1.GraphNodeTypeHostEndpoint,
+			v1.GraphNodeTypeHost,
 			v1.GraphNodeTypeNetwork,
 			v1.GraphNodeTypeNetworkSet:
 			idf.Endpoint.Type = thisType

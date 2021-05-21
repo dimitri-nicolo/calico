@@ -94,7 +94,7 @@ func (f *rbacFilter) IncludeEndpoint(e FlowEndpoint) bool {
 			return f.IncludeGlobalNetworkSets()
 		}
 		return f.IncludeNetworkSets(e.Namespace)
-	case v1.GraphNodeTypeHostEndpoint:
+	case v1.GraphNodeTypeHost:
 		return f.IncludeHostEndpoints()
 	default:
 		log.Panicf("Unexpected endpoint type in parsed flows: %s", e.Type)

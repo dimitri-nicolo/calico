@@ -76,23 +76,23 @@ func newParsedLayers() *ParsedLayers {
 }
 
 // ParseViewIDs converts the IDs contained in the view to a ParsedView.
-func ParseViewIDs(sgr *v1.ServiceGraphRequest, sgs ServiceGroups) (*ParsedView, error) {
+func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 	// Parse the Focus and Expanded node IDs.
 	log.Debug("Parse view data")
 	p := &ParsedView{
-		FollowConnectionDirection: sgr.SelectedView.FollowConnectionDirection,
-		SplitIngressEgress:        sgr.SelectedView.SplitIngressEgress,
+		FollowConnectionDirection: rd.request.SelectedView.FollowConnectionDirection,
+		SplitIngressEgress:        rd.request.SelectedView.SplitIngressEgress,
 	}
 	var err error
-	if p.Focus, err = parseNodes(sgr.SelectedView.Focus, sgs); err != nil {
+	if p.Focus, err = parseNodes(rd.request.SelectedView.Focus, sgs); err != nil {
 		return nil, err
-	} else if p.Expanded, err = parseNodes(sgr.SelectedView.Expanded, sgs); err != nil {
+	} else if p.Expanded, err = parseNodes(rd.request.SelectedView.Expanded, sgs); err != nil {
 		return nil, err
-	} else if p.FollowedEgress, err = parseNodes(sgr.SelectedView.FollowedEgress, sgs); err != nil {
+	} else if p.FollowedEgress, err = parseNodes(rd.request.SelectedView.FollowedEgress, sgs); err != nil {
 		return nil, err
-	} else if p.FollowedIngress, err = parseNodes(sgr.SelectedView.FollowedIngress, sgs); err != nil {
+	} else if p.FollowedIngress, err = parseNodes(rd.request.SelectedView.FollowedIngress, sgs); err != nil {
 		return nil, err
-	} else if p.Layers, err = parseLayers(sgr.SelectedView.Layers, sgs); err != nil {
+	} else if p.Layers, err = parseLayers(rd.request.SelectedView.Layers, sgs); err != nil {
 		return nil, err
 	}
 

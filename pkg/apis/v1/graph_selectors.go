@@ -86,7 +86,9 @@ type GraphSelector struct {
 }
 
 func (s *GraphSelector) SelectorString() string {
-	if ss, noMatch := s.selectorString(false); noMatch {
+	if s == nil {
+		return ""
+	} else if ss, noMatch := s.selectorString(false); noMatch {
 		return ""
 	} else if ss == "" {
 		return string(OpAll)
@@ -147,14 +149,14 @@ func (s *GraphSelector) selectorString(nested bool) (sel string, noMatch bool) {
 	case OpIn:
 		sb.WriteString(s.key)
 		sb.WriteString(string(s.operator))
-		sb.WriteString("{\"")
+		sb.WriteString("(\"")
 		value := s.value.([]string)
 		for i := 0; i < len(value)-1; i++ {
 			sb.WriteString(value[i])
 			sb.WriteString("\", \"")
 		}
 		sb.WriteString(value[len(value)-1])
-		sb.WriteString("\"}")
+		sb.WriteString("\")")
 	case OpNoMatch:
 		return "", true
 	}

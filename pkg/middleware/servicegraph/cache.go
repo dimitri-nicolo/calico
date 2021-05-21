@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/tigera/es-proxy/pkg/authorization"
+
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/middleware/k8s"
 )
 
 // This file provides a cache interface for pre-correlated flows, logs and events (those returned by the machinery in
@@ -40,17 +41,15 @@ func (t TimeSeriesFlow) String() string {
 }
 
 type ServiceGraphData struct {
-	TimeIntervals     []v1.TimeRange
-	FilteredFlows     []TimeSeriesFlow
-	ServiceGroups     ServiceGroups
-	Events            []Event
-	AggregationHelper AggregationHelper
+	TimeIntervals  []v1.TimeRange
+	FilteredFlows  []TimeSeriesFlow
+	ServiceGroups  ServiceGroups
+	Events         []Event
+	HostnameHelper HostnameHelper
 }
 
 type ServiceGraphCache interface {
-	GetFilteredServiceGraphData(
-		ctx context.Context, cluster string, sgr *v1.ServiceGraphRequest, rbacFilter RBACFilter,
-	) (*ServiceGraphData, error)
+	GetFilteredServiceGraphData(ctx context.Context, rd *RequestData) (*ServiceGraphData, error)
 }
 
 func NewServiceGraphCache(elastic lmaelastic.Client) ServiceGraphCache {
@@ -70,9 +69,7 @@ type serviceGraphCache struct {
 // TODO(rlb): The events are not RBAC filtered, instead events are overlaid onto the filtered graph view - so the
 //            presence of a graph node or not is used to determine whether or not an event is included. This will likely
 //            need to be revisited when we refine RBAC control of events.
-func (fc *serviceGraphCache) GetFilteredServiceGraphData(
-	ctx context.Context, cluster string, sgr *v1.ServiceGraphRequest, rbacFilter RBACFilter,
-) (*ServiceGraphData, error) {
+func (fc *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd *RequestData) (*ServiceGraphData, error) {
 	// At the moment there is no cache and only a single data point in the flow. Kick off the L3 and L7 queries at the
 	// same time.
 	wg := sync.WaitGroup{}
@@ -80,67 +77,77 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	var rawL3 []L3Flow
 	var rawL7 []L7Flow
 	var rawEvents []Event
-	var aggHelper AggregationHelper
-	var errFlowConfig, errL3, errL7, errEvents, errNameFormatter error
+	var hostnameHelper HostnameHelper
+	var rbac RBACFilter
+	var errFlowConfig, errL3, errL7, errEvents, errHostnameHelper, errRBAC error
 
-	// Extract the cluster specific k8s client.
-	k8sClient := k8s.GetClientSetApplicationFromContext(ctx)
-
-	flowConfig, errFlowConfig = GetFlowConfig(ctx, k8sClient)
+	// We user the flow config as part of the L3 flow loading so get this before kicking off the various go
+	// routines.
+	flowConfig, errFlowConfig = GetFlowConfig(ctx, rd)
 	if errFlowConfig != nil {
 		return nil, errFlowConfig
 	}
 
+	// The other queries we can run in parallel:
+	// - Get the RBAC filter
+	// - Get the host name mapping helper
+	// - Get the L3 logs
+	// - Get the L7 logs
+	// - Get the events
 	wg.Add(1)
 	go func() {
-		rawL3, errL3 = GetL3FlowData(ctx, fc.elasticClient, cluster, sgr.TimeRange, flowConfig)
-		wg.Done()
+		defer wg.Done()
+		rbac, errRBAC = GetRBACFilter(ctx, rd)
 	}()
 	wg.Add(1)
 	go func() {
-		rawL7, errL7 = GetL7FlowData(ctx, fc.elasticClient, cluster, sgr.TimeRange)
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func() {
-		rawEvents, errEvents = GetEvents(ctx, fc.elasticClient, cluster, sgr.TimeRange)
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func() {
+		defer wg.Done()
 		// The name formatter is used to adjust names based on user supplied configuration.  We do this here rather
 		// than updating the cached data.
-		aggHelper, errNameFormatter = GetAggregationHelper(ctx, k8sClient, sgr.SelectedView)
-		wg.Done()
+		hostnameHelper, errHostnameHelper = GetHostnameHelper(ctx, rd)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rawL3, errL3 = GetL3FlowData(ctx, fc.elasticClient, rd, flowConfig)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rawL7, errL7 = GetL7FlowData(ctx, fc.elasticClient, rd)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rawEvents, errEvents = GetEvents(ctx, fc.elasticClient, rd)
 	}()
 	wg.Wait()
-	if errL3 != nil {
+	if errRBAC != nil {
+		return nil, errRBAC
+	} else if errHostnameHelper != nil {
+		return nil, errHostnameHelper
+	} else if errL3 != nil {
 		return nil, errL3
-	}
-	if errL7 != nil {
+	} else if errL7 != nil {
 		return nil, errL7
-	}
-	if errEvents != nil {
+	} else if errEvents != nil {
 		return nil, errEvents
-	}
-	if errNameFormatter != nil {
-		return nil, errNameFormatter
 	}
 
 	fd := &ServiceGraphData{
-		TimeIntervals:     []v1.TimeRange{sgr.TimeRange},
-		ServiceGroups:     NewServiceGroups(),
-		AggregationHelper: aggHelper,
+		TimeIntervals:  []v1.TimeRange{rd.request.TimeRange},
+		ServiceGroups:  NewServiceGroups(),
+		HostnameHelper: hostnameHelper,
 	}
 
 	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning.
 	for _, rf := range rawL3 {
-		if !rbacFilter.IncludeFlow(rf.Edge) {
+		if !rbac.IncludeFlow(rf.Edge) {
 			continue
 		}
 
 		// Update the names in the flow (if required).
-		aggHelper.ProcessL3Flow(&rf)
+		hostnameHelper.ProcessL3Flow(&rf)
 
 		if rf.Edge.ServicePort != nil {
 			fd.ServiceGroups.AddMapping(*rf.Edge.ServicePort, rf.Edge.Dest)
@@ -160,12 +167,12 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 
 	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
 	for _, rf := range rawL7 {
-		if !rbacFilter.IncludeFlow(rf.Edge) {
+		if !rbac.IncludeFlow(rf.Edge) {
 			continue
 		}
 
 		// Update the names in the flow (if required).
-		aggHelper.ProcessL7Flow(&rf)
+		hostnameHelper.ProcessL7Flow(&rf)
 
 		stats := rf.Stats
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
@@ -179,10 +186,19 @@ func (fc *serviceGraphCache) GetFilteredServiceGraphData(
 	// Filter the events.
 	for _, ev := range rawEvents {
 		// Update the names in the events (if required).
-		aggHelper.ProcessEvent(&ev)
+		hostnameHelper.ProcessEvent(&ev)
 
 		fd.Events = append(fd.Events, ev)
 	}
 
 	return fd, nil
+}
+
+// GetRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
+func GetRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
+	verbs, err := authorization.PerformAuthorizationReview(ctx, rd.userCluster, authReviewAttrListEndpoints)
+	if err != nil {
+		return nil, err
+	}
+	return NewRBACFilterFromAuth(verbs), nil
 }

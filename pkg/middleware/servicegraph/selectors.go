@@ -44,7 +44,7 @@ func (s SelectorPairs) Or(s2 SelectorPairs) SelectorPairs {
 	}
 }
 
-func NewSelectorHelper(view *ParsedView, aggHelper AggregationHelper, sgs ServiceGroups) *SelectorHelper {
+func NewSelectorHelper(view *ParsedView, aggHelper HostnameHelper, sgs ServiceGroups) *SelectorHelper {
 	return &SelectorHelper{
 		view:          view,
 		aggHelper:     aggHelper,
@@ -54,7 +54,7 @@ func NewSelectorHelper(view *ParsedView, aggHelper AggregationHelper, sgs Servic
 
 type SelectorHelper struct {
 	view          *ParsedView
-	aggHelper     AggregationHelper
+	aggHelper     HostnameHelper
 	serviceGroups ServiceGroups
 }
 
@@ -68,12 +68,7 @@ func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
 		gs = gs.Or(s.GetServiceGroupNodeSelectors(sg))
 	}
 	for _, ep := range s.view.Layers.LayerToEndpoints[layer] {
-		_, isAgg := mapGraphNodeTypeToRawType(ep.Type)
-		if isAgg {
-			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
-		} else {
-			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
-		}
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
 	}
 	return gs
 }
@@ -143,18 +138,13 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp ServicePort) SelectorPai
 	if sg != nil {
 		for ep := range sg.ServicePorts[sp] {
 			switch ep.Type {
-			case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
 				allEps[ep] = struct{}{}
 			}
 		}
 	}
 	for ep := range allEps {
-		_, isAgg := mapGraphNodeTypeToRawType(ep.Type)
-		if isAgg {
-			epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
-		} else {
-			epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
-		}
+		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
 	}
 
 	// Only include the endpoint dest selectors, not the source.
@@ -173,7 +163,7 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 	for sp, eps := range sg.ServicePorts {
 		for ep := range eps {
 			switch ep.Type {
-			case v1.GraphNodeTypeHostEndpoint, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
 				allEps[ep] = struct{}{}
 			default:
 				allSvcs[sp.NamespacedName] = struct{}{}
@@ -186,18 +176,15 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 		gs = gs.Or(s.GetServiceNodeSelectors(svc))
 	}
 	for ep := range allEps {
-		_, isAgg := mapGraphNodeTypeToRawType(ep.Type)
-		if isAgg {
-			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
-		} else {
-			gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.Proto, ep.Port, NoDirection))
-		}
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
 	}
 	return gs
 }
 
 // GetEndpointNodeSelectors returns the selectors for an endpoint node.
-func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, namespace, name, proto string, port int, dir Direction) SelectorPairs {
+func (s *SelectorHelper) GetEndpointNodeSelectors(
+	epType v1.GraphNodeType, namespace, name, nameAggr, proto string, port int, dir Direction,
+) SelectorPairs {
 	rawType, isAgg := mapGraphNodeTypeToRawType(epType)
 	namespace = blankToSingleDash(namespace)
 
@@ -207,11 +194,11 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 		if isAgg {
 			dnsSource = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "client_name_aggr", name),
+				v1.NewGraphSelector(v1.OpEqual, "client_name_aggr", nameAggr),
 			)
 			dnsDest = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "servers.name_aggr", name),
+				v1.NewGraphSelector(v1.OpEqual, "servers.name_aggr", nameAggr),
 			)
 		} else {
 			dnsDest = v1.NewGraphSelector(v1.OpAnd,
@@ -225,11 +212,11 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 		if isAgg && (proto == "" || proto == "tcp") {
 			l7Source = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "src_name_aggr", name),
+				v1.NewGraphSelector(v1.OpEqual, "src_name_aggr", nameAggr),
 			)
 			l7Dest = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", nameAggr),
 			)
 		} else {
 			l7Source = v1.NewGraphSelector(v1.OpNoMatch)
@@ -246,7 +233,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 		// Handle hosts separately. We provide an internal aggregation for these types, so when constructing a selector
 		// we have do do a rather brutal list of all host endpoints. We can at least skip namespace since hep types
 		// are only non-namespaced.
-		hosts := s.aggHelper.GetHostNamesFromAggregatedName(name)
+		hosts := s.aggHelper.GetCompiledHostNamesFromAggregatedName(nameAggr)
 		if len(hosts) > maxSelectorItemsPerGroup {
 			// Too many individual items. Don't filter on the hosts.
 			l3Source = v1.NewGraphSelector(v1.OpAnd,
@@ -254,17 +241,16 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 			)
 			l3Dest = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
 			)
 		} else if len(hosts) == 1 {
 			// Only one host, just use equals.
 			l3Source = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-				v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", name),
+				v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", hosts[0]),
 			)
 			l3Dest = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", hosts[0]),
 			)
 		} else {
 			// Multiple (or no) host names, use "in" operator.  The in operator will not include a zero length
@@ -278,27 +264,39 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(epType v1.GraphNodeType, names
 				v1.NewGraphSelector(v1.OpIn, "dest_name_aggr", hosts),
 			)
 		}
-	} else if isAgg {
+	} else if epType == v1.GraphNodeTypeHost {
+		// Handle host separately. We provide an internal aggregation for these types which means we copy
+		// the aggregated name into the name and provide a calculated aggregated name.  Make sure we use the non
+		// aggregated name but use the aggregated name field for the selector.
 		l3Source = v1.NewGraphSelector(v1.OpAnd,
 			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
 			v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", name),
 		)
 		l3Dest = v1.NewGraphSelector(v1.OpAnd,
 			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
 			v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+		)
+	} else if isAgg {
+		l3Source = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
+			v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", nameAggr),
+		)
+		l3Dest = v1.NewGraphSelector(v1.OpAnd,
+			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", nameAggr),
 		)
 	} else {
 		l3Source = v1.NewGraphSelector(v1.OpAnd,
 			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
 			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-			v1.NewGraphSelector(v1.OpEqual, "source_name", name),
+			v1.NewGraphSelector(v1.OpEqual, "source_name", nameAggr),
 		)
 		l3Dest = v1.NewGraphSelector(v1.OpAnd,
 			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
 			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
-			v1.NewGraphSelector(v1.OpEqual, "dest_name", name),
+			v1.NewGraphSelector(v1.OpEqual, "dest_name", nameAggr),
 		)
 	}
 	if port != 0 {
