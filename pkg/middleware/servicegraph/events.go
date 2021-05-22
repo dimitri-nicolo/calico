@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/es-proxy/pkg/k8s"
+
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -88,7 +90,7 @@ type RawEventRecord struct {
 // view. If we have insufficient information in the event log to accurately pin the event to a service graph node then
 // we will not include it in the node. The unfiltered alerts table will still provide the user with the opportunity to
 // see all events.
-func GetEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]Event, error) {
+func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr v1.TimeRange) ([]Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 
@@ -109,14 +111,14 @@ func GetEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]Ev
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		kubernetesEvents, kubernetesErr = getKubernetesEvents(ctx, rd)
+		kubernetesEvents, kubernetesErr = getKubernetesEvents(ctx, csAppCluster, tr)
 	}()
 
 	// Query the Tigera events.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		tigeraEvents, tigeraErr = getTigeraEvents(ctx, es, rd)
+		tigeraEvents, tigeraErr = getTigeraEvents(ctx, es, cluster, tr)
 	}()
 
 	wg.Wait()
@@ -130,15 +132,15 @@ func GetEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]Ev
 	return append(tigeraEvents, kubernetesEvents...), nil
 }
 
-func getTigeraEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]Event, error) {
+func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]Event, error) {
 	// Issue the query to Elasticsearch and send results out through the results channel. We terminate the search if:
 	// - there are no more "buckets" returned by Elasticsearch or the equivalent no-or-empty "after_key" in the
 	//   aggregated search results,
 	// - we hit an error, or
 	// - the context indicates "done"
 	var results []Event
-	query := elastic.GetTimeRangeQuery(rd.request.TimeRange)
-	index := elastic.GetEventsIndex(rd.request.Cluster)
+	query := elastic.GetTimeRangeQuery(tr)
+	index := elastic.GetEventsIndex(cluster)
 	var searchAfterKeys []interface{}
 	for {
 		log.Debugf("Issuing search query, start after %#v", searchAfterKeys)
@@ -192,17 +194,17 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, rd *RequestData)
 	return results, nil
 }
 
-func getKubernetesEvents(ctx context.Context, rd *RequestData) ([]Event, error) {
+func getKubernetesEvents(ctx context.Context, cs k8s.ClientSet, tr v1.TimeRange) ([]Event, error) {
 	var results []Event
 
 	// Query the Kubernetes events
-	k8sEvents, err := rd.appCluster.CoreV1().Events("").List(ctx, metav1.ListOptions{})
+	k8sEvents, err := cs.CoreV1().Events("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	for _, ke := range k8sEvents.Items {
-		if e := parseKubernetesEvent(ke, rd); e != nil {
+		if e := parseKubernetesEvent(ke, tr); e != nil {
 			results = append(results, *e)
 		}
 	}
@@ -217,7 +219,7 @@ func getKubernetesEvents(ctx context.Context, rd *RequestData) ([]Event, error) 
 	return results, nil
 }
 
-func parseKubernetesEvent(rawEvent corev1.Event, rd *RequestData) *Event {
+func parseKubernetesEvent(rawEvent corev1.Event, tr v1.TimeRange) *Event {
 	// We only care about warning events where the first/last event time falls within our time window.
 	if rawEvent.Type != K8sEventTypeWarning {
 		return nil
@@ -230,14 +232,14 @@ func parseKubernetesEvent(rawEvent corev1.Event, rd *RequestData) *Event {
 	eventTime := rawEvent.EventTime
 
 	if !firstTime.IsZero() && !lastTime.IsZero() {
-		if !rd.request.TimeRange.Overlaps(firstTime.Time, lastTime.Time) {
-			log.Debugf("Skipping event, time range outside request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
+		if !tr.Overlaps(firstTime.Time, lastTime.Time) {
+			log.Debugf("Skipping event, time range outside Request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
 			return nil
 		}
 		chosenTime = &lastTime
 	} else if !eventTime.IsZero() {
-		if !rd.request.TimeRange.InRange(eventTime.Time) {
-			log.Debugf("Skipping event, time outside request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
+		if !tr.InRange(eventTime.Time) {
+			log.Debugf("Skipping event, time outside Request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
 			return nil
 		}
 		chosenTime = &metav1.Time{Time: eventTime.Time}

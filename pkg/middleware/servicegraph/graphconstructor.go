@@ -12,33 +12,20 @@ import (
 // This file provides the final graph construction from a set of correlated (time-series) flows and the parsed view
 // IDs.
 //
-// The flows are aggregated based on the layers and expanded nodes defined in the view. The graph is then pruned
-// based on the focus and followed-nodes. A graph node is included if any of the following is true:
-// - the node (or one of its child nodes) is in-focus
-// - the node (or one of its child nodes) is connected directly to an in-focus node (in either connection Direction)
-// - the node (or one of its child nodes) is connected indirectly to an in-focus node, respecting the Direction
-//   of the connection (*)
-// - the node (or one of its child nodes) is directly connected to an "included" node whose connections are being
-//   explicitly "followed" in the appropriate connection Direction (*)
-//
-// (*) Suppose you have nodes A, B, C, D, E; C is directly in focus
-//     If connections are: A-->B-->C-->D-->E then: A, B, C, D and E will all be included in the view.
-//     If connections are: A<--B-->C-->D<--E then: B, C and D will be included in the view, and
-//                                                 A will be included if the egress connections for B are being followed
-//                                                 E will be included if the ingress connections for D are being followed
+// See v1.GraphView for details on aggregation, and which nodes will be included in the graph.
 
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
-func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
+func GetServiceGraphResponse(rd *RequestData, f *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
 	sgr := &v1.ServiceGraphResponse{
 		// Response should include the time range actually used to perform these queries.
 		TimeIntervals: f.TimeIntervals,
 	}
-	s := newServiceGraphConstructor(f, v)
+	s := newServiceGraphConstructor(rd, f, v)
 
 	// Iterate through the flows to track the nodes and edges.
-	for i := range s.flowData.FilteredFlows {
-		if err := s.trackFlow(&s.flowData.FilteredFlows[i]); err != nil {
-			log.WithError(err).WithField("flow", s.flowData.FilteredFlows[i]).Errorf("Unable to process flow")
+	for i := range s.sgd.FilteredFlows {
+		if err := s.trackFlow(&s.sgd.FilteredFlows[i]); err != nil {
+			log.WithError(err).WithField("flow", s.sgd.FilteredFlows[i]).Errorf("Unable to process flow")
 			continue
 		}
 	}
@@ -204,8 +191,8 @@ type serviceGraphConstructionData struct {
 	// The mapping between service and edges connected to the service.
 	serviceEdges map[v1.GraphNodeID]*serviceEdges
 
-	// The supplied flow data.
-	flowData *ServiceGraphData
+	// The supplied service graph data.
+	sgd *ServiceGraphData
 
 	// The supplied view data.
 	view *ParsedView
@@ -215,15 +202,15 @@ type serviceGraphConstructionData struct {
 }
 
 // newServiceGraphConstructor intializes a new serviceGraphConstructionData.
-func newServiceGraphConstructor(f *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
+func newServiceGraphConstructor(rd *RequestData, sgd *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
 	return &serviceGraphConstructionData{
 		groupsMap:    make(map[v1.GraphNodeID]*trackedGroup),
 		nodesMap:     make(map[v1.GraphNodeID]trackedNode),
 		edgesMap:     make(map[v1.GraphEdgeID]*v1.GraphEdge),
 		serviceEdges: make(map[v1.GraphNodeID]*serviceEdges),
-		flowData:     f,
+		sgd:          sgd,
 		view:         v,
-		selh:         NewSelectorHelper(v, f.HostnameHelper, f.ServiceGroups),
+		selh:         NewSelectorHelper(v, rd.HostnameHelper, sgd.ServiceGroups),
 	}
 }
 
@@ -349,9 +336,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 	// Determine if this endpoint is in a layer - most granular wins.
 	var sg *ServiceGroup
 	if svc != nil {
-		sg = s.flowData.ServiceGroups.GetByService(svc.NamespacedName)
+		sg = s.sgd.ServiceGroups.GetByService(svc.NamespacedName)
 	} else {
-		sg = s.flowData.ServiceGroups.GetByEndpoint(endpoint)
+		sg = s.sgd.ServiceGroups.GetByEndpoint(endpoint)
 	}
 	// Create an ID handler.
 	idi := IDInfo{
@@ -828,7 +815,7 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 // overlayEvents iterates through all the events and overlays them on the existing graph nodes. This never adds more
 // nodes to the graph.
 func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
-	for _, event := range s.flowData.Events {
+	for _, event := range s.sgd.Events {
 		log.Debugf("Checking event %#v", event)
 		for _, ep := range event.Endpoints {
 			log.Debugf("  - Checking event endpoint: %#v", ep)
@@ -838,12 +825,12 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 					Type:      ep.Type,
 					Namespace: ep.Namespace,
 				}
-				sg := s.flowData.ServiceGroups.GetByService(v1.NamespacedName{
+				sg := s.sgd.ServiceGroups.GetByService(v1.NamespacedName{
 					Namespace: ep.Namespace, Name: ep.Name,
 				})
 				s.maybeOverlayEventID(nodesInView, event, fep, sg)
 			default:
-				sg := s.flowData.ServiceGroups.GetByEndpoint(ep)
+				sg := s.sgd.ServiceGroups.GetByEndpoint(ep)
 				s.maybeOverlayEventID(nodesInView, event, ep, sg)
 			}
 		}

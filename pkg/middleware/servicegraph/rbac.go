@@ -2,7 +2,12 @@
 package servicegraph
 
 import (
+	"context"
+
+	"github.com/tigera/es-proxy/pkg/k8s"
+
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/es-proxy/pkg/authorization"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
@@ -21,6 +26,29 @@ type RBACFilter interface {
 	IncludeNetworkSets(namespace string) bool
 	IncludePods(namespace string) bool
 }
+
+// GetRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
+func GetRBACFilter(ctx context.Context, management, managed k8s.ClientSet) (RBACFilter, error) {
+	verbs, err := authorization.PerformAuthorizationReview(ctx, managed, authReviewAttrListEndpoints)
+	if err != nil {
+		return nil, err
+	}
+	return NewRBACFilterFromAuth(verbs), nil
+}
+
+var (
+	authReviewAttrListEndpoints = []v3.AuthorizationReviewResourceAttributes{{
+		APIGroup: "projectcalico.org",
+		Resources: []string{
+			"hostendpoints", "networksets", "globalnetworksets",
+		},
+		Verbs: []string{"list"},
+	}, {
+		APIGroup:  "",
+		Resources: []string{"pods"},
+		Verbs:     []string{"list"},
+	}}
+)
 
 // NewRBACFilterFromAuth creates a new RBAC filter from a set of AuthorizedResourceVerbs.
 func NewRBACFilterFromAuth(verbs []v3.AuthorizedResourceVerbs) RBACFilter {

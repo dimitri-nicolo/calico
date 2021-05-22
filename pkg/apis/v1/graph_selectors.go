@@ -72,6 +72,11 @@ const (
 	// Special case internal operator used to indicate an impossible match. This is used to simplify the construction
 	// of the selectors.
 	OpNoMatch GraphSelectorOperator = " *NOMATCH* "
+
+	// Start and end list and list separator for OpIn.
+	OpInListStart = "("
+	OpInListSep   = ", "
+	OpInListEnd   = ")"
 )
 
 type GraphSelector struct {
@@ -149,14 +154,18 @@ func (s *GraphSelector) selectorString(nested bool) (sel string, noMatch bool) {
 	case OpIn:
 		sb.WriteString(s.key)
 		sb.WriteString(string(s.operator))
-		sb.WriteString("(\"")
+		sb.WriteString(OpInListStart)
+		sb.WriteString("\"")
 		value := s.value.([]string)
 		for i := 0; i < len(value)-1; i++ {
 			sb.WriteString(value[i])
-			sb.WriteString("\", \"")
+			sb.WriteString("\"")
+			sb.WriteString(OpInListSep)
+			sb.WriteString("\"")
 		}
 		sb.WriteString(value[len(value)-1])
-		sb.WriteString("\")")
+		sb.WriteString("\"")
+		sb.WriteString(OpInListEnd)
 	case OpNoMatch:
 		return "", true
 	}

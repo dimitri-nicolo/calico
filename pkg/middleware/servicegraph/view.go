@@ -80,19 +80,19 @@ func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 	// Parse the Focus and Expanded node IDs.
 	log.Debug("Parse view data")
 	p := &ParsedView{
-		FollowConnectionDirection: rd.request.SelectedView.FollowConnectionDirection,
-		SplitIngressEgress:        rd.request.SelectedView.SplitIngressEgress,
+		FollowConnectionDirection: rd.Request.SelectedView.FollowConnectionDirection,
+		SplitIngressEgress:        rd.Request.SelectedView.SplitIngressEgress,
 	}
 	var err error
-	if p.Focus, err = parseNodes(rd.request.SelectedView.Focus, sgs); err != nil {
+	if p.Focus, err = parseNodes(rd.Request.SelectedView.Focus, sgs); err != nil {
 		return nil, err
-	} else if p.Expanded, err = parseNodes(rd.request.SelectedView.Expanded, sgs); err != nil {
+	} else if p.Expanded, err = parseNodes(rd.Request.SelectedView.Expanded, sgs); err != nil {
 		return nil, err
-	} else if p.FollowedEgress, err = parseNodes(rd.request.SelectedView.FollowedEgress, sgs); err != nil {
+	} else if p.FollowedEgress, err = parseNodes(rd.Request.SelectedView.FollowedEgress, sgs); err != nil {
 		return nil, err
-	} else if p.FollowedIngress, err = parseNodes(rd.request.SelectedView.FollowedIngress, sgs); err != nil {
+	} else if p.FollowedIngress, err = parseNodes(rd.Request.SelectedView.FollowedIngress, sgs); err != nil {
 		return nil, err
-	} else if p.Layers, err = parseLayers(rd.request.SelectedView.Layers, sgs); err != nil {
+	} else if p.Layers, err = parseLayers(rd.Request.SelectedView.Layers, sgs); err != nil {
 		return nil, err
 	}
 

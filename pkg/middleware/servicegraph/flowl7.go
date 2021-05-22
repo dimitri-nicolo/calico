@@ -81,7 +81,7 @@ var (
 )
 
 // GetL7FlowData queries and returns the set of L7 flow data.
-func GetL7FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]L7Flow, error) {
+func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]L7Flow, error) {
 	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
 	defer cancel()
 
@@ -98,10 +98,10 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData) (
 		}()
 	}
 
-	index := elastic.GetL7FlowsIndex(rd.request.Cluster)
+	index := elastic.GetL7FlowsIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeQuery(rd.request.TimeRange),
+		Query:                   elastic.GetEndTimeRangeQuery(tr),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: l7CompositeSources,
 		AggSumInfos:             l7AggregationSums,

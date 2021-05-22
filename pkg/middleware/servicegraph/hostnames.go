@@ -5,6 +5,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/tigera/es-proxy/pkg/k8s"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,9 +17,9 @@ import (
 type HostnameHelper interface {
 	// Methods used to modify host name data in flows and events.  These methods may update the helper with additional
 	// host names that were found in the logs and events but are no longer in the cluster.
-	ProcessL3Flow(f *L3Flow)
-	ProcessL7Flow(f *L7Flow)
-	ProcessEvent(e *Event)
+	ProcessL3Flow(f L3Flow) L3Flow
+	ProcessL7Flow(f L7Flow) L7Flow
+	ProcessEvent(e Event) Event
 
 	// Return the set of host names associated with a host aggregated name.  This method does not update the helper.
 	// It returns the final compiled set of hosts associated with the aggregated name.
@@ -35,7 +37,7 @@ type hostnameHelper struct {
 	hepToHostname map[string]string
 }
 
-func GetHostnameHelper(ctx context.Context, rd *RequestData) (HostnameHelper, error) {
+func GetHostnameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSelector) (HostnameHelper, error) {
 	hh := &hostnameHelper{}
 
 	wg := sync.WaitGroup{}
@@ -48,11 +50,11 @@ func GetHostnameHelper(ctx context.Context, rd *RequestData) (HostnameHelper, er
 		// If the user has specified a set of host aggregation selectors then query the Node resource and determine
 		// which selectors match which nodes. The nodes (hosts) matching a selector will be put in a hosts buckets
 		// with the name assigned to the selector.
-		if len(rd.request.SelectedView.HostAggregationSelectors) > 0 {
+		if len(selectors) > 0 {
 			hh.hostNameToAggrName = make(map[string]string)
 			hh.aggrNameToHostnames = make(map[string][]string)
 
-			nodes, err := rd.appCluster.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+			nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				errNodes = err
 				return
@@ -60,7 +62,7 @@ func GetHostnameHelper(ctx context.Context, rd *RequestData) (HostnameHelper, er
 
 		next_node:
 			for _, node := range nodes.Items {
-				for _, selector := range rd.request.SelectedView.HostAggregationSelectors {
+				for _, selector := range selectors {
 					if selector.Selector.Evaluate(node.Labels) {
 						log.Debugf("Host to aggregated name mapping: %s -> %s", node.Name, selector.Name)
 						hh.hostNameToAggrName[node.Name] = selector.Name
@@ -83,7 +85,7 @@ func GetHostnameHelper(ctx context.Context, rd *RequestData) (HostnameHelper, er
 		// Get the HostEndpoints to determine a HostEndpoint -> Host name mapping. We use this to correlate events
 		// related to HostEndpoint resources with the host or hosts node types.
 		hepToHostname := make(map[string]string)
-		hostEndpoints, err := rd.appCluster.HostEndpoints().List(ctx, metav1.ListOptions{})
+		hostEndpoints, err := cs.HostEndpoints().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			errHosts = err
 			return
@@ -106,12 +108,12 @@ func GetHostnameHelper(ctx context.Context, rd *RequestData) (HostnameHelper, er
 
 // ProcessL3Flow updates an L3 flow to include additional aggregation details, and will also update the aggregation
 // helper to track additional mappings that were not found during instantiation.
-func (ah *hostnameHelper) ProcessL3Flow(f *L3Flow) {
+func (ah *hostnameHelper) ProcessL3Flow(f L3Flow) L3Flow {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
 	if ah.hostNameToAggrName == nil {
-		return
+		return f
 	}
 
 	// The aggregated name for hosts is actually the full name. Swap over, and apply the calculated aggregated name.
@@ -135,16 +137,18 @@ func (ah *hostnameHelper) ProcessL3Flow(f *L3Flow) {
 			ah.addAdditionalWildcardAggregatedNode(f.Edge.Dest.Name)
 		}
 	}
+
+	return f
 }
 
 // ProcessL7Flow updates an L7 flow to include additional aggregation details, and will also update the aggregation
 // helper to track additional mappings that were not found during instantiation.
-func (ah *hostnameHelper) ProcessL7Flow(f *L7Flow) {
+func (ah *hostnameHelper) ProcessL7Flow(f L7Flow) L7Flow {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
 	if ah.hostNameToAggrName == nil {
-		return
+		return f
 	}
 
 	// The aggregated name for hosts is actually the full name. Swap over, and apply the calculated aggregated name.
@@ -168,20 +172,24 @@ func (ah *hostnameHelper) ProcessL7Flow(f *L7Flow) {
 			ah.addAdditionalWildcardAggregatedNode(f.Edge.Dest.Name)
 		}
 	}
+
+	return f
 }
 
 // ProcessEvent updates an event to include additional aggregation details, and will also update the aggregation
 // helper to track additional mappings that were not found during instantiation.
-func (ah *hostnameHelper) ProcessEvent(e *Event) {
+func (ah *hostnameHelper) ProcessEvent(e Event) Event {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
 	if ah.hostNameToAggrName == nil {
-		return
+		return e
 	}
 
-	for i := range e.Endpoints {
-		ep := &e.Endpoints[i]
+	// Be careful not to modify the original data which is cached.
+	eps := e.Endpoints
+	e.Endpoints = make([]FlowEndpoint, len(eps))
+	for i, ep := range eps {
 		if ep.Type == v1.GraphNodeTypeHost {
 			ep.Name = ep.NameAggr
 			if nameAggr := ah.hostNameToAggrName[ep.NameAggr]; nameAggr != "" {
@@ -210,7 +218,10 @@ func (ah *hostnameHelper) ProcessEvent(e *Event) {
 				ep.NameAggr = "*"
 			}
 		}
+		e.Endpoints[i] = ep
 	}
+
+	return e
 }
 
 // GetCompiledHostNamesFromAggregatedName returns the set of host names that correspond to the aggregated name.

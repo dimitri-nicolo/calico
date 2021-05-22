@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/tigera/es-proxy/pkg/k8s"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -14,8 +16,8 @@ type FlowConfig struct {
 	DNSLogFlushInterval time.Duration
 }
 
-func GetFlowConfig(ctx context.Context, rd *RequestData) (*FlowConfig, error) {
-	felixConfig, err := rd.appCluster.FelixConfigurations().Get(ctx, "default", v1.GetOptions{})
+func GetFlowConfig(ctx context.Context, cs k8s.ClientSet) (*FlowConfig, error) {
+	felixConfig, err := cs.FelixConfigurations().Get(ctx, "default", v1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

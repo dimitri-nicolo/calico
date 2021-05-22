@@ -1,10 +1,10 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package v1
 
+import "time"
+
 type ServiceGraphRequest struct {
-	// The cluster name.
-	// For standalone deployments this may be omitted or set to "cluster.
-	// For a multi-cluster deployments, this defaults to the management cluster if omitted.
+	// The cluster name. Defaults to "cluster".
 	Cluster string `json:"cluster"`
 
 	// Time range.
@@ -12,6 +12,12 @@ type ServiceGraphRequest struct {
 
 	// The selected view.
 	SelectedView GraphView `json:"selected_view"`
+
+	// Timeout for the request. Defaults to 60s.
+	Timeout time.Duration `json:"timeout"`
+
+	// Force a refresh of the data. Generally this should not be required.
+	ForceRefresh bool `json:"force_refresh"`
 }
 
 type ServiceGraphResponse struct {
