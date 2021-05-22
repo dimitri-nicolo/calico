@@ -9,8 +9,8 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2-0.20210521161459-221c1edde3fd
-	github.com/sirupsen/logrus v1.6.0
+	github.com/projectcalico/libcalico-go v1.7.2-0.20210316170114-0bc78efd377a
+	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	google.golang.org/grpc v1.27.1
 )
@@ -21,6 +21,6 @@ replace (
 	// supply the go code.
 	github.com/envoyproxy/data-plane-api => github.com/projectcalico/data-plane-api v0.0.0-20210121211707-a620ff3c8f7e
 
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210126182422-b334ce1a1d94
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210511163730-078ad1161770
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
