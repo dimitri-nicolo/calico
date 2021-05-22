@@ -1,25 +1,19 @@
 PACKAGE_NAME=github.com/projectcalico/kube-controllers
-GO_BUILD_VER=v0.51
+GO_BUILD_VER=v0.53
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID)
 
 GIT_USE_SSH = true
 
-###############################################################################
-# Download and include Makefile.common
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+# Makefile configuration options
+KUBE_CONTROLLERS_IMAGE  ?=tigera/kube-controllers
+FLANNEL_MIGRATION_IMAGE ?=tigera/flannel-migration-controller
+BUILD_IMAGES            ?=$(KUBE_CONTROLLERS_IMAGE) $(FLANNEL_MIGRATION_IMAGE)
+DEV_REGISTRIES          ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES      ?=quay.io
+RELEASE_BRANCH_PREFIX ?= release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
@@ -39,14 +33,22 @@ $(LOCAL_BUILD_DEP):
 		-replace=github.com/projectcalico/typha=../typha
 endif
 
-BUILD_IMAGE?=tigera/kube-controllers
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
-FLANNEL_MIGRATION_BUILD_IMAGE?=calico/flannel-migration-controller
-RELEASE_IMAGES?=
+###############################################################################
+# Download and include Makefile.common
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 include Makefile.common
-
-###############################################################################
 
 KUBE_CONTROLLERS_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 
@@ -63,13 +65,15 @@ endif
 
 SRC_FILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
 
+###############################################################################
+
 ## Removes all build artifacts.
 clean:
 	rm -rf .go-pkg-cache bin image.created-$(ARCH) build report/*.xml release-notes-*
-	-docker rmi $(BUILD_IMAGE)
-	-docker rmi $(BUILD_IMAGE):latest-amd64
-	-docker rmi $(FLANNEL_MIGRATION_BUILD_IMAGE)
-	-docker rmi $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-amd64
+	-docker rmi $(KUBE_CONTROLLERS_IMAGE)
+	-docker rmi $(KUBE_CONTROLLERS_IMAGE):latest-amd64
+	-docker rmi $(FLANNEL_MIGRATION_IMAGE)
+	-docker rmi $(FLANNEL_MIGRATION_IMAGE):latest-amd64
 	rm -f tests/fv/fv.test
 	rm -f report/*.xml
 	rm -f tests/crds.yaml
@@ -138,13 +142,13 @@ sub-image-%:
 
 image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH) bin/wrapper-$(ARCH) bin/kubectl-$(ARCH)
 	# Build the docker image for the policy controller.
-	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
+	docker build -t $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 	# Build the docker image for the flannel migration controller.
-	docker build -t $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f docker-images/flannel-migration/Dockerfile.$(ARCH) .
+	docker build -t $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f docker-images/flannel-migration/Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	# Need amd64 builds tagged as :latest because Semaphore depends on that
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
-	docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(FLANNEL_MIGRATION_BUILD_IMAGE):latest
+	docker tag $(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) $(KUBE_CONTROLLERS_IMAGE):latest
+	docker tag $(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) $(FLANNEL_MIGRATION_IMAGE):latest
 endif
 	touch $@
 
@@ -154,34 +158,6 @@ remote-deps: mod-download
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c ' \
 		cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config/crd/* tests/crds/; \
 		chmod +w tests/crds/*'
-
-sub-single-tag-images-arch-%:
-	@if echo $* | grep -q "$(call escapefs,$(FLANNEL_MIGRATION_BUILD_IMAGE))"; then \
-		echo "docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
-		docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
-	else \
-		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
-		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
-	fi
-
-# because some still do not support multi-arch manifest
-sub-single-tag-images-non-manifest-%:
-ifeq ($(ARCH),amd64)
-	@if echo $* | grep -q "$(call escapefs,$(FLANNEL_MIGRATION_BUILD_IMAGE))"; then \
-		echo "docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
-		docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
-	else \
-		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
-		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
-	fi
-else
-	$(NOECHO) $(NOOP)
-endif
-
-## tag version number build images i.e.  tigera/kube-controllers:latest-amd64 -> tigera/kube-controllers:v1.1.1-amd64
-tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
-sub-base-tag-images-%:
-	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
 
 ###############################################################################
 # Static checks
@@ -203,8 +179,8 @@ fv: remote-deps tests/fv/fv.test image
 	@echo Running Go FVs.
 	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) \
 		HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) \
-		CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
-		MIGRATION_CONTAINER_NAME=$(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) \
+		CONTAINER_NAME=$(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) \
+		MIGRATION_CONTAINER_NAME=$(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) \
 		PRIVATE_KEY=`pwd`/private.key \
 		CRDS=${PWD}/tests/crds \
 		GO111MODULE=on \
@@ -243,88 +219,3 @@ check-dirty: undo-go-sum
 .PHONY: cd
 ## Deploys images to registry
 cd: check-dirty cd-common
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) tag-base-images-all
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-
-	$(MAKE) image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
-	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) --version | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://github.com/tigera/kube-controllers/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE):latest --version | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):latest --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
