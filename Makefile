@@ -1,19 +1,10 @@
-# Shortcut targets
-default: build
-
-## Build binary for current platform
-all: build
-
-## Run the tests for the current platform/architecture
-test: ut
+PACKAGE_NAME?=github.com/projectcalico/app-policy
+GO_BUILD_VER?=v0.53
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_APP_POLICY_PRIVATE_PROJECT_ID)
 
 ###############################################################################
-GO_BUILD_VER?=v0.51
-
-CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
@@ -24,6 +15,48 @@ GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 ifeq ($(LOCAL_BUILD),true)
 	GIT_VERSION = $(shell git describe --tags --dirty --always --abbrev=12)-dev-build
 endif
+
+# Figure out the users UID/GID.  These are needed to run docker containers
+# as the current user and ensure that files built inside containers are
+# owned by the current user.
+LOCAL_USER_ID:=$(shell id -u)
+MY_GID:=$(shell id -g)
+
+SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
+
+# If local build is set, then always build the binary since we might not
+# detect when another local repository has been modified.
+ifeq ($(LOCAL_BUILD),true)
+.PHONY: $(SRC_FILES)
+endif
+
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+
+GIT_USE_SSH?=true
+
+DIKASTES_IMAGE        ?=tigera/dikastes
+BUILD_IMAGES          ?= $(DIKASTES_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?= release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+.PHONY:local_build
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+else
+local_build:
+	@echo "Building app-policy-private"
+endif
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -40,68 +73,27 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-# Figure out the users UID/GID.  These are needed to run docker containers
-# as the current user and ensure that files built inside containers are
-# owned by the current user.
-LOCAL_USER_ID:=$(shell id -u)
-MY_GID:=$(shell id -g)
-
-SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
-
-# If local build is set, then always build the binary since we might not
-# detect when another local repository has been modified.
-ifeq ($(LOCAL_BUILD),true)
-.PHONY: $(SRC_FILES)
-endif
-
-############################################################################
-BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
-PUSH_IMAGES?=$(BUILD_IMAGE)
-RELEASE_IMAGES?=quay.io/tigera/dikastes
-PACKAGE_NAME?=github.com/projectcalico/app-policy
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-GIT_USE_SSH?=true
-
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-PUSH_IMAGES+=$(RELEASE_IMAGES)
-endif
-
-# remove from the list to push to manifest any registries that do not support multi-arch
-EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
-PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
-
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-.PHONY:local_build
-
-ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw
-local_build:
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-else
-local_build:
-	@echo "Building app-policy-private"
-endif
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
 include Makefile.common
 
-# Always install the git hooks to prevent publishing closed source code to a non-private repo.
-hooks_installed:=$(shell ./install-git-hooks)
+# Shortcut targets
+default: build
+
+## Build binary for current platform
+all: build
+
+## Run the tests for the current platform/architecture
+test: ut
 
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
 	rm -rf .go-pkg-cache report vendor bin Makefile.common*
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
-	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
+	-docker rmi $(DIKASTES_IMAGE):latest-$(ARCH)
+	-docker rmi $(DIKASTES_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	-docker rmi $(BUILD_IMAGE):latest
-	-docker rmi $(BUILD_IMAGE):$(VERSION)
+	-docker rmi $(DIKASTES_IMAGE):latest
+	-docker rmi $(DIKASTES_IMAGE):$(VERSION)
 endif
 
 ###############################################################################
@@ -168,17 +160,17 @@ proto/healthz.pb.go: proto/healthz.proto
 # Building the image
 ###############################################################################
 CONTAINER_CREATED=.dikastes.created-$(ARCH)
-.PHONY: image $(BUILD_IMAGE)
-image: $(BUILD_IMAGE)
+.PHONY: image $(DIKASTES_IMAGE)
+image: $(DIKASTES_IMAGE)
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(BUILD_IMAGE): $(CONTAINER_CREATED)
+$(DIKASTES_IMAGE): $(CONTAINER_CREATED)
 $(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/dikastes-$(ARCH) bin/healthz-$(ARCH)
-	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
+	docker build -t $(DIKASTES_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(DIKASTES_IMAGE):latest-$(ARCH) $(DIKASTES_IMAGE):latest
 endif
 	touch $@
 
@@ -228,108 +220,3 @@ check-dirty: undo-go-sum
 .PHONY: cd
 ## Deploys images to registry
 cd: image-all check-dirty cd-common
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-
-	$(MAKE) image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
-	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /dikastes --version | grep '^$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /dikastes --version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-
-###############################################################################
-# Developer helper scripts (not used by build or test)
-###############################################################################
-.PHONY: help
-## Display this help text
-help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
-		nb = sub( /^## /, "", helpMsg );				\
-		if(nb == 0) {						   \
-			helpMsg = $$0;					      \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
-		}							       \
-		if (nb)							 \
-			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}								   \
-	{ helpMsg = $$0 }'						  \
-	width=20							    \
-	$(MAKEFILE_LIST)

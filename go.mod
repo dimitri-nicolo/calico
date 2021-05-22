@@ -9,10 +9,10 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2-0.20210316170114-0bc78efd377a
+	github.com/projectcalico/libcalico-go v1.7.2-0.20210521161459-221c1edde3fd
 	github.com/sirupsen/logrus v1.6.0
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
-	google.golang.org/grpc v1.27.0
+	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
+	google.golang.org/grpc v1.27.1
 )
 
 replace (
