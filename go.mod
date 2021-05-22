@@ -14,7 +14,6 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
 	gopkg.in/ini.v1 v1.44.0 // indirect
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
