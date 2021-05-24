@@ -104,8 +104,10 @@ fi
 chmod +x ${KIND}
 
 echo "Create kind cluster"
-if dual_stack; then
-    ${KIND} -v 1 create cluster --image songtjiang/kindnode-dualstack:1.17.0 --config - <<EOF
+set +e
+for attempt in 1 2 3; do
+    if dual_stack; then
+	${KIND} -v 1 create cluster --image songtjiang/kindnode-dualstack:1.17.0 --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
@@ -133,8 +135,8 @@ kubeadmConfigPatches:
     name: config
   mode: ipvs
 EOF
-else
-    ${KIND} create cluster --config - <<EOF
+    else
+	${KIND} create cluster --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
@@ -147,7 +149,17 @@ nodes:
 - role: worker
 - role: worker
 EOF
-fi
+    fi
+    kind_rc=$?
+    if ${TEST_RETRY:-false} || test "${kind_rc}" != 0; then
+	${KIND} delete cluster
+	TEST_RETRY=false	# Only force a retry test once.
+	continue
+    fi
+    break
+done
+set -e
+test "${kind_rc}" = 0
 
 ${kubectl} get no -o wide
 ${kubectl} get po --all-namespaces -o wide
