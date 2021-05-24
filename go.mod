@@ -58,6 +58,7 @@ require (
 	k8s.io/client-go v0.21.0
 	k8s.io/kubernetes v1.21.0-rc.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	modernc.org/memory v1.0.4
 	sigs.k8s.io/kind v0.9.0
 )
 

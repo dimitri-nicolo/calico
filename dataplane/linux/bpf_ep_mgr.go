@@ -40,6 +40,8 @@ import (
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/felix/logutils"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -159,6 +161,7 @@ type bpfEndpointManager struct {
 	dp bpfDataplane
 
 	ifaceToIpMap map[string]net.IP
+	opReporter   logutils.OpRecorder
 
 	// CaliEnt features below
 
@@ -187,6 +190,7 @@ func newBPFEndpointManager(
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
+	opReporter logutils.OpRecorder,
 
 	// CaliEnt args below
 
@@ -237,6 +241,7 @@ func newBPFEndpointManager(
 		lookupsCache:     lookupsCache,
 		hostIfaceToEpMap: map[string]proto.HostEndpoint{},
 		ifaceToIpMap:     map[string]net.IP{},
+		opReporter:       opReporter,
 		actionOnDrop:     actionOnDrop,
 		enableTcpStats:   enableTcpStats,
 	}
@@ -537,6 +542,8 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			return set.RemoveItem
 		}
 
+		m.opReporter.RecordOperation("update-data-iface")
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -591,7 +598,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			log.WithField("id", iface).Info("Applied program to host interface")
 			return set.RemoveItem
 		}
-		if errors.Is(err, tc.ErrDeviceNotFound) {
+		if isLinkNotFoundError(err) {
 			log.WithField("iface", iface).Debug(
 				"Tried to apply BPF program to interface but the interface wasn't present.  " +
 					"Will retry if it shows up.")
@@ -618,6 +625,8 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 		if !m.isWorkloadIface(ifaceName) {
 			return nil
 		}
+
+		m.opReporter.RecordOperation("update-workload-iface")
 
 		if err := sem.Acquire(context.Background(), 1); err != nil {
 			// Should only happen if the context finishes.
@@ -664,7 +673,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 			return set.RemoveItem
 		} else {
 			if wlID != nil && m.happyWEPs[*wlID] != nil {
-				if !errors.Is(err, tc.ErrDeviceNotFound) {
+				if !isLinkNotFoundError(err) {
 					log.WithField("id", *wlID).WithError(err).Warning(
 						"Failed to add policy to workload, removing from iptables allow list")
 				}
@@ -672,7 +681,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 				m.happyWEPsDirty = true
 			}
 		}
-		if errors.Is(err, tc.ErrDeviceNotFound) {
+		if isLinkNotFoundError(err) {
 			log.WithField("wep", wlID).Debug(
 				"Tried to apply BPF program to interface but the interface wasn't present.  " +
 					"Will retry if it shows up.")
@@ -727,7 +736,7 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	// Attach the qdisc first; it is shared between the directions.
 	err := m.dp.ensureQdisc(ifaceName)
 	if err != nil {
-		if errors.Is(err, tc.ErrDeviceNotFound) {
+		if isLinkNotFoundError(err) {
 			// Interface is gone, nothing to do.
 			log.WithField("ifaceName", ifaceName).Debug(
 				"Ignoring request to program interface that is not present.")
@@ -764,6 +773,16 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	applyTime := time.Since(startTime)
 	log.WithField("timeTaken", applyTime).Info("Finished applying BPF programs for workload")
 	return nil
+}
+
+func isLinkNotFoundError(err error) bool {
+	if errors.Is(err, tc.ErrDeviceNotFound) { // From the tc package.
+		return true
+	}
+	if err.Error() == "Link not found" { // From netlink and friends.
+		return true
+	}
+	return false
 }
 
 var calicoRouterIP = net.IPv4(169, 254, 1, 1).To4()
