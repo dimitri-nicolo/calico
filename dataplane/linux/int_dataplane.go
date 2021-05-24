@@ -763,19 +763,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.ipSets = append(dp.ipSets, ipSetsV6)
 
 	if config.RulesConfig.TPROXYMode == "Enabled" {
-		maxsize := 1000
-		svcs := []string{}
-		for _, serverPort := range config.RulesConfig.TPROXYDests {
-			svcs = append(svcs, fmt.Sprintf("%v,tcp:%v", serverPort.IP, serverPort.Port))
-		}
-		ipSetsV4.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			svcs,
-		)
-		ipSetsV6.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			[]string{},
-		)
+		tproxyMgr := newTproxyManager(ipSetsV4, ipSetsV6, config.RulesConfig.TPROXYDests)
+		dp.RegisterManager(tproxyMgr)
 	}
 
 	if config.BPFEnabled {
