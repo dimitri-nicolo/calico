@@ -165,6 +165,10 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		})
 
 		JustAfterEach(func() {
+			for _, p := range proxies {
+				p.Stop()
+			}
+
 			if CurrentGinkgoTestDescription().Failed {
 				for _, felix := range felixes {
 					felix.Exec("iptables-save", "-c")
@@ -193,10 +197,6 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				cc.ExpectSome(w[1][0], w[0][0], 8055)
 				cc.ExpectSome(w[1][1], w[0][0], 8055)
 				cc.CheckConnectivity()
-
-				for _, p := range proxies {
-					p.Stop()
-				}
 
 				// Connection is proxied both on the client and server node
 				Expect(proxies[0].ConnCount(w[0][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
@@ -229,10 +229,6 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
 				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
 				cc.CheckConnectivity()
-
-				for _, p := range proxies {
-					p.Stop()
-				}
 
 				// Connection should be proxied on the pod's local node
 				Expect(proxies[0].ConnCount(w[0][1].IP, w[0][0].IP+":8055", clusterIP+":8090")).To(BeNumerically(">", 0))

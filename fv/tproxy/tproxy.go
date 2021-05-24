@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/onsi/ginkgo"
@@ -43,6 +44,7 @@ type TProxy struct {
 	port  uint16
 
 	connections map[ConnKey]int
+	connLock    sync.Mutex
 }
 
 type ConnKey struct {
@@ -134,16 +136,20 @@ func (t *TProxy) readStderr() {
 
 		m := connRegexp.FindStringSubmatch(line)
 		if len(m) == 4 {
-			t.connections[ConnKey{ClientIP: m[1], PodIPPort: m[2], ServiceIPPort: m[3]}]++
+			t.connAdd(m[1], m[2], m[3])
 		}
 	}
 	log.WithError(s.Err()).Info("TProxy stderr finished")
 }
 
-func (t *TProxy) ConnCount(client, pod, service string) int {
-	return t.connections[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
+func (t *TProxy) connAdd(client, pod, service string) {
+	t.connLock.Lock()
+	t.connections[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]++
+	t.connLock.Unlock()
 }
 
-func (t *TProxy) Connections() map[ConnKey]int {
-	return t.connections
+func (t *TProxy) ConnCount(client, pod, service string) int {
+	t.connLock.Lock()
+	defer t.connLock.Unlock()
+	return t.connections[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
 }
