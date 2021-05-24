@@ -17,6 +17,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/gopacket v1.1.19
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
+	github.com/google/uuid v1.2.0
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
@@ -35,7 +36,6 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.0
