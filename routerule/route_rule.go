@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -236,6 +236,11 @@ func (r *RouteRules) Apply() error {
 		r.logCxt.WithError(err).Error("Failed to list routing rules, retrying...")
 		r.closeNetlinkHandle() // Defensive: force a netlink reconnection next time.
 		return ListFailed
+	}
+
+	// Set the Family onto the rules, the netlink lib does not populate this field.
+	for i := range nlRules {
+		nlRules[i].Family = r.netlinkFamily
 	}
 
 	// Work out two sets, rules to add and rules to remove.
