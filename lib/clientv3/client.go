@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,15 +16,13 @@ package clientv3
 
 import (
 	"context"
-
-	log "github.com/sirupsen/logrus"
-
 	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -325,7 +323,8 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, cnx
 				newClusterInfo.Spec.CalicoVersion = calicoVersion
 				newClusterInfo.Spec.CNXVersion = cnxVersion
 				newClusterInfo.Spec.ClusterType = clusterType
-				newClusterInfo.Spec.ClusterGUID = fmt.Sprintf("%s", hex.EncodeToString(uuid.NewV4().Bytes()))
+				u := uuid.New()
+				newClusterInfo.Spec.ClusterGUID = hex.EncodeToString(u[:])
 				datastoreReady := true
 				newClusterInfo.Spec.DatastoreReady = &datastoreReady
 				_, err = c.ClusterInformation().Create(ctx, newClusterInfo, options.SetOptions{})
@@ -367,7 +366,8 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, cnx
 		}
 
 		if clusterInfo.Spec.ClusterGUID == "" {
-			clusterInfo.Spec.ClusterGUID = fmt.Sprintf("%s", hex.EncodeToString(uuid.NewV4().Bytes()))
+			u := uuid.New()
+			clusterInfo.Spec.ClusterGUID = hex.EncodeToString(u[:])
 			updateNeeded = true
 		} else {
 			log.WithField("ClusterGUID", clusterInfo.Spec.ClusterGUID).Debug("Cluster GUID value already set")
