@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,25 +23,22 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	uuid "github.com/satori/go.uuid"
-	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s/resources"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/names"
-
 	k8sapi "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/resources"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 var _ = Describe("WorkloadEndpointClient", func() {
@@ -358,7 +355,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 	Describe("Delete", func() {
 		Context("WorkloadEndpoint has no IPs set", func() {
 			It("zeros out the cni.projectcalico.org/podIP and cni.projectcalico.org/podIPs annotations", func() {
-				podUID := types.UID(uuid.NewV4().String())
+				podUID := types.UID(uuid.NewString())
 				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "simplePod",
