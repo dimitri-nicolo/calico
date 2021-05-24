@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 package server
 
 import (
@@ -9,24 +9,24 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/es-proxy/pkg/kibana"
-
-	"github.com/tigera/lma/pkg/list"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/datastore"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	celastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/list"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"github.com/tigera/es-proxy/pkg/handler"
+	"github.com/tigera/es-proxy/pkg/k8s"
+	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	celastic "github.com/tigera/lma/pkg/elastic"
 )
 
 var (
@@ -118,12 +118,21 @@ func Start(cfg *Config) error {
 
 	restConfig := datastore.MustGetConfig()
 
+	//TODO(rlb): I think we can remove this factory in favor of the user and cluster aware factory that can do user based
+	//  authorization review that performs multiple checks in a single request.
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, voltronServiceURL)
 	k8sCli, err := k8sClientFactory.ClientSetForCluster(datastore.DefaultCluster)
 	if err != nil {
 		panic(err)
 	}
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
+
+	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetFactory provide
+	// cluster and user aware k8s clients.
+	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, voltronServiceURL)
+
+	// Create a service graph handler.
+	serviceGraph := servicegraph.NewServiceGraph(esClient, k8sClientSetFactory)
 
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
@@ -133,6 +142,11 @@ func Start(cfg *Config) error {
 	}, cfg.ElasticKibanaEndpoint, cfg.ElasticVersion)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
+	sm.Handle("/serviceGraph",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					serviceGraph.Handler()))))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,

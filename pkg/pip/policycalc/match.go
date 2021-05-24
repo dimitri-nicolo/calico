@@ -148,14 +148,14 @@ func (m *MatcherFactory) Protocol(p *numorstring.Protocol) FlowMatcher {
 
 	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		if flow.Proto == nil {
-			log.Debugf("Protocol: %s (unknown)", MatchTypeUncertain)
+			log.Debugf("Proto: %s (unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
 		}
 		if *flow.Proto == *protocol {
-			log.Debugf("Protocol: %s (protocol matches %d)", MatchTypeTrue, *protocol)
+			log.Debugf("Proto: %s (protocol matches %d)", MatchTypeTrue, *protocol)
 			return MatchTypeTrue
 		}
-		log.Debugf("Protocol: %s (protocol %d != %d)", MatchTypeFalse, *flow.Proto, *protocol)
+		log.Debugf("Proto: %s (protocol %d != %d)", MatchTypeFalse, *flow.Proto, *protocol)
 		return MatchTypeFalse
 	}
 }

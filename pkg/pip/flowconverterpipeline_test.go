@@ -433,11 +433,11 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
-			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
+			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + AggregatedProtoPorts after
 			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), //                // +
 			// Source api.
-			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
-			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregated   // |
+			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + AggregatedProtoPorts after
+			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + AggregatedProtoPorts   // |
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
 			// WEP
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)), // Missing dest flow
@@ -705,11 +705,11 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
-			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
+			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + AggregatedProtoPorts after
 			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), //                // +
 			// Source api.
-			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
-			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregated   // |
+			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + AggregatedProtoPorts after
+			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + AggregatedProtoPorts   // |
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
 			// WEP
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)), // Missing dest flow

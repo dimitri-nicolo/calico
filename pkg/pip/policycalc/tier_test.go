@@ -388,9 +388,9 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(compute().Action).To(Equal(api.ActionFlagAllow | api.ActionFlagEndOfTierDeny))
 	})
 
-	// ---- Protocol/NotProtocol matcher ----
+	// ---- Proto/NotProtocol matcher ----
 
-	It("checking source egress allow exact match when Protocol is non-nil", func() {
+	It("checking source egress allow exact match when Proto is non-nil", func() {
 		f.Proto = &uint8_17
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
@@ -402,7 +402,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(compute().Action).To(Equal(api.ActionFlagAllow))
 	})
 
-	It("checking source ingress allow exact match when Protocol is non-nil", func() {
+	It("checking source ingress allow exact match when Proto is non-nil", func() {
 		f.Proto = &uint8_17
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
@@ -414,7 +414,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(compute().Action).To(Equal(api.ActionFlagAllow))
 	})
 
-	It("checking source egress allow non-match when Protocol is non-nil", func() {
+	It("checking source egress allow non-match when Proto is non-nil", func() {
 		f.Proto = &uint8_17
 		f.Source.Namespace = "ns1"
 		f.Source.Type = api.EndpointTypeWep
@@ -426,7 +426,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(compute().Action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
-	It("checking source ingress allow inexact match when Protocol is non-nil", func() {
+	It("checking source ingress allow inexact match when Proto is non-nil", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		np.Spec.Types = typesIngress

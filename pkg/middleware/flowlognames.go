@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/olivere/elastic/v7"
+	log "github.com/sirupsen/logrus"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
@@ -21,6 +20,8 @@ import (
 	"github.com/tigera/lma/pkg/rbac"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
+
+	"github.com/tigera/es-proxy/pkg/timeutils"
 )
 
 const (
@@ -152,12 +153,12 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 
 	// Parse the start/end time to validate the format. We don't need the resulting time struct.
 	now := time.Now()
-	_, startDateTimeESParm, err := ParseElasticsearchTime(now, &startDateTimeString)
+	_, startDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, errParseRequest
 	}
-	_, endDateTimeESParm, err := ParseElasticsearchTime(now, &endDateTimeString)
+	_, endDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, errParseRequest
