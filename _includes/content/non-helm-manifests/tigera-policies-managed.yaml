@@ -282,6 +282,15 @@ spec:
   types:
   - Ingress
   - Egress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+      namespaceSelector: projectcalico.org/name == "tigera-prometheus"
+    destination:
+      ports:
+      - '9081'
   egress:
   - action: Deny
     protocol: TCP
