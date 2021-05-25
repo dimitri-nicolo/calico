@@ -6,7 +6,7 @@ GIT_USE_SSH = true
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
 
-NODE_IMAGE            ?=tigera/node
+NODE_IMAGE            ?=tigera/cnx-node
 BUILD_IMAGES          ?=$(NODE_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
@@ -70,11 +70,12 @@ FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.gz
 INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 
 # Versions and locations of dependencies used in tests.
-CALICOCTL_VERSION?=master
-CNI_VERSION?=master
-TEST_CONTAINER_NAME_VER?=latest
-CTL_CONTAINER_NAME?=$(CNX_REPOSITORY)/tigera/calicoctl:$(CALICOCTL_VERSION)-$(ARCH)
-TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
+CNX_REPOSITORY          ?=gcr.io/unique-caldron-775/cnx
+CALICOCTL_VERSION       ?=master
+CNI_VERSION             ?=master
+TEST_CONTAINER_NAME_VER ?=latest
+CTL_CONTAINER_NAME      ?=$(CNX_REPOSITORY)/tigera/calicoctl:$(CALICOCTL_VERSION)-$(ARCH)
+TEST_CONTAINER_NAME     ?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 # If building on amd64 omit the arch in the container name.  Fixme!
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 ifneq ($(BUILDARCH),amd64)
