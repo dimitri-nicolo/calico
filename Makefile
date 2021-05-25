@@ -40,13 +40,25 @@ endif
 #
 # We support these platforms:
 # - Windows 10 1809 amd64
-# - Windows 10 1903 amd64
-# - Windows 10 1909 amd64
 # - Windows 10 2004 amd64
+# - Windows 10 20H2 amd64
 #
 # For Linux, we leave the image tag alone.
 ifeq ($(OS),Windows_NT)
-$(eval WINDOWS_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ReleaseId))
+# Get the Windows build number.
+$(eval WINDOWS_BUILD_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuild))
+
+# Get Windows version based on build number.
+ifeq ($(WINDOWS_BUILD_VERSION),17763)
+WINDOWS_VERSION := 1809
+else ifeq ($(WINDOWS_BUILD_VERSION),19041)
+WINDOWS_VERSION := 2004
+else ifeq ($(WINDOWS_BUILD_VERSION),19042)
+WINDOWS_VERSION := 20H2
+else
+$(error Unknown WINDOWS_BUILD_VERSION)
+endif
+
 ARCH_TAG=-windows-$(WINDOWS_VERSION)
 else
 ARCH_TAG=
