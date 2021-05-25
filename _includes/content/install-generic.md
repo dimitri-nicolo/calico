@@ -1,6 +1,10 @@
 #### Install {{site.prodname}}
 
+{% if include.clusterType != "managed" %}
+
 1. [Configure storage for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
+
+{% endif %}
 
 1. Install the Tigera operator and custom resource definitions.
 
