@@ -250,7 +250,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 			})
 
-			Context("With traffic denied from w[1][1]", func() {
+			Context("With ingress traffic denied from w[1][1]", func() {
 				It("should have connectivity only from w[0][1] and w[1][0]", func() {
 					By("Denying traffic from w[1][1]", func() {
 						pol := api.NewGlobalNetworkPolicy()
@@ -265,6 +265,44 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 							},
 						}
 						pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+						one := float64(1)
+						pol.Spec.Order = &one
+
+						pol = createPolicy(pol)
+					})
+
+					cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
+					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
+					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+					cc.CheckConnectivity()
+
+					// Connection should be proxied on the pod's local node
+
+					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+				})
+			})
+
+			Context("With egress traffic denied from w[1][1]", func() {
+				It("should have connectivity only from w[0][1] and w[1][0]", func() {
+					By("Denying traffic from w[1][1]", func() {
+						pol := api.NewGlobalNetworkPolicy()
+						pol.Namespace = "fv"
+						pol.Name = "policy-deny-1-1"
+						pol.Spec.Egress = []api.Rule{
+							{
+								Action: "Deny",
+								Destination: api.EntityRule{
+									Selector: "name=='" + w[0][0].Name + "'",
+								},
+							},
+						}
+						pol.Spec.Selector = "name=='" + w[1][1].Name + "'"
 						one := float64(1)
 						pol.Spec.Order = &one
 

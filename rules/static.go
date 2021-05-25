@@ -210,16 +210,19 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
 
 	if r.TPROXYMode == "Enabled" {
-		mark := r.IptablesMarkProxy
+		/*
+			mark := r.IptablesMarkProxy
+			inputRules = append(inputRules,
+				Rule{
+					// XXX needs to jump in a proper policy chain XXX
+					Comment: []string{"Accept packets destined to proxy on existing connection"},
+					Match:   Match().MarkMatchesWithMask(mark, mark),
+					Action:  AcceptAction{},
+				},
+			)
+		*/
 
-		inputRules = append(inputRules,
-			Rule{
-				// XXX needs to jump in a proper policy chain XXX
-				Comment: []string{"Accept packets destined to proxy on existing connection"},
-				Match:   Match().MarkMatchesWithMask(mark, mark),
-				Action:  AcceptAction{},
-			},
-		)
+		inputRules = append(inputRules, r.forwardPolicyRules()...)
 	}
 
 	// Snoop DNS responses to a client directly on this host (e.g. bare metal, or a
@@ -590,30 +593,8 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string, ipVersion uint8) *C
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chain {
+func (r *DefaultRuleRenderer) forwardPolicyRules() []Rule {
 	rules := []Rule{}
-
-	// Rules for filter forward chains dispatches the packet to our dispatch chains if it is going
-	// to/from an interface that we're responsible for.  Note: the dispatch chains represent "allow"
-	// by returning to this chain for further processing; this is required to handle traffic that
-	// is going between endpoints on the same host.  In that case we need to apply the egress policy
-	// for one endpoint and the ingress policy for the other.
-	//
-	// Packets will be accepted if they passed through both workload and host endpoint policy
-	// and were returned.
-
-	// Snoop DNS messages to or from a local workload.  Place this first as it only snoops and
-	// does not accept or drop.  There are cases where we can snoop some DNS info and the packet
-	// is then dropped, e.g. because of host endpoint ingress policy.  However we are still
-	// filtering on trusted DNS servers, so the DNS info is trustworthy even if the packet gets
-	// dropped later by policy.  Also, if we placed this after host endpoint policy processing,
-	// we might be too late because of the packet already having been accepted.
-	for _, prefix := range r.WorkloadIfacePrefixes {
-		log.WithField("ifacePrefix", prefix).Debug("Adding DNS snooping rules")
-		ifaceMatch := prefix + "+"
-		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
-		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
-	}
 
 	// Jump to from-host-endpoint dispatch chains.
 	rules = append(rules,
@@ -670,6 +651,36 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
 	)
+
+	return rules
+}
+
+func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chain {
+	rules := []Rule{}
+
+	// Rules for filter forward chains dispatches the packet to our dispatch chains if it is going
+	// to/from an interface that we're responsible for.  Note: the dispatch chains represent "allow"
+	// by returning to this chain for further processing; this is required to handle traffic that
+	// is going between endpoints on the same host.  In that case we need to apply the egress policy
+	// for one endpoint and the ingress policy for the other.
+	//
+	// Packets will be accepted if they passed through both workload and host endpoint policy
+	// and were returned.
+
+	// Snoop DNS messages to or from a local workload.  Place this first as it only snoops and
+	// does not accept or drop.  There are cases where we can snoop some DNS info and the packet
+	// is then dropped, e.g. because of host endpoint ingress policy.  However we are still
+	// filtering on trusted DNS servers, so the DNS info is trustworthy even if the packet gets
+	// dropped later by policy.  Also, if we placed this after host endpoint policy processing,
+	// we might be too late because of the packet already having been accepted.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding DNS snooping rules")
+		ifaceMatch := prefix + "+"
+		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
+		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
+	}
+
+	rules = append(rules, r.forwardPolicyRules()...)
 
 	// Set IptablesMarkAccept bit here, to indicate to our mangle-POSTROUTING chain that this is
 	// forwarded traffic and should not be subject to normal host endpoint policy.
