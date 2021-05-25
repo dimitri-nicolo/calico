@@ -93,6 +93,12 @@ func (c *CollectorPolicyListener) run() {
 				Bytes:  int(e.IPSize),
 			}
 
+			// This is for compatibality with the previous version of handing PolicyVerdict
+			// where we only reported 1 Byte for each packet vs the actual packet size.
+			if e.IPSize == 0 {
+				pktInfo.RuleHits[i].Bytes = 1
+			}
+
 			// All directions should be the same
 			if rid != nil {
 				pktInfo.Direction = rid.Direction
