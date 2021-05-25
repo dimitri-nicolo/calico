@@ -108,7 +108,9 @@ func getPreDNATDest(c net.Conn) net.Addr {
 func handleConnection(down net.Conn) {
 	defer down.Close()
 
-	log.Infof("Accepted Connection from %s to %s", down.RemoteAddr(), down.LocalAddr())
+	preDNATDest := getPreDNATDest(down)
+
+	log.Infof("Accepted connection from %s to %s orig dest %s", down.RemoteAddr(), down.LocalAddr(), preDNATDest)
 	clientNetAddr := down.RemoteAddr().(*net.TCPAddr)
 	clientIP := [4]byte{}
 	copy(clientIP[:], clientNetAddr.IP.To4())
@@ -144,8 +146,6 @@ func handleConnection(down net.Conn) {
 		log.WithError(err).Fatalf("Failed to convert socket to connection %v - %v", clientAddr, serverAddr)
 	}
 	defer up.Close()
-
-	preDNATDest := getPreDNATDest(down)
 
 	log.Infof("Proxying from %s to %s orig dest %s", down.RemoteAddr(), up.RemoteAddr(), preDNATDest)
 	proxyConnection(down, up)

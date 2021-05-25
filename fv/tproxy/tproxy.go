@@ -32,7 +32,11 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 )
 
-var connRegexp = regexp.MustCompile(`Proxying from (\d+\.\d+\.\d+\.\d+):\d+ to (\d+\.\d+\.\d+\.\d+:\d+) orig dest (\d+\.\d+\.\d+\.\d+:\d+)`)
+var proxiedRegexp = regexp.MustCompile(
+	`Proxying from (\d+\.\d+\.\d+\.\d+):\d+ to (\d+\.\d+\.\d+\.\d+:\d+) orig dest (\d+\.\d+\.\d+\.\d+:\d+)`)
+
+var acceptedRegexp = regexp.MustCompile(
+	`Accepted connection from (\d+\.\d+\.\d+\.\d+):\d+ to (\d+\.\d+\.\d+\.\d+:\d+) orig dest (\d+\.\d+\.\d+\.\d+:\d+)`)
 
 type TProxy struct {
 	cmd              *exec.Cmd
@@ -43,8 +47,9 @@ type TProxy struct {
 	cname string
 	port  uint16
 
-	connections map[ConnKey]int
-	connLock    sync.Mutex
+	proxied  map[ConnKey]int
+	accepted map[ConnKey]int
+	connLock sync.Mutex
 }
 
 type ConnKey struct {
@@ -61,7 +66,8 @@ func New(f *infrastructure.Felix, port uint16) *TProxy {
 
 		listeningStarted: make(chan struct{}),
 
-		connections: make(map[ConnKey]int),
+		proxied:  make(map[ConnKey]int),
+		accepted: make(map[ConnKey]int),
 	}
 }
 
@@ -134,22 +140,40 @@ func (t *TProxy) readStderr() {
 			continue
 		}
 
-		m := connRegexp.FindStringSubmatch(line)
+		m := acceptedRegexp.FindStringSubmatch(line)
 		if len(m) == 4 {
-			t.connAdd(m[1], m[2], m[3])
+			t.acceptedAdd(m[1], m[2], m[3])
+			continue
+		}
+		m = proxiedRegexp.FindStringSubmatch(line)
+		if len(m) == 4 {
+			t.proxiedAdd(m[1], m[2], m[3])
+			continue
 		}
 	}
 	log.WithError(s.Err()).Info("TProxy stderr finished")
 }
 
-func (t *TProxy) connAdd(client, pod, service string) {
+func (t *TProxy) proxiedAdd(client, pod, service string) {
 	t.connLock.Lock()
-	t.connections[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]++
+	t.proxied[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]++
 	t.connLock.Unlock()
 }
 
-func (t *TProxy) ConnCount(client, pod, service string) int {
+func (t *TProxy) ProxiedCount(client, pod, service string) int {
 	t.connLock.Lock()
 	defer t.connLock.Unlock()
-	return t.connections[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
+	return t.proxied[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
+}
+
+func (t *TProxy) acceptedAdd(client, pod, service string) {
+	t.connLock.Lock()
+	t.accepted[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]++
+	t.connLock.Unlock()
+}
+
+func (t *TProxy) AcceptedCount(client, pod, service string) int {
+	t.connLock.Lock()
+	defer t.connLock.Unlock()
+	return t.accepted[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
 }
