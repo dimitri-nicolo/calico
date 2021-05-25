@@ -89,6 +89,8 @@ const (
 	ChainForwardCheck        = ChainNamePrefix + "forward-check"
 	ChainForwardEndpointMark = ChainNamePrefix + "forward-endpoint-mark"
 
+	ChainSetWireguardIncomingMark = ChainNamePrefix + "wireguard-incoming-mark"
+
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadPfxSpecialAllow = "ALLOW"
 	WorkloadFromEndpointPfx = ChainNamePrefix + "fw-"
@@ -298,6 +300,8 @@ type RuleRenderer interface {
 	BlockedCIDRsToIptablesChains(cidrs []string, ipVersion uint8) []*iptables.Chain
 
 	RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled, acceptLocal bool) []iptables.Rule
+
+	WireguardIncomingMarkChain() *iptables.Chain
 }
 
 type DefaultRuleRenderer struct {
