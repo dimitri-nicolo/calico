@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER=v0.52
+GO_BUILD_VER=v0.53
 
 GIT_USE_SSH = true
 
@@ -7,22 +7,18 @@ GIT_USE_SSH = true
 # to the drift between public and private to a minimum we just disable the deprecation checks.
 LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclude SA1019
 
-# This needs to be evaluated before the common makefile is included.
-# This var contains some default values that the common makefile may append to.
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cni
-
-BUILD_IMAGE_ORG?=calico
-CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
-
-BUILD_IMAGE?=tigera/cni
-DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
-RELEASE_IMAGES?=
-
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CNI_PLUGIN_PRIVATE_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
+
+CNI_PLUGIN_IMAGE      ?=tigera/cni
+BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ###############################################################################
 # Download and include Makefile.common
@@ -158,10 +154,10 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(DEPLOY_CONTAINER_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
-	GO111MODULE=on docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
+	GO111MODULE=on docker build -t $(CNI_PLUGIN_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	# Need amd64 builds tagged as :latest because Semaphore depends on that
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(CNI_PLUGIN_IMAGE):latest-$(ARCH) $(CNI_PLUGIN_IMAGE):latest
 endif
 	touch $@
 
@@ -297,7 +293,7 @@ pkg/install/install.test: pkg/install/*.go
 .PHONY: test-install-cni
 ## Test the install
 test-install-cni: image pkg/install/install.test
-	cd pkg/install && CONTAINER_NAME=$(BUILD_IMAGE) ./install.test
+	cd pkg/install && CONTAINER_NAME=$(CNI_PLUGIN_IMAGE) ./install.test
 
 ###############################################################################
 # CI/CD
@@ -325,111 +321,6 @@ cd: check-dirty image-all cd-common
 ## Build fv binary for Windows
 $(BIN_WIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
 	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(BIN_WIN)/win-fv.exe'
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) tag-base-images-all
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-	$(MAKE) image-all
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
-
-	# Copy artifacts for upload to GitHub.
-	mkdir -p bin/github
-	$(foreach var,$(VALIDARCHES), cp bin/$(var)/calico bin/github/calico-$(var);)
-	$(foreach var,$(VALIDARCHES), cp bin/$(var)/calico-ipam bin/github/calico-ipam-$(var);)
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	docker run --rm $(BUILD_IMAGE):$(VERSION)-$(ARCH) calico -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE):$(VERSION)-$(ARCH) calico -v` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE):$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE):$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-
-	# TODO: Some sort of quick validation of the produced binaries.
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=$(VERSION)
-
-	# Push binaries to GitHub release.
-	# Requires ghr: https://github.com/tcnksm/ghr
-	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u tigera -r cni-plugin-private \
-		-b "Release notes can be found at https://docs.projectcalico.org" \
-		-n $(VERSION) \
-		$(VERSION) ./bin/github/
-
-	@echo "Confirm that the release was published at the following URL."
-	@echo ""
-	@echo "  https://github.com/tigera/cni-plugin/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE):latest-$(ARCH) calico -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):latest-$(ARCH) calico -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN must be set for a release)
-endif
-ifeq (, $(shell which ghr))
-	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
-endif
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
