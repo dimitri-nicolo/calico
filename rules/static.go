@@ -1118,23 +1118,21 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingTPROXY, Rules: tproxyRules})
 
-		if r.TPROXYMode == "Enabled" {
-			nameForIPSet := func(ipsetID string) string {
-				if ipVersion == 4 {
-					return r.IPSetConfigV4.NameForMainIPSet(ipsetID)
-				} else {
-					return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
-				}
+		nameForIPSet := func(ipsetID string) string {
+			if ipVersion == 4 {
+				return r.IPSetConfigV4.NameForMainIPSet(ipsetID)
+			} else {
+				return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
 			}
-			chains = append(chains, &Chain{
-				Name: ChainManglePreroutingTPROXYSelect,
-				Rules: []Rule{{
-					Comment: []string{"Proxy selected destinations"},
-					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-					Action:  JumpAction{Target: ChainManglePreroutingTPROXY},
-				}},
-			})
 		}
+		chains = append(chains, &Chain{
+			Name: ChainManglePreroutingTPROXYSelect,
+			Rules: []Rule{{
+				Comment: []string{"Proxy selected destinations"},
+				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+				Action:  JumpAction{Target: ChainManglePreroutingTPROXY},
+			}},
+		})
 	}
 
 	chains = append(chains,
