@@ -55,8 +55,6 @@ EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/proje
 	-v $(CURDIR)/../typha-private:/go/src/github.com/projectcalico/typha-private:rw \
 	-v $(CURDIR)/../pod2daemon:/go/src/github.com/projectcalico/pod2daemon:rw
 
-EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
-
 $(LOCAL_BUILD_DEP):
 	$(DOCKER_GO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go-private \
 	-replace=github.com/projectcalico/typha=../typha-private \
@@ -73,7 +71,8 @@ DEV_TAG_SUFFIX        ?= calient-0.dev
 # All Felix go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
 FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
-EXTRA_DOCKER_ARGS+=--init -v $(CURDIR)/../pod2daemon:/go/src/github.com/projectcalico/pod2daemon:rw
+EXTRA_DOCKER_ARGS += --init -v $(CURDIR)/../pod2daemon:/go/src/github.com/projectcalico/pod2daemon:rw
+EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
 
 ###############################################################################
 # Download and include Makefile.common
