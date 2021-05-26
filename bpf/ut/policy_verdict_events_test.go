@@ -175,6 +175,8 @@ func TestPolicyVerdictEvents(t *testing.T) {
 
 			Expect(fl.RulesHit).To(Equal(uint32(tc.hits)))
 			Expect(fl.RuleIDs).To(Equal(tc.rulesIDs))
+
+			Expect(fl.IPSize).To(Equal(uint16(ipv4.Length)))
 		})
 	}
 }
