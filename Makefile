@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/calicoctl
-GO_BUILD_VER=v0.52
+GO_BUILD_VER=v0.53
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID)
@@ -10,6 +10,29 @@ GIT_USE_SSH = true
 
 KUBE_APISERVER_PORT?=8080
 KUBE_MOCK_NODE_MANIFEST?=mock-node.yaml
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+ifdef LOCAL_BUILD
+PHONY: set-up-local-build
+LOCAL_BUILD_DEP:=set-up-local-build
+
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+$(LOCAL_BUILD_DEP):
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+endif
+
+CALICOCTL_IMAGE       ?=tigera/calicoctl
+BUILD_IMAGES          ?=$(CALICOCTL_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
+
+# Remove any excluded architectures since for calicoctl we want to build everything.
+EXCLUDEARCH?=
 
 ###############################################################################
 # Download and include Makefile.common
@@ -25,26 +48,6 @@ Makefile.common.$(MAKE_BRANCH):
 	# Clean up any files downloaded from other branches so they don't accumulate.
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-ifdef LOCAL_BUILD
-PHONY: set-up-local-build
-LOCAL_BUILD_DEP:=set-up-local-build
-
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
-$(LOCAL_BUILD_DEP):
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-endif
-
-BUILD_IMAGE?=tigera/calicoctl
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/calicoctl
-RELEASE_IMAGES?=
-
-# Remove any excluded architectures since for calicoctl we want to build everything.
-EXCLUDEARCH?=
 
 include Makefile.common
 
@@ -66,11 +69,11 @@ LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/v3/calicoctl/commands.VERSION=$(GIT_VERSION
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} \;
 	rm -rf .go-pkg-cache bin build certs *.tar vendor Makefile.common* calicoctl/commands/report
-	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
-	docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH) || true
+	docker rmi $(CALICOCTL_IMAGE):latest-$(ARCH) || true
+	docker rmi $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) || true
 ifeq ($(ARCH),amd64)
-	docker rmi $(BUILD_IMAGE):latest || true
-	docker rmi $(BUILD_IMAGE):$(VERSION) || true
+	docker rmi $(CALICOCTL_IMAGE):latest || true
+	docker rmi $(CALICOCTL_IMAGE):$(VERSION) || true
 endif
 
 ###############################################################################
@@ -137,13 +140,13 @@ remote-deps: mod-download
 ###############################################################################
 # Building the image
 ###############################################################################
-.PHONY: image $(BUILD_IMAGE)
-image: $(BUILD_IMAGE)
-$(BUILD_IMAGE): $(CTL_CONTAINER_CREATED)
+.PHONY: image $(CALICOCTL_IMAGE)
+image: $(CALICOCTL_IMAGE)
+$(CALICOCTL_IMAGE): $(CTL_CONTAINER_CREATED)
 $(CTL_CONTAINER_CREATED): Dockerfile.$(ARCH) bin/calicoctl-linux-$(ARCH)
-	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
+	docker build -t $(CALICOCTL_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(CALICOCTL_IMAGE):latest-$(ARCH) $(CALICOCTL_IMAGE):latest
 endif
 	touch $@
 
@@ -326,115 +329,3 @@ check-dirty: undo-go-sum
 .PHONY: cd
 ## Deploys images to registry
 cd: check-dirty image-all cd-common
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) tag-base-images-all
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-	$(MAKE) build-all image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
-	$(MAKE) tag-images-all IMAGETAG=latest
-
-	# Copy the amd64 variant to calicoctl - for now various downstream projects
-	# expect this naming convention. Until they can be swapped over, we still need to
-	# publish a binary called calicoctl.
-	$(MAKE) bin/calicoctl
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
-
-	# Push binaries to GitHub release.
-	# Requires ghr: https://github.com/tcnksm/ghr
-	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u tigera -r calicoctl-private \
-		-b "Release notes can be found at https://docs.projectcalico.org" \
-		-n $(VERSION) \
-		$(VERSION) ./bin/
-
-	@echo "Confirm that the release was published at the following URL."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE):latest-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE):latest-$(ARCH) version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN must be set for a release)
-endif
-ifeq (, $(shell which ghr))
-	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
-endif
