@@ -3,6 +3,7 @@ module github.com/tigera/es-proxy
 go 1.15
 
 require (
+	github.com/go-openapi/runtime v0.19.28
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/google/go-cmp v0.5.4
 	github.com/huandu/xstrings v1.2.0 // indirect

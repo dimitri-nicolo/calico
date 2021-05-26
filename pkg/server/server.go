@@ -152,6 +152,11 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
+	sm.Handle("/flowLogs/search",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.SearchHandler(esClient.Backend())))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(
