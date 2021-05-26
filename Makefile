@@ -1,8 +1,12 @@
 PACKAGE_NAME?=github.com/tigera/elasticsearch-metrics
-GO_BUILD_VER?=v0.51
+GO_BUILD_VER?=v0.53
 
-BUILD_IMAGE=tigera/elasticsearch-metrics
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
+ELASTICSEARCH_METRICS_IMAGE ?=tigera/elasticsearch-metrics
+BUILD_IMAGES                ?=$(ELASTICSEARCH_METRICS_IMAGE)
+DEV_REGISTRIES              ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES          ?=quay.io
+RELEASE_BRANCH_PREFIX       ?=release-calient
+DEV_TAG_SUFFIX              ?=calient-0.dev
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ELASTICSEARCH_METRICS_PROJECT_ID)
@@ -40,12 +44,12 @@ build/$(JUST_WATCH_FILE_NAME).tar.gz:
 
 build: build/$(JUST_WATCH_FILE_NAME).tar.gz
 
-image: $(BUILD_IMAGE)
-$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): build
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+image: $(ELASTICSEARCH_METRICS_IMAGE)
+$(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
+$(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH): build
+	docker build --pull -t $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_METRICS_IMAGE):latest
 endif
 
 cd: image cd-common
