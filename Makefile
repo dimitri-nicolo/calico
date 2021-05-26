@@ -1,12 +1,15 @@
-.PHONY: ci cd
 PACKAGE_NAME?=github.com/tigera/elasticsearch-docker
-GO_BUILD_VER?=v0.51
-
-BUILD_IMAGE=tigera/elasticsearch
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
+GO_BUILD_VER?=v0.53
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ELASTICSEARCH_DOCKER_PROJECT_ID)
+
+ELASTICSEARCH_IMAGE   ?=tigera/elasticsearch
+BUILD_IMAGES          ?=$(ELASTICSEARCH_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ###############################################################################
 # Download and include Makefile.common
@@ -31,17 +34,18 @@ bin/readiness-probe: readiness-probe
 
 build: bin/readiness-probe
 
-image: $(BUILD_IMAGE)
-$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): build
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+image: $(ELASTICSEARCH_IMAGE)
+$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_IMAGE)-$(ARCH)
+$(ELASTICSEARCH_IMAGE)-$(ARCH): build
+	docker build --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(ELASTICSEARCH_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_IMAGE):latest
 endif
 
 compressed-image: image
-	$(MAKE) docker-compress IMAGE_NAME=$(BUILD_IMAGE):latest
+	$(MAKE) docker-compress IMAGE_NAME=$(ELASTICSEARCH_IMAGE):latest
 
+.PHONY: cd
 cd: compressed-image cd-common
 
 .PHONY: clean
