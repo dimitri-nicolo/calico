@@ -57,9 +57,9 @@ const (
 	ChainManglePostrouting            = ChainNamePrefix + "POSTROUTING"
 	ChainManglePreroutingEgress       = ChainNamePrefix + "pre-egress"
 	ChainManglePostroutingEgress      = ChainNamePrefix + "post-egress"
-	ChainManglePreroutingTPROXY       = ChainNamePrefix + "pre-tproxy"
-	ChainManglePreroutingTPROXYEstabl = ChainNamePrefix + "pre-tproxy-establ"
-	ChainManglePreroutingTPROXYSelect = ChainNamePrefix + "pre-tproxy-selec"
+	ChainManglePreroutingTProxy       = ChainNamePrefix + "pre-tproxy"
+	ChainManglePreroutingTProxyEstabl = ChainNamePrefix + "pre-tproxy-establ"
+	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"

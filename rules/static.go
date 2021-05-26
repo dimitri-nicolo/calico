@@ -101,7 +101,7 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain 
 	if r.KubeIPVSSupportEnabled {
 		result = append(result, r.StaticFilterInputForwardCheckChain(ipVersion))
 	}
-	if r.TPROXYMode == "Enabled" {
+	if r.TPROXYMode == "Enabled" && r.BPFEnabled == false {
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterInputTProxy,
@@ -826,7 +826,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain
 		result = append(result, r.StaticFilterOutputForwardEndpointMarkChain())
 	}
 
-	if r.TPROXYMode == "Enabled" {
+	if r.TPROXYMode == "Enabled" && r.BPFEnabled == false {
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterOutputTProxy,
@@ -1182,7 +1182,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTPROXYEstabl, Rules: tproxyEstablRules})
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyEstabl, Rules: tproxyEstablRules})
 
 		tproxyRules := []Rule{
 			{
@@ -1197,7 +1197,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTPROXY, Rules: tproxyRules})
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxy, Rules: tproxyRules})
 
 		nameForIPSet := func(ipsetID string) string {
 			if ipVersion == 4 {
@@ -1207,11 +1207,11 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			}
 		}
 		chains = append(chains, &Chain{
-			Name: ChainManglePreroutingTPROXYSelect,
+			Name: ChainManglePreroutingTProxySelect,
 			Rules: []Rule{{
 				Comment: []string{"Proxy selected destinations"},
 				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-				Action:  JumpAction{Target: ChainManglePreroutingTPROXY},
+				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
 			}},
 		})
 	}
@@ -1243,7 +1243,7 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 			Rule{
 				Comment: []string{"Check if should be proxied when established"},
 				Match:   Match().ConntrackState("RELATED,ESTABLISHED"),
-				Action:  JumpAction{Target: ChainManglePreroutingTPROXYEstabl},
+				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
 			},
 		)
 	}
@@ -1287,7 +1287,7 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 		rules = append(rules,
 			Rule{
 				Comment: []string{"Check if it is a new connection to be proxied"},
-				Action:  JumpAction{Target: ChainManglePreroutingTPROXYSelect},
+				Action:  JumpAction{Target: ChainManglePreroutingTProxySelect},
 			},
 		)
 	}
