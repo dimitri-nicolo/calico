@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/calicoq
-GO_BUILD_VER    ?= v0.51
+GO_BUILD_VER    ?= v0.53
 GOMOD_VENDOR     = true
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
@@ -11,23 +11,6 @@ BINARY           = bin/calicoq
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOQ_PROJECT_ID)
 
-build: $(BINARY)
-
-##############################################################################
-# Download and include Makefile.common before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 # Allow local libcalico-go to be mapped into the build container.
@@ -38,9 +21,15 @@ endif
 ##############################################################################
 # Define some constants
 ##############################################################################
+CALICOQ_IMAGE         ?=tigera/calicoq
+BUILD_IMAGES          ?=$(CALICOQ_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+ARCHES                ?=amd64
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
+
 BUILD_VER?=latest
-BUILD_IMAGE:=tigera/calicoq
-REGISTRY_PREFIX?=gcr.io/unique-caldron-775/cnx/
 
 CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
@@ -59,8 +48,24 @@ TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 
-# Include Makefile after env variables have been initialized
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
 include Makefile.common
+
+build: $(BINARY)
 
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
@@ -96,7 +101,7 @@ ut-containerized: vendor
 fv: bin/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 
-fv-containerized: build-image run-etcd
+fv-containerized: image run-etcd
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
@@ -110,7 +115,7 @@ fv-containerized: build-image run-etcd
 st: bin/calicoq
 	KUBECONFIG=st/kubeconfig CALICOQ=`pwd`/$^ st/run-test
 
-st-containerized: build-image $(TOOLING_IMAGE_CREATED)
+st-containerized: image $(TOOLING_IMAGE_CREATED)
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
@@ -125,7 +130,7 @@ st-containerized: build-image $(TOOLING_IMAGE_CREATED)
 scale-test: bin/calicoq
 	CALICOQ=`pwd`/$^ scale-test/run-test
 
-scale-test-containerized: build-image
+scale-test-containerized: image
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
@@ -136,14 +141,24 @@ scale-test-containerized: build-image
 		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
 
 # Build image for containerized testing
-.PHONY: build-image
-build-image: binary-containerized
-	docker build -t $(BUILD_IMAGE):$(BUILD_VER) `pwd`
+.PHONY: image $(BUILD_IMAGES)
+image: $(BUILD_IMAGES)
 
+# Build the image for the target architecture
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+$(CALICOQ_IMAGE): binary-containerized
+	docker build -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile .
+ifeq ($(ARCH),amd64)
+	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
+endif
 # Clean up image from containerized testing
 .PHONY: clean-image
 clean-image:
-	docker rmi -f $(shell docker images -a | grep $(BUILD_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
+	docker rmi -f $(shell docker images -a | grep $(CALICOQ_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
 
 # All calicoq Go source files.
 CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
@@ -167,12 +182,6 @@ endif
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
 
-tag-image: imagetag build-image
-	docker tag $(BUILD_IMAGE):latest $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
-
-push-image: imagetag tag-image
-	docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
-
 ###############################################################################
 # Updating pins
 ###############################################################################
@@ -183,7 +192,6 @@ guard-ssh-forwarding-bug:
 		echo "$(MAKECMDGOALS)"; \
 		exit 1; \
 	fi;
-
 
 LICENSING_REPO=github.com/tigera/licensing
 LICENSING_BRANCH=$(PIN_BRANCH)
@@ -210,32 +218,8 @@ LINT_ARGS +=
 ## Run what CI runs
 ci: clean static-checks fv-containerized ut-containerized st-containerized
 
-## Avoid unplanned go.sum updates
-.PHONY: undo-go-sum check-dirty
-undo-go-sum:
-	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
-	  echo "Undoing go.sum update..."; \
-	  git checkout -- go.sum; \
-	fi
-
-## Check if generated image is dirty
-check-dirty: undo-go-sum
-	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated image is dirty:"; \
-	  git status --porcelain; \
-	  false; \
-	fi
-
 ## Deploys images to registry
-cd: check-dirty
-ifndef CONFIRM
-	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
-endif
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
-	$(MAKE) push-image IMAGETAG=${GIT_VERSION}
+cd: image cd-common
 
 # Generate the protobuf bindings for Felix.
 .PHONY: felixbackend
@@ -258,112 +242,13 @@ run-etcd: stop-etcd
 stop-etcd:
 	-docker rm -f calico-etcd
 
-.PHONY: clean-release
-clean-release:
-	-rm -rf release
-
 .PHONY: clean
 clean:
 	-rm -f *.created
 	find . -name '*.pyc' -exec rm -f {} +
 	-rm -rf build bin release vendor
 	-docker rmi calico/build
-	-docker rmi $(BUILD_IMAGE) -f
+	-docker rmi $(CALICOQ_IMAGE) -f
 	-docker rmi $(CALICO_BUILD) -f
 	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
 	-rm -f $(TOOLING_IMAGE_CREATED)
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-
-	$(MAKE) build-image RELEASE_BUILD=1
-	$(MAKE) tag-image IMAGETAG=$(VERSION)
-	# Generate the `latest` images.
-	$(MAKE) tag-image IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE) version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' go modules.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
