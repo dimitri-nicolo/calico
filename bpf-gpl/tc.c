@@ -1175,8 +1175,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 {
 	CALI_DEBUG("Entering calico_tc_skb_drop\n");
 
-	//__u32 key = 0;
-	//struct cali_tc_state *state = cali_v4_state_lookup_elem(&key);
 	struct cali_tc_state *state = state_get();
 	if (!state) {
 		CALI_DEBUG("State map lookup failed: no event generated\n");
