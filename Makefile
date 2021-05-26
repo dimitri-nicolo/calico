@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/projectcalico/apiserver
-GO_BUILD_VER    ?= v0.51
+GO_BUILD_VER    ?= v0.53
 GOMOD_VENDOR    := false
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir goimports
@@ -17,7 +17,12 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_LMA_PROJECT_ID) $(SEMAPHORE_COMPLIANCE_PROJECT_ID) \
 	 $(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID) $(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
-build: local_build image
+API_SERVER_IMAGE      ?=tigera/cnx-apiserver
+BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ifdef LOCAL_BUILD
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
@@ -28,21 +33,6 @@ local_build:
 else
 local_build:
 endif
-
-##############################################################################
-# Download and include Makefile.common before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 # Allow libcalico-go to be mapped into the build container.
 # Please note, this will change go.mod.
@@ -57,8 +47,6 @@ EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache
 ###############################################################################
 K8S_VERSION = v1.16.3
 BINDIR ?= bin
-BUILD_IMAGE?=tigera/cnx-apiserver
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 BUILD_DIR ?= build
 
 TOP_SRC_DIRS = pkg cmd
@@ -94,7 +82,21 @@ BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
 
-# Common Makefile must be included after the build env variables are set
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
 include Makefile.common
 
 ###############################################################################
@@ -270,18 +272,20 @@ endif
 ###############################################################################
 # Building the image
 ###############################################################################
+build: local_build image
+
 CONTAINER_CREATED=.apiserver.created-$(ARCH)
-.PHONY: image $(BUILD_IMAGE)
-image: $(BUILD_IMAGE)
+.PHONY: image $(API_SERVER_IMAGE)
+image: $(API_SERVER_IMAGE)
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(BUILD_IMAGE): $(CONTAINER_CREATED)
+$(API_SERVER_IMAGE): $(CONTAINER_CREATED)
 $(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver
-	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
+	docker build -t $(API_SERVER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(API_SERVER_IMAGE):latest-$(ARCH) $(API_SERVER_IMAGE):latest
 endif
 	touch $@
 
