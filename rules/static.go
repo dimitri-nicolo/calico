@@ -73,6 +73,24 @@ func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []Rule {
 	return rules
 }
 
+func (r *DefaultRuleRenderer) tproxyOutputPolicyRules(ipVersion uint8) []Rule {
+	rules := []Rule{}
+
+	// Jump to workload dispatch chains.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
+		ifaceMatch := prefix + "+"
+		rules = append(rules,
+			Rule{
+				Match:  Match().OutInterface(ifaceMatch),
+				Action: JumpAction{Target: ChainToWorkloadDispatch},
+			},
+		)
+	}
+
+	return rules
+}
+
 func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
 	result := []*Chain{}
 	result = append(result,
@@ -808,11 +826,32 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain
 		result = append(result, r.StaticFilterOutputForwardEndpointMarkChain())
 	}
 
+	if r.TPROXYMode == "Enabled" {
+		result = append(result,
+			&Chain{
+				Name:  ChainFilterOutputTProxy,
+				Rules: r.tproxyOutputPolicyRules(ipVersion),
+			})
+	}
+
 	return result
 }
 
 func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 	var rules []Rule
+
+	if r.TPROXYMode == "Enabled" {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Police packets from proxy"},
+				// Atm any traffic from local host that does not have a local source.
+				// XXX that would not work well for nodeports if we let proxy to use local
+				// XXX source instead of passing it through MASQUERADE
+				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
+				Action: JumpAction{Target: ChainFilterOutputTProxy},
+			},
+		)
+	}
 
 	// Accept immediately if we've already accepted this packet in the raw or mangle table.
 	rules = append(rules, r.acceptAlreadyAccepted()...)

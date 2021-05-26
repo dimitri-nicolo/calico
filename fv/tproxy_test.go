@@ -256,8 +256,8 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 			})
 
-			Context("With ingress traffic denied from w[1][1]", func() {
-				It("should have connectivity only from w[0][1] and w[1][0]", func() {
+			Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
+				It("should have connectivity only from w[1][0]", func() {
 					By("Denying traffic from w[1][1]", func() {
 						pol := api.NewGlobalNetworkPolicy()
 						pol.Namespace = "fv"
