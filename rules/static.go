@@ -50,6 +50,13 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain 
 	if r.KubeIPVSSupportEnabled {
 		result = append(result, r.StaticFilterInputForwardCheckChain(ipVersion))
 	}
+	if r.TPROXYMode == "Enabled" {
+		result = append(result,
+			&Chain{
+				Name:  ChainFilterInputTProxy,
+				Rules: r.forwardPolicyRules(),
+			})
+	}
 	return result
 }
 
@@ -210,19 +217,14 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
 
 	if r.TPROXYMode == "Enabled" {
-		/*
-			mark := r.IptablesMarkProxy
-			inputRules = append(inputRules,
-				Rule{
-					// XXX needs to jump in a proper policy chain XXX
-					Comment: []string{"Accept packets destined to proxy on existing connection"},
-					Match:   Match().MarkMatchesWithMask(mark, mark),
-					Action:  AcceptAction{},
-				},
-			)
-		*/
-
-		inputRules = append(inputRules, r.forwardPolicyRules()...)
+		mark := r.IptablesMarkProxy
+		inputRules = append(inputRules,
+			Rule{
+				Comment: []string{"Police packets towards proxy"},
+				Match:   Match().MarkMatchesWithMask(mark, mark),
+				Action:  JumpAction{Target: ChainFilterInputTProxy},
+			},
+		)
 	}
 
 	// Snoop DNS responses to a client directly on this host (e.g. bare metal, or a

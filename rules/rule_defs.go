@@ -57,9 +57,9 @@ const (
 	ChainManglePostrouting            = ChainNamePrefix + "POSTROUTING"
 	ChainManglePreroutingEgress       = ChainNamePrefix + "pre-egress"
 	ChainManglePostroutingEgress      = ChainNamePrefix + "post-egress"
-	ChainManglePreroutingTPROXY       = ChainNamePrefix + "TPROXY"
-	ChainManglePreroutingTPROXYEstabl = ChainNamePrefix + "TPROXY-establ"
-	ChainManglePreroutingTPROXYSelect = ChainNamePrefix + "TPROXY-selec"
+	ChainManglePreroutingTPROXY       = ChainNamePrefix + "pre-tproxy"
+	ChainManglePreroutingTPROXYEstabl = ChainNamePrefix + "pre-tproxy-establ"
+	ChainManglePreroutingTPROXYSelect = ChainNamePrefix + "pre-tproxy-selec"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -131,6 +131,9 @@ const (
 		`-A POSTROUTING -o tunl0 -m addrtype ! --src-type LOCAL --limit-iface-out -m addrtype --src-type LOCAL -j MASQUERADE`
 
 	KubeProxyInsertRuleRegex = `-j KUBE-[a-zA-Z0-9-]*SERVICES|-j KUBE-FORWARD`
+
+	ChainFilterInputTProxy  = ChainNamePrefix + "input-filter-tproxy"
+	ChainFilterOutputTProxy = ChainNamePrefix + "output-filter-tproxy"
 )
 
 type RuleAction byte
