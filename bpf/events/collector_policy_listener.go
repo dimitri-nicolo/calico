@@ -93,11 +93,9 @@ func (c *CollectorPolicyListener) run() {
 				Bytes:  int(e.IPSize),
 			}
 
-			// This is for compatibility with the previous version of handing PolicyVerdict
-			// where we only reported 1 Byte for each packet vs the actual packet size.
 			// Note, this is only relevant when we have just upgraded from older (pre v3.8) Felix code,
 			// and the TC program has not yet been updated on all existing interfaces,
-			// because the pre v3.8 TC code reported zero instead of an actual size.
+			// because the pre v3.8 TC code reported one instead of an actual size.
 			if e.IPSize == 0 {
 				pktInfo.RuleHits[i].Bytes = 1
 			}
