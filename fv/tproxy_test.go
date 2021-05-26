@@ -194,6 +194,12 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.65.0.2:8055"
 			})
 
+			var pod string
+
+			JustBeforeEach(func() {
+				pod = w[0][0].IP + ":8055"
+			})
+
 			It("should have connectivity from all workloads via w[0][0].IP", func() {
 				cc.ExpectSome(w[0][1], w[0][0], 8055)
 				cc.ExpectSome(w[1][0], w[0][0], 8055)
@@ -201,11 +207,11 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				cc.CheckConnectivity()
 
 				// Connection is proxied both on the client and server node
-				Expect(proxies[0].ProxiedCount(w[0][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
-				Expect(proxies[0].ProxiedCount(w[1][0].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
-				Expect(proxies[0].ProxiedCount(w[1][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
-				Expect(proxies[1].ProxiedCount(w[1][0].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
-				Expect(proxies[1].ProxiedCount(w[1][1].IP, w[0][0].IP+":8055", w[0][0].IP+":8055")).To(BeNumerically(">", 0))
+				Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
 			})
 		})
 
@@ -260,7 +266,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 							{
 								Action: "Deny",
 								Source: api.EntityRule{
-									Selector: "name=='" + w[1][1].Name + "'",
+									Selector: "(name=='" + w[1][1].Name + "') || (name=='" + w[0][1].Name + "')",
 								},
 							},
 						}
@@ -271,7 +277,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						pol = createPolicy(pol)
 					})
 
-					cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
+					cc.ExpectNone(w[0][1], TargetIP(clusterIP), 8090)
 					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
 					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
 					cc.CheckConnectivity()
@@ -282,7 +288,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
 					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
 
-					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
 					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
 					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 				})

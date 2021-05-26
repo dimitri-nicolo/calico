@@ -40,6 +40,39 @@ const (
 	PortIKE     = 500
 )
 
+func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []Rule {
+	rules := []Rule{}
+
+	// N.B. we do not snoop on DNS in input towards proxy, we defer it to output from proxy
+
+	// Jump to from-host-endpoint dispatch chains.
+	rules = append(rules, r.filterFromHEP(ipVersion)...)
+
+	// Jump to workload dispatch chains - from wl only as we we are in INPUT to proxy and
+	// we do not know the output ifaces, thus the to-wl must be done after proxy.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
+		ifaceMatch := prefix + "+"
+		rules = append(rules,
+			Rule{
+				Match:  Match().InInterface(ifaceMatch),
+				Action: JumpAction{Target: ChainFromWorkloadDispatch},
+			},
+		)
+	}
+
+	// Accept packet if policies above set ACCEPT mark.
+	rules = append(rules,
+		Rule{
+			Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
+			Action:  r.filterAllowAction,
+			Comment: []string{"Policy explicitly accepted packet."},
+		},
+	)
+
+	return rules
+}
+
 func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
 	result := []*Chain{}
 	result = append(result,
@@ -54,7 +87,7 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain 
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterInputTProxy,
-				Rules: r.forwardPolicyRules(),
+				Rules: r.tproxyInputPolicyRules(ipVersion),
 			})
 	}
 	return result
@@ -595,6 +628,23 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string, ipVersion uint8) *C
 	}
 }
 
+func (r *DefaultRuleRenderer) filterFromHEP(ipVersion uint8) []Rule {
+	return []Rule{
+		{
+			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
+			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
+			// Similarly, the IPsec bit is used across multiple tables.
+			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
+		},
+		{
+			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
+			// was not accepted in a previous raw or pre-DNAT chain.
+			Match:  Match().MarkClear(r.IptablesMarkAccept),
+			Action: JumpAction{Target: ChainDispatchFromHostEndPointForward},
+		},
+	}
+}
+
 func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chain {
 	rules := []Rule{}
 
@@ -621,20 +671,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	}
 
 	// Jump to from-host-endpoint dispatch chains.
-	rules = append(rules,
-		Rule{
-			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
-			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
-			// Similarly, the IPsec bit is used across multiple tables.
-			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
-		},
-		Rule{
-			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
-			// was not accepted in a previous raw or pre-DNAT chain.
-			Match:  Match().MarkClear(r.IptablesMarkAccept),
-			Action: JumpAction{Target: ChainDispatchFromHostEndPointForward},
-		},
-	)
+	rules = append(rules, r.filterFromHEP(ipVersion)...)
 
 	// Jump to workload dispatch chains.
 	for _, prefix := range r.WorkloadIfacePrefixes {
