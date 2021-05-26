@@ -155,7 +155,7 @@ endif
 ## tag version number build images i.e.  tigera/typha:latest-amd64 -> tigera/typha:v1.1.1-amd64
 tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
 sub-base-tag-images-%:
-	docker tag $(TYPHA_IMAGE:latest-$* $(call unescapefs,$(TYPHA_IMAGE:$(VERSION)-$*)
+	docker tag $(TYPHA_IMAGE):latest-$* $(call unescapefs,$(TYPHA_IMAGE):$(VERSION)-$*)
 
 
 ###############################################################################
