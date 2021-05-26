@@ -899,8 +899,8 @@ github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwD
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/apiserver v0.0.0-20210525234507-dc22813724d8 h1:ehWVmXy4LoiFuS3vH7PKXpTTdrjF0+QFgoMdVChFdjg=
-github.com/tigera/apiserver v0.0.0-20210525234507-dc22813724d8/go.mod h1:/iukv7k9j6m5+U+rbp6qZHPdRl+eVsboyyonYF97mtc=
+github.com/tigera/apiserver v0.0.0-20210526193720-825ad9d33af3 h1:PzDqL1aOX/iXh4MdgYGueeeP28/4UFpFhmgjYs+Suds=
+github.com/tigera/apiserver v0.0.0-20210526193720-825ad9d33af3/go.mod h1:/iukv7k9j6m5+U+rbp6qZHPdRl+eVsboyyonYF97mtc=
 github.com/tigera/compliance v0.0.0-20210526002452-f381c4c41bf9 h1:oBJENNIfOQgh50KQ45cTwRQhv2/mol5SQYvQA841xiI=
 github.com/tigera/compliance v0.0.0-20210526002452-f381c4c41bf9/go.mod h1:YiqFcjhVDPVN6E76RM3AVbf5+V0rgf5JpB+7ipOCms8=
 github.com/tigera/felix-private v0.0.0-20210526160013-5960b25568c5 h1:OxC08pOXrZntJpZxfniwr/HmfMh2xJ6gKuxMGLd40Yc=
