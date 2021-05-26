@@ -94,8 +94,10 @@ func (c *CollectorPolicyListener) run() {
 			}
 
 			// Note, this is only relevant when we have just upgraded from older (pre v3.8) Felix code,
-			// and the TC program has not yet been updated on all existing interfaces,
-			// because the pre v3.8 TC code reported one instead of an actual size.
+			// and the TC program has not yet been updated on all existing interfaces.
+			// The pre v3.8 TC code does not report an actual size, and Felix userspace reports 1 instead.
+			// TC program in v3.8 uses 2 bytes pad (memset to 0) in older versions to report IP length.
+			// Thus, e.IPSize == 0 only matches older (pre v3.8) TC programs since IP header is at least 20 bytes.
 			if e.IPSize == 0 {
 				pktInfo.RuleHits[i].Bytes = 1
 			}
