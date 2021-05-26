@@ -16,6 +16,8 @@ import (
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
+type getIndex func(string) string
+
 type SearchError struct {
 	// Status http status code of the request error.
 	Status int
@@ -54,7 +56,7 @@ func (ee *SearchError) Error() string {
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func SearchHandler(client *elastic.Client) http.Handler {
+func SearchHandler(getIndex getIndex, client *elastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
@@ -68,7 +70,7 @@ func SearchHandler(client *elastic.Client) http.Handler {
 			}
 			return
 		}
-		response, serr := search(params, client)
+		response, serr := search(getIndex, params, client)
 		if serr != nil {
 			var mr *httpRequestBody.MalformedRequest
 			var se *SearchError
@@ -153,9 +155,11 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*SearchP
 }
 
 // search returns the results of ES search.
-func search(params *SearchParams, esClient *elastic.Client) (*esSearch.ESResults, error) {
+func search(
+	getIndex getIndex, params *SearchParams, esClient *elastic.Client,
+) (*esSearch.ESResults, error) {
 	query := elastic.NewBoolQuery()
-	index := getClusterFlowIndex(params.ClusterName)
+	index := getIndex(params.ClusterName)
 
 	rquery := &esSearch.Query{
 		Query:       query,

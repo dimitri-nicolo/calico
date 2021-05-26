@@ -20,6 +20,7 @@ import (
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 
+	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/k8s"
 	"github.com/tigera/es-proxy/pkg/kibana"
@@ -156,7 +157,12 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(esClient.Backend())))))
+					middleware.SearchHandler(eselastic.GetFlowsIndex, esClient.Backend())))))
+	sm.Handle("/dnsLogs/search",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.SearchHandler(eselastic.GetDnsIndex, esClient.Backend())))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(

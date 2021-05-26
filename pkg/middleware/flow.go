@@ -19,6 +19,7 @@ import (
 	celastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
 
+	esindex "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/timeutils"
 )
 
@@ -51,7 +52,7 @@ type flowRequestParams struct {
 }
 
 func (req flowRequestParams) clusterIndex() string {
-	return fmt.Sprintf("%s.%s.*", esflowIndexPrefix, req.clusterName)
+	return esindex.GetFlowsIndex(req.clusterName)
 }
 
 // parseAndValidateFlowRequest parses the fields in the request query, validating that required parameters are set and or the

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	esindex "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/timeutils"
 
 	log "github.com/sirupsen/logrus"
@@ -121,8 +122,6 @@ func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
 	}
 	return nil
 }
-
-const esflowIndexPrefix = "tigera_secure_ee_flows"
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
@@ -418,7 +417,7 @@ func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, terms
 // This method will take a look at the request parameters made to the /flowLogs endpoint and return the results from elastic.
 func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client) (interface{}, int, error) {
 	query := buildFlowLogsQuery(params)
-	index := getClusterFlowIndex(params.ClusterName)
+	index := esindex.GetFlowsIndex(params.ClusterName)
 	result, err := lmaelastic.GetCompositeAggrFlows(
 		context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit)
 	if err != nil {
@@ -429,7 +428,7 @@ func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsPa
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	query := buildFlowLogsQuery(params)
-	index := getClusterFlowIndex(params.ClusterName)
+	index := esindex.GetFlowsIndex(params.ClusterName)
 
 	// Convert the input format to the PIP format.
 	// TODO(rlb): We don't need both formats, and the PIP format has the more generically named "Resource" field rather
@@ -493,10 +492,6 @@ func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLog
 		return nil, http.StatusInternalServerError, err
 	}
 	return response, http.StatusOK, nil
-}
-
-func getClusterFlowIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s.*", esflowIndexPrefix, cluster)
 }
 
 // validateAction checks that the action in a resource update is one of the expected actions. Any deviation from these

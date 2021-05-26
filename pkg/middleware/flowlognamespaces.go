@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	esindex "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/timeutils"
 
 	log "github.com/sirupsen/logrus"
@@ -231,7 +232,7 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	// form query
 	query := buildESQuery(params)
-	index := getClusterFlowIndex(params.ClusterName)
+	index := esindex.GetFlowsIndex(params.ClusterName)
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
