@@ -1,5 +1,5 @@
 PACKAGE_NAME            ?= github.com/tigera/compliance
-GO_BUILD_VER            ?= v0.51
+GO_BUILD_VER            ?= v0.53
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
@@ -12,8 +12,6 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_COMPLIANCE_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID) $(SEMAPHORE_FIREWALL_INTEGRATION_PROJECT_ID)
-
-build: ut
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -73,20 +71,26 @@ KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 #   This repo differs in how ARCHES are determined compared to common logic.
 #   overriding the value with the only platform supported ATM.
 
-BUILD_IMAGE_SERVER=tigera/compliance-server
-BUILD_IMAGE_CONTROLLER=tigera/compliance-controller
-BUILD_IMAGE_SNAPSHOTTER=tigera/compliance-snapshotter
-BUILD_IMAGE_REPORTER=tigera/compliance-reporter
-BUILD_IMAGE_SCALELOADER=tigera/compliance-scaleloader
-BUILD_IMAGE_BENCHMARKER=tigera/compliance-benchmarker
-GCR_REPO?=gcr.io/unique-caldron-775/cnx
+COMPLIANCE_SERVER_IMAGE      =tigera/compliance-server
+COMPLIANCE_CONTROLLER_IMAGE  =tigera/compliance-controller
+COMPLIANCE_SNAPSHOTTER_IMAGE =tigera/compliance-snapshotter
+COMPLIANCE_REPORTER_IMAGE    =tigera/compliance-reporter
+COMPLIANCE_SCALELOADER_IMAGE =tigera/compliance-scaleloader
+COMPLIANCE_BENCHMARKER_IMAGE =tigera/compliance-benchmarker
 
-PUSH_IMAGE_PREFIXES?=$(GCR_REPO)/
-RELEASE_IMAGES?=
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-PUSH_IMAGE_PREFIXES+=$(RELEASE_IMAGES)
-endif
+# NOTE COMPLIANCE_SCALELOADER_IMAGE isn't included as it's a special case that shouldn't be pushed to quay when
+# releasing images. Pushing this image to gcr is handled explicitly in the cd target.
+BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE)\
+ 	$(COMPLIANCE_CONTROLLER_IMAGE)\
+ 	$(COMPLIANCE_SNAPSHOTTER_IMAGE)\
+	$(COMPLIANCE_REPORTER_IMAGE)\
+	$(COMPLIANCE_BENCHMARKER_IMAGE)
+
+
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 # remove from the list to push to manifest any registries that do not support multi-arch
 # EXCLUDE_MANIFEST_REGISTRIES defined in Makefile.comm
@@ -120,6 +124,8 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o
 
 # Common Makefile needs to be included after the build env variables are set.
 include Makefile.common
+
+build: ut
 
 .PHONY: clean
 clean:
@@ -248,16 +254,11 @@ gen-files: bin/report-type-gen
 ###############################################################################
 # Building the images
 ###############################################################################
-.PHONY: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_SERVER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_CONTROLLER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_SNAPSHOTTER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_REPORTER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_SCALELOADER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_BENCHMARKER) $(BUILD_IMAGE_BENCHMARKER)-$(ARCH)
+.PHONY: $(BUILD_IMAGES) $(-$(ARCH),$(BUILD_IMAGES))
 .PHONY: images
 .PHONY: image
 
-images image: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_BENCHMARKER)
+images image: $(BUILD_IMAGES)
 
 # Build the images for the target architecture
 .PHONY: images-all
@@ -266,47 +267,47 @@ sub-image-%:
 	$(MAKE) images ARCH=$*
 
 # Build the tigera/compliance-server docker image, which contains only Compliance server.
-$(BUILD_IMAGE_SERVER): bin/server-$(ARCH) register
+$(COMPLIANCE_SERVER_IMAGE): bin/server-$(ARCH) register
 	rm -rf docker-image/server/bin
 	mkdir -p docker-image/server/bin
 	cp bin/server-$(ARCH) docker-image/server/bin/
-	docker build --pull -t $(BUILD_IMAGE_SERVER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/server/Dockerfile.$(ARCH) docker-image/server
+	docker build --pull -t $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/server/Dockerfile.$(ARCH) docker-image/server
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(BUILD_IMAGE_SERVER):latest
+	docker tag $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) $(COMPLIANCE_SERVER_IMAGE):latest
 endif
 
 # Build the tigera/compliance-controller docker image, which contains only Compliance controller.
-$(BUILD_IMAGE_CONTROLLER): bin/controller-$(ARCH) register
+$(COMPLIANCE_CONTROLLER_IMAGE): bin/controller-$(ARCH) register
 	rm -rf docker-image/controller/bin
 	mkdir -p docker-image/controller/bin
 	cp bin/controller-$(ARCH) docker-image/controller/bin/
-	docker build --pull -t $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller
+	docker build --pull -t $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(BUILD_IMAGE_CONTROLLER):latest
+	docker tag $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) $(COMPLIANCE_CONTROLLER_IMAGE):latest
 endif
 
 # Build the tigera/compliance-snapshotter docker image, which contains only Compliance snapshotter.
-$(BUILD_IMAGE_SNAPSHOTTER): bin/snapshotter-$(ARCH) register
+$(COMPLIANCE_SNAPSHOTTER_IMAGE): bin/snapshotter-$(ARCH) register
 	rm -rf docker-image/snapshotter/bin
 	mkdir -p docker-image/snapshotter/bin
 	cp bin/snapshotter-$(ARCH) docker-image/snapshotter/bin/
-	docker build --pull -t $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/snapshotter/Dockerfile.$(ARCH) docker-image/snapshotter
+	docker build --pull -t $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/snapshotter/Dockerfile.$(ARCH) docker-image/snapshotter
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(BUILD_IMAGE_SNAPSHOTTER):latest
+	docker tag $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest
 endif
 
 # Build the tigera/compliance-reporter docker image, which contains only Compliance reporter.
-$(BUILD_IMAGE_REPORTER): bin/reporter-$(ARCH) register
+$(COMPLIANCE_REPORTER_IMAGE): bin/reporter-$(ARCH) register
 	rm -rf docker-image/reporter/bin
 	mkdir -p docker-image/reporter/bin
 	cp bin/reporter-$(ARCH) docker-image/reporter/bin/
-	docker build --pull -t $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/reporter/Dockerfile.$(ARCH) docker-image/reporter
+	docker build --pull -t $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/reporter/Dockerfile.$(ARCH) docker-image/reporter
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(BUILD_IMAGE_REPORTER):latest
+	docker tag $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) $(COMPLIANCE_REPORTER_IMAGE):latest
 endif
 
 # Build the tigera/compliance-scaleloader docker image, which contains only Compliance scaleloader.
-$(BUILD_IMAGE_SCALELOADER): bin/scaleloader-$(ARCH) register
+$(COMPLIANCE_SCALELOADER_IMAGE): bin/scaleloader-$(ARCH) register
 	rm -rf docker-image/scaleloader/bin
 	rm -rf docker-image/scaleloader/playbooks
 	rm -rf docker-image/scaleloader/scenarios
@@ -316,13 +317,13 @@ $(BUILD_IMAGE_SCALELOADER): bin/scaleloader-$(ARCH) register
 	cp docker-image/clean.sh docker-image/scaleloader/clean.sh
 	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
 	cp -r mockdata/scaleloader/scenarios docker-image/scaleloader
-	docker build --pull -t $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader
+	docker build --pull -t $(COMPLIANCE_SCALELOADER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(BUILD_IMAGE_SCALELOADER):latest
+	docker tag $(COMPLIANCE_SCALELOADER_IMAGE):latest-$(ARCH) $(COMPLIANCE_SCALELOADER_IMAGE):latest
 endif
 
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
-$(BUILD_IMAGE_BENCHMARKER): bin/benchmarker-$(ARCH) register
+$(COMPLIANCE_BENCHMARKER_IMAGE): bin/benchmarker-$(ARCH) register
 	rm -rf docker-image/benchmarker/bin
 	rm -rf tmp/kube-bench
 	rm -rf docker-image/benchmarker/clean.sh
@@ -335,80 +336,9 @@ $(BUILD_IMAGE_BENCHMARKER): bin/benchmarker-$(ARCH) register
 	mv tmp/kube-bench/cfg/config.yaml.new tmp/kube-bench/cfg/config.yaml
 	cp -r tmp/kube-bench/cfg docker-image/benchmarker
 	rm -rf tmp/kube-bench
-	docker build --pull -t $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/benchmarker/Dockerfile.$(ARCH) docker-image/benchmarker
+	docker build --pull -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/benchmarker/Dockerfile.$(ARCH) docker-image/benchmarker
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(BUILD_IMAGE_BENCHMARKER):latest
-endif
-
-## Override target in common Makefile since there are different image prefixes
-push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGE_PREFIXES)))
-
-## Override target in common Makefile since we're building multiple different images
-sub-single-push-%:
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG)-$(ARCH))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
-endif
-
-## Override target in common Makefile since we're building multiple different images
-push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGE_PREFIXES)))
-sub-manifest-%:
-	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
-	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))"
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))"
-endif
-
-## Override target in common Makefile since we're building multiple different images
-push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
-sub-non-manifest-%:
-ifeq ($(ARCH),amd64)
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SHAPSHOTTER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
-endif
-else
-	$(NOECHO) $(NOOP)
-endif
-
-## Override target in common Makefile since we're building multiple different images
-tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGE_PREFIXES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
-sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG)-$(ARCH))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
-endif
-
-## Override target in common Makefile since we're building multiple different images
-sub-single-tag-images-non-manifest-%:
-ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
-endif
-else
-	$(NOECHO) $(NOOP)
+	docker tag $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) $(COMPLIANCE_BENCHMARKER_IMAGE):latest
 endif
 
 ###############################################################################
@@ -575,138 +505,19 @@ stop-kubernetes-master:
 
 ## checks that we can get the version
 version: images
-	docker run --rm $(BUILD_IMAGE_SERVER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version
+	docker run --rm $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) --version
+	docker run --rm $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) --version
+	docker run --rm $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) --version
+	docker run --rm $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) --version
+	docker run --rm $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) --version
 
 ## Builds the code and runs all tests.
 ci: images-all version static-checks ut
 
-## Avoid unplanned go.sum updates
-.PHONY: undo-go-sum check-dirty
-undo-go-sum:
-	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
-	  echo "Undoing go.sum update..."; \
-	  git checkout -- go.sum; \
-	fi
-
-## Check if generated image is dirty
-check-dirty: undo-go-sum
-	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated image is dirty:"; \
-	  git status --porcelain; \
-	  false; \
-	fi
-
 ## Deploys images to registry
-cd: check-dirty images-all cd-common
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0 )
-GIT_VERSION?=$(shell git describe --tags --dirty --abbrev=12 2>/dev/null  )
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-	$(MAKE) images-all
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	docker run --rm $(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_BENCHMARKER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_BENCHMARKER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-
-	# TODO: Some sort of quick validation of the produced binaries.
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	echo "" >> release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE_SERVER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_SERVER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_SERVER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_SERVER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifeq ($(GIT_COMMIT),<unknown>)
-	$(error git commit ID could not be determined, releases must be done from a git working copy)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
+cd: images-all cd-common
+#push the scale loader separately because we don't release it and therefore don't want it as part of the build images list.
+	$(MAKE) retag-build-images-with-registries push-images-to-registries push-manifests BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE) IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
@@ -766,40 +577,6 @@ bin/benchmarker.transfer-url: bin/benchmarker-$(ARCH)
 .PHONY: update-tools
 update-tools:
 	go get -u github.com/onsi/ginkgo/ginkgo
-
-help:
-	@echo "Compliance Components Makefile"
-	@echo
-	@echo "Dependencies: docker 1.12+; go 1.8+"
-	@echo
-	@echo "For any target, set ARCH=<target> to build for a given target."
-	@echo "For example, to build for arm64:"
-	@echo
-	@echo "  make build ARCH=arm64"
-	@echo
-	@echo "Initial set-up:"
-	@echo
-	@echo "  make update-tools  Update/install the go build dependencies."
-	@echo
-	@echo "Builds:"
-	@echo
-	@echo "  make all           Build all the binary packages."
-	@echo "  make images        Build $(BUILD_IMAGE_SERVER), $(BUILD_IMAGE_CONTROLLER),"
-	@echo "                     $(BUILD_IMAGE_SNAPSHOTTER) and $(BUILD_IMAGE_REPORTER) docker images."
-	@echo
-	@echo "Tests:"
-	@echo
-	@echo "  make ut                Run UTs."
-	@echo
-	@echo "Maintenance:"
-	@echo
-	@echo "  make go-fmt        Format our go code."
-	@echo "  make clean         Remove binary files."
-	@echo "-----------------------------------------"
-	@echo "ARCH (target):          $(ARCH)"
-	@echo "BUILDARCH (host):       $(BUILDARCH)"
-	@echo "CALICO_BUILD:     $(CALICO_BUILD)"
-	@echo "-----------------------------------------"
 
 ###############################################################################
 # Utils
