@@ -24,7 +24,7 @@ func TestOnDemand(t *testing.T) {
 		lock.Lock()
 		wake.Broadcast()
 		lock.Unlock()
-		g.Eventually(func() bool { return done }).Should(BeTrue(), "run terminates on context cancellation")
+		g.Eventually(func() bool { return done }, 10*time.Second, 1*time.Second).Should(BeTrue(), "run terminates on context cancellation")
 	}()
 
 	run, enqueue := OnDemand()
@@ -42,7 +42,7 @@ func TestOnDemand(t *testing.T) {
 	}()
 
 	enqueue(1)
-	g.Eventually(func() int { return last }).Should(Equal(1))
+	g.Eventually(func() int { return last }, 10*time.Second, 1*time.Second).Should(Equal(1))
 
 	lock.Lock()
 	enqueue(2)
@@ -50,5 +50,5 @@ func TestOnDemand(t *testing.T) {
 	wake.Signal()
 	lock.Unlock()
 
-	g.Eventually(func() int { return last }, time.Second).Should(Equal(3))
+	g.Eventually(func() int { return last }, 10*time.Second, 1*time.Second).Should(Equal(3))
 }
