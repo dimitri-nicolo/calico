@@ -109,11 +109,16 @@ static CALI_BPF_INLINE void __xxx_compile_asserts(void) {
 #pragma clang diagnostic pop
 }
 
-#define CT_CREATE_NORMAL	0
-#define CT_CREATE_NAT		1
-#define CT_CREATE_NAT_FWD	2
+struct ct_lookup_ctx {
+	__u8 proto;
+	__be32 src;
+	__be32 dst;
+	__u16 sport;
+	__u16 dport;
+	struct tcphdr *tcp;
+};
 
-struct ct_ctx {
+struct ct_create_ctx {
 	struct __sk_buff *skb;
 	__u8 proto;
 	__be32 src;
@@ -127,6 +132,8 @@ struct ct_ctx {
 			* It is also set on the first node when we create the
 			* initial CT entry for the tunneled traffic. */
 	__u8 flags;
+	enum cali_ct_type type;
+	bool allow_return;
 };
 
 CALI_MAP(cali_v4_ct, 3,
