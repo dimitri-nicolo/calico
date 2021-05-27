@@ -736,8 +736,6 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		}
 		/* Propagate the trusted DNS flag when updating conntrack entry. */
 		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
-		/* Propagate the workload flag when updating conntrack entry. */
-		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_WORKLOAD);
 
 		if (state->ip_proto == IPPROTO_TCP) {
 			if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
