@@ -717,13 +717,17 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 
 	ips := make([]net.IP, 0, len(d.HttpData))
+	var isOriginalSourceIPData bool
 
 	for _, hd := range d.HttpData {
 		if c.l7LogReporter != nil && hd.Type != "" {
 			// If the l7LogReporter has been set, then L7 logs are configured to be run.
 			// If the HttpData has a type, then this is an L7 log.
 			c.LogL7(hd, data, t, httpDataCount)
-		} else {
+		} else if hd.Type == "" {
+			// Flag that the httpDataCount refers to original source IPs
+			isOriginalSourceIPData = true
+
 			var origSrcIP string
 			if len(hd.XRealIp) != 0 {
 				origSrcIP = hd.XRealIp
@@ -748,7 +752,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 
 		bs := NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, ips, httpDataCount)
 		data.AddOriginalSourceIPs(bs)
-	} else if httpDataCount != 0 {
+	} else if httpDataCount != 0 && isOriginalSourceIPData {
 		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
 	}
 }
