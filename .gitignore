@@ -9,4 +9,5 @@
 /controller/cmd/controller/controller
 vendor
 controller/Makefile.common*
+install/Makefile.common*
 .vscode
