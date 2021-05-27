@@ -10,9 +10,10 @@ import (
 const (
 	clusterIdHeader     = "x-cluster-id"
 	defaultClusterName  = "cluster"
+	esAlertsIndexPrefix = "tigera_secure_ee_events"
+	esDnsIndexPrefix    = "tigera_secure_ee_dns"
 	esflowIndexPrefix   = "tigera_secure_ee_flows"
 	esL7IndexPrefix     = "tigera_secure_ee_l7"
-	esAlertsIndexPrefix = "tigera_secure_ee_events"
 )
 
 func GetCluster(req *http.Request) string {
@@ -23,14 +24,18 @@ func GetCluster(req *http.Request) string {
 	return cluster
 }
 
+func GetDnsIndex(cluster string) string {
+	return fmt.Sprintf("%s.%s.*", esDnsIndexPrefix, cluster)
+}
+
+func GetEventsIndex(cluster string) string {
+	return fmt.Sprintf("%s.%s", esAlertsIndexPrefix, cluster)
+}
+
 func GetFlowsIndex(cluster string) string {
 	return fmt.Sprintf("%s.%s.*", esflowIndexPrefix, cluster)
 }
 
 func GetL7FlowsIndex(cluster string) string {
 	return fmt.Sprintf("%s.%s.*", esL7IndexPrefix, cluster)
-}
-
-func GetEventsIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s", esAlertsIndexPrefix, cluster)
 }

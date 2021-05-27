@@ -16,6 +16,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
+	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
 	"github.com/tigera/es-proxy/pkg/utils"
 	calicojson "github.com/tigera/lma/pkg/test/json"
@@ -176,7 +177,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(params, client)
+			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(results.TotalHits).Should(Equal(int64(2)))
 			Expect(results.TimedOut).Should(Equal(false))
@@ -241,7 +242,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(params, client)
+			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(results.TotalHits).Should(Equal(int64(0)))
 			Expect(results.TimedOut).Should(Equal(false))
@@ -296,7 +297,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(params, client)
+			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(results.TotalHits).Should(Equal(int64(0)))
 			Expect(results.TimedOut).Should(Equal(false))
@@ -351,7 +352,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(params, client)
+			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).Should(HaveOccurred())
 			var se *SearchError
 			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))
@@ -408,7 +409,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(params, client)
+			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).Should(HaveOccurred())
 			var se *SearchError
 			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))

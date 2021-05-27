@@ -21,6 +21,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	esindex "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/timeutils"
 )
 
@@ -317,7 +318,7 @@ func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]string, error) {
 	// form query
 	query := buildNamesQuery(params)
-	index := getClusterFlowIndex(params.ClusterName)
+	index := esindex.GetFlowsIndex(params.ClusterName)
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
