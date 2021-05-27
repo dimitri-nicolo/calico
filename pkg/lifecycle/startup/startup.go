@@ -180,7 +180,7 @@ func Run() {
 	// override the AS number.
 	if err := configureBGPLayout(node); err != nil {
 		log.WithError(err).Error("BGP layout configuration failed")
-		terminate()
+		utils.Terminate()
 	}
 
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).

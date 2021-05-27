@@ -19,13 +19,13 @@ import (
 	"os"
 	"strings"
 
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/node/pkg/lifecycle/utils"
 
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/node/pkg/startup/autodetection"
+	"github.com/projectcalico/node/pkg/lifecycle/startup/autodetection"
+	"github.com/projectcalico/node/pkg/lifecycle/utils"
 )
 
 // Default interfaces to exclude for any logic following the first-found

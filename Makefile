@@ -147,13 +147,13 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 
 # TODO(doublek): The various version variables in use here will need some cleanup.
 # VERSION is used by cmd/calico-ipam and cmd/calico
-# CNXVERSION is used by cmd/calico-node and pkg/startup
-# CALICO_VERSION is used by pkg/startup
+# CNXVERSION is used by cmd/calico-node and pkg/lifecycle/startup
+# CALICO_VERSION is used by pkg/lifecycle/startup
 # All these are required for correct version reporting by the various binaries
 # as well as embedding this information within the ClusterInformation resource.
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(NODE_GIT_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(NODE_GIT_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CALICOVERSION=$(CALICO_VERSION) \
 	-X main.VERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
@@ -296,7 +296,7 @@ GINKGO = ginkgo
 #############################################
 # Run unit level tests
 #############################################
-UT_PACKAGES_TO_SKIP?=pkg/startup,pkg/allocateip
+UT_PACKAGES_TO_SKIP?=pkg/lifecycle/startup,pkg/allocateip
 .PHONY: ut
 ut: CMD = go mod download && $(GINKGO) -r
 ut:
@@ -323,7 +323,7 @@ $(FELIX_GPL_SOURCE): go.mod
 ## Run the ginkgo FVs
 fv: run-k8s-apiserver
 	 $(DOCKER_RUN) -e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateip $(GINKGO_ARGS)'
+		ginkgo -cover -r -skipPackage vendor pkg/lifecycle/startup pkg/allocateip $(GINKGO_ARGS)'
 
 # etcd is used by the STs
 .PHONY: run-etcd
