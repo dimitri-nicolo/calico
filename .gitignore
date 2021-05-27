@@ -13,3 +13,14 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+bin
+.go-pkg-cache
+
+# Ignore IDE files
+.vscode/
+
+# Ignore Go build files
+Makefile.common*
+
+release-notes-*
