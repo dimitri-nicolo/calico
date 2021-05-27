@@ -76,7 +76,7 @@ blocks:
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - cd controller
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image cd CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
 
   - name: 'Push Installer Images (non-PR builds only)'
     dependencies: ["Installer CI"]
