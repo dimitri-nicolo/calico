@@ -601,12 +601,6 @@ cd: check-dirty cd-common
 golangci-lint: $(GENERATED_FILES)
 	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-verify
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
-
 .PHONY: node-test-at
 # Run docker-image acceptance tests
 node-test-at: release-prereqs
@@ -616,11 +610,6 @@ node-test-at: release-prereqs
 	   wget -q -O /tmp/goss https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \
 	   chmod +rx /tmp/goss && \
 	   /tmp/goss --gossfile /tmp/goss.yaml validate'
-
-ensure-version-defined:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
 
 ensure-local-build-not-defined:
 ifdef LOCAL_BUILD
@@ -632,13 +621,6 @@ ifndef CALICO_VERSION_RELEASE
 	$(error CALICO_VERSION_RELEASE is undefined - run using make release CALICO_VERSION_RELEASE=vX.Y.Z)
 endif
 
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs: ensure-version-defined ensure-local-build-not-defined ensure-calico-version-release-defined
-
-## tag version number build images i.e.  tigera/node:latest-amd64 -> tigera/node:v1.1.1-amd64
-tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
-sub-base-tag-images-%:
-	docker tag $(NODE_IMAGE):latest-$* $(call unescapefs,$(NODE_IMAGE):$(VERSION)-$*)
 
 ###############################################################################
 # Windows packaging
@@ -711,6 +693,11 @@ endif
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
+
+## Produces the Windows ZIP archive for the release.
+## NOTE: this is needed to make the hash release, don't remove until that's changed.
+release-windows-archive $(WINDOWS_ARCHIVE): var-require-all-VERSION
+	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
 
 ###############################################################################
 # Utilities
