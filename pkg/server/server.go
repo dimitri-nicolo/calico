@@ -174,6 +174,11 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetDnsIndex, esClient.Backend())))))
+	sm.Handle("/l7/search",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.SearchHandler(eselastic.GetL7FlowsIndex, esClient.Backend())))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(
