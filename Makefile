@@ -1,5 +1,5 @@
 PACKAGE_NAME            ?= github.com/tigera/honeypod-controller
-GO_BUILD_VER            ?= v0.51
+GO_BUILD_VER            ?= v0.53
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
@@ -8,23 +8,6 @@ TYPHA_REPO               = github.com/tigera/typha-private
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID)
-
-build: ut
-
-##############################################################################
-# Download and include Makefile.common before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 # Build mounts for running in "local build" mode. Developers will need to make sure they have the correct local version
 # otherwise the build will fail.
@@ -50,31 +33,18 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 ##############################################################################
 # Define some constants
 ##############################################################################
+HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
+BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
+ARCHES                    ?=amd64
+DEV_REGISTRIES            ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES        ?=quay.io
+RELEASE_BRANCH_PREFIX     ?=release-calient
+DEV_TAG_SUFFIX            ?=calient-0.dev
+
 ELASTIC_VERSION			?= 7.3.2
 K8S_VERSION     		?= v1.11.3
 ETCD_VERSION			?= v3.3.7
 KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
-
-# Override ARCHES inferenced in common Makefile.
-#   This repo differs in how ARCHES are determined compared to common logic.
-#   overriding the value with the only platform supported ATM.
-ARCHES = amd64
-
-BUILD_IMAGE_CONTROLLER=honeypod-controller
-GCR_REPO?=gcr.io/unique-caldron-775/cnx/tigera
-#GCR_REPO?=gcr.io/tigera-security-research
-
-PUSH_IMAGE_PREFIXES?=$(GCR_REPO)/
-RELEASE_IMAGES?=
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-PUSH_IMAGE_PREFIXES+=$(RELEASE_IMAGES)
-endif
-
-# remove from the list to push to manifest any registries that do not support multi-arch
-# EXCLUDE_MANIFEST_REGISTRIES defined in Makefile.comm
-PUSH_MANIFEST_IMAGE_PREFIXES=$(PUSH_IMAGE_PREFIXES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGE_PREFIXES=$(filter-out $(PUSH_MANIFEST_IMAGE_PREFIXES),$(PUSH_IMAGE_PREFIXES))
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
@@ -96,6 +66,21 @@ LDFLAGS:=-ldflags "\
 		-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(PKG_VERSION_GIT_DESCRIPTION) \
 		-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(PKG_VERSION_REVISION) \
 		-B 0x$(BUILD_ID)"
+
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 include Makefile.common
 
@@ -139,11 +124,11 @@ bin/controller-$(ARCH): $(SRC_FILES) local_build
 ###############################################################################
 # Building the images
 ###############################################################################
-.PHONY: $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_CONTROLLER)-$(ARCH)
+.PHONY: $(HONEYPOD_CONTROLLER_IMAGE) $(HONEYPOD_CONTROLLER_IMAGE)-$(ARCH)
 .PHONY: images
 .PHONY: image
 
-images image: $(BUILD_IMAGE_CONTROLLER)
+images image: $(HONEYPOD_CONTROLLER_IMAGE)
 
 # Build the images for the target architecture
 .PHONY: images-all
@@ -152,48 +137,14 @@ sub-image-%:
 	$(MAKE) images ARCH=$*
 
 # Build the tigera/honeypod-controller docker image.
-$(BUILD_IMAGE_CONTROLLER): bin/controller-$(ARCH) register
+$(HONEYPOD_CONTROLLER_IMAGE): bin/controller-$(ARCH) register
 	rm -rf docker-image/controller/bin
 	mkdir -p docker-image/controller/bin
 	cp bin/controller-$(ARCH) docker-image/controller/bin/
 	docker build --pull -t snort:local --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/snort/Dockerfile docker-image/snort
-	docker build --pull -t $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller --pull=false
+	docker build --pull -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller --pull=false
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(BUILD_IMAGE_CONTROLLER):latest
-endif
-
-## push one arch
-push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGE_PREFIXES)))
-
-sub-single-push-%:
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
-
-push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGE_PREFIXES)))
-sub-manifest-%:
-	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
-	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))"
-
-## push default amd64 arch where multi-arch manifest is not supported
-push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
-sub-non-manifest-%:
-ifeq ($(ARCH),amd64)
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
-else
-	$(NOECHO) $(NOOP)
-endif
-
-## tag images of one arch
-tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGE_PREFIXES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
-sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
-
-# because some still do not support multi-arch manifest
-sub-single-tag-images-non-manifest-%:
-ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
-else
-	$(NOECHO) $(NOOP)
+	docker tag $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) $(HONEYPOD_CONTROLLER_IMAGE):latest
 endif
 
 ###############################################################################
@@ -379,119 +330,14 @@ stop-kubernetes-master:
 
 ## checks that we can get the version
 version: images
-	docker run --rm $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version
+	docker run --rm $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) --version
 
 ## Builds the code and runs all tests.
 #ci: images-all version static-checks ut
 ci: images-all static-checks ut
 
-## Avoid unplanned go.sum updates
-.PHONY: undo-go-sum check-dirty
-undo-go-sum:
-	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
-	  echo "Undoing go.sum update..."; \
-	  git checkout -- go.sum; \
-	fi
-
-## Check if generated image is dirty
-check-dirty: undo-go-sum
-	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated image is dirty:"; \
-	  git status --porcelain; \
-	  false; \
-	fi
-
 ## Deploys images to registry
-cd: check-dirty cd-common
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0 )
-GIT_VERSION?=$(shell git describe --tags --dirty  2>/dev/null  )
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-	$(MAKE) images-all
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	#docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-
-	# TODO: Some sort of quick validation of the produced binaries.
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	echo "" >> release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifeq ($(GIT_COMMIT),<unknown>)
-	$(error git commit ID could not be determined, releases must be done from a git working copy)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
+cd: cd-common
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
@@ -538,46 +384,3 @@ bin/controller.transfer-url: bin/controller-$(ARCH)
 .PHONY: update-tools
 update-tools:
 	go get -u github.com/onsi/ginkgo/ginkgo
-
-help:
-	@echo "Honeypod Controller Components Makefile"
-	@echo
-	@echo "Dependencies: docker 1.12+; go 1.8+"
-	@echo
-	@echo "For any target, set ARCH=<target> to build for a given target."
-	@echo "For example, to build for arm64:"
-	@echo
-	@echo "  make build ARCH=arm64"
-	@echo
-	@echo "Initial set-up:"
-	@echo
-	@echo "  make update-tools  Update/install the go build dependencies."
-	@echo
-	@echo "Builds:"
-	@echo
-	@echo "  make all           Build all the binary packages."
-	@echo "  make images        Build$(BUILD_IMAGE_CONTROLLER)"
-	@echo "                     docker image."
-	@echo
-	@echo "Tests:"
-	@echo
-	@echo "  make ut                Run UTs."
-	@echo
-	@echo "Maintenance:"
-	@echo
-	@echo "  make go-fmt        Format our go code."
-	@echo "  make clean         Remove binary files."
-	@echo "-----------------------------------------"
-	@echo "ARCH (target):          $(ARCH)"
-	@echo "BUILDARCH (host):       $(BUILDARCH)"
-	@echo "CALICO_BUILD:     $(CALICO_BUILD)"
-	@echo "-----------------------------------------"
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' go modules.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
