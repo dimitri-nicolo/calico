@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -46,7 +46,7 @@ type portProtoKey struct {
 // themselves with update dispatcher. Ex ServiceLookupsCache and TproxyEndPointsResolver
 //
 // It processes the updates passed to it and creates three maps. One contains all services
-// passed to it, other two contains node port services other regular services.
+// passed to it, other two contains node port services, regular services.
 type ServiceUpdateHandler struct {
 	mutex sync.RWMutex
 

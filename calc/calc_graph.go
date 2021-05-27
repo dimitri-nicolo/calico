@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -501,6 +501,11 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		cache.nsCache.RegisterWith(allUpdDispatcher)
 	} else {
 		log.Debug("lookup cache is nil on windows platform")
+	}
+
+	if conf.TPROXYModeEnabled() {
+		tproxyResolver := NewTproxyEndPointsResolver(callbacks)
+		tproxyResolver.RegisterWith(allUpdDispatcher)
 	}
 
 	return &CalcGraph{
