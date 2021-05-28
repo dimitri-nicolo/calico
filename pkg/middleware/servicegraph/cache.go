@@ -9,35 +9,27 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
-// This file provides a cached interface for pre-correlated flows, logs and events (those returned by the machinery in
-// flowl3.go, flowl7.go and events.go). Flow data is filtered based on the users RBAC. Events data is not yet filtered
-// by RBAC - instead we only overlay events onto correlated nodes that are in the final service graph response.
+// This file provides a cache-backed interface for service graph data.
 //
-// The cache is a warm cache. It keeps up to _maxCacheSize_ sets of data stored so that subsequent queries requesting
-// the same time range will be gathered from the cache.
-// The cache contains raw, but correlated flow and event data. It is filtered after retrieving from the cache, so the
-// cached data is applicable to all users.
+// The cache is a warm cache. It keeps a number of data sets cached so that subsequent queries requiring the same
+// underlying data will be handled from the cache. The cache contains unfiltered correlated L3 and L7 flows, and events.
+// Each set of cached data may be accessed by any user because the raw cached data is post-processed to provide a
+// user-specific subset of data.
 //
 // Data requested using relative times (e.g. now-15m to now) are updated in the background, so that subsequent requests
-// using the same relative time interval will return the cached value.  The Force Refresh option in the service graph
-// request parameters may be used if the data is not updating fast enough, but this will have an impact on the response
-// times.
-const (
-	// Max number of cached datasets.
-	maxCacheSize = 10
-
-	// The length of time we allow for late updates in elastic search. If the end time of a request was within this
-	// time we will update the data in the background so subsequent requests may contain more accurate data.
-	lateUpdateDuration = 15 * time.Minute
-)
+// using the same relative time interval will return regularly updated cached values for the same relative range.
+// The Force Refresh option in the service graph request parameters may be used if the data is not updating fast enough,
+// but that will obviously impact response times because the cache would then be cold for that request.
+//
+// There are a number of different configuration parameters available to configure the size, refresh interval and max
+// age of cache entries. See pkg/server/config.go for details.
+// TODO(rlb): Future iterations may use runtime stats to determine how the cache grows and ages out, and perhaps control
+//            garbage collection.
 
 type ServiceGraphCache interface {
 	GetFilteredServiceGraphData(ctx context.Context, rd *RequestData) (*ServiceGraphData, error)
@@ -45,27 +37,13 @@ type ServiceGraphCache interface {
 
 func NewServiceGraphCache(
 	ctx context.Context,
-	elastic lmaelastic.Client,
-	clientSetFactory k8s.ClientSetFactory,
-) ServiceGraphCache {
-	return NewServiceGraphCacheWithBackend(
-		ctx, &realServiceGraphBackend{
-			ctx:              ctx,
-			elastic:          elastic,
-			clientSetFactory: clientSetFactory,
-		},
-	)
-}
-
-func NewServiceGraphCacheWithBackend(
-	ctx context.Context,
 	backend ServiceGraphBackend,
+	cfg *Config,
 ) ServiceGraphCache {
 	sgc := &serviceGraphCache{
-		cache:               make(map[cacheKey]*cacheData),
-		updateLoopInterval:  2 * time.Minute,
-		updateQueryInterval: 5 * time.Second,
-		backend:             backend,
+		cache:   make(map[cacheKey]*cacheData),
+		backend: backend,
+		cfg:     cfg,
 	}
 	go sgc.backgroundCacheUpdateLoop(ctx)
 	return sgc
@@ -88,6 +66,7 @@ type ServiceGraphData struct {
 	TimeIntervals []v1.TimeRange
 	FilteredFlows []TimeSeriesFlow
 	ServiceGroups ServiceGroups
+	NameHelper    NameHelper
 	Events        []Event
 }
 
@@ -95,17 +74,15 @@ type serviceGraphCache struct {
 	// The service graph backend.
 	backend ServiceGraphBackend
 
+	// The service graph config
+	cfg *Config
+
 	// We cache a number of different sets of data. When memory usage is to high we'll age out the least used entries.
 	lock  sync.Mutex
 	cache map[cacheKey]*cacheData
 
 	// Cached data queue in the order of most recently accessed first.
 	queue cacheDataQueue
-
-	// The interval at which we trigger background updates, and the minimum interval between each query within a single
-	// update loop.
-	updateLoopInterval  time.Duration
-	updateQueryInterval time.Duration
 }
 
 // GetFilteredServiceGraphData returns RBAC filtered service graph data:
@@ -116,27 +93,58 @@ type serviceGraphCache struct {
 //            presence of a graph node or not is used to determine whether or not an event is included. This will likely
 //            need to be revisited when we refine RBAC control of events.
 func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd *RequestData) (*ServiceGraphData, error) {
-
-	// Get the raw unfiltered data that will satisfy the request.
-	data, err := s.getRawDataForRequest(ctx, rd)
-	if err != nil {
-		return nil, err
+	// Run the following queries in parallel.
+	// - Get the RBAC filter
+	// - Get the host name mapping helper
+	// - Get the raw data.
+	log.Debugf("GetFilteredServiceGraphData called with time range: %s", rd.ServiceGraphRequest.TimeRange)
+	var cacheData *cacheData
+	var rbacFilter RBACFilter
+	var nameHelper NameHelper
+	var errCacheData, errRBACFilter, errNameHelper error
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rbacFilter, errRBACFilter = s.backend.GetRBACFilter(ctx, rd)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		nameHelper, errNameHelper = s.backend.GetNameHelper(ctx, rd)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cacheData, errCacheData = s.getRawDataForRequest(ctx, rd)
+	}()
+	wg.Wait()
+	if errRBACFilter != nil {
+		log.WithError(errRBACFilter).Error("Failed to discover users permissions")
+		return nil, errRBACFilter
+	} else if errNameHelper != nil {
+		log.WithError(errNameHelper).Error("Failed to query cluster hosts")
+		return nil, errNameHelper
+	} else if errCacheData != nil {
+		log.WithError(errNameHelper).Error("Failed to query log data")
+		return nil, errCacheData
 	}
 
 	// Construct the service graph data by filtering the L3 and L7 data.
 	fd := &ServiceGraphData{
-		TimeIntervals: []v1.TimeRange{rd.Request.TimeRange},
+		TimeIntervals: []v1.TimeRange{rd.ServiceGraphRequest.TimeRange},
 		ServiceGroups: NewServiceGroups(),
+		NameHelper:    nameHelper,
 	}
 
 	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning.
-	for _, rf := range data.l3 {
-		if !rd.RBACFilter.IncludeFlow(rf.Edge) {
+	for _, rf := range cacheData.l3 {
+		if !rbacFilter.IncludeFlow(rf.Edge) {
 			continue
 		}
 
 		// Update the names in the flow (if required).
-		rf = rd.HostnameHelper.ProcessL3Flow(rf)
+		rf = nameHelper.ConvertL3Flow(rf)
 
 		if rf.Edge.ServicePort != nil {
 			fd.ServiceGroups.AddMapping(*rf.Edge.ServicePort, rf.Edge.Dest)
@@ -155,13 +163,13 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	fd.ServiceGroups.FinishMappings()
 
 	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
-	for _, rf := range data.l7 {
-		if !rd.RBACFilter.IncludeFlow(rf.Edge) {
+	for _, rf := range cacheData.l7 {
+		if !rbacFilter.IncludeFlow(rf.Edge) {
 			continue
 		}
 
 		// Update the names in the flow (if required).
-		rf = rd.HostnameHelper.ProcessL7Flow(rf)
+		rf = nameHelper.ConvertL7Flow(rf)
 
 		stats := rf.Stats
 		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
@@ -173,9 +181,9 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	}
 
 	// Filter the events.
-	for _, ev := range data.events {
+	for _, ev := range cacheData.events {
 		// Update the names in the events (if required).
-		ev = rd.HostnameHelper.ProcessEvent(ev)
+		ev = nameHelper.ConvertEvent(ev)
 		fd.Events = append(fd.Events, ev)
 	}
 
@@ -189,6 +197,7 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("Getting raw data for %s", key)
 
 	// Lock to access the cache. Grab the current entry or create a new entry and kick off a query. This approach allows
 	// multiple concurrent accesses of the same data - but only one goroutine will create a new entry and kick off a
@@ -196,8 +205,8 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 	s.lock.Lock()
 	var data *cacheData
 
-	if rd.Request.ForceRefresh {
-		// Request is forcing a refresh. If there is already cached data that is not pending then delete that data.
+	if rd.ServiceGraphRequest.ForceRefresh {
+		// Requested a forced refresh. If there is already cached data that is not pending then delete that data.
 		if data = s.cache[key]; data != nil {
 			select {
 			case <-data.pending:
@@ -220,8 +229,12 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 		}()
 	}
 
-	// Just accessed, so move to front of queue.
+	// Just accessed, so move to front of queue and update the access time.
 	s.queue.add(data)
+	data.accessed = time.Now().UTC()
+
+	// Tidy the cache to maintain cache size and age out old entries.
+	s.tidyCache()
 
 	// Release the lock.
 	s.lock.Unlock()
@@ -239,76 +252,94 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 	return data, nil
 }
 
-// backgroundCacheUpdateLoop loops until done, updating cache entries every tick.
-func (s *serviceGraphCache) backgroundCacheUpdateLoop(ctx context.Context) {
-	ticker := jitter.NewTicker(s.updateLoopInterval, s.updateLoopInterval/10)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			s.cacheUpdate(ctx)
-		}
-	}
-}
+// tidyCache is called after adding new entries to the cache, or during the update poll. It removes oldest entries from
+// the cache to maintain cache size and removes polled entries that have not been accessed for a long time (to avoid
+// continuously polling).
+//
+// Lock is held by caller.
+func (s *serviceGraphCache) tidyCache() {
+	// Access cutoff time.
+	cutoff := time.Now().UTC().Add(-s.cfg.ServiceGraphCachePolledEntryAgeOut)
 
-// cacheUpdate is called from backgroundCacheUpdateLoop - it performs the cache updates. It determines which entries
-// should be updated and then performs a query for each. These queries are performed consecutively so we are not
-// drowning elastic with requests.
-func (s *serviceGraphCache) cacheUpdate(ctx context.Context) {
-	log.Debug("Starting cache update cycle")
-
-	ticker := jitter.NewTicker(s.updateQueryInterval, s.updateQueryInterval/10)
-	defer ticker.Stop()
-
-	// Grab the lock and construct the ordered set of cache datas that need updating.
-	var datasToUpdate []*cacheData
-	createdCutoff := time.Now().Add(-s.updateLoopInterval / 2)
-	endCutoff := time.Now().Add(-lateUpdateDuration)
-	s.lock.Lock()
+	// Preferentially remove aged out relative time entries - this avoid unneccessary polling of elastic.
 	for data := s.queue.first; data != nil; data = data.next {
-		if len(datasToUpdate) < maxCacheSize {
-			datasToUpdate = append(datasToUpdate, data)
-		} else {
-			log.Debugf("Removing cache entry: %s", data.cacheKey)
+		if data.relative && data.accessed.Before(cutoff) {
+			log.Debugf("Removing aged out cache entry: %s", data.cacheKey)
 			delete(s.cache, data.cacheKey)
 			s.queue.remove(data)
 		}
 	}
 
-	// Unlock and then kick off the asynchronous updates for the entries that need updating.
-	s.lock.Unlock()
-	for _, data := range datasToUpdate {
-		log.Debugf("Checking cache entry: %s", data.cacheKey)
+	// Remove oldest entries to maintain cache size.  It is fine if this removes entries that are still pending - any
+	// API call that is waiting for the data already has the data pointer and that data will be still be updated.
+	for len(s.cache) > s.cfg.ServiceGraphCacheMaxEntries {
+		data := s.queue.last
+		log.Debugf("Removing cache entry to keep cache size maintained: %s", data.cacheKey)
+		delete(s.cache, data.cacheKey)
+		s.queue.remove(data)
+	}
+}
+
+// backgroundCacheUpdateLoop loops until done, updating cache entries every tick.
+func (s *serviceGraphCache) backgroundCacheUpdateLoop(ctx context.Context) {
+	loopTicker := jitter.NewTicker(s.cfg.ServiceGraphCachePollLoopInterval, s.cfg.ServiceGraphCachePollLoopInterval/10)
+	defer loopTicker.Stop()
+	queryTicker := jitter.NewTicker(s.cfg.ServiceGraphCachePollQueryInterval, s.cfg.ServiceGraphCachePollQueryInterval/10)
+	defer queryTicker.Stop()
+
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-loopTicker.C:
+			log.Debug("Starting cache update cycle")
+		}
+
+		// Grab the lock and construct the set of cache datas that need updating.
+		var datasToUpdate []*cacheData
+		createdCutoff := time.Now().Add(-s.cfg.ServiceGraphCachePollLoopInterval / 2)
+		endCutoff := time.Now().Add(-s.cfg.ServiceGraphCacheDataSettleTime)
+
+		// Start by tidying the cache and then loop through remaining cache entries to see which need updating.
+		s.lock.Lock()
+		s.tidyCache()
+		for data := s.queue.first; data != nil; data = data.next {
 			if data.needsUpdating(createdCutoff, endCutoff) {
+				// This cache entry needs updating.
+				datasToUpdate = append(datasToUpdate, data)
+			}
+		}
+		s.lock.Unlock()
+
+		for _, data := range datasToUpdate {
+			log.Debugf("Checking cache entry: %s", data.cacheKey)
+			select {
+			case <-ctx.Done():
+				return
+			case <-queryTicker.C:
 				s.updateData(data.cacheKey)
 			}
 		}
-	}
 
-	log.Debug("Finished cache update cycle")
+		log.Debug("Finished cache update cycle")
+	}
 }
 
 // calculateKey calculates the cache data key for the reqeust.
 func (s *serviceGraphCache) calculateKey(rd *RequestData) (cacheKey, error) {
-	if rd.Request.TimeRange.Now == nil {
+	if rd.ServiceGraphRequest.TimeRange.Now == nil {
 		return cacheKey{
 			relative: false,
-			start:    rd.Request.TimeRange.From.Unix(),
-			end:      rd.Request.TimeRange.To.Unix(),
-			cluster:  rd.Request.Cluster,
+			start:    rd.ServiceGraphRequest.TimeRange.From.Unix(),
+			end:      rd.ServiceGraphRequest.TimeRange.To.Unix(),
+			cluster:  rd.ServiceGraphRequest.Cluster,
 		}, nil
 	}
 	return cacheKey{
 		relative: true,
-		start:    int64(rd.Request.TimeRange.Now.Sub(rd.Request.TimeRange.From) / time.Second),
-		end:      int64(rd.Request.TimeRange.Now.Sub(rd.Request.TimeRange.From) / time.Second),
-		cluster:  rd.Request.Cluster,
+		start:    int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.From) / time.Second),
+		end:      int64(rd.ServiceGraphRequest.TimeRange.Now.Sub(rd.ServiceGraphRequest.TimeRange.To) / time.Second),
+		cluster:  rd.ServiceGraphRequest.Cluster,
 	}, nil
 }
 
@@ -338,9 +369,10 @@ func (s *serviceGraphCache) updateData(key cacheKey) {
 		return
 	}
 
-	// Replace the entry with the new one.
+	// Replace the entry with the new one and transfer across the accessed time.
 	s.cache[key] = dNew
 	s.queue.replace(dOld, dNew)
+	dNew.accessed = dOld.accessed
 }
 
 // populateData performs the various queries to get raw log data and updates the cacheData.
@@ -395,15 +427,15 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	}()
 	wg.Wait()
 	if errL3 != nil {
-		log.WithError(err).Error("failed to get l3 logs")
+		log.WithError(errL3).Error("failed to get l3 logs")
 		d.err = errL3
 		return
 	} else if errL7 != nil {
-		log.WithError(err).Error("failed to get l7 logs")
+		log.WithError(errL7).Error("failed to get l7 logs")
 		d.err = errL7
 		return
 	} else if errEvents != nil {
-		log.WithError(err).Error("failed to get event logs")
+		log.WithError(errEvents).Error("failed to get event logs")
 		d.err = errEvents
 		return
 	}
@@ -422,10 +454,15 @@ type cacheData struct {
 
 	// ==== lock required for accessing the following data ====
 
-	// The previous and next most recently accessed entries. A nil entry indicates the end of the queue (see first and
-	// last in the serviceGraphCache struct).
+	// The previous and next most recently accessed entries. A nil entry indicates the end of the queue (see
+	// cacheDataQueue below).
 	prev *cacheData
 	next *cacheData
+
+	// The time this entry was last accessed. We use this to start removing relative time entries that have not been
+	// accessed for some amount of time so that we don't just keep querying for ever. Fixed time entries can remain in
+	// the cache until they are aged out through cache size and access order.
+	accessed time.Time
 
 	// ==== cached data:  This is read safe without any locks once the pending channel is closed ====
 

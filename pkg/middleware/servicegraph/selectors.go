@@ -44,17 +44,17 @@ func (s SelectorPairs) Or(s2 SelectorPairs) SelectorPairs {
 	}
 }
 
-func NewSelectorHelper(view *ParsedView, aggHelper HostnameHelper, sgs ServiceGroups) *SelectorHelper {
+func NewSelectorHelper(view *ParsedView, nameHelper NameHelper, sgs ServiceGroups) *SelectorHelper {
 	return &SelectorHelper{
 		view:          view,
-		aggHelper:     aggHelper,
+		nameHelper:    nameHelper,
 		serviceGroups: sgs,
 	}
 }
 
 type SelectorHelper struct {
 	view          *ParsedView
-	aggHelper     HostnameHelper
+	nameHelper    NameHelper
 	serviceGroups ServiceGroups
 }
 
@@ -233,7 +233,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		// Handle hosts separately. We provide an internal aggregation for these types, so when constructing a selector
 		// we have do do a rather brutal list of all host endpoints. We can at least skip namespace since hep types
 		// are only non-namespaced.
-		hosts := s.aggHelper.GetCompiledHostNamesFromAggregatedName(nameAggr)
+		hosts := s.nameHelper.GetCompiledHostNamesFromAggregatedName(nameAggr)
 		if len(hosts) > maxSelectorItemsPerGroup {
 			// Too many individual items. Don't filter on the hosts.
 			l3Source = v1.NewGraphSelector(v1.OpAnd,

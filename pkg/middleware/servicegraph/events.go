@@ -233,13 +233,13 @@ func parseKubernetesEvent(rawEvent corev1.Event, tr v1.TimeRange) *Event {
 
 	if !firstTime.IsZero() && !lastTime.IsZero() {
 		if !tr.Overlaps(firstTime.Time, lastTime.Time) {
-			log.Debugf("Skipping event, time range outside Request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
+			log.Debugf("Skipping event, time range outside request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
 			return nil
 		}
 		chosenTime = &lastTime
 	} else if !eventTime.IsZero() {
 		if !tr.InRange(eventTime.Time) {
-			log.Debugf("Skipping event, time outside Request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
+			log.Debugf("Skipping event, time outside request range: %s/%s", rawEvent.Namespace, rawEvent.Name)
 			return nil
 		}
 		chosenTime = &metav1.Time{Time: eventTime.Time}

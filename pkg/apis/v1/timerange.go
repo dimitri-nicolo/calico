@@ -73,6 +73,10 @@ func (t TimeRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s)
 }
 
+func (t TimeRange) String() string {
+	return fmt.Sprintf("%s -> %s", t.From.UTC().Format(time.RFC3339), t.To.UTC().Format(time.RFC3339))
+}
+
 func (t TimeRange) Duration() time.Duration {
 	return t.To.Sub(t.From)
 }

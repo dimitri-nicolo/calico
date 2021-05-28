@@ -28,7 +28,7 @@ type RBACFilter interface {
 }
 
 // GetRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
-func GetRBACFilter(ctx context.Context, management, managed k8s.ClientSet) (RBACFilter, error) {
+func GetRBACFilter(ctx context.Context, managed k8s.ClientSet) (RBACFilter, error) {
 	verbs, err := authorization.PerformAuthorizationReview(ctx, managed, authReviewAttrListEndpoints)
 	if err != nil {
 		return nil, err

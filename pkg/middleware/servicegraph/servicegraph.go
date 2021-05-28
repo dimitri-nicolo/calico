@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/tigera/es-proxy/pkg/elastic"
@@ -22,8 +21,8 @@ import (
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service
-// graph in es-proxy. The handler pulls together various components to parse the Request, query the flow data,
-// filter and aggregate the flows. All HTTP Request processing is handled here.
+// graph in es-proxy. The handler pulls together various components to parse the request, query the flow data,
+// filter and aggregate the flows. All HTTP request processing is handled here.
 
 const (
 	defaultRequestTimeout = 60 * time.Second
@@ -33,26 +32,36 @@ type ServiceGraph interface {
 	Handler() http.HandlerFunc
 }
 
-func NewServiceGraph(ctx context.Context, elasticClient lmaelastic.Client, clientSetFactory k8s.ClientSetFactory) ServiceGraph {
-	return &serviceGraph{
-		sgCache:          NewServiceGraphCache(ctx, elasticClient, clientSetFactory),
+func NewServiceGraph(
+	ctx context.Context,
+	elasticClient lmaelastic.Client,
+	clientSetFactory k8s.ClientSetFactory,
+	cfg *Config,
+) ServiceGraph {
+	return NewServiceGraphWithBackend(ctx, &realServiceGraphBackend{
+		ctx:              ctx,
+		elastic:          elasticClient,
 		clientSetFactory: clientSetFactory,
+	}, cfg)
+}
+
+func NewServiceGraphWithBackend(ctx context.Context, backend ServiceGraphBackend, cfg *Config) ServiceGraph {
+	return &serviceGraph{
+		sgCache: NewServiceGraphCache(ctx, backend, cfg),
 	}
 }
 
 // serviceGraph implements the ServiceGraph interface.
 type serviceGraph struct {
 	// Flows cache.
-	sgCache          ServiceGraphCache
-	clientSetFactory k8s.ClientSetFactory
+	sgCache ServiceGraphCache
 }
 
 // RequestData encapsulates data parsed from the request that is shared between the various components that construct
 // the service graph.
 type RequestData struct {
-	Request        *v1.ServiceGraphRequest
-	HostnameHelper HostnameHelper
-	RBACFilter     RBACFilter
+	HTTPRequest         *http.Request
+	ServiceGraphRequest *v1.ServiceGraphRequest
 }
 
 func (s *serviceGraph) Handler() http.HandlerFunc {
@@ -72,63 +81,14 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 			return
 		}
 
-		// Construct a context with timeout based on the service graph Request.
+		// Construct a context with timeout based on the service graph request.
 		ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout)
 		defer cancel()
 
-		csAppCluster, err := s.clientSetFactory.NewClientSetForApplication(sgr.Cluster)
-		if err != nil {
-			log.WithError(err).Error("failed to authenticate")
-			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
-			return
-		}
-		csUserManagement, err := s.clientSetFactory.NewClientSetForUser(req, "")
-		if err != nil {
-			log.WithError(err).Error("failed to authenticate")
-			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
-			return
-		}
-		csUserCluster, err := s.clientSetFactory.NewClientSetForUser(req, sgr.Cluster)
-		if err != nil {
-			log.WithError(err).Error("failed to authenticate")
-			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
-			return
-		}
-
-		// Run the following queries in parallel - this is used for filtering and modifying the logs, so we need to
-		// do this first.
-		// - Get the RBAC filter
-		// - Get the host name mapping helper
-		var rbacFilter RBACFilter
-		var hostnameHelper HostnameHelper
-		var errRBACFilter, errHostnameHelper error
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			rbacFilter, errRBACFilter = GetRBACFilter(ctx, csUserManagement, csUserCluster)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			hostnameHelper, errHostnameHelper = GetHostnameHelper(ctx, csAppCluster, sgr.SelectedView.HostAggregationSelectors)
-		}()
-		wg.Wait()
-		if errRBACFilter != nil {
-			log.WithError(err).Error("Failed to discover users permissions")
-			http.Error(w, "Failed to discover users permissions", http.StatusBadRequest)
-			return
-		} else if errHostnameHelper != nil {
-			log.WithError(err).Error("Failed to query cluster hosts")
-			http.Error(w, "Failed to query cluster hosts", http.StatusBadRequest)
-			return
-		}
-
-		// Create the Request data.
+		// Create the request data.
 		rd := &RequestData{
-			Request:        sgr,
-			HostnameHelper: hostnameHelper,
-			RBACFilter:     rbacFilter,
+			HTTPRequest:         req,
+			ServiceGraphRequest: sgr,
 		}
 
 		// Get the filtered flow from the cache.
@@ -138,7 +98,7 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 		} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-		} else if sg, err := GetServiceGraphResponse(rd, f, pv); err != nil {
+		} else if sg, err := GetServiceGraphResponse(f, pv); err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		} else {
@@ -156,7 +116,7 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 	}
 }
 
-// getServiceGraphRequest parses the ServiceGraphRequest from the HTTP request body.
+// getServiceGraphRequest parses the request from the HTTP request body.
 func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGraphRequest, error) {
 	// Extract the request from the body.
 	sgr := &v1.ServiceGraphRequest{}

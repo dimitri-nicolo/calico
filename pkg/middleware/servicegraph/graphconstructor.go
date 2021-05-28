@@ -15,12 +15,12 @@ import (
 // See v1.GraphView for details on aggregation, and which nodes will be included in the graph.
 
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
-func GetServiceGraphResponse(rd *RequestData, f *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
+func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
 	sgr := &v1.ServiceGraphResponse{
 		// Response should include the time range actually used to perform these queries.
 		TimeIntervals: f.TimeIntervals,
 	}
-	s := newServiceGraphConstructor(rd, f, v)
+	s := newServiceGraphConstructor(f, v)
 
 	// Iterate through the flows to track the nodes and edges.
 	for i := range s.sgd.FilteredFlows {
@@ -156,7 +156,7 @@ func (t *trackedGroup) update(child v1.GraphNodeID, isInFocus, isFollowingEgress
 	t.isFollowingIngress = t.isFollowingIngress || isFollowingIngress
 }
 
-// trackedNode encpasulates details of a node returned by the API, and additional data required to do some post
+// trackedNode encapsulates details of a node returned by the API, and additional data required to do some post
 // graph-construction updates.
 type trackedNode struct {
 	Node      *v1.GraphNode
@@ -202,7 +202,7 @@ type serviceGraphConstructionData struct {
 }
 
 // newServiceGraphConstructor intializes a new serviceGraphConstructionData.
-func newServiceGraphConstructor(rd *RequestData, sgd *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
+func newServiceGraphConstructor(sgd *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
 	return &serviceGraphConstructionData{
 		groupsMap:    make(map[v1.GraphNodeID]*trackedGroup),
 		nodesMap:     make(map[v1.GraphNodeID]trackedNode),
@@ -210,7 +210,7 @@ func newServiceGraphConstructor(rd *RequestData, sgd *ServiceGraphData, v *Parse
 		serviceEdges: make(map[v1.GraphNodeID]*serviceEdges),
 		sgd:          sgd,
 		view:         v,
-		selh:         NewSelectorHelper(v, rd.HostnameHelper, sgd.ServiceGroups),
+		selh:         NewSelectorHelper(v, sgd.NameHelper, sgd.ServiceGroups),
 	}
 }
 

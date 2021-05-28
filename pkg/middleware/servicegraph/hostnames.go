@@ -14,19 +14,21 @@ import (
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
-type HostnameHelper interface {
-	// Methods used to modify host name data in flows and events.  These methods may update the helper with additional
-	// host names that were found in the logs and events but are no longer in the cluster.
-	ProcessL3Flow(f L3Flow) L3Flow
-	ProcessL7Flow(f L7Flow) L7Flow
-	ProcessEvent(e Event) Event
+// The NameHelper is used to modify the names in the flow and event data based on request-specific parameters.
+
+type NameHelper interface {
+	// Methods used to modify name data in flows and events.  These methods may update the helper with additional
+	// data found in the logs.
+	ConvertL3Flow(f L3Flow) L3Flow
+	ConvertL7Flow(f L7Flow) L7Flow
+	ConvertEvent(e Event) Event
 
 	// Return the set of host names associated with a host aggregated name.  This method does not update the helper.
 	// It returns the final compiled set of hosts associated with the aggregated name.
 	GetCompiledHostNamesFromAggregatedName(aggrName string) []string
 }
 
-type hostnameHelper struct {
+type nameHelper struct {
 	lock sync.RWMutex
 
 	// If hosts are being aggregated into groups these will be non-nil.
@@ -37,8 +39,8 @@ type hostnameHelper struct {
 	hepToHostname map[string]string
 }
 
-func GetHostnameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSelector) (HostnameHelper, error) {
-	hh := &hostnameHelper{}
+func GetNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSelector) (NameHelper, error) {
+	hh := &nameHelper{}
 
 	wg := sync.WaitGroup{}
 
@@ -108,7 +110,7 @@ func GetHostnameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.Nam
 
 // ProcessL3Flow updates an L3 flow to include additional aggregation details, and will also update the aggregation
 // helper to track additional mappings that were not found during instantiation.
-func (ah *hostnameHelper) ProcessL3Flow(f L3Flow) L3Flow {
+func (ah *nameHelper) ConvertL3Flow(f L3Flow) L3Flow {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
@@ -143,7 +145,7 @@ func (ah *hostnameHelper) ProcessL3Flow(f L3Flow) L3Flow {
 
 // ProcessL7Flow updates an L7 flow to include additional aggregation details, and will also update the aggregation
 // helper to track additional mappings that were not found during instantiation.
-func (ah *hostnameHelper) ProcessL7Flow(f L7Flow) L7Flow {
+func (ah *nameHelper) ConvertL7Flow(f L7Flow) L7Flow {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
@@ -178,7 +180,7 @@ func (ah *hostnameHelper) ProcessL7Flow(f L7Flow) L7Flow {
 
 // ProcessEvent updates an event to include additional aggregation details, and will also update the aggregation
 // helper to track additional mappings that were not found during instantiation.
-func (ah *hostnameHelper) ProcessEvent(e Event) Event {
+func (ah *nameHelper) ConvertEvent(e Event) Event {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
@@ -226,7 +228,7 @@ func (ah *hostnameHelper) ProcessEvent(e Event) Event {
 
 // GetCompiledHostNamesFromAggregatedName returns the set of host names that correspond to the aggregated name.
 // This returns nil if nodes are not aggregated into multiple groups.
-func (ah *hostnameHelper) GetCompiledHostNamesFromAggregatedName(aggrName string) []string {
+func (ah *nameHelper) GetCompiledHostNamesFromAggregatedName(aggrName string) []string {
 	if len(ah.aggrNameToHostnames) <= 1 {
 		return nil
 	}
@@ -239,7 +241,7 @@ func (ah *hostnameHelper) GetCompiledHostNamesFromAggregatedName(aggrName string
 
 // addAdditionalWildcardAggregatedNode includes an additional node in the "*" bucket.
 // The caller should be holding the read-lock.
-func (ah *hostnameHelper) addAdditionalWildcardAggregatedNode(name string) {
+func (ah *nameHelper) addAdditionalWildcardAggregatedNode(name string) {
 	ah.lock.RUnlock()
 	ah.lock.Lock()
 	ah.hostNameToAggrName[name] = "*"

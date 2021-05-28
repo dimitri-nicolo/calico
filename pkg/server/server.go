@@ -133,7 +133,18 @@ func Start(cfg *Config) error {
 	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, voltronServiceURL)
 
 	// Create a service graph handler.
-	serviceGraph := servicegraph.NewServiceGraph(context.Background(), esClient, k8sClientSetFactory)
+	serviceGraph := servicegraph.NewServiceGraph(
+		context.Background(),
+		esClient,
+		k8sClientSetFactory,
+		&servicegraph.Config{
+			ServiceGraphCacheMaxEntries:        cfg.ServiceGraphCacheMaxEntries,
+			ServiceGraphCachePolledEntryAgeOut: cfg.ServiceGraphCachePolledEntryAgeOut,
+			ServiceGraphCachePollLoopInterval:  cfg.ServiceGraphCachePollLoopInterval,
+			ServiceGraphCachePollQueryInterval: cfg.ServiceGraphCachePollQueryInterval,
+			ServiceGraphCacheDataSettleTime:    cfg.ServiceGraphCacheDataSettleTime,
+		},
+	)
 
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
