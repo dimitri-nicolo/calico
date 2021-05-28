@@ -225,8 +225,7 @@ func init() {
 	registerFieldValidator("l7SourceAggregation", validateL7SourceAggregation)
 	registerFieldValidator("l7ResponseCodeAggregation", validateL7ResponseCodeAggregation)
 	registerFieldValidator("l7URLAggregation", validateL7URLAggregation)
-	registerFieldValidator("cloudWatchAggregationKind", validateCloudWatchAggregationKind)
-	registerFieldValidator("cloudWatchRetentionDays", validateCloudWatchRetentionDays)
+	registerFieldValidator("flowLogAggregationKind", validateFlowLogAggregationKind)
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("keyValueList", validateKeyValueList)
@@ -658,24 +657,6 @@ func validateL7URLAggregation(fl validator.FieldLevel) bool {
 	return L7URLAggregationRegex.MatchString(s)
 }
 
-func validateCloudWatchAggregationKind(fl validator.FieldLevel) bool {
-	kind := int(fl.Field().Int())
-	log.Debugf("Validate CloudWatch FlowLogs aggregation kind: %d", kind)
-	return kind >= minAggregationKindValue && kind <= maxAggregationKindValue
-}
-
-// Ref. https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
-func validateCloudWatchRetentionDays(fl validator.FieldLevel) bool {
-	days := int(fl.Field().Int())
-	log.Debugf("Validate CloudWatch FlowLogs retention days: %d", days)
-	switch days {
-	case 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653:
-		return true
-	default:
-		return false
-	}
-}
-
 func validateSelector(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate selector: %s", s)
@@ -687,6 +668,12 @@ func validateSelector(fl validator.FieldLevel) bool {
 		return false
 	}
 	return true
+}
+
+func validateFlowLogAggregationKind(fl validator.FieldLevel) bool {
+	kind := int(fl.Field().Int())
+	log.Debugf("Validate FlowLogs aggregation kind: %d", kind)
+	return kind >= minAggregationKindValue && kind <= maxAggregationKindValue
 }
 
 func validateTag(fl validator.FieldLevel) bool {

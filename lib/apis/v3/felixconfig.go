@@ -393,55 +393,6 @@ type FelixConfigurationSpec struct {
 	// FlowLogsCollectTcpStats enables flow logs reporting TCP socket stats
 	FlowLogsCollectTcpStats *bool `json:"flowLogsCollectTcpStats,omitempty" validate:"omitempty"`
 
-	// Enable Flow logs reporting to AWS CloudWatch.
-	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
-	// Deprecated: Use FlowLogsFlushInterval instead.
-	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty" configv1timescale:"seconds"`
-	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "tigera-flowlogs-<cluster-guid>".
-	CloudWatchLogsLogGroupName string `json:"cloudWatchLogsLogGroupName,omitempty"`
-	// CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to "<felix-hostname>_Flowlogs".
-	CloudWatchLogsLogStreamName string `json:"cloudWatchLogsLogStreamName,omitempty"`
-	// CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.
-	CloudWatchLogsIncludeLabels *bool `json:"cloudWatchLogsIncludeLabels,omitempty"`
-	// CloudWatchLogsIncludePolicies is used to configure if policy information are included in a Flow log entry.
-	CloudWatchLogsIncludePolicies *bool `json:"cloudWatchLogsIncludePolicies,omitempty"`
-	// CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
-	// allowed connections. [Default: 2 - pod prefix name based aggregation].
-	// Accepted values are 0, 1 and 2.
-	// 0 - No aggregation
-	// 1 - Source port based aggregation
-	// 2 - Pod prefix name based aggreagation.
-	CloudWatchLogsAggregationKindForAllowed *int `json:"cloudWatchLogsAggregationKindForAllowed,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
-	// CloudWatchLogsAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for
-	// denied connections. [Default: 1 - source port based aggregation].
-	// Accepted values are 0, 1 and 2.
-	// 0 - No aggregation
-	// 1 - Source port based aggregation
-	// 2 - Pod prefix name based aggreagation.
-	CloudWatchLogsAggregationKindForDenied *int `json:"cloudWatchLogsAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
-	// Number of days for which to retain logs.
-	// See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
-	// for allowed values.
-	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty" validate:"omitempty,cloudWatchRetentionDays"`
-	// Deprecated: Use FlowLogsEnableHostEndpoint.
-	CloudWatchLogsEnableHostEndpoint *bool `json:"cloudWatchLogsEnableHostEndpoint,omitempty"`
-	// CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
-	// This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.
-	CloudWatchLogsEnabledForAllowed *bool `json:"cloudWatchLogsEnabledForAllowed,omitempty"`
-	// CloudWatchLogsEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true.
-	// This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.
-	CloudWatchLogsEnabledForDenied *bool `json:"cloudWatchLogsEnabledForDenied,omitempty"`
-
-	// Enable reporting metrics to CloudWatch.
-	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`
-	// CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.
-	CloudWatchMetricsPushInterval *metav1.Duration `json:"cloudWatchMetricsPushIntervalSecs,omitempty" configv1timescale:"seconds" confignamev1:"CloudWatchMetricsPushIntervalSecs"`
-
-	// CloudWatchNodeHealthStatusEnabled enables pushing node health data to CloudWatch.
-	CloudWatchNodeHealthStatusEnabled *bool `json:"cloudWatchNodeHealthStatusEnabled,omitempty"`
-	// CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.
-	CloudWatchNodeHealthPushIntervalSecs *metav1.Duration `json:"cloudWatchNodeHealthPushIntervalSecs,omitempty" configv1timescale:"seconds" confignamev1:"CloudWatchNodeHealthPushIntervalSecs"`
-
 	// FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.
 	FlowLogsFileEnabled *bool `json:"flowLogsFileEnabled,omitempty"`
 	// FlowLogsFileMaxFiles sets the number of log files to keep.
@@ -464,7 +415,7 @@ type FelixConfigurationSpec struct {
 	// 0 - No aggregation
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggreagation.
-	FlowLogsFileAggregationKindForAllowed *int `json:"flowLogsFileAggregationKindForAllowed,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	FlowLogsFileAggregationKindForAllowed *int `json:"flowLogsFileAggregationKindForAllowed,omitempty" validate:"omitempty,flowLogAggregationKind"`
 	// FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for
 	// denied connections. [Default: 1 - source port based aggregation].
 	// Accepted values are 0, 1 and 2.
@@ -472,7 +423,7 @@ type FelixConfigurationSpec struct {
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggregation.
 	// 3 - No destination ports based aggregation
-	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,flowLogAggregationKind"`
 	// FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
 	FlowLogsFileEnabledForAllowed *bool `json:"flowLogsFileEnabledForAllowed,omitempty"`

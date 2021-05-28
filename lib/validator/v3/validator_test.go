@@ -102,7 +102,6 @@ func init() {
 	zero := 0
 	one := 1
 	two := 2
-	three := 3
 	minusOne := -1
 
 	// L7 log aggregation settings
@@ -826,17 +825,6 @@ func init() {
 
 		Entry("should accept a valid WindowsNetworkName value '(?i)calico'", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(?i)calico")}, true),
 		Entry("should reject an invalid WindowsNetworkName value '('", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(")}, false),
-
-		Entry("should accept an valid CloudWatchAggregationKind value '0'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &zero}, true),
-		Entry("should accept an valid CloudWatchAggregationKind value '1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &one}, true),
-		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &two}, true),
-		Entry("should reject an invalid CloudWatchAggregationKind value '3'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &three}, false),
-		Entry("should reject an invalid CloudWatchAggregationKind value '-1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &minusOne}, false),
-
-		Entry("should accept valid CloudWatchLogsRetentionDays value '7'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(7)}, true),
-		Entry("should accept valid CloudWatchLogsRetentionDays value '365'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(365)}, true),
-		Entry("should accept valid CloudWatchLogsRetentionDays value '30'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(30)}, true),
-		Entry("should reject invalid CloudWatchLogsRetentionDays value '31'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(31)}, false),
 
 		Entry("should accept an valid DNSLogsFileAggregationKind value '0'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &zero}, true),
 		Entry("should accept an valid DNSLogsFileAggregationKind value '1'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &one}, true),
