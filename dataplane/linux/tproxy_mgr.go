@@ -19,6 +19,8 @@ package intdataplane
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ipsets"
 )
@@ -31,17 +33,37 @@ type tproxyManager struct {
 func newTproxyManager(ipSetsV4, ipSetsV6 *ipsets.IPSets, dests []config.ServerPort) *tproxyManager {
 	maxsize := 1000
 	svcs := []string{}
+	nps := []string{}
+
 	for _, serverPort := range dests {
-		svcs = append(svcs, fmt.Sprintf("%v,tcp:%v", serverPort.IP, serverPort.Port))
+		if serverPort.IP == "0.0.0.0" {
+			nps = append(nps, fmt.Sprintf("%v", serverPort.Port))
+		} else {
+			svcs = append(svcs, fmt.Sprintf("%v,tcp:%v", serverPort.IP, serverPort.Port))
+		}
 	}
+
+	log.WithField("services", svcs).Info("tproxyManager")
+	log.WithField("nodeports", nps).Info("tproxyManager")
+
 	ipSetsV4.AddOrReplaceIPSet(
 		ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
 		svcs,
+	)
+	ipSetsV4.AddOrReplaceIPSet(
+		ipsets.IPSetMetadata{SetID: "tproxy-nodeports", Type: ipsets.IPSetTypeBitmapPort, RangeMax: 0xffff},
+		nps,
 	)
 	ipSetsV6.AddOrReplaceIPSet(
 		ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
 		[]string{},
 	)
+	/*
+		ipSetsV6.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-nodeports", Type: ipsets.IPSetTypeBitmapPort, RangeMax: 0xffff},
+			[]string{},
+		)
+	*/
 
 	return &tproxyManager{
 		ipSetsV4: ipSetsV4,

@@ -44,8 +44,9 @@ type TProxy struct {
 	err              io.ReadCloser
 	listeningStarted chan struct{}
 
-	cname string
-	port  uint16
+	cname  string
+	port   uint16
+	portNp uint16
 
 	proxied  map[ConnKey]int
 	accepted map[ConnKey]int
@@ -58,11 +59,12 @@ type ConnKey struct {
 	PodIPPort     string
 }
 
-func New(f *infrastructure.Felix, port uint16) *TProxy {
+func New(f *infrastructure.Felix, port, portNp uint16) *TProxy {
 	f.EnsureBinary("tproxy")
 	return &TProxy{
-		cname: f.Name,
-		port:  port,
+		cname:  f.Name,
+		port:   port,
+		portNp: portNp,
 
 		listeningStarted: make(chan struct{}),
 
@@ -72,7 +74,8 @@ func New(f *infrastructure.Felix, port uint16) *TProxy {
 }
 
 func (t *TProxy) Start() {
-	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy", strconv.Itoa(int(t.port)))
+	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy",
+		strconv.Itoa(int(t.port)), strconv.Itoa(int(t.portNp)))
 
 	var err error
 	t.out, err = t.cmd.StdoutPipe()

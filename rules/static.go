@@ -1197,7 +1197,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxy, Rules: tproxyRules})
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxySvc, Rules: tproxyRules})
 
 		nameForIPSet := func(ipsetID string) string {
 			if ipVersion == 4 {
@@ -1206,12 +1206,40 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
 			}
 		}
+
 		chains = append(chains, &Chain{
 			Name: ChainManglePreroutingTProxySelect,
 			Rules: []Rule{{
-				Comment: []string{"Proxy selected destinations"},
+				Comment: []string{"Proxy selected services"},
 				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
+				Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
+			}},
+		})
+
+		tproxyRules = []Rule{
+			{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("tcp").DestAddrType(AddrTypeLocal),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+			},
+			{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("udp").DestAddrType(AddrTypeLocal),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+			},
+		}
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
+
+		chains = append(chains, &Chain{
+			Name: ChainManglePreroutingTProxySelect,
+			Rules: []Rule{{
+				Comment: []string{"Proxy selected nodeports"},
+				Match: Match().
+					DestAddrType(AddrTypeLocal).
+					// We use a single port ipset for both V4 and V6
+					DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports")),
+				Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
 			}},
 		})
 	}

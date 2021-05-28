@@ -31,6 +31,7 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	. "github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -86,7 +87,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 			proxies = []*tproxy.TProxy{}
 			for _, felix := range felixes {
-				proxy := tproxy.New(felix, 16001)
+				proxy := tproxy.New(felix, 16001, 16002)
 				proxy.Start()
 				proxies = append(proxies, proxy)
 			}
@@ -175,6 +176,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				for _, felix := range felixes {
 					felix.Exec("iptables-save", "-c")
 					felix.Exec("ipset", "list", "cali40tproxy-services")
+					felix.Exec("ipset", "list", "cali40tproxy-nodeports")
 					felix.Exec("ip", "rule")
 					felix.Exec("ip", "route")
 					felix.Exec("ip", "route", "show", "table", "224")
@@ -201,9 +203,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			})
 
 			It("should have connectivity from all workloads via w[0][0].IP", func() {
-				cc.ExpectSome(w[0][1], w[0][0], 8055)
-				cc.ExpectSome(w[1][0], w[0][0], 8055)
-				cc.ExpectSome(w[1][1], w[0][0], 8055)
+				cc.Expect(Some, w[0][1], w[0][0], ExpectWithPorts(8055))
+				cc.Expect(Some, w[1][0], w[0][0], ExpectWithPorts(8055))
+				cc.Expect(Some, w[1][1], w[0][0], ExpectWithPorts(8055))
 				cc.CheckConnectivity()
 
 				// Connection is proxied both on the client and server node
@@ -241,9 +243,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			})
 
 			It("should have connectivity from all workloads via ClusterIP", func() {
-				cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
+				cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+				cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+				cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 				cc.CheckConnectivity()
 
 				// Connection should be proxied on the pod's local node
@@ -277,9 +279,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						pol = createPolicy(pol)
 					})
 
-					cc.ExpectNone(w[0][1], TargetIP(clusterIP), 8090)
-					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+					cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(None, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()
 
 					// Connection should be proxied on the pod's local node
@@ -315,9 +317,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						pol = createPolicy(pol)
 					})
 
-					cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
-					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(None, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()
 
 					// Connection should be proxied on the pod's local node
@@ -330,6 +332,87 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
 					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 				})
+			})
+		})
+
+		Context("NodePorts", func() {
+			var pod, svc string
+
+			nodeport := uint16(30333)
+
+			BeforeEach(func() {
+				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "0.0.0.0:" + strconv.Itoa(int(nodeport))
+			})
+
+			JustBeforeEach(func() {
+				pod = w[0][0].IP + ":8055"
+				pod = w[0][0].IP + ":8055"
+				svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
+
+				// Mimic the kube-proxy service iptable clusterIP rule.
+				for _, f := range felixes {
+					f.Exec("iptables", "-t", "nat",
+						"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+						"-W", "100000", // How often to probe the lock in microsecs.
+						"-A", "PREROUTING",
+						"-p", "tcp",
+						"-m", "addrtype", "--dst-type", "LOCAL",
+						"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+						"-j", "MARK", "--set-xmark", "0x4000/0x4000")
+					f.Exec("iptables", "-t", "nat",
+						"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+						"-W", "100000", // How often to probe the lock in microsecs.
+						"-A", "PREROUTING",
+						"-p", "tcp",
+						"-m", "addrtype", "--dst-type", "LOCAL",
+						"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+						"-j", "DNAT", "--to-destination", pod)
+					f.Exec("iptables", "-t", "nat",
+						"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+						"-W", "100000", // How often to probe the lock in microsecs.
+						"-A", "POSTROUTING",
+						"-m", "mark", "--mark", "0x4000/0x4000",
+						"-j", "MASQUERADE")
+				}
+
+				pol := api.NewGlobalNetworkPolicy()
+				pol.Namespace = "fv"
+				pol.Name = "policy-allow-8055-from-any"
+				tcpProto := numorstring.ProtocolFromString("tcp")
+				pol.Spec.Ingress = []api.Rule{
+					{
+						Action:   "Allow",
+						Protocol: &tcpProto,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(8055)},
+						},
+					},
+				}
+				pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+				one := float64(1)
+				pol.Spec.Order = &one
+
+				pol = createPolicy(pol)
+			})
+
+			It("should have connectivity from all workloads via ClusterIP", func() {
+
+				opts := []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(felixes[0].IP)}
+
+				cc.Expect(Some, w[0][1], TargetIP(felixes[0].IP), opts...)
+				cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
+				cc.Expect(Some, w[1][1], TargetIP(felixes[0].IP), opts...)
+				cc.CheckConnectivity()
+
+				// Connection should be proxied on the pod's local node
+				Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+				// Due to NAT outgoing
+				Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+				Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+				// Connection should not be proxied on the backend pod's node
+				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
+				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 			})
 		})
 	})
