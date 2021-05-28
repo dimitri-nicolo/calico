@@ -1,25 +1,18 @@
 PACKAGE_NAME    ?= github.com/tigera/l7-collector
-GO_BUILD_VER    ?= v0.51
+GO_BUILD_VER    ?= v0.53
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_L7_COLLECTOR_PROJECT_ID)
 
-##############################################################################
-# Download and include Makefile.common before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-##############################################################################
-MAKE_BRANCH ?= $(GO_BUILD_VER)
-MAKE_REPO   ?= https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+L7_COLLECTOR_IMAGE    ?=tigera/l7-collector
+ENVOY_INIT_IMAGE      ?=tigera/envoy-init
+BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_INIT_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
@@ -51,29 +44,26 @@ RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
 
-BUILD_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/l7-collector
-INIT_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/envoy-init
-PUSH_IMAGES ?= $(BUILD_IMAGE)
-RELEASE_IMAGES ?= quay.io/tigera/l7-collector,quay.io/tigera/envoy-init
-
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-PUSH_IMAGES+=$(RELEASE_IMAGES)
-endif
-
-# remove from the list to push to manifest any registries that do not support multi-arch
-EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
-PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
-
-# location of docker credentials to push manifests
-DOCKER_CONFIG ?= $(HOME)/.docker/config.json
-
 ENVOY_API=deps/github.com/envoyproxy/data-plane-api
 EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
 ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
 V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
 HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
+
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH ?= $(GO_BUILD_VER)
+MAKE_REPO   ?= https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 include Makefile.common
 
@@ -87,11 +77,11 @@ clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
 	rm -rf report/
 	rm -rf bin proto/felixbackend.pb.go
-	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
-	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
+	-docker rmi $(L7_COLLECTOR_IMAGE):latest-$(ARCH)
+	-docker rmi $(L7_COLLECTOR_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	-docker rmi $(BUILD_IMAGE):latest
-	-docker rmi $(BUILD_IMAGE):$(VERSION)
+	-docker rmi $(L7_COLLECTOR_IMAGE):latest
+	-docker rmi $(L7_COLLECTOR_IMAGE):$(VERSION)
 endif
 
 ###############################################################################
@@ -187,56 +177,26 @@ proto/felixbackend.pb.go: proto/felixbackend.proto
 ###############################################################################
 # Building the image
 ###############################################################################
-CONTAINER_CREATED=.l7-collector.created-$(ARCH)
-.PHONY: image $(BUILD_IMAGE)
-image: $(BUILD_IMAGE)
-image-all: $(addprefix sub-image-,$(VALIDARCHES)) image-init
+.PHONY: image $(BUILD_IMAGES)
+
+image-all: $(addprefix sub-image-,$(VALIDARCHES)) $(ENVOY_INIT_IMAGE)
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(BUILD_IMAGE): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/l7-collector-$(ARCH)
-	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
-endif
-	touch $@
+image: $(L7_COLLECTOR_IMAGE)-$(ARCH)
 
-.PHONY: image-init
-image-init:
-	docker build -t $(INIT_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f envoy-init/Dockerfile.$(ARCH) envoy-init/.
+$(L7_COLLECTOR_IMAGE)-$(ARCH): Dockerfile.$(ARCH) bin/l7-collector-$(ARCH)
+	docker build -t $(L7_COLLECTOR_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(INIT_IMAGE):latest-$(ARCH) $(INIT_IMAGE):latest
+	docker tag $(L7_COLLECTOR_IMAGE):latest-$(ARCH) $(L7_COLLECTOR_IMAGE):latest
 endif
 
-## push one arch
-push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
-sub-single-push-%:
-	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+$(ENVOY_INIT_IMAGE):
+	docker build -t $(ENVOY_INIT_IMAGE):latest-$(ARCH) -f envoy-init/Dockerfile.$(ARCH) envoy-init/.
 ifeq ($(ARCH),amd64)
-	docker push $(call unescapefs,$*:$(IMAGETAG))
+	docker tag $(ENVOY_INIT_IMAGE):latest-$(ARCH) $(ENVOY_INIT_IMAGE):latest
 endif
 
-push-init: imagetag $(addprefix sub-init-,$(call escapefs,$(INIT_IMAGE)))
-sub-init-%:
-	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
-ifeq ($(ARCH),amd64)
-	docker push $(call unescapefs,$*:$(IMAGETAG))
-endif
-
-tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES))) $(addprefix sub-single-tag-images-init-,$(call escapefs,$(INIT_IMAGE)))
-
-sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
-ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
-endif
-
-sub-single-tag-images-init-%:
-	docker tag $(INIT_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
-ifeq ($(ARCH),amd64)
-	docker tag $(INIT_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
-endif
 
 ###############################################################################
 # Managing the upstream library pins
@@ -305,107 +265,4 @@ ci:
 ###############################################################################
 .PHONY: cd
 ## Deploys images to registry
-cd: image-all
-ifndef CONFIRM
-	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
-endif
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-init push-manifests push-non-manifests IMAGETAG=$(GIT_VERSION) EXCLUDEARCH="$(EXCLUDEARCH)"
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=12)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(ENVOY_COLLECTOR_GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(ENVOY_COLLECTOR_GIT_VERSION))
-endif
-
-	$(MAKE) image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
-	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /l7-collector --version | grep '^$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) /l7-collector --version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-init push-manifests push-non-manifests IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	$(MAKE) push-all push-init push-manifests push-non-manifests IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go mod tidy'
+cd: image-all cd-common
