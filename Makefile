@@ -6,6 +6,9 @@ LOCAL_CHECKS     = mod-download
 
 build: license-agent
 
+ORGANIZATION=tigera
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LICENSE_AGENT_PROJECT_ID)
+
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
