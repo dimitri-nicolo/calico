@@ -1,9 +1,23 @@
 .PHONY: cd image
 PACKAGE_NAME?=github.com/tigera/kibana-docker
-GO_BUILD_VER?=v0.51
+GO_BUILD_VER?=v0.53
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_KIBANA_DOCKER_PROJECT_ID)
+
+KIBANA_IMAGE          ?=tigera/kibana
+BUILD_IMAGES          ?=$(KIBANA_IMAGE)
+ARCHES                ?=amd64
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
+
+BUILD_IMAGE_NAME?=tigera/kibana
+BUILD_IMAGE_TAG?=latest
+BUILD_IMAGE?=$(BUILD_IMAGE_NAME):$(BUILD_IMAGE_TAG)
+
+PUSH_IMAGE_NAME?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE_NAME)
 
 ###############################################################################
 # Download and include Makefile.common
@@ -54,34 +68,16 @@ PUSH_IMAGE_NAME?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE_NAME)
 
 KIBANA_VERSION=$(shell jq -r '.version' kibana/package.json)
 
-image:
+image: $(KIBANA_IMAGE)
+$(KIBANA_IMAGE):
 	cd docker && KIBANA_VERSION=$(KIBANA_VERSION) bash Dockerfile-template.sh
 	docker build --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) docker/. -t $(BUILD_IMAGE)
+	docker build --pull -t $(KIBANA_IMAGE):latest-$(ARCH) --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) --file ./docker/Dockerfile docker
+ifeq ($(ARCH),amd64)
+	docker tag $(KIBANA_IMAGE):latest-$(ARCH) $(KIBANA_IMAGE):latest
+endif
 
 compressed-image: image
 	$(MAKE) docker-compress IMAGE_NAME=$(BUILD_IMAGE)
 
-# Set the image tags if the branch name is defined
-ifdef BRANCH_NAME
-ifdef IMAGE_PREFIX
-BRANCH_NAME_TAG=$(IMAGE_PREFIX)-$(BRANCH_NAME)
-GIT_VERSION_TAG=$(IMAGE_PREFIX)-$(GIT_VERSION)
-else
-BRANCH_NAME_TAG=$(BRANCH_NAME)
-GIT_VERSION_TAG=$(GIT_VERSION)
-endif
-endif
-
-tag-kibana-images:
-ifndef BRANCH_NAME
-	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
-endif
-	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(BRANCH_NAME_TAG)
-	docker tag $(BUILD_IMAGE) $(PUSH_IMAGE_NAME):$(GIT_VERSION_TAG)
-
-cd: compressed-image tag-kibana-images
-ifndef CONFIRM
-	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
-endif
-	docker push $(PUSH_IMAGE_NAME):$(BRANCH_NAME_TAG)
-	docker push $(PUSH_IMAGE_NAME):$(GIT_VERSION_TAG)
+cd: compressed-image cd-common
