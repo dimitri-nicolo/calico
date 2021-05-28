@@ -125,8 +125,6 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o
 # Common Makefile needs to be included after the build env variables are set.
 include Makefile.common
 
-build: ut
-
 .PHONY: clean
 clean:
 	rm -rf bin \
@@ -258,7 +256,7 @@ gen-files: bin/report-type-gen
 .PHONY: images
 .PHONY: image
 
-images image: $(BUILD_IMAGES)
+images image: $(BUILD_IMAGES) $(COMPLIANCE_SCALELOADER_IMAGE)
 
 # Build the images for the target architecture
 .PHONY: images-all
