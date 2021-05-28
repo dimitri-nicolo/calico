@@ -18,8 +18,9 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/ip"
+
+	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -30,10 +31,9 @@ import (
 )
 
 const l7LoggingAnnotation = "projectcalico.org/l7-logging"
-const TproxyServicesIPSetV4 = "tproxy-services"
-const TproxyServicesIPSetV6 = "tproxy-services"
-const TproxyNodePortIpSetV4 = "tproxy-nodeports"
-const TproxyNodePortIpSetV6 = "tproxy-nodeports"
+const TproxyServicesIPSetV4 = "cali40tproxy-services"
+const TproxyServicesIPSetV6 = "cali60tproxy-services"
+const TproxyNodePortIpSetV4 = "cali40tproxy-nodeports"
 
 // TproxyEndPointsResolver maintains most up-to-date list of all tproxy enabled endpoints.
 //
@@ -47,7 +47,7 @@ type TproxyEndPointsResolver struct {
 
 	suh              *ServiceUpdateHandler
 	callbacks        PipelineCallbacks
-	activeServices   map[ipPortProtoKey][]proxy.ServicePortName
+	regularServices  map[ipPortProtoKey][]proxy.ServicePortName
 	nodePortServices map[portProtoKey][]proxy.ServicePortName
 }
 
@@ -76,8 +76,9 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 				tpr.flush()
 			} else {
 				service := update.Value.(*kapiv1.Service)
+				annotations := service.ObjectMeta.Annotations
 				// only services annotated with l7 are of interest for us
-				if containsL7Annotation(service) {
+				if hasAnnotation(annotations, l7LoggingAnnotation) {
 					tpr.suh.addOrUpdateService(k, service)
 					tpr.flush()
 				}
@@ -100,67 +101,118 @@ func (tpr *TproxyEndPointsResolver) flush() {
 	tpr.mutex.Lock()
 	defer tpr.mutex.Unlock()
 
-	sendActive := reflect.DeepEqual(tpr.activeServices, tpr.suh.ipPortProtoToServices)
-	sendNodePorts := reflect.DeepEqual(tpr.nodePortServices, tpr.suh.nodePortServices)
+	flushRegular := reflect.DeepEqual(tpr.regularServices, tpr.suh.ipPortProtoToServices)
+	flushNodePorts := reflect.DeepEqual(tpr.nodePortServices, tpr.suh.nodePortServices)
 
-	// nothing to do if handler is insync with tproxy resolver
-	if !sendActive && !sendNodePorts {
-		return
+	if flushRegular {
+		tpr.flushRegularServices()
 	}
 
-	if sendActive {
-		// remove old items in updated list
-		for key, _ := range tpr.activeServices {
-			// if the member already exists in active service skip over it
-			if _, ok := tpr.suh.ipPortProtoToServices[key]; ok {
-				continue
-			}
-			ipaddr := ip.V6Addr(key.ip)
-			ipSetId := TproxyServicesIPSetV4
-			if ipaddr.AsNetIP().To4() == nil {
-				ipSetId = TproxyServicesIPSetV6
-			}
-			member := labelindex.IPSetMember{
-				PortNumber: uint16(key.port),
-				Protocol:   labelindex.ProtocolTCP, // for now its TCP
-				CIDR:       ipaddr.AsCIDR(),
-			}
-			// send call back for expired member and delete from active
-			tpr.callbacks.OnIPSetMemberRemoved(ipSetId, member)
-			delete(tpr.activeServices, key)
-		}
-
-		// check for new items in updated list
-		for key, value := range tpr.suh.ipPortProtoToServices {
-			// if the member already exists in active service skip over it
-			if existing, ok := tpr.activeServices[key]; ok {
-				if reflect.DeepEqual(existing, value) {
-					continue
-				}
-			}
-			ipaddr := ip.V6Addr(key.ip)
-			ipSetId := TproxyServicesIPSetV4
-			if ipaddr.AsNetIP().To4() == nil {
-				ipSetId = TproxyServicesIPSetV6
-			}
-			// have to check if the IP is v6 or v4
-			member := labelindex.IPSetMember{
-				PortNumber: uint16(key.port),
-				Protocol:   labelindex.ProtocolTCP, // for now its TCP
-				CIDR:       ipaddr.AsCIDR(),
-			}
-			// send callback for new member and add it to active
-			tpr.callbacks.OnIPSetMemberAdded(ipSetId, member)
-			tpr.activeServices[key] = value
-		}
+	if flushNodePorts {
+		tpr.flushNodePorts()
 	}
 
 }
 
-func containsL7Annotation(svc *kapiv1.Service) bool {
-	annotations := svc.ObjectMeta.Annotations
-	if svc.ObjectMeta.Annotations != nil {
-		if value, ok := annotations[l7LoggingAnnotation]; ok {
+func (tpr *TproxyEndPointsResolver) flushRegularServices() {
+	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
+	// remove expired services from tproxy
+	for key, _ := range tpr.regularServices {
+		// skip deleting if member exists in updated list of annotated services
+		if _, ok := tpr.suh.ipPortProtoToServices[key]; ok {
+			continue
+		}
+		ipaddr := ip.V6Addr(key.ip)
+		ipSetId := TproxyServicesIPSetV4
+		if ipaddr.AsNetIP().To4() == nil {
+			ipSetId = TproxyServicesIPSetV6
+		}
+		member := labelindex.IPSetMember{
+			PortNumber: uint16(key.port),
+			Protocol:   labelindex.ProtocolTCP,
+			CIDR:       ipaddr.AsCIDR(),
+		}
+		// send ip set call back for expired members and delete from tproxy list
+		tpr.callbacks.OnIPSetMemberRemoved(ipSetId, member)
+		delete(tpr.regularServices, key)
+	}
+
+	// add new items to tproxy from updated list of annotated services
+	for ipPortProto, value := range tpr.suh.ipPortProtoToServices {
+		// if it already exists in resolved service skip it
+		if existing, ok := tpr.regularServices[ipPortProto]; ok {
+			if reflect.DeepEqual(existing, value) {
+				continue
+			}
+		}
+		protocol := labelindex.IPSetPortProtocol(ipPortProto.proto)
+		// if protocol is not TCP skip it for now
+		if protocol != labelindex.ProtocolTCP {
+			log.Debugf("IP/Port/Protocol (%v/%d/%d) Protocol not valid for tproxy",
+				ipPortProto.ip, protocol, ipPortProto.port)
+			continue
+		}
+
+		ipaddr := ip.V6Addr(ipPortProto.ip)
+		ipSetId := TproxyServicesIPSetV4
+		if ipaddr.AsNetIP().To4() == nil {
+			ipSetId = TproxyServicesIPSetV6
+		}
+		member := labelindex.IPSetMember{
+			PortNumber: uint16(ipPortProto.port),
+			Protocol:   labelindex.ProtocolTCP,
+			CIDR:       ipaddr.AsCIDR(),
+		}
+		// send ip set call back for new members and add them to tproxy list
+		tpr.callbacks.OnIPSetMemberAdded(ipSetId, member)
+		tpr.regularServices[ipPortProto] = value
+	}
+}
+
+func (tpr *TproxyEndPointsResolver) flushNodePorts() {
+	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
+	// remove old items in updated list
+	for key, _ := range tpr.nodePortServices {
+		// skip deleting if member exists in updated list of annotated services
+		if _, ok := tpr.suh.nodePortServices[key]; ok {
+			continue
+		}
+		member := labelindex.IPSetMember{
+			PortNumber: uint16(key.port),
+			Protocol:   labelindex.ProtocolTCP,
+		}
+		// send ip set call back for expired members and delete from tproxy list
+		tpr.callbacks.OnIPSetMemberRemoved(TproxyNodePortIpSetV4, member)
+		delete(tpr.nodePortServices, key)
+	}
+
+	// add new items to tproxy from updated list of annotated services
+	for ipPortProto, value := range tpr.suh.nodePortServices {
+		// if it already exists in resolved service skip it
+		if existing, ok := tpr.nodePortServices[ipPortProto]; ok {
+			if reflect.DeepEqual(existing, value) {
+				continue
+			}
+		}
+		protocol := labelindex.IPSetPortProtocol(ipPortProto.proto)
+		// if protocol is not TCP skip it for now
+		if protocol != labelindex.ProtocolTCP {
+			log.Debugf("Port/Protocol (%v/%d/%d) Protocol not valid for tproxy", protocol, ipPortProto.port)
+			continue
+		}
+		member := labelindex.IPSetMember{
+			PortNumber: uint16(ipPortProto.port),
+			Protocol:   labelindex.ProtocolTCP,
+		}
+		// send ip set call back for new members and add them to tproxy list
+		tpr.callbacks.OnIPSetMemberAdded(TproxyNodePortIpSetV4, member)
+		tpr.nodePortServices[ipPortProto] = value
+	}
+}
+
+func hasAnnotation(annotations map[string]string, annotation string) bool {
+	if annotations != nil {
+		if value, ok := annotations[annotation]; ok {
 			return value == "true"
 		}
 	}
