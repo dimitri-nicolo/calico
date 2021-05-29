@@ -10,6 +10,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
 	httpRequestBody "github.com/tigera/es-proxy/pkg/utils"
 
@@ -140,6 +141,10 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*SearchP
 				Err:    err,
 			}
 		}
+	}
+
+	if len(params.ClusterName) == 0 {
+		params.ClusterName = eselastic.GetCluster(r)
 	}
 
 	// Validate parameters.

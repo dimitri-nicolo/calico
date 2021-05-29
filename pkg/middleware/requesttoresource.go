@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/lma/pkg/auth"
 	authzv1 "k8s.io/api/authorization/v1"
 )
@@ -73,6 +74,16 @@ func RequestToResource(h http.Handler) http.Handler {
 		newReq := req.WithContext(auth.NewContextWithReviewResource(req.Context(), createLMAResourceAttributes(cluster, resourceName)))
 		newReq.URL.Path = urlPath
 		newReq.URL.RawPath = urlPath
+		h.ServeHTTP(w, newReq)
+	})
+}
+
+func SearchRequestToResource(resource string, url string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		newReq := req.WithContext(auth.NewContextWithReviewResource(
+			req.Context(), createLMAResourceAttributes(eselastic.GetCluster(req), resource)))
+		newReq.URL.Path = url
+		newReq.URL.RawPath = url
 		h.ServeHTTP(w, newReq)
 	})
 }
