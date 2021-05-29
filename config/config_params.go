@@ -268,12 +268,6 @@ type Config struct {
 	PrometheusMetricsKeyFile        string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
-	CloudWatchMetricsReporterEnabled  bool          `config:"bool;false"`
-	CloudWatchMetricsPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
-
-	CloudWatchNodeHealthStatusEnabled    bool          `config:"bool;false"`
-	CloudWatchNodeHealthPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
-
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 
@@ -294,19 +288,6 @@ type Config struct {
 	FlowLogsFlushInterval          time.Duration `config:"seconds;300"`
 	FlowLogsEnableNetworkSets      bool          `config:"bool;false"`
 	FlowLogsMaxOriginalIPsIncluded int           `config:"int;50"`
-
-	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
-	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;0"` // Deprecated
-	CloudWatchLogsLogGroupName              string        `config:"string;tigera-flowlogs-<cluster-guid>"`
-	CloudWatchLogsLogStreamName             string        `config:"string;<felix-hostname>_Flowlogs"`
-	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
-	CloudWatchLogsIncludePolicies           bool          `config:"bool;false"`
-	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
-	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
-	CloudWatchLogsRetentionDays             int           `config:"int(1,3,5,7,14,30,60,90,120,150,180,365,400,545,731,1827,3653);7;die-on-fail"`
-	CloudWatchLogsEnableHostEndpoint        bool          `config:"bool;false"` // Deprecated
-	CloudWatchLogsEnabledForAllowed         bool          `config:"bool;true"`
-	CloudWatchLogsEnabledForDenied          bool          `config:"bool;true"`
 
 	FlowLogsFileEnabled                   bool   `config:"bool;false"`
 	FlowLogsFileDirectory                 string `config:"string;/var/log/calico/flowlogs"`
@@ -681,30 +662,6 @@ func (config *Config) resolve() (changed bool, err error) {
 		delete(newRawValues, "IpInIpTunnelAddr")
 	}
 
-	// Preferentially use the new FlowLogsFlushInterval if explicitly set or if the deprecated
-	// CloudWatchLogsFlushInterval is not explicitly set, otherwise use the explicitly set CloudWatchLogsFlushInterval
-	// value.
-	if nameToSource["flowlogsflushinterval"] != Default || nameToSource["cloudwatchlogsflushinterval"] == Default {
-		config.CloudWatchLogsFlushInterval = config.FlowLogsFlushInterval
-		newRawValues["CloudWatchLogsFlushInterval"] = newRawValues["FlowLogsFlushInterval"]
-	} else {
-		log.Warning("Using deprecated CloudWatchLogsFlushInterval value for FlowLogsFlushInterval")
-		config.FlowLogsFlushInterval = config.CloudWatchLogsFlushInterval
-		newRawValues["FlowLogsFlushInterval"] = newRawValues["CloudWatchLogsFlushInterval"]
-	}
-
-	// Preferentially use the new FlowLogsEnableHostEndpoint if explicitly set or if the deprecated
-	// CloudWatchLogsEnableHostEndpoint is not explicitly set, otherwise use the explicitly set
-	// CloudWatchLogsEnableHostEndpoint value.
-	if nameToSource["flowlogsenablehostendpoint"] != Default || nameToSource["cloudwatchlogsenablehostendpoint"] == Default {
-		config.CloudWatchLogsEnableHostEndpoint = config.FlowLogsEnableHostEndpoint
-		newRawValues["CloudWatchLogsEnableHostEndpoint"] = newRawValues["FlowLogsEnableHostEndpoint"]
-	} else {
-		log.Warning("Using deprecated CloudWatchLogsEnableHostEndpoint value for FlowLogsEnableHostEndpoint")
-		config.FlowLogsEnableHostEndpoint = config.CloudWatchLogsEnableHostEndpoint
-		newRawValues["FlowLogsEnableHostEndpoint"] = newRawValues["CloudWatchLogsEnableHostEndpoint"]
-	}
-
 	changed = !reflect.DeepEqual(newRawValues, config.rawValues)
 	config.rawValues = newRawValues
 	return
@@ -835,14 +792,6 @@ func (config *Config) Validate() (err error) {
 		}
 		if problems != nil {
 			err = errors.New("IPsec is misconfigured: " + strings.Join(problems, "; "))
-		}
-	}
-
-	if config.CloudWatchLogsReporterEnabled {
-		if !config.CloudWatchLogsEnabledForAllowed && !config.CloudWatchLogsEnabledForDenied {
-			err = errors.New("CloudWatchLogsReporterEnabled is set to true. " +
-				"Enable at least one of CloudWatchLogsEnabledForAllowed or " +
-				"CloudWatchLogsEnabledForDenied")
 		}
 	}
 

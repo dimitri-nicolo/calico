@@ -93,7 +93,6 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"UsageReportingInitialDelaySecs":     "UsageReportingInitialDelay",
 		"UsageReportingIntervalSecs":         "UsageReportingInterval",
 		"EndpointReportingDelaySecs":         "EndpointReportingDelay",
-		"CloudWatchMetricsPushIntervalSecs":  "CloudWatchMetricsPushInterval",
 	}
 	fcFieldNameToCP := map[string]string{}
 	for k, v := range cpFieldNameToFC {
@@ -230,12 +229,6 @@ var _ = DescribeTable("Config parsing",
 		}
 	},
 
-	Entry("CloudWatchLogsRetentionDays - good", "CloudWatchLogsRetentionDays", "30", 30),
-	Entry("CloudWatchLogsRetentionDays - bad", "CloudWatchLogsRetentionDays", "31", 7, true),
-
-	Entry("CloudWatch Metrics update interval - in range", "CloudWatchMetricsPushIntervalSecs", "90", time.Duration(90*time.Second), false),
-	Entry("CloudWatch Metrics update interval - out of range should be converted to default", "CloudWatchMetricsPushIntervalSecs", "5", time.Duration(60*time.Second), false),
-	Entry("CloudWatch Metrics update interval - default value", "CloudWatchMetricsPushIntervalSecs", "", time.Duration(60*time.Second), false),
 	Entry("Netlink Timeout - default value", "NetlinkTimeoutSecs", "", time.Duration(10*time.Second), false),
 
 	Entry("FelixHostname", "FelixHostname", "hostname", "hostname"),
@@ -960,145 +953,5 @@ var _ = Describe("IPSec PSK parameters test", func() {
 		Expect(cfg.IpInIpEnabled).To(BeFalse())
 		Expect(cfg.IPSecEnabled()).To(BeTrue())
 		Expect(cfg.IPSecMode).To(Equal("PSK"))
-	})
-})
-
-var _ = DescribeTable("CloudWatchLogs config validation",
-	func(settings map[string]string, ok bool) {
-		cfg := config.New()
-		cfg.UpdateFrom(settings, config.ConfigFile)
-		err := cfg.Validate()
-		log.WithError(err).Info("Validation result")
-		if !ok {
-			Expect(err).To(HaveOccurred())
-		} else {
-			Expect(err).NotTo(HaveOccurred())
-		}
-	},
-
-	Entry("reporter enabled", map[string]string{
-		"CloudWatchLogsReporterEnabled": "true",
-	}, true),
-	Entry("reporter enabled, allowed and denied disabled", map[string]string{
-		"CloudWatchLogsReporterEnabled":   "true",
-		"CloudWatchLogsEnabledForAllowed": "false",
-		"CloudWatchLogsEnabledForDenied":  "false",
-	}, false),
-	Entry("reporter enabled, allowed enabled and denied disabled", map[string]string{
-		"CloudWatchLogsReporterEnabled":   "true",
-		"CloudWatchLogsEnabledForAllowed": "true",
-		"CloudWatchLogsEnabledForDenied":  "false",
-	}, true),
-	Entry("reporter enabled, allowed disabled and denied enabled", map[string]string{
-		"CloudWatchLogsReporterEnabled":   "true",
-		"CloudWatchLogsEnabledForAllowed": "false",
-		"CloudWatchLogsEnabledForDenied":  "true",
-	}, true),
-)
-
-var _ = Describe("CloudWatch deprecated config fields", func() {
-	var c *config.Config
-
-	BeforeEach(func() {
-		c = config.New()
-	})
-
-	It("should preferentially take the value of FlowLogsFlushInterval over CloudWatchLogsFlushInterval", func() {
-		By("setting no values and default value of FlowLogsFlushInterval is used")
-		_, err := c.UpdateFrom(map[string]string{}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsFlushInterval).To(Equal(300 * time.Second))
-		Expect(c.FlowLogsFlushInterval).To(Equal(300 * time.Second))
-
-		By("setting CloudWatchLogsFlushInterval and checking that value is used")
-		changed, err := c.UpdateFrom(map[string]string{
-			"CloudWatchLogsFlushInterval": "800",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsFlushInterval).To(Equal(800 * time.Second))
-		Expect(c.FlowLogsFlushInterval).To(Equal(800 * time.Second))
-		Expect(changed).To(BeTrue())
-
-		By("setting both FlowLogsFlushInterval and checking for FlowLogsFlushInterval value")
-		changed, err = c.UpdateFrom(map[string]string{
-			"FlowLogsFlushInterval": "600",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsFlushInterval).To(Equal(600 * time.Second))
-		Expect(c.FlowLogsFlushInterval).To(Equal(600 * time.Second))
-		Expect(changed).To(BeTrue())
-
-		By("setting CloudWatchLogsFlushInterval to a lower value and checking unchanged")
-		changed, err = c.UpdateFrom(map[string]string{
-			"CloudWatchLogsFlushInterval": "500",
-			"FlowLogsFlushInterval":       "600",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsFlushInterval).To(Equal(600 * time.Second))
-		Expect(c.FlowLogsFlushInterval).To(Equal(600 * time.Second))
-		Expect(changed).To(BeFalse())
-
-		By("setting swapping the values around and checking changed")
-		changed, err = c.UpdateFrom(map[string]string{
-			"CloudWatchLogsFlushInterval": "600",
-			"FlowLogsFlushInterval":       "500",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsFlushInterval).To(Equal(500 * time.Second))
-		Expect(c.FlowLogsFlushInterval).To(Equal(500 * time.Second))
-		Expect(changed).To(BeTrue())
-	})
-
-	It("should combine the value of CloudWatchLogsEnableHostEndpoint and FlowLogsEnableHostEndpoint", func() {
-		By("setting no values and default value of FlowLogsEnableHostEndpoint is used")
-		_, err := c.UpdateFrom(map[string]string{}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
-		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
-
-		By("setting CloudWatchLogsEnableHostEndpoint to true and checking value is now true")
-		changed, err := c.UpdateFrom(map[string]string{
-			"CloudWatchLogsEnableHostEndpoint": "true",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
-		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
-		Expect(changed).To(BeTrue())
-
-		By("setting CloudWatchLogsEnableHostEndpoint to false and checking value is now false")
-		changed, err = c.UpdateFrom(map[string]string{
-			"CloudWatchLogsEnableHostEndpoint": "false",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
-		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
-		Expect(changed).To(BeTrue())
-
-		By("setting FlowLogsEnableHostEndpoint to true and checking value is now true")
-		changed, err = c.UpdateFrom(map[string]string{
-			"FlowLogsEnableHostEndpoint": "true",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
-		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
-		Expect(changed).To(BeTrue())
-
-		By("setting CloudWatchLogsEnableHostEndpoint to true and checking value is still true")
-		changed, err = c.UpdateFrom(map[string]string{
-			"CloudWatchLogsEnableHostEndpoint": "true",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
-		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
-		Expect(changed).To(BeFalse())
-
-		By("setting FlowLogsEnableHostEndpoint to false and checking value is now false")
-		changed, err = c.UpdateFrom(map[string]string{
-			"FlowLogsEnableHostEndpoint": "false",
-		}, config.EnvironmentVariable)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
-		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
-		Expect(changed).To(BeTrue())
 	})
 })

@@ -76,23 +76,6 @@ func DefaultTopologyOptions() TopologyOptions {
 	}
 }
 
-func (opts TopologyOptions) EnableCloudWatchLogs(settings ...string) {
-
-	// Enable CloudWatch logs.
-	opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSREPORTERENABLED"] = "true"
-
-	// Set particular settings for the calling test.
-	param := ""
-	for _, arg := range settings {
-		if param == "" {
-			param = "FELIX_CLOUDWATCHLOGS" + strings.ToUpper(arg)
-		} else {
-			opts.ExtraEnvVars[param] = arg
-			param = ""
-		}
-	}
-}
-
 func (opts TopologyOptions) EnableFlowLogsFile(settings ...string) {
 
 	// Enable CloudWatch logs.

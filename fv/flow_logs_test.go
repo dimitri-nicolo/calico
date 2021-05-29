@@ -32,8 +32,6 @@ import (
 // - Non-default group name.
 // - Non-default stream name.
 // - Include endpoint labels.
-// - CloudWatchLogsAggregationKindForAllowed
-// - CloudWatchLogsAggregationKindForDenied
 //
 // With those variations in place,
 //
@@ -740,69 +738,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		}, "30s", "3s").ShouldNot(HaveOccurred())
 	}
 
-	Context("CloudWatch flow logs", func() {
-
-		BeforeEach(func() {
-			opts.EnableCloudWatchLogs()
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "1"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
-
-			// Defaults for how we expect flow logs to be generated.
-			expectation.labels = false
-			expectation.aggregationForAllowed = AggrByPodPrefix
-			expectation.aggregationForDenied = AggrBySourcePort
-			expectation.policies = false
-		})
-
-		Context("with custom log group name", func() {
-
-			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"] = "fvtestg:<cluster-guid>"
-			})
-
-			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-			})
-		})
-
-		Context("with custom log stream name", func() {
-
-			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGSTREAMNAME"] = "fvtests:<cluster-guid>"
-			})
-
-			It("should get expected flow logs", func() {
-				checkFlowLogs("cloudwatch")
-			})
-		})
-
-		Context("with an expired license", func() {
-			BeforeEach(func() {
-				useInvalidLicense = true
-				// Reduce license poll interval so felix won't generate any flow logs before it spots the bad license.
-				opts.ExtraEnvVars["FELIX_DebugUseShortPollIntervals"] = "true"
-			})
-
-			It("should get no flow logs", func() {
-				endTime := time.Now().Add(30 * time.Second)
-				// Check at least twice and for at least 30s.
-				attempts := 0
-				for time.Now().Before(endTime) || attempts < 2 {
-					for _, f := range felixes {
-						_, err := f.ReadCloudWatchLogs()
-						Expect(err).To(Equal(infrastructure.ErrNoCloudwatchLogs))
-					}
-					time.Sleep(1 * time.Second)
-					attempts++
-				}
-			})
-		})
-
-	})
-
 	cloudAndFile := func(flowLogsOutput string) {
 		BeforeEach(func() {
-			opts.EnableCloudWatchLogs()
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 
@@ -818,7 +755,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with endpoint labels", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSINCLUDELABELS"] = "true"
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
 				expectation.labels = true
 			})
@@ -831,7 +767,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with allowed aggregation none", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
 				expectation.aggregationForAllowed = AggrNone
 			})
@@ -844,7 +779,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with allowed aggregation by source port", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrBySourcePort))
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrBySourcePort))
 				expectation.aggregationForAllowed = AggrBySourcePort
 			})
@@ -857,7 +791,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with allowed aggregation by pod prefix", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
 				expectation.aggregationForAllowed = AggrByPodPrefix
 			})
@@ -870,7 +803,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with denied aggregation none", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
 				expectation.aggregationForDenied = AggrNone
 			})
@@ -883,7 +815,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with denied aggregation by source port", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrBySourcePort))
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrBySourcePort))
 				expectation.aggregationForDenied = AggrBySourcePort
 			})
@@ -896,7 +827,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with denied aggregation by pod prefix", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
 				expectation.aggregationForDenied = AggrByPodPrefix
 			})
@@ -909,7 +839,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		Context("with policies", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSINCLUDEPOLICIES"] = "true"
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
 				expectation.policies = true
 			})
@@ -921,8 +850,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 	}
 
-	Context("CloudWatch and File flow logs", func() {
-		Context("CloudWatch output", func() { cloudAndFile("cloudwatch") })
+	Context("File flow logs", func() {
 		Context("File output", func() { cloudAndFile("file") })
 	})
 

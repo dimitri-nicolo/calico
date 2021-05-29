@@ -17,13 +17,11 @@ package infrastructure
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -95,14 +93,8 @@ func (f *Felix) TriggerDelayedStart() {
 	f.startupDelayed = false
 }
 
-var (
-	ErrNoCloudwatchLogs = errors.New("No logs yet")
-)
-
 func (f *Felix) ReadFlowLogs(output string) ([]collector.FlowLog, error) {
 	switch output {
-	case "cloudwatch":
-		return f.ReadCloudWatchLogs()
 	case "file":
 		return f.ReadFlowLogsFile()
 	default:
@@ -135,98 +127,6 @@ func (f *Felix) ReadFlowLogsFile() ([]collector.FlowLog, error) {
 		flowLogs = append(flowLogs, fl)
 	}
 	return flowLogs, nil
-}
-
-func (f *Felix) ReadCloudWatchLogs() ([]collector.FlowLog, error) {
-	log.Infof("Read CloudWatchLogs file %v", cwLogDir+"/"+f.cwlFile)
-
-	file, err := os.Open(cwLogDir + "/" + f.cwlFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	retentionDays := make(map[string]int64)
-	logs := make(map[string][]collector.FlowLog)
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.Contains(line, "PutRetentionPolicy") {
-			// Next line is LogGroupName: "<name>".
-			scanner.Scan()
-			lgName := strings.Split(scanner.Text(), "\"")[1]
-			// Next line is RetentionInDays: <int>.
-			scanner.Scan()
-			days, err := strconv.ParseInt(strings.Split(strings.TrimSpace(scanner.Text()), " ")[1], 10, 64)
-			Expect(err).NotTo(HaveOccurred())
-			// Store this policy.
-			retentionDays[lgName] = days
-		} else if strings.Contains(line, "PutLogEvents") {
-			var events []collector.FlowLog
-			message := ""
-			groupName := ""
-			streamName := ""
-			// Read until we see a line that is just "}", and we've seen the
-			// group and stream names.
-			for scanner.Scan() {
-				line = strings.TrimSpace(scanner.Text())
-				if strings.Contains(line, "Message: \"") {
-					// Replace escaped double quotes, in the flow log
-					// message string, with single quotes.  (So as not
-					// to confuse the following line, which relies on
-					// double quotes to identify the complete
-					// message.)
-					line = strings.Replace(line, "\\\"", "'", -1)
-					message = strings.Split(line, "\"")[1]
-				} else if strings.Contains(line, "Timestamp: ") {
-					_, err := strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
-					Expect(err).NotTo(HaveOccurred())
-					// Parse the log message.
-					fl := collector.FlowLog{}
-					fl.Deserialize(message)
-					events = append(events, fl)
-				} else if strings.Contains(line, "LogGroupName: \"") {
-					groupName = strings.Split(line, "\"")[1]
-				} else if strings.Contains(line, "LogStreamName: \"") {
-					streamName = strings.Split(line, "\"")[1]
-				} else if line == "}" && groupName != "" && streamName != "" {
-					// Store these logs.
-					key := groupName + "/" + streamName
-					previousEvents, ok := logs[key]
-					if ok {
-						logs[key] = append(previousEvents, events...)
-					} else {
-						logs[key] = events
-					}
-					break
-				}
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.WithFields(log.Fields{"retentionDays": retentionDays, "logs": logs}).Info("Data read")
-
-	if len(logs) == 0 {
-		return nil, ErrNoCloudwatchLogs
-	}
-
-	Expect(retentionDays).To(HaveLen(1))
-	for group, days := range retentionDays {
-		Expect(group).To(Equal(f.cwlGroupName))
-		Expect(days).To(Equal(f.cwlRetentionDays))
-	}
-
-	Expect(logs).To(HaveLen(1))
-	for groupSlashStream, events := range logs {
-		Expect(groupSlashStream).To(Equal(f.cwlGroupName + "/" + f.cwlStreamName))
-		return events, nil
-	}
-
-	return nil, errors.New("Should never get here")
 }
 
 func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
@@ -290,23 +190,6 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	cwlGroupName := "tigera-flowlogs-<cluster-guid>"
 	cwlStreamName := "<felix-hostname>_Flowlogs"
 	cwlRetentionDays := int64(7)
-	if setting, ok := options.ExtraEnvVars["FELIX_CLOUDWATCHLOGSREPORTERENABLED"]; ok {
-		switch setting {
-		case "true", "1", "yes", "y", "t":
-			cwlCallsExpected = true
-		}
-	}
-	if setting, ok := options.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"]; ok {
-		cwlGroupName = setting
-	}
-	if setting, ok := options.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGSTREAMNAME"]; ok {
-		cwlStreamName = setting
-	}
-	if setting, ok := options.ExtraEnvVars["FELIX_CLOUDWATCHLOGSRETENTIONDAYS"]; ok {
-		var err error
-		cwlRetentionDays, err = strconv.ParseInt(setting, 10, 64)
-		Expect(err).NotTo(HaveOccurred())
-	}
 
 	// It's fine to always create the directory for felix flow logs, if they
 	// aren't enabled the directory will just stay empty.

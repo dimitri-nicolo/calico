@@ -1469,61 +1469,6 @@ var _ = DescribeTable("Config negotiation tests",
 			"DataplaneStatsEnabledForDenied":  "true",
 		},
 	),
-
-	Entry("Supports DataplaneStats (CloudWatch allowed/denied enabled, but overall disabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			CloudWatchLogsReporterEnabled:   false,
-			CloudWatchLogsEnabledForAllowed: true,
-			CloudWatchLogsEnabledForDenied:  true,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "false",
-			"DataplaneStatsEnabledForDenied":  "false",
-		},
-	),
-
-	Entry("Supports DataplaneStats (CloudWatch enabled; allowed enabled, denied disabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			CloudWatchLogsReporterEnabled:   true,
-			CloudWatchLogsEnabledForAllowed: true,
-			CloudWatchLogsEnabledForDenied:  false,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "true",
-			"DataplaneStatsEnabledForDenied":  "false",
-		},
-	),
-
-	Entry("Supports DataplaneStats (CloudWatch enabled; allowed disabled, denied enabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			CloudWatchLogsReporterEnabled:   true,
-			CloudWatchLogsEnabledForAllowed: false,
-			CloudWatchLogsEnabledForDenied:  true,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "false",
-			"DataplaneStatsEnabledForDenied":  "true",
-		},
-	),
-
-	Entry("Supports DataplaneStats (Cloudwatch enabled allowed, Files enabled denied)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			FlowLogsFileEnabled:             true,
-			FlowLogsFileEnabledForAllowed:   false,
-			FlowLogsFileEnabledForDenied:    true,
-			CloudWatchLogsReporterEnabled:   true,
-			CloudWatchLogsEnabledForAllowed: true,
-			CloudWatchLogsEnabledForDenied:  false,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "true",
-			"DataplaneStatsEnabledForDenied":  "true",
-		},
-	),
 )
 
 func testId(w string) proto.WorkloadEndpointID {

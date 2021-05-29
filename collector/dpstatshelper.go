@@ -3,14 +3,9 @@
 package collector
 
 import (
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
-
 	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/collector/testutil"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
@@ -18,10 +13,9 @@ import (
 
 const (
 	// Log dispatcher names
-	CloudWatchLogsDispatcherName = "cloudwatch"
-	FlowLogsFileDispatcherName   = "file"
-	DNSLogsFileDispatcherName    = "dnsfile"
-	L7LogsFileDispatcherName     = "l7file"
+	FlowLogsFileDispatcherName = "file"
+	DNSLogsFileDispatcherName  = "dnsfile"
+	L7LogsFileDispatcherName   = "l7file"
 )
 
 // New creates the required dataplane stats collector, reporters and aggregators.
@@ -43,32 +37,7 @@ func New(
 		pr.AddAggregator(NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
 	}
-	log.Debugf("CloudWatchLogsReporterEnabled %v", configParams.CloudWatchLogsReporterEnabled)
 	dispatchers := map[string]LogDispatcher{}
-	if configParams.CloudWatchLogsReporterEnabled {
-		logGroupName := strings.Replace(
-			configParams.CloudWatchLogsLogGroupName,
-			"<cluster-guid>",
-			configParams.ClusterGUID,
-			1,
-		)
-		logStreamName := strings.Replace(
-			configParams.CloudWatchLogsLogStreamName,
-			"<felix-hostname>",
-			configParams.FelixHostname,
-			1,
-		)
-		var cwl cloudwatchlogsiface.CloudWatchLogsAPI
-		if configParams.DebugCloudWatchLogsFile != "" {
-			log.Info("Creating Debug CloudWatchLogsAPI")
-			// Allow CloudWatch logging to be FV tested without incurring AWS
-			// costs, by calling a mock AWS API instead of the real one.
-			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, configParams.DebugCloudWatchLogsFile)
-		}
-		log.Info("Creating Flow Logs CloudWatchDispatcher")
-		cwd := NewCloudWatchDispatcher(logGroupName, logStreamName, configParams.CloudWatchLogsRetentionDays, cwl)
-		dispatchers[CloudWatchLogsDispatcherName] = cwd
-	}
 	if configParams.FlowLogsFileEnabled {
 		log.WithFields(log.Fields{
 			"directory": configParams.GetFlowLogsFileDirectory(),
@@ -94,11 +63,6 @@ func New(
 			configParams.FlowLogsEnableHostEndpoint, offsetReader)
 		configureFlowAggregation(configParams, cw)
 		rm.RegisterMetricsReporter(cw)
-	}
-
-	if configParams.CloudWatchMetricsReporterEnabled {
-		cwm := NewCloudWatchMetricsReporter(configParams.CloudWatchMetricsPushIntervalSecs, configParams.ClusterGUID)
-		rm.RegisterMetricsReporter(cwm)
 	}
 
 	syslogReporter := NewSyslogReporter(configParams.SyslogReporterNetwork, configParams.SyslogReporterAddress)
@@ -174,61 +138,9 @@ func New(
 }
 
 // configureFlowAggregation adds appropriate aggregators to the FlowLogsReporter, depending on configuration.
-func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter) {
+func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter) {
 	addedFileAllow := false
 	addedFileDeny := false
-	if configParams.CloudWatchLogsReporterEnabled {
-		if configParams.CloudWatchLogsEnabledForAllowed {
-			log.Info("Creating Flow Logs Aggregator for allowed")
-			caa := NewFlowLogAggregator().
-				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForAllowed)).
-				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
-				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
-				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
-				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
-				ForAction(rules.RuleActionAllow)
-
-			// Can we use the same aggregator for file logging?
-			if configParams.FlowLogsFileEnabled &&
-				configParams.FlowLogsFileEnabledForAllowed &&
-				configParams.FlowLogsFileAggregationKindForAllowed == configParams.CloudWatchLogsAggregationKindForAllowed &&
-				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
-				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies &&
-				!configParams.FlowLogsFileIncludeService {
-				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
-				addedFileAllow = true
-			} else {
-				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
-			}
-		}
-		if configParams.CloudWatchLogsEnabledForDenied {
-			log.Info("Creating Flow Logs Aggregator for denied")
-			cad := NewFlowLogAggregator().
-				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForDenied)).
-				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
-				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
-				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
-				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
-				ForAction(rules.RuleActionDeny)
-			// Can we use the same aggregator for file logging?
-			if configParams.FlowLogsFileEnabled &&
-				configParams.FlowLogsFileEnabledForDenied &&
-				configParams.FlowLogsFileAggregationKindForDenied == configParams.CloudWatchLogsAggregationKindForDenied &&
-				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
-				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies &&
-				!configParams.FlowLogsFileIncludeService {
-				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
-				addedFileDeny = true
-			} else {
-				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
-			}
-		}
-	}
-
 	if configParams.FlowLogsFileEnabled {
 		if !addedFileAllow && configParams.FlowLogsFileEnabledForAllowed {
 			log.Info("Creating Flow Logs Aggregator for allowed")
@@ -243,7 +155,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
-			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
+			fr.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
 		}
 		if !addedFileDeny && configParams.FlowLogsFileEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
@@ -258,7 +170,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
-			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
+			fr.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
 		}
 	}
 }
