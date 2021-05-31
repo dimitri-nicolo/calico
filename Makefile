@@ -82,6 +82,9 @@ BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
 
+GIT_PIN_UPDATE_COMMIT_EXTRA_FILES =\*_generated.go
+POST_PIN_UPDATE_TARGETS           =gen-files
+
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
