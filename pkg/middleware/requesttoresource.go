@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,7 +10,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	eselastic "github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/tigera/es-proxy/pkg/utils"
 	"github.com/tigera/lma/pkg/auth"
 	authzv1 "k8s.io/api/authorization/v1"
 )
@@ -78,12 +79,25 @@ func RequestToResource(h http.Handler) http.Handler {
 	})
 }
 
-func SearchRequestToResource(resource string, url string, h http.Handler) http.Handler {
+func SearchRequestToResource(resource string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		clusterName, err := utils.GetClusterName(w, req)
+		if err != nil {
+			log.WithError(err).Infof("Unable to get cluster name from the request body")
+			var mr *utils.MalformedRequest
+			if errors.As(err, &mr) {
+				log.WithError(mr.Err).Info(mr.Msg)
+				http.Error(w, mr.Msg, mr.Status)
+				return
+			} else {
+				log.WithError(err).Info(err.Error())
+				http.Error(w, err.Error(), http.StatusForbidden)
+				return
+			}
+		}
+
 		newReq := req.WithContext(auth.NewContextWithReviewResource(
-			req.Context(), createLMAResourceAttributes(eselastic.GetCluster(req), resource)))
-		newReq.URL.Path = url
-		newReq.URL.RawPath = url
+			req.Context(), createLMAResourceAttributes(clusterName, resource)))
 		h.ServeHTTP(w, newReq)
 	})
 }

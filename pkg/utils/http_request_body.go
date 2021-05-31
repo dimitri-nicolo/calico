@@ -42,7 +42,7 @@ var (
 	ErrJsonUnknownField                = errors.New("json: unknown field ")
 	ErrHttpRequestBodyTooLarge         = errors.New("http: request body too large")
 	ErrEmptyRequestBody                = errors.New("empty request body")
-	ErrTooManyJsonObjectsInRequestBody = errors.New("To many JSON objects in request body")
+	ErrTooManyJsonObjectsInRequestBody = errors.New("to many JSON objects in request body")
 )
 
 type MalformedRequest struct {
@@ -62,7 +62,7 @@ func (mr *MalformedRequest) Error() string {
 	return mr.Msg
 }
 
-// decodeRequestBody decodes the json body onto a destination interface.
+// Decode decodes the json body onto a destination interface.
 //
 // Forms a malformed request error passes the error up to be handled.
 func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
@@ -143,4 +143,28 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 			Err:    ErrTooManyJsonObjectsInRequestBody}
 	}
 	return nil
+}
+
+// GetClusterName decodes the json body onto a interface.
+//
+// Extracts only the ClusterName parameter, returns the default name: "cluster", if empty.
+func GetClusterName(w http.ResponseWriter, r *http.Request) (string, error) {
+
+	param := struct {
+		// ClusterName defines the name of the cluster a connection will be performed on.
+		ClusterName string `json:"cluster" validate:"omitempty"`
+	}{
+		"cluster",
+	}
+
+	// Decode the http request body into the cluster name.
+	if err := Decode(w, r, &param); err != nil {
+		return "", err
+	}
+
+	if len(param.ClusterName) == 0 {
+		param.ClusterName = "cluster"
+	}
+
+	return param.ClusterName, nil
 }

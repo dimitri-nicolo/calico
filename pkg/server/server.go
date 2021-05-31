@@ -47,10 +47,6 @@ const (
 	dnsLogsSearchResourceName  = "dns"
 	flowLogsSearchResourceName = "flows"
 	l7SearchResourceName       = "l7"
-
-	dnsLogsSearchUrl  = "/dnsLogs/search"
-	flowLogsSearchUrl = "/flowLogs/search"
-	l7SearchUrl       = "/l7/search"
 )
 
 func Start(cfg *Config) error {
@@ -172,19 +168,19 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
-	sm.Handle(flowLogsSearchUrl,
+	sm.Handle("/flowLogs/search",
 		middleware.SearchRequestToResource(
-			flowLogsSearchResourceName, flowLogsSearchUrl, middleware.AuthenticateRequest(authenticator,
+			flowLogsSearchResourceName, middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetFlowsIndex, esClient.Backend())))))
-	sm.Handle(dnsLogsSearchUrl,
+	sm.Handle("/dnsLogs/search",
 		middleware.SearchRequestToResource(
-			dnsLogsSearchResourceName, dnsLogsSearchUrl, middleware.AuthenticateRequest(authenticator,
+			dnsLogsSearchResourceName, middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetDnsIndex, esClient.Backend())))))
-	sm.Handle(l7SearchUrl,
+	sm.Handle("/l7/search",
 		middleware.SearchRequestToResource(
-			l7SearchResourceName, l7SearchUrl, middleware.AuthenticateRequest(authenticator,
+			l7SearchResourceName, middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetL7FlowsIndex, esClient.Backend())))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.

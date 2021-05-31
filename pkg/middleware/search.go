@@ -10,7 +10,6 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
 	httpRequestBody "github.com/tigera/es-proxy/pkg/utils"
 
@@ -31,7 +30,7 @@ type SearchError struct {
 }
 
 type SearchParams struct {
-	// CluserName defines the name of the cluster a connection will be performed on.
+	// ClusterName defines the name of the cluster a connection will be performed on.
 	ClusterName string `json:"cluster" validate:"omitempty"`
 
 	// PageSize defines the page size of raw flow logs to retrieve per search. [Default: 100]
@@ -44,6 +43,7 @@ type SearchParams struct {
 
 // decodeRequestBody sets the search parameters to their default values.
 func (params *SearchParams) defaultParams() {
+	params.ClusterName = "cluster"
 	params.PageSize = 100
 }
 
@@ -143,10 +143,6 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*SearchP
 		}
 	}
 
-	if len(params.ClusterName) == 0 {
-		params.ClusterName = eselastic.GetCluster(r)
-	}
-
 	// Validate parameters.
 	if err := validator.Validate(params); err != nil {
 		return nil, &SearchError{
@@ -154,6 +150,11 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*SearchP
 			Msg:    err.Error(),
 			Err:    err,
 		}
+	}
+
+	// Set cluster name to default: "cluster", if empty.
+	if len(params.ClusterName) == 0 {
+		params.ClusterName = "cluster"
 	}
 
 	return &params, nil
