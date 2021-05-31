@@ -12,6 +12,7 @@ import (
 
 func NewReconciler(
 	clusterName string,
+	ownerReference string,
 	esClientBuilder elasticsearch.ClientBuilder,
 	management bool,
 	managementK8sCLI kubernetes.Interface,
@@ -19,6 +20,7 @@ func NewReconciler(
 	esK8sCLI relasticsearch.RESTClient) worker.Reconciler {
 	return &reconciler{
 		clusterName:      clusterName,
+		ownerReference:   ownerReference,
 		management:       management,
 		managementK8sCLI: managementK8sCLI,
 		managedK8sCLI:    managedK8sCLI,

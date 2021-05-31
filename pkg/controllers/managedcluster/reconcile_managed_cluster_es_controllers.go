@@ -57,7 +57,7 @@ func (c *managedClusterESControllerReconciler) Reconcile(name types.NamespacedNa
 		if errors.IsNotFound(err) {
 			reqLogger.Info("ManagedCluster not found")
 			// In case the ManagedCluster resource was delete remove the controller for that ManagedCluster
-			c.removeManagedClusterWatch(name.Name)
+			c.removeManagedClusterWatch(mc)
 			cleaner := users.NewEsCleaner(c.esClient)
 			cleaner.DeleteResidueUsers(name.Name)
 			return nil
@@ -67,12 +67,12 @@ func (c *managedClusterESControllerReconciler) Reconcile(name types.NamespacedNa
 	log.WithField("mc", mc).Info("cluster")
 	if !clusterConnected(mc) {
 		reqLogger.Info("Attempting to stop watch on disconnected cluster")
-		c.removeManagedClusterWatch(mc.Name)
+		c.removeManagedClusterWatch(mc)
 		return nil
 	}
 
 	reqLogger.Info("Attempting to start watch on connected cluster")
-	if err := c.startManagedClusterWatch(mc.Name); err != nil {
+	if err := c.startManagedClusterWatch(mc); err != nil {
 		return err
 	}
 
@@ -88,46 +88,46 @@ func clusterConnected(managedCluster *v3.ManagedCluster) bool {
 	return false
 }
 
-func (c *managedClusterESControllerReconciler) startManagedClusterWatch(name string) error {
-	managedK8sCLI, managedCalicoCLI, err := c.createManagedK8sCLI(name)
+func (c *managedClusterESControllerReconciler) startManagedClusterWatch(mc *v3.ManagedCluster) error {
+	managedK8sCLI, managedCalicoCLI, err := c.createManagedK8sCLI(mc.Name)
 	if err != nil {
 		return err
 	}
 
-	c.removeManagedClusterWatch(name)
-	c.addManagedClusterWatch(name, managedK8sCLI, managedCalicoCLI)
+	c.removeManagedClusterWatch(mc)
+	c.addManagedClusterWatch(mc, managedK8sCLI, managedCalicoCLI)
 
 	return nil
 }
 
-func (c *managedClusterESControllerReconciler) removeManagedClusterWatch(name string) {
+func (c *managedClusterESControllerReconciler) removeManagedClusterWatch(mc *v3.ManagedCluster) {
 	c.Lock()
 	defer c.Unlock()
 
-	log.Infof("Removing cluster watch for %s", name)
-	if st, exists := c.managedClustersStopChans[name]; exists {
+	log.Infof("Removing cluster watch for %s", mc.Name)
+	if st, exists := c.managedClustersStopChans[mc.Name]; exists {
 		close(st)
-		delete(c.managedClustersStopChans, name)
+		delete(c.managedClustersStopChans, mc.Name)
 	}
 }
 
-func (c *managedClusterESControllerReconciler) addManagedClusterWatch(name string, managedK8sCLI kubernetes.Interface, managedCalicoCLI *tigeraapi.Clientset) {
+func (c *managedClusterESControllerReconciler) addManagedClusterWatch(mc *v3.ManagedCluster, managedK8sCLI kubernetes.Interface, managedCalicoCLI *tigeraapi.Clientset) {
 	c.Lock()
 	defer c.Unlock()
 
-	log.Infof("Adding cluster watch for %s", name)
+	log.Infof("Adding cluster watch for %s", mc.Name)
 	// If this happens it's a programming error, setManagerClusterWatch should never be called if the managed cluster
 	// already has an entry
-	if _, exists := c.managedClustersStopChans[name]; exists {
-		panic(fmt.Sprintf("a watch for managed cluster %s already exists", name))
+	if _, exists := c.managedClustersStopChans[mc.Name]; exists {
+		panic(fmt.Sprintf("a watch for managed cluster %s already exists", mc.Name))
 	}
 
-	esCredsController := elasticsearchconfiguration.New(name, managedK8sCLI, c.managementK8sCLI, c.esK8sCLI,
+	esCredsController := elasticsearchconfiguration.New(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, c.esK8sCLI,
 		c.esClientBuilder, false, c.cfgEs)
-	licenseController := license.New(name, managedCalicoCLI, c.calicoCLI, c.cfgLic)
+	licenseController := license.New(mc.Name, managedCalicoCLI, c.calicoCLI, c.cfgLic)
 
 	stop := make(chan struct{})
 	go esCredsController.Run(stop)
 	go licenseController.Run(stop)
-	c.managedClustersStopChans[name] = stop
+	c.managedClustersStopChans[mc.Name] = stop
 }
