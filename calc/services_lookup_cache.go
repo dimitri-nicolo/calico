@@ -257,7 +257,8 @@ type ServiceLookupsCache struct {
 
 func NewServiceLookupsCache() *ServiceLookupsCache {
 	slc := &ServiceLookupsCache{
-		suh: NewServiceUpdateHandler(),
+		suh:   NewServiceUpdateHandler(),
+		mutex: sync.RWMutex{},
 	}
 	return slc
 }
