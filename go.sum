@@ -883,8 +883,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apiserver v0.0.0-20210531202602-87bcb2552851 h1:tc8DisIoilnJN/dnnElzSv4qE31/wXccHFis3hG33KI=
 github.com/tigera/apiserver v0.0.0-20210531202602-87bcb2552851/go.mod h1:/iukv7k9j6m5+U+rbp6qZHPdRl+eVsboyyonYF97mtc=
-github.com/tigera/compliance v0.0.0-20210529000115-a91717affe62 h1:fwn7tGsGDDvB9fB9CP8pRJZSc2M6e27zhBkmlG383Ww=
-github.com/tigera/compliance v0.0.0-20210529000115-a91717affe62/go.mod h1:107KUFqjxZKDlpZLWZN78KadcnVriVPAK8iG0QjGgW0=
+github.com/tigera/compliance v0.0.0-20210531203513-91e5f05e07dd h1:xlZeXFVDl9G11yjXDa5xMsAkJbH5l5Mqg/PzYQbZn4k=
+github.com/tigera/compliance v0.0.0-20210531203513-91e5f05e07dd/go.mod h1:Vc6M1QFuoBgPU8stn6vjklNCrJOeDJLmiVa4THvt3H4=
 github.com/tigera/felix-private v0.0.0-20210529161339-3bc8f8494900 h1:a2o1Tox0cdSy5dJEz//kG6R1ALOIgEhSNl6GIQrI5yk=
 github.com/tigera/felix-private v0.0.0-20210529161339-3bc8f8494900/go.mod h1:xPL76yu53i69Zj0QvKDnjQmvx0IhfR5etOcXBFDIucg=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210528232610-8ed805fcba2f h1:zi4g98YaxovBNKXvK3QEIhFEaPRAQErWpu5S6fqqHlw=
@@ -895,6 +895,8 @@ github.com/tigera/licensing v1.0.1-0.20210528232903-d09dc4403179 h1:fhNjm/MGJZ59
 github.com/tigera/licensing v1.0.1-0.20210528232903-d09dc4403179/go.mod h1:z+ohkr+mDMMfZpHXhiYWKlg6Z1VMBMvo7KRYRjzBbwc=
 github.com/tigera/lma v0.0.0-20210528233150-0393d92df2ff h1:Ut4s8km8PYNkCijvtR8PzqLSKBHkPHYnp+5XznWEfDU=
 github.com/tigera/lma v0.0.0-20210528233150-0393d92df2ff/go.mod h1:KYab9d9lzLmoN/8jGIiXMXPVqN8IUKXxaXVRfzVZHro=
+github.com/tigera/lma v0.0.0-20210531203159-5a574dd23ba8 h1:M9XfSGEMPt4KImgdrVyHD9pEB+IegokX4/TsnR89EjM=
+github.com/tigera/lma v0.0.0-20210531203159-5a574dd23ba8/go.mod h1:1adfsexEGXc/aiKYfaVWJAR2cHZxUES9HLl65TaCauU=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210528233935-730908cf7d81 h1:VUbp6//ijEMma+kZZGglmTu+9rAJTh0+de8CnvDRBi0=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210528233935-730908cf7d81/go.mod h1:KSHBA7dmGhhM0Y5Tmz61dVC2YfwujjP4gUo3VFF+R7w=
