@@ -881,8 +881,8 @@ github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwD
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/apiserver v0.0.0-20210531204841-f281c884e1fd h1:ldbooahbVjlRo+Xt6cx7j9rxFIj0rkZp3JwhjPr3+3k=
-github.com/tigera/apiserver v0.0.0-20210531204841-f281c884e1fd/go.mod h1:QyX8gI3am5bQaoVcksue7tyJlqcNdw08yR+zFYC7rBY=
+github.com/tigera/apiserver v0.0.0-20210531224356-df09e9ca1451 h1:cZFEp9KMoAoI7xuI+d1P+Oat6zVckH4GfB/78cVzhCA=
+github.com/tigera/apiserver v0.0.0-20210531224356-df09e9ca1451/go.mod h1:QyX8gI3am5bQaoVcksue7tyJlqcNdw08yR+zFYC7rBY=
 github.com/tigera/compliance v0.0.0-20210531211711-5a67c22f2573 h1:AXil2Yk44e/q6V1GXOf+eTMJK8NefYZZPs/oGSqYsvY=
 github.com/tigera/compliance v0.0.0-20210531211711-5a67c22f2573/go.mod h1:phwiJbtV7KpCcfTW5mX0na6Dsk2BH2kef+LE+eznqtg=
 github.com/tigera/felix-private v0.0.0-20210529161339-3bc8f8494900 h1:a2o1Tox0cdSy5dJEz//kG6R1ALOIgEhSNl6GIQrI5yk=
