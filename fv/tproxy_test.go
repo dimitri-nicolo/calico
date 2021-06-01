@@ -349,7 +349,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				pod = w[0][0].IP + ":8055"
 				svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
 
-				// Mimic the kube-proxy service iptable clusterIP rule.
+				// Mimic the kube-proxy service iptable nodeport rule.
 				for _, f := range felixes {
 					f.Exec("iptables", "-t", "nat",
 						"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
@@ -395,7 +395,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				pol = createPolicy(pol)
 			})
 
-			It("should have connectivity from all workloads via ClusterIP", func() {
+			It("should have connectivity from all workloads via NodePort", func() {
 
 				opts := []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(felixes[0].IP)}
 

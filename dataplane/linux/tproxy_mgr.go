@@ -58,12 +58,6 @@ func newTproxyManager(ipSetsV4, ipSetsV6 *ipsets.IPSets, dests []config.ServerPo
 		ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
 		[]string{},
 	)
-	/*
-		ipSetsV6.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-nodeports", Type: ipsets.IPSetTypeBitmapPort, RangeMax: 0xffff},
-			[]string{},
-		)
-	*/
 
 	return &tproxyManager{
 		ipSetsV4: ipSetsV4,
@@ -72,6 +66,7 @@ func newTproxyManager(ipSetsV4, ipSetsV6 *ipsets.IPSets, dests []config.ServerPo
 }
 
 func (m *tproxyManager) OnUpdate(msg interface{}) {
+	log.Infof("tproxyManager %T", msg)
 }
 
 func (m *tproxyManager) CompleteDeferredWork() error {

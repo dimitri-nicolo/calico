@@ -1209,11 +1209,21 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{
 			Name: ChainManglePreroutingTProxySelect,
-			Rules: []Rule{{
-				Comment: []string{"Proxy selected services"},
-				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-				Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
-			}},
+			Rules: []Rule{
+				{
+					Comment: []string{"Proxy selected services"},
+					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
+				},
+				{
+					Comment: []string{"Proxy selected nodeports"},
+					Match: Match().
+						DestAddrType(AddrTypeLocal).
+						// We use a single port ipset for both V4 and V6
+						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports")),
+					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
+				},
+			},
 		})
 
 		tproxyRules = []Rule{
@@ -1230,18 +1240,6 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		}
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
-
-		chains = append(chains, &Chain{
-			Name: ChainManglePreroutingTProxySelect,
-			Rules: []Rule{{
-				Comment: []string{"Proxy selected nodeports"},
-				Match: Match().
-					DestAddrType(AddrTypeLocal).
-					// We use a single port ipset for both V4 and V6
-					DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports")),
-				Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
-			}},
-		})
 	}
 
 	chains = append(chains,
