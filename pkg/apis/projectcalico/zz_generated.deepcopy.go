@@ -1235,6 +1235,7 @@ func (in *PacketCapture) DeepCopyInto(out *PacketCapture) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	out.Spec = in.Spec
+	in.Status.DeepCopyInto(&out.Status)
 	return
 }
 

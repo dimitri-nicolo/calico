@@ -90,6 +90,7 @@ func (gc PacketCaptureConverter) convertToLibcalico(aapiObj runtime.Object) reso
 	lcgPacketCapture.Kind = libcalicoapi.KindPacketCapture
 	lcgPacketCapture.APIVersion = libcalicoapi.GroupVersionCurrent
 	lcgPacketCapture.Spec = aapiPacketCapture.Spec
+	lcgPacketCapture.Status = aapiPacketCapture.Status
 	return lcgPacketCapture
 }
 
@@ -97,6 +98,7 @@ func (gc PacketCaptureConverter) convertToAAPI(libcalicoObject resourceObject, a
 	lcgPacketCapture := libcalicoObject.(*libcalicoapi.PacketCapture)
 	aapiPacketCapture := aapiObj.(*aapi.PacketCapture)
 	aapiPacketCapture.Spec = lcgPacketCapture.Spec
+	aapiPacketCapture.Status = lcgPacketCapture.Status
 	aapiPacketCapture.TypeMeta = lcgPacketCapture.TypeMeta
 	aapiPacketCapture.ObjectMeta = lcgPacketCapture.ObjectMeta
 }

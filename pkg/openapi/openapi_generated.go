@@ -2455,11 +2455,17 @@ func schema_pkg_apis_projectcalico_v3_PacketCapture(ref common.ReferenceCallback
 							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

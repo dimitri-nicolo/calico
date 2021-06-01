@@ -101,6 +101,18 @@ func (c *FakePacketCaptures) Update(ctx context.Context, packetCapture *projectc
 	return obj.(*projectcalico.PacketCapture), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakePacketCaptures) UpdateStatus(ctx context.Context, packetCapture *projectcalico.PacketCapture, opts v1.UpdateOptions) (*projectcalico.PacketCapture, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(packetcapturesResource, "status", c.ns, packetCapture), &projectcalico.PacketCapture{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.PacketCapture), err
+}
+
 // Delete takes name of the packetCapture and deletes it. Returns an error if one occurs.
 func (c *FakePacketCaptures) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.

@@ -720,12 +720,13 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["authenticationreviews"] = calicoauthenticationreview.NewREST()
 	storage["authorizationreviews"] = calicoauthorizationreview.NewREST(calculator)
 
-	packetCaptureStorage, err := calicopacketcapture.NewREST(scheme, *packetCaptureOpts)
+	packetCaptureStorage, packetCaptureStatusStorage, err := calicopacketcapture.NewREST(scheme, *packetCaptureOpts)
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
 		panic(err)
 	}
 	storage["packetcaptures"] = packetCaptureStorage
+	storage["packetcaptures/status"] = packetCaptureStatusStorage
 
 	return storage, nil
 }

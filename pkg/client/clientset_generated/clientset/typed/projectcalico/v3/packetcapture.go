@@ -39,6 +39,7 @@ type PacketCapturesGetter interface {
 type PacketCaptureInterface interface {
 	Create(ctx context.Context, packetCapture *v3.PacketCapture, opts v1.CreateOptions) (*v3.PacketCapture, error)
 	Update(ctx context.Context, packetCapture *v3.PacketCapture, opts v1.UpdateOptions) (*v3.PacketCapture, error)
+	UpdateStatus(ctx context.Context, packetCapture *v3.PacketCapture, opts v1.UpdateOptions) (*v3.PacketCapture, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v3.PacketCapture, error)
@@ -127,6 +128,22 @@ func (c *packetCaptures) Update(ctx context.Context, packetCapture *v3.PacketCap
 		Namespace(c.ns).
 		Resource("packetcaptures").
 		Name(packetCapture.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(packetCapture).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *packetCaptures) UpdateStatus(ctx context.Context, packetCapture *v3.PacketCapture, opts v1.UpdateOptions) (result *v3.PacketCapture, err error) {
+	result = &v3.PacketCapture{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("packetcaptures").
+		Name(packetCapture.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(packetCapture).
 		Do(ctx).

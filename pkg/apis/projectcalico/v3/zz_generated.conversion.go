@@ -1474,6 +1474,7 @@ func Convert_projectcalico_NetworkSetList_To_v3_NetworkSetList(in *projectcalico
 func autoConvert_v3_PacketCapture_To_projectcalico_PacketCapture(in *PacketCapture, out *projectcalico.PacketCapture, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 
@@ -1485,6 +1486,7 @@ func Convert_v3_PacketCapture_To_projectcalico_PacketCapture(in *PacketCapture, 
 func autoConvert_projectcalico_PacketCapture_To_v3_PacketCapture(in *projectcalico.PacketCapture, out *PacketCapture, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 

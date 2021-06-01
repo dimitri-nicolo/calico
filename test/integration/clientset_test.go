@@ -3042,20 +3042,38 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("error creating the packetCapture '%v' (%v)", packetCapture, err)
 	}
 
-	updatedPacketCapture := packetCaptureServer
+	updatedPacketCapture := packetCaptureServer.DeepCopy()
 	updatedPacketCapture.Labels = map[string]string{"foo": "bar"}
 	packetCaptureServer, err = packetCaptureClient.Update(ctx, updatedPacketCapture, metav1.UpdateOptions{})
 	if nil != err {
-		return fmt.Errorf("error updating the packetCapture '%v' (%v)", packetCapture, err)
+		return fmt.Errorf("error in updating the packetCapture '%v' (%v)", packetCapture, err)
+	}
+
+	updatedPacketCaptureWithStatus := packetCaptureServer.DeepCopy()
+	updatedPacketCaptureWithStatus.Status = calico.PacketCaptureStatus{
+		Files: []calico.PacketCaptureFile{
+			{
+				Node:      "node",
+				FileNames: []string{"file1", "file2"},
+			},
+		},
+	}
+
+	packetCaptureServer, err = packetCaptureClient.UpdateStatus(ctx, updatedPacketCaptureWithStatus, metav1.UpdateOptions{})
+	if nil != err {
+		return fmt.Errorf("error updating the packetCapture '%v' (%v)", packetCaptureServer, err)
+	}
+	if !reflect.DeepEqual(packetCaptureServer.Status, updatedPacketCaptureWithStatus.Status) {
+		return fmt.Errorf("didn't update status %#v", updatedPacketCaptureWithStatus.Status)
 	}
 
 	// Should be listing the packetCapture.
 	packetCaptures, err = packetCaptureClient.List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("error listing networkSets (%s)", err)
+		return fmt.Errorf("error listing packetCaptures (%s)", err)
 	}
 	if 1 != len(packetCaptures.Items) {
-		return fmt.Errorf("should have exactly one networkSet, had %v networkSets", len(packetCaptures.Items))
+		return fmt.Errorf("should have exactly one packetCapture, had %v packetCaptures", len(packetCaptures.Items))
 	}
 
 	packetCaptureServer, err = packetCaptureClient.Get(ctx, name, metav1.GetOptions{})

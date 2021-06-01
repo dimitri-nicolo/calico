@@ -599,10 +599,12 @@ type PacketCaptureList struct {
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 type PacketCapture struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.PacketCaptureSpec
+	Spec   calico.PacketCaptureSpec
+	Status calico.PacketCaptureStatus
 }

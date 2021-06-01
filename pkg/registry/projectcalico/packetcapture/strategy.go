@@ -3,6 +3,9 @@ package packetcapture
 import (
 	"context"
 	"fmt"
+	"reflect"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -11,6 +14,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
 	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )
@@ -29,10 +33,17 @@ func (apiServerStrategy) NamespaceScoped() bool {
 	return true
 }
 
+// PrepareForCreate clears the Status
 func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+	packetCapture := obj.(*calico.PacketCapture)
+	packetCapture.Status = v3.PacketCaptureStatus{}
 }
 
+// PrepareForUpdate copies the Status from old to obj
 func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	newPacketCapture := obj.(*calico.PacketCapture)
+	oldPacketCapture := old.(*calico.PacketCapture)
+	newPacketCapture.Status = oldPacketCapture.Status
 }
 
 func (apiServerStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
@@ -51,13 +62,33 @@ func (apiServerStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func (apiServerStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return field.ErrorList{}
+	return ValidatePacketCaptureUpdate(obj.(*calico.PacketCapture), old.(*calico.PacketCapture))
+}
+
+type apiServerStatusStrategy struct {
+	apiServerStrategy
+}
+
+func NewStatusStrategy(strategy apiServerStrategy) apiServerStatusStrategy {
+	return apiServerStatusStrategy{strategy}
+}
+
+func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	newPacketCapture := obj.(*calico.PacketCapture)
+	oldPacketCapture := old.(*calico.PacketCapture)
+	newPacketCapture.Spec = oldPacketCapture.Spec
+	newPacketCapture.Labels = oldPacketCapture.Labels
+}
+
+// ValidateUpdate is the default update validation for an end user updating status
+func (apiServerStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+	return ValidatePacketCaptureUpdate(obj.(*calico.PacketCapture), old.(*calico.PacketCapture))
 }
 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	apiserver, ok := obj.(*calico.PacketCapture)
 	if !ok {
-		return nil, nil, fmt.Errorf("given object is not a PacketCapture Set")
+		return nil, nil, fmt.Errorf("given object (type %v) is not a PacketCapture Set", reflect.TypeOf(obj))
 	}
 	return labels.Set(apiserver.ObjectMeta.Labels), PacketCaptureToSelectableFields(apiserver), nil
 }
@@ -74,5 +105,9 @@ func MatchPacketCapture(label labels.Selector, field fields.Selector) storage.Se
 
 // PacketCaptureToSelectableFields returns a field set that represents the object.
 func PacketCaptureToSelectableFields(obj *calico.PacketCapture) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
+	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+}
+
+func ValidatePacketCaptureUpdate(update, old *calico.PacketCapture) field.ErrorList {
+	return apivalidation.ValidateObjectMetaUpdate(&update.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))
 }
