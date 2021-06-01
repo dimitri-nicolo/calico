@@ -130,10 +130,41 @@ static CALI_BPF_INLINE void __compile_asserts(void) {
 #pragma clang diagnostic pop
 }
 
+/* Calico BPF mode assumes it can use the top 3 nibbles of the 32-bit packet mark,
+ * i.e. 0xFFF00000.  To run successfully in BPF mode, Felix's IptablesMarkMask must be
+ * configured to _include_ those top 3 nibbles _and_ to have some bits over for use by the
+ * remaining iptables rules that do not interact with the BPF C code.  (Felix golang code
+ * checks this at start of day and will shutdown and restart if IptablesMarkMask is
+ * insufficient.)
+ *
+ * Bits used only by C code, or for interaction between C and golang code, must come out
+ * of the 0xFFF00000, and must be defined compatibly here and in bpf/tc/tc_defs.go.
+ *
+ * The internal structure of the top 3 nibbles is as follows:
+
+     1 1 0 .  . . . .  . . . .       indicates any packet that has been marked in
+                                     some way by the Calico BPF C code
+
+     . . . .  . . . 1  . . . .       packet SEEN by at least one TC program
+
+     . . . .  . . 1 1  . . . .       BYPASS => SEEN and no further policy checking needed;
+                                     remaining bits indicate options for how to treat such
+                                     packets: FWD, FWD_SRC_FIXUP, SKIP_RPF and NAT_OUT
+
+     . . . .  . 1 0 1  . . . .       FALLTHROUGH => SEEN but no BPF CT state; need to check
+                                     against Linux CT state
+
+     . . . .  1 . . .  . . . .       CT_ESTABLISHED: set by iptables to indicate match
+                                     against Linux CT state
+
+     . . . 1  . . . .  . . . .       EGRESS => packet should be routed via an egress gateway
+
+ */
+
 enum calico_skb_mark {
 	/* Bits that we set in all _our_ mark patterns. */
 	CALI_MARK_CALICO                     = 0xc0000000,
-	CALI_MARK_CALICO_MASK                = 0xf0000000,
+	CALI_MARK_CALICO_MASK                = 0xe0000000,
 	/* The "SEEN" bit is set by any BPF program that allows a packet through.  It allows
 	 * a second BPF program that handles the same packet to determine that another program
 	 * handled it first. */
@@ -173,8 +204,9 @@ enum calico_skb_mark {
 	CALI_SKB_MARK_CT_ESTABLISHED         = CALI_MARK_CALICO      | 0x08000000,
 	CALI_SKB_MARK_CT_ESTABLISHED_MASK    = CALI_MARK_CALICO      | 0x08000000,
 
-	/* Hack! */
-	CALI_SKB_MARK_EGRESS = 0x40000,
+	/* EGRESS => packet should be routed via an egress gateway. */
+	CALI_SKB_MARK_EGRESS                 = CALI_MARK_CALICO      | 0x10000000,
+	CALI_SKB_MARK_EGRESS_MASK            = CALI_MARK_CALICO_MASK | 0x10000000,
 };
 
 /* bpf_exit inserts a BPF exit instruction with the given return value. In a fully-inlined
