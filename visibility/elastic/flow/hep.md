@@ -1,13 +1,12 @@
 ---
-title: Enabling HostEndpoint reporting in flow logs
-description: Enabling hostendpoint reporting in flow logs
+title: Enable HostEndpoint reporting in flow logs
+description: Enable hostendpoint reporting in flow logs.
 canonical_url: /visibility/elastic/flow/hep
 ---
 
-
 ### Big picture
 
-Configure {{site.prodname}} flow logs to report HostEndpoint information.
+Enable {{site.prodname}} flow logs to report HostEndpoint information.
 
 ### Value
 
@@ -30,7 +29,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Enable HostEndpoint reporting
 
-{{site.prodname}} can be configured to enable reporting HostEndpoint metadata in flow logs using the command:
+To enable reporting HostEndpoint metadata in flow logs, use the following command:
 
 ```
  kubectl patch felixconfiguration default -p '{"spec":{"flowLogsEnableHostEndpoint":true}}'
@@ -38,4 +37,4 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Above and beyond
 
-- [Protect Kubernetes Nodes]({{site.baseurl}}/security/kubernetes-nodes)
+- [Protect Kubernetes nodes]({{site.baseurl}}/security/kubernetes-nodes)
