@@ -22,7 +22,10 @@ import (
 )
 
 type reconciler struct {
-	clusterName      string
+	clusterName string
+	// ownerReference is used to store the "owner" of this reconciler. If the owner has changed that signals the user
+	// credential secrets should be rotated. It's valid to have an empty owner reference.
+	ownerReference   string
 	management       bool
 	managementK8sCLI kubernetes.Interface
 	managedK8sCLI    kubernetes.Interface
@@ -122,19 +125,14 @@ func (c *reconciler) reconcileCASecrets() error {
 // reconcileUsers makes sure that all the necessary users exist for a managed cluster in elasticsearch and that the managed
 // cluster has access to those users via secrets
 func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
-	esHash, err := c.esK8sCLI.CalculateTigeraElasticsearchHash()
-	if err != nil {
-		return err
-	}
-
-	staleOrMissingUsers, err := c.missingOrStaleUsers(esHash)
+	staleOrMissingUsers, err := c.missingOrStaleUsers()
 	if err != nil {
 		return err
 	}
 
 	for username, user := range staleOrMissingUsers {
 		reqLogger.Infof("creating user %s", username)
-		if err := c.createUser(username, user, esHash); err != nil {
+		if err := c.createUser(username, user); err != nil {
 			return err
 		}
 	}
@@ -144,7 +142,7 @@ func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 
 // createUser creates the given elasticsearch user in elasticsearch and creates a secret in the managed cluster containing
 // that users credentials
-func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User, esHash string) error {
+func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User) error {
 	esCLI, err := c.getOrInitializeESClient()
 	if err != nil {
 		return err
@@ -159,7 +157,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 		return err
 	}
 
-	changeHash, err := calculateUserChangeHash(esHash, esUser)
+	changeHash, err := c.calculateUserChangeHash(esUser)
 	if err != nil {
 		return err
 	}
@@ -182,7 +180,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 
 // missingOrStaleUsers returns a map of all the users that are missing from the cluster or have mismatched elasticsearch
 // hashes (indicating that elasticsearch changed in a way that requires user credential recreation)
-func (c *reconciler) missingOrStaleUsers(esHash string) (map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
+func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
 	esUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
 	secretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
 	if err != nil {
@@ -192,7 +190,7 @@ func (c *reconciler) missingOrStaleUsers(esHash string) (map[esusers.Elasticsear
 	for _, secret := range secretsList.Items {
 		username := esusers.ElasticsearchUserName(secret.Labels[ElasticsearchUserNameLabel])
 		if user, exists := esUsers[username]; exists {
-			userHash, err := calculateUserChangeHash(esHash, user)
+			userHash, err := c.calculateUserChangeHash(user)
 			if err != nil {
 				return nil, err
 			}
@@ -205,8 +203,8 @@ func (c *reconciler) missingOrStaleUsers(esHash string) (map[esusers.Elasticsear
 	return esUsers, nil
 }
 
-func calculateUserChangeHash(elasticsearchHash string, user elasticsearch.User) (string, error) {
-	return resource.CreateHashFromObject([]interface{}{elasticsearchHash, user.Roles})
+func (c *reconciler) calculateUserChangeHash(user elasticsearch.User) (string, error) {
+	return resource.CreateHashFromObject([]interface{}{c.esHash, c.ownerReference, user.Roles})
 }
 
 func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {

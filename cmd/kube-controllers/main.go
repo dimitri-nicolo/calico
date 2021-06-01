@@ -516,6 +516,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.controllerStates["ElasticsearchConfiguration"] = &controllerState{
 			controller: elasticsearchconfiguration.New(
 				"cluster",
+				"",
 				k8sClientset,
 				k8sClientset,
 				esK8sREST,
