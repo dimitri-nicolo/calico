@@ -6,6 +6,8 @@ import (
 	"context"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -189,6 +191,33 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 				testutils.Resource(apiv3.KindPacketCapture, namespace2, name2, spec2),
 			))
 
+			By("Setting status1 on resource")
+			status1 := apiv3.PacketCaptureStatus{
+				Files: []apiv3.PacketCaptureFile{
+					{
+						Node:      "node1",
+						FileNames: []string{"file1", "file2"},
+					},
+				},
+			}
+			res.Status = status1
+			log.Infof("Before update %#v", res)
+			res, outError = c.PacketCaptures().Update(ctx, res, options.SetOptions{})
+			Expect(outError).ToNot(HaveOccurred())
+			log.Infof("After update %#v", res)
+			Expect(res.Status.Files).To(HaveLen(1))
+			Expect(res).To(MatchResourceWithStatus(apiv3.KindPacketCapture, namespace1, name1, spec2, status1))
+
+			By("Getting resource and verifying status1 is present")
+			res, outError = c.PacketCaptures().Get(ctx, namespace1, name1, options.GetOptions{})
+			log.Infof("After get %#v", res)
+			Expect(outError).ToNot(HaveOccurred())
+			Expect(res).To(MatchResourceWithStatus(apiv3.KindPacketCapture, namespace1, name1, spec2, status1))
+			Expect(res.Status.Files).To(HaveLen(1))
+
+			// Track the version of the updated name1 data.
+			rv1_3 := res.ResourceVersion
+
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting PacketCapture (namespace1/name1) with the old resource version")
 				_, outError = c.PacketCaptures().Delete(ctx, namespace1, name1, options.DeleteOptions{ResourceVersion: rv1_1})
@@ -197,7 +226,7 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 			}
 
 			By("Deleting PacketCapture (namespace1/name1) with the new resource version")
-			dres, outError := c.PacketCaptures().Delete(ctx, namespace1, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			dres, outError := c.PacketCaptures().Delete(ctx, namespace1, name1, options.DeleteOptions{ResourceVersion: rv1_3})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(dres).To(MatchResource(apiv3.KindPacketCapture, namespace1, name1, spec2))
 

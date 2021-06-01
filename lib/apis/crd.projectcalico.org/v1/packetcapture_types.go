@@ -15,5 +15,6 @@ import (
 type PacketCapture struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              v3.PacketCaptureSpec `json:"spec,omitempty"`
+	Spec              v3.PacketCaptureSpec   `json:"spec,omitempty"`
+	Status            v3.PacketCaptureStatus `json:"status,omitempty"`
 }
