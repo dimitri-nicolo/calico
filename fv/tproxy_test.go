@@ -27,7 +27,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -87,6 +86,8 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			log.WithField("service", dumpResource(service)).Info("Creating service")
 			svc, err := client.CoreV1().Services(service.ObjectMeta.Namespace).Create(context.Background(), service, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
+			Eventually(k8sGetEpsForServiceFunc(client, service), "10s").Should(HaveLen(1),
+				"Service endpoints didn't get created? Is controller-manager happy?")
 			log.WithField("service", dumpResource(svc)).Info("created service")
 
 			return svc
@@ -357,8 +358,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				svc = clusterIP + ":8090"
 				// create service resources, one with annotation another without backed by same pod
 				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
-				createService(getServiceResource("with-annotation", clusterIP, w[0][0], 8090,
-					8055, 0, true), client)
+				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+				createService(v1Svc, client)
 
 				// Mimic the kube-proxy service iptable clusterIP rule.
 				for _, f := range felixes {
@@ -380,38 +382,8 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 				Eventually(func() bool {
 					return proxies[0].ProxiedCount(w[0][1].IP, pod, svc) > 0
-				}, 5*time.Second, 30*time.Second).Should(BeTrue())
+				}, 15*time.Second, 30*time.Second).Should(BeTrue())
 
 			})
 		})
 	})
-
-func getServiceResource(name, clusterIP string, workload *workload.Workload,
-	svcPort, tgtPort int, nodePort int32, enableTPROXY bool) *v1.Service {
-
-	objectMeta := metav1.ObjectMeta{Name: name, Namespace: "default", Annotations: map[string]string{}}
-	if enableTPROXY {
-		objectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-	}
-
-	return &v1.Service{
-		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
-		ObjectMeta: objectMeta,
-		Spec: v1.ServiceSpec{
-			Type:      v1.ServiceTypeClusterIP,
-			ClusterIP: clusterIP,
-			Selector: map[string]string{
-				"name": workload.Name,
-			},
-			Ports: []v1.ServicePort{
-				{
-					Protocol:   v1.ProtocolTCP,
-					Port:       int32(svcPort),
-					NodePort:   nodePort,
-					Name:       fmt.Sprintf("port-%d", tgtPort),
-					TargetPort: intstr.FromInt(tgtPort),
-				},
-			},
-		},
-	}
-}
