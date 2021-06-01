@@ -31,6 +31,8 @@ import (
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 const (
@@ -172,6 +174,9 @@ func (m *endpointManager) OnUpdate(msg interface{}) {
 		log.WithField("workloadEndpointId", msg.Id).Info("Processing WorkloadEndpointRemove")
 		m.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.ActivePolicyUpdate:
+		if model.PolicyIsStaged(msg.Id.Name) {
+			return
+		}
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyUpdate")
 		m.ProcessPolicyProfileUpdate(policysets.PolicyNamePrefix + msg.Id.Name)
 	case *proto.ActiveProfileUpdate:

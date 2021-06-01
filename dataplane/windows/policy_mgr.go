@@ -19,6 +19,8 @@ import (
 
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/proto"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 // policyManager simply passes through Policy and Profile updates from the datastore to the
@@ -38,9 +40,15 @@ func newPolicyManager(policysets policysets.PolicySetsDataplane) *policyManager 
 func (m *policyManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.ActivePolicyUpdate:
+		if model.PolicyIsStaged(msg.Id.Name) {
+			return
+		}
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyUpdate")
 		m.policysetsDataplane.AddOrReplacePolicySet(policysets.PolicyNamePrefix+msg.Id.Name, msg.Policy)
 	case *proto.ActivePolicyRemove:
+		if model.PolicyIsStaged(msg.Id.Name) {
+			return
+		}
 		log.WithField("policyID", msg.Id).Info("Processing ActivePolicyRemove")
 		m.policysetsDataplane.RemovePolicySet(policysets.PolicyNamePrefix + msg.Id.Name)
 	case *proto.ActiveProfileUpdate:
