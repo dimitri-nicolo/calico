@@ -43,7 +43,10 @@ type User struct {
 
 // RoleNames is a convenience function for getting the names of all the roles defined for this Elasticsearch user
 func (u User) RoleNames() []string {
-	var names []string
+	// The Elasticsearch users API expects a string array in the "roles" field and will fail if it detects a null value
+	// instead. Initialising the slice in this manner ensures that even in the case that there are no roles we still
+	// send an empty array of strings rather than null.
+	names := []string{}
 	for _, role := range u.Roles {
 		names = append(names, role.Name)
 	}

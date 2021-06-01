@@ -92,36 +92,45 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 
 			assertIssuedDeleteRequests(&esClient,
 				[]string{
-					"tigera-ee-compliance-benchmarker-anyCluster",
-					"tigera-ee-compliance-controller-anyCluster",
-					"tigera-ee-compliance-reporter-anyCluster",
-					"tigera-ee-compliance-snapshotter-anyCluster",
-					"tigera-ee-ad-job-anyCluster",
-					"tigera-ee-intrusion-detection-anyCluster",
-					"tigera-eks-log-forwarder-anyCluster",
-					"tigera-fluentd-anyCluster",
+					"tigera-ee-compliance-benchmarker-anyCluster-secure",
+					"tigera-ee-compliance-controller-anyCluster-secure",
+					"tigera-ee-compliance-reporter-anyCluster-secure",
+					"tigera-ee-compliance-snapshotter-anyCluster-secure",
+					"tigera-ee-ad-job-anyCluster-secure",
+					"tigera-ee-intrusion-detection-anyCluster-secure",
+					"tigera-eks-log-forwarder-anyCluster-secure",
+					"tigera-fluentd-anyCluster-secure",
 				}, []string{
-					"tigera-ee-compliance-benchmarker-anyCluster",
-					"tigera-ee-compliance-controller-anyCluster",
-					"tigera-ee-compliance-reporter-anyCluster",
-					"tigera-ee-compliance-snapshotter-anyCluster",
-					"tigera-ee-ad-job-anyCluster",
-					"tigera-ee-intrusion-detection-anyCluster",
-					"tigera-eks-log-forwarder-anyCluster",
-					"tigera-fluentd-anyCluster",
+					"tigera-ee-compliance-benchmarker-anyCluster-secure",
+					"tigera-ee-compliance-controller-anyCluster-secure",
+					"tigera-ee-compliance-reporter-anyCluster-secure",
+					"tigera-ee-compliance-snapshotter-anyCluster-secure",
+					"tigera-ee-ad-job-anyCluster-secure",
+					"tigera-ee-intrusion-detection-anyCluster-secure",
+					"tigera-eks-log-forwarder-anyCluster-secure",
+					"tigera-fluentd-anyCluster-secure",
 				})
 		})
 	})
-
-	expectedValuesOldCluster := []string{
-		"tigera-ee-compliance-benchmarker-old-cluster",
-		"tigera-ee-compliance-controller-old-cluster",
-		"tigera-ee-compliance-reporter-old-cluster",
-		"tigera-ee-compliance-snapshotter-old-cluster",
-		"tigera-ee-ad-job-old-cluster",
-		"tigera-ee-intrusion-detection-old-cluster",
-		"tigera-eks-log-forwarder-old-cluster",
-		"tigera-fluentd-old-cluster",
+	expectedUsersOldCluster := []string{
+		"tigera-ee-compliance-benchmarker-old-cluster-secure",
+		"tigera-ee-compliance-controller-old-cluster-secure",
+		"tigera-ee-compliance-reporter-old-cluster-secure",
+		"tigera-ee-compliance-snapshotter-old-cluster-secure",
+		"tigera-ee-ad-job-old-cluster-secure",
+		"tigera-ee-intrusion-detection-old-cluster-secure",
+		"tigera-eks-log-forwarder-old-cluster-secure",
+		"tigera-fluentd-old-cluster-secure",
+	}
+	expectedRolesOldCluster := []string{
+		"tigera-ee-compliance-benchmarker-old-cluster-secure",
+		"tigera-ee-compliance-controller-old-cluster-secure",
+		"tigera-ee-compliance-reporter-old-cluster-secure",
+		"tigera-ee-compliance-snapshotter-old-cluster-secure",
+		"tigera-ee-ad-job-old-cluster-secure",
+		"tigera-ee-intrusion-detection-old-cluster-secure",
+		"tigera-eks-log-forwarder-old-cluster-secure",
+		"tigera-fluentd-old-cluster-secure",
 	}
 
 	DescribeTable("DeleteUserAtStartUp",
@@ -144,26 +153,26 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-old-cluster",
-					Roles:    roles("tigera-ee-ad-job-role-old-cluster"),
+					Username: "tigera-ee-ad-job-old-cluster-secure",
+					Roles:    roles("tigera-ee-ad-job-role-old-cluster-secure"),
 				},
 				{
-					Username: "tigera-ee-ad-job",
-					Roles:    roles("tigera-ee-ad-job-role"),
+					Username: "tigera-ee-ad-job-secure",
+					Roles:    roles("tigera-ee-ad-job-role-secure"),
 				},
 			},
-			expectedValuesOldCluster,
-			expectedValuesOldCluster),
+			expectedUsersOldCluster,
+			expectedRolesOldCluster),
 		Entry("Do not delete new users and roles",
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-new-cluster",
-					Roles:    roles("tigera-ee-ad-job-role-new-cluster"),
+					Username: "tigera-ee-ad-job-new-cluster-secure",
+					Roles:    roles("tigera-ee-ad-job-role-new-cluster-secure"),
 				},
 				{
-					Username: "tigera-ee-ad-job",
-					Roles:    roles("tigera-ee-ad-job-role"),
+					Username: "tigera-ee-ad-job-secure",
+					Roles:    roles("tigera-ee-ad-job-role-secure"),
 				},
 			},
 			nil,
@@ -177,16 +186,16 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-old-cluster",
-					Roles:    roles("tigera-ee-ad-job-role-old-cluster"),
+					Username: "tigera-ee-ad-job-old-cluster-secure",
+					Roles:    roles("tigera-ee-ad-job-role-old-cluster-secure"),
 				},
 				{
-					Username: "tigera-ee-ad-job",
-					Roles:    roles("tigera-ee-ad-job-role"),
+					Username: "tigera-ee-ad-job-secure",
+					Roles:    roles("tigera-ee-ad-job-role-secure"),
 				},
 			},
-			expectedValuesOldCluster,
-			expectedValuesOldCluster),
+			expectedUsersOldCluster,
+			expectedRolesOldCluster),
 		Entry("DO not delete non-tigera users and roles",
 			map[string]bool{"any-cluster": true},
 			[]es.User{
@@ -201,16 +210,16 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			map[string]bool{"new-cluster": true},
 			[]es.User{
 				{
-					Username: "tigera-ee-ad-job-old-cluster",
+					Username: "tigera-ee-ad-job-old-cluster-secure",
 					Roles:    roles("watcher_admin"),
 				},
 				{
-					Username: "tigera-ee-ad-job",
+					Username: "tigera-ee-ad-job-secure",
 					Roles:    roles("watcher_admin"),
 				},
 			},
-			expectedValuesOldCluster,
-			expectedValuesOldCluster),
+			expectedUsersOldCluster,
+			expectedRolesOldCluster),
 	)
 })
 

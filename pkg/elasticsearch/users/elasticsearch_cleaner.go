@@ -23,7 +23,8 @@ func NewEsCleaner(esCLI elasticsearch.Client) *ESCleaner {
 func (c *ESCleaner) DeleteResidueUsers(clusterName string) {
 	log.Infof("Deleting ES Users for managed cluster %s", clusterName)
 
-	esUsers := ElasticsearchUsers(clusterName, false)
+	// Ignore public users here since they were not created in Elasticsearch.
+	esUsers, _ := ElasticsearchUsers(clusterName, false)
 	var usersToBeDeleted []elasticsearch.User
 	var rolesToBeDeleted = make(map[elasticsearch.Role]bool)
 

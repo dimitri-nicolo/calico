@@ -28,21 +28,26 @@ const (
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
 	ElasticsearchUserNameOperator              ElasticsearchUserName = "tigera-ee-operator"
 	ElasticsearchUserNameElasticsearchMetrics  ElasticsearchUserName = "tigera-ee-elasticsearch-metrics"
+
+	// This suffix is used to maintain a 1:1 mapping of public users that can be safely propagated to the managed cluster and
+	// private users that will be swapped into the request at the ES gateway in the management cluster by stripping this suffix.
+	ElasticsearchSecureUserSuffix = "secure"
 )
 
-// ElasticsearchUsers returns a map of ElasticsearchUserNames as keys and elasticsearch.Users as values. The clusterName
-// is used to format the username / role names for the elasticsearch.User (format is <name>-<clusterName>). If management
-// is true, the return map will contain the elasticsearch users needed for a management cluster, and the usernames and
+// ElasticsearchUsers returns two maps of ElasticsearchUserNames as keys and elasticsearch.Users as values. The first map contains
+// private Elasticsearch users with permissions and the second contains public credentials to be given to components and swapped
+// out by the ES Gateway. The clusterName is used to format the username / role names for the elasticsearch.User (format is <name>-<clusterName>).
+// If management is true, the return map will contain the elasticsearch users needed for a management cluster, and the usernames and
 // role names will not be formatted with the clusterName.
 //
 // Note that the clusterName parameter is also used to format the index names, allowing the user to have access to only
 // specific cluster indices
-func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUserName]elasticsearch.User {
-	users := map[ElasticsearchUserName]elasticsearch.User{
+func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchUserName]elasticsearch.User, map[ElasticsearchUserName]elasticsearch.User) {
+	privateUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameFluentd: {
-			Username: formatName(ElasticsearchUserNameFluentd, clusterName, management),
+			Username: formatName(ElasticsearchUserNameFluentd, clusterName, management, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameFluentd, clusterName, management),
+				Name: formatName(ElasticsearchUserNameFluentd, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -53,9 +58,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			}},
 		},
 		ElasticsearchUserNameEKSLogForwarder: {
-			Username: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management),
+			Username: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management),
+				Name: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -66,9 +71,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			}},
 		},
 		ElasticsearchUserNameComplianceBenchmarker: {
-			Username: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management),
+			Username: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management),
+				Name: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -79,9 +84,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			}},
 		},
 		ElasticsearchUserNameComplianceController: {
-			Username: formatName(ElasticsearchUserNameComplianceController, clusterName, management),
+			Username: formatName(ElasticsearchUserNameComplianceController, clusterName, management, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameComplianceController, clusterName, management),
+				Name: formatName(ElasticsearchUserNameComplianceController, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -92,9 +97,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			}},
 		},
 		ElasticsearchUserNameComplianceReporter: {
-			Username: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management),
+			Username: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management),
+				Name: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{
@@ -123,9 +128,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			}},
 		},
 		ElasticsearchUserNameComplianceSnapshotter: {
-			Username: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management),
+			Username: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management),
+				Name: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -136,10 +141,10 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			}},
 		},
 		ElasticsearchUserNameIntrusionDetection: {
-			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management),
+			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, true),
 			Roles: []elasticsearch.Role{
 				{
-					Name: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management),
+					Name: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, true),
 					Definition: &elasticsearch.RoleDefinition{
 						Cluster: []string{"monitor", "manage_index_templates"},
 						Indices: buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName, management),
@@ -151,10 +156,10 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			},
 		},
 		ElasticsearchUserNameADJob: {
-			Username: formatName(ElasticsearchUserNameADJob, clusterName, management),
+			Username: formatName(ElasticsearchUserNameADJob, clusterName, management, true),
 			Roles: []elasticsearch.Role{
 				{
-					Name: formatName(ElasticsearchUserNameADJob, clusterName, management),
+					Name: formatName(ElasticsearchUserNameADJob, clusterName, management, true),
 					Definition: &elasticsearch.RoleDefinition{
 						Cluster: []string{"monitor", "manage_index_templates"},
 						Indices: []elasticsearch.RoleIndex{
@@ -180,14 +185,43 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 			},
 		},
 	}
-
-	if management {
-		for k, v := range managementOnlyElasticsearchUsers(clusterName) {
-			users[k] = v
-		}
+	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
+		ElasticsearchUserNameFluentd: {
+			Username: formatName(ElasticsearchUserNameFluentd, clusterName, management, false),
+		},
+		ElasticsearchUserNameEKSLogForwarder: {
+			Username: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management, false),
+		},
+		ElasticsearchUserNameComplianceBenchmarker: {
+			Username: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management, false),
+		},
+		ElasticsearchUserNameComplianceController: {
+			Username: formatName(ElasticsearchUserNameComplianceController, clusterName, management, false),
+		},
+		ElasticsearchUserNameComplianceReporter: {
+			Username: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management, false),
+		},
+		ElasticsearchUserNameComplianceSnapshotter: {
+			Username: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management, false),
+		},
+		ElasticsearchUserNameIntrusionDetection: {
+			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management, false),
+		},
+		ElasticsearchUserNameADJob: {
+			Username: formatName(ElasticsearchUserNameADJob, clusterName, management, false),
+		},
 	}
 
-	return users
+	if management {
+		privateManagementUsers, publicManagementUsers := managementOnlyElasticsearchUsers(clusterName)
+		for k, v := range privateManagementUsers {
+			privateUsers[k] = v
+		}
+		for k, v := range publicManagementUsers {
+			publicUsers[k] = v
+		}
+	}
+	return privateUsers, publicUsers
 }
 
 func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isManagement bool) []elasticsearch.RoleIndex {
@@ -234,7 +268,8 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 
 func buildManagedUserPattern() []*regexp.Regexp {
 	var usersPattern []*regexp.Regexp
-	users := ElasticsearchUsers("(.*)", false)
+	// Ignore public users here since they are not created in Elasticsearch.
+	users, _ := ElasticsearchUsers("(.*)", false)
 	for _, user := range users {
 		usersPattern = append(usersPattern, regexp.MustCompile(user.Username))
 	}
@@ -242,12 +277,12 @@ func buildManagedUserPattern() []*regexp.Regexp {
 	return usersPattern
 }
 
-func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserName]elasticsearch.User {
-	return map[ElasticsearchUserName]elasticsearch.User{
+func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUserName]elasticsearch.User, map[ElasticsearchUserName]elasticsearch.User) {
+	privateUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameComplianceServer: {
-			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, true),
+			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameComplianceServer, clusterName, true),
+				Name: formatName(ElasticsearchUserNameComplianceServer, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -259,9 +294,9 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 		ElasticsearchUserNameManager: {
-			Username: formatName(ElasticsearchUserNameManager, clusterName, true),
+			Username: formatName(ElasticsearchUserNameManager, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameManager, clusterName, true),
+				Name: formatName(ElasticsearchUserNameManager, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -273,9 +308,9 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 		ElasticsearchUserNameCurator: {
-			Username: formatName(ElasticsearchUserNameCurator, clusterName, true),
+			Username: formatName(ElasticsearchUserNameCurator, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameCurator, clusterName, true),
+				Name: formatName(ElasticsearchUserNameCurator, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -287,9 +322,9 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 		ElasticsearchUserNameOperator: {
-			Username: formatName(ElasticsearchUserNameOperator, clusterName, true),
+			Username: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameOperator, clusterName, true),
+				Name: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates", "manage_ilm", "read_ilm"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -300,9 +335,9 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 		ElasticsearchUserNameInstaller: {
-			Username: formatName(ElasticsearchUserNameInstaller, clusterName, true),
+			Username: formatName(ElasticsearchUserNameInstaller, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameInstaller, clusterName, true),
+				Name: formatName(ElasticsearchUserNameInstaller, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"manage_watcher", "manage"},
 					Indices: []elasticsearch.RoleIndex{
@@ -320,9 +355,9 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 		ElasticsearchUserNameElasticsearchMetrics: {
-			Username: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true),
+			Username: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true),
+				Name: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -333,15 +368,42 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 	}
+	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
+		ElasticsearchUserNameComplianceServer: {
+			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, true, false),
+		},
+		ElasticsearchUserNameManager: {
+			Username: formatName(ElasticsearchUserNameManager, clusterName, true, false),
+		},
+		ElasticsearchUserNameCurator: {
+			Username: formatName(ElasticsearchUserNameCurator, clusterName, true, false),
+		},
+		ElasticsearchUserNameOperator: {
+			Username: formatName(ElasticsearchUserNameOperator, clusterName, true, false),
+		},
+		ElasticsearchUserNameInstaller: {
+			Username: formatName(ElasticsearchUserNameInstaller, clusterName, true, false),
+		},
+		ElasticsearchUserNameElasticsearchMetrics: {
+			Username: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true, false),
+		},
+	}
+	return privateUsers, publicUsers
 }
 
 func indexPattern(prefix, cluster, suffix string) string {
 	return fmt.Sprintf("%s.%s%s", prefix, cluster, suffix)
 }
 
-func formatName(name ElasticsearchUserName, clusterName string, management bool) string {
+func formatName(name ElasticsearchUserName, clusterName string, management, secureSuffix bool) string {
+	var formattedName string
 	if management {
-		return string(name)
+		formattedName = string(name)
+	} else {
+		formattedName = fmt.Sprintf("%s-%s", string(name), clusterName)
 	}
-	return fmt.Sprintf("%s-%s", string(name), clusterName)
+	if secureSuffix {
+		formattedName = fmt.Sprintf("%s-%s", formattedName,  ElasticsearchSecureUserSuffix)
+	}
+	return formattedName
 }
