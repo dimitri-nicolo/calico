@@ -64,6 +64,7 @@ func NewTproxyEndPointsResolver(callbacks ipSetUpdateCallbacks) *TproxyEndPoints
 }
 
 func (tpr *TproxyEndPointsResolver) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
+	log.Infof("registering with all update dispatcher for tproxy service updates")
 	allUpdateDisp.Register(model.ResourceKey{}, tpr.OnResourceUpdate)
 }
 
@@ -74,6 +75,7 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 	case model.ResourceKey:
 		switch k.Kind {
 		case v3.KindK8sService:
+			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				tpr.suh.removeService(k)
 				tpr.flush()
@@ -82,6 +84,7 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 				annotations := service.ObjectMeta.Annotations
 				// only services annotated with l7 are of interest for us
 				if hasAnnotation(annotations, l7LoggingAnnotation) {
+					log.Infof("processing update for tproxy annotated service %s", k)
 					tpr.suh.addOrUpdateService(k, service)
 					tpr.flush()
 				}
@@ -120,6 +123,8 @@ func (tpr *TproxyEndPointsResolver) flush() {
 func (tpr *TproxyEndPointsResolver) flushRegularServices() {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
 	// remove expired services from active services
+	log.Debugf("flush regular services for tproxy")
+
 	for ipPortProto, _ := range tpr.activeServices {
 		// if member key exists in up-to-date list, update the value to latest in active service and continue to next
 		if latest, ok := tpr.suh.ipPortProtoToServices[ipPortProto]; ok {
@@ -158,6 +163,8 @@ func (tpr *TproxyEndPointsResolver) flushRegularServices() {
 func (tpr *TproxyEndPointsResolver) flushNodePorts() {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
 	// remove expired node ports from active
+	log.Debugf("flush node ports for tproxy")
+
 	for portProto, _ := range tpr.activeNodePorts {
 		// if member key exists in up-to-date list, update the value to latest in active node ports and continue to next
 		if latest, ok := tpr.suh.nodePortServices[portProto]; ok {

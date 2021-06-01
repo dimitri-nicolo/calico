@@ -274,6 +274,7 @@ func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case v3.KindK8sService:
+			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				slc.suh.removeService(k)
 			} else {
