@@ -734,7 +734,13 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		if (CALI_F_FROM_WEP && state->flags & CALI_ST_SKIP_FIB) {
 			ct_ctx_nat.flags |= CALI_CT_FLAG_SKIP_FIB;
 		}
-		/* Propagate the trusted DNS flag when updating conntrack entry. */
+
+		// Propagate the trusted DNS flag when creating conntrack entry.  Note,
+		// this isn't propagation from a previously looked up CT entry, because
+		// there are no cases where we successfully look up a CT entry and then
+		// create an equivalent entry for the same flow.  Rather, it's because we
+		// got a CT miss for this flow and then used the state->ct_result.flags
+		// field to record that the flow _should_ be trusted for DNS.
 		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
 
 		if (state->ip_proto == IPPROTO_TCP) {
