@@ -9,11 +9,11 @@ import (
 
 // GetRBACQuery converts the permissions specified in the authroized resource verbs into an elastic search query
 // that limits results to resources the user may list.
-func GetRBACQuery(verbs []apiv3.AuthorizedResourceVerbs) elastic.Query {
+func GetRBACQuery(resources []apiv3.AuthorizedResourceVerbs) elastic.Query {
 	// Convert the permissions into a query that each flow must satisfy - essentially a source or destination must
 	// be listable by the user to be included in the response.
 	var should []elastic.Query
-	for _, r := range verbs {
+	for _, r := range resources {
 		for _, v := range r.Verbs {
 			if v.Verb != "list" {
 				// Only interested in the list verbs.

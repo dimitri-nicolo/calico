@@ -40,16 +40,15 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 	now := time.Now().UTC()
 	if from, fromQp, err := timeutils.ParseElasticsearchTime(now, &s.From); err != nil {
 		log.WithError(err).Debug("Unable to parse 'from' time")
-		return err
+		return fmt.Errorf("time range from value is invalid: %s", s.From)
 	} else if to, toQp, err := timeutils.ParseElasticsearchTime(now, &s.To); err != nil {
-		log.WithError(err).Debug("Unable to parse 'to' time")
-		return err
+		return fmt.Errorf("time range to value is invalid: %s", s.To)
 	} else if isstring(fromQp) != isstring(toQp) {
 		log.Debug("time range is specified as a mixture of explicit time and relative time")
 		return fmt.Errorf("time range values must either both be explicit times or both be relative to now")
 	} else if from.After(*to) {
 		log.Debug("From is after To")
-		return fmt.Errorf("incorrect time range specified: from (%s) is after to (%s)", s.From, s.To)
+		return fmt.Errorf("invalid time range specified: from (%s) is after to (%s)", s.From, s.To)
 	} else {
 		t.From = *from
 		t.To = *to

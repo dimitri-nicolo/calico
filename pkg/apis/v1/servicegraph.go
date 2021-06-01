@@ -23,7 +23,7 @@ type ServiceGraphRequest struct {
 type ServiceGraphResponse struct {
 	// Time intervals contained in the response. Each node and edge will contain corresponding traffic data sets for
 	// each time interval.
-	TimeIntervals []TimeRange `json:"time_range,omitempty"`
+	TimeIntervals []TimeRange `json:"time_intervals,omitempty"`
 
 	// Nodes and edges for the graph.
 	Nodes []GraphNode `json:"nodes"`

@@ -12,8 +12,9 @@ import (
 
 // ParseElasticsearchTime parses the time string supplied in the ES query. Returns:
 // - Calculated time
-// - The ES query parameter. For time format "now-X" this is just the string, for RFC 3339 format this is the UTC
-//   time.Time.
+// - The ES query parameter:
+//   - For relative time format "now-X" this returns the original string value
+//   - Otherwise, it is parsed in RFC 3339 format and is returned as a UTC time.Time.
 func ParseElasticsearchTime(now time.Time, tstr *string) (*time.Time, interface{}, error) {
 	if tstr == nil || *tstr == "" {
 		return nil, nil, nil

@@ -23,6 +23,20 @@ func (ns NamespacedNames) MarshalJSON() ([]byte, error) {
 	return json.Marshal(names)
 }
 
+func (ns *NamespacedNames) UnmarshalJSON(b []byte) error {
+	var names []NamespacedName
+	err := json.Unmarshal(b, &names)
+	if err != nil {
+		return err
+	}
+
+	*ns = make(map[NamespacedName]struct{})
+	for _, name := range names {
+		(*ns)[name] = struct{}{}
+	}
+	return nil
+}
+
 func (ns NamespacedNames) AsSortedSlice() []NamespacedName {
 	if len(ns) == 0 {
 		return nil

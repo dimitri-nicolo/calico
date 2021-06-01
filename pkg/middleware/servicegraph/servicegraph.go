@@ -8,15 +8,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tigera/es-proxy/pkg/elastic"
-
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	"github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
@@ -121,7 +120,7 @@ func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGra
 	// Extract the request from the body.
 	sgr := &v1.ServiceGraphRequest{}
 	if err := json.NewDecoder(req.Body).Decode(&sgr); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid request: %v", err)
 	}
 	if sgr.Timeout == 0 {
 		sgr.Timeout = defaultRequestTimeout

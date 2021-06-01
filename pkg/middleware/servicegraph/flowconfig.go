@@ -5,9 +5,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/tigera/es-proxy/pkg/k8s"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 type FlowConfig struct {
@@ -22,7 +22,7 @@ func GetFlowConfig(ctx context.Context, cs k8s.ClientSet) (*FlowConfig, error) {
 		return nil, err
 	}
 
-	// Assume the default flush interval unless explicily overridden.
+	// Assume the default flush interval unless explicitly overridden.
 	l3FlowFlushInterval := time.Minute * 5
 	if felixConfig.Spec.FlowLogsFlushInterval != nil {
 		l3FlowFlushInterval = felixConfig.Spec.FlowLogsFlushInterval.Duration

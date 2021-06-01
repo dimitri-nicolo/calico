@@ -5,13 +5,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/tigera/es-proxy/pkg/k8s"
-
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 // The NameHelper is used to modify the names in the flow and event data based on request-specific parameters.
@@ -39,7 +38,7 @@ type nameHelper struct {
 	hepToHostname map[string]string
 }
 
-func GetNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSelector) (NameHelper, error) {
+func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSelector) (NameHelper, error) {
 	hh := &nameHelper{}
 
 	wg := sync.WaitGroup{}
@@ -232,10 +231,8 @@ func (ah *nameHelper) GetCompiledHostNamesFromAggregatedName(aggrName string) []
 	if len(ah.aggrNameToHostnames) <= 1 {
 		return nil
 	}
-
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
-
 	return ah.aggrNameToHostnames[aggrName]
 }
 
@@ -243,9 +240,29 @@ func (ah *nameHelper) GetCompiledHostNamesFromAggregatedName(aggrName string) []
 // The caller should be holding the read-lock.
 func (ah *nameHelper) addAdditionalWildcardAggregatedNode(name string) {
 	ah.lock.RUnlock()
+	defer ah.lock.RLock()
 	ah.lock.Lock()
+	defer ah.lock.Unlock()
 	ah.hostNameToAggrName[name] = "*"
 	ah.aggrNameToHostnames["*"] = append(ah.aggrNameToHostnames["*"], name)
-	ah.lock.Unlock()
-	ah.lock.RLock()
+}
+
+// ---- Mocked helper for testing ----
+
+func NewMockNameHelper(hostNameToAggrName map[string]string, hepToHostname map[string]string) NameHelper {
+	if hostNameToAggrName == nil {
+		hostNameToAggrName = make(map[string]string)
+	}
+	if hepToHostname == nil {
+		hepToHostname = make(map[string]string)
+	}
+	aggrNameToHostnames := make(map[string][]string)
+	for h, a := range hostNameToAggrName {
+		aggrNameToHostnames[a] = append(aggrNameToHostnames[a], h)
+	}
+	return &nameHelper{
+		hostNameToAggrName:  hostNameToAggrName,
+		aggrNameToHostnames: aggrNameToHostnames,
+		hepToHostname:       hepToHostname,
+	}
 }

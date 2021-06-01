@@ -10,17 +10,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/es-proxy/pkg/k8s"
-
 	log "github.com/sirupsen/logrus"
-
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	lmaelastic "github.com/tigera/lma/pkg/elastic"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 const (

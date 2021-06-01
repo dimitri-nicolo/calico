@@ -67,45 +67,48 @@ func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGra
 		return n.Node
 	}
 
-	// Determine which nodes are in view from the tracked data. If there is no view, this will return nil indicating
-	// all nodes and edges should be included.
 	nodesInView := s.getNodesInView()
 
-	// Copy across edges that are in view, and update the nodes to indicate whether we are truncating the graph (i.e.
-	// that the graph can be followed along it's ingress or egress connections).
-	for id, edge := range s.edgesMap {
-		sourceInFocus := nodesInView == nil || nodesInView.Contains(id.SourceNodeID)
-		destInFocus := nodesInView == nil || nodesInView.Contains(id.DestNodeID)
-		if sourceInFocus && destInFocus {
-			sgr.Edges = append(sgr.Edges, *edge)
-		} else if sourceInFocus {
-			// Destination is not in Focus, but this means the egress can be Expanded for the source node. Mark this
-			// on the group rather than the endpoint.
-			getGroupNode(id.SourceNodeID).FollowEgress = true
-		} else if destInFocus {
-			// Source is not in Focus, but this means the ingress can be Expanded for the dest node. Mark this
-			// on the group rather than the endpoint.
-			getGroupNode(id.DestNodeID).FollowIngress = true
-		}
-	}
-
-	// Overlay alerts on to the graph.
+	// Overlay the events on the in-view nodes.
 	s.overlayEvents(nodesInView)
 
-	if nodesInView == nil {
-		// No view, copy all nodes.
-		sgr.Nodes = make([]v1.GraphNode, 0, len(s.nodesMap))
-		for _, n := range s.nodesMap {
-			sgr.Nodes = append(sgr.Nodes, *n.Node)
+	if nodesInView != nil && nodesInView.Len() > 0 {
+		// Copy across edges that are in view, and update the nodes to indicate whether we are truncating the graph (i.e.
+		// that the graph can be followed along it's ingress or egress connections).
+		for id, edge := range s.edgesMap {
+			sourceInView := nodesInView.Contains(id.SourceNodeID)
+			destInView := nodesInView.Contains(id.DestNodeID)
+			if sourceInView && destInView {
+				sgr.Edges = append(sgr.Edges, *edge)
+			} else if sourceInView {
+				// Destination is not in view, but this means the egress can be Expanded for the source node. Mark this
+				// on the group rather than the endpoint.
+				getGroupNode(id.SourceNodeID).FollowEgress = true
+			} else if destInView {
+				// Source is not in view, but this means the ingress can be Expanded for the dest node. Mark this
+				// on the group rather than the endpoint.
+				getGroupNode(id.DestNodeID).FollowIngress = true
+			}
 		}
-	} else {
-		// We have a view so copy across the nodes in the view.
+
+		// Copy across the nodes that are in view.
 		sgr.Nodes = make([]v1.GraphNode, 0, nodesInView.Len())
 		nodesInView.Iter(func(item interface{}) error {
 			id := item.(v1.GraphNodeID)
 			sgr.Nodes = append(sgr.Nodes, *s.nodesMap[id].Node)
 			return nil
 		})
+	} else if nodesInView == nil && len(s.nodesMap) > 0 {
+		// There is no focus, which means everything is in view, and there are some nodes to return.  Include them all
+		// and all edges.
+		sgr.Nodes = make([]v1.GraphNode, 0, len(s.nodesMap))
+		for _, n := range s.nodesMap {
+			sgr.Nodes = append(sgr.Nodes, *n.Node)
+		}
+		sgr.Edges = make([]v1.GraphEdge, 0, len(s.edgesMap))
+		for _, edge := range s.edgesMap {
+			sgr.Edges = append(sgr.Edges, *edge)
+		}
 	}
 
 	// Trace out the nodes and edges if the log level is debug.
@@ -655,126 +658,80 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 	groupsInView := set.New()
 	expandIngress := set.New()
 	expandEgress := set.New()
-	followed := set.New()
+	expandFollowing := set.New()
 	for id, gp := range s.groupsMap {
 		if gp.isInFocus {
-			log.Debugf("Group is in view: %s", id)
+			log.Debugf("Expand ingress and egress for in-focus node: %s", id)
 			groupsInView.Add(gp)
-			gp.processedIngress = true
-			gp.ingress.Iter(func(item interface{}) error {
-				directlyConnectedGp := item.(*trackedGroup)
-				if !directlyConnectedGp.processedIngress {
-					log.Debugf("Expanding directly connected ingress to: %s", directlyConnectedGp.id)
-					expandIngress.Add(directlyConnectedGp)
-				}
-				return nil
-			})
-
-			gp.processedEgress = true
-			gp.egress.Iter(func(item interface{}) error {
-				directlyConnectedGp := item.(*trackedGroup)
-				log.Debugf("Expanding directly connected egress to: %s", directlyConnectedGp.id)
-				followed.Add(directlyConnectedGp)
-				return nil
-			})
-			groupsInView.Add(gp)
+			expandIngress.Add(gp)
+			expandEgress.Add(gp)
 		}
 	}
 
-	// Expand in-Focus nodes in ingress Direction.
+	// Expand in-Focus nodes in ingress Direction and possibly follow connection direction.
 	for expandIngress.Len() > 0 {
 		expandIngress.Iter(func(item interface{}) error {
 			gp := item.(*trackedGroup)
-			groupsInView.Add(gp)
+			if gp.processedIngress {
+				return set.RemoveItem
+			}
+
+			// Add ingress nodes for this group.
 			gp.processedIngress = true
-			log.Debugf("Adding group to view: %s", gp.id)
-
-			if s.view.FollowConnectionDirection {
-				// We are following the connection so keep expanding along the connection direction
-				gp.ingress.Iter(func(item interface{}) error {
-					indirectlyConnectedGp := item.(*trackedGroup)
-					if !indirectlyConnectedGp.processedIngress {
-						log.Debugf("Expanding along ingress direction to: %s", indirectlyConnectedGp.id)
-						expandIngress.Add(indirectlyConnectedGp)
-					}
-					return nil
-				})
-			} else if gp.isFollowingIngress {
-				// We are explicitly following the ingress connection so add to the followed set.
-				gp.ingress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following ingress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
-
-			// If the egress is being followed add it to the followed set.
-			if gp.isFollowingEgress {
-				gp.egress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following egress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
+			gp.ingress.Iter(func(item interface{}) error {
+				connectedGp := item.(*trackedGroup)
+				log.Debugf("Including ingress expanded group: %s -> %s", connectedGp.id, gp.id)
+				groupsInView.Add(connectedGp)
+				if s.view.FollowConnectionDirection {
+					expandIngress.Add(connectedGp)
+				} else if connectedGp.isFollowingEgress || connectedGp.isFollowingIngress {
+					log.Debugf("Following ingress and/or egress direction from: %s", connectedGp.id)
+					expandFollowing.Add(connectedGp)
+				}
+				return nil
+			})
 			return set.RemoveItem
 		})
 	}
 
-	// Expand in-Focus nodes in egress Direction.
+	// Expand in-Focus nodes in ingress Direction and possibly follow connection direction.
 	for expandEgress.Len() > 0 {
 		expandEgress.Iter(func(item interface{}) error {
 			gp := item.(*trackedGroup)
-			groupsInView.Add(gp)
+			if gp.processedEgress {
+				return set.RemoveItem
+			}
+
+			// Add egress nodes for this group.
 			gp.processedEgress = true
-			log.Debugf("Adding group to view: %s", gp.id)
+			gp.egress.Iter(func(item interface{}) error {
+				connectedGp := item.(*trackedGroup)
+				log.Debugf("Including egress expanded group: %s -> %s", gp.id, connectedGp.id)
+				groupsInView.Add(connectedGp)
 
-			if s.view.FollowConnectionDirection {
-				// We are following the connection so keep expanding along the connection direction
-				gp.egress.Iter(func(item interface{}) error {
-					indirectlyConnectedGp := item.(*trackedGroup)
-					if !indirectlyConnectedGp.processedEgress {
-						log.Debugf("Expanding egress to: %s", indirectlyConnectedGp.id)
-						expandEgress.Add(indirectlyConnectedGp)
-					}
-					return nil
-				})
-			} else if gp.isFollowingEgress {
-				// We are explicitly following the egress connection so add to the followed set.
-				gp.egress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following egress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
-
-			// If the ingress is being followed add it to the followed set.
-			if gp.isFollowingIngress {
-				gp.ingress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following ingress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
+				if s.view.FollowConnectionDirection {
+					expandEgress.Add(connectedGp)
+				} else if connectedGp.isFollowingEgress || connectedGp.isFollowingIngress {
+					log.Debugf("Following ingress and/or egress direction from: %s", connectedGp.id)
+					expandFollowing.Add(connectedGp)
+				}
+				return nil
+			})
 			return set.RemoveItem
 		})
 	}
 
 	// Expand followed nodes.
-	for followed.Len() > 0 {
-		followed.Iter(func(item interface{}) error {
+	for expandFollowing.Len() > 0 {
+		expandFollowing.Iter(func(item interface{}) error {
 			gp := item.(*trackedGroup)
-			groupsInView.Add(gp)
-			log.Debugf("Adding group to view: %s", gp.id)
 			if gp.isFollowingIngress && !gp.processedIngress {
 				gp.processedIngress = true
 				gp.ingress.Iter(func(item interface{}) error {
 					followedGp := item.(*trackedGroup)
-					log.Debugf("Following ingress to: %s", followedGp.id)
-					followed.Add(followedGp)
+					log.Debugf("Following ingress from %s to %s", gp.id, followedGp.id)
+					groupsInView.Add(followedGp)
+					expandFollowing.Add(followedGp)
 					return nil
 				})
 			}
@@ -782,8 +739,9 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 				gp.processedEgress = true
 				gp.egress.Iter(func(item interface{}) error {
 					followedGp := item.(*trackedGroup)
-					log.Debugf("Following egress to: %s", followedGp.id)
-					followed.Add(followedGp)
+					log.Debugf("Following egress from %s to %s", gp.id, followedGp.id)
+					groupsInView.Add(followedGp)
+					expandFollowing.Add(followedGp)
 					return nil
 				})
 			}

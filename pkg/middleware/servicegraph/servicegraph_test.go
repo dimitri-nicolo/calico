@@ -1,0 +1,561 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+package servicegraph_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
+
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+)
+
+const (
+	timeStrFrom = "2021-05-30T21:23:10Z"
+	timeStrTo   = "2021-05-30T21:38:10Z"
+)
+
+var _ = Describe("Service graph data tests", func() {
+	// Track last handled response filename and expected data.
+	var actualDataFilename string
+	var actualData map[string]interface{}
+
+	AfterEach(func() {
+		// If the test failed then write out the actual contents of the file. We can verify the data by hand and if
+		// correct rename (by removing the .actual from the name).
+		if CurrentGinkgoTestDescription().Failed && actualData != nil && actualDataFilename != "" {
+			formatted, err := json.MarshalIndent(actualData, "", "  ")
+			Expect(err).NotTo(HaveOccurred())
+			err = ioutil.WriteFile(actualDataFilename, formatted, os.ModePerm)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		actualData = nil
+		actualDataFilename = ""
+	})
+
+	DescribeTable("valid request parameters",
+		func(sgr v1.ServiceGraphRequest, code int, resp string, rbac RBACFilter, names NameHelper) {
+			// Load data.
+			var l3 []L3Flow
+			var l7 []L7Flow
+			var events []Event
+
+			content, err := ioutil.ReadFile("testdata/l3.json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &l3)
+			Expect(err).NotTo(HaveOccurred())
+
+			content, err = ioutil.ReadFile("testdata/l7.json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &l7)
+			Expect(err).NotTo(HaveOccurred())
+
+			content, err = ioutil.ReadFile("testdata/events.json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &events)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a mock backend.
+			mb := &MockServiceGraphBackend{
+				FlowConfig: FlowConfig{
+					L3FlowFlushInterval: time.Minute * 5,
+					L7FlowFlushInterval: time.Minute * 5,
+					DNSLogFlushInterval: time.Minute * 5,
+				},
+				L3:         l3,
+				L7:         l7,
+				Events:     events,
+				RBACFilter: rbac,
+				NameHelper: names,
+			}
+
+			// Create a service graph.
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			sg := NewServiceGraphWithBackend(ctx, mb, &Config{
+				ServiceGraphCacheMaxEntries:        1,
+				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
+				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
+				ServiceGraphCachePollQueryInterval: 5 * time.Minute,
+				ServiceGraphCacheDataSettleTime:    5 * time.Minute,
+			})
+
+			// Fix the time range in the request.
+			timeFrom, err := time.Parse(time.RFC3339, timeStrFrom)
+			Expect(err).NotTo(HaveOccurred())
+			timeTo, err := time.Parse(time.RFC3339, timeStrTo)
+			Expect(err).NotTo(HaveOccurred())
+			sgr.TimeRange.From = timeFrom
+			sgr.TimeRange.To = timeTo
+
+			// Marshal the request and create an HTTP request
+			sgrb, err := json.Marshal(sgr)
+			Expect(err).NotTo(HaveOccurred())
+			body := ioutil.NopCloser(bytes.NewReader(sgrb))
+			req, err := http.NewRequest("POST", "/serviceGraph", body)
+			Expect(err).NotTo(HaveOccurred())
+			req = req.WithContext(ctx)
+
+			// Pass it through the handler
+			handler := sg.Handler()
+			writer := httptest.NewRecorder()
+			handler.ServeHTTP(writer, req)
+			Expect(writer.Code).To(Equal(code))
+
+			// The remaining checks are only applicable if the response was 200 OK.
+			if code != http.StatusOK {
+				Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp))
+				return
+			}
+
+			// Parse the response. Unmarshal into a generic map for easier comparison (also we haven't implemented
+			// all the unmarshal methods required)
+			var actual map[string]interface{}
+			err = json.Unmarshal(writer.Body.Bytes(), &actual)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actual).To(HaveKey("time_intervals"))
+			Expect(actual).To(HaveKey("nodes"))
+			Expect(actual).To(HaveKey("edges"))
+			if actual["edges"] != nil {
+				Expect(actual["edges"]).To(BeAssignableToTypeOf([]interface{}{}))
+			}
+			if actual["nodes"] != nil {
+				Expect(actual["nodes"]).To(BeAssignableToTypeOf([]interface{}{}))
+			}
+
+			// Track the last handled response data and the response filename. We use this to write out the expected
+			// file in the event of an error.  It makes dev cycles easier.
+			actualData = actual
+			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
+
+			// Parse the expected response.
+			var expected map[string]interface{}
+			content, err = ioutil.ReadFile("testdata/responses/test-" + resp + ".json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &expected)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(expected).To(HaveKey("time_intervals"))
+			Expect(expected).To(HaveKey("nodes"))
+			Expect(expected).To(HaveKey("edges"))
+			if actual["edges"] == nil {
+				Expect(expected["edges"]).To(BeNil())
+			} else {
+				Expect(expected["edges"]).To(BeAssignableToTypeOf([]interface{}{}))
+			}
+			if actual["nodes"] == nil {
+				Expect(actual["nodes"]).To(BeNil())
+			} else {
+				Expect(expected["nodes"]).To(BeAssignableToTypeOf([]interface{}{}))
+			}
+
+			// Compile the set of node and edge IDs and compare - just comparing the node and edge IDs makes development
+			// and sanity checking these test much easier.
+			var actualEdgeIds []interface{}
+			var actualNodeIds []interface{}
+			var expectedEdgeIds []interface{}
+			var expectedNodeIds []interface{}
+			if actual["edges"] != nil {
+				for _, edge := range actual["edges"].([]interface{}) {
+					Expect(edge).To(BeAssignableToTypeOf(map[string]interface{}{}))
+					actualEdgeIds = append(actualEdgeIds, edge.(map[string]interface{})["id"])
+				}
+				for _, edge := range expected["edges"].([]interface{}) {
+					Expect(edge).To(BeAssignableToTypeOf(map[string]interface{}{}))
+					expectedEdgeIds = append(expectedEdgeIds, edge.(map[string]interface{})["id"])
+				}
+			}
+			if actual["nodes"] != nil {
+				for _, node := range actual["nodes"].([]interface{}) {
+					Expect(node).To(BeAssignableToTypeOf(map[string]interface{}{}))
+					actualNodeIds = append(actualNodeIds, node.(map[string]interface{})["id"])
+				}
+				for _, node := range expected["nodes"].([]interface{}) {
+					Expect(node).To(BeAssignableToTypeOf(map[string]interface{}{}))
+					expectedNodeIds = append(expectedNodeIds, node.(map[string]interface{})["id"])
+				}
+			}
+
+			Expect(actualEdgeIds).To(ConsistOf(expectedEdgeIds))
+			Expect(actualNodeIds).To(ConsistOf(expectedNodeIds))
+
+			// Compare the full sets of data ignoring the order of the slices.
+			Expect(actual["time_intervals"]).To(Equal(expected["time_intervals"]))
+			if actual["edges"] != nil {
+				Expect(actual["edges"]).To(ConsistOf(expected["edges"]))
+			}
+			if actual["nodes"] != nil {
+				Expect(actual["nodes"]).To(ConsistOf(expected["nodes"]))
+			}
+		},
+		Entry("No request parameters",
+			v1.ServiceGraphRequest{}, http.StatusOK, "001-no-req-parms", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Non-nil empty request parameters",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:                    []v1.GraphNodeID{},
+					Expanded:                 []v1.GraphNodeID{},
+					HostAggregationSelectors: []v1.NamedSelector{},
+					FollowedEgress:           []v1.GraphNodeID{},
+					FollowedIngress:          []v1.GraphNodeID{},
+					Layers:                   []v1.Layer{},
+				},
+			}, http.StatusOK, "001-no-req-parms", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus on storefront",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus: []v1.GraphNodeID{"namespace/storefront"},
+				},
+			}, http.StatusOK, "002-focus-storefront", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus and expand storefront",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"namespace/storefront"},
+					Expanded: []v1.GraphNodeID{"namespace/storefront"},
+				},
+			}, http.StatusOK, "003-focus-expand-storefront", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus and expand storefront, follow ingress",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:           []v1.GraphNodeID{"namespace/storefront"},
+					Expanded:        []v1.GraphNodeID{"namespace/storefront"},
+					FollowedIngress: []v1.GraphNodeID{"hosts/*"},
+				},
+			}, http.StatusOK, "004-focus-expand-storefront-follow-ingress", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus and expand storefront, follow egress",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:          []v1.GraphNodeID{"namespace/storefront"},
+					Expanded:       []v1.GraphNodeID{"namespace/storefront"},
+					FollowedEgress: []v1.GraphNodeID{"hosts/*"},
+				},
+			}, http.StatusOK, "005-focus-expand-storefront-follow-egress", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Split ingress and egress",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					SplitIngressEgress: true,
+				},
+			}, http.StatusOK, "006-split-ingress-egress", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Follow connection direction",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:                     []v1.GraphNodeID{"namespace/tigera-elasticsearch"},
+					FollowConnectionDirection: true,
+				},
+			}, http.StatusOK, "007-elastic-follow", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Follow connection direction with split ingress/egress",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:                     []v1.GraphNodeID{"namespace/tigera-elasticsearch"},
+					FollowConnectionDirection: true,
+					SplitIngressEgress:        true,
+				},
+			}, http.StatusOK, "008-elastic-follow-split", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Infrastructure layer, no focus",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Layers: []v1.Layer{{
+						Name: "infrastructure-tigera",
+						Nodes: []v1.GraphNodeID{
+							"namespace/tigera-kibana",
+							"namespace/tigera-fluentd",
+							"namespace/tigera-manager",
+							"namespace/tigera-compliance",
+							"namespace/tigera-eck-operator",
+							"namespace/tigera-elasticsearch",
+							"namespace/tigera-intrusion-detection",
+							"namespace/tigera-prometheus",
+							"namespace/tigera-system",
+						},
+					}, {
+						Name: "infrastructure-kubernetes",
+						Nodes: []v1.GraphNodeID{
+							"namespace/calico-system",
+							"namespace/kube-system",
+							"namespace/crc-local-storage-system",
+							"svcgp;svc/default/kubernetes",
+						},
+					}},
+				},
+			}, http.StatusOK, "009-infra-layers-no-focus", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("No request parameters, no permissions",
+			v1.ServiceGraphRequest{}, http.StatusOK, "010-no-req-parms-no-permissions", MockRBACFilterIncludeNone{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("No request parameters, aggregating nodes",
+			v1.ServiceGraphRequest{}, http.StatusOK, "011-no-req-parms-host-aggr", MockRBACFilterIncludeAll{},
+			NewMockNameHelper(map[string]string{
+				"rob-bz-q5fq-kadm-infra-0": "infra",
+				"rob-bz-q5fq-kadm-node-1":  "worker",
+				"rob-bz-q5fq-kadm-node-0":  "worker",
+			}, nil),
+		),
+		Entry("No request parameters, aggregating nodes, expanded node",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Expanded: []v1.GraphNodeID{"hosts/worker"},
+				},
+			}, http.StatusOK, "012-no-req-parms-host-aggr-expand", MockRBACFilterIncludeAll{},
+			NewMockNameHelper(map[string]string{
+				"rob-bz-q5fq-kadm-infra-0": "infra",
+				"rob-bz-q5fq-kadm-node-1":  "worker",
+				"rob-bz-q5fq-kadm-node-0":  "worker",
+			}, nil),
+		),
+	)
+
+	DescribeTable("badly formatted requests",
+		func(sgr string, code int, resp string) {
+			// Load data.
+			var l3 []L3Flow
+			var l7 []L7Flow
+			var events []Event
+
+			content, err := ioutil.ReadFile("testdata/l3.json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &l3)
+			Expect(err).NotTo(HaveOccurred())
+
+			content, err = ioutil.ReadFile("testdata/l7.json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &l7)
+			Expect(err).NotTo(HaveOccurred())
+
+			content, err = ioutil.ReadFile("testdata/events.json")
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(content, &events)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a mock backend.
+			mb := &MockServiceGraphBackend{
+				FlowConfig: FlowConfig{
+					L3FlowFlushInterval: time.Minute * 5,
+					L7FlowFlushInterval: time.Minute * 5,
+					DNSLogFlushInterval: time.Minute * 5,
+				},
+				L3:         l3,
+				L7:         l7,
+				Events:     events,
+				RBACFilter: MockRBACFilterIncludeAll{},
+				NameHelper: NewMockNameHelper(nil, nil),
+			}
+
+			// Create a service graph.
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			sg := NewServiceGraphWithBackend(ctx, mb, &Config{
+				ServiceGraphCacheMaxEntries:        1,
+				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
+				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
+				ServiceGraphCachePollQueryInterval: 5 * time.Minute,
+				ServiceGraphCacheDataSettleTime:    5 * time.Minute,
+			})
+
+			// Marshal the request and create an HTTP request
+			body := ioutil.NopCloser(strings.NewReader(sgr))
+			req, err := http.NewRequest("POST", "/serviceGraph", body)
+			Expect(err).NotTo(HaveOccurred())
+			req = req.WithContext(ctx)
+
+			// Pass it through the handler
+			handler := sg.Handler()
+			writer := httptest.NewRecorder()
+			handler.ServeHTTP(writer, req)
+			Expect(writer.Code).To(Equal(code))
+			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp))
+		},
+		Entry("bad focus node ID",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"focus": ["foobar/baz"]
+				}
+			}`, http.StatusBadRequest, "invalid focus node: unexpected format of node ID foobar/baz",
+		),
+		Entry("bad expanded node ID",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"expanded": ["namespace/abc/def"]
+				}
+			}`, http.StatusBadRequest, "invalid expanded node: unexpected format of node ID namespace/abc/def",
+		),
+		Entry("bad followed_ingress node ID",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"followed_ingress": ["hosts/%Rlsdf!"]
+				}
+			}`, http.StatusBadRequest, "invalid followed_ingress node: unexpected format of node ID hosts/%Rlsdf!: badly formatted segment",
+		),
+		Entry("bad followed_egress node ID",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"followed_egress": ["port/tcp/thing;hosts/*"]
+				}
+			}`, http.StatusBadRequest, "invalid followed_egress node: unexpected format of node ID port/tcp/thing;hosts/*: port is not a number",
+		),
+		Entry("bad layer node ID",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"layers": [{
+						"name": "test",
+						"nodes": ["svc"]
+					}]
+				}
+			}`, http.StatusBadRequest, "invalid layer node: unexpected format of node ID svc",
+		),
+		Entry("bad layer name",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"layers": [{
+						"name": "test@",
+						"nodes": ["namespace/n"]
+					}]
+				}
+			}`, http.StatusBadRequest, "invalid layer name: test@",
+		),
+		Entry("duplicate layer name",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"layers": [{
+						"name": "test",
+						"nodes": ["namespace/n"]
+					}, {
+						"name": "test",
+						"nodes": ["namespace/n2"]
+					}]
+				}
+			}`, http.StatusBadRequest, "duplicate layer name specified: test",
+		),
+		Entry("bad aggregated hosts name",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"host_aggregation_selectors": [{
+						"name": "test@",
+						"selector": "all()"
+					}]
+				}
+			}`, http.StatusBadRequest, "invalid aggregated host name: test@",
+		),
+		Entry("duplicate aggregated host names",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"host_aggregation_selectors": [{
+						"name": "test",
+						"selectors": "all()"
+					}, {
+						"name": "test",
+						"selector": "all()"
+					}]
+				}
+			}`, http.StatusBadRequest, "duplicate aggregated host name specified: test",
+		),
+		Entry("invalid host aggregation selector",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+				"selected_view": {
+					"host_aggregation_selectors": [{
+						"name": "test",
+						"selector": "foobar()"
+					}]
+				}
+			}`, http.StatusBadRequest, "invalid request: invalid selector: foobar()",
+		),
+		Entry("invalid json syntax",
+			`{
+				"time_range": {
+					"from": "now-15m",
+					"to": "now"
+				},
+			}`, http.StatusBadRequest, "invalid request: invalid character '}' looking for beginning of object key string",
+		),
+		Entry("reversed relative time range",
+			`{
+				"time_range": {
+					"from": "now",
+					"to": "now-15m"
+				}
+			}`, http.StatusBadRequest, "invalid request: invalid time range specified: from (now) is after to (now-15m)",
+		),
+		Entry("reversed absolute time range",
+			`{
+				"time_range": {
+					"from": "2021-05-30T21:38:10Z",
+					"to": "2021-05-30T21:23:10Z"
+				}
+			}`, http.StatusBadRequest, "invalid request: invalid time range specified: from (2021-05-30T21:38:10Z) is after to (2021-05-30T21:23:10Z)",
+		),
+		Entry("mix relative time range",
+			`{
+				"time_range": {
+					"from": "now",
+					"to": "2021-05-30T21:38:10Z"
+				}
+			}`, http.StatusBadRequest, "invalid request: time range values must either both be explicit times or both be relative to now",
+		),
+		Entry("bad time range from value",
+			`{
+				"time_range": {
+					"from": "nox",
+					"to": "2021-05-30T21:38:10Z"
+				}
+			}`, http.StatusBadRequest, "invalid request: time range from value is invalid: nox",
+		),
+	)
+})

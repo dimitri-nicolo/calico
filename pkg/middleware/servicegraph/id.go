@@ -297,7 +297,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				}
 			}
 			if !allowed {
-				return nil, fmt.Errorf("invalid format for ID: %s", id)
+				return nil, fmt.Errorf("unexpected format of node ID: %s", id)
 			}
 		}
 
@@ -329,11 +329,11 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				switch field {
 				case idpServicePort:
 					if !IDValueAllowedEmptyRegex.MatchString(parts[idx]) {
-						return nil, fmt.Errorf("invalid format of graph node ID %s: unexpected empty segment", id)
+						return nil, fmt.Errorf("unexpected format of node ID %s: unexpected empty segment", id)
 					}
 				default:
 					if !IDValueRegex.MatchString(parts[idx]) {
-						return nil, fmt.Errorf("invalid format of graph node ID %s: badly formatted segment", id)
+						return nil, fmt.Errorf("unexpected format of node ID %s: badly formatted segment", id)
 					}
 				}
 
@@ -355,7 +355,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				case idpPort:
 					val, err := strconv.Atoi(parts[idx])
 					if err != nil {
-						return nil, fmt.Errorf("invalid format of graph node ID %s: Port is not a number: %v", id, err)
+						return nil, fmt.Errorf("unexpected format of node ID %s: port is not a number", id)
 					}
 					idf.Endpoint.Port = val
 				case idpServiceNamespace:
@@ -367,7 +367,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				case idpDirection:
 					idf.Direction = Direction(parts[idx])
 				default:
-					return nil, fmt.Errorf("invalid format of graph node ID %s: unexpected node type", id)
+					return nil, fmt.Errorf("unexpected format of node ID %s: unexpected node type", id)
 				}
 			}
 			break
@@ -379,7 +379,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 		if isServiceGroup && thisType == v1.GraphNodeTypeService {
 			sg := sgs.GetByService(idf.Service.NamespacedName)
 			if idf.ServiceGroup != nil && sg != nil && idf.ServiceGroup != sg {
-				return nil, fmt.Errorf("invalid format of graph node ID %s: unrelated services specified as a group", id)
+				return nil, fmt.Errorf("unexpected format of node ID %s: unrelated services specified as a group", id)
 			}
 			if sg != nil {
 				idf.ServiceGroup = sg
@@ -388,7 +388,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 		}
 
 		if !foundMapping {
-			return nil, fmt.Errorf("invalid format of graph node ID %s", id)
+			return nil, fmt.Errorf("unexpected format of node ID %s", id)
 		}
 
 		previousType = thisType

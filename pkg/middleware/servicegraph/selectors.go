@@ -2,6 +2,8 @@
 package servicegraph
 
 import (
+	"sort"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
@@ -255,6 +257,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		} else {
 			// Multiple (or no) host names, use "in" operator.  The in operator will not include a zero length
 			// comparison (which would be the case if there are no node selectors specified).
+			sort.Strings(hosts)
 			l3Source = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
 				v1.NewGraphSelector(v1.OpIn, "source_name_aggr", hosts),
