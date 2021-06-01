@@ -24,7 +24,7 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/lma v0.0.0-20210601165222-cbb681a8f189
+	github.com/tigera/lma v0.0.0-20210601182811-e7fd697697ab
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
