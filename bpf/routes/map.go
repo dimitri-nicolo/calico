@@ -136,6 +136,10 @@ func (v Value) String() string {
 		parts = append(parts, "same-subnet")
 	}
 
+	if typeFlags&FlagEgressClient != 0 {
+		parts = append(parts, "egress-client")
+	}
+
 	if typeFlags&FlagLocal != 0 && typeFlags&FlagWorkload != 0 {
 		parts = append(parts, "idx", fmt.Sprint(v.IfaceIndex()))
 	}
