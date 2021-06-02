@@ -41,6 +41,12 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 		goto deny;
 	}
 
+	if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+		CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
+		rc = TC_ACT_UNSPEC;
+		goto skip_fib;
+	}
+
 	if (rc == CALI_RES_REDIR_BACK) {
 		int redir_flags = 0;
 		if  (CALI_F_FROM_HOST) {
@@ -150,12 +156,6 @@ skip_redir_ifindex:
 		CALI_DEBUG("FIB ipv4_dst=%x\n", bpf_ntohl(fib_params.ipv4_dst));
 
 		CALI_DEBUG("Traffic is towards the host namespace, doing Linux FIB lookup\n");
-		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
-			CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
-			ctx->skb->mark |= CALI_SKB_MARK_EGRESS;
-			rc = TC_ACT_UNSPEC;
-			goto cancel_fib;
-		}
 		rc = bpf_fib_lookup(ctx->skb, &fib_params, sizeof(fib_params), ctx->fwd.fib_flags);
 		if (rc == 0) {
 			CALI_DEBUG("FIB lookup succeeded\n");
@@ -211,11 +211,16 @@ skip_fib:
 		 * programs know that they're not the first to see the packet.
 		 */
 		ctx->fwd.mark |=  CALI_SKB_MARK_SEEN;
-		if (ctx->state->ct_result.flags & CALI_CT_FLAG_EXT_LOCAL) {
+		if (state->ct_result.flags & CALI_CT_FLAG_EXT_LOCAL) {
 			CALI_DEBUG("To host marked with FLAG_EXT_LOCAL\n");
 			ctx->fwd.mark |= EXT_TO_SVC_MARK;
 		}
+		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+			CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
+			ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
+		}
 		CALI_DEBUG("Traffic is towards host namespace, marking with %x.\n", ctx->fwd.mark);
+
 		/* FIXME: this ignores the mask that we should be using.
 		 * However, if we mask off the bits, then clang spots that it
 		 * can do a 16-bit store instead of a 32-bit load/modify/store,
