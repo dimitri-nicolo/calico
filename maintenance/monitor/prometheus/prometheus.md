@@ -1,7 +1,7 @@
 ---
 title: Configure Prometheus
 description: Configure rules for alerts and denied packets, for persistent storage.
-canonical_url: /maintenance/monitor/prometheus
+canonical_url: /maintenance/monitor/prometheus/prometheus
 ---
 
 ### Updating Denied Packets Rules

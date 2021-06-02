@@ -1,5 +1,5 @@
 ---
-title: Monitor policy metrics
+title: Policy metrics
 description: Monitor the effects of policy in your cluster and received alerts by defining rules and thresholds.
 canonical_url: /maintenance/monitor/metrics
 ---

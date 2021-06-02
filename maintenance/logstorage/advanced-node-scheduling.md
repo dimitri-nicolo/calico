@@ -1,6 +1,6 @@
 ---
 title: Advanced Node Scheduling
-description: Have fine-grained control over where your LogStorage is scheduled.
+description: Control where Elasticsearch pods and replicas are scheduled.
 canonical_url: /maintenance/logstorage/advanced-node-scheduling
 ---
 

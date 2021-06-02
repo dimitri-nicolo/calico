@@ -1,7 +1,7 @@
 ---
+title: Calico Enterprise Manager UI
 description: Get started using the Calico Enterprise Manager user interface.
-show_read_time: false
-show_toc: false
+canonical_url: '/getting-started/cnx/index'
 ---
 
 {{ page.description }}

@@ -82,23 +82,23 @@ section:
   path: /maintenance/monitor/
   section: 
   - title: Prometheus
-    path: /maintenance/monitor/prometheus
+    path: /maintenance/monitor/prometheus/
     section: 
     - title: Configure Prometheus
-      path: /maintenance/monitor/prometheus
+      path: /maintenance/monitor/prometheus/prometheus
     - title: Configure Alertmanager
-      path: /maintenance/monitor/alertmanager
+      path: /maintenance/monitor/prometheus/alertmanager
   - title: Metrics
-    path: /maintenance/monitor/bgp-metrics
+    path: /maintenance/monitor/metrics/
     section: 
-    - title: Monitor BGP metrics
-      path: /maintenance/monitor/bgp-metrics
+    - title: BGP metrics
+      path: /maintenance/monitor/metrics/bgp-metrics
     - title: License metrics
-      path: /maintenance/monitor/license-agent
+      path: /maintenance/monitor/metrics/license-agent
     - title: Policy metrics 
-      path: /maintenance/monitor/metrics
-    - title: Monitor Elasticsearch and Fluentd Metrics
-      path: /maintenance/monitor/elasticsearch-and-fluentd-metrics
+      path: /maintenance/monitor/metrics/metrics
+    - title: Elasticsearch and Fluentd metrics
+      path: /maintenance/monitor/metrics/elasticsearch-and-fluentd-metrics
 - title: Performance and scaling
   path: /maintenance/performance/
   section:

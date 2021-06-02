@@ -1,6 +1,7 @@
 ---
 title: Manage TLS certificates used by Calico Enterprise
-description: Control the issuer of certificates used by Calico Enterprise
+description: Control the issuer of certificates used by Calico Enterprise.
+canonical_url: '/security/comms/certificate-management'
 ---
 
 ### Big picture

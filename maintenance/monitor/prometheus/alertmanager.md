@@ -1,7 +1,7 @@
 ---
 title: Configure Alertmanager
 description: Configure Alertmanager, a Prometheus feature that routes alerts. 
-canonical_url: /maintenance/monitor/alertmanager
+canonical_url: /maintenance/monitor/prometheus/alertmanager
 ---
 
 Alertmanager is used by {{site.prodname}} to route alerts from Prometheus to the administrators.

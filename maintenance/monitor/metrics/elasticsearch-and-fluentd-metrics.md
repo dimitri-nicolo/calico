@@ -1,6 +1,7 @@
 ---
-title: Monitor Elasticsearch and Fluentd metrics
-description: Monitor Elasticsearch and Fluentd metrics and get alerts on log storage or collection issues.
+title: Elasticsearch and Fluentd metrics
+description: Monitor Elasticsearch and Fluentd metrics, and get alerts on log storage or collection issues.
+canonical_url: /maintenance/monitor/metrics/elasticsearch-and-fluentd-metrics
 ---
 
 ### Big picture

@@ -1,6 +1,6 @@
 ---
 title: Authentication quickstart
-description: Get started quickly and log in to Calico Enterprise Manager and Kibana. 
+description: Use default token authentication to log in to Calico Enterprise Manager UI and Kibana. 
 canonical_url: '/getting-started/cnx/authentication-quickstart'
 ---
 

@@ -1,6 +1,7 @@
 ---
-title: Monitor Calico Enterprise license metrics
-description: Use the Prometheus monitoring and alerting tool to get Calico Enterprise license metrics such as nodes used, nodes available, and days until license expires.
+title: License metrics
+description: Monitor Calico Enterprise license metrics such as nodes used, nodes available, and days until license expires.
+canonical_url: /maintenance/monitor/license-agent
 ---
 
 ### Big picture

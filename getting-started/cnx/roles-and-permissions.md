@@ -1,6 +1,6 @@
 ---
 title: Configure user roles and permissions
-description: Configure roles and permissions for {{site.prodname}} features and functions.
+description: Configure roles and permissions for Calico Enterprise features and functions.
 canonical_url: '/getting-started/cnx/roles-and-permissions'
 ---
 
