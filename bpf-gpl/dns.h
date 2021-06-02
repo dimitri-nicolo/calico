@@ -65,10 +65,10 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 
 		// Lookup apparent dst IP and port in cali_v4_srmsg map.  If there's a
 		// hit, henceforth use dst IP and port from the map entry.  (Hit implies
-		// that a DNAT has already happened, because of CTLB being in use, but now
-		// we have the pre-DNAT IP and port.  Miss implies that CTLB isn't in use
-		// or DNAT hasn't happened yet; either way the message in hand already had
-		// the dst IP and port that we need.)
+		// that a DNAT has already happened, because of CTLB being in use, and now
+		// the message has the post-DNAT IP and port.  Miss implies that CTLB
+		// isn't in use or DNAT hasn't happened yet; in those cases the message in
+		// hand still has the dst IP and port that we need.)
 		struct sendrecv4_key key = {
 			.ip	= dst_ip,
 			.port	= dst_port,

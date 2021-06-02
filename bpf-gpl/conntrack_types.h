@@ -41,7 +41,6 @@ enum cali_ct_type {
 #define CALI_CT_FLAG_NP_FWD	0x04 /* marks entry into the tunnel on the fwd node */
 #define CALI_CT_FLAG_SKIP_FIB	0x08 /* marks traffic that should pass through host IP stack */
 #define CALI_CT_FLAG_TRUST_DNS	0x10 /* marks connection to a trusted DNS server */
-#define CALI_CT_FLAG_WORKLOAD	0x20 /* marks a flow that was originated from a workload */
 #define CALI_CT_FLAG_EXT_LOCAL	0x40 /* marks traffic from external client to a local serice */
 
 struct calico_ct_leg {
