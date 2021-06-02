@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package capture_test
 
@@ -31,7 +31,7 @@ var _ = Describe("PacketCapture Storage Tests", func() {
 	It("Cannot call stop with start", func() {
 		var err error
 		var activeCaptures capture.ActiveCaptures
-		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir})
+		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir}, make(chan interface{}))
 		Expect(err).NotTo(HaveOccurred())
 		err, _ = activeCaptures.Remove(capture.Key{CaptureName: "any"})
 		Expect(err).To(HaveOccurred())
@@ -40,7 +40,7 @@ var _ = Describe("PacketCapture Storage Tests", func() {
 	It("Cannot call start multiple times for the same capture", func() {
 		var err error
 		var activeCaptures capture.ActiveCaptures
-		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir})
+		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir}, make(chan interface{}))
 		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, "eth0")
 		Expect(err).NotTo(HaveOccurred())
 		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, "eth0")

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package capture
 
@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/projectcalico/felix/proto"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -38,9 +40,9 @@ type Capture interface {
 
 // PcapFile writes packets captured from an active interface to a pcap file
 type PcapFile interface {
-	// Writes packets to disk that are being read from network interface
+	// Write writes packets to disk that are being read from network interface
 	Write(chan gopacket.Packet) error
-	// Stop capture and closes all used resources. Should not be used without Write()
+	// Done stops capture and closes all used resources. Should not be used without Write()
 	Done()
 }
 
@@ -49,11 +51,14 @@ type rotatingPcapFile struct {
 	directory       string
 	baseName        string
 	deviceName      string
+	namespace       string
+	captureName     string
 	maxSizeBytes    int
 	rotationSeconds int
 	maxFiles        int
 	done            chan struct{}
 	isDone          bool
+	statusUpdates   chan interface{}
 
 	// the parameters below should not be made available to users
 	currentSize  int
@@ -62,6 +67,7 @@ type rotatingPcapFile struct {
 	writer       *pcapgo.Writer
 	handle       *pcap.Handle
 	ticker       *time.Ticker
+	loggingID    string
 }
 
 type Option func(file *rotatingPcapFile)
@@ -95,12 +101,14 @@ func WithMaxFiles(v int) Option {
 }
 
 // NewRotatingPcapFile creates a rotatingPcapFile. It will capture traffic from a live interface
-// defined by deviceName and store under a specified directory. Traffic will be stored on disk
-// using pcap file format. All pcap files will have a name that matches baseName. The pcap
-// file that will is currently used for logging will have {baseName}.pcap format, while older
-// files will have {baseName}{rotationTimestamp}.pcap. Pcap files will be rotated using both
-// time and size and only keep a predefined number of backup files.
-func NewRotatingPcapFile(dir, baseName, deviceName string, opts ...Option) *rotatingPcapFile {
+// defined by deviceName and store under a specified directory. The directory used to stored traffic is
+// defined by {directory}/{namespace}/{captureName}, where directory is a general directory to store all
+// capture files, and namespace and captureName represent the namespace and name of a PacketCapture resource.
+// Traffic will be stored on disk using pcap file format. All pcap files will have a name that matches
+// {podName}_{deviceName}. The pcap file that is currently used for logging will have {podName}_{deviceName}.pcap
+// format, while older files will have {podName}_{deviceName}.{rotationTimestamp}.pcap. Pcap files will be rotated using
+// both time and size and we only keep a predefined number of backup files.
+func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName string, statusUpdates chan interface{}, opts ...Option) *rotatingPcapFile {
 
 	const (
 		defaultMaxSizeBytes    = 10 * 1000 * 1000
@@ -108,14 +116,22 @@ func NewRotatingPcapFile(dir, baseName, deviceName string, opts ...Option) *rota
 		defaultMaxFiles        = 2
 	)
 
+	var captureDirectory = filepath.Join(directory, namespace, captureName)
+	var baseName = fmt.Sprintf("%s_%s", podName, deviceName)
+	var loggingID = fmt.Sprintf("%s/%s/%s", namespace, captureName, deviceName)
+
 	var capture = &rotatingPcapFile{
-		directory:       dir,
+		directory:       captureDirectory,
 		baseName:        baseName,
 		deviceName:      deviceName,
+		namespace:       namespace,
+		captureName:     captureName,
 		maxSizeBytes:    defaultMaxSizeBytes,
 		rotationSeconds: defaultRotationSeconds,
 		maxFiles:        defaultMaxFiles,
 		done:            make(chan struct{}),
+		statusUpdates:   statusUpdates,
+		loggingID:       loggingID,
 	}
 
 	for _, opt := range opts {
@@ -128,23 +144,30 @@ func NewRotatingPcapFile(dir, baseName, deviceName string, opts ...Option) *rota
 
 	return capture
 }
+func (capture *rotatingPcapFile) currentCaptureFileAbsolutePath() string {
+	return filepath.Join(capture.directory, capture.currentCaptureFileName())
+}
+
+func (capture *rotatingPcapFile) currentCaptureFileName() string {
+	return fmt.Sprintf("%s.pcap", capture.baseName)
+}
 
 func (capture *rotatingPcapFile) open() error {
 	var err error
 
-	log.WithField("CAPTURE", capture.deviceName).Debugf("Creating base directory %s", capture.directory)
+	log.WithField("CAPTURE", capture.loggingID).Debugf("Creating base directory %s", capture.directory)
 	err = os.MkdirAll(capture.directory, 0755)
 	if err != nil {
 		return err
 	}
 
-	var currentFile = fmt.Sprintf("%s/%s.pcap", capture.directory, capture.baseName)
+	var currentFile = capture.currentCaptureFileAbsolutePath()
 	var info os.FileInfo
 	if info, err = os.Stat(currentFile); err == nil {
-		log.WithField("CAPTURE", capture.deviceName).Debug("Open existing pcap file")
+		log.WithField("CAPTURE", capture.loggingID).Debug("Open existing pcap file")
 		capture.output, err = os.OpenFile(currentFile, os.O_APPEND|os.O_WRONLY, 0644)
 	} else {
-		log.WithField("CAPTURE", capture.deviceName).Debug("Creating pcap file")
+		log.WithField("CAPTURE", capture.loggingID).Debug("Creating pcap file")
 		capture.output, err = os.OpenFile(currentFile, os.O_CREATE|os.O_WRONLY, 0644)
 	}
 
@@ -152,7 +175,7 @@ func (capture *rotatingPcapFile) open() error {
 		return err
 	}
 
-	log.WithField("CAPTURE", capture.deviceName).Debug("Opening a new writer")
+	log.WithField("CAPTURE", capture.loggingID).Debug("Opening a new writer")
 	capture.writer = pcapgo.NewWriter(capture.output)
 	if info == nil {
 		capture.currentSize = 0
@@ -167,7 +190,7 @@ func (capture *rotatingPcapFile) open() error {
 }
 
 func (capture *rotatingPcapFile) close() error {
-	log.WithField("CAPTURE", capture.deviceName).Debug("Closing pcap file")
+	log.WithField("CAPTURE", capture.loggingID).Debug("Closing pcap file")
 	return capture.output.Close()
 }
 
@@ -197,10 +220,10 @@ func (capture *rotatingPcapFile) rotate() error {
 	}
 
 	var currentTime = time.Now()
-	var newName = fmt.Sprintf("%s/%s-%d.pcap", capture.directory, capture.baseName, currentTime.UnixNano()/1000)
+	var newName = filepath.Join(capture.directory, fmt.Sprintf("%s-%d.pcap", capture.baseName, currentTime.UnixNano()/1000))
 
-	log.WithField("CAPTURE", capture.deviceName).Debugf("Rename pcap file to %s", newName)
-	err = os.Rename(fmt.Sprintf("%s/%s.pcap", capture.directory, capture.baseName), newName)
+	log.WithField("CAPTURE", capture.loggingID).Debugf("Rename pcap file to %s", newName)
+	err = os.Rename(filepath.Join(capture.directory, capture.currentCaptureFileName()), newName)
 	if err != nil {
 		return err
 	}
@@ -210,52 +233,81 @@ func (capture *rotatingPcapFile) rotate() error {
 		return err
 	}
 
-	capture.cleanOlderFiles()
+	var files = capture.cleanOlderFiles()
+
+	go capture.updateStatus(capture.extractFileNames(files))
 
 	return nil
 }
 
-func (capture *rotatingPcapFile) cleanOlderFiles() {
-	var files []os.FileInfo
+func (capture *rotatingPcapFile) extractFileNames(files []os.FileInfo) []string {
+	var fileNames []string
+	for _, f := range files {
+		fileNames = append(fileNames, f.Name())
+	}
+
+	// current capture file was previously filtered when listing the files
+	// and needs to be appended to the received files
+	fileNames = append(fileNames, capture.currentCaptureFileName())
+
+	// Sort files in an ascending alphanumerical
+	sort.Strings(fileNames)
+
+	return fileNames
+}
+
+func (capture *rotatingPcapFile) cleanOlderFiles() []os.FileInfo {
 	var err error
 
 	if capture.maxFiles == 0 {
-		return
+		return nil
 	}
 
 	if _, err = os.Stat(capture.directory); err != nil {
-		return
+		return nil
 	}
 
-	err = filepath.Walk(capture.directory, func(path string, info os.FileInfo, err error) error {
-		if info != nil && !info.IsDir() && strings.HasSuffix(info.Name(), ".pcap") {
-			if info.Name() != fmt.Sprintf("%s.pcap", capture.baseName) {
-				files = append(files, info)
-			}
-		}
-		return nil
-	})
+	err, files := capture.listFiles()
 
 	if err != nil {
-		log.WithField("CAPTURE", capture.deviceName).WithError(err).Errorf("Failed to list directory %s", capture.directory)
+		log.WithField("CAPTURE", capture.loggingID).WithError(err).Errorf("Failed to list directory %s", capture.directory)
 	}
 
-	// Sort files in a descending order using last modification timestamp
+	// Sort files in an ascending order using last modification timestamp
 	sort.Slice(files, func(current, next int) bool {
 		return files[current].ModTime().UnixNano() < files[next].ModTime().UnixNano()
 	})
 
 	if len(files) <= capture.maxFiles {
-		return
+		return files
 	}
 
-	for _, file := range files[:capture.maxFiles-1] {
-		log.WithField("CAPTURE", capture.deviceName).Debugf("Removing %s", file.Name())
-		err = os.Remove(fmt.Sprintf("%s/%s", capture.directory, file.Name()))
+	// We only need to keep the latest maxFiles; older files will be clean up
+	var cutOffIndex = len(files) - capture.maxFiles
+	for _, file := range files[:cutOffIndex] {
+		log.WithField("CAPTURE", capture.loggingID).Debugf("Removing %s", file.Name())
+		err = os.Remove(filepath.Join(capture.directory, file.Name()))
 		if err != nil {
-			log.WithField("CAPTURE", capture.deviceName).WithError(err).Errorf("Failed to remove file %s", file.Name())
+			log.WithField("CAPTURE", capture.loggingID).WithError(err).Errorf("Failed to remove file %s", file.Name())
 		}
 	}
+
+	return files[cutOffIndex:]
+}
+
+func (capture *rotatingPcapFile) listFiles() (error, []os.FileInfo) {
+	var files []os.FileInfo
+	var err error
+
+	err = filepath.Walk(capture.directory, func(path string, info os.FileInfo, err error) error {
+		if info != nil && !info.IsDir() && strings.HasSuffix(info.Name(), ".pcap") {
+			if info.Name() != capture.currentCaptureFileName() {
+				files = append(files, info)
+			}
+		}
+		return nil
+	})
+	return err, files
 }
 
 func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
@@ -264,11 +316,17 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	}
 
 	var err error
-	log.WithField("CAPTURE", capture.deviceName).Debug("Start writing packets to pcap files")
+	log.WithField("CAPTURE", capture.loggingID).Debug("Start writing packets to pcap files")
 	if err = capture.open(); err != nil {
 		return err
 	}
 	defer capture.doDone()
+
+	err, files := capture.listFiles()
+	if err != nil {
+		return err
+	}
+	go capture.updateStatus(capture.extractFileNames(files))
 
 	for {
 		select {
@@ -279,9 +337,9 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 
 			// check if rotation is needed due to size
 			if packet.Metadata().CaptureLength+PacketInfoLen+capture.currentSize > capture.maxSizeBytes {
-				log.WithField("CAPTURE", capture.deviceName).Debug("Will exceed maxSize. Will invoke rotation")
+				log.WithField("CAPTURE", capture.loggingID).Debug("Will exceed maxSize. Will invoke rotation")
 				if err = capture.tryToRotate(); err != nil {
-					log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not rotate file")
+					log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not rotate file")
 					return err
 				}
 			}
@@ -292,9 +350,9 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 			}
 		case <-capture.ticker.C:
 			// rotate based on time
-			log.WithField("CAPTURE", capture.deviceName).Debug("Wil exceed time limit. Will invoke rotation")
+			log.WithField("CAPTURE", capture.loggingID).Debug("Wil exceed time limit. Will invoke rotation")
 			if err = capture.tryToRotate(); err != nil {
-				log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not rotate file")
+				log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not rotate file")
 				return err
 			}
 		case <-capture.done:
@@ -306,7 +364,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 func (capture *rotatingPcapFile) doDone() {
 	var err error
 	if err = capture.close(); err != nil {
-		log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not close file")
+		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not close file")
 	}
 	capture.isDone = true
 	capture.ticker.Stop()
@@ -319,7 +377,7 @@ func (capture *rotatingPcapFile) Done() {
 func (capture *rotatingPcapFile) writePacket(packet gopacket.Packet) error {
 	var err = capture.writer.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
 	if err != nil {
-		log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not write packet")
+		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not write packet")
 		return err
 	}
 	capture.currentSize += len(packet.Data()) + PacketInfoLen
@@ -330,7 +388,7 @@ func (capture *rotatingPcapFile) writeHeader() error {
 	if capture.currentSize == 0 {
 		var err = capture.writer.WriteFileHeader(uint32(maxSizePerPacket), layers.LinkTypeEthernet)
 		if err != nil {
-			log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not write global headers")
+			log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not write global headers")
 			return err
 		}
 		capture.currentSize += GlobalHeaderLen
@@ -353,4 +411,13 @@ func (capture *rotatingPcapFile) Start() error {
 func (capture *rotatingPcapFile) Stop() {
 	capture.Done()
 	capture.handle.Close()
+}
+
+func (capture *rotatingPcapFile) updateStatus(fileNames []string) {
+	var update = &proto.PacketCaptureStatusUpdate{
+		Id:           &proto.PacketCaptureID{Name: capture.captureName, Namespace: capture.namespace},
+		CaptureFiles: fileNames,
+	}
+	log.WithField("CAPTURE", capture.loggingID).Debugf("Sending PacketCaptureStatusUpdate to dataplane for files %v", fileNames)
+	capture.statusUpdates <- update
 }

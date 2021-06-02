@@ -1,12 +1,10 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package capture
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"syscall"
 
 	"k8s.io/utils/strings"
 
@@ -44,9 +42,10 @@ type activeCaptures struct {
 	maxSizeBytes    int
 	rotationSeconds int
 	maxFiles        int
+	statusUpdates   chan interface{}
 }
 
-func NewActiveCaptures(config Config) (ActiveCaptures, error) {
+func NewActiveCaptures(config Config, statusUpdates chan interface{}) (ActiveCaptures, error) {
 	var err = os.MkdirAll(config.Directory, 0755)
 	if err != nil {
 		return nil, err
@@ -59,6 +58,7 @@ func NewActiveCaptures(config Config) (ActiveCaptures, error) {
 		maxSizeBytes:    config.MaxSizeBytes,
 		rotationSeconds: config.RotationSeconds,
 		maxFiles:        config.MaxFiles,
+		statusUpdates:   statusUpdates,
 	}, nil
 }
 
@@ -71,28 +71,28 @@ func (activeCaptures *activeCaptures) Add(key Key, deviceName string) error {
 		return ErrDuplicate
 	}
 
-	var stat syscall.Statfs_t
-	err = syscall.Statfs(activeCaptures.captureDir, &stat)
+	size, err := GetFreeDiskSize(activeCaptures.captureDir)
 	if err != nil {
 		return err
 	}
 
 	// This will check if the free disk capacity can accommodate another capture
-	// The free disk capacity is calculated using :
-	// Bavail (Free blocks available to unprivileged user) multiplied by Frsize (Fragment size)
+	// The free disk capacity is calculated per OS
+
 	// A capture can have at most activeCaptures.maxFiles+1 (max files represents number of rotated files + current file)
 	// of size maxSizeBytes
-	if (stat.Bavail * uint64(stat.Frsize)) <= uint64((activeCaptures.maxFiles+1)*activeCaptures.maxSizeBytes) {
+	if size <= uint64((activeCaptures.maxFiles+1)*activeCaptures.maxSizeBytes) {
 		return ErrNoSpaceLeft
 	}
 
-	var directory = fmt.Sprintf("%s/%s/%s", activeCaptures.captureDir, key.Namespace, key.CaptureName)
 	var _, podName = strings.SplitQualifiedName(key.WorkloadEndpointId)
-	var baseFileName = fmt.Sprintf("%s_%s", podName, deviceName)
 
-	var newCapture = NewRotatingPcapFile(directory,
-		baseFileName,
+	var newCapture = NewRotatingPcapFile(activeCaptures.captureDir,
+		key.Namespace,
+		key.CaptureName,
+		podName,
 		deviceName,
+		activeCaptures.statusUpdates,
 		WithMaxSizeBytes(activeCaptures.maxSizeBytes),
 		WithRotationSeconds(activeCaptures.rotationSeconds),
 		WithMaxFiles(activeCaptures.maxFiles),

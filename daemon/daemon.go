@@ -58,6 +58,7 @@ import (
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	_ "github.com/projectcalico/felix/config"
@@ -634,6 +635,10 @@ configRetry:
 		dpConnector.statusReporter.Start()
 	}
 
+	if dpConnector.captureStatusWriter != nil {
+		dpConnector.captureStatusWriter.Start()
+	}
+
 	// Start communicating with the dataplane driver.
 	dpConnector.Start()
 
@@ -1010,6 +1015,8 @@ type DataplaneConnector struct {
 	datastore                  bapi.Client
 	datastorev3                client.Interface
 	statusReporter             *statusrep.EndpointStatusReporter
+	captureStatusWriter        *capture.StatusWriter
+	captureStatusUpdates       chan *proto.PacketCaptureStatusUpdate
 
 	datastoreInSync bool
 
@@ -1029,6 +1036,8 @@ func newConnector(configParams *config.Config,
 	dataplane dp.DataplaneDriver,
 	failureReportChan chan<- string,
 ) *DataplaneConnector {
+	var captureStatusUpdates = make(chan *proto.PacketCaptureStatusUpdate, 100)
+
 	felixConn := &DataplaneConnector{
 		config:                           configParams,
 		configUpdChan:                    configUpdChan,
@@ -1040,6 +1049,8 @@ func newConnector(configParams *config.Config,
 		failureReportChan:                failureReportChan,
 		dataplane:                        dataplane,
 		wireguardStatUpdateFromDataplane: make(chan *proto.WireguardStatusUpdate, 1),
+		captureStatusUpdates:             captureStatusUpdates,
+		captureStatusWriter:              capture.NewStatusWriter(configParams.FelixHostname, configParams.CaptureDir, datastorev3.PacketCaptures(), captureStatusUpdates, 2*time.Second),
 	}
 	return felixConn
 }
@@ -1078,6 +1089,10 @@ func (fc *DataplaneConnector) readMessagesFromDataplane() {
 			}
 		case *proto.WireguardStatusUpdate:
 			fc.wireguardStatUpdateFromDataplane <- msg
+		case *proto.PacketCaptureStatusUpdate:
+			if fc.captureStatusWriter != nil {
+				fc.captureStatusUpdates <- msg
+			}
 		default:
 			log.WithField("msg", msg).Warning("Unknown message from dataplane")
 		}
