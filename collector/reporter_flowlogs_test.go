@@ -23,7 +23,7 @@ var (
 	logStreamName = "test-stream"
 	flushInterval = 500 * time.Millisecond
 	includeLabels = false
-	noService     = FlowService{Namespace: "-", Name: "-", Port: "-"}
+	noService     = FlowService{Namespace: "-", Name: "-", PortName: "-", PortNum: 0}
 )
 
 var (

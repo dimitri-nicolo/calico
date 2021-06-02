@@ -68,7 +68,8 @@ var (
 		DstService: FlowService{
 			Namespace: "foo-ns",
 			Name:      "foo-svc",
-			Port:      "foo-port",
+			PortName:  "foo-port",
+			PortNum:   8080,
 		},
 		Action:   "allow",
 		Reporter: "dst",
@@ -297,7 +298,8 @@ var (
 		DstService: FlowService{
 			Namespace: "foo-ns",
 			Name:      "foo-svc",
-			Port:      "-",
+			PortName:  "-",
+			PortNum:   8080,
 		},
 		Action:   "allow",
 		Reporter: "dst",
@@ -450,14 +452,16 @@ var (
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 
-		dstService: proxy.ServicePortName{
-			NamespacedName: types.NamespacedName{
-				Namespace: "foo-ns",
-				Name:      "foo-svc",
+		dstService: MetricServiceInfo{
+			proxy.ServicePortName{
+				NamespacedName: types.NamespacedName{
+					Namespace: "foo-ns",
+					Name:      "foo-svc",
+				},
+				Port: "foo-port",
 			},
-			Port: "foo-port",
+			8080,
 		},
-
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
 		inMetric: MetricValue{

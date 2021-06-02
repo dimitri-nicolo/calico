@@ -406,7 +406,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			err = flowTester.CheckFlow(
 				"wep default "+ep1_1.Name+" "+ep1_1.Name, ep1_1.IP,
 				"wep default "+ep2_1.Name+" "+ep2_1.Name, ep2_1.IP,
-				"default test-service port-"+wepPortStr, 3, 1,
+				"default test-service port-"+wepPortStr+" "+svcPortStr, 3, 1,
 				[]metrics.ExpectedPolicy{
 					{"src", "allow", []string{"0|default|default.ep1-1-allow-all|allow"}},
 					{},

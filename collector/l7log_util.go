@@ -19,7 +19,8 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 		Type:             update.Type,
 		ServiceName:      update.ServiceName,
 		ServiceNamespace: update.ServiceNamespace,
-		ServicePort:      update.ServicePort,
+		ServicePortName:  update.ServicePortName,
+		ServicePortNum:   update.ServicePortNum,
 	}
 
 	// Get source endpoint metadata
@@ -36,10 +37,14 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 
 	meta.SrcNameAggr = srcMeta.AggregatedName
 	meta.SrcNamespace = srcMeta.Namespace
-	meta.DstNameAggr = dstMeta.AggregatedName
-	meta.DstNamespace = dstMeta.Namespace
+	meta.SourcePortNum = update.Tuple.l4Src
+
+	meta.DestNameAggr = dstMeta.AggregatedName
+	meta.DestNamespace = dstMeta.Namespace
+	meta.DestPortNum = update.Tuple.l4Dst
+
 	meta.SrcType = srcMeta.Type
-	meta.DstType = dstMeta.Type
+	meta.DestType = dstMeta.Type
 
 	// If we have a service and the service namespace has not been set, default it to the destination namespace.
 	if meta.ServiceName != "" && meta.ServiceNamespace == "" {
@@ -59,19 +64,22 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 	if ak.Service == L7ServiceInfoNone {
 		meta.ServiceName = flowLogFieldNotIncluded
 		meta.ServiceNamespace = flowLogFieldNotIncluded
-		meta.ServicePort = 0
+		meta.ServicePortName = flowLogFieldNotIncluded
+		meta.ServicePortNum = 0
 	}
 
 	if ak.Destination == L7DestinationInfoNone {
-		meta.DstNameAggr = flowLogFieldNotIncluded
-		meta.DstNamespace = flowLogFieldNotIncluded
-		meta.DstType = flowLogFieldNotIncluded
+		meta.DestNameAggr = flowLogFieldNotIncluded
+		meta.DestNamespace = flowLogFieldNotIncluded
+		meta.DestType = flowLogFieldNotIncluded
+		meta.DestPortNum = 0
 	}
 
 	if ak.Source == L7SourceInfoNone {
 		meta.SrcNameAggr = flowLogFieldNotIncluded
 		meta.SrcNamespace = flowLogFieldNotIncluded
 		meta.SrcType = flowLogFieldNotIncluded
+		meta.SourcePortNum = 0
 	}
 
 	if ak.ResponseCode == L7ResponseCodeNone {

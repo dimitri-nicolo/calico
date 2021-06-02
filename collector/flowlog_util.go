@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	"k8s.io/kubernetes/pkg/proxy"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,9 +19,10 @@ import (
 const (
 	flowLogBufferSize = 1000
 
-	flowLogNamespaceGlobal  = "-"
-	flowLogFieldNotIncluded = "-"
-	flowLogFieldAggregated  = "*"
+	flowLogNamespaceGlobal                  = "-"
+	flowLogFieldNotIncluded                 = "-"
+	flowLogFieldNotIncludedForNumericFields = 0
+	flowLogFieldAggregated                  = "*"
 
 	FlowLogActionAllow FlowLogAction = "allow"
 	FlowLogActionDeny  FlowLogAction = "deny"
@@ -152,25 +151,28 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData, ip [16]byte) (EndpointMet
 	return em, nil
 }
 
-func getFlowLogService(svc proxy.ServicePortName) FlowService {
+func getFlowLogService(svc MetricServiceInfo) FlowService {
 	if svc.Name == "" {
 		return FlowService{
 			Namespace: flowLogFieldNotIncluded,
 			Name:      flowLogFieldNotIncluded,
-			Port:      flowLogFieldNotIncluded,
+			PortName:  flowLogFieldNotIncluded,
+			PortNum:   flowLogFieldNotIncludedForNumericFields,
 		}
-	} else if svc.Port == "" {
+	} else if svc.Port == "" { // proxy.ServicePortName.Port refers to the PortName
 		// A single port for a service may not have a name.
 		return FlowService{
 			Namespace: svc.Namespace,
 			Name:      svc.Name,
-			Port:      flowLogFieldNotIncluded,
+			PortName:  flowLogFieldNotIncluded,
+			PortNum:   svc.PortNum,
 		}
 	}
 	return FlowService{
 		Namespace: svc.Namespace,
 		Name:      svc.Name,
-		Port:      svc.Port,
+		PortName:  svc.Port,
+		PortNum:   svc.PortNum,
 	}
 }
 

@@ -773,12 +773,18 @@ func (d *Data) PreDNATTuple() Tuple {
 
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
 func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
+	metricDstServiceInfo := MetricServiceInfo{
+		d.dstSvc,
+		d.preDNATPort,
+	}
+
 	metricUpdate := MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		dstService:   d.dstSvc,
+		updateType: ut,
+		tuple:      d.Tuple,
+		srcEp:      d.srcEp,
+		dstEp:      d.dstEp,
+
+		dstService:   metricDstServiceInfo,
 		ruleIDs:      d.IngressRuleTrace.Path(),
 		isConnection: d.isConnection,
 		inMetric: MetricValue{
@@ -810,12 +816,17 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 
 // metricUpdateEgressConn creates a metric update for Outbound connection traffic
 func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
+	metricDstServiceInfo := MetricServiceInfo{
+		d.dstSvc,
+		d.preDNATPort,
+	}
+
 	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
-		dstService:   d.dstSvc,
+		dstService:   metricDstServiceInfo,
 		ruleIDs:      d.EgressRuleTrace.Path(),
 		isConnection: d.isConnection,
 		inMetric: MetricValue{
@@ -846,12 +857,17 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
 func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
+	metricDstServiceInfo := MetricServiceInfo{
+		d.dstSvc,
+		d.preDNATPort,
+	}
+
 	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
-		dstService:   d.dstSvc,
+		dstService:   metricDstServiceInfo,
 		ruleIDs:      d.IngressRuleTrace.Path(),
 		isConnection: d.isConnection,
 
@@ -879,14 +895,20 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
 func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
+	metricDstServiceInfo := MetricServiceInfo{
+		d.dstSvc,
+		d.preDNATPort,
+	}
+
 	metricUpdate := MetricUpdate{
 		updateType:   ut,
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
-		dstService:   d.dstSvc,
+		dstService:   metricDstServiceInfo,
 		ruleIDs:      d.EgressRuleTrace.Path(),
 		isConnection: d.isConnection,
+
 		outMetric: MetricValue{
 			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
@@ -919,12 +941,18 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 	if !d.IngressRuleTrace.FoundVerdict() {
 		unknownRuleID = calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
 	}
+
+	metricDstServiceInfo := MetricServiceInfo{
+		d.dstSvc,
+		d.preDNATPort,
+	}
+
 	mu := MetricUpdate{
 		updateType:    ut,
 		tuple:         d.Tuple,
 		srcEp:         d.srcEp,
 		dstEp:         d.dstEp,
-		dstService:    d.dstSvc,
+		dstService:    metricDstServiceInfo,
 		origSourceIPs: d.origSourceIPs.Copy(),
 		ruleIDs:       d.IngressRuleTrace.Path(),
 		unknownRuleID: unknownRuleID,

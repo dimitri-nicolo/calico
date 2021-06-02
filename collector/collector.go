@@ -22,6 +22,8 @@ import (
 	"github.com/projectcalico/felix/rules"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
+	kapiv1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -939,12 +941,15 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	var validService bool
 	svcName := addr
 	svcNamespace := dstMeta.Namespace
+	svcPortName := data.dstSvc.Port
+
 	if ip := net.ParseIP(addr); ip != nil {
 		// Address is an IP. Attempt to look up a service name by cluster IP
-		svcPortName, found := c.luc.GetServiceFromPreDNATDest(ipStrTo16Byte(addr), port, tuple.proto)
+		k8sSvcPortName, found := c.luc.GetServiceFromPreDNATDest(ipStrTo16Byte(addr), port, tuple.proto)
 		if found {
-			svcName = svcPortName.NamespacedName.Name
-			svcNamespace = svcPortName.NamespacedName.Namespace
+			svcName = k8sSvcPortName.NamespacedName.Name
+			svcNamespace = k8sSvcPortName.NamespacedName.Namespace
+			svcPortName = k8sSvcPortName.Port
 			validService = true
 		}
 	} else {
@@ -956,11 +961,16 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		}
 
 		// Verify that the service name and namespace are valid
-		_, validService = c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
+		serviceSpec, isValidService := c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
 			Kind:      v3.KindK8sService,
 			Name:      svcName,
 			Namespace: svcNamespace,
 		})
+		validService = isValidService
+
+		if isValidService {
+			svcPortName = getPortNameFromServicSpec(serviceSpec, port)
+		}
 	}
 
 	// Add the service name and port if they are available
@@ -968,7 +978,8 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	if validService {
 		update.ServiceName = svcName
 		update.ServiceNamespace = svcNamespace
-		update.ServicePort = port
+		update.ServicePortName = svcPortName
+		update.ServicePortNum = port
 	}
 
 	// Send the update to the reporter
@@ -979,6 +990,16 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 			"dst": tuple.src,
 		}).Error("Failed to log request")
 	}
+}
+
+func getPortNameFromServicSpec(serviceSpec kapiv1.ServiceSpec, port int) string {
+	for _, servicePort := range serviceSpec.Ports {
+		if servicePort.Port == int32(port) {
+			return servicePort.Name
+		}
+	}
+
+	return ""
 }
 
 // NilProcessInfoCache implements the ProcessInfoCache interface and always returns false

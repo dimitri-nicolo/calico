@@ -40,21 +40,26 @@ var _ = Describe("L7 log type tests", func() {
 
 	Describe("L7Data Tests", func() {
 		meta := L7Meta{
-			SrcNameAggr:      "client-*",
-			SrcNamespace:     "test-ns",
-			SrcType:          FlowLogEndpointTypeWep,
-			DstNameAggr:      "server-*",
-			DstNamespace:     "test-ns",
-			DstType:          FlowLogEndpointTypeWep,
+			SrcNameAggr:   "client-*",
+			SrcNamespace:  "test-ns",
+			SrcType:       FlowLogEndpointTypeWep,
+			SourcePortNum: 80,
+
+			DestNameAggr:  "server-*",
+			DestNamespace: "test-ns",
+			DestType:      FlowLogEndpointTypeWep,
+			DestPortNum:   80,
+
 			ServiceName:      "svc1",
 			ServiceNamespace: "namespace1",
-			ServicePort:      80,
-			ResponseCode:     "200",
-			Method:           "POST",
-			Domain:           "www.server.com",
-			Path:             "/test/path",
-			UserAgent:        "firefox",
-			Type:             "html/1.1",
+			ServicePortName:  "testPort",
+
+			ResponseCode: "200",
+			Method:       "POST",
+			Domain:       "www.server.com",
+			Path:         "/test/path",
+			UserAgent:    "firefox",
+			Type:         "html/1.1",
 		}
 		spec := L7Spec{
 			Duration:      52,
@@ -81,12 +86,21 @@ var _ = Describe("L7 log type tests", func() {
 
 			Expect(log.StartTime).To(Equal(now.Unix()))
 			Expect(log.EndTime).To(Equal(end.Unix()))
-			Expect(log.SrcNameAggr).To(Equal(meta.SrcNameAggr))
-			Expect(log.SrcNamespace).To(Equal(meta.SrcNamespace))
-			Expect(log.SrcType).To(Equal(meta.SrcType))
-			Expect(log.DstNameAggr).To(Equal(meta.DstNameAggr))
-			Expect(log.DstNamespace).To(Equal(meta.DstNamespace))
-			Expect(log.DstType).To(Equal(meta.DstType))
+
+			Expect(log.SourceNameAggr).To(Equal(meta.SrcNameAggr))
+			Expect(log.SourceNamespace).To(Equal(meta.SrcNamespace))
+			Expect(log.SourceType).To(Equal(meta.SrcType))
+			Expect(log.SourcePortNum).To(Equal(80))
+
+			Expect(log.DestNameAggr).To(Equal(meta.DestNameAggr))
+			Expect(log.DestNamespace).To(Equal(meta.DestNamespace))
+			Expect(log.DestType).To(Equal(meta.DestType))
+			Expect(log.DestPortNum).To(Equal(80))
+
+			Expect(log.DestServiceName).To(Equal("svc1"))
+			Expect(log.DestServiceNamespace).To(Equal("namespace1"))
+			Expect(log.DestServicePortName).To(Equal("testPort"))
+
 			Expect(log.ResponseCode).To(Equal(meta.ResponseCode))
 			Expect(log.Method).To(Equal(meta.Method))
 			Expect(log.URL).To(Equal("www.server.com/test/path"))
@@ -97,9 +111,7 @@ var _ = Describe("L7 log type tests", func() {
 			Expect(log.BytesIn).To(Equal(109))
 			Expect(log.BytesOut).To(Equal(100))
 			Expect(log.Count).To(Equal(4))
-			Expect(log.ServiceName).To(Equal("svc1"))
-			Expect(log.ServiceNamespace).To(Equal("namespace1"))
-			Expect(log.ServicePort).To(Equal(80))
+
 		})
 
 		It("Should round the duration mean properly", func() {
@@ -109,12 +121,21 @@ var _ = Describe("L7 log type tests", func() {
 
 			Expect(log.StartTime).To(Equal(now.Unix()))
 			Expect(log.EndTime).To(Equal(end.Unix()))
-			Expect(log.SrcNameAggr).To(Equal(meta.SrcNameAggr))
-			Expect(log.SrcNamespace).To(Equal(meta.SrcNamespace))
-			Expect(log.SrcType).To(Equal(meta.SrcType))
-			Expect(log.DstNameAggr).To(Equal(meta.DstNameAggr))
-			Expect(log.DstNamespace).To(Equal(meta.DstNamespace))
-			Expect(log.DstType).To(Equal(meta.DstType))
+
+			Expect(log.SourceNameAggr).To(Equal(meta.SrcNameAggr))
+			Expect(log.SourceNamespace).To(Equal(meta.SrcNamespace))
+			Expect(log.SourceType).To(Equal(meta.SrcType))
+			Expect(log.SourcePortNum).To(Equal(80))
+
+			Expect(log.DestNameAggr).To(Equal(meta.DestNameAggr))
+			Expect(log.DestNamespace).To(Equal(meta.DestNamespace))
+			Expect(log.DestType).To(Equal(meta.DestType))
+			Expect(log.DestPortNum).To(Equal(80))
+
+			Expect(log.DestServiceName).To(Equal("svc1"))
+			Expect(log.DestServiceNamespace).To(Equal("namespace1"))
+			Expect(log.DestServicePortName).To(Equal("testPort"))
+
 			Expect(log.ResponseCode).To(Equal(meta.ResponseCode))
 			Expect(log.Method).To(Equal(meta.Method))
 			Expect(log.URL).To(Equal("www.server.com/test/path"))
@@ -125,9 +146,6 @@ var _ = Describe("L7 log type tests", func() {
 			Expect(log.BytesIn).To(Equal(109))
 			Expect(log.BytesOut).To(Equal(100))
 			Expect(log.Count).To(Equal(100))
-			Expect(log.ServiceName).To(Equal("svc1"))
-			Expect(log.ServiceNamespace).To(Equal("namespace1"))
-			Expect(log.ServicePort).To(Equal(80))
 		})
 
 	})

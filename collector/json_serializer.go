@@ -18,7 +18,7 @@ var protoNames = map[int]string{
 	132: "sctp",
 }
 
-// FlowLogJSONOutput represents the JSON representation of a flow log.
+// FlowLogJSONOutput represents the JSON representation of a flow log we are pushing to fluentd/elastic.
 type FlowLogJSONOutput struct {
 	StartTime int64 `json:"start_time"`
 	EndTime   int64 `json:"end_time"`
@@ -26,24 +26,31 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP             *string                  `json:"source_ip"`
-	SourceName           string                   `json:"source_name"`
-	SourceNameAggr       string                   `json:"source_name_aggr"`
-	SourceNamespace      string                   `json:"source_namespace"`
-	SourcePort           *int64                   `json:"source_port"`
-	SourceType           string                   `json:"source_type"`
-	SourceLabels         *FlowLogLabelsJSONOutput `json:"source_labels"`
-	DestIP               *string                  `json:"dest_ip"`
-	DestName             string                   `json:"dest_name"`
-	DestNameAggr         string                   `json:"dest_name_aggr"`
-	DestNamespace        string                   `json:"dest_namespace"`
-	DestServiceNamespace string                   `json:"dest_service_namespace"`
-	DestServiceName      string                   `json:"dest_service_name"`
-	DestServicePort      string                   `json:"dest_service_port"`
-	DestPort             *int64                   `json:"dest_port"`
-	DestType             string                   `json:"dest_type"`
-	DestLabels           *FlowLogLabelsJSONOutput `json:"dest_labels"`
-	Proto                string                   `json:"proto"`
+	SourceIP        *string `json:"source_ip"`
+	SourceName      string  `json:"source_name"`
+	SourceNameAggr  string  `json:"source_name_aggr"`
+	SourceNamespace string  `json:"source_namespace"`
+	// TODO: make a breaking change on the elastic schema + re-index to change this field to source_port_num
+	SourcePortNum *int64                   `json:"source_port"` // aliased as source_port_num on ee_flows.template
+	SourceType    string                   `json:"source_type"`
+	SourceLabels  *FlowLogLabelsJSONOutput `json:"source_labels"`
+
+	DestIP        *string `json:"dest_ip"`
+	DestName      string  `json:"dest_name"`
+	DestNameAggr  string  `json:"dest_name_aggr"`
+	DestNamespace string  `json:"dest_namespace"`
+	// TODO: make a breaking change on the elastic schema + re-index to change this field to dest_port_num
+	DestPortNum *int64                   `json:"dest_port"` // aliased as dest_port_num on ee_flows.template
+	DestType    string                   `json:"dest_type"`
+	DestLabels  *FlowLogLabelsJSONOutput `json:"dest_labels"`
+
+	DestServiceNamespace string `json:"dest_service_namespace"`
+	DestServiceName      string `json:"dest_service_name"`
+	// TODO: make a breaking change on the elastic schema + re-index to change this field to dest_service_port_name
+	DestServicePortName string `json:"dest_service_port"` // aliased as dest_service_port_name on ee_flows.template
+	DestServicePortNum  *int64 `json:"dest_service_port_num"`
+
+	Proto string `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
@@ -101,15 +108,16 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.SourceIP = &s
 	}
 	if l.Tuple.proto == 1 || l.Tuple.l4Src == unsetIntField {
-		out.SourcePort = nil
+		out.SourcePortNum = nil
 	} else {
 		t := int64(l.Tuple.l4Src)
-		out.SourcePort = &t
+		out.SourcePortNum = &t
 	}
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNameAggr = l.SrcMeta.AggregatedName
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
+
 	if l.SrcLabels == nil {
 		out.SourceLabels = nil
 	} else {
@@ -124,17 +132,15 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.DestIP = &s
 	}
 	if l.Tuple.proto == 1 || l.Tuple.l4Dst == unsetIntField {
-		out.DestPort = nil
+		out.DestPortNum = nil
 	} else {
 		t := int64(l.Tuple.l4Dst)
-		out.DestPort = &t
+		out.DestPortNum = &t
 	}
 	out.DestName = l.DstMeta.Name
 	out.DestNameAggr = l.DstMeta.AggregatedName
 	out.DestNamespace = l.DstMeta.Namespace
-	out.DestServiceNamespace = l.DstService.Namespace
-	out.DestServiceName = l.DstService.Name
-	out.DestServicePort = l.DstService.Port
+
 	out.DestType = string(l.DstMeta.Type)
 	if l.DstLabels == nil {
 		out.DestLabels = nil
@@ -142,6 +148,17 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.DestLabels = &FlowLogLabelsJSONOutput{
 			Labels: flattenLabels(l.DstLabels),
 		}
+	}
+
+	out.DestServiceNamespace = l.DstService.Namespace
+	out.DestServiceName = l.DstService.Name
+	out.DestServicePortName = l.DstService.PortName
+
+	if l.DstService.PortNum != 0 {
+		destSvcPortNum := int64(l.DstService.PortNum)
+		out.DestServicePortNum = &destSvcPortNum
+	} else {
+		out.DestServicePortNum = nil
 	}
 
 	out.Proto = protoToString(l.Tuple.proto)
@@ -234,11 +251,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	}
 	p := stringToProto(o.Proto)
 	var sPort, dPort int
-	if o.SourcePort != nil {
-		sPort = int(*o.SourcePort)
+	if o.SourcePortNum != nil {
+		sPort = int(*o.SourcePortNum)
 	}
-	if o.DestPort != nil {
-		dPort = int(*o.DestPort)
+	if o.DestPortNum != nil {
+		dPort = int(*o.DestPortNum)
 	}
 	fl.Tuple = *NewTuple(sip, dip, p, sPort, dPort)
 
@@ -286,8 +303,12 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.DstService = FlowService{
 		Namespace: o.DestServiceNamespace,
 		Name:      o.DestServiceName,
-		Port:      o.DestServicePort,
+		PortName:  o.DestServicePortName,
 	}
+	if o.DestServicePortNum != nil {
+		fl.DstService.PortNum = int(*o.DestServicePortNum)
+	}
+
 	if o.DestLabels == nil {
 		fl.DstLabels = nil
 	} else {
