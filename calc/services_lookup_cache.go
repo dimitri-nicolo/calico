@@ -71,7 +71,7 @@ func (suh *ServiceUpdateHandler) handleService(
 	epOperator func(key ipPortProtoKey, svc proxy.ServicePortName),
 	nodePortOperator func(key portProtoKey, svc proxy.ServicePortName),
 ) {
-	log.Debugf("Handle service %s", key)
+	log.Infof("Handle service %s", key)
 
 	// Construct a full set of service IPs from the cluster IP and other ExternalIPs.
 	serviceIPs := make([][16]byte, 0, len(svc.ExternalIPs)+1)
@@ -270,11 +270,12 @@ func (slc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates.
 func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
+	log.Infof("OnResourceUpdate", update)
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case v3.KindK8sService:
-			log.Debugf("processing update for service %s", k)
+			log.Infof("processing update for service %s", k)
 			if update.Value == nil {
 				slc.suh.removeService(k)
 			} else {

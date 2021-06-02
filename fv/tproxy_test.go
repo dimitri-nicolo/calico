@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -65,7 +65,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			}
 			cc.Protocol = "tcp"
 
-			options.FelixLogSeverity = "debug"
+			options.FelixLogSeverity = "info"
 			options.NATOutgoingEnabled = true
 			options.AutoHEPsEnabled = true
 			// override IPIP being enabled by default
@@ -350,17 +350,11 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		Context("Select Traffic ClusterIP", func() {
 			clusterIP := "10.101.0.10"
 
-			var pod, svc string
+			var pod string
 			var client *kubernetes.Clientset
 
 			JustBeforeEach(func() {
 				pod = w[0][0].IP + ":8055"
-				svc = clusterIP + ":8090"
-				// create service resources, one with annotation another without backed by same pod
-				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
-				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-				createService(v1Svc, client)
 
 				// Mimic the kube-proxy service iptable clusterIP rule.
 				for _, f := range felixes {
@@ -375,14 +369,26 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			})
 
 			It("should have connectivity from all workloads via ClusterIP", func() {
-				cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
-				cc.CheckConnectivity()
+				By("setting up service for the end points ")
+				// create service resources, one with annotation another without backed by same pod
+				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
+				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+				createService(v1Svc, client)
 
+				By("ensuring the ipaddress propagated to ipset ")
+				ipExists := make(map[*infrastructure.Felix]struct{})
 				Eventually(func() bool {
-					return proxies[0].ProxiedCount(w[0][1].IP, pod, svc) > 0
-				}, 15*time.Second, 30*time.Second).Should(BeTrue())
+					for _, felix := range felixes {
+						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
+						Expect(err).NotTo(HaveOccurred())
+						log.Infof("AfterEach starting %v", out)
+						if strings.Contains("10.101.0.10", out) {
+							ipExists[felix] = struct{}{}
+						}
+					}
+					return len(ipExists) > 0
+				}, "60s", "5s").Should(BeTrue())
 
 			})
 		})

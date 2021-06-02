@@ -5,6 +5,10 @@ package calc_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/stretchr/testify/mock"
+	kapiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/labelindex"
@@ -12,9 +16,6 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/stretchr/testify/mock"
-	kapiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Mocked callbacks for ipSetUpdateCallbacks

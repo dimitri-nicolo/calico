@@ -21,14 +21,15 @@ import (
 
 	"github.com/projectcalico/felix/ip"
 
+	log "github.com/sirupsen/logrus"
+	kapiv1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/proxy"
+
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	log "github.com/sirupsen/logrus"
-	kapiv1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/proxy"
 )
 
 const l7LoggingAnnotation = "projectcalico.org/l7-logging"
@@ -71,11 +72,12 @@ func (tpr *TproxyEndPointsResolver) RegisterWith(allUpdateDisp *dispatcher.Dispa
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates (for now). We can add other resources to tproxy in future here.
 func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool) {
+	log.Infof("OnResourceUpdate", update)
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case v3.KindK8sService:
-			log.Debugf("processing update for service %s", k)
+			log.Infof("processing update for service %s", k)
 			if update.Value == nil {
 				tpr.suh.removeService(k)
 				tpr.flush()
