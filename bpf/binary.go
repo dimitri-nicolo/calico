@@ -161,3 +161,13 @@ func (b *Binary) PatchTcpStats(tcpStats bool) {
 	binary.LittleEndian.PutUint32(bytes, uint32(enableTcpStats))
 	b.replaceAllLoadImm32([]byte("TCPS"), bytes)
 }
+
+func (b *Binary) PatchIsEgressGateway(isEgressGateway bool) {
+	bytes := make([]byte, 4)
+	egressGateway := 0
+	if isEgressGateway {
+		egressGateway = 1
+	}
+	binary.LittleEndian.PutUint32(bytes, uint32(egressGateway))
+	b.replaceAllLoadImm32([]byte("ISEG"), bytes)
+}

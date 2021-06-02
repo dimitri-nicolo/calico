@@ -57,6 +57,7 @@ type AttachPoint struct {
 	ExtToServiceConnmark uint32
 	VethNS               uint16
 	EnableTCPStats       bool
+	IsEgressGateway      bool
 }
 
 var tcLock sync.RWMutex
@@ -270,6 +271,7 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 	b.PatchExtToServiceConnmark(uint32(ap.ExtToServiceConnmark))
 	b.PatchIfNS(ap.VethNS)
 	b.PatchTcpStats(ap.EnableTCPStats)
+	b.PatchIsEgressGateway(ap.IsEgressGateway)
 
 	err = b.PatchIntfAddr(ap.IntfIP)
 	if err != nil {
