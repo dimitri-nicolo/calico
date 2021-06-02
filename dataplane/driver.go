@@ -123,7 +123,14 @@ func StartDataplaneDriver(configParams *config.Config,
 				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
 			}
 		}
-		if configParams.EgressIPCheckEnabled() {
+
+		// Egress mark is hard-coded in BPF mode - because then it needs to
+		// interop between the BPF C code and Felix golang code - but dynamically
+		// allocated in iptables mode.
+		if configParams.BPFEnabled {
+			// We need it to be just a single bit.
+			markEgressIP = tc.MarkEgress &^ tc.MarkCalico
+		} else if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
 			if markEgressIP == 0 {
