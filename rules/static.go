@@ -847,7 +847,8 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 				// Atm any traffic from local host that does not have a local source.
 				// XXX that would not work well for nodeports if we let proxy to use local
 				// XXX source instead of passing it through MASQUERADE
-				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
+				//				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
+				Match:  Match().OwnerGroup("tproxy"),
 				Action: JumpAction{Target: ChainFilterOutputTProxy},
 			},
 		)

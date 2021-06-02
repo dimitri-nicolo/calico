@@ -87,7 +87,8 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 			proxies = []*tproxy.TProxy{}
 			for _, felix := range felixes {
-				proxy := tproxy.New(felix, 16001, 16002)
+				felix.Exec("addgroup", "--gid", "1234", "tproxy")
+				proxy := tproxy.New(felix, 16001, 16002 /* tproxy.WithGID(1234) */)
 				proxy.Start()
 				proxies = append(proxies, proxy)
 			}
@@ -260,7 +261,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 			Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
 				It("should have connectivity only from w[1][0]", func() {
-					By("Denying traffic from w[1][1]", func() {
+					By("Denying traffic from w[0]][1] and w[1][1]", func() {
 						pol := api.NewGlobalNetworkPolicy()
 						pol.Namespace = "fv"
 						pol.Name = "policy-deny-1-1"
@@ -344,6 +345,10 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "0.0.0.0:" + strconv.Itoa(int(nodeport))
 			})
 
+			var opts []ExpectationOption
+
+			tcpProto := numorstring.ProtocolFromString("tcp")
+
 			JustBeforeEach(func() {
 				pod = w[0][0].IP + ":8055"
 				pod = w[0][0].IP + ":8055"
@@ -378,7 +383,6 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				pol := api.NewGlobalNetworkPolicy()
 				pol.Namespace = "fv"
 				pol.Name = "policy-allow-8055-from-any"
-				tcpProto := numorstring.ProtocolFromString("tcp")
 				pol.Spec.Ingress = []api.Rule{
 					{
 						Action:   "Allow",
@@ -389,16 +393,15 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 					},
 				}
 				pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
-				one := float64(1)
-				pol.Spec.Order = &one
+				hundred := float64(100)
+				pol.Spec.Order = &hundred
 
 				pol = createPolicy(pol)
+
+				opts = []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(felixes[0].IP)}
 			})
 
 			It("should have connectivity from all workloads via NodePort", func() {
-
-				opts := []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(felixes[0].IP)}
-
 				cc.Expect(Some, w[0][1], TargetIP(felixes[0].IP), opts...)
 				cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
 				cc.Expect(Some, w[1][1], TargetIP(felixes[0].IP), opts...)
@@ -413,6 +416,56 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				// Connection should not be proxied on the backend pod's node
 				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
 				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+			})
+
+			Context("With ingress traffic denied from felixes[0].IP to nodeport", func() {
+				It("should have no w[0][0]", func() {
+					By("Denying traffic from felixes[0].IP to nodeport", func() {
+						pol := api.NewGlobalNetworkPolicy()
+						pol.Namespace = "fv"
+						pol.Name = "policy-deny-1-1"
+						pol.Spec.Ingress = []api.Rule{
+							{
+								Action:   "Deny",
+								Protocol: &tcpProto,
+								/*
+									Source: api.EntityRule{
+										Nets: []string{felixes[0].IP + "/32"},
+									},
+								*/
+								Destination: api.EntityRule{
+									Ports: []numorstring.Port{numorstring.SinglePort(8055)},
+								},
+							},
+						}
+						pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+						one := float64(1)
+						pol.Spec.Order = &one
+
+						pol = createPolicy(pol)
+					})
+
+					cc.Expect(None, w[0][1], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(None, w[1][0], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(None, w[1][1], TargetIP(felixes[0].IP), opts...)
+					cc.CheckConnectivity()
+
+					// Connection should be proxied on the pod's local node
+					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					// Due to NAT outgoing
+					Expect(proxies[0].AcceptedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[0].AcceptedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					// Connection should be proxied on the pod's local node
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+					// Due to NAT outgoing
+					Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(Equal(0))
+
+					// Connection should not be proxied on the backend pod's node
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+				})
 			})
 		})
 	})

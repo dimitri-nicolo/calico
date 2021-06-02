@@ -343,3 +343,7 @@ func PortRangessToMultiport(ports []*proto.PortRange) string {
 	portsString := strings.Join(portFragments, ",")
 	return portsString
 }
+
+func (m MatchCriteria) OwnerGroup(grp string) MatchCriteria {
+	return append(m, "-m owner --gid-owner "+grp)
+}

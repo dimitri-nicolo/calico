@@ -31,7 +31,7 @@ import (
 const usage = `tproxy: acts as a transparent proxy for Felix fv testing.
 
 Usage:
-  tproxy <port-svc> <port-np>`
+  tproxy <port-svc> <port-np> [--gid=<gid>]`
 
 func main() {
 	log.SetLevel(log.InfoLevel)
@@ -42,6 +42,20 @@ func main() {
 	}
 
 	log.WithField("args", args).Info("Parsed arguments")
+
+	gid := -1
+	if args["--gid"] != nil {
+		gid, err = strconv.Atoi(args["--gid"].(string))
+		if err != nil {
+			log.WithError(err).Fatal("gid not a number")
+		}
+	}
+
+	if gid >= 0 {
+		if err := syscall.Setgid(gid); err != nil {
+			log.WithError(err).Fatalf("Failed to set gid to %d", gid)
+		}
+	}
 
 	portSvc, err := strconv.Atoi(args["<port-svc>"].(string))
 	if err != nil {
