@@ -3,12 +3,6 @@ title: Create an EKS cluster for eBPF mode
 description: Create an EKS cluster with a newer kernel, suitable for eBPF mode.
 ---
 
->**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production 
-> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This 
-> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward 
-> policy); flow logs; and DNS policy.
-{: .alert .alert-info}
-
 ### Big picture
 
 This guide explains how to set up an EKS cluster with a recent-enough Linux kernel to run the eBPF dataplane.

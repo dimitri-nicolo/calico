@@ -3,12 +3,6 @@ title: Enable the eBPF dataplane
 description: Step-by-step instructions for enabling the eBPF dataplane.
 ---
 
->**Note**: Support for eBPF mode is in tech preview in this release.  We recommend against deploying it in production
-> because it has had less testing (particularly scale and robustness testing) than a full GA release.  This
-> tech preview release has support for tiered policy; host endpoints (with normal, pre-DNAT and apply-on-forward
-> policy); flow logs; and DNS policy.
-{: .alert .alert-info}
-
 ### Big picture
 
 Enable the eBPF dataplane on an existing cluster.

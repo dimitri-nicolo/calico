@@ -1,7 +1,7 @@
 ---
-title: Installing in eBPF mode
+title: Install in eBPF mode
 description: Install Calico Enterprise in eBPF mode.
-canonical_url: '/getting-started/kubernetes/ebpf'
+canonical_url: '/maintenance/performance/ebpf/install'
 ---
 
 ### Big picture
