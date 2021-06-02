@@ -90,9 +90,6 @@ type RawEventRecord struct {
 // we will not include it in the node. The unfiltered alerts table will still provide the user with the opportunity to
 // see all events.
 func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr v1.TimeRange) ([]Event, error) {
-	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
-	defer cancel()
-
 	// Trace stats at debug level.
 	if log.IsLevelEnabled(log.DebugLevel) {
 		start := time.Now()

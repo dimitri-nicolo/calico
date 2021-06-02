@@ -28,7 +28,6 @@ const (
 
 const (
 	flowsBucketName = "flows"
-	flowTimeout     = 3 * time.Minute
 )
 
 const (
@@ -205,9 +204,6 @@ type L3FlowData struct {
 //   when an endpoint is subjected to a port scan.
 // - Stats for TCP and Processes are aggregated for each flow.
 func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
-	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
-	defer cancel()
-
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var fs []L3Flow

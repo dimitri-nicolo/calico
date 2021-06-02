@@ -82,9 +82,6 @@ var (
 
 // GetL7FlowData queries and returns the set of L7 flow data.
 func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]L7Flow, error) {
-	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
-	defer cancel()
-
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var fs []L7Flow
