@@ -12,15 +12,17 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
-
+vendor/
 bin
 .go-pkg-cache
 
 # Ignore IDE files
 .vscode/
+*/__debug_bin
 
 # Ignore Go build files
 Makefile.common*
 
 release-notes-*
+
+test/scratch
