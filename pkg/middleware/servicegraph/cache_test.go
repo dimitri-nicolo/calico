@@ -302,7 +302,7 @@ var _ = Describe("Service graph cache tests", func() {
 			atomic.AddInt32(&safeCount, -1)
 		}()
 		// We don't know when both goroutines will be blocked waiting, so all we can do it sleep for a bit.
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		// Now unblock elastic. One of the requests will use the results of the other event though both request have
 		// ForceRefresh set to true.
@@ -319,7 +319,7 @@ var _ = Describe("Service graph cache tests", func() {
 			_, _ = cache.GetFilteredServiceGraphData(thisctx, &RequestData{
 				HTTPRequest: nil,
 				ServiceGraphRequest: &v1.ServiceGraphRequest{
-					TimeRange:    tr3,
+					TimeRange: tr3,
 				},
 			})
 			atomic.AddInt32(&safeCount, -1)

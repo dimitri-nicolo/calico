@@ -39,7 +39,11 @@ type nameHelper struct {
 }
 
 func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSelector) (NameHelper, error) {
-	hh := &nameHelper{}
+	hh := &nameHelper{
+		hostNameToAggrName:  make(map[string]string),
+		aggrNameToHostnames: make(map[string][]string),
+		hepToHostname:       make(map[string]string),
+	}
 
 	wg := sync.WaitGroup{}
 
@@ -51,31 +55,26 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 		// If the user has specified a set of host aggregation selectors then query the Node resource and determine
 		// which selectors match which nodes. The nodes (hosts) matching a selector will be put in a hosts buckets
 		// with the name assigned to the selector.
-		if len(selectors) > 0 {
-			hh.hostNameToAggrName = make(map[string]string)
-			hh.aggrNameToHostnames = make(map[string][]string)
+		nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			errNodes = err
+			return
+		}
 
-			nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				errNodes = err
-				return
-			}
-
-		next_node:
-			for _, node := range nodes.Items {
-				for _, selector := range selectors {
-					if selector.Selector.Evaluate(node.Labels) {
-						log.Debugf("Host to aggregated name mapping: %s -> %s", node.Name, selector.Name)
-						hh.hostNameToAggrName[node.Name] = selector.Name
-						hh.aggrNameToHostnames[selector.Name] = append(hh.aggrNameToHostnames[selector.Name], node.Name)
-						continue next_node
-					}
+	next_node:
+		for _, node := range nodes.Items {
+			for _, selector := range selectors {
+				if selector.Selector.Evaluate(node.Labels) {
+					log.Debugf("Host to aggregated name mapping: %s -> %s", node.Name, selector.Name)
+					hh.hostNameToAggrName[node.Name] = selector.Name
+					hh.aggrNameToHostnames[selector.Name] = append(hh.aggrNameToHostnames[selector.Name], node.Name)
+					continue next_node
 				}
-
-				log.Debugf("Host to aggregated name mapping: %s -> *", node.Name)
-				hh.hostNameToAggrName[node.Name] = "*"
-				hh.aggrNameToHostnames["*"] = append(hh.aggrNameToHostnames["*"], node.Name)
 			}
+
+			log.Debugf("Host to aggregated name mapping: %s -> *", node.Name)
+			hh.hostNameToAggrName[node.Name] = "*"
+			hh.aggrNameToHostnames["*"] = append(hh.aggrNameToHostnames["*"], node.Name)
 		}
 	}()
 
@@ -85,7 +84,6 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 
 		// Get the HostEndpoints to determine a HostEndpoint -> Host name mapping. We use this to correlate events
 		// related to HostEndpoint resources with the host or hosts node types.
-		hepToHostname := make(map[string]string)
 		hostEndpoints, err := cs.HostEndpoints().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			errHosts = err
@@ -93,10 +91,11 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 		}
 		for _, hep := range hostEndpoints.Items {
 			log.Debugf("Hostendpoint to host name mapping: %s -> %s", hep.Name, hep.Spec.Node)
-			hepToHostname[hep.Name] = hep.Spec.Node
+			hh.hepToHostname[hep.Name] = hep.Spec.Node
 		}
-		hh.hepToHostname = hepToHostname
 	}()
+
+	wg.Wait()
 
 	if errNodes != nil {
 		return nil, errNodes
@@ -112,10 +111,6 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 func (ah *nameHelper) ConvertL3Flow(f L3Flow) L3Flow {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
-
-	if ah.hostNameToAggrName == nil {
-		return f
-	}
 
 	// The aggregated name for hosts is actually the full name. Swap over, and apply the calculated aggregated name.
 	if f.Edge.Source.Type == v1.GraphNodeTypeHost {
@@ -148,10 +143,6 @@ func (ah *nameHelper) ConvertL7Flow(f L7Flow) L7Flow {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
 
-	if ah.hostNameToAggrName == nil {
-		return f
-	}
-
 	// The aggregated name for hosts is actually the full name. Swap over, and apply the calculated aggregated name.
 	if f.Edge.Source.Type == v1.GraphNodeTypeHost {
 		f.Edge.Source.Name = f.Edge.Source.NameAggr
@@ -182,10 +173,6 @@ func (ah *nameHelper) ConvertL7Flow(f L7Flow) L7Flow {
 func (ah *nameHelper) ConvertEvent(e Event) Event {
 	ah.lock.RLock()
 	defer ah.lock.RUnlock()
-
-	if ah.hostNameToAggrName == nil {
-		return e
-	}
 
 	// Be careful not to modify the original data which is cached.
 	eps := e.Endpoints
