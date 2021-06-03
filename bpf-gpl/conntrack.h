@@ -184,7 +184,7 @@ create:
 		src_to_dst->whitelisted = 1;
 		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
 
-		if (ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW) {
+		if ((ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW) || EGRESS_GATEWAY) {
 			CALI_DEBUG("CT-ALL Whitelisted dest side - egress gateway flow\n");
 			dst_to_src->whitelisted = 1;
 		}
