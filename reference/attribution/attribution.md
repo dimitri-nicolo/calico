@@ -25,11 +25,6 @@ In the table below, you can look at the details of each project and license asso
 		<td>ISC</td>
 	</tr>
 	<tr>
-		<td>lkarlslund</td>
-		<td>adalanche-r20201225</td>
-		<td>GPL 3.0</td>
-	</tr>
-	<tr>
 		<td>algoliasearch</td>
 		<td>algoliasearch.umd-4.2.0.js</td>
 		<td>MIT</td>
@@ -2078,11 +2073,6 @@ In the table below, you can look at the details of each project and license asso
 		<td>projectcalico</td>
 		<td>libcalico-go-v3.18.0-0.dev</td>
 		<td>Apache 2.0</td>
-	</tr>
-	<tr>
-		<td>gnu</td>
-		<td>librejs-librejs-7.20.2</td>
-		<td>GPL 3.0</td>
 	</tr>
 	<tr>
 		<td>loader-utils</td>
