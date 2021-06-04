@@ -46,7 +46,7 @@ type output struct {
 	protocol labelindex.IPSetPortProtocol
 }
 
-var _ = Describe("TproxyEndPointsResolver", func() {
+var _ = Describe("L7FrontEndResolver", func() {
 
 	DescribeTable("Check ipset callbacks for updates",
 		func(updates []api.Update, addedMembers []output, removedMembers []output) {
@@ -77,7 +77,7 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 			}
 
-			var resolver = calc.NewTproxyEndPointsResolver(mockCallbacks)
+			var resolver = calc.NewL7FrontEndResolver(mockCallbacks)
 
 			for _, update := range updates {
 				resolver.OnResourceUpdate(update)

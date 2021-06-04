@@ -43,13 +43,11 @@ type portProtoKey struct {
 // update dispatcher.
 //
 // This component should included in other components which can register
-// themselves with update dispatcher. Ex ServiceLookupsCache and TproxyEndPointsResolver
+// themselves with update dispatcher. Ex ServiceLookupsCache and L7FrontEndResolver
 //
 // It processes the updates passed to it and creates three maps. One contains all services
 // passed to it, other two contains node port services, regular services.
 type ServiceUpdateHandler struct {
-	mutex sync.RWMutex
-
 	// Service relationships and cached resource info.
 	ipPortProtoToServices map[ipPortProtoKey][]proxy.ServicePortName
 	nodePortServices      map[portProtoKey][]proxy.ServicePortName
@@ -58,7 +56,6 @@ type ServiceUpdateHandler struct {
 
 func NewServiceUpdateHandler() *ServiceUpdateHandler {
 	suh := &ServiceUpdateHandler{
-		mutex:                 sync.RWMutex{},
 		ipPortProtoToServices: make(map[ipPortProtoKey][]proxy.ServicePortName),
 		nodePortServices:      make(map[portProtoKey][]proxy.ServicePortName),
 		services:              make(map[model.ResourceKey]kapiv1.ServiceSpec),
@@ -71,7 +68,7 @@ func (suh *ServiceUpdateHandler) handleService(
 	epOperator func(key ipPortProtoKey, svc proxy.ServicePortName),
 	nodePortOperator func(key portProtoKey, svc proxy.ServicePortName),
 ) {
-	log.Infof("Handle service %s", key)
+	log.Debugf("Handle service %s", key)
 
 	// Construct a full set of service IPs from the cluster IP and other ExternalIPs.
 	serviceIPs := make([][16]byte, 0, len(svc.ExternalIPs)+1)
@@ -157,10 +154,8 @@ func (suh *ServiceUpdateHandler) removeServiceMap(key ipPortProtoKey, svc proxy.
 	}
 }
 
-// addOrUpdateService tracks service cluster IP to service mappings.
-func (suh *ServiceUpdateHandler) addOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
-	suh.mutex.Lock()
-	defer suh.mutex.Unlock()
+// AddOrUpdateService tracks service cluster IP to service mappings.
+func (suh *ServiceUpdateHandler) AddOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
 
 	if existing, ok := suh.services[key]; ok {
 		if reflect.DeepEqual(existing, service.Spec) {
@@ -176,9 +171,7 @@ func (suh *ServiceUpdateHandler) addOrUpdateService(key model.ResourceKey, servi
 	suh.services[key] = service.Spec
 }
 
-func (suh *ServiceUpdateHandler) removeService(key model.ResourceKey) {
-	suh.mutex.Lock()
-	defer suh.mutex.Unlock()
+func (suh *ServiceUpdateHandler) RemoveService(key model.ResourceKey) {
 
 	// Look up service by key and remove the entry.
 	if existing, ok := suh.services[key]; ok {
@@ -276,9 +269,9 @@ func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 		case v3.KindK8sService:
 			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
-				slc.suh.removeService(k)
+				slc.suh.RemoveService(k)
 			} else {
-				slc.suh.addOrUpdateService(k, update.Value.(*kapiv1.Service))
+				slc.suh.AddOrUpdateService(k, update.Value.(*kapiv1.Service))
 			}
 		default:
 			log.Debugf("Ignoring update for resource: %s", k)

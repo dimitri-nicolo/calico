@@ -504,7 +504,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	}
 
 	if conf.TPROXYModeEnabled() {
-		tproxyResolver := NewTproxyEndPointsResolver(callbacks)
+		tproxyResolver := NewL7FrontEndResolver(callbacks)
 		tproxyResolver.RegisterWith(allUpdDispatcher)
 	}
 

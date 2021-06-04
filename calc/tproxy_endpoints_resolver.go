@@ -17,7 +17,6 @@ package calc
 import (
 	"net"
 	"reflect"
-	"sync"
 
 	"github.com/projectcalico/felix/proto"
 
@@ -38,27 +37,24 @@ const l7LoggingAnnotation = "projectcalico.org/l7-logging"
 const TPROXYServicesIPSet = "tproxy-services"
 const TRPOXYNodePortsIPSet = "tproxy-nodeports"
 
-// TproxyEndPointsResolver maintains most up-to-date list of all tproxy enabled endpoints.
+// L7FrontEndResolver maintains most up-to-date list of all L7 logging enabled frontends.
 //
-// To do this, the TproxyEndPointsResolver hooks into the calculation graph
-// by handling callbacks for updated local endpoint tier information.
+// To do this, the L7FrontEndResolver hooks into the calculation graph
+// by handling callbacks for updated service information.
 //
-// Currently it handles "service" resource that have a predefined annotation for enabling tproxy.
+// Currently it handles "service" resource that have a predefined annotation for enabling logging.
 // It emits ipSetUpdateCallbacks when a state change happens, keeping data plane in-sync with datastore.
-type TproxyEndPointsResolver struct {
-	mutex sync.RWMutex
-
-	createIpSet     bool
+type L7FrontEndResolver struct {
+	createdIpSet    bool
 	suh             *ServiceUpdateHandler
 	callbacks       ipSetUpdateCallbacks
 	activeServices  map[ipPortProtoKey][]proxy.ServicePortName
 	activeNodePorts map[portProtoKey][]proxy.ServicePortName
 }
 
-func NewTproxyEndPointsResolver(callbacks ipSetUpdateCallbacks) *TproxyEndPointsResolver {
-	tpr := &TproxyEndPointsResolver{
-		mutex:           sync.RWMutex{},
-		createIpSet:     false,
+func NewL7FrontEndResolver(callbacks ipSetUpdateCallbacks) *L7FrontEndResolver {
+	tpr := &L7FrontEndResolver{
+		createdIpSet:    false,
 		callbacks:       callbacks,
 		suh:             NewServiceUpdateHandler(),
 		activeServices:  make(map[ipPortProtoKey][]proxy.ServicePortName),
@@ -67,14 +63,14 @@ func NewTproxyEndPointsResolver(callbacks ipSetUpdateCallbacks) *TproxyEndPoints
 	return tpr
 }
 
-func (tpr *TproxyEndPointsResolver) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
+func (tpr *L7FrontEndResolver) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
 	log.Debugf("registering with all update dispatcher for tproxy service updates")
 	allUpdateDisp.Register(model.ResourceKey{}, tpr.OnResourceUpdate)
 }
 
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
-// kubernetes services updates (for now). We can add other resources to tproxy in future here.
-func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool) {
+// kubernetes services updates (for now). We can add other resources to L7 in future here.
+func (tpr *L7FrontEndResolver) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
@@ -82,7 +78,7 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				if _, ok := tpr.suh.services[k]; ok {
-					tpr.suh.removeService(k)
+					tpr.suh.RemoveService(k)
 					tpr.flush()
 				}
 			} else {
@@ -91,7 +87,7 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 				// only services annotated with l7 are of interest for us
 				if hasAnnotation(annotations, l7LoggingAnnotation) {
 					log.Infof("processing update for tproxy annotated service %s", k)
-					tpr.suh.addOrUpdateService(k, service)
+					tpr.suh.AddOrUpdateService(k, service)
 					tpr.flush()
 				}
 			}
@@ -105,13 +101,10 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 	return
 }
 
-// flush emits ipSetUpdateCallbacks (OnIPSetMemberAdded, OnIPSetMemberRemoved) when endpoints for tproxy traffic
-// selection changes. It detects the change in state by comparing most up to data members list maintained by
-// ServiceUpdateHandler to the list maintained by TproxyEndPointsResolver.
-// It's also responsible for setting the appropriate IpSetID when emitting callbacks.
-func (tpr *TproxyEndPointsResolver) flush() {
-	tpr.mutex.Lock()
-	defer tpr.mutex.Unlock()
+// flush emits ipSetUpdateCallbacks (OnIPSetAdded, OnIPSetMemberAdded, OnIPSetMemberRemoved) when endpoints
+//for tproxy traffic selection changes. It detects the change in state by comparing most up to date
+//members list maintained by ServiceUpdateHandler to the list maintained by L7FrontEndResolver.
+func (tpr *L7FrontEndResolver) flush() {
 
 	addedSvs, removedSvs := tpr.resolveRegularServices()
 
@@ -119,17 +112,17 @@ func (tpr *TproxyEndPointsResolver) flush() {
 		tpr.flushRegularService(addedSvs, removedSvs)
 	}
 
-	// TODO: current release doesn't intend to support nodeports
+	// TODO: current release doesn't intend to support node ports
 	//addedNPs, removedNps := tpr.resolveNodePorts()
 	//if len(addedNPs) > 0 || len(removedNps) > 0 {
 	//	tpr.flushNodePorts(addedNPs, removedNps)
 	//}
 }
 
-func (tpr *TproxyEndPointsResolver) resolveRegularServices() (map[ipPortProtoKey][]proxy.ServicePortName,
+func (tpr *L7FrontEndResolver) resolveRegularServices() (map[ipPortProtoKey][]proxy.ServicePortName,
 	map[ipPortProtoKey]struct{}) {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
-	log.Debugf("flush regular services for tproxy")
+	log.Infof("flush regular services for tproxy")
 
 	added := make(map[ipPortProtoKey][]proxy.ServicePortName)
 	removed := make(map[ipPortProtoKey]struct{})
@@ -161,7 +154,7 @@ func (tpr *TproxyEndPointsResolver) resolveRegularServices() (map[ipPortProtoKey
 	return added, removed
 }
 
-func (tpr *TproxyEndPointsResolver) flushRegularService(added map[ipPortProtoKey][]proxy.ServicePortName,
+func (tpr *L7FrontEndResolver) flushRegularService(added map[ipPortProtoKey][]proxy.ServicePortName,
 	removed map[ipPortProtoKey]struct{}) {
 
 	// before sending member callbacks create ipset if doesn't exists
@@ -169,9 +162,9 @@ func (tpr *TproxyEndPointsResolver) flushRegularService(added map[ipPortProtoKey
 	//	tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
 	//}
 
-	if !tpr.createIpSet {
+	if !tpr.createdIpSet {
 		tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-		tpr.createIpSet = true
+		tpr.createdIpSet = true
 	}
 
 	for ipPortProto := range removed {
@@ -187,7 +180,7 @@ func (tpr *TproxyEndPointsResolver) flushRegularService(added map[ipPortProtoKey
 	}
 
 	// after sending member callbacks delete ipset if no active services present
-	// TODO: This can't be done since the deletion of ipset fails with message
+	// TODO: This can't be done since the deletion of ipset fails with following message
 	// Set cannot be destroyed: it is in use by a kernel component
 	//if len(tpr.activeServices) == 0 {
 	//	tpr.callbacks.OnIPSetRemoved(TPROXYServicesIPSet)
@@ -195,10 +188,10 @@ func (tpr *TproxyEndPointsResolver) flushRegularService(added map[ipPortProtoKey
 
 }
 
-func (tpr *TproxyEndPointsResolver) resolveNodePorts() (map[portProtoKey][]proxy.ServicePortName,
+func (tpr *L7FrontEndResolver) resolveNodePorts() (map[portProtoKey][]proxy.ServicePortName,
 	map[portProtoKey]struct{}) {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
-	log.Debugf("flush node ports for tproxy")
+	log.Infof("flush node ports for tproxy")
 
 	added := make(map[portProtoKey][]proxy.ServicePortName)
 	removed := make(map[portProtoKey]struct{})
@@ -232,7 +225,7 @@ func (tpr *TproxyEndPointsResolver) resolveNodePorts() (map[portProtoKey][]proxy
 	return added, removed
 }
 
-func (tpr *TproxyEndPointsResolver) flushNodePorts(added map[portProtoKey][]proxy.ServicePortName,
+func (tpr *L7FrontEndResolver) flushNodePorts(added map[portProtoKey][]proxy.ServicePortName,
 	removed map[portProtoKey]struct{}) {
 
 	// before sending member callbacks create ipset if doesn't exists
