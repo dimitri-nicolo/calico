@@ -19,6 +19,8 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/projectcalico/felix/proto"
+
 	"github.com/projectcalico/felix/ip"
 
 	log "github.com/sirupsen/logrus"
@@ -33,9 +35,8 @@ import (
 )
 
 const l7LoggingAnnotation = "projectcalico.org/l7-logging"
-const TproxyServicesIPSetV4 = "cali40tproxy-services"
-const TproxyServicesIPSetV6 = "cali60tproxy-services"
-const TproxyNodePortIpSetV4 = "cali40tproxy-nodeports"
+const TPROXYServicesIPSet = "tproxy-services"
+const TRPOXYNodePortsIPSet = "tproxy-nodeports"
 
 // TproxyEndPointsResolver maintains most up-to-date list of all tproxy enabled endpoints.
 //
@@ -65,19 +66,18 @@ func NewTproxyEndPointsResolver(callbacks ipSetUpdateCallbacks) *TproxyEndPoints
 }
 
 func (tpr *TproxyEndPointsResolver) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
-	log.Infof("registering with all update dispatcher for tproxy service updates")
+	log.Debugf("registering with all update dispatcher for tproxy service updates")
 	allUpdateDisp.Register(model.ResourceKey{}, tpr.OnResourceUpdate)
 }
 
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates (for now). We can add other resources to tproxy in future here.
 func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool) {
-	log.Infof("OnResourceUpdate", update)
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case v3.KindK8sService:
-			log.Infof("processing update for service %s", k)
+			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				tpr.suh.removeService(k)
 				tpr.flush()
@@ -127,6 +127,11 @@ func (tpr *TproxyEndPointsResolver) flushRegularServices() {
 	// remove expired services from active services
 	log.Debugf("flush regular services for tproxy")
 
+	// if the active services are zero send OnIPSetAdded to ensure it's existence before sending updates
+	if len(tpr.activeServices) == 0 {
+		tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	}
+
 	for ipPortProto, _ := range tpr.activeServices {
 		// if member key exists in up-to-date list, update the value to latest in active service and continue to next
 		if latest, ok := tpr.suh.ipPortProtoToServices[ipPortProto]; ok {
@@ -167,6 +172,11 @@ func (tpr *TproxyEndPointsResolver) flushNodePorts() {
 	// remove expired node ports from active
 	log.Debugf("flush node ports for tproxy")
 
+	// if the active node ports are zero send OnIPSetAdded to ensure it's existence before sending updates
+	if len(tpr.activeNodePorts) == 0 {
+		tpr.callbacks.OnIPSetAdded(TRPOXYNodePortsIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	}
+
 	for portProto, _ := range tpr.activeNodePorts {
 		// if member key exists in up-to-date list, update the value to latest in active node ports and continue to next
 		if latest, ok := tpr.suh.nodePortServices[portProto]; ok {
@@ -193,6 +203,10 @@ func (tpr *TproxyEndPointsResolver) flushNodePorts() {
 			log.Debugf("Port/Protocol (%d/%d) Protocol not valid for tproxy", portProto.port, protocol)
 			continue
 		}
+		// if node port is zero don't send OnIPSetMemberAdded calls backs
+		if portProto.port == 0 {
+			continue
+		}
 		ipSetId, member := getIpSetMemberFromPortProto(portProto)
 		// send ip set call back for new members and add them to tproxy list
 		tpr.callbacks.OnIPSetMemberAdded(ipSetId, member)
@@ -208,12 +222,7 @@ func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) (string, labelind
 		CIDR:       ip.FromNetIP(netIP).AsCIDR(),
 	}
 
-	ipSetId := TproxyServicesIPSetV4
-	if member.CIDR.Version() == 6 {
-		ipSetId = TproxyServicesIPSetV6
-	}
-
-	return ipSetId, member
+	return TPROXYServicesIPSet, member
 }
 
 func getIpSetMemberFromPortProto(portProto portProtoKey) (string, labelindex.IPSetMember) {
@@ -222,7 +231,7 @@ func getIpSetMemberFromPortProto(portProto portProtoKey) (string, labelindex.IPS
 		Protocol:   labelindex.IPSetPortProtocol(portProto.proto),
 	}
 
-	return TproxyNodePortIpSetV4, member
+	return TRPOXYNodePortsIPSet, member
 }
 func hasAnnotation(annotations map[string]string, annotation string) bool {
 	if annotations != nil {

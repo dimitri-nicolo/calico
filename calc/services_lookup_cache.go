@@ -270,12 +270,11 @@ func (slc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatche
 // OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
 // kubernetes services updates.
 func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
-	log.Infof("OnResourceUpdate", update)
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
 		case v3.KindK8sService:
-			log.Infof("processing update for service %s", k)
+			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				slc.suh.removeService(k)
 			} else {

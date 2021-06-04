@@ -128,12 +128,12 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TproxyServicesIPSetV4,
+				setId:    calc.TPROXYServicesIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TproxyNodePortIpSetV4,
+				setId:    calc.TRPOXYNodePortsIPSet,
 				port:     234,
 				protocol: labelindex.ProtocolTCP,
 			}},
@@ -190,22 +190,22 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}},
 			[]output{{
-				setId:    calc.TproxyServicesIPSetV4,
+				setId:    calc.TPROXYServicesIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TproxyNodePortIpSetV4,
+				setId:    calc.TRPOXYNodePortsIPSet,
 				port:     234,
 				protocol: labelindex.ProtocolTCP,
 			}},
 			[]output{{
-				setId:    calc.TproxyServicesIPSetV4,
+				setId:    calc.TPROXYServicesIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TproxyNodePortIpSetV4,
+				setId:    calc.TRPOXYNodePortsIPSet,
 				port:     234,
 				protocol: labelindex.ProtocolTCP,
 			}},
@@ -232,12 +232,12 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TproxyServicesIPSetV6,
+				setId:    calc.TPROXYServicesIPSet,
 				ipAddr:   "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TproxyNodePortIpSetV4,
+				setId:    calc.TRPOXYNodePortsIPSet,
 				port:     234,
 				protocol: labelindex.ProtocolTCP,
 			}},

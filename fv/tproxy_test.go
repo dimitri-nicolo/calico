@@ -65,7 +65,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			}
 			cc.Protocol = "tcp"
 
-			options.FelixLogSeverity = "info"
+			options.FelixLogSeverity = "debug"
 			options.NATOutgoingEnabled = true
 			options.AutoHEPsEnabled = true
 			// override IPIP being enabled by default
@@ -202,194 +202,236 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			infra.Stop()
 			log.Info("AfterEach done")
 		})
+		/*
+			Context("Pod-Pod", func() {
+				BeforeEach(func() {
+					options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.65.0.2:8055"
+				})
 
-		Context("Pod-Pod", func() {
-			BeforeEach(func() {
-				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.65.0.2:8055"
-			})
+				var pod string
 
-			var pod string
+				JustBeforeEach(func() {
+					pod = w[0][0].IP + ":8055"
+				})
 
-			JustBeforeEach(func() {
-				pod = w[0][0].IP + ":8055"
-			})
-
-			It("should have connectivity from all workloads via w[0][0].IP", func() {
-				cc.ExpectSome(w[0][1], w[0][0], 8055)
-				cc.ExpectSome(w[1][0], w[0][0], 8055)
-				cc.ExpectSome(w[1][1], w[0][0], 8055)
-				cc.CheckConnectivity()
-
-				// Connection is proxied both on the client and server node
-				Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, pod)).To(BeNumerically(">", 0))
-				Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
-				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
-				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
-				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
-			})
-		})
-
-		Context("ClusterIP", func() {
-			clusterIP := "10.101.0.10"
-
-			var pod, svc string
-
-			BeforeEach(func() {
-				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.101.0.10:8090"
-			})
-
-			JustBeforeEach(func() {
-				pod = w[0][0].IP + ":8055"
-				svc = clusterIP + ":8090"
-
-				// Mimic the kube-proxy service iptable clusterIP rule.
-				for _, f := range felixes {
-					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-						"-p", "tcp",
-						"-d", clusterIP,
-						"-m", "tcp", "--dport", "8090",
-						"-j", "DNAT", "--to-destination",
-						pod)
-				}
-
-			})
-
-			It("should have connectivity from all workloads via ClusterIP", func() {
-				cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
-				cc.CheckConnectivity()
-
-				// Connection should be proxied on the pod's local node
-				Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
-
-				// Connection should not be proxied on the backend pod's node
-				Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
-				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
-			})
-
-			Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
-				It("should have connectivity only from w[1][0]", func() {
-					By("Denying traffic from w[1][1]", func() {
-						pol := api.NewGlobalNetworkPolicy()
-						pol.Namespace = "fv"
-						pol.Name = "policy-deny-1-1"
-						pol.Spec.Ingress = []api.Rule{
-							{
-								Action: "Deny",
-								Source: api.EntityRule{
-									Selector: "(name=='" + w[1][1].Name + "') || (name=='" + w[0][1].Name + "')",
-								},
-							},
-						}
-						pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
-						one := float64(1)
-						pol.Spec.Order = &one
-
-						pol = createPolicy(pol)
-					})
-
-					cc.ExpectNone(w[0][1], TargetIP(clusterIP), 8090)
-					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+				It("should have connectivity from all workloads via w[0][0].IP", func() {
+					cc.ExpectSome(w[0][1], w[0][0], 8055)
+					cc.ExpectSome(w[1][0], w[0][0], 8055)
+					cc.ExpectSome(w[1][1], w[0][0], 8055)
 					cc.CheckConnectivity()
 
-					// Connection should be proxied on the pod's local node
-
-					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
-
-					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
-					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					// Connection is proxied both on the client and server node
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, pod)).To(BeNumerically(">", 0))
+					Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
+					Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
 				})
 			})
 
-			Context("With egress traffic denied from w[1][1]", func() {
-				It("should have connectivity only from w[0][1] and w[1][0]", func() {
-					By("Denying traffic from w[1][1]", func() {
-						pol := api.NewGlobalNetworkPolicy()
-						pol.Namespace = "fv"
-						pol.Name = "policy-deny-1-1"
-						pol.Spec.Egress = []api.Rule{
-							{
-								Action: "Deny",
-								Destination: api.EntityRule{
-									Selector: "name=='" + w[0][0].Name + "'",
-								},
-							},
-						}
-						pol.Spec.Selector = "name=='" + w[1][1].Name + "'"
-						one := float64(1)
-						pol.Spec.Order = &one
+			Context("ClusterIP", func() {
+				clusterIP := "10.101.0.10"
 
-						pol = createPolicy(pol)
-					})
+				var pod, svc string
 
+				BeforeEach(func() {
+					options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.101.0.10:8090"
+				})
+
+				JustBeforeEach(func() {
+					pod = w[0][0].IP + ":8055"
+					svc = clusterIP + ":8090"
+
+					// Mimic the kube-proxy service iptable clusterIP rule.
+					for _, f := range felixes {
+						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+							"-p", "tcp",
+							"-d", clusterIP,
+							"-m", "tcp", "--dport", "8090",
+							"-j", "DNAT", "--to-destination",
+							pod)
+					}
+
+				})
+
+				It("should have connectivity from all workloads via ClusterIP", func() {
 					cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
 					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+					cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
 					cc.CheckConnectivity()
 
 					// Connection should be proxied on the pod's local node
-
-					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
-
 					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
 					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					// Connection should not be proxied on the backend pod's node
+					Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+				})
+
+				Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
+					It("should have connectivity only from w[1][0]", func() {
+						By("Denying traffic from w[1][1]", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-1-1"
+							pol.Spec.Ingress = []api.Rule{
+								{
+									Action: "Deny",
+									Source: api.EntityRule{
+										Selector: "(name=='" + w[1][1].Name + "') || (name=='" + w[0][1].Name + "')",
+									},
+								},
+							}
+							pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+
+						cc.ExpectNone(w[0][1], TargetIP(clusterIP), 8090)
+						cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
+						cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+						cc.CheckConnectivity()
+
+						// Connection should be proxied on the pod's local node
+
+						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+						Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+						Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					})
+				})
+
+				Context("With egress traffic denied from w[1][1]", func() {
+					It("should have connectivity only from w[0][1] and w[1][0]", func() {
+						By("Denying traffic from w[1][1]", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-1-1"
+							pol.Spec.Egress = []api.Rule{
+								{
+									Action: "Deny",
+									Destination: api.EntityRule{
+										Selector: "name=='" + w[0][0].Name + "'",
+									},
+								},
+							}
+							pol.Spec.Selector = "name=='" + w[1][1].Name + "'"
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+
+						cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
+						cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
+						cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+						cc.CheckConnectivity()
+
+						// Connection should be proxied on the pod's local node
+
+						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+
+						Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					})
 				})
 			})
-		})
-
+		*/
 		Context("Select Traffic ClusterIP", func() {
 			clusterIP := "10.101.0.10"
+			servicePort := "8090"
+			clusterIP2 := "10.101.0.20"
+			servicePort2 := "8090"
 
 			var pod string
 			var client *kubernetes.Clientset
 
 			JustBeforeEach(func() {
 				pod = w[0][0].IP + ":8055"
+				pod = w[0][0].IP + ":8055"
 
 				// Mimic the kube-proxy service iptable clusterIP rule.
 				for _, f := range felixes {
 					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 						"-p", "tcp",
 						"-d", clusterIP,
-						"-m", "tcp", "--dport", "8090",
+						"-m", "tcp", "--dport", servicePort,
+						"-j", "DNAT", "--to-destination",
+						pod)
+					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+						"-p", "tcp",
+						"-d", clusterIP2,
+						"-m", "tcp", "--dport", servicePort2,
 						"-j", "DNAT", "--to-destination",
 						pod)
 				}
 
 			})
 
-			It("should have connectivity from all workloads via ClusterIP", func() {
-				By("setting up service for the end points ")
+			It("Should propagate annotated service update and deletions to tproxy ip set", func() {
+
+				By("setting up annotated service for the end points ")
 				// create service resources, one with annotation another without backed by same pod
 				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
 				createService(v1Svc, client)
 
-				By("ensuring the ipaddress propagated to ipset ")
-				ipExists := make(map[*infrastructure.Felix]struct{})
+				By("ensuring the ipaddress of service propagated to ipset ")
+				exists := make(map[*infrastructure.Felix]struct{})
 				Eventually(func() bool {
 					for _, felix := range felixes {
 						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
 						Expect(err).NotTo(HaveOccurred())
-						log.Infof("AfterEach starting %v", out)
-						if strings.Contains("10.101.0.10", out) {
-							ipExists[felix] = struct{}{}
+						if strings.Contains(out, clusterIP) && strings.Contains(out, servicePort) {
+							exists[felix] = struct{}{}
 						}
 					}
-					return len(ipExists) > 0
+					return len(exists) == len(felixes)
 				}, "60s", "5s").Should(BeTrue())
 
+				By("deleting the annotated service  ")
+				err := client.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("ensuring the ipaddress removal is propagated to ipset")
+				Eventually(func() bool {
+					for _, felix := range felixes {
+						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
+						Expect(err).NotTo(HaveOccurred())
+						if !strings.Contains(out, clusterIP) && !strings.Contains(out, servicePort) {
+							return true
+						}
+					}
+					return false
+				}, "60s", "5s").Should(BeTrue())
+
+				By("creating the service again, to verify the ipset callbacks")
+				createService(v1Svc, client)
+
+				By("ensuring the ipaddress of service propagated to ipset again")
+				exists = make(map[*infrastructure.Felix]struct{})
+				Eventually(func() bool {
+					for _, felix := range felixes {
+						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
+						Expect(err).NotTo(HaveOccurred())
+						if strings.Contains(out, clusterIP) && strings.Contains(out, servicePort) {
+							exists[felix] = struct{}{}
+						}
+					}
+					return len(exists) == len(felixes)
+				}, "60s", "5s").Should(BeTrue())
 			})
+
 		})
 	})
