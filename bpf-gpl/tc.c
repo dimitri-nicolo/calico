@@ -303,6 +303,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	 * This will make it to skip fib in calico_tc_skb_accepted()
 	 */
 	if (CALI_F_FROM_HEP) {
+		CALI_DEBUG("Arrange for Linux to do RPF check\n");
 		ct_result_set_flag(ctx.state->ct_result.rc, CALI_CT_RPF_FAILED);
 	}
 
@@ -568,7 +569,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 	CALI_DEBUG("pol_rc=%d\n", state->pol_rc);
 	CALI_DEBUG("sport=%d\n", state->sport);
 	CALI_DEBUG("flags=%x\n", state->flags);
-	CALI_DEBUG("ct_rc=%d\n", ct_rc);
+	CALI_DEBUG("ct_rc=%d\n", state->ct_result.rc);
 	CALI_DEBUG("ct_related=%d\n", ct_related);
 
 	// Set the dport to 0, to make sure conntrack entries for icmp is proper as we use
