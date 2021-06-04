@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/go-openapi/runtime v0.19.28
 	github.com/go-playground/universal-translator v0.16.0 // indirect
+	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/google/go-cmp v0.5.4
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0

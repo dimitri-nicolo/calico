@@ -61,7 +61,7 @@ const (
 }`
 )
 
-var _ = Describe("Test /decodeRequestBody functions", func() {
+var _ = Describe("Test /utils/http functions", func() {
 	Context("Test that the request body decode function behaves as expected", func() {
 		It("Should return an error if the json is badly formed in the request body", func() {
 			r, err := http.NewRequest(http.MethodGet, "", bytes.NewReader([]byte(badlyFormedAtPosisitonRequestBody)))
@@ -227,6 +227,11 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 			Expect(params.ClusterName).To(BeEquivalentTo("c_val"))
 			Expect(params.PageSize).To(BeEquivalentTo(152))
 			Expect(params.SearchAfter).To(BeEquivalentTo("sa_val"))
+		})
+	})
+
+	Context("Test that the request body enecode function behaves as expected", func() {
+		It("", func() {
 		})
 	})
 })

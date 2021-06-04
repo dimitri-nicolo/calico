@@ -24,14 +24,17 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/go-openapi/runtime/middleware/header"
+	log "github.com/sirupsen/logrus"
 )
 
 // Based on: https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
@@ -41,8 +44,9 @@ const maxBytes = 1048576 // 1MB maximum, bytes per http request body.
 var (
 	ErrJsonUnknownField                = errors.New("json: unknown field ")
 	ErrHttpRequestBodyTooLarge         = errors.New("http: request body too large")
+	ErrCantReadRequestBody             = errors.New("can't read body")
 	ErrEmptyRequestBody                = errors.New("empty request body")
-	ErrTooManyJsonObjectsInRequestBody = errors.New("to many JSON objects in request body")
+	ErrTooManyJsonObjectsInRequestBody = errors.New("too many JSON objects in request body")
 )
 
 type MalformedRequest struct {
@@ -64,7 +68,8 @@ func (mr *MalformedRequest) Error() string {
 
 // Decode decodes the json body onto a destination interface.
 //
-// Forms a malformed request error passes the error up to be handled.
+// Decodes and maintains the request body onto the next handler. Forms a
+// malformed request error passes the error up to be handled.
 func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 	if r.Header.Get("Content-Type") != "" {
 		value, _ := header.ParseValueAndParams(r.Header, "Content-Type")
@@ -83,13 +88,31 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 		}
 	}
 
+	// Limit the allowable request body size.
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
-
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	err := dec.Decode(&dst)
+	// Retain the body, to pass it forward.
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		if len(body) >= maxBytes {
+			msg := "Request body must not be larger than 1MB"
+			return &MalformedRequest{
+				Status: http.StatusRequestEntityTooLarge,
+				Msg:    msg,
+				Err:    ErrHttpRequestBodyTooLarge,
+			}
+		} else {
+			msg := "Cannot read request body"
+			return &MalformedRequest{
+				Status: http.StatusBadRequest,
+				Msg:    msg,
+				Err:    ErrCantReadRequestBody,
+			}
+		}
+	}
+
+	dec := json.NewDecoder(ioutil.NopCloser(bytes.NewBuffer(body)))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&dst); err != nil {
 		var syntaxError *json.SyntaxError
 		var unmarshalTypeError *json.UnmarshalTypeError
 
@@ -121,50 +144,37 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 			msg := "Request body must not be empty"
 			return &MalformedRequest{Status: http.StatusBadRequest, Msg: msg, Err: io.EOF}
 
-		case err.Error() == "http: request body too large":
-			msg := "Request body must not be larger than 1MB"
-			return &MalformedRequest{
-				Status: http.StatusRequestEntityTooLarge,
-				Msg:    msg,
-				Err:    ErrHttpRequestBodyTooLarge,
-			}
-
 		default:
 			return err
 		}
 	}
 
-	err = dec.Decode(&struct{}{})
-	if err != io.EOF {
+	// Limit to one srtuct per request.
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		msg := "Request body must only contain a single JSON object"
 		return &MalformedRequest{
 			Status: http.StatusBadRequest,
 			Msg:    msg,
 			Err:    ErrTooManyJsonObjectsInRequestBody}
 	}
+
+	// Write data back to the request body.
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
 	return nil
 }
 
-// GetClusterName decodes the json body onto a interface.
-//
-// Extracts only the ClusterName parameter, returns the default name: "cluster", if empty.
-func GetClusterName(w http.ResponseWriter, r *http.Request) (string, error) {
-
-	param := struct {
-		// ClusterName defines the name of the cluster a connection will be performed on.
-		ClusterName string `json:"cluster" validate:"omitempty"`
-	}{
-		"cluster",
+// Encode encodes the src as a JSON response to the responce writer destination.
+func Encode(dst http.ResponseWriter, src interface{}) error {
+	dst.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(dst).Encode(src); err != nil {
+		msg := "Encoding search results failed"
+		log.Debug(msg)
+		return &MalformedRequest{
+			Status: http.StatusBadRequest,
+			Msg:    msg,
+			Err:    ErrTooManyJsonObjectsInRequestBody}
 	}
 
-	// Decode the http request body into the cluster name.
-	if err := Decode(w, r, &param); err != nil {
-		return "", err
-	}
-
-	if len(param.ClusterName) == 0 {
-		param.ClusterName = "cluster"
-	}
-
-	return param.ClusterName, nil
+	return nil
 }

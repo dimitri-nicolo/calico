@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-proxy/pkg/utils"
+	httpUtils "github.com/tigera/es-proxy/pkg/utils"
 	"github.com/tigera/lma/pkg/auth"
 	authzv1 "k8s.io/api/authorization/v1"
 )
@@ -79,25 +79,30 @@ func RequestToResource(h http.Handler) http.Handler {
 	})
 }
 
-func SearchRequestToResource(resource string, h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		clusterName, err := utils.GetClusterName(w, req)
-		if err != nil {
-			log.WithError(err).Infof("Unable to get cluster name from the request body")
-			var mr *utils.MalformedRequest
+// ClusterRequestToResource creates a new request given the cluster name.
+//
+// Handles a copy of the request body buffer and copies it back to the response writer.
+func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Extract the cluster name from the request body.
+		// Note: Decode maintains the request body's data to pass on to the next handler.
+		var params SearchParams
+		if err := httpUtils.Decode(w, r, &params); err != nil {
+			var mr *httpUtils.MalformedRequest
 			if errors.As(err, &mr) {
-				log.WithError(mr.Err).Info(mr.Msg)
 				http.Error(w, mr.Msg, mr.Status)
-				return
 			} else {
-				log.WithError(err).Info(err.Error())
-				http.Error(w, err.Error(), http.StatusForbidden)
-				return
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
+			return
+		}
+		clusterName := params.ClusterName
+		if len(clusterName) == 0 {
+			clusterName = "cluster"
 		}
 
-		newReq := req.WithContext(auth.NewContextWithReviewResource(
-			req.Context(), createLMAResourceAttributes(clusterName, resource)))
+		newReq := r.WithContext(auth.NewContextWithReviewResource(
+			r.Context(), createLMAResourceAttributes(clusterName, resource)))
 		h.ServeHTTP(w, newReq)
 	})
 }

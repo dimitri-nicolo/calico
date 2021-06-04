@@ -3,7 +3,6 @@ package middleware
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -11,7 +10,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
-	httpRequestBody "github.com/tigera/es-proxy/pkg/utils"
+	httpUtils "github.com/tigera/es-proxy/pkg/utils"
 
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
@@ -42,7 +41,7 @@ type SearchParams struct {
 }
 
 // decodeRequestBody sets the search parameters to their default values.
-func (params *SearchParams) defaultParams() {
+func (params *SearchParams) DefaultParams() {
 	params.ClusterName = "cluster"
 	params.PageSize = 100
 }
@@ -71,9 +70,10 @@ func SearchHandler(getIndex getIndex, client *elastic.Client) http.Handler {
 			}
 			return
 		}
+		// Search.
 		response, serr := search(getIndex, params, client)
 		if serr != nil {
-			var mr *httpRequestBody.MalformedRequest
+			var mr *httpUtils.MalformedRequest
 			var se *SearchError
 			if errors.As(serr, &se) {
 				http.Error(w, se.Msg, se.Status)
@@ -84,7 +84,8 @@ func SearchHandler(getIndex getIndex, client *elastic.Client) http.Handler {
 			}
 			return
 		}
-		if eerr := encodeResponse(w, response); eerr != nil {
+		// Encode reponse to writer.
+		if eerr := httpUtils.Encode(w, response); eerr != nil {
 			var ee *SearchError
 			if errors.As(eerr, &ee) {
 				http.Error(w, ee.Msg, ee.Status)
@@ -93,20 +94,6 @@ func SearchHandler(getIndex getIndex, client *elastic.Client) http.Handler {
 			}
 		}
 	})
-}
-
-// encodeResponse encodes the ES search results as a JSON response.
-func encodeResponse(w http.ResponseWriter, r *esSearch.ESResults) error {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(r); err != nil {
-		log.WithError(err).Info("Encoding search results failed")
-		return &SearchError{
-			Status: http.StatusInternalServerError,
-			Msg:    errGeneric.Error(),
-			Err:    err,
-		}
-	}
-	return nil
 }
 
 // parseRequestBodyForParams extracts query parameters from the request body (JSON.blob) and
@@ -125,11 +112,12 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*SearchP
 		}
 	}
 
-	// Decode the http request body into the struct.
 	var params SearchParams
-	params.defaultParams()
-	if err := httpRequestBody.Decode(w, r, &params); err != nil {
-		var mr *httpRequestBody.MalformedRequest
+	params.DefaultParams()
+
+	// Decode the http request body into the struct.
+	if err := httpUtils.Decode(w, r, &params); err != nil {
+		var mr *httpUtils.MalformedRequest
 		if errors.As(err, &mr) {
 			log.WithError(mr.Err).Info(mr.Msg)
 			return nil, mr

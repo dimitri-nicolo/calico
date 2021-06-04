@@ -13,6 +13,7 @@ import (
 
 // Query encapsulates parameters that define the hits requested from an ES query.
 type Query struct {
+
 	// The elastic-formatted query.
 	Query elastic.Query
 
