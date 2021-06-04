@@ -754,6 +754,11 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		ct_tcp_entry_update(tcp_header, src_to_dst, dst_to_src);
 	}
 
+	if (EGRESS_GATEWAY) {
+		CALI_CT_DEBUG("Skip RPF processing for egress gateway\n");
+		goto skip_rpf;
+	}
+
 	__u32 ifindex = skb_ingress_ifindex(tc_ctx->skb);
 
 	if (src_to_dst->ifindex != ifindex) {
@@ -797,6 +802,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		result.ifindex_fwd = dst_to_src->ifindex;
 	}
 
+skip_rpf:
 	if ((CALI_F_INGRESS && CALI_F_TUNNEL) || !skb_seen(tc_ctx->skb)) {
 		/* Account for the src->dst leg if we haven't seen the packet yet.
 		 * Since when the traffic is tunneled, BPF program on the host
