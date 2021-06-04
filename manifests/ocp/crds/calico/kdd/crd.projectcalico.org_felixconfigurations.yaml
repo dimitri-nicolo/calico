@@ -65,38 +65,6 @@ spec:
                   type: integer
                 chainInsertMode:
                   type: string
-                cloudWatchLogsAggregationKindForAllowed:
-                  type: integer
-                cloudWatchLogsAggregationKindForDenied:
-                  type: integer
-                cloudWatchLogsEnableHostEndpoint:
-                  type: boolean
-                cloudWatchLogsEnabledForAllowed:
-                  type: boolean
-                cloudWatchLogsEnabledForDenied:
-                  type: boolean
-                cloudWatchLogsFlushInterval:
-                  type: string
-                cloudWatchLogsIncludeLabels:
-                  type: boolean
-                cloudWatchLogsIncludePolicies:
-                  type: boolean
-                cloudWatchLogsLogGroupName:
-                  type: string
-                cloudWatchLogsLogStreamName:
-                  type: string
-                cloudWatchLogsReporterEnabled:
-                  type: boolean
-                cloudWatchLogsRetentionDays:
-                  type: integer
-                cloudWatchMetricsPushIntervalSecs:
-                  type: string
-                cloudWatchMetricsReporterEnabled:
-                  type: boolean
-                cloudWatchNodeHealthPushIntervalSecs:
-                  type: string
-                cloudWatchNodeHealthStatusEnabled:
-                  type: boolean
                 dataplaneDriver:
                   type: string
                 debugDisableLogDropping:
