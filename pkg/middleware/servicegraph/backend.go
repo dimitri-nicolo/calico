@@ -20,6 +20,7 @@ type ServiceGraphBackend interface {
 	GetFlowConfig(cluster string) (*FlowConfig, error)
 	GetL3FlowData(cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
 	GetL7FlowData(cluster string, tr v1.TimeRange) ([]L7Flow, error)
+	GetDNSData(cluster string, tr v1.TimeRange) ([]DNSLog, error)
 	GetEvents(cluster string, tr v1.TimeRange) ([]Event, error)
 
 	// These methods access data for a specific user request and therefore need to include the users request context.
@@ -43,6 +44,10 @@ func (r *realServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, er
 
 func (r *realServiceGraphBackend) GetL3FlowData(cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
 	return GetL3FlowData(r.ctx, r.elastic, cluster, tr, fc)
+}
+
+func (r *realServiceGraphBackend) GetDNSData(cluster string, tr v1.TimeRange) ([]DNSLog, error) {
+	return GetDNSClientData(r.ctx, r.elastic, cluster, tr)
 }
 
 func (r *realServiceGraphBackend) GetL7FlowData(cluster string, tr v1.TimeRange) ([]L7Flow, error) {
@@ -82,6 +87,8 @@ type MockServiceGraphBackend struct {
 	L3Err              error
 	L7                 []L7Flow
 	L7Err              error
+	DNS                []DNSLog
+	DNSErr             error
 	Events             []Event
 	EventsErr          error
 	RBACFilter         RBACFilter
@@ -92,6 +99,7 @@ type MockServiceGraphBackend struct {
 	numCallsFlowConfig int
 	numCallsL3         int
 	numCallsL7         int
+	numCallsDNS        int
 	numCallsEvents     int
 	numCallsRBACFilter int
 	numCallsNameHelper int
@@ -139,6 +147,17 @@ func (m *MockServiceGraphBackend) GetL7FlowData(cluster string, tr v1.TimeRange)
 		return nil, m.L7Err
 	}
 	return m.L7, nil
+}
+
+func (m *MockServiceGraphBackend) GetDNSData(cluster string, tr v1.TimeRange) ([]DNSLog, error) {
+	m.waitElastic()
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.numCallsDNS++
+	if m.DNSErr != nil {
+		return nil, m.DNSErr
+	}
+	return m.DNS, nil
 }
 
 func (m *MockServiceGraphBackend) GetEvents(cluster string, tr v1.TimeRange) ([]Event, error) {
@@ -196,6 +215,12 @@ func (m *MockServiceGraphBackend) GetNumCallsL7() int {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.numCallsL7
+}
+
+func (m *MockServiceGraphBackend) GetNumCallsDNS() int {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	return m.numCallsDNS
 }
 
 func (m *MockServiceGraphBackend) GetNumCallsEvents() int {

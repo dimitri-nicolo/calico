@@ -72,6 +72,9 @@ func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGra
 	// Overlay the events on the in-view nodes.
 	s.overlayEvents(nodesInView)
 
+	// Overlay the dns client data on the in-view nodes.
+	s.overlayDNS(nodesInView)
+
 	if nodesInView != nil && nodesInView.Len() > 0 {
 		// Copy across edges that are in view, and update the nodes to indicate whether we are truncating the graph (i.e.
 		// that the graph can be followed along it's ingress or egress connections).
@@ -777,6 +780,7 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 		log.Debugf("Checking event %#v", event)
 		for _, ep := range event.Endpoints {
 			log.Debugf("  - Checking event endpoint: %#v", ep)
+			var nodes []*v1.GraphNode
 			switch ep.Type {
 			case v1.GraphNodeTypeService:
 				fep := FlowEndpoint{
@@ -786,18 +790,35 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
 				sg := s.sgd.ServiceGroups.GetByService(v1.NamespacedName{
 					Namespace: ep.Namespace, Name: ep.Name,
 				})
-				s.maybeOverlayEventID(nodesInView, event, fep, sg)
+				nodes = s.getAssociatedNodesInView(nodesInView, fep, sg)
 			default:
 				sg := s.sgd.ServiceGroups.GetByEndpoint(ep)
-				s.maybeOverlayEventID(nodesInView, event, ep, sg)
+				nodes = s.getAssociatedNodesInView(nodesInView, ep, sg)
+			}
+
+			if len(nodes) > 0 {
+				// Assign the events to the most aggregated node (the first one in the slice).
+				nodes[0].IncludeEvent(event.ID, event.Details)
 			}
 		}
 	}
 }
 
-// maybeOverlayEventID attempts to overlay an event on to one of the graph nodes. It applies the event to the top
-// level parent containing the impacted endpoint. If there is no node visible the event is discarded.
-func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, event Event, ep FlowEndpoint, sg *ServiceGroup) {
+// overlayDNS iterates through all the DNS logs and overlays them on the existing graph nodes. The stats are added
+// to the endpoint and all parent nodes in the hierarchy.
+func (s *serviceGraphConstructionData) overlayDNS(nodesInView set.Set) {
+	for _, dl := range s.sgd.FilteredDNSClientLogs {
+		log.Debugf("Checking DNS log for endpoint %#v", dl.Endpoint)
+		sg := s.sgd.ServiceGroups.GetByEndpoint(dl.Endpoint)
+		nodes := s.getAssociatedNodesInView(nodesInView, dl.Endpoint, sg)
+		for _, node := range nodes {
+			node.IncludeStats(dl.Stats)
+		}
+	}
+}
+
+// getAssociatedNodesInView returns the set of node (parent down to endpoint) for the specified endpoint or service group.
+func (s *serviceGraphConstructionData) getAssociatedNodesInView(nodesInView set.Set, ep FlowEndpoint, sg *ServiceGroup) []*v1.GraphNode {
 	// Determine which layer this endpoint might be part of.
 	var layerName, layerNameEndpoint, layerNameAggrEndpoint, layerNameServiceGroup, layerNameNamespace string
 
@@ -829,48 +850,40 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 	// Set the layer.
 	idi.Layer = layerName
 
-	// Check if the layer is in view, if so add the event to the layer.
+	// Check if the layer is in view, if so return just the layer.
 	if layerName != "" {
 		layerId := idi.GetLayerID()
 		if _, ok := s.nodesMap[layerId]; ok && (nodesInView == nil || nodesInView.Contains(layerId)) {
-			log.Debugf("  - Including event in node %s", layerId)
-			s.nodesMap[layerId].Node.IncludeEvent(event.ID, event.Details)
-			return
+			return []*v1.GraphNode{s.nodesMap[layerId].Node}
 		}
 	}
 
-	// Check if the namespace is in view, if so add the event to the namespace.
+	// Check if the namespace is in view, if so return just the namespace.
 	if ep.Namespace != "" {
 		namespaceId := idi.GetNamespaceID()
 		if _, ok := s.nodesMap[namespaceId]; ok && (nodesInView == nil || nodesInView.Contains(namespaceId)) {
-			log.Debugf("  - Including event in node %s", namespaceId)
-			s.nodesMap[namespaceId].Node.IncludeEvent(event.ID, event.Details)
-			return
+			return []*v1.GraphNode{s.nodesMap[namespaceId].Node}
 		}
 	}
 
-	// Check if service group is in view, if so add the event to the service group.
+	var nodes []*v1.GraphNode
+	// Check if service group is in view, include in the response.
 	if sg != nil {
 		if _, ok := s.nodesMap[sg.ID]; ok && (nodesInView == nil || nodesInView.Contains(sg.ID)) {
-			log.Debugf("  - Including event in node %s", sg.ID)
-			s.nodesMap[sg.ID].Node.IncludeEvent(event.ID, event.Details)
-			return
+			nodes = append(nodes, s.nodesMap[sg.ID].Node)
 		}
 	}
-	// Check if endpoint is in view, if so add the event to the endpoint.
-	if endpointId != "" {
-		if _, ok := s.nodesMap[endpointId]; ok && (nodesInView == nil || nodesInView.Contains(endpointId)) {
-			log.Debugf("  - Including event in node %s", endpointId)
-			s.nodesMap[endpointId].Node.IncludeEvent(event.ID, event.Details)
-			return
-		}
-	}
+	// Check if aggregated endpoint is in view, if so include the aggregated endpoint.
 	if aggrEndpointId != "" {
 		if _, ok := s.nodesMap[aggrEndpointId]; ok && (nodesInView == nil || nodesInView.Contains(aggrEndpointId)) {
-			log.Debugf("  - Including event in node %s", aggrEndpointId)
-			s.nodesMap[aggrEndpointId].Node.IncludeEvent(event.ID, event.Details)
-			return
+			nodes = append(nodes, s.nodesMap[aggrEndpointId].Node)
 		}
 	}
-	log.Debug("  - No matching node in graph")
+	// Check if endpoint is in view, if so include the endpoint.
+	if endpointId != "" {
+		if _, ok := s.nodesMap[endpointId]; ok && (nodesInView == nil || nodesInView.Contains(endpointId)) {
+			nodes = append(nodes, s.nodesMap[endpointId].Node)
+		}
+	}
+	return nodes
 }

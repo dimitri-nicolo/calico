@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,7 @@ const (
 
 var _ = Describe("Service graph data tests", func() {
 	// Track last handled response filename and expected data.
+	var expectDataFilename string
 	var actualDataFilename string
 	var actualData map[string]interface{}
 
@@ -40,45 +42,29 @@ var _ = Describe("Service graph data tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
+		_, err := GinkgoWriter.Write([]byte(fmt.Sprintf(`
+********************************************************************************
+  Comparison failed comparing service graph response to expected response data.
+
+  Expected response is in test file: %s
+  Actual response has been written out to file: %s
+
+  This may be a valid failure if the response format has been modified. If so,
+  check the difference in the files and once verifired correct the file may be
+  renamed so that the test no long errors.
+********************************************************************************
+`, expectDataFilename, actualDataFilename)))
+		Expect(err).NotTo(HaveOccurred())
+
 		actualData = nil
 		actualDataFilename = ""
+		expectDataFilename = ""
 	})
 
 	DescribeTable("valid request parameters",
 		func(sgr v1.ServiceGraphRequest, code int, resp string, rbac RBACFilter, names NameHelper) {
-			// Load data.
-			var l3 []L3Flow
-			var l7 []L7Flow
-			var events []Event
-
-			content, err := ioutil.ReadFile("testdata/l3.json")
-			Expect(err).NotTo(HaveOccurred())
-			err = json.Unmarshal(content, &l3)
-			Expect(err).NotTo(HaveOccurred())
-
-			content, err = ioutil.ReadFile("testdata/l7.json")
-			Expect(err).NotTo(HaveOccurred())
-			err = json.Unmarshal(content, &l7)
-			Expect(err).NotTo(HaveOccurred())
-
-			content, err = ioutil.ReadFile("testdata/events.json")
-			Expect(err).NotTo(HaveOccurred())
-			err = json.Unmarshal(content, &events)
-			Expect(err).NotTo(HaveOccurred())
-
 			// Create a mock backend.
-			mb := &MockServiceGraphBackend{
-				FlowConfig: FlowConfig{
-					L3FlowFlushInterval: time.Minute * 5,
-					L7FlowFlushInterval: time.Minute * 5,
-					DNSLogFlushInterval: time.Minute * 5,
-				},
-				L3:         l3,
-				L7:         l7,
-				Events:     events,
-				RBACFilter: rbac,
-				NameHelper: names,
-			}
+			mb := CreateMockBackendWithData(rbac, names)
 
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
@@ -137,11 +123,12 @@ var _ = Describe("Service graph data tests", func() {
 			// Track the last handled response data and the response filename. We use this to write out the expected
 			// file in the event of an error.  It makes dev cycles easier.
 			actualData = actual
+			expectDataFilename = "testdata/responses/test-" + resp + ".json"
 			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
 
 			// Parse the expected response.
 			var expected map[string]interface{}
-			content, err = ioutil.ReadFile("testdata/responses/test-" + resp + ".json")
+			content, err := ioutil.ReadFile(expectDataFilename)
 			Expect(err).NotTo(HaveOccurred())
 			err = json.Unmarshal(content, &expected)
 			Expect(err).NotTo(HaveOccurred())
@@ -325,39 +312,8 @@ var _ = Describe("Service graph data tests", func() {
 
 	DescribeTable("badly formatted requests",
 		func(sgr string, code int, resp string) {
-			// Load data.
-			var l3 []L3Flow
-			var l7 []L7Flow
-			var events []Event
-
-			content, err := ioutil.ReadFile("testdata/l3.json")
-			Expect(err).NotTo(HaveOccurred())
-			err = json.Unmarshal(content, &l3)
-			Expect(err).NotTo(HaveOccurred())
-
-			content, err = ioutil.ReadFile("testdata/l7.json")
-			Expect(err).NotTo(HaveOccurred())
-			err = json.Unmarshal(content, &l7)
-			Expect(err).NotTo(HaveOccurred())
-
-			content, err = ioutil.ReadFile("testdata/events.json")
-			Expect(err).NotTo(HaveOccurred())
-			err = json.Unmarshal(content, &events)
-			Expect(err).NotTo(HaveOccurred())
-
 			// Create a mock backend.
-			mb := &MockServiceGraphBackend{
-				FlowConfig: FlowConfig{
-					L3FlowFlushInterval: time.Minute * 5,
-					L7FlowFlushInterval: time.Minute * 5,
-					DNSLogFlushInterval: time.Minute * 5,
-				},
-				L3:         l3,
-				L7:         l7,
-				Events:     events,
-				RBACFilter: MockRBACFilterIncludeAll{},
-				NameHelper: NewMockNameHelper(nil, nil),
-			}
+			mb := CreateMockBackendWithData(MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
 
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())

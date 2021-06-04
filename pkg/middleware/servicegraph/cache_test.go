@@ -16,6 +16,49 @@ import (
 	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 )
 
+func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGraphBackend {
+	// Load data.
+	var l3 []L3Flow
+	var l7 []L7Flow
+	var dns []DNSLog
+	var events []Event
+
+	content, err := ioutil.ReadFile("testdata/l3.json")
+	Expect(err).NotTo(HaveOccurred())
+	err = json.Unmarshal(content, &l3)
+	Expect(err).NotTo(HaveOccurred())
+
+	content, err = ioutil.ReadFile("testdata/l7.json")
+	Expect(err).NotTo(HaveOccurred())
+	err = json.Unmarshal(content, &l7)
+	Expect(err).NotTo(HaveOccurred())
+
+	content, err = ioutil.ReadFile("testdata/dns.json")
+	Expect(err).NotTo(HaveOccurred())
+	err = json.Unmarshal(content, &dns)
+	Expect(err).NotTo(HaveOccurred())
+
+	content, err = ioutil.ReadFile("testdata/events.json")
+	Expect(err).NotTo(HaveOccurred())
+	err = json.Unmarshal(content, &events)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Create a mock backend.
+	return &MockServiceGraphBackend{
+		FlowConfig: FlowConfig{
+			L3FlowFlushInterval: time.Minute * 5,
+			L7FlowFlushInterval: time.Minute * 5,
+			DNSLogFlushInterval: time.Minute * 5,
+		},
+		L3:         l3,
+		L7:         l7,
+		DNS:        dns,
+		Events:     events,
+		RBACFilter: rbac,
+		NameHelper: names,
+	}
+}
+
 var _ = Describe("Service graph cache tests", func() {
 	var cache ServiceGraphCache
 	var ctx context.Context
@@ -34,42 +77,10 @@ var _ = Describe("Service graph cache tests", func() {
 			ServiceGraphCachePollQueryInterval: 5 * time.Millisecond,
 			ServiceGraphCacheDataSettleTime:    15 * time.Minute,
 		}
+
+		// Create a service graph with a mock backend.
 		ctx, cancel = context.WithCancel(context.Background())
-
-		// Load data.
-		var l3 []L3Flow
-		var l7 []L7Flow
-		var events []Event
-
-		content, err := ioutil.ReadFile("testdata/l3.json")
-		Expect(err).NotTo(HaveOccurred())
-		err = json.Unmarshal(content, &l3)
-		Expect(err).NotTo(HaveOccurred())
-
-		content, err = ioutil.ReadFile("testdata/l7.json")
-		Expect(err).NotTo(HaveOccurred())
-		err = json.Unmarshal(content, &l7)
-		Expect(err).NotTo(HaveOccurred())
-
-		content, err = ioutil.ReadFile("testdata/events.json")
-		Expect(err).NotTo(HaveOccurred())
-		err = json.Unmarshal(content, &events)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Create a mock backend.
-		backend = &MockServiceGraphBackend{
-			FlowConfig: FlowConfig{
-				L3FlowFlushInterval: time.Minute * 5,
-				L7FlowFlushInterval: time.Minute * 5,
-				DNSLogFlushInterval: time.Minute * 5,
-			},
-			L3:         l3,
-			L7:         l7,
-			Events:     events,
-			RBACFilter: MockRBACFilterIncludeAll{},
-			NameHelper: NewMockNameHelper(nil, nil),
-		}
-
+		backend = CreateMockBackendWithData(MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
 		cache = NewServiceGraphCache(ctx, backend, cfg)
 	})
 
@@ -139,9 +150,9 @@ var _ = Describe("Service graph cache tests", func() {
 		}()
 
 		By("Waiting for the correct number of block elastic calls")
-		// All requests should be blocked, a single request has 3 concurrent requests, and two out of three of the
+		// All requests should be blocked, a single request has 4 concurrent requests, and two out of three of the
 		// requests should result in actual queries.
-		Eventually(backend.GetNumBlocked).Should(Equal(6))
+		Eventually(backend.GetNumBlocked).Should(Equal(8))
 
 		// Unblock the backend, wait for blocked calls to drop to zero and all async calls to return.
 		By("Unblocking elastic and waiting for all three requests to complete.")
@@ -159,10 +170,11 @@ var _ = Describe("Service graph cache tests", func() {
 		Expect(q1.TimeIntervals).To(Equal(q2.TimeIntervals))
 		Expect(q1.TimeIntervals).NotTo(Equal(q3.TimeIntervals))
 
-		// The number of calls to get flow config, L3 data, L7 data and events should be 2.
+		// The number of calls to get flow config, L3 data, L7 data, DNS logs and events should be 2.
 		Expect(backend.GetNumCallsFlowConfig()).To(Equal(2))
 		Expect(backend.GetNumCallsL3()).To(Equal(2))
 		Expect(backend.GetNumCallsL7()).To(Equal(2))
+		Expect(backend.GetNumCallsDNS()).To(Equal(2))
 		Expect(backend.GetNumCallsEvents()).To(Equal(2))
 
 		// The number of calls to get RBAC filter and name helper should be 3.
@@ -174,6 +186,7 @@ var _ = Describe("Service graph cache tests", func() {
 		Eventually(backend.GetNumCallsFlowConfig, "5s").Should(Equal(10))
 		Eventually(backend.GetNumCallsL3, "5s").Should(Equal(10))
 		Eventually(backend.GetNumCallsL7, "5s").Should(Equal(10))
+		Eventually(backend.GetNumCallsDNS, "5s").Should(Equal(10))
 		Eventually(backend.GetNumCallsEvents, "5s").Should(Equal(10))
 
 		By("Waiting for the cache entries to age out")
@@ -181,6 +194,7 @@ var _ = Describe("Service graph cache tests", func() {
 		Expect(backend.GetNumCallsFlowConfig()).To(Equal(10))
 		Expect(backend.GetNumCallsL3()).To(Equal(10))
 		Expect(backend.GetNumCallsL7()).To(Equal(10))
+		Expect(backend.GetNumCallsDNS()).To(Equal(10))
 		Expect(backend.GetNumCallsEvents()).To(Equal(10))
 
 		By("Querying a fix time interval")

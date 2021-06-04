@@ -56,6 +56,11 @@ type TimeSeriesFlow struct {
 	Stats                []v1.GraphStats
 }
 
+type TimeSeriesDNS struct {
+	Endpoint FlowEndpoint
+	Stats    []v1.GraphStats
+}
+
 func (t TimeSeriesFlow) String() string {
 	if t.AggregatedProtoPorts == nil {
 		return fmt.Sprintf("L3Flow %s", t.Edge)
@@ -64,11 +69,12 @@ func (t TimeSeriesFlow) String() string {
 }
 
 type ServiceGraphData struct {
-	TimeIntervals []v1.TimeRange
-	FilteredFlows []TimeSeriesFlow
-	ServiceGroups ServiceGroups
-	NameHelper    NameHelper
-	Events        []Event
+	TimeIntervals         []v1.TimeRange
+	FilteredFlows         []TimeSeriesFlow
+	FilteredDNSClientLogs []TimeSeriesDNS
+	ServiceGroups         ServiceGroups
+	NameHelper            NameHelper
+	Events                []Event
 }
 
 type serviceGraphCache struct {
@@ -185,6 +191,21 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 			Edge: rf.Edge,
 			Stats: []v1.GraphStats{{
 				L7: &stats,
+			}},
+		})
+	}
+
+	// Filter the DNS logs based on RBAC. All other graph content is removed through graph pruning.
+	for _, dl := range cacheData.dns {
+		if !rbacFilter.IncludeEndpoint(dl.Endpoint) {
+			continue
+		}
+
+		stats := dl.Stats
+		fd.FilteredDNSClientLogs = append(fd.FilteredDNSClientLogs, TimeSeriesDNS{
+			Endpoint: dl.Endpoint,
+			Stats: []v1.GraphStats{{
+				DNS: &stats,
 			}},
 		})
 	}
@@ -432,8 +453,9 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	wg := sync.WaitGroup{}
 	var rawL3 []L3Flow
 	var rawL7 []L7Flow
+	var rawDNS []DNSLog
 	var rawEvents []Event
-	var errL3, errL7, errEvents error
+	var errL3, errL7, errDNS, errEvents error
 
 	// Determine the flow config - we need this to process some of the flow data correctly.
 	flowConfig, err := s.backend.GetFlowConfig(d.cluster)
@@ -470,6 +492,11 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		rawDNS, errDNS = s.backend.GetDNSData(d.cluster, tr)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		rawEvents, errEvents = s.backend.GetEvents(d.cluster, tr)
 	}()
 	wg.Wait()
@@ -479,6 +506,9 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	} else if errL7 != nil {
 		log.WithError(errL7).Error("failed to get l7 logs")
 		d.err = errL7
+	} else if errDNS != nil {
+		log.WithError(errDNS).Error("failed to get DNS logs")
+		d.err = errDNS
 	} else if errEvents != nil {
 		log.WithError(errEvents).Error("failed to get event logs")
 		d.err = errEvents
@@ -486,6 +516,7 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 
 	d.l3 = rawL3
 	d.l7 = rawL7
+	d.dns = rawDNS
 	d.events = rawEvents
 
 	log.Debugf("Updated data: %s", d.cacheKey)
@@ -527,6 +558,7 @@ type cacheData struct {
 	// The L3, L7 and events data.
 	l3     []L3Flow
 	l7     []L7Flow
+	dns    []DNSLog
 	events []Event
 }
 

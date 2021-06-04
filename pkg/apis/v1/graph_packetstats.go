@@ -1,7 +1,11 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package v1
 
-import "math"
+import (
+	"encoding/json"
+	"math"
+	"sort"
+)
 
 // GraphByteStats contains byte statistics.
 type GraphByteStats struct {
@@ -236,5 +240,118 @@ func (l *GraphL7Stats) Combine(l2 *GraphL7Stats) *GraphL7Stats {
 		ResponseCode3xx: l.ResponseCode3xx.Combine(l2.ResponseCode3xx),
 		ResponseCode4xx: l.ResponseCode4xx.Combine(l2.ResponseCode4xx),
 		ResponseCode5xx: l.ResponseCode5xx.Combine(l2.ResponseCode5xx),
+	}
+}
+
+// GraphDNSStats contains DNS statistics.
+type GraphDNSStats struct {
+	GraphLatencyStats `json:",inline"`
+	ResponseCodes     GraphDNSResponseCodes `json:"response_codes"`
+}
+
+// Combine returns a pointer to a GraphDNSStats that combines the stats from d and d2. Depending on the stat
+// this may either be the max or min value, the average (weighted by count) or the sum.
+func (d *GraphDNSStats) Combine(d2 *GraphDNSStats) *GraphDNSStats {
+	if d == nil {
+		return d2
+	} else if d2 == nil {
+		return d
+	}
+
+	return &GraphDNSStats{
+		GraphLatencyStats: d.GraphLatencyStats.Combine(d2.GraphLatencyStats),
+		ResponseCodes:     d.ResponseCodes.Combine(d2.ResponseCodes),
+	}
+}
+
+type GraphLatencyStats struct {
+	MeanRequestLatency float64 `json:"mean_request_latency,omitempty"`
+	MaxRequestLatency  float64 `json:"max_request_latency,omitempty"`
+	MinRequestLatency  float64 `json:"min_request_latency,omitempty"`
+	LatencyCount       int64   `json:"-"`
+}
+
+// Combine returns a pointer to a GraphDNSStats that combines the stats from d and d2. Depending on the stat
+// this may either be the max or min value, the average (weighted by count) or the sum.
+func (l GraphLatencyStats) Combine(l2 GraphLatencyStats) GraphLatencyStats {
+	if l.LatencyCount == 0 {
+		return l2
+	} else if l2.LatencyCount == 0 {
+		return l
+	}
+
+	totalLatencyCount := l.LatencyCount + l2.LatencyCount
+	return GraphLatencyStats{
+		MeanRequestLatency: ((float64(l.LatencyCount) * l.MeanRequestLatency) + (float64(l2.LatencyCount) * l2.MeanRequestLatency)) / float64(totalLatencyCount),
+		MaxRequestLatency:  math.Max(l.MaxRequestLatency, l2.MaxRequestLatency),
+		MinRequestLatency:  math.Min(l.MinRequestLatency, l2.MinRequestLatency),
+		LatencyCount:       totalLatencyCount,
+	}
+}
+
+// GraphDNSResponseCodes contains DNS response codes. This is stored as a map, but json marshalled as a slice.
+type GraphDNSResponseCodes map[string]GraphDNSResponseCode
+
+func (c GraphDNSResponseCodes) Copy() GraphDNSResponseCodes {
+	pcopy := make(GraphDNSResponseCodes)
+	for n, grc := range c {
+		pcopy[n] = grc
+	}
+	return pcopy
+}
+
+func (c GraphDNSResponseCodes) Combine(c2 GraphDNSResponseCodes) GraphDNSResponseCodes {
+	codes := c.Copy()
+	for k, code := range c2 {
+		codes[k] = codes[k].Combine(code)
+	}
+	return codes
+}
+
+func (c GraphDNSResponseCodes) MarshalJSON() ([]byte, error) {
+	var names []string
+	for name := range c {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	codes := make([]GraphDNSResponseCode, len(names))
+	for i, name := range names {
+		codes[i] = c[name]
+	}
+	return json.Marshal(codes)
+}
+
+func (c *GraphDNSResponseCodes) UnmarshalJSON(b []byte) error {
+	var codes []GraphDNSResponseCode
+	err := json.Unmarshal(b, &codes)
+	if err != nil {
+		return err
+	}
+
+	*c = make(map[string]GraphDNSResponseCode)
+	for _, code := range codes {
+		(*c)[code.Code] = code
+	}
+	return nil
+}
+
+// GraphDNSResponseCode encapsulates information about a DNS response code.
+type GraphDNSResponseCode struct {
+	Code              string `json:"code"`
+	Count             int64  `json:"count"`
+	GraphLatencyStats `json:",inline"`
+}
+
+func (c GraphDNSResponseCode) Combine(c2 GraphDNSResponseCode) GraphDNSResponseCode {
+	if c.Count == 0 {
+		return c2
+	} else if c2.Count == 0 {
+		return c
+	}
+	return GraphDNSResponseCode{
+		Code:              c.Code,
+		Count:             c.Count + c2.Count,
+		GraphLatencyStats: c.GraphLatencyStats.Combine(c2.GraphLatencyStats),
 	}
 }
