@@ -1,16 +1,18 @@
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
 GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
-IMAGES_FILE=
+IMAGES_FILE?=
 JEKYLL_VERSION=4.0.0
 HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
+BUILD_EXTRA_FLAG=
 ifeq ($(DEV),true)
 	CONFIG:=$(CONFIG),_config_dev.yml
 endif
 ifneq ($(IMAGES_FILE),)
 	CONFIG:=$(CONFIG),/config_images.yml
+	BUILD_EXTRA_FLAG+=-v $(IMAGES_FILE):/config_images.yml
 endif
 
 # Set DEV_NULL=true to enable the Null Converter which renders the docs site as markdown. 
@@ -94,8 +96,7 @@ _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-c
 	-e JEKYLL_UID=`id -u` \
 	-v $$PWD/bin/helm:/usr/local/bin/helm:ro \
 	-v $$PWD:/srv/jekyll \
-	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
-	-v $(IMAGES_FILE):/config_images.yml \
+	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml $(BUILD_EXTRA_FLAG) \
 	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
 
 ## Clean enough that a new release build will be clean
