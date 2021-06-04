@@ -73,7 +73,7 @@ blocks:
         - name: Run CD
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make images cd CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
 
 promotions:
   - name: Update Pins
