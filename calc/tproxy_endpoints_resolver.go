@@ -48,6 +48,7 @@ const TRPOXYNodePortsIPSet = "tproxy-nodeports"
 type TproxyEndPointsResolver struct {
 	mutex sync.RWMutex
 
+	createIpSet     bool
 	suh             *ServiceUpdateHandler
 	callbacks       ipSetUpdateCallbacks
 	activeServices  map[ipPortProtoKey][]proxy.ServicePortName
@@ -57,6 +58,7 @@ type TproxyEndPointsResolver struct {
 func NewTproxyEndPointsResolver(callbacks ipSetUpdateCallbacks) *TproxyEndPointsResolver {
 	tpr := &TproxyEndPointsResolver{
 		mutex:           sync.RWMutex{},
+		createIpSet:     false,
 		callbacks:       callbacks,
 		suh:             NewServiceUpdateHandler(),
 		activeServices:  make(map[ipPortProtoKey][]proxy.ServicePortName),
@@ -79,8 +81,10 @@ func (tpr *TproxyEndPointsResolver) OnResourceUpdate(update api.Update) (_ bool)
 		case v3.KindK8sService:
 			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
-				tpr.suh.removeService(k)
-				tpr.flush()
+				if _, ok := tpr.suh.services[k]; ok {
+					tpr.suh.removeService(k)
+					tpr.flush()
+				}
 			} else {
 				service := update.Value.(*kapiv1.Service)
 				annotations := service.ObjectMeta.Annotations
@@ -109,112 +113,152 @@ func (tpr *TproxyEndPointsResolver) flush() {
 	tpr.mutex.Lock()
 	defer tpr.mutex.Unlock()
 
-	serviceUptoDate := reflect.DeepEqual(tpr.activeServices, tpr.suh.ipPortProtoToServices)
-	nodePortsUptoDate := reflect.DeepEqual(tpr.activeNodePorts, tpr.suh.nodePortServices)
+	addedSvs, removedSvs := tpr.resolveRegularServices()
 
-	if !serviceUptoDate {
-		tpr.flushRegularServices()
+	if len(addedSvs) > 0 || len(removedSvs) > 0 {
+		tpr.flushRegularService(addedSvs, removedSvs)
 	}
 
-	if !nodePortsUptoDate {
-		tpr.flushNodePorts()
-	}
-
+	// TODO: current release doesn't intend to support nodeports
+	//addedNPs, removedNps := tpr.resolveNodePorts()
+	//if len(addedNPs) > 0 || len(removedNps) > 0 {
+	//	tpr.flushNodePorts(addedNPs, removedNps)
+	//}
 }
 
-func (tpr *TproxyEndPointsResolver) flushRegularServices() {
+func (tpr *TproxyEndPointsResolver) resolveRegularServices() (map[ipPortProtoKey][]proxy.ServicePortName,
+	map[ipPortProtoKey]struct{}) {
 	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
-	// remove expired services from active services
 	log.Debugf("flush regular services for tproxy")
 
-	// if the active services are zero send OnIPSetAdded to ensure it's existence before sending updates
-	if len(tpr.activeServices) == 0 {
-		tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-	}
+	added := make(map[ipPortProtoKey][]proxy.ServicePortName)
+	removed := make(map[ipPortProtoKey]struct{})
 
-	for ipPortProto, _ := range tpr.activeServices {
+	for ipPortProto := range tpr.activeServices {
 		// if member key exists in up-to-date list, update the value to latest in active service and continue to next
 		if latest, ok := tpr.suh.ipPortProtoToServices[ipPortProto]; ok {
 			tpr.activeServices[ipPortProto] = latest
 			continue
 		}
-
-		ipSetId, member := getIpSetMemberFromIpPortProto(ipPortProto)
-		// send ip set call back to remove them from tproxy ipset
-		tpr.callbacks.OnIPSetMemberRemoved(ipSetId, member)
-		delete(tpr.activeServices, ipPortProto)
+		removed[ipPortProto] = struct{}{}
 	}
-
 	// add new items to tproxy from updated list of annotated services
 	for ipPortProto, value := range tpr.suh.ipPortProtoToServices {
 		// if it already exists in active services skip it
-		if existing, ok := tpr.activeServices[ipPortProto]; ok {
-			if reflect.DeepEqual(existing, value) {
-				continue
-			}
+		if _, ok := tpr.activeServices[ipPortProto]; ok {
+			continue
 		}
-		protocol := labelindex.IPSetPortProtocol(ipPortProto.proto)
 		// if protocol is not TCP skip it for now
+		protocol := labelindex.IPSetPortProtocol(ipPortProto.proto)
 		if protocol != labelindex.ProtocolTCP {
-			log.Debugf("IP/Port/Protocol (%v/%d/%d) Protocol not valid for tproxy",
+			log.Infof("IP/Port/Protocol (%v/%d/%d) Protocol not valid for l7 logging",
 				ipPortProto.ip, protocol, ipPortProto.port)
 			continue
 		}
-		ipSetId, member := getIpSetMemberFromIpPortProto(ipPortProto)
-		// send ip set call back for new members and add them to tproxy ipset
-		tpr.callbacks.OnIPSetMemberAdded(ipSetId, member)
-		tpr.activeServices[ipPortProto] = value
+		added[ipPortProto] = value
 	}
+
+	return added, removed
 }
 
-func (tpr *TproxyEndPointsResolver) flushNodePorts() {
-	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
-	// remove expired node ports from active
-	log.Debugf("flush node ports for tproxy")
+func (tpr *TproxyEndPointsResolver) flushRegularService(added map[ipPortProtoKey][]proxy.ServicePortName,
+	removed map[ipPortProtoKey]struct{}) {
 
-	// if the active node ports are zero send OnIPSetAdded to ensure it's existence before sending updates
-	if len(tpr.activeNodePorts) == 0 {
-		tpr.callbacks.OnIPSetAdded(TRPOXYNodePortsIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	// before sending member callbacks create ipset if doesn't exists
+	//if len(tpr.activeServices) == 0 {
+	//	tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	//}
+
+	if !tpr.createIpSet {
+		tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+		tpr.createIpSet = true
 	}
 
-	for portProto, _ := range tpr.activeNodePorts {
+	for ipPortProto := range removed {
+		member := getIpSetMemberFromIpPortProto(ipPortProto)
+		tpr.callbacks.OnIPSetMemberRemoved(TPROXYServicesIPSet, member)
+		delete(tpr.activeServices, ipPortProto)
+	}
+
+	for ipPortProto, value := range added {
+		member := getIpSetMemberFromIpPortProto(ipPortProto)
+		tpr.callbacks.OnIPSetMemberAdded(TPROXYServicesIPSet, member)
+		tpr.activeServices[ipPortProto] = value
+	}
+
+	// after sending member callbacks delete ipset if no active services present
+	// TODO: This can't be done since the deletion of ipset fails with message
+	// Set cannot be destroyed: it is in use by a kernel component
+	//if len(tpr.activeServices) == 0 {
+	//	tpr.callbacks.OnIPSetRemoved(TPROXYServicesIPSet)
+	//}
+
+}
+
+func (tpr *TproxyEndPointsResolver) resolveNodePorts() (map[portProtoKey][]proxy.ServicePortName,
+	map[portProtoKey]struct{}) {
+	// todo: felix maintains a diff of changes. We should use that instead if iterating over entire map
+	log.Debugf("flush node ports for tproxy")
+
+	added := make(map[portProtoKey][]proxy.ServicePortName)
+	removed := make(map[portProtoKey]struct{})
+
+	for portProto := range tpr.activeNodePorts {
 		// if member key exists in up-to-date list, update the value to latest in active node ports and continue to next
 		if latest, ok := tpr.suh.nodePortServices[portProto]; ok {
 			tpr.activeNodePorts[portProto] = latest
 			continue
 		}
-		ipSetId, member := getIpSetMemberFromPortProto(portProto)
-		// send ip set call back for expired members and delete from tproxy list
-		tpr.callbacks.OnIPSetMemberRemoved(ipSetId, member)
-		delete(tpr.activeNodePorts, portProto)
+		removed[portProto] = struct{}{}
 	}
 
-	// add new items to active node ports
 	for portProto, value := range tpr.suh.nodePortServices {
 		// if it already exists in active node ports skip it
-		if existing, ok := tpr.activeNodePorts[portProto]; ok {
-			if reflect.DeepEqual(existing, value) {
-				continue
-			}
-		}
-		protocol := labelindex.IPSetPortProtocol(portProto.proto)
-		// if protocol is not TCP skip it for now
-		if protocol != labelindex.ProtocolTCP {
-			log.Debugf("Port/Protocol (%d/%d) Protocol not valid for tproxy", portProto.port, protocol)
+		if _, ok := tpr.activeNodePorts[portProto]; ok {
 			continue
 		}
-		// if node port is zero don't send OnIPSetMemberAdded calls backs
+		protocol := labelindex.IPSetPortProtocol(portProto.proto)
+		// skip non tcp for now
+		if protocol != labelindex.ProtocolTCP {
+			log.Infof("Port/Protocol (%d/%d) Protocol not valid for tproxy", portProto.port, protocol)
+			continue
+		}
+		// if node port is zero skip callbacks
 		if portProto.port == 0 {
 			continue
 		}
-		ipSetId, member := getIpSetMemberFromPortProto(portProto)
-		// send ip set call back for new members and add them to tproxy list
-		tpr.callbacks.OnIPSetMemberAdded(ipSetId, member)
-		tpr.activeNodePorts[portProto] = value
+		added[portProto] = value
 	}
+	return added, removed
 }
 
-func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) (string, labelindex.IPSetMember) {
+func (tpr *TproxyEndPointsResolver) flushNodePorts(added map[portProtoKey][]proxy.ServicePortName,
+	removed map[portProtoKey]struct{}) {
+
+	// before sending member callbacks create ipset if doesn't exists
+	//if len(tpr.activeNodePorts) == 0 {
+	//	tpr.callbacks.OnIPSetAdded(TRPOXYNodePortsIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	//}
+
+	for portProto := range removed {
+		member := getIpSetMemberFromPortProto(portProto)
+		tpr.callbacks.OnIPSetMemberRemoved(TRPOXYNodePortsIPSet, member)
+		delete(tpr.activeNodePorts, portProto)
+	}
+
+	for portProto, value := range added {
+		member := getIpSetMemberFromPortProto(portProto)
+		tpr.callbacks.OnIPSetMemberAdded(TRPOXYNodePortsIPSet, member)
+		tpr.activeNodePorts[portProto] = value
+	}
+
+	// after sending member callbacks create ipset if doesn't exists
+	//if len(tpr.activeNodePorts) == 0 {
+	//	tpr.callbacks.OnIPSetRemoved(TRPOXYNodePortsIPSet)
+	//}
+}
+
+func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) labelindex.IPSetMember {
 	netIP := net.IP(ipPortProto.ip[:])
 	member := labelindex.IPSetMember{
 		PortNumber: uint16(ipPortProto.port),
@@ -222,16 +266,16 @@ func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) (string, labelind
 		CIDR:       ip.FromNetIP(netIP).AsCIDR(),
 	}
 
-	return TPROXYServicesIPSet, member
+	return member
 }
 
-func getIpSetMemberFromPortProto(portProto portProtoKey) (string, labelindex.IPSetMember) {
+func getIpSetMemberFromPortProto(portProto portProtoKey) labelindex.IPSetMember {
 	member := labelindex.IPSetMember{
 		PortNumber: uint16(portProto.port),
 		Protocol:   labelindex.IPSetPortProtocol(portProto.proto),
 	}
 
-	return TRPOXYNodePortsIPSet, member
+	return member
 }
 func hasAnnotation(annotations map[string]string, annotation string) bool {
 	if annotations != nil {

@@ -52,6 +52,9 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 		func(updates []api.Update, addedMembers []output, removedMembers []output) {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
+			if len(addedMembers) > 0 {
+				mockCallbacks.On("OnIPSetAdded", calc.TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+			}
 			for _, addedMember := range addedMembers {
 				member := labelindex.IPSetMember{
 					PortNumber: uint16(addedMember.port),
@@ -91,6 +94,10 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 					Value: &kapiv1.Service{
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     int32(123),
@@ -114,10 +121,14 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 234,
+									NodePort: 0,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -133,8 +144,14 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TRPOXYNodePortsIPSet,
-				port:     234,
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}},
 			[]output{},
@@ -147,6 +164,10 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
@@ -171,10 +192,14 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 234,
+									NodePort: 0,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -195,8 +220,14 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TRPOXYNodePortsIPSet,
-				port:     234,
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}},
 			[]output{{
@@ -205,8 +236,14 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TRPOXYNodePortsIPSet,
-				port:     234,
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}},
 		),
@@ -221,7 +258,7 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 234,
+									NodePort: 0,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -235,10 +272,6 @@ var _ = Describe("TproxyEndPointsResolver", func() {
 				setId:    calc.TPROXYServicesIPSet,
 				ipAddr:   "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
 				port:     123,
-				protocol: labelindex.ProtocolTCP,
-			}, {
-				setId:    calc.TRPOXYNodePortsIPSet,
-				port:     234,
 				protocol: labelindex.ProtocolTCP,
 			}},
 			[]output{},

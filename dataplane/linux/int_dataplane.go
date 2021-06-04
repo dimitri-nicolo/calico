@@ -763,8 +763,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.ipSets = append(dp.ipSets, ipSetsV6)
 
 	if config.RulesConfig.TPROXYMode == "Enabled" {
-		tproxyMgr := newTproxyManager(ipSetsV4, ipSetsV6, config.RulesConfig.TPROXYDests)
-		dp.RegisterManager(tproxyMgr)
+		// add empty ipsets in data plan for felix ip table programming
+		ipSetsV4.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
+			[]string{},
+		)
+		ipSetsV6.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
+			[]string{},
+		)
 	}
 
 	if config.BPFEnabled {

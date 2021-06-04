@@ -388,16 +388,16 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				createService(v1Svc, client)
 
 				By("ensuring the ipaddress of service propagated to ipset ")
-				exists := make(map[*infrastructure.Felix]struct{})
+				results := make(map[*infrastructure.Felix]struct{})
 				Eventually(func() bool {
 					for _, felix := range felixes {
 						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
 						Expect(err).NotTo(HaveOccurred())
 						if strings.Contains(out, clusterIP) && strings.Contains(out, servicePort) {
-							exists[felix] = struct{}{}
+							results[felix] = struct{}{}
 						}
 					}
-					return len(exists) == len(felixes)
+					return len(results) == len(felixes)
 				}, "60s", "5s").Should(BeTrue())
 
 				By("deleting the annotated service  ")
@@ -405,31 +405,34 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				Expect(err).NotTo(HaveOccurred())
 
 				By("ensuring the ipaddress removal is propagated to ipset")
+				results = make(map[*infrastructure.Felix]struct{})
 				Eventually(func() bool {
 					for _, felix := range felixes {
 						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
 						Expect(err).NotTo(HaveOccurred())
 						if !strings.Contains(out, clusterIP) && !strings.Contains(out, servicePort) {
-							return true
+							results[felix] = struct{}{}
 						}
 					}
-					return false
+					return len(results) == len(felixes)
 				}, "60s", "5s").Should(BeTrue())
 
 				By("creating the service again, to verify the ipset callbacks")
 				createService(v1Svc, client)
 
+				// this case ensures that the process of annotating is repeatable
+				// fails if a call to already existing ipset is made
 				By("ensuring the ipaddress of service propagated to ipset again")
-				exists = make(map[*infrastructure.Felix]struct{})
+				results = make(map[*infrastructure.Felix]struct{})
 				Eventually(func() bool {
 					for _, felix := range felixes {
 						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
 						Expect(err).NotTo(HaveOccurred())
 						if strings.Contains(out, clusterIP) && strings.Contains(out, servicePort) {
-							exists[felix] = struct{}{}
+							results[felix] = struct{}{}
 						}
 					}
-					return len(exists) == len(felixes)
+					return len(results) == len(felixes)
 				}, "60s", "5s").Should(BeTrue())
 			})
 
