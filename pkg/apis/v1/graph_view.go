@@ -3,6 +3,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
@@ -78,7 +79,7 @@ func (ns *NamedSelector) UnmarshalJSON(b []byte) error {
 	}
 
 	if sel, err := selector.Parse(ss.Selector); err != nil {
-		return err
+		return fmt.Errorf("invalid selector: %s", ss.Selector)
 	} else {
 		ns.Name = ss.Name
 		ns.Selector = sel

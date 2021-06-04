@@ -2,11 +2,15 @@
 package servicegraph
 
 import (
+	"context"
+
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	"github.com/tigera/es-proxy/pkg/authorization"
+	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 // This file implements an RBAC flow filter. It parses the AuthorizedResourceVerbs returned by a authorization
@@ -21,6 +25,29 @@ type RBACFilter interface {
 	IncludeNetworkSets(namespace string) bool
 	IncludePods(namespace string) bool
 }
+
+// NewRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
+func NewRBACFilter(ctx context.Context, managed k8s.ClientSet) (RBACFilter, error) {
+	verbs, err := authorization.PerformAuthorizationReview(ctx, managed, authReviewAttrListEndpoints)
+	if err != nil {
+		return nil, err
+	}
+	return NewRBACFilterFromAuth(verbs), nil
+}
+
+var (
+	authReviewAttrListEndpoints = []v3.AuthorizationReviewResourceAttributes{{
+		APIGroup: "projectcalico.org",
+		Resources: []string{
+			"hostendpoints", "networksets", "globalnetworksets",
+		},
+		Verbs: []string{"list"},
+	}, {
+		APIGroup:  "",
+		Resources: []string{"pods"},
+		Verbs:     []string{"list"},
+	}}
+)
 
 // NewRBACFilterFromAuth creates a new RBAC filter from a set of AuthorizedResourceVerbs.
 func NewRBACFilterFromAuth(verbs []v3.AuthorizedResourceVerbs) RBACFilter {
@@ -117,3 +144,22 @@ func (f *rbacFilter) IncludeNetworkSets(namespace string) bool {
 func (f *rbacFilter) IncludePods(namespace string) bool {
 	return f.listAllPods || f.listPodNamespaces[namespace]
 }
+
+// ---- Mock filters for testing ----
+type MockRBACFilterIncludeAll struct{}
+
+func (m MockRBACFilterIncludeAll) IncludeFlow(f FlowEdge) bool              { return true }
+func (m MockRBACFilterIncludeAll) IncludeEndpoint(f FlowEndpoint) bool      { return true }
+func (m MockRBACFilterIncludeAll) IncludeHostEndpoints() bool               { return true }
+func (m MockRBACFilterIncludeAll) IncludeGlobalNetworkSets() bool           { return true }
+func (m MockRBACFilterIncludeAll) IncludeNetworkSets(namespace string) bool { return true }
+func (m MockRBACFilterIncludeAll) IncludePods(namespace string) bool        { return true }
+
+type MockRBACFilterIncludeNone struct{}
+
+func (m MockRBACFilterIncludeNone) IncludeFlow(f FlowEdge) bool              { return false }
+func (m MockRBACFilterIncludeNone) IncludeEndpoint(f FlowEndpoint) bool      { return false }
+func (m MockRBACFilterIncludeNone) IncludeHostEndpoints() bool               { return false }
+func (m MockRBACFilterIncludeNone) IncludeGlobalNetworkSets() bool           { return false }
+func (m MockRBACFilterIncludeNone) IncludeNetworkSets(namespace string) bool { return false }
+func (m MockRBACFilterIncludeNone) IncludePods(namespace string) bool        { return false }

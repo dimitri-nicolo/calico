@@ -98,3 +98,17 @@ func (e GraphEvents) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(ids)
 }
+
+func (e *GraphEvents) UnmarshalJSON(b []byte) error {
+	var events []graphEventWithID
+	err := json.Unmarshal(b, &events)
+	if err != nil {
+		return err
+	}
+
+	*e = make(map[GraphEventID]GraphEventDetails)
+	for _, event := range events {
+		(*e)[event.ID] = event.GraphEventDetails
+	}
+	return nil
+}

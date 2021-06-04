@@ -28,7 +28,6 @@ const (
 
 const (
 	flowsBucketName = "flows"
-	flowTimeout     = 3 * time.Minute
 )
 
 const (
@@ -204,10 +203,7 @@ type L3FlowData struct {
 // - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
 //   when an endpoint is subjected to a port scan.
 // - Stats for TCP and Processes are aggregated for each flow.
-func GetL3FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData, config *FlowConfig) ([]L3Flow, error) {
-	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
-	defer cancel()
-
+func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var fs []L3Flow
@@ -221,10 +217,10 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData, c
 		}()
 	}
 
-	index := elastic.GetFlowsIndex(rd.request.Cluster)
+	index := elastic.GetFlowsIndex(cluster)
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeQuery(rd.request.TimeRange),
+		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: flowCompositeSources,
 		AggSumInfos:             flowAggregationSums,
@@ -355,8 +351,8 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData, c
 	}
 
 	// Adjust some of the statistics based on the aggregation interval.
-	timeInterval := rd.request.TimeRange.Duration()
-	l3Flushes := float64(timeInterval) / float64(config.L3FlowFlushInterval)
+	timeInterval := tr.Duration()
+	l3Flushes := float64(timeInterval) / float64(fc.L3FlowFlushInterval)
 	for i := range fs {
 		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
 	}

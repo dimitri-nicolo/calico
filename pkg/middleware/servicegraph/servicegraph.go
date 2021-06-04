@@ -2,19 +2,20 @@
 package servicegraph
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	"github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
@@ -22,54 +23,49 @@ import (
 // graph in es-proxy. The handler pulls together various components to parse the request, query the flow data,
 // filter and aggregate the flows. All HTTP request processing is handled here.
 
-var (
-	authReviewAttrListEndpoints = []apiv3.AuthorizationReviewResourceAttributes{{
-		APIGroup: "projectcalico.org",
-		Resources: []string{
-			"hostendpoints", "networksets", "globalnetworksets",
-		},
-		Verbs: []string{"list"},
-	}, {
-		APIGroup:  "",
-		Resources: []string{"pods"},
-		Verbs:     []string{"list"},
-	}}
+const (
+	defaultRequestTimeout = 60 * time.Second
 )
 
 type ServiceGraph interface {
 	Handler() http.HandlerFunc
 }
 
-func NewServiceGraph(elasticClient lmaelastic.Client, clientSetFactory k8s.ClientSetFactory) ServiceGraph {
-	return &serviceGraph{
-		flowCache:        NewServiceGraphCache(elasticClient),
+func NewServiceGraph(
+	ctx context.Context,
+	elasticClient lmaelastic.Client,
+	clientSetFactory k8s.ClientSetFactory,
+	cfg *Config,
+) ServiceGraph {
+	return NewServiceGraphWithBackend(ctx, &realServiceGraphBackend{
+		ctx:              ctx,
+		elastic:          elasticClient,
 		clientSetFactory: clientSetFactory,
+	}, cfg)
+}
+
+func NewServiceGraphWithBackend(ctx context.Context, backend ServiceGraphBackend, cfg *Config) ServiceGraph {
+	return &serviceGraph{
+		sgCache: NewServiceGraphCache(ctx, backend, cfg),
 	}
 }
 
 // serviceGraph implements the ServiceGraph interface.
 type serviceGraph struct {
 	// Flows cache.
-	flowCache        ServiceGraphCache
-	clientSetFactory k8s.ClientSetFactory
+	sgCache ServiceGraphCache
 }
 
 // RequestData encapsulates data parsed from the request that is shared between the various components that construct
 // the service graph.
 type RequestData struct {
-	request        *v1.ServiceGraphRequest
-	appCluster     k8s.ClientSet
-	userManagement k8s.ClientSet
-	userCluster    k8s.ClientSet
+	HTTPRequest         *http.Request
+	ServiceGraphRequest *v1.ServiceGraphRequest
 }
 
 func (s *serviceGraph) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		start := time.Now()
-
-		ctx := req.Context()
-		var err error
-		rd := &RequestData{}
 
 		// Extract the request specific data used to collate and filter the data.
 		// - The parsed service graph request
@@ -78,25 +74,24 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 		//   - User/Management: Determine which ES tables the user has access to
 		//   - User/Cluster:    Flow endpoint RBAC, Events
 		// - RBAC filter.
-		if rd.request, err = s.getServiceGraphRequest(req); err != nil {
+		sgr, err := s.getServiceGraphRequest(req)
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		} else if rd.appCluster, err = s.clientSetFactory.NewClientSetForApplication(rd.request.Cluster); err != nil {
-			log.WithError(err).Error("failed to authenticate")
-			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
-			return
-		} else if rd.userManagement, err = s.clientSetFactory.NewClientSetForUser(req, ""); err != nil {
-			log.WithError(err).Error("failed to authenticate")
-			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
-			return
-		} else if rd.userCluster, err = s.clientSetFactory.NewClientSetForUser(req, rd.request.Cluster); err != nil {
-			log.WithError(err).Error("failed to authenticate")
-			http.Error(w, "Failed to authenticate", http.StatusBadRequest)
 			return
 		}
 
+		// Construct a context with timeout based on the service graph request.
+		ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout)
+		defer cancel()
+
+		// Create the request data.
+		rd := &RequestData{
+			HTTPRequest:         req,
+			ServiceGraphRequest: sgr,
+		}
+
 		// Get the filtered flow from the cache.
-		if f, err := s.flowCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
+		if f, err := s.sgCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
@@ -120,12 +115,18 @@ func (s *serviceGraph) Handler() http.HandlerFunc {
 	}
 }
 
-// getServiceGraphRequest parses the ServiceGraphRequest from the HTTP request body.
+// getServiceGraphRequest parses the request from the HTTP request body.
 func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGraphRequest, error) {
 	// Extract the request from the body.
 	sgr := &v1.ServiceGraphRequest{}
 	if err := json.NewDecoder(req.Body).Decode(&sgr); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid request: %v", err)
+	}
+	if sgr.Timeout == 0 {
+		sgr.Timeout = defaultRequestTimeout
+	}
+	if sgr.Cluster == "" {
+		sgr.Cluster = elastic.DefaultClusterName
 	}
 
 	// Sanity check any user configuration that may potentially break the API. In particular all user defined names

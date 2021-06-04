@@ -67,6 +67,20 @@ func (p GraphEndpointProcesses) MarshalJSON() ([]byte, error) {
 	return json.Marshal(processes)
 }
 
+func (p *GraphEndpointProcesses) UnmarshalJSON(b []byte) error {
+	var proceses []GraphEndpointProcess
+	err := json.Unmarshal(b, &proceses)
+	if err != nil {
+		return err
+	}
+
+	*p = make(map[string]GraphEndpointProcess)
+	for _, process := range proceses {
+		(*p)[process.Name] = process
+	}
+	return nil
+}
+
 // Include combines the two sets of process infos.
 func (p GraphEndpointProcesses) Combine(p2 GraphEndpointProcesses) GraphEndpointProcesses {
 	if len(p) == 0 {

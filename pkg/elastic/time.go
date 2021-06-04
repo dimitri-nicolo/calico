@@ -7,8 +7,12 @@ import (
 	api "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
-func GetEndTimeRangeQuery(tr api.TimeRange) elastic.Query {
+func GetEndTimeRangeEpochSecondQuery(tr api.TimeRange) elastic.Query {
 	return elastic.NewRangeQuery("end_time").Gt(tr.From.Unix()).Lte(tr.To.Unix())
+}
+
+func GetEndTimeRangeQuery(tr api.TimeRange) elastic.Query {
+	return elastic.NewRangeQuery("end_time").Gt(tr.From).Lte(tr.To)
 }
 
 func GetTimeRangeQuery(tr api.TimeRange) elastic.Query {

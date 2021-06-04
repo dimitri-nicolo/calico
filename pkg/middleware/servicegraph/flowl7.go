@@ -81,10 +81,7 @@ var (
 )
 
 // GetL7FlowData queries and returns the set of L7 flow data.
-func GetL7FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData) ([]L7Flow, error) {
-	ctx, cancel := context.WithTimeout(ctx, flowTimeout)
-	defer cancel()
-
+func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]L7Flow, error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var fs []L7Flow
@@ -94,14 +91,14 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData) (
 		start := time.Now()
 		log.Debug("GetL7FlowData called")
 		defer func() {
-			log.Infof("GetL7FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+			log.Debugf("GetL7FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
 		}()
 	}
 
-	index := elastic.GetL7FlowsIndex(rd.request.Cluster)
+	index := elastic.GetL7FlowsIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeQuery(rd.request.TimeRange),
+		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: l7CompositeSources,
 		AggSumInfos:             l7AggregationSums,
@@ -110,7 +107,6 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, rd *RequestData) (
 		AggMeanInfos:            l7AggregationMean,
 	}
 
-	// Perform the L3 and L7 composite aggregation queries together.
 	addFlow := func(source, dest FlowEndpoint, svc ServicePort, stats v1.GraphL7Stats) {
 		if svc.Name != "" {
 			fs = append(fs, L7Flow{

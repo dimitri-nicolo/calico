@@ -128,6 +128,26 @@ var (
 				},
 			},
 		},
+		DNS: &GraphDNSStats{
+			GraphLatencyStats: GraphLatencyStats{
+				MeanRequestLatency: 269,
+				MaxRequestLatency:  293,
+				MinRequestLatency:  271,
+				LatencyCount:       10,
+			},
+			ResponseCodes: map[string]GraphDNSResponseCode{
+				"NXDOMAIN": {
+					Code:  "NXDOMAIN",
+					Count: 10,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: 269,
+						MaxRequestLatency:  293,
+						MinRequestLatency:  271,
+						LatencyCount:       10,
+					},
+				},
+			},
+		},
 	}
 	secondL3Stats = GraphStats{
 		L3: &GraphL3Stats{
@@ -204,6 +224,28 @@ var (
 			},
 		},
 	}
+	secondDNSStats = GraphStats{
+		DNS: &GraphDNSStats{
+			GraphLatencyStats: GraphLatencyStats{
+				MeanRequestLatency: 1,
+				MaxRequestLatency:  3,
+				MinRequestLatency:  5,
+				LatencyCount:       1,
+			},
+			ResponseCodes: map[string]GraphDNSResponseCode{
+				"NOERROR": {
+					Code:  "NOERROR",
+					Count: 2,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: 1,
+						MaxRequestLatency:  3,
+						MinRequestLatency:  5,
+						LatencyCount:       1,
+					},
+				},
+			},
+		},
+	}
 	thirdStats = GraphStats{
 		L3: &GraphL3Stats{
 			DeniedAtSource: &GraphPacketStats{
@@ -269,6 +311,36 @@ var (
 					MaxNumNamesPerFlow: 947,
 					MinNumIDsPerFlow:   953,
 					MaxNumIDsPerFlow:   967,
+				},
+			},
+		},
+		DNS: &GraphDNSStats{
+			GraphLatencyStats: GraphLatencyStats{
+				MeanRequestLatency: 10,
+				MaxRequestLatency:  11,
+				MinRequestLatency:  12,
+				LatencyCount:       2,
+			},
+			ResponseCodes: map[string]GraphDNSResponseCode{
+				"NOERROR": {
+					Code:  "NOERROR",
+					Count: 4,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: 13,
+						MaxRequestLatency:  14,
+						MinRequestLatency:  15,
+						LatencyCount:       3,
+					},
+				},
+				"NXDOMAIN": {
+					Code:  "NXDOMAIN",
+					Count: 1,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: 16,
+						MaxRequestLatency:  17,
+						MinRequestLatency:  18,
+						LatencyCount:       1,
+					},
 				},
 			},
 		},
@@ -389,6 +461,36 @@ var (
 					MaxNumNamesPerFlow: 293,
 					MinNumIDsPerFlow:   307,
 					MaxNumIDsPerFlow:   311,
+				},
+			},
+		},
+		DNS: &GraphDNSStats{
+			GraphLatencyStats: GraphLatencyStats{
+				MeanRequestLatency: float64((269*10)+(1*1)) / float64(11),
+				MaxRequestLatency:  293,
+				MinRequestLatency:  5,
+				LatencyCount:       11,
+			},
+			ResponseCodes: map[string]GraphDNSResponseCode{
+				"NOERROR": {
+					Code:  "NOERROR",
+					Count: 2,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: 1,
+						MaxRequestLatency:  3,
+						MinRequestLatency:  5,
+						LatencyCount:       1,
+					},
+				},
+				"NXDOMAIN": {
+					Code:  "NXDOMAIN",
+					Count: 10,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: 269,
+						MaxRequestLatency:  293,
+						MinRequestLatency:  271,
+						LatencyCount:       10,
+					},
 				},
 			},
 		},
@@ -519,6 +621,36 @@ var (
 				},
 			},
 		},
+		DNS: &GraphDNSStats{
+			GraphLatencyStats: GraphLatencyStats{
+				MeanRequestLatency: float64((269*10)+(1*1)+(10*2)) / float64(13),
+				MaxRequestLatency:  293,
+				MinRequestLatency:  5,
+				LatencyCount:       13,
+			},
+			ResponseCodes: map[string]GraphDNSResponseCode{
+				"NOERROR": {
+					Code:  "NOERROR",
+					Count: 6,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: float64((1*1)+(13*3)) / float64(4),
+						MaxRequestLatency:  14,
+						MinRequestLatency:  5,
+						LatencyCount:       4,
+					},
+				},
+				"NXDOMAIN": {
+					Code:  "NXDOMAIN",
+					Count: 11,
+					GraphLatencyStats: GraphLatencyStats{
+						MeanRequestLatency: float64((269*10)+(16*1)) / float64(11),
+						MaxRequestLatency:  293,
+						MinRequestLatency:  18,
+						LatencyCount:       11,
+					},
+				},
+			},
+		},
 	}
 )
 
@@ -551,6 +683,13 @@ func expectStats(actual, expected GraphStats, desc string) {
 		Expect(actual.Processes.Dest).To(Equal(expected.Processes.Dest), desc)
 	}
 
+	if expected.DNS == nil {
+		Expect(actual.DNS).To(BeNil())
+	} else {
+		Expect(actual.DNS.GraphLatencyStats).To(Equal(expected.DNS.GraphLatencyStats), desc)
+		Expect(actual.DNS.ResponseCodes).To(Equal(expected.DNS.ResponseCodes), desc)
+	}
+
 	// Catch all - compare full struct
 	Expect(actual).To(Equal(expected))
 }
@@ -559,39 +698,51 @@ var _ = Describe("Graph API tests", func() {
 	It("handles GraphEdge.IncludeStats", func() {
 		edge := GraphEdge{}
 
-		// Have 5 sets of stats, each is a cycle of the set of stats defined above. After including everything the
-		// stats in each of the 5 positions should be equal.
+		// Have 6 sets of stats, each is a cycle of the set of stats defined above. After including everything the
+		// stats in each of the 6 positions should be equal.
 		edge.IncludeStats([]GraphStats{
 			firstStats,
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 		})
 		edge.IncludeStats([]GraphStats{
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 			firstStats,
 		})
 		edge.IncludeStats([]GraphStats{
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 			firstStats,
 			secondL3Stats,
 		})
 		edge.IncludeStats([]GraphStats{
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 			firstStats,
 			secondL3Stats,
 			secondL7Stats,
+		})
+		edge.IncludeStats([]GraphStats{
+			secondDNSStats,
+			thirdStats,
+			firstStats,
+			secondL3Stats,
+			secondL7Stats,
+			secondProcessStats,
 		})
 
 		// We have a checkpoint for the first and second set of stats.
-		Expect(edge.Stats).To(HaveLen(5))
+		Expect(edge.Stats).To(HaveLen(6))
 		expectStats(edge.Stats[0], firstSecondCombinedStats, "First and second combined stats")
 
 		edge.IncludeStats([]GraphStats{
@@ -600,11 +751,12 @@ var _ = Describe("Graph API tests", func() {
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 		})
 		edge.IncludeStats(nil)
 
 		// All of the stats should be the same (in each time position)
-		Expect(edge.Stats).To(HaveLen(5))
+		Expect(edge.Stats).To(HaveLen(6))
 		for i, stats := range edge.Stats {
 			expectStats(stats, firstSecondThirdCombinedStats, fmt.Sprintf("All stats, index %d", i))
 		}
@@ -733,6 +885,27 @@ var _ = Describe("Graph API tests", func() {
                   "max_num_ids_per_flow": 967
                 }
               ]
+            },
+            "dns": {
+              "mean_request_latency": 208.53846153846155,
+              "max_request_latency": 293,
+              "min_request_latency": 5,
+              "response_codes": [
+                {
+                  "code": "NOERROR",
+                  "count": 6,
+                  "mean_request_latency": 10,
+                  "max_request_latency": 14,
+                  "min_request_latency": 5
+                },
+                {
+                  "code": "NXDOMAIN",
+                  "count": 11,
+                  "mean_request_latency": 246,
+                  "max_request_latency": 293,
+                  "min_request_latency": 18
+                }
+              ]
             }
           }
         ],
@@ -748,39 +921,51 @@ var _ = Describe("Graph API tests", func() {
 	It("handles GraphNode.IncludeStats", func() {
 		node := GraphNode{}
 
-		// Have 5 sets of stats, each is a cycle of the set of stats defined above. After including everything the
-		// stats in each of the 5 positions should be equal.
+		// Have 6 sets of stats, each is a cycle of the set of stats defined above. After including everything the
+		// stats in each of the 6 positions should be equal.
 		node.IncludeStats([]GraphStats{
 			firstStats,
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 		})
 		node.IncludeStats([]GraphStats{
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 			firstStats,
 		})
 		node.IncludeStats([]GraphStats{
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 			firstStats,
 			secondL3Stats,
 		})
 		node.IncludeStats([]GraphStats{
 			secondProcessStats,
+			secondDNSStats,
 			thirdStats,
 			firstStats,
 			secondL3Stats,
 			secondL7Stats,
+		})
+		node.IncludeStats([]GraphStats{
+			secondDNSStats,
+			thirdStats,
+			firstStats,
+			secondL3Stats,
+			secondL7Stats,
+			secondProcessStats,
 		})
 
 		// We have a checkpoint for the first and second set of stats.
-		Expect(node.Stats).To(HaveLen(5))
+		Expect(node.Stats).To(HaveLen(6))
 		expectStats(node.Stats[0], firstSecondCombinedStats, "First and second combined stats")
 
 		node.IncludeStats([]GraphStats{
@@ -789,11 +974,12 @@ var _ = Describe("Graph API tests", func() {
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
+			secondDNSStats,
 		})
 		node.IncludeStats(nil)
 
 		// All of the stats should be the same (in each time position)
-		Expect(node.Stats).To(HaveLen(5))
+		Expect(node.Stats).To(HaveLen(6))
 		for i, stats := range node.Stats {
 			expectStats(stats, firstSecondThirdCombinedStats, fmt.Sprintf("All stats, index %d", i))
 		}

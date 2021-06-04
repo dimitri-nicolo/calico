@@ -12,20 +12,7 @@ import (
 // This file provides the final graph construction from a set of correlated (time-series) flows and the parsed view
 // IDs.
 //
-// The flows are aggregated based on the layers and expanded nodes defined in the view. The graph is then pruned
-// based on the focus and followed-nodes. A graph node is included if any of the following is true:
-// - the node (or one of its child nodes) is in-focus
-// - the node (or one of its child nodes) is connected directly to an in-focus node (in either connection Direction)
-// - the node (or one of its child nodes) is connected indirectly to an in-focus node, respecting the Direction
-//   of the connection (*)
-// - the node (or one of its child nodes) is directly connected to an "included" node whose connections are being
-//   explicitly "followed" in the appropriate connection Direction (*)
-//
-// (*) Suppose you have nodes A, B, C, D, E; C is directly in focus
-//     If connections are: A-->B-->C-->D-->E then: A, B, C, D and E will all be included in the view.
-//     If connections are: A<--B-->C-->D<--E then: B, C and D will be included in the view, and
-//                                                 A will be included if the egress connections for B are being followed
-//                                                 E will be included if the ingress connections for D are being followed
+// See v1.GraphView for details on aggregation, and which nodes will be included in the graph.
 
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
 func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
@@ -36,9 +23,9 @@ func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGra
 	s := newServiceGraphConstructor(f, v)
 
 	// Iterate through the flows to track the nodes and edges.
-	for i := range s.flowData.FilteredFlows {
-		if err := s.trackFlow(&s.flowData.FilteredFlows[i]); err != nil {
-			log.WithError(err).WithField("flow", s.flowData.FilteredFlows[i]).Errorf("Unable to process flow")
+	for i := range s.sgd.FilteredFlows {
+		if err := s.trackFlow(&s.sgd.FilteredFlows[i]); err != nil {
+			log.WithError(err).WithField("flow", s.sgd.FilteredFlows[i]).Errorf("Unable to process flow")
 			continue
 		}
 	}
@@ -80,45 +67,51 @@ func GetServiceGraphResponse(f *ServiceGraphData, v *ParsedView) (*v1.ServiceGra
 		return n.Node
 	}
 
-	// Determine which nodes are in view from the tracked data. If there is no view, this will return nil indicating
-	// all nodes and edges should be included.
 	nodesInView := s.getNodesInView()
 
-	// Copy across edges that are in view, and update the nodes to indicate whether we are truncating the graph (i.e.
-	// that the graph can be followed along it's ingress or egress connections).
-	for id, edge := range s.edgesMap {
-		sourceInFocus := nodesInView == nil || nodesInView.Contains(id.SourceNodeID)
-		destInFocus := nodesInView == nil || nodesInView.Contains(id.DestNodeID)
-		if sourceInFocus && destInFocus {
-			sgr.Edges = append(sgr.Edges, *edge)
-		} else if sourceInFocus {
-			// Destination is not in Focus, but this means the egress can be Expanded for the source node. Mark this
-			// on the group rather than the endpoint.
-			getGroupNode(id.SourceNodeID).FollowEgress = true
-		} else if destInFocus {
-			// Source is not in Focus, but this means the ingress can be Expanded for the dest node. Mark this
-			// on the group rather than the endpoint.
-			getGroupNode(id.DestNodeID).FollowIngress = true
-		}
-	}
-
-	// Overlay alerts on to the graph.
+	// Overlay the events on the in-view nodes.
 	s.overlayEvents(nodesInView)
 
-	if nodesInView == nil {
-		// No view, copy all nodes.
-		sgr.Nodes = make([]v1.GraphNode, 0, len(s.nodesMap))
-		for _, n := range s.nodesMap {
-			sgr.Nodes = append(sgr.Nodes, *n.Node)
+	// Overlay the dns client data on the in-view nodes.
+	s.overlayDNS(nodesInView)
+
+	if nodesInView != nil && nodesInView.Len() > 0 {
+		// Copy across edges that are in view, and update the nodes to indicate whether we are truncating the graph (i.e.
+		// that the graph can be followed along it's ingress or egress connections).
+		for id, edge := range s.edgesMap {
+			sourceInView := nodesInView.Contains(id.SourceNodeID)
+			destInView := nodesInView.Contains(id.DestNodeID)
+			if sourceInView && destInView {
+				sgr.Edges = append(sgr.Edges, *edge)
+			} else if sourceInView {
+				// Destination is not in view, but this means the egress can be Expanded for the source node. Mark this
+				// on the group rather than the endpoint.
+				getGroupNode(id.SourceNodeID).FollowEgress = true
+			} else if destInView {
+				// Source is not in view, but this means the ingress can be Expanded for the dest node. Mark this
+				// on the group rather than the endpoint.
+				getGroupNode(id.DestNodeID).FollowIngress = true
+			}
 		}
-	} else {
-		// We have a view so copy across the nodes in the view.
+
+		// Copy across the nodes that are in view.
 		sgr.Nodes = make([]v1.GraphNode, 0, nodesInView.Len())
 		nodesInView.Iter(func(item interface{}) error {
 			id := item.(v1.GraphNodeID)
 			sgr.Nodes = append(sgr.Nodes, *s.nodesMap[id].Node)
 			return nil
 		})
+	} else if nodesInView == nil && len(s.nodesMap) > 0 {
+		// There is no focus, which means everything is in view, and there are some nodes to return.  Include them all
+		// and all edges.
+		sgr.Nodes = make([]v1.GraphNode, 0, len(s.nodesMap))
+		for _, n := range s.nodesMap {
+			sgr.Nodes = append(sgr.Nodes, *n.Node)
+		}
+		sgr.Edges = make([]v1.GraphEdge, 0, len(s.edgesMap))
+		for _, edge := range s.edgesMap {
+			sgr.Edges = append(sgr.Edges, *edge)
+		}
 	}
 
 	// Trace out the nodes and edges if the log level is debug.
@@ -169,7 +162,7 @@ func (t *trackedGroup) update(child v1.GraphNodeID, isInFocus, isFollowingEgress
 	t.isFollowingIngress = t.isFollowingIngress || isFollowingIngress
 }
 
-// trackedNode encpasulates details of a node returned by the API, and additional data required to do some post
+// trackedNode encapsulates details of a node returned by the API, and additional data required to do some post
 // graph-construction updates.
 type trackedNode struct {
 	Node      *v1.GraphNode
@@ -204,8 +197,8 @@ type serviceGraphConstructionData struct {
 	// The mapping between service and edges connected to the service.
 	serviceEdges map[v1.GraphNodeID]*serviceEdges
 
-	// The supplied flow data.
-	flowData *ServiceGraphData
+	// The supplied service graph data.
+	sgd *ServiceGraphData
 
 	// The supplied view data.
 	view *ParsedView
@@ -215,15 +208,15 @@ type serviceGraphConstructionData struct {
 }
 
 // newServiceGraphConstructor intializes a new serviceGraphConstructionData.
-func newServiceGraphConstructor(f *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
+func newServiceGraphConstructor(sgd *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
 	return &serviceGraphConstructionData{
 		groupsMap:    make(map[v1.GraphNodeID]*trackedGroup),
 		nodesMap:     make(map[v1.GraphNodeID]trackedNode),
 		edgesMap:     make(map[v1.GraphEdgeID]*v1.GraphEdge),
 		serviceEdges: make(map[v1.GraphNodeID]*serviceEdges),
-		flowData:     f,
+		sgd:          sgd,
 		view:         v,
-		selh:         NewSelectorHelper(v, f.HostnameHelper, f.ServiceGroups),
+		selh:         NewSelectorHelper(v, sgd.NameHelper, sgd.ServiceGroups),
 	}
 }
 
@@ -349,9 +342,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 	// Determine if this endpoint is in a layer - most granular wins.
 	var sg *ServiceGroup
 	if svc != nil {
-		sg = s.flowData.ServiceGroups.GetByService(svc.NamespacedName)
+		sg = s.sgd.ServiceGroups.GetByService(svc.NamespacedName)
 	} else {
-		sg = s.flowData.ServiceGroups.GetByEndpoint(endpoint)
+		sg = s.sgd.ServiceGroups.GetByEndpoint(endpoint)
 	}
 	// Create an ID handler.
 	idi := IDInfo{
@@ -668,126 +661,80 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 	groupsInView := set.New()
 	expandIngress := set.New()
 	expandEgress := set.New()
-	followed := set.New()
+	expandFollowing := set.New()
 	for id, gp := range s.groupsMap {
 		if gp.isInFocus {
-			log.Debugf("Group is in view: %s", id)
+			log.Debugf("Expand ingress and egress for in-focus node: %s", id)
 			groupsInView.Add(gp)
-			gp.processedIngress = true
-			gp.ingress.Iter(func(item interface{}) error {
-				directlyConnectedGp := item.(*trackedGroup)
-				if !directlyConnectedGp.processedIngress {
-					log.Debugf("Expanding directly connected ingress to: %s", directlyConnectedGp.id)
-					expandIngress.Add(directlyConnectedGp)
-				}
-				return nil
-			})
-
-			gp.processedEgress = true
-			gp.egress.Iter(func(item interface{}) error {
-				directlyConnectedGp := item.(*trackedGroup)
-				log.Debugf("Expanding directly connected egress to: %s", directlyConnectedGp.id)
-				followed.Add(directlyConnectedGp)
-				return nil
-			})
-			groupsInView.Add(gp)
+			expandIngress.Add(gp)
+			expandEgress.Add(gp)
 		}
 	}
 
-	// Expand in-Focus nodes in ingress Direction.
+	// Expand in-Focus nodes in ingress Direction and possibly follow connection direction.
 	for expandIngress.Len() > 0 {
 		expandIngress.Iter(func(item interface{}) error {
 			gp := item.(*trackedGroup)
-			groupsInView.Add(gp)
+			if gp.processedIngress {
+				return set.RemoveItem
+			}
+
+			// Add ingress nodes for this group.
 			gp.processedIngress = true
-			log.Debugf("Adding group to view: %s", gp.id)
-
-			if s.view.FollowConnectionDirection {
-				// We are following the connection so keep expanding along the connection direction
-				gp.ingress.Iter(func(item interface{}) error {
-					indirectlyConnectedGp := item.(*trackedGroup)
-					if !indirectlyConnectedGp.processedIngress {
-						log.Debugf("Expanding along ingress direction to: %s", indirectlyConnectedGp.id)
-						expandIngress.Add(indirectlyConnectedGp)
-					}
-					return nil
-				})
-			} else if gp.isFollowingIngress {
-				// We are explicitly following the ingress connection so add to the followed set.
-				gp.ingress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following ingress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
-
-			// If the egress is being followed add it to the followed set.
-			if gp.isFollowingEgress {
-				gp.egress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following egress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
+			gp.ingress.Iter(func(item interface{}) error {
+				connectedGp := item.(*trackedGroup)
+				log.Debugf("Including ingress expanded group: %s -> %s", connectedGp.id, gp.id)
+				groupsInView.Add(connectedGp)
+				if s.view.FollowConnectionDirection {
+					expandIngress.Add(connectedGp)
+				} else if connectedGp.isFollowingEgress || connectedGp.isFollowingIngress {
+					log.Debugf("Following ingress and/or egress direction from: %s", connectedGp.id)
+					expandFollowing.Add(connectedGp)
+				}
+				return nil
+			})
 			return set.RemoveItem
 		})
 	}
 
-	// Expand in-Focus nodes in egress Direction.
+	// Expand in-Focus nodes in ingress Direction and possibly follow connection direction.
 	for expandEgress.Len() > 0 {
 		expandEgress.Iter(func(item interface{}) error {
 			gp := item.(*trackedGroup)
-			groupsInView.Add(gp)
+			if gp.processedEgress {
+				return set.RemoveItem
+			}
+
+			// Add egress nodes for this group.
 			gp.processedEgress = true
-			log.Debugf("Adding group to view: %s", gp.id)
+			gp.egress.Iter(func(item interface{}) error {
+				connectedGp := item.(*trackedGroup)
+				log.Debugf("Including egress expanded group: %s -> %s", gp.id, connectedGp.id)
+				groupsInView.Add(connectedGp)
 
-			if s.view.FollowConnectionDirection {
-				// We are following the connection so keep expanding along the connection direction
-				gp.egress.Iter(func(item interface{}) error {
-					indirectlyConnectedGp := item.(*trackedGroup)
-					if !indirectlyConnectedGp.processedEgress {
-						log.Debugf("Expanding egress to: %s", indirectlyConnectedGp.id)
-						expandEgress.Add(indirectlyConnectedGp)
-					}
-					return nil
-				})
-			} else if gp.isFollowingEgress {
-				// We are explicitly following the egress connection so add to the followed set.
-				gp.egress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following egress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
-
-			// If the ingress is being followed add it to the followed set.
-			if gp.isFollowingIngress {
-				gp.ingress.Iter(func(item interface{}) error {
-					followedGp := item.(*trackedGroup)
-					log.Debugf("Following ingress to: %s", followedGp.id)
-					followed.Add(followedGp)
-					return nil
-				})
-			}
+				if s.view.FollowConnectionDirection {
+					expandEgress.Add(connectedGp)
+				} else if connectedGp.isFollowingEgress || connectedGp.isFollowingIngress {
+					log.Debugf("Following ingress and/or egress direction from: %s", connectedGp.id)
+					expandFollowing.Add(connectedGp)
+				}
+				return nil
+			})
 			return set.RemoveItem
 		})
 	}
 
 	// Expand followed nodes.
-	for followed.Len() > 0 {
-		followed.Iter(func(item interface{}) error {
+	for expandFollowing.Len() > 0 {
+		expandFollowing.Iter(func(item interface{}) error {
 			gp := item.(*trackedGroup)
-			groupsInView.Add(gp)
-			log.Debugf("Adding group to view: %s", gp.id)
 			if gp.isFollowingIngress && !gp.processedIngress {
 				gp.processedIngress = true
 				gp.ingress.Iter(func(item interface{}) error {
 					followedGp := item.(*trackedGroup)
-					log.Debugf("Following ingress to: %s", followedGp.id)
-					followed.Add(followedGp)
+					log.Debugf("Following ingress from %s to %s", gp.id, followedGp.id)
+					groupsInView.Add(followedGp)
+					expandFollowing.Add(followedGp)
 					return nil
 				})
 			}
@@ -795,8 +742,9 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 				gp.processedEgress = true
 				gp.egress.Iter(func(item interface{}) error {
 					followedGp := item.(*trackedGroup)
-					log.Debugf("Following egress to: %s", followedGp.id)
-					followed.Add(followedGp)
+					log.Debugf("Following egress from %s to %s", gp.id, followedGp.id)
+					groupsInView.Add(followedGp)
+					expandFollowing.Add(followedGp)
 					return nil
 				})
 			}
@@ -828,31 +776,49 @@ func (s *serviceGraphConstructionData) getNodesInView() set.Set {
 // overlayEvents iterates through all the events and overlays them on the existing graph nodes. This never adds more
 // nodes to the graph.
 func (s *serviceGraphConstructionData) overlayEvents(nodesInView set.Set) {
-	for _, event := range s.flowData.Events {
+	for _, event := range s.sgd.Events {
 		log.Debugf("Checking event %#v", event)
 		for _, ep := range event.Endpoints {
 			log.Debugf("  - Checking event endpoint: %#v", ep)
+			var nodes []*v1.GraphNode
 			switch ep.Type {
 			case v1.GraphNodeTypeService:
 				fep := FlowEndpoint{
 					Type:      ep.Type,
 					Namespace: ep.Namespace,
 				}
-				sg := s.flowData.ServiceGroups.GetByService(v1.NamespacedName{
+				sg := s.sgd.ServiceGroups.GetByService(v1.NamespacedName{
 					Namespace: ep.Namespace, Name: ep.Name,
 				})
-				s.maybeOverlayEventID(nodesInView, event, fep, sg)
+				nodes = s.getAssociatedNodesInView(nodesInView, fep, sg)
 			default:
-				sg := s.flowData.ServiceGroups.GetByEndpoint(ep)
-				s.maybeOverlayEventID(nodesInView, event, ep, sg)
+				sg := s.sgd.ServiceGroups.GetByEndpoint(ep)
+				nodes = s.getAssociatedNodesInView(nodesInView, ep, sg)
+			}
+
+			if len(nodes) > 0 {
+				// Assign the events to the most aggregated node (the first one in the slice).
+				nodes[0].IncludeEvent(event.ID, event.Details)
 			}
 		}
 	}
 }
 
-// maybeOverlayEventID attempts to overlay an event on to one of the graph nodes. It applies the event to the top
-// level parent containing the impacted endpoint. If there is no node visible the event is discarded.
-func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, event Event, ep FlowEndpoint, sg *ServiceGroup) {
+// overlayDNS iterates through all the DNS logs and overlays them on the existing graph nodes. The stats are added
+// to the endpoint and all parent nodes in the hierarchy.
+func (s *serviceGraphConstructionData) overlayDNS(nodesInView set.Set) {
+	for _, dl := range s.sgd.FilteredDNSClientLogs {
+		log.Debugf("Checking DNS log for endpoint %#v", dl.Endpoint)
+		sg := s.sgd.ServiceGroups.GetByEndpoint(dl.Endpoint)
+		nodes := s.getAssociatedNodesInView(nodesInView, dl.Endpoint, sg)
+		for _, node := range nodes {
+			node.IncludeStats(dl.Stats)
+		}
+	}
+}
+
+// getAssociatedNodesInView returns the set of node (parent down to endpoint) for the specified endpoint or service group.
+func (s *serviceGraphConstructionData) getAssociatedNodesInView(nodesInView set.Set, ep FlowEndpoint, sg *ServiceGroup) []*v1.GraphNode {
 	// Determine which layer this endpoint might be part of.
 	var layerName, layerNameEndpoint, layerNameAggrEndpoint, layerNameServiceGroup, layerNameNamespace string
 
@@ -884,48 +850,40 @@ func (s *serviceGraphConstructionData) maybeOverlayEventID(nodesInView set.Set, 
 	// Set the layer.
 	idi.Layer = layerName
 
-	// Check if the layer is in view, if so add the event to the layer.
+	// Check if the layer is in view, if so return just the layer.
 	if layerName != "" {
 		layerId := idi.GetLayerID()
 		if _, ok := s.nodesMap[layerId]; ok && (nodesInView == nil || nodesInView.Contains(layerId)) {
-			log.Debugf("  - Including event in node %s", layerId)
-			s.nodesMap[layerId].Node.IncludeEvent(event.ID, event.Details)
-			return
+			return []*v1.GraphNode{s.nodesMap[layerId].Node}
 		}
 	}
 
-	// Check if the namespace is in view, if so add the event to the namespace.
+	// Check if the namespace is in view, if so return just the namespace.
 	if ep.Namespace != "" {
 		namespaceId := idi.GetNamespaceID()
 		if _, ok := s.nodesMap[namespaceId]; ok && (nodesInView == nil || nodesInView.Contains(namespaceId)) {
-			log.Debugf("  - Including event in node %s", namespaceId)
-			s.nodesMap[namespaceId].Node.IncludeEvent(event.ID, event.Details)
-			return
+			return []*v1.GraphNode{s.nodesMap[namespaceId].Node}
 		}
 	}
 
-	// Check if service group is in view, if so add the event to the service group.
+	var nodes []*v1.GraphNode
+	// Check if service group is in view, include in the response.
 	if sg != nil {
 		if _, ok := s.nodesMap[sg.ID]; ok && (nodesInView == nil || nodesInView.Contains(sg.ID)) {
-			log.Debugf("  - Including event in node %s", sg.ID)
-			s.nodesMap[sg.ID].Node.IncludeEvent(event.ID, event.Details)
-			return
+			nodes = append(nodes, s.nodesMap[sg.ID].Node)
 		}
 	}
-	// Check if endpoint is in view, if so add the event to the endpoint.
-	if endpointId != "" {
-		if _, ok := s.nodesMap[endpointId]; ok && (nodesInView == nil || nodesInView.Contains(endpointId)) {
-			log.Debugf("  - Including event in node %s", endpointId)
-			s.nodesMap[endpointId].Node.IncludeEvent(event.ID, event.Details)
-			return
-		}
-	}
+	// Check if aggregated endpoint is in view, if so include the aggregated endpoint.
 	if aggrEndpointId != "" {
 		if _, ok := s.nodesMap[aggrEndpointId]; ok && (nodesInView == nil || nodesInView.Contains(aggrEndpointId)) {
-			log.Debugf("  - Including event in node %s", aggrEndpointId)
-			s.nodesMap[aggrEndpointId].Node.IncludeEvent(event.ID, event.Details)
-			return
+			nodes = append(nodes, s.nodesMap[aggrEndpointId].Node)
 		}
 	}
-	log.Debug("  - No matching node in graph")
+	// Check if endpoint is in view, if so include the endpoint.
+	if endpointId != "" {
+		if _, ok := s.nodesMap[endpointId]; ok && (nodesInView == nil || nodesInView.Contains(endpointId)) {
+			nodes = append(nodes, s.nodesMap[endpointId].Node)
+		}
+	}
+	return nodes
 }

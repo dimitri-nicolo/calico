@@ -7,3 +7,4 @@ cmd/server/server
 bin/
 Makefile.common*
 .DS_Store
+pkg/middleware/servicegraph/testdata/responses/*.actual.json

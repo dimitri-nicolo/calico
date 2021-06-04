@@ -80,31 +80,31 @@ func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 	// Parse the Focus and Expanded node IDs.
 	log.Debug("Parse view data")
 	p := &ParsedView{
-		FollowConnectionDirection: rd.request.SelectedView.FollowConnectionDirection,
-		SplitIngressEgress:        rd.request.SelectedView.SplitIngressEgress,
+		FollowConnectionDirection: rd.ServiceGraphRequest.SelectedView.FollowConnectionDirection,
+		SplitIngressEgress:        rd.ServiceGraphRequest.SelectedView.SplitIngressEgress,
 	}
 	var err error
-	if p.Focus, err = parseNodes(rd.request.SelectedView.Focus, sgs); err != nil {
+	if p.Focus, err = parseNodes("focus", rd.ServiceGraphRequest.SelectedView.Focus, sgs); err != nil {
 		return nil, err
-	} else if p.Expanded, err = parseNodes(rd.request.SelectedView.Expanded, sgs); err != nil {
+	} else if p.Expanded, err = parseNodes("expanded", rd.ServiceGraphRequest.SelectedView.Expanded, sgs); err != nil {
 		return nil, err
-	} else if p.FollowedEgress, err = parseNodes(rd.request.SelectedView.FollowedEgress, sgs); err != nil {
+	} else if p.FollowedEgress, err = parseNodes("followed_egress", rd.ServiceGraphRequest.SelectedView.FollowedEgress, sgs); err != nil {
 		return nil, err
-	} else if p.FollowedIngress, err = parseNodes(rd.request.SelectedView.FollowedIngress, sgs); err != nil {
+	} else if p.FollowedIngress, err = parseNodes("followed_ingress", rd.ServiceGraphRequest.SelectedView.FollowedIngress, sgs); err != nil {
 		return nil, err
-	} else if p.Layers, err = parseLayers(rd.request.SelectedView.Layers, sgs); err != nil {
+	} else if p.Layers, err = parseLayers(rd.ServiceGraphRequest.SelectedView.Layers, sgs); err != nil {
 		return nil, err
 	}
 
 	return p, nil
 }
 
-func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err error) {
+func parseNodes(fieldname string, ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err error) {
 	pn = newParsedNodes()
 	for _, id := range ids {
 		log.Debugf("Processing ID in view: %s", id)
 		if pid, err := ParseGraphNodeID(id, sgs); err != nil {
-			return nil, fmt.Errorf("invalid id '%s': %v", id, err)
+			return nil, fmt.Errorf("invalid %s node: %v", fieldname, err)
 		} else {
 			switch pid.ParsedIDType {
 			case v1.GraphNodeTypeLayer:
@@ -131,7 +131,7 @@ func parseLayers(layers []v1.Layer, sgs ServiceGroups) (pn *ParsedLayers, err er
 		for _, id := range layer.Nodes {
 			log.Debugf("Processing ID in view: %s", id)
 			if pid, err := ParseGraphNodeID(id, sgs); err != nil {
-				return nil, fmt.Errorf("invalid id '%s': %v", id, err)
+				return nil, fmt.Errorf("invalid layer node: %v", err)
 			} else {
 				switch pid.ParsedIDType {
 				case v1.GraphNodeTypeNamespace:
