@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/tigera/es-proxy/pkg/httputils"
+
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
@@ -79,7 +81,9 @@ func (ns *NamedSelector) UnmarshalJSON(b []byte) error {
 	}
 
 	if sel, err := selector.Parse(ss.Selector); err != nil {
-		return fmt.Errorf("invalid selector: %s", ss.Selector)
+		return httputils.NewHttpStatusErrorBadRequest(
+			fmt.Sprintf("Request body contains an invalid selector: %s", ss.Selector), err,
+		)
 	} else {
 		ns.Name = ss.Name
 		ns.Selector = sel

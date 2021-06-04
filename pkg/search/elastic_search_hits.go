@@ -42,7 +42,7 @@ type ESResults struct {
 	TotalHits int64 `json:"total_hits"`
 
 	// The actual hits returned, as a raw json.
-	RawHits []json.RawMessage `json:"raw_messages"`
+	RawHits []json.RawMessage `json:"raw_hits"`
 }
 
 // TimedOutError is returned when the response indicates a timeout.

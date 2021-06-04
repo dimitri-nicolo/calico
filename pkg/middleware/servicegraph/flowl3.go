@@ -217,10 +217,10 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		}()
 	}
 
-	index := elastic.GetFlowsIndex(cluster)
+	index := elastic.GetFlowLogsIndex(cluster)
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr),
+		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr.From, tr.To),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: flowCompositeSources,
 		AggSumInfos:             flowAggregationSums,

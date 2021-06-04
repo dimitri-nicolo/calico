@@ -12,5 +12,5 @@ import (
 func TestUtils(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Utils Suite")
+	RunSpecs(t, "HTTP utils Suite")
 }

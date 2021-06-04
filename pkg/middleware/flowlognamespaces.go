@@ -232,7 +232,7 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	// form query
 	query := buildESQuery(params)
-	index := esindex.GetFlowsIndex(params.ClusterName)
+	index := esindex.GetFlowLogsIndex(params.ClusterName)
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,

@@ -177,7 +177,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(eselastic.GetFlowsIndex, params, client)
+			results, err := search(eselastic.GetFlowLogsIndex, params, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(results.TotalHits).Should(Equal(int64(2)))
 			Expect(results.TimedOut).Should(Equal(false))
@@ -242,7 +242,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(eselastic.GetFlowsIndex, params, client)
+			results, err := search(eselastic.GetFlowLogsIndex, params, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(results.TotalHits).Should(Equal(int64(0)))
 			Expect(results.TimedOut).Should(Equal(false))
@@ -297,7 +297,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(eselastic.GetFlowsIndex, params, client)
+			results, err := search(eselastic.GetFlowLogsIndex, params, client)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(results.TotalHits).Should(Equal(int64(0)))
 			Expect(results.TimedOut).Should(Equal(false))
@@ -352,7 +352,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(eselastic.GetFlowsIndex, params, client)
+			results, err := search(eselastic.GetFlowLogsIndex, params, client)
 			Expect(err).Should(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))
@@ -409,7 +409,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PageSize:    100,
 				SearchAfter: nil,
 			}
-			results, err := search(eselastic.GetFlowsIndex, params, client)
+			results, err := search(eselastic.GetFlowLogsIndex, params, client)
 			Expect(err).Should(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))

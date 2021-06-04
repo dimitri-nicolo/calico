@@ -25,7 +25,7 @@ type ServiceGraphBackend interface {
 	GetEvents(cluster string, tr v1.TimeRange) ([]Event, error)
 
 	// These methods access data for a specific user request and therefore need to include the users request context.
-	NewRBACFilter(cxt context.Context, rd *RequestData) (RBACFilter, error)
+	NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error)
 	NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error)
 }
 
@@ -64,11 +64,7 @@ func (r *realServiceGraphBackend) GetEvents(cluster string, tr v1.TimeRange) ([]
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
-	cs, err := r.clientSetFactory.NewClientSetForUserRequest(rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
-	if err != nil {
-		return nil, err
-	}
-	return NewRBACFilter(ctx, cs)
+	return NewRBACFilter(ctx, r.clientSetFactory, rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
 }
 
 func (r *realServiceGraphBackend) NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error) {

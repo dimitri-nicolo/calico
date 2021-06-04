@@ -171,17 +171,17 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetFlowsIndex, esClient.Backend())))))
+					middleware.SearchHandler(eselastic.GetFlowLogsIndex, esClient.Backend())))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetDnsIndex, esClient.Backend())))))
-	sm.Handle("/l7/search",
+					middleware.SearchHandler(eselastic.GetDNSLogsIndex, esClient.Backend())))))
+	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetL7FlowsIndex, esClient.Backend())))))
+					middleware.SearchHandler(eselastic.GetL7LogsIndex, esClient.Backend())))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authenticator,

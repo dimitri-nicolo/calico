@@ -135,7 +135,7 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, 
 	// - we hit an error, or
 	// - the context indicates "done"
 	var results []Event
-	query := elastic.GetTimeRangeQuery(tr)
+	query := elastic.GetTimeRangeQuery(tr.From, tr.To)
 	index := elastic.GetEventsIndex(cluster)
 	var searchAfterKeys []interface{}
 	for {

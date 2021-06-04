@@ -77,10 +77,10 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 		}()
 	}
 
-	index := elastic.GetDnsIndex(cluster)
+	index := elastic.GetDNSLogsIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeQuery(tr),
+		Query:                   elastic.GetEndTimeRangeQuery(tr.From, tr.To),
 		Name:                    dnsBucketName,
 		AggCompositeSourceInfos: dnsCompositeSources,
 		AggSumInfos:             dnsAggregationSums,

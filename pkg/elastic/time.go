@@ -2,19 +2,19 @@
 package elastic
 
 import (
-	"github.com/olivere/elastic/v7"
+	"time"
 
-	api "github.com/tigera/es-proxy/pkg/apis/v1"
+	"github.com/olivere/elastic/v7"
 )
 
-func GetEndTimeRangeEpochSecondQuery(tr api.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery("end_time").Gt(tr.From.Unix()).Lte(tr.To.Unix())
+func GetEndTimeRangeEpochSecondQuery(from, to time.Time) elastic.Query {
+	return elastic.NewRangeQuery("end_time").Gt(from.Unix()).Lte(to.Unix())
 }
 
-func GetEndTimeRangeQuery(tr api.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery("end_time").Gt(tr.From).Lte(tr.To)
+func GetEndTimeRangeQuery(from, to time.Time) elastic.Query {
+	return elastic.NewRangeQuery("end_time").Gt(from).Lte(to)
 }
 
-func GetTimeRangeQuery(tr api.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery("time").Gt(tr.From.Unix()).Lte(tr.To.Unix())
+func GetTimeRangeQuery(from, to time.Time) elastic.Query {
+	return elastic.NewRangeQuery("time").Gt(from.Unix()).Lte(to.Unix())
 }

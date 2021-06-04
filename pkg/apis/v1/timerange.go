@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tigera/es-proxy/pkg/httputils"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-proxy/pkg/timeutils"
@@ -40,15 +42,23 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 	now := time.Now().UTC()
 	if from, fromQp, err := timeutils.ParseElasticsearchTime(now, &s.From); err != nil {
 		log.WithError(err).Debug("Unable to parse 'from' time")
-		return fmt.Errorf("time range from value is invalid: %s", s.From)
+		return httputils.NewHttpStatusErrorBadRequest(
+			fmt.Sprintf("Request body contains an invalid value for the time range 'from' field: %s", s.From), err,
+		)
 	} else if to, toQp, err := timeutils.ParseElasticsearchTime(now, &s.To); err != nil {
-		return fmt.Errorf("time range to value is invalid: %s", s.To)
+		return httputils.NewHttpStatusErrorBadRequest(
+			fmt.Sprintf("Request body contains an invalid value for the time range 'to' field: %s", s.To), err,
+		)
 	} else if isstring(fromQp) != isstring(toQp) {
 		log.Debug("time range is specified as a mixture of explicit time and relative time")
-		return fmt.Errorf("time range values must either both be explicit times or both be relative to now")
+		return httputils.NewHttpStatusErrorBadRequest(
+			"Request body contains an invalid time range: values must either both be explicit times or both be relative to now", nil,
+		)
 	} else if from.After(*to) {
 		log.Debug("From is after To")
-		return fmt.Errorf("invalid time range specified: from (%s) is after to (%s)", s.From, s.To)
+		return httputils.NewHttpStatusErrorBadRequest(
+			fmt.Sprintf("Request body contains an invalid time range: from (%s) is after to (%s)", s.From, s.To), nil,
+		)
 	} else {
 		t.From = *from
 		t.To = *to
