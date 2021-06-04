@@ -41,7 +41,9 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 		goto deny;
 	}
 
-	if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+	if ((state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
+	    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
+	     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
 		CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
 		rc = TC_ACT_UNSPEC;
 		goto skip_fib;
@@ -215,7 +217,9 @@ skip_fib:
 			CALI_DEBUG("To host marked with FLAG_EXT_LOCAL\n");
 			ctx->fwd.mark |= EXT_TO_SVC_MARK;
 		}
-		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+		if ((state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
+		    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
+		     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
 			CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
 			ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
 		}
