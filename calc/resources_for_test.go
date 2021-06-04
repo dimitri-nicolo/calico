@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,10 +18,14 @@ package calc_test
 // the model package.
 
 import (
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/encap"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	kapiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Canned hostnames.
@@ -929,6 +933,54 @@ var localIPAMBlockWithBorrows = AllocationBlock{
 			IPAMBlockAttributeNode: remoteHostname,
 		}},
 	},
+}
+
+var svcWithOutL7Annotation = KVPair{
+	Key: ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+	Value: &kapiv1.Service{
+		Spec: kapiv1.ServiceSpec{
+			ClusterIP: "10.0.0.0",
+			ExternalIPs: []string{
+				"10.0.0.10",
+				"10.0.0.20",
+			},
+			Ports: []kapiv1.ServicePort{
+				{
+					Port:     123,
+					NodePort: 0,
+					Protocol: kapiv1.ProtocolTCP,
+					Name:     "namedport",
+				},
+			},
+		},
+	},
+}
+
+var svcWithL7Annotation = KVPair{
+	Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service2", Namespace: "ns2"},
+	Value: &kapiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
+		Spec: kapiv1.ServiceSpec{
+			ClusterIP: "10.0.0.0",
+			ExternalIPs: []string{
+				"2001:569:7007:1a00:45ac:2caa:a3be:5e10",
+				"10.0.0.20",
+			},
+			Ports: []kapiv1.ServicePort{
+				{
+					Port:     123,
+					NodePort: 234,
+					Protocol: kapiv1.ProtocolTCP,
+					Name:     "namedport",
+				},
+			},
+		},
+	},
+}
+
+var deleteSvcWithL7Annotation = KVPair{
+	Key:   model.ResourceKey{Kind: v3.KindK8sService, Name: "service2", Namespace: "ns2"},
+	Value: nil,
 }
 
 func intPtr(i int) *int {

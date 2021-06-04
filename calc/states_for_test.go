@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2002,6 +2002,23 @@ var nodesWithMoreIPsDeleted = vxlanWithBlock.withKVUpdates(
 		}}},
 ).withRoutes(nodesWithMoreIPsRoutesDeletedExtras...).
 	withName("routes for nodes with more IPs deleted the extra IPs")
+
+var withOutL7Annotation = empty.withKVUpdates(
+	svcWithOutL7Annotation,
+).withIPSet(allSelectorId, []string{})
+
+var withL7Annotation = withOutL7Annotation.withKVUpdates(
+	svcWithL7Annotation,
+).withIPSet(allSelectorId,
+	[]string{
+		"2001:569:7007:1a00:45ac:2caa:a3be:5e10:tcp,123",
+		"10.0.0.20:tcp,123",
+		"10.0.0.0:tcp,123",
+	})
+
+var deleteL7Annotation = withL7Annotation.withKVUpdates(
+	deleteSvcWithL7Annotation,
+).withIPSet("", []string{})
 
 type StateList []State
 
