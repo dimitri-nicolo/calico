@@ -37,7 +37,6 @@ blocks:
       jobs:
         - name: Run UT
           commands:
-            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
             - make ci
 
   - name: 'Push Images (non-PR builds only)'
@@ -60,8 +59,7 @@ blocks:
         - name: Run CD
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
+            - make cd CONFIRM=true
 
   - name: 'Push Windows Images (non-PR builds only)'
     dependencies: ["CI"]
@@ -97,16 +95,11 @@ blocks:
         - name: Run CD
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
             - export PROCESS_REPO=~/process/testing/windows-instances
-            - >-
-              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
-                CONFIRM=true .semaphore/windows-cd.sh
-              fi
-
-  - name: 'Push Manifest Image'
+            - CONFIRM=true .semaphore/windows-cd.sh
+  - name: 'Push Windows Manifests (non-PR builds only)'
     dependencies:
-    - "Push Windows Images (non-PR builds only)"
+      - "Push Windows Images (non-PR builds only)"
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -125,8 +118,4 @@ blocks:
         - name: Run CD
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
-            - export IMAGETAG=$SEMAPHORE_GIT_BRANCH
-            - >-
-              if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
-                make cd-windows-manifest CONFIRM=true
-              fi
+            - make push-windows-manifest CONFIRM=true
