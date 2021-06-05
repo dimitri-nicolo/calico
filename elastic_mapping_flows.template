@@ -42,8 +42,14 @@
             "type": "keyword"
         },
         "dest_port": {
+            /*dest_port is deprecated please use dest_port_num*/
             "type": "long",
             "null_value": "0"
+        },
+        "dest_port_num": {
+            /*dest_port_num - Destination Port Number replaces dest_port. */
+            "type": "alias",
+            "path": "dest_port"
         },
         "dest_type": {
             "type": "keyword"
@@ -55,7 +61,32 @@
             "type": "keyword"
         },
         "dest_service_port": {
+            /*dest_service_port is deprecated please use dest_service_port_name*/
             "type": "keyword"
+        },
+        "dest_service_port_name": {
+            /*
+                dest_service_port_name - Destination Service Port Name is the name of the port exposed by the service which the connection is trying to reach.  
+                Described in the Service resource specs as specs.[]ports.name. It will have the empty character flowlogs field value of '-' when:
+                - the reported flowlog is for the destination endpoint (ie. reporter==dst)
+                - the optional port name field in the Service resource is not provided 
+                - the connection does not have a service destination
+                - in rare cases where the destination is a Service and the Service is unavailable (ie. deleted) while processing the Service information
+                This field replaces dest_service_port.
+            */
+            "type": "alias",
+            "path": "dest_service_port"
+        },
+        "dest_service_port_num": {
+             /*
+                dest_service_port_num - Destination Service Port Number is the numerical value of the port exposed by the service which the connection is trying to reach.  
+                Described in the Service resource specs as specs.[]ports.port. It will have the empty numerical flowlogs field value of 0 when:
+                - the reported flowlog is for the destination endpoint (ie. reporter==dst)
+                - the connection does not have a service destination
+                - in rare cases where the destination is a Service and the Service is unavailable (ie. deleted or down) while processing the Service information
+            */
+            "type": "long",
+            "null_value": "0"
         },
         "dest_labels": {
                 /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
@@ -148,8 +179,14 @@
             "type": "keyword"
         },
         "source_port": {
+            /*source_port is deprecated please use source_port_num*/
             "type": "long",
             "null_value": "0"
+        },
+        "source_port_num": {
+            /*source_port_num - Source Port Number: is an alias to duplicate dest_port until a breaking change version occurs to remove source_port and switch to fully source_port_num. */
+           "type": "alias",
+           "path": "source_port"
         },
         "source_type": {
             "type": "keyword"
