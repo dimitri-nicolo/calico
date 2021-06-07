@@ -27,6 +27,7 @@ When you install {{site.prodname}} on your cluster for the first time, you get t
 
 **Required**
 
+- Kubernetes cluster meets [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
 - [License and pull secret to access Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise)
 
 **Recommended**

@@ -22,9 +22,7 @@ section:
     - title: Docker Enterprise
       path: /getting-started/kubernetes/docker-enterprise
     - title: Helm
-      path: /getting-started/kubernetes/helm
-    - title: Rancher Kubernetes Engine
-      path: /getting-started/kubernetes/rancher      
+      path: /getting-started/kubernetes/helm      
   - title: AKS 
     path: /getting-started/kubernetes/aks
   - title: AWS using kOps
@@ -35,6 +33,8 @@ section:
     path: /getting-started/kubernetes/gke
   - title: Quickstart
     path: /getting-started/kubernetes/quickstart 
+  - title: Rancher Kubernetes Engine
+    path: /getting-started/kubernetes/rancher  
   - title: Install from a private registry
     path: /getting-started/private-registry/
     section:

@@ -8,6 +8,13 @@ canonical_url: '/getting-started/kubernetes/rancher'
 
 Install {{site.prodname}} as the required CNI for networking and/or network policy on Rancher-deployed clusters.
 
+### Concepts
+
+{{site.prodname}} supports the Calico CNI with Calico Enterprise network policy:
+
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
+
 ### Before you begin
 
 **Required**
@@ -26,9 +33,6 @@ Install {{site.prodname}} as the required CNI for networking and/or network poli
 - If using a Kubeconfig file locally, {% include open-new-window.html text='install and set up the Kubectl CLI tool' url='https://kubernetes.io/docs/tasks/tools/install-kubectl/' %}.
 
 ### How to
-
-The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
 
 - [Install {{site.prodname}}](#install-calico-enterprise)
 - [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)

@@ -1,4 +1,4 @@
-## Kernel dependencies
+### Kernel dependencies
 
 > **Tip**: If you are using one of the recommended distributions, you will already
 > satisfy these. 

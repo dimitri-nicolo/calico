@@ -6,7 +6,7 @@ canonical_url: '/getting-started/kubernetes/requirements'
 
 {% include content/reqs-sys.md orch="Kubernetes" %}
 
-## Kubernetes requirements
+### Kubernetes requirements
 
 #### Supported Kubernetes versions
 
@@ -64,7 +64,7 @@ IP ranges in your network, including:
 - The Kubernetes service cluster IP range
 - The range from which host IPs are allocated
 
-## Application layer policy requirements
+### Application layer policy requirements
 
 - {% include open-new-window.html text='MutatingAdmissionWebhook' url='https://kubernetes.io/docs/admin/admission-controllers/#mutatingadmissionwebhook' %} enabled
 - Istio {% include open-new-window.html text='v1.6' url='https://archive.istio.io/v1.6/' %}, or {% include open-new-window.html text='v1.7' url='https://archive.istio.io/v1.7/' %}

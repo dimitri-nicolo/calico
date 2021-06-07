@@ -8,20 +8,18 @@ canonical_url: '/getting-started/kubernetes/eks'
 
 Install {{site.prodname}} in EKS managed Kubernetes service.
 
-### Value
-
-You can use {{site.prodname}} with Amazon VPC CNI networking on EKS, or with Calico CNI networking in place of the default AWS VPC networking without the need to use IP addresses from the underlying VPC. This allows you to take
-advantage of the full set of {{site.prodname}} networking features, including {{site.prodname}}'s flexible IP address management capabilities.
-
 ### Before you begin
 
+**Supported**
+- {% include /content/eks.md %}
+
 **Required**
+
+- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
 
 - [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
-
-- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
 
 ### How to
 

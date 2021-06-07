@@ -1,4 +1,4 @@
-## Node requirements
+### Node requirements
 
 - x86-64 processor with at least 2 cores, 8.0GB RAM and 20 GB free disk space
 
@@ -44,7 +44,7 @@
   | up to 2000              | 8
   | 2000 or more            | 10
 
-## Key/value store
+### Key/value store
 
 {{site.prodname}} {{page.version}} requires a key/value store accessible by all
 {{site.prodname}} components.
@@ -59,7 +59,7 @@ nodes for greater performance and reliability.  If you don't already have an
 etcdv3 cluster to connect to, please refer to {% include open-new-window.html text='the upstream etcd
 docs' url='https://coreos.com/etcd/' %} for detailed advice and setup.{% endif %}{% if include.orch == "host protection" %}{% endif %}
 
-## Network requirements
+### Network requirements
 
 Ensure that your hosts and firewalls allow the necessary traffic based on your configuration. See [Component architecture]({{site.baseurl}}/reference/architecture/overview) to view the following components. 
 
@@ -97,7 +97,7 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 \* _If your compute hosts connect directly and don't use IP-in-IP, you don't need to allow IP-in-IP traffic._
 {%- endif %}
 
-## Privileges
+### Privileges
 
 Ensure that {{site.prodname}} has the `CAP_SYS_ADMIN` privilege.
 

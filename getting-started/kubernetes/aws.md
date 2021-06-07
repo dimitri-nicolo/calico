@@ -1,7 +1,7 @@
 ---
-title: Self-managed Kubernetes in Amazon Web Services (AWS)
+title: AWS using kOps
 description: Use Calico Enterprise with a self-managed Kubernetes cluster in Amazon Web Services (AWS) through kOps.
-canonical_url: '/getting-started/kubernetes/self-managed--public-cloud/aws'
+canonical_url: '/getting-started/kubernetes/aws'
 ---
 
 ### Big picture
@@ -14,33 +14,51 @@ Managing your own Kubernetes cluster (as opposed to using a managed-Kubernetes s
 
 ### Concepts
 
-Kubernetes Operations (kops) is a cluster management tool that handles provisioning cluster VMs and installing Kubernetes. It has built-in support for using {{site.prodname}} as the Kubernetes networking provider.
+#### About kOps
+
+Kubernetes Operations (kOps) is a cluster management tool that provisions cluster VMs and installs Kubernetes. It is a good default choice for most because it gives you access to all {{site.prodname}} [flexible and powerful networking features]({{site.baseurl}}/networking). However, other options may work better for your environment. 
+
+{{site.prodname}} supports these options:
+
+- Calico CNI for networking with {{site.prodname}} network policy 
+
+    The geeky details of what you get (default):    
+    {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}  
+
+- AWS VPC CNI for networking with {{site.prodname}} network policy 
+
+    The geeky details of what you get:    
+    {% include geek-details.html details='Policy:Calico,IPAM:AWS,CNI:AWS,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
 
 ### Before you begin...
 
+**Supported**
+- kOps version 1.20.0
+
+**Required**
 - Install {% include open-new-window.html text='kubectl' url='https://kubernetes.io/docs/tasks/tools/install-kubectl/' %}
 - Install {% include open-new-window.html text='AWS CLI tools' url='https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html' %}
 
 ### How to
 
-There are many ways to install and manage Kubernetes in AWS. Using Kubernetes Operations (kops) is a good default choice for most people, as it gives you access to all of {{site.prodname}}’s [flexible and powerful networking features]({{site.baseurl}}/networking). However, there are other options that may work better for your environment.
+Select one of the following installation paths:
 
-- [Kubernetes Operations for Calico networking and network policy](#kubernetes-operations-for-calico-networking-and-network-policy)
-- [Other options and tools](#other-options-and-tools)
+- [Install Calico Enterprise networking and network policy](#calico-enterprise-networking-and-network-policy)
+- [Install Amazon VPC networking with Calico Enterprise network policy](#install-amazon-vpc-networking-with-calico-enterprise-network-policy)
 
-#### Kubernetes Operations for Calico networking and network policy
+#### Install Calico Enterprise networking and network policy
 
-To use kops to create a cluster with {{site.prodname}} networking and network policy:
+To use kOps to create a cluster with {{site.prodname}} networking and network policy:
 
 1. {% include open-new-window.html text='Install kOps' url='https://kops.sigs.k8s.io/install/' %} on your workstation.
 1. {% include open-new-window.html text='Set up your environment for AWS' url='https://kops.sigs.k8s.io/getting_started/aws/' %} .
 1. Be sure to {% include open-new-window.html text='set up an S3 state store' url='https://kops.sigs.k8s.io/getting_started/aws/#cluster-state-storage' %} and export its name:
 
-   ```
+   ```bash
    export KOPS_STATE_STORE=s3://<name-of-your-state-store-bucket>
    ```
-1. Configure kops to use {{site.prodname}} for networking.
-   Create a cluster with kops using the `--networking cni` flag. For example:
+1. Configure kOps to use {{site.prodname}} for networking.
+   Create a cluster with kOps using the `--networking cni` flag. For example:
 
    ```
    kops create cluster \
@@ -84,40 +102,32 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
 
     > **Note:** Once the cluster has been created, the `kubectl` command should be pointing to the newly created cluster. By default `kops>=1.19` does not update `kubeconfig` to include the cluster certificates, accesses to the cluster through `kubectl` must be configured. 
 
-1. Validate if Nodes are created.
+1. Validate that nodes are created.
 
-   ```
+   ```bash
    kubectl get nodes
    ```
-	The above should return the status of the nodes in the `Not Ready` state.
+  The above should return the status of the nodes in the `Not Ready` state.
 
 1. KOps does not install any CNI when the flag ```--networking cni``` or ```spec.networking: cni {}``` is used. In this case the user is expected to install the CNI separately.
    To Install {{site.prodname}} follow the [install instructions for {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/generic-install).
 
 1. Finally, to delete your cluster once finished, run `kops delete cluster <name-of-your-cluster> --yes`.
 
-The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:etcd' %}
-
 You can further customize the {{site.prodname}} install with {% include open-new-window.html text='options listed in the kops documentation' url='https://kops.sigs.k8s.io/networking/#calico-example-for-cni-and-network-policy' %}.
 
-#### Other options and tools
+#### Install Amazon VPC networking with Calico Enterprise network policy
 
-##### Amazon VPC CNI plugin
+You can use Amazon’s VPC CNI plugin for networking, and {{site.prodname}} for network policy. The advantage of this approach is that pods are assigned IP addresses associated with Elastic Network Interfaces on worker nodes. The IPs come from the VPC network pool, and therefore do not require NAT to access resources outside the Kubernetes cluster.
 
-As an alternative to {{site.prodname}} for both networking and network policy, you can use Amazon’s VPC CNI plugin for networking, and {{site.prodname}} for network policy. The advantage of this approach is that pods are assigned IP addresses associated with Elastic Network Interfaces on worker nodes. The IPs come from the VPC network pool and therefore do not require NAT to access resources outside the Kubernetes cluster.
-
-Set your kops cluster configuration to:
+Set your kOps cluster configuration to:
 
 ```
-networking:
-  amazonvpc: {}
-```
-Then install {{site.prodname}} for network policy only after the cluster is up and ready.
+  networking:
+    amazonvpc: {}
+  ```
 
-The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:AWS,CNI:AWS,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
-
+After the cluster is up and ready, [Install {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/generic-install).
 
 ### Next steps
 

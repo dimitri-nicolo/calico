@@ -8,34 +8,44 @@ canonical_url: '/getting-started/kubernetes/gke'
 
 Install {{site.prodname}} on a GKE managed Kubernetes cluster.
 
+### Concepts
+
+{{site.prodname}} supports the Calico CNI with {{site.prodname}} network policy:
+
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Host Local,CNI:Calico,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
+
 ### Before you begin
 
-- [Create a compatible GKE cluster](#create-a-compatible-gke-cluster)
-- [Gather the necessary resources](#gather-required-resources)
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
-- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
+#### Supported
+- {% include /content/gke.md %}
 
-#### Create a compatible GKE cluster
+#### Required
 
-Ensure that your GKE cluster that meets the following requirements:
+**Verify cluster settings**
 
-  - *Version `1.18.x` or newer
+Verify the cluster has these Networking settings:
+- Intranode visability is disabled
+- Network policy is disabled
+- Dataplane V2 is disabled
+- Istio is disabled  
+   The Istio setting on the GKE cluster prevents configuration of {{site.prodname}} application layer policy. To use Istio in your cluster, follow {% include open-new-window.html text='this GKE tutorial' url='https://cloud.google.com/kubernetes-engine/docs/tutorials/installing-istio' %} to install the open source version of Istio on GKE.
+- GKE master access to port 5443   
+   The GKE master must be able to access the {{site.prodname}} API server, which runs with host networking on port 5443.  For multi-zone clusters and clusters with the "master IP range" configured, you will need to add a GCP firewall rule to allow access to that port from the master.  For example, you could add a network tag to your nodes and then refer to that tag in a firewall rule, or allow based on your cluster's node CIDR.
 
-  - *{% include open-new-window.html text='Intranode visibility' url='https://cloud.google.com/kubernetes-engine/docs/how-to/intranode-visibility' %} is enabled*.  This setting configures GKE to use the GKE CNI plugin, which is required.
+**Verify IAM permissions**  
 
-  - *Network policy is disabled*. This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
-
-  - *Istio disabled*. The Istio setting on the GKE cluster prevents configuration of {{site.prodname}} application layer policy. To use Istio in your cluster, follow {% include open-new-window.html text='this GKE tutorial' url='https://cloud.google.com/kubernetes-engine/docs/tutorials/installing-istio' %} to install the open source version of Istio on GKE.
-
-  - *Master access to port 5443*. The GKE master must be able to access the {{site.prodname}} API server, which runs with host networking on port 5443.  For multi-zone clusters and clusters with the "master IP range" configured, you will need to add a GCP firewall rule to allow access to that port from the master.  For example, you could add a network tag to your nodes and then refer to that tag in a firewall rule, or allow based on your cluster's node CIDR.
-
-#### Gather required resources
-
-- Ensure that your Google account has sufficient IAM permissions.  To apply the {{site.prodname}} manifests requires permissions to create Kubernetes ClusterRoles and ClusterRoleBindings.  The easiest way to grant such permissions is to assign the "Kubernetes Engine Developer" IAM role to your user account as described in the {% include open-new-window.html text='Creating Cloud IAM policies' url='https://cloud.google.com/kubernetes-engine/docs/how-to/iam' %} section of the GKE documentation.
+Verify your user account has IAM permissions to create Kubernetes ClusterRoles, ClusterRoleBindings, Deployments, Service Accounts, and Custom Resource Definitions. The easiest way to grant permissions is to assign the "Kubernetes Service Cluster Admin Role” to your user account. For help, see {% include open-new-window.html text='GKE access control' url='https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control' %}. 
 
 > **Tip**: By default, GCP users often have permissions to create basic Kubernetes resources (such as Pods and Services) but lack the permissions to create ClusterRoles and other admin resources.  Even if you can create basic resources, it's worth verifying that you can create admin resources before continuing.
 
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key) and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
+**Review {{site.prodname}} requirements**
+
+- [Network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
+
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
+
+- Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
 ### How to
 
@@ -44,9 +54,6 @@ Ensure that your GKE cluster that meets the following requirements:
 1. [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
 
 {% include content/install-gke.md clusterType="standalone" %}
-
-The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:Host Local,CNI:Calico,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
 
 ### Next steps
 
