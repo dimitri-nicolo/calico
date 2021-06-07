@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	httpUtils "github.com/tigera/es-proxy/pkg/utils"
+	"github.com/tigera/es-proxy/pkg/httputils"
 	"github.com/tigera/lma/pkg/auth"
 	authzv1 "k8s.io/api/authorization/v1"
 )
@@ -87,8 +87,8 @@ func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
 		// Extract the cluster name from the request body.
 		// Note: Decode maintains the request body's data to pass on to the next handler.
 		var params SearchParams
-		if err := httpUtils.Decode(w, r, &params); err != nil {
-			var mr *httpUtils.MalformedRequest
+		if err := httputils.Decode(w, r, &params); err != nil {
+			var mr *httputils.HttpStatusError
 			if errors.As(err, &mr) {
 				http.Error(w, mr.Msg, mr.Status)
 			} else {

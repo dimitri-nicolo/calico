@@ -42,7 +42,7 @@ type ESResults struct {
 	TotalHits int64 `json:"total_hits"`
 
 	// The actual hits returned, as a raw json.
-	RawHits []*json.RawMessage `json:"raw_messages"`
+	RawHits []json.RawMessage `json:"raw_messages"`
 }
 
 // TimedOutError is returned when the response indicates a timeout.
@@ -103,7 +103,7 @@ func searchElastic(
 		searchQuery.SearchAfter(searchAfter)
 	}
 
-	var rawHits []*json.RawMessage
+	var rawHits []json.RawMessage
 	if result, err := searchQuery.Do(ctx); err != nil {
 		// We hit an error, exit.
 		log.WithError(err).Debugf("Error searching %s", index)
@@ -117,7 +117,7 @@ func searchElastic(
 		}
 		if result.Hits != nil && result.Hits.TotalHits.Value > 0 {
 			for _, hit := range result.Hits.Hits {
-				rawHits = append(rawHits, &hit.Source)
+				rawHits = append(rawHits, hit.Source)
 			}
 		} else {
 			// Log when no hits are returned.

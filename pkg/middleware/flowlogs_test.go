@@ -32,11 +32,11 @@ import (
 )
 
 const (
-	startTimeTest          = "now-3h"
-	endTimeTest            = "now"
-	invalidFlowTypes       = `[network", "networkSSet", "wepp", "heppp"]`
-	invalidActions         = `["allowW", "deeny", "unknownn"]`
-	malformedFlowsResponse = `{badlyFormedNamesJson}`
+	startTimeTest                = "now-3h"
+	endTimeTest                  = "now"
+	invalidFlowTypes             = `[network", "networkSSet", "wepp", "heppp"]`
+	invalidActions               = `["allowW", "deeny", "unknownn"]`
+	httpStatusErrorFlowsResponse = `{badlyFormedNamesJson}`
 )
 
 var _ = Describe("Test /flowLogs endpoint functions", func() {
@@ -360,8 +360,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		})
 
 		It("should fail to retrieve a search results object and return an error", func() {
-			By("Creating a mock ES client with a mock malformed response")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{malformedFlowsResponse})
+			By("Creating a mock ES client with a mock http status error response")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{httpStatusErrorFlowsResponse})
 			params := &FlowLogsParams{}
 
 			searchResults, stat, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient)

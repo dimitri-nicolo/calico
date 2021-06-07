@@ -21,7 +21,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-package utils
+package httputils
 
 import (
 	"bytes"
@@ -49,23 +49,6 @@ var (
 	ErrTooManyJsonObjectsInRequestBody = errors.New("too many JSON objects in request body")
 )
 
-type MalformedRequest struct {
-	// Status http status code of the request error.
-	Status int
-
-	// Malformed error message.
-	Msg string
-
-	// Error cause of malformed request.
-	Err error
-}
-
-// Error implementation of error type Error function, which returns the malformed request message
-// as a string.
-func (mr *MalformedRequest) Error() string {
-	return mr.Msg
-}
-
 // Decode decodes the json body onto a destination interface.
 //
 // Decodes and maintains the request body onto the next handler. Forms a
@@ -75,13 +58,13 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 		value, _ := header.ParseValueAndParams(r.Header, "Content-Type")
 		if value != "application/json" {
 			msg := "Content-Type header is not application/json"
-			return &MalformedRequest{Status: http.StatusUnsupportedMediaType, Msg: msg}
+			return &HttpStatusError{Status: http.StatusUnsupportedMediaType, Msg: msg}
 		}
 	}
 
 	// Return an error if the request body is nil.
 	if r.Body == nil {
-		return &MalformedRequest{
+		return &HttpStatusError{
 			Status: http.StatusBadRequest,
 			Msg:    ErrEmptyRequestBody.Error(),
 			Err:    ErrEmptyRequestBody,
@@ -95,14 +78,14 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 	if err != nil {
 		if len(body) >= maxBytes {
 			msg := "Request body must not be larger than 1MB"
-			return &MalformedRequest{
+			return &HttpStatusError{
 				Status: http.StatusRequestEntityTooLarge,
 				Msg:    msg,
 				Err:    ErrHttpRequestBodyTooLarge,
 			}
 		} else {
 			msg := "Cannot read request body"
-			return &MalformedRequest{
+			return &HttpStatusError{
 				Status: http.StatusBadRequest,
 				Msg:    msg,
 				Err:    ErrCantReadRequestBody,
@@ -120,11 +103,11 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 		case errors.As(err, &syntaxError):
 			msg :=
 				fmt.Sprintf("Request body contains badly-formed JSON (at position %d)", syntaxError.Offset)
-			return &MalformedRequest{Status: http.StatusBadRequest, Msg: msg, Err: syntaxError}
+			return &HttpStatusError{Status: http.StatusBadRequest, Msg: msg, Err: syntaxError}
 
 		case errors.Is(err, io.ErrUnexpectedEOF):
 			msg := "Request body contains badly-formed JSON"
-			return &MalformedRequest{Status: http.StatusBadRequest, Msg: msg, Err: io.ErrUnexpectedEOF}
+			return &HttpStatusError{Status: http.StatusBadRequest, Msg: msg, Err: io.ErrUnexpectedEOF}
 
 		case errors.As(err, &unmarshalTypeError):
 			msg :=
@@ -133,26 +116,26 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 					unmarshalTypeError.Field,
 					unmarshalTypeError.Offset,
 				)
-			return &MalformedRequest{Status: http.StatusBadRequest, Msg: msg, Err: unmarshalTypeError}
+			return &HttpStatusError{Status: http.StatusBadRequest, Msg: msg, Err: unmarshalTypeError}
 
 		case strings.HasPrefix(err.Error(), "json: unknown field "):
 			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
 			msg := fmt.Sprintf("Request body contains unknown field %s", fieldName)
-			return &MalformedRequest{Status: http.StatusBadRequest, Msg: msg, Err: ErrJsonUnknownField}
+			return &HttpStatusError{Status: http.StatusBadRequest, Msg: msg, Err: ErrJsonUnknownField}
 
 		case errors.Is(err, io.EOF):
 			msg := "Request body must not be empty"
-			return &MalformedRequest{Status: http.StatusBadRequest, Msg: msg, Err: io.EOF}
+			return &HttpStatusError{Status: http.StatusBadRequest, Msg: msg, Err: io.EOF}
 
 		default:
 			return err
 		}
 	}
 
-	// Limit to one srtuct per request.
+	// Limit to one struct per request.
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		msg := "Request body must only contain a single JSON object"
-		return &MalformedRequest{
+		return &HttpStatusError{
 			Status: http.StatusBadRequest,
 			Msg:    msg,
 			Err:    ErrTooManyJsonObjectsInRequestBody}
@@ -165,16 +148,10 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 }
 
 // Encode encodes the src as a JSON response to the responce writer destination.
-func Encode(dst http.ResponseWriter, src interface{}) error {
+func Encode(dst http.ResponseWriter, src interface{}) {
 	dst.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(dst).Encode(src); err != nil {
-		msg := "Encoding search results failed"
-		log.Debug(msg)
-		return &MalformedRequest{
-			Status: http.StatusBadRequest,
-			Msg:    msg,
-			Err:    ErrTooManyJsonObjectsInRequestBody}
+		log.WithError(err).Panic("Encoding search results failed")
+		panic(err)
 	}
-
-	return nil
 }
