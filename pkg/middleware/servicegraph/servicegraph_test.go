@@ -69,7 +69,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			sg := NewServiceGraphWithBackend(ctx, mb, &Config{
+			sg := NewServiceGraphHandlerWithBackend(ctx, mb, &Config{
 				ServiceGraphCacheMaxEntries:        1,
 				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
@@ -94,9 +94,8 @@ var _ = Describe("Service graph data tests", func() {
 			req = req.WithContext(ctx)
 
 			// Pass it through the handler
-			handler := sg.Handler()
 			writer := httptest.NewRecorder()
-			handler.ServeHTTP(writer, req)
+			sg.ServeHTTP(writer, req)
 			Expect(writer.Code).To(Equal(code))
 
 			// The remaining checks are only applicable if the response was 200 OK.
@@ -318,7 +317,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			sg := NewServiceGraphWithBackend(ctx, mb, &Config{
+			sg := NewServiceGraphHandlerWithBackend(ctx, mb, &Config{
 				ServiceGraphCacheMaxEntries:        1,
 				ServiceGraphCachePolledEntryAgeOut: 5 * time.Minute,
 				ServiceGraphCachePollLoopInterval:  5 * time.Minute,
@@ -333,9 +332,8 @@ var _ = Describe("Service graph data tests", func() {
 			req = req.WithContext(ctx)
 
 			// Pass it through the handler
-			handler := sg.Handler()
 			writer := httptest.NewRecorder()
-			handler.ServeHTTP(writer, req)
+			sg.ServeHTTP(writer, req)
 			Expect(writer.Code).To(Equal(code))
 			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp))
 		},

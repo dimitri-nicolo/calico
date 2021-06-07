@@ -27,24 +27,20 @@ const (
 	defaultRequestTimeout = 60 * time.Second
 )
 
-type ServiceGraph interface {
-	Handler() http.HandlerFunc
-}
-
-func NewServiceGraph(
+func NewServiceGraphHandler(
 	ctx context.Context,
 	elasticClient lmaelastic.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
-) ServiceGraph {
-	return NewServiceGraphWithBackend(ctx, &realServiceGraphBackend{
+) http.Handler {
+	return NewServiceGraphHandlerWithBackend(ctx, &realServiceGraphBackend{
 		ctx:              ctx,
 		elastic:          elasticClient,
 		clientSetFactory: clientSetFactory,
 	}, cfg)
 }
 
-func NewServiceGraphWithBackend(ctx context.Context, backend ServiceGraphBackend, cfg *Config) ServiceGraph {
+func NewServiceGraphHandlerWithBackend(ctx context.Context, backend ServiceGraphBackend, cfg *Config) http.Handler {
 	return &serviceGraph{
 		sgCache: NewServiceGraphCache(ctx, backend, cfg),
 	}
@@ -63,55 +59,53 @@ type RequestData struct {
 	ServiceGraphRequest *v1.ServiceGraphRequest
 }
 
-func (s *serviceGraph) Handler() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		start := time.Now()
+func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	start := time.Now()
 
-		// Extract the request specific data used to collate and filter the data.
-		// - The parsed service graph request
-		// - A bunch of client sets:
-		//   - App/Cluster:     Query host names
-		//   - User/Management: Determine which ES tables the user has access to
-		//   - User/Cluster:    Flow endpoint RBAC, Events
-		// - RBAC filter.
-		sgr, err := s.getServiceGraphRequest(req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+	// Extract the request specific data used to collate and filter the data.
+	// - The parsed service graph request
+	// - A bunch of client sets:
+	//   - App/Cluster:     Query host names
+	//   - User/Management: Determine which ES tables the user has access to
+	//   - User/Cluster:    Flow endpoint RBAC, Events
+	// - RBAC filter.
+	sgr, err := s.getServiceGraphRequest(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Construct a context with timeout based on the service graph request.
+	ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout)
+	defer cancel()
+
+	// Create the request data.
+	rd := &RequestData{
+		HTTPRequest:         req,
+		ServiceGraphRequest: sgr,
+	}
+
+	// Get the filtered flow from the cache.
+	if f, err := s.sgCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else if sg, err := GetServiceGraphResponse(f, pv); err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	} else {
+		// Write the response.
+		w.Header().Set("Content-Type", "application/json")
+		if err = json.NewEncoder(w).Encode(sg); err != nil {
+			log.WithError(err).Info("Encoding search results failed")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Construct a context with timeout based on the service graph request.
-		ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout)
-		defer cancel()
-
-		// Create the request data.
-		rd := &RequestData{
-			HTTPRequest:         req,
-			ServiceGraphRequest: sgr,
-		}
-
-		// Get the filtered flow from the cache.
-		if f, err := s.sgCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		} else if sg, err := GetServiceGraphResponse(f, pv); err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		} else {
-			// Write the response.
-			w.Header().Set("Content-Type", "application/json")
-			if err = json.NewEncoder(w).Encode(sg); err != nil {
-				log.WithError(err).Info("Encoding search results failed")
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			log.Infof("ServicePort graph request took %s; returning %d nodes and %d edges",
-				time.Since(start), len(sg.Nodes), len(sg.Edges))
-		}
+		log.Infof("ServicePort graph request took %s; returning %d nodes and %d edges",
+			time.Since(start), len(sg.Nodes), len(sg.Edges))
 	}
 }
 

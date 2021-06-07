@@ -48,7 +48,6 @@ func init() {
 		"tigera_secure_ee_dns*":       "dns",
 		"tigera_secure_ee_l7":         "l7",
 		"tigera_secure_ee_l7*":        "l7",
-		"serviceGraph":                "servicegraph",
 		"flowLogNames":                "flows",
 		"flowLogNamespaces":           "flows",
 		"flowLogs":                    "flows",
