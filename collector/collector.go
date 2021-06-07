@@ -694,6 +694,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	data := c.getDataAndUpdateEndpoints(t, false)
 
 	var httpDataCount int
+	var isOriginalSourceIPData bool
 	for _, s := range d.Stats {
 		if s.Relativity != proto.Statistic_DELTA {
 			// Currently we only expect delta HTTP requests from the dataplane statistics API.
@@ -710,6 +711,9 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 			}
 		case proto.Statistic_HTTP_DATA:
 			httpDataCount = int(s.Value)
+		case proto.Statistic_INGRESS_DATA:
+			httpDataCount = int(s.Value)
+			isOriginalSourceIPData = true
 		default:
 			log.WithField("kind", s.Kind.String()).Warnf("Received a statistic from the dataplane that Felix cannot process")
 			continue
@@ -717,7 +721,6 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 
 	ips := make([]net.IP, 0, len(d.HttpData))
-	var isOriginalSourceIPData bool
 
 	for _, hd := range d.HttpData {
 		if c.l7LogReporter != nil && hd.Type != "" {
@@ -725,9 +728,6 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 			// If the HttpData has a type, then this is an L7 log.
 			c.LogL7(hd, data, t, httpDataCount)
 		} else if hd.Type == "" {
-			// Flag that the httpDataCount refers to original source IPs
-			isOriginalSourceIPData = true
-
 			var origSrcIP string
 			if len(hd.XRealIp) != 0 {
 				origSrcIP = hd.XRealIp
