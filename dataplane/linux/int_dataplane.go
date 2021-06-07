@@ -772,6 +772,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
 			[]string{},
 		)
+		ipSetsV4.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-nodeports", Type: ipsets.IPSetTypeBitmapPort, RangeMax: 0xffff},
+			[]string{},
+		)
 	}
 
 	if config.BPFEnabled {

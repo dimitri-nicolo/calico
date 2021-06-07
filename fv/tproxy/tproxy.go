@@ -16,6 +16,7 @@ package tproxy
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os/exec"
 	"regexp"
@@ -44,8 +45,10 @@ type TProxy struct {
 	err              io.ReadCloser
 	listeningStarted chan struct{}
 
-	cname string
-	port  uint16
+	cname  string
+	port   uint16
+	portNp uint16
+	gid    int
 
 	proxied  map[ConnKey]int
 	accepted map[ConnKey]int
@@ -58,21 +61,41 @@ type ConnKey struct {
 	PodIPPort     string
 }
 
-func New(f *infrastructure.Felix, port uint16) *TProxy {
+type Option func(*TProxy)
+
+func New(f *infrastructure.Felix, port, portNp uint16, opts ...Option) *TProxy {
 	f.EnsureBinary("tproxy")
-	return &TProxy{
-		cname: f.Name,
-		port:  port,
+
+	t := &TProxy{
+		cname:  f.Name,
+		port:   port,
+		portNp: portNp,
+		gid:    -1,
 
 		listeningStarted: make(chan struct{}),
 
 		proxied:  make(map[ConnKey]int),
 		accepted: make(map[ConnKey]int),
 	}
+
+	for _, opt := range opts {
+		opt(t)
+	}
+
+	return t
 }
 
 func (t *TProxy) Start() {
-	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy", strconv.Itoa(int(t.port)))
+	args := []string{"exec", t.cname, "/tproxy",
+		strconv.Itoa(int(t.port)), strconv.Itoa(int(t.portNp))}
+
+	args = []string{"exec", t.cname, "sg", "tproxy", "-c", "/tproxy 16001 16002"}
+
+	if t.gid >= 0 {
+		args = append(args, fmt.Sprintf("--gid=%d", t.gid))
+	}
+
+	t.cmd = utils.Command("docker", args...)
 
 	var err error
 	t.out, err = t.cmd.StdoutPipe()
@@ -176,4 +199,10 @@ func (t *TProxy) AcceptedCount(client, pod, service string) int {
 	t.connLock.Lock()
 	defer t.connLock.Unlock()
 	return t.accepted[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
+}
+
+func WithGID(gid int) Option {
+	return func(p *TProxy) {
+		p.gid = gid
+	}
 }

@@ -847,7 +847,8 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 				// Atm any traffic from local host that does not have a local source.
 				// XXX that would not work well for nodeports if we let proxy to use local
 				// XXX source instead of passing it through MASQUERADE
-				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
+				//				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
+				Match:  Match().OwnerGroup("tproxy"),
 				Action: JumpAction{Target: ChainFilterOutputTProxy},
 			},
 		)
@@ -1197,7 +1198,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxy, Rules: tproxyRules})
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxySvc, Rules: tproxyRules})
 
 		nameForIPSet := func(ipsetID string) string {
 			if ipVersion == 4 {
@@ -1206,14 +1207,40 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
 			}
 		}
+
 		chains = append(chains, &Chain{
 			Name: ChainManglePreroutingTProxySelect,
-			Rules: []Rule{{
-				Comment: []string{"Proxy selected destinations"},
-				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
-			}},
+			Rules: []Rule{
+				{
+					Comment: []string{"Proxy selected services"},
+					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
+				},
+				{
+					Comment: []string{"Proxy selected nodeports"},
+					Match: Match().
+						DestAddrType(AddrTypeLocal).
+						// We use a single port ipset for both V4 and V6
+						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports")),
+					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
+				},
+			},
 		})
+
+		tproxyRules = []Rule{
+			{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("tcp").DestAddrType(AddrTypeLocal),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+			},
+			{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("udp").DestAddrType(AddrTypeLocal),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+			},
+		}
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 	}
 
 	chains = append(chains,
