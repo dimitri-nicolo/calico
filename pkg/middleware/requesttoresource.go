@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/es-proxy/pkg/httputils"
 	"github.com/tigera/lma/pkg/auth"
 	authzv1 "k8s.io/api/authorization/v1"
 )
@@ -73,6 +75,34 @@ func RequestToResource(h http.Handler) http.Handler {
 		newReq := req.WithContext(auth.NewContextWithReviewResource(req.Context(), createLMAResourceAttributes(cluster, resourceName)))
 		newReq.URL.Path = urlPath
 		newReq.URL.RawPath = urlPath
+		h.ServeHTTP(w, newReq)
+	})
+}
+
+// ClusterRequestToResource creates a new request given the cluster name.
+//
+// Handles a copy of the request body buffer and copies it back to the response writer.
+func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Extract the cluster name from the request body.
+		// Note: Decode maintains the request body's data to pass on to the next handler.
+		var params SearchParams
+		if err := httputils.Decode(w, r, &params); err != nil {
+			var mr *httputils.HttpStatusError
+			if errors.As(err, &mr) {
+				http.Error(w, mr.Msg, mr.Status)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+		clusterName := params.ClusterName
+		if len(clusterName) == 0 {
+			clusterName = "cluster"
+		}
+
+		newReq := r.WithContext(auth.NewContextWithReviewResource(
+			r.Context(), createLMAResourceAttributes(clusterName, resource)))
 		h.ServeHTTP(w, newReq)
 	})
 }

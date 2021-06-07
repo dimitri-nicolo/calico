@@ -43,6 +43,10 @@ const (
 	shardsNotRequired   = 0
 	replicasNotRequired = 0
 	voltronServiceURL   = "https://localhost:9443"
+
+	dnsLogsSearchResourceName  = "dns"
+	flowLogsSearchResourceName = "flows"
+	l7SearchResourceName       = "l7"
 )
 
 func Start(cfg *Config) error {
@@ -165,15 +169,20 @@ func Start(cfg *Config) error {
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
 	sm.Handle("/flowLogs/search",
-		middleware.RequestToResource(
+		middleware.ClusterRequestToResource(flowLogsSearchResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetFlowsIndex, esClient.Backend())))))
 	sm.Handle("/dnsLogs/search",
-		middleware.RequestToResource(
+		middleware.ClusterRequestToResource(dnsLogsSearchResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetDnsIndex, esClient.Backend())))))
+	sm.Handle("/l7/search",
+		middleware.ClusterRequestToResource(l7SearchResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.SearchHandler(eselastic.GetL7FlowsIndex, esClient.Backend())))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(

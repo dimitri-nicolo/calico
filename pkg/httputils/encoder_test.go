@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-package utils_test
+package httputils_test
 
 import (
 	"bytes"
@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/tigera/es-proxy/pkg/httputils"
 	search "github.com/tigera/es-proxy/pkg/middleware"
-	"github.com/tigera/es-proxy/pkg/utils"
 )
 
 const (
@@ -61,7 +62,7 @@ const (
 }`
 )
 
-var _ = Describe("Test /decodeRequestBody functions", func() {
+var _ = Describe("Test /httputils/encoder", func() {
 	Context("Test that the request body decode function behaves as expected", func() {
 		It("Should return an error if the json is badly formed in the request body", func() {
 			r, err := http.NewRequest(http.MethodGet, "", bytes.NewReader([]byte(badlyFormedAtPosisitonRequestBody)))
@@ -69,10 +70,10 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, r, &params)
+			decodeError := httputils.Decode(w, r, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(400).To(BeEquivalentTo(mr.Status))
 			Expect("Request body contains badly-formed JSON (at position 17)").To(BeEquivalentTo(mr.Msg))
@@ -85,10 +86,10 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, r, &params)
+			decodeError := httputils.Decode(w, r, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(400).To(BeEquivalentTo(mr.Status))
 			Expect("Request body contains badly-formed JSON").To(BeEquivalentTo(mr.Msg))
@@ -110,10 +111,10 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, r, &params)
+			decodeError := httputils.Decode(w, r, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(400).To(BeEquivalentTo(mr.Status))
 			Expect("Request body contains an invalid value for the \"page_size\" field (at position 36)").To(BeEquivalentTo(mr.Msg))
@@ -135,14 +136,14 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, r, &params)
+			decodeError := httputils.Decode(w, r, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(400).To(BeEquivalentTo(mr.Status))
 			Expect("Request body contains unknown field \"invalid_cluster_key\"").To(BeEquivalentTo(mr.Msg))
-			Expect(utils.ErrJsonUnknownField).To(BeEquivalentTo(mr.Err))
+			Expect(httputils.ErrJsonUnknownField).To(BeEquivalentTo(mr.Err))
 		})
 
 		It("Should return an error if the request body is empty (nil)", func() {
@@ -150,10 +151,10 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 			Expect(err).NotTo(HaveOccurred())
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, r, &params)
+			decodeError := httputils.Decode(w, r, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(400).To(BeEquivalentTo(mr.Status))
 			Expect("Request body must not be empty").To(BeEquivalentTo(mr.Msg))
@@ -186,14 +187,14 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 				Field3 []string `json:"field3"`
 			}
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, req, &params)
+			decodeError := httputils.Decode(w, req, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(413).To(BeEquivalentTo(mr.Status))
 			Expect("Request body must not be larger than 1MB").To(BeEquivalentTo(mr.Msg))
-			Expect(utils.ErrHttpRequestBodyTooLarge).To(BeEquivalentTo(mr.Err))
+			Expect(httputils.ErrHttpRequestBodyTooLarge).To(BeEquivalentTo(mr.Err))
 		})
 
 		It("Should return an error if the request body contains more than one JSON object", func() {
@@ -202,14 +203,14 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, req, &params)
+			decodeError := httputils.Decode(w, req, &params)
 			Expect(decodeError).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(decodeError, &mr)))
 			Expect(400).To(BeEquivalentTo(mr.Status))
 			Expect("Request body must only contain a single JSON object").To(BeEquivalentTo(mr.Msg))
-			Expect(utils.ErrTooManyJsonObjectsInRequestBody).To(BeEquivalentTo(mr.Err))
+			Expect(httputils.ErrTooManyJsonObjectsInRequestBody).To(BeEquivalentTo(mr.Err))
 		})
 
 		It("Should return a valid set of parameters", func() {
@@ -222,11 +223,33 @@ var _ = Describe("Test /decodeRequestBody functions", func() {
 
 			var params search.SearchParams
 			var w http.ResponseWriter
-			decodeError := utils.Decode(w, req, &params)
+			decodeError := httputils.Decode(w, req, &params)
 			Expect(decodeError).ToNot(HaveOccurred())
 			Expect(params.ClusterName).To(BeEquivalentTo("c_val"))
 			Expect(params.PageSize).To(BeEquivalentTo(152))
 			Expect(params.SearchAfter).To(BeEquivalentTo("sa_val"))
+		})
+	})
+
+	Context("Test that the request body encode function behaves as expected", func() {
+		It("Should encode the parameters without panicing", func() {
+			data := search.SearchParams{}
+			umerr := json.Unmarshal([]byte(validRequestBody), &data)
+			Expect(umerr).ShouldNot(HaveOccurred())
+			s, _ := json.Marshal(data)
+			req, err := http.NewRequest(http.MethodGet, "", bytes.NewReader(s))
+			Expect(err).NotTo(HaveOccurred())
+
+			var params search.SearchParams
+			w := httptest.NewRecorder()
+
+			decodeError := httputils.Decode(w, req, &params)
+			Expect(decodeError).ToNot(HaveOccurred())
+			Expect(params.ClusterName).To(BeEquivalentTo("c_val"))
+			Expect(params.PageSize).To(BeEquivalentTo(152))
+			Expect(params.SearchAfter).To(BeEquivalentTo("sa_val"))
+
+			httputils.Encode(w, params)
 		})
 	})
 })

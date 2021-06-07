@@ -17,8 +17,8 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	eselastic "github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/tigera/es-proxy/pkg/httputils"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
-	"github.com/tigera/es-proxy/pkg/utils"
 	calicojson "github.com/tigera/lma/pkg/test/json"
 	"github.com/tigera/lma/pkg/test/thirdpartymock"
 )
@@ -247,7 +247,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(results.TotalHits).Should(Equal(int64(0)))
 			Expect(results.TimedOut).Should(Equal(false))
 			Expect(results.TookInMillis).Should(Equal(int64(631)))
-			var emptyHitsResponse []*json.RawMessage
+			var emptyHitsResponse []json.RawMessage
 			Expect(results.RawHits).Should(Equal(emptyHitsResponse))
 		})
 
@@ -302,7 +302,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(results.TotalHits).Should(Equal(int64(0)))
 			Expect(results.TimedOut).Should(Equal(false))
 			Expect(results.TookInMillis).Should(Equal(int64(631)))
-			var emptyHitsResponse []*json.RawMessage
+			var emptyHitsResponse []json.RawMessage
 			Expect(results.RawHits).Should(Equal(emptyHitsResponse))
 		})
 
@@ -354,7 +354,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).Should(HaveOccurred())
-			var se *SearchError
+			var se *httputils.HttpStatusError
 			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))
 			Expect(500).Should(BeEquivalentTo(se.Status))
 			Expect("timed out querying tigera_secure_ee_flows.cl_name_val.*").
@@ -411,7 +411,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 			results, err := search(eselastic.GetFlowsIndex, params, client)
 			Expect(err).Should(HaveOccurred())
-			var se *SearchError
+			var se *httputils.HttpStatusError
 			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))
 			Expect(500).Should(BeEquivalentTo(se.Status))
 			Expect("ESError: Elastic search generic error").Should(BeEquivalentTo(se.Msg))
@@ -428,11 +428,11 @@ var _ = Describe("SearchElasticHits", func() {
 
 			_, err = parseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
-			var se *SearchError
+			var se *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(err, &se)))
 		})
 
-		It("Should return a MalformedRequest error when parsing a malformed request body", func() {
+		It("Should return a HttpStatusError when parsing a http status error body", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(badlyFormedAtPosisitonRequestBody)))
 			Expect(err).NotTo(HaveOccurred())
@@ -441,7 +441,7 @@ var _ = Describe("SearchElasticHits", func() {
 			_, err = parseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
-			var mr *utils.MalformedRequest
+			var mr *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(err, &mr)))
 		})
 
@@ -454,7 +454,7 @@ var _ = Describe("SearchElasticHits", func() {
 			_, err = parseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
-			var se *SearchError
+			var se *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(err, &se)))
 			Expect(400).To(BeEquivalentTo(se.Status))
 			Expect("error with field PageSize = '1001' (Reason: failed to validate Field: PageSize " +
@@ -470,7 +470,7 @@ var _ = Describe("SearchElasticHits", func() {
 			_, err = parseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
-			var se *SearchError
+			var se *httputils.HttpStatusError
 			Expect(true).To(BeEquivalentTo(errors.As(err, &se)))
 			Expect(400).To(BeEquivalentTo(se.Status))
 			Expect("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize " +

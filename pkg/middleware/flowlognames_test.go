@@ -274,7 +274,7 @@ const (
         "hits": []
     }
 }`
-	malformedNamesResponse = `{
+	httpStatusErrorNamesResponse = `{
     badlyFormedNamesJson
 }`
 )
@@ -655,7 +655,7 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 
 		It("should return an error when the query fails", func() {
 			By("Creating a mock ES client with badly formed search results")
-			esClient = NewMockSearchClient([]interface{}{malformedNamesResponse})
+			esClient = NewMockSearchClient([]interface{}{httpStatusErrorNamesResponse})
 
 			params := &FlowLogNamesParams{
 				Limit:       2000,
