@@ -802,7 +802,9 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 
 	ap.EnableTCPStats = m.enableTcpStats
-	ap.IsEgressGateway = endpoint.IsEgressGateway
+	if endpoint != nil {
+		ap.IsEgressGateway = endpoint.IsEgressGateway
+	}
 
 	jumpMapFD, err := m.dp.ensureProgramAttached(&ap, polDirection)
 	if err != nil {
