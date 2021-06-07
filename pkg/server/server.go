@@ -44,10 +44,11 @@ const (
 	replicasNotRequired = 0
 	voltronServiceURL   = "https://localhost:9443"
 
-	dnsLogsSearchResourceName  = "dns"
-	eventsSearchResourceName   = "events"
-	flowLogsSearchResourceName = "flows"
-	l7SearchResourceName       = "l7"
+	dnsLogsResourceName      = "dns"
+	eventsResourceName       = "events"
+	flowLogsResourceName     = "flows"
+	l7ResourceName           = "l7"
+	serviceGraphResourceName = "servicegraph"
 )
 
 func Start(cfg *Config) error {
@@ -137,20 +138,6 @@ func Start(cfg *Config) error {
 	// cluster and user aware k8s clients.
 	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, voltronServiceURL)
 
-	// Create a service graph handler.
-	serviceGraph := servicegraph.NewServiceGraph(
-		context.Background(),
-		esClient,
-		k8sClientSetFactory,
-		&servicegraph.Config{
-			ServiceGraphCacheMaxEntries:        cfg.ServiceGraphCacheMaxEntries,
-			ServiceGraphCachePolledEntryAgeOut: cfg.ServiceGraphCachePolledEntryAgeOut,
-			ServiceGraphCachePollLoopInterval:  cfg.ServiceGraphCachePollLoopInterval,
-			ServiceGraphCachePollQueryInterval: cfg.ServiceGraphCachePollQueryInterval,
-			ServiceGraphCacheDataSettleTime:    cfg.ServiceGraphCacheDataSettleTime,
-		},
-	)
-
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
 
@@ -160,32 +147,43 @@ func Start(cfg *Config) error {
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 	sm.Handle("/serviceGraph",
-		middleware.RequestToResource(
+		middleware.ClusterRequestToResource(serviceGraphResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					serviceGraph.Handler()))))
+					servicegraph.NewServiceGraphHandler(
+						context.Background(),
+						esClient,
+						k8sClientSetFactory,
+						&servicegraph.Config{
+							ServiceGraphCacheMaxEntries:        cfg.ServiceGraphCacheMaxEntries,
+							ServiceGraphCachePolledEntryAgeOut: cfg.ServiceGraphCachePolledEntryAgeOut,
+							ServiceGraphCachePollLoopInterval:  cfg.ServiceGraphCachePollLoopInterval,
+							ServiceGraphCachePollQueryInterval: cfg.ServiceGraphCachePollQueryInterval,
+							ServiceGraphCacheDataSettleTime:    cfg.ServiceGraphCacheDataSettleTime,
+						},
+					)))))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
 	sm.Handle("/flowLogs/search",
-		middleware.ClusterRequestToResource(flowLogsSearchResourceName,
+		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetFlowsIndex, esClient.Backend())))))
 	sm.Handle("/dnsLogs/search",
-		middleware.ClusterRequestToResource(dnsLogsSearchResourceName,
+		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetDnsIndex, esClient.Backend())))))
 	sm.Handle("/l7/search",
-		middleware.ClusterRequestToResource(l7SearchResourceName,
+		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetL7FlowsIndex, esClient.Backend())))))
 	sm.Handle("/events/search",
-		middleware.ClusterRequestToResource(eventsSearchResourceName,
+		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetEventsIndex, esClient.Backend())))))
