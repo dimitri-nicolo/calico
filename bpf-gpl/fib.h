@@ -222,11 +222,15 @@ skip_fib:
 			CALI_DEBUG("To host marked with FLAG_EXT_LOCAL\n");
 			ctx->fwd.mark |= EXT_TO_SVC_MARK;
 		}
-		if ((state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
-		    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
-		     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
-			CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
-			ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
+		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+			if ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
+			    (state->ct_result.ifindex_created == ctx->skb->ifindex)) {
+				CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
+				ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
+			} else {
+				CALI_DEBUG("Return path of egress gateway flow\n");
+				ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
+			}
 		}
 		CALI_DEBUG("Traffic is towards host namespace, marking with %x.\n", ctx->fwd.mark);
 
