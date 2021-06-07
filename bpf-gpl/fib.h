@@ -205,8 +205,13 @@ skip_fib:
 		 *
 		 * XXX We should check ourselves that we got our tunnel packets only from
 		 * XXX those devices where we expect them before we even decap.
+		 *
+		 * Also need to skip RPF when dropping to iptables on egress from an
+		 * egress gateway.  On the return path, source IP will be an IP outside
+		 * the cluster, and routing for that IP would not be via the egress
+		 * gateway.
 		 */
-		if (CALI_F_FROM_HEP && state->tun_ip != 0) {
+		if (EGRESS_GATEWAY || (CALI_F_FROM_HEP && state->tun_ip != 0)) {
 			ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
 		}
 		/* Packet is towards host namespace, mark it so that downstream
