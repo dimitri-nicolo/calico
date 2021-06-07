@@ -233,13 +233,11 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		})
 
 		Context("ClusterIP", func() {
+			var client *kubernetes.Clientset
+
 			clusterIP := "10.101.0.10"
 
 			var pod, svc string
-
-			BeforeEach(func() {
-				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.101.0.10:8090"
-			})
 
 			JustBeforeEach(func() {
 				pod = w[0][0].IP + ":8055"
@@ -255,6 +253,11 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						pod)
 				}
 
+				// create service resources with the cluster IP
+				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
+				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+				createService(v1Svc, client)
 			})
 
 			It("should have connectivity from all workloads via ClusterIP", func() {
@@ -516,7 +519,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			It("Should propagate annotated service update and deletions to tproxy ip set", func() {
 
 				By("setting up annotated service for the end points ")
-				// create service resources, one with annotation another without backed by same pod
+				// create service resource
 				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
