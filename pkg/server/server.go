@@ -45,6 +45,7 @@ const (
 	voltronServiceURL   = "https://localhost:9443"
 
 	dnsLogsSearchResourceName  = "dns"
+	eventsSearchResourceName   = "events"
 	flowLogsSearchResourceName = "flows"
 	l7SearchResourceName       = "l7"
 )
@@ -183,6 +184,11 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetL7FlowsIndex, esClient.Backend())))))
+	sm.Handle("/events/search",
+		middleware.ClusterRequestToResource(eventsSearchResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.SearchHandler(eselastic.GetEventsIndex, esClient.Backend())))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(
