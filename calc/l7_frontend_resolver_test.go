@@ -5,6 +5,7 @@ package calc_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/projectcalico/felix/config"
 	"github.com/stretchr/testify/mock"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,8 +49,10 @@ type output struct {
 
 var _ = Describe("L7FrontEndResolver", func() {
 
+	var configEnabled = &config.Config{TPROXYMode: "EnabledDebug"}
+
 	DescribeTable("Check ipset callbacks for updates",
-		func(updates []api.Update, addedMembers []output, removedMembers []output) {
+		func(updates []api.Update, addedMembers []output, removedMembers []output, conf *config.Config) {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
 			if len(addedMembers) > 0 {
@@ -77,7 +80,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 			}
 
-			var resolver = calc.NewL7FrontEndResolver(mockCallbacks)
+			var resolver = calc.NewL7FrontEndResolver(mockCallbacks, conf)
 
 			for _, update := range updates {
 				resolver.OnResourceUpdate(update)
@@ -112,6 +115,49 @@ var _ = Describe("L7FrontEndResolver", func() {
 			}},
 			[]output{},
 			[]output{},
+			&config.Config{},
+		),
+		Entry("Config with TPROXYMode EnabledDebug should result in callbacks ",
+			[]api.Update{{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Value: &kapiv1.Service{
+						Spec: kapiv1.ServiceSpec{
+							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
+							Ports: []kapiv1.ServicePort{
+								{
+									Port:     int32(123),
+									Protocol: kapiv1.ProtocolTCP,
+									Name:     "namedport",
+								},
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}},
+			[]output{{
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.0",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}},
+			[]output{},
+			configEnabled,
 		),
 		Entry("Service with L7 annotation (Cluster Ip, Node Port) should result in two OnIPSetMemberAdded callbacks ",
 			[]api.Update{{
@@ -155,6 +201,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				protocol: labelindex.ProtocolTCP,
 			}},
 			[]output{},
+			&config.Config{},
 		),
 		Entry("Service with L7 annotation other than TCP protocol should result in empty callbacks ",
 			[]api.Update{{
@@ -183,6 +230,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 			}},
 			[]output{},
 			[]output{},
+			&config.Config{},
 		),
 		Entry("delete update for service with L7 annotation should remove endpoints from ipset ",
 			[]api.Update{{
@@ -246,6 +294,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}},
+			&config.Config{},
 		),
 		Entry("Service with L7 annotation with IPV6 should result in two OnIPSetMemberAdded callbacks",
 			[]api.Update{{
@@ -275,6 +324,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				protocol: labelindex.ProtocolTCP,
 			}},
 			[]output{},
+			&config.Config{},
 		),
 	)
 })

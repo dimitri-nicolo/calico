@@ -18,6 +18,7 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
 
 	"github.com/projectcalico/felix/ip"
@@ -46,14 +47,16 @@ const TRPOXYNodePortsIPSet = "tproxy-nodeports"
 // It emits ipSetUpdateCallbacks when a state change happens, keeping data plane in-sync with datastore.
 type L7FrontEndResolver struct {
 	createdIpSet    bool
+	conf            *config.Config
 	suh             *ServiceUpdateHandler
 	callbacks       ipSetUpdateCallbacks
 	activeServices  map[ipPortProtoKey][]proxy.ServicePortName
 	activeNodePorts map[portProtoKey][]proxy.ServicePortName
 }
 
-func NewL7FrontEndResolver(callbacks ipSetUpdateCallbacks) *L7FrontEndResolver {
+func NewL7FrontEndResolver(callbacks ipSetUpdateCallbacks, conf *config.Config) *L7FrontEndResolver {
 	tpr := &L7FrontEndResolver{
+		conf:            conf,
 		createdIpSet:    false,
 		callbacks:       callbacks,
 		suh:             NewServiceUpdateHandler(),
@@ -84,8 +87,8 @@ func (tpr *L7FrontEndResolver) OnResourceUpdate(update api.Update) (_ bool) {
 			} else {
 				service := update.Value.(*kapiv1.Service)
 				annotations := service.ObjectMeta.Annotations
-				// only services annotated with l7 are of interest for us
-				if hasAnnotation(annotations, l7LoggingAnnotation) {
+				// process services annotated with l7 or all service when in debug mode
+				if hasAnnotation(annotations, l7LoggingAnnotation) || tpr.conf.TPROXYMode == "EnabledDebug" {
 					log.Infof("processing update for tproxy annotated service %s", k)
 					tpr.suh.AddOrUpdateService(k, service)
 					tpr.flush()
@@ -270,6 +273,7 @@ func getIpSetMemberFromPortProto(portProto portProtoKey) labelindex.IPSetMember 
 
 	return member
 }
+
 func hasAnnotation(annotations map[string]string, annotation string) bool {
 	if annotations != nil {
 		if value, ok := annotations[annotation]; ok {

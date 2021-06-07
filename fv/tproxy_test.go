@@ -209,6 +209,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		Context("Pod-Pod", func() {
 			BeforeEach(func() {
 				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "10.65.0.2:8055"
+				Skip("Not supported by version")
 			})
 
 			var pod string
@@ -360,6 +361,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 
 			BeforeEach(func() {
 				options.ExtraEnvVars["FELIX_TPROXYDESTS"] = "0.0.0.0:" + strconv.Itoa(int(nodeport))
+				Skip("Not supported by version")
 			})
 
 			var opts []ExpectationOption

@@ -443,7 +443,7 @@ type Config struct {
 	// Configures MTU auto-detection.
 	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
 
-	TPROXYMode  string       `config:"oneof(Disabled,Enabled);Disabled"`
+	TPROXYMode  string       `config:"oneof(Disabled,Enabled,EnabledDebug);Disabled"`
 	TPROXYPort  int          `config:"int;16001"`
 	TPROXYDests []ServerPort `config:"server-list;"`
 
@@ -569,7 +569,7 @@ func (c *Config) EgressIPCheckEnabled() bool {
 }
 
 func (c *Config) TPROXYModeEnabled() bool {
-	return c.TPROXYMode == "Enabled"
+	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledDebug"
 }
 
 func (c *Config) IPSecEnabled() bool {
