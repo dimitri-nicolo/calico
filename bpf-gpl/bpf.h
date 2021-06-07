@@ -190,7 +190,7 @@ enum calico_skb_mark {
 	 * were live before BPF was enabled. */
 	CALI_SKB_MARK_FALLTHROUGH            = CALI_SKB_MARK_SEEN    | 0x04000000,
 	/* The SKIP_RPF bit is used by programs that are towards the host namespace to disable our
-	 * RPF check for htat packet.  Typically used for a packet that we originate (such as an ICMP
+	 * RPF check for that packet.  Typically used for a packet that we originate (such as an ICMP
 	 * response). */
 	CALI_SKB_MARK_SKIP_RPF               = CALI_SKB_MARK_BYPASS  | 0x00400000,
 	/* The NAT_OUT bit is used by programs that are towards the host namespace to tell iptables to
