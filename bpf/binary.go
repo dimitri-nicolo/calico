@@ -171,3 +171,13 @@ func (b *Binary) PatchIsEgressGateway(isEgressGateway bool) {
 	binary.LittleEndian.PutUint32(bytes, uint32(egressGateway))
 	b.replaceAllLoadImm32([]byte("ISEG"), bytes)
 }
+
+func (b *Binary) PatchIsEgressClient(isEgressClient bool) {
+	bytes := make([]byte, 4)
+	egressClient := 0
+	if isEgressClient {
+		egressClient = 1
+	}
+	binary.LittleEndian.PutUint32(bytes, uint32(egressClient))
+	b.replaceAllLoadImm32([]byte("ISEC"), bytes)
+}

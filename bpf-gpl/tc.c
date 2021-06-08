@@ -361,7 +361,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			goto deny;
 		}
 
-		if (r->flags & CALI_RT_EGRESS_CLIENT) {
+		if (EGRESS_CLIENT) {
 			if (cali_rt_flags_outside_cluster(cali_rt_lookup_flags(ctx.state->post_nat_ip_dst))) {
 				CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
 				ctx.state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
