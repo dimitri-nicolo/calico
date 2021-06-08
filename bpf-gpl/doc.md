@@ -7,6 +7,7 @@
 for a pod iff:
 - `EGRESS_CLIENT`: the pod is an egress client
 - `EGRESS_GATEWAY`: the pod is an egress gateway.
+
 (Note, it isn't allowed to be both, so as to avoid loops.)
 
 Expected conntrack states:
@@ -104,15 +105,15 @@ When client and gateway are on same node:
 
 ```
  +--------------------------------------------------------------------------+
- | +---------+							      +---------+                   |
+ | +---------+                                +---------+                   |
  | | Egress  | caliX   CT-A      egress. CT-B |  Egress |     CT-C          |
  | | client  |-------> Host --->  calico -------> gw  -----> Host --> eth0 ---> destination
- | | pod     | [1]                encap	      |   pod   |                   |
- | |         |							      | decap+  |                   |
- | |         |       					      |  SNAT   |                   |
+ | | pod     | [1]                encap       |   pod   |                   |
+ | |         |                                | decap+  |                   |
+ | |         |                                |  SNAT   |                   |
  | |         | caliX              CT-A    [3] |         |     CT-C          |
  | |         |<------- Host <-------------------- DNAT<----- Host <-- eth0 <--- destination
- | +---------+							      +---------+                   |
+ | +---------+                                +---------+                   |
  +--------------------------------------------------------------------------+
 ```
 
