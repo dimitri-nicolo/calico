@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,13 +60,12 @@ func (k Key) AsBytes() []byte {
 type Flags uint32
 
 const (
-	FlagInIPAMPool   Flags = 0x01
-	FlagNATOutgoing  Flags = 0x02
-	FlagWorkload     Flags = 0x04
-	FlagLocal        Flags = 0x08
-	FlagHost         Flags = 0x10
-	FlagSameSubnet   Flags = 0x20
-	FlagEgressClient Flags = 0x40
+	FlagInIPAMPool  Flags = 0x01
+	FlagNATOutgoing Flags = 0x02
+	FlagWorkload    Flags = 0x04
+	FlagLocal       Flags = 0x08
+	FlagHost        Flags = 0x10
+	FlagSameSubnet  Flags = 0x20
 
 	FlagsUnknown        Flags = 0
 	FlagsRemoteWorkload       = FlagWorkload

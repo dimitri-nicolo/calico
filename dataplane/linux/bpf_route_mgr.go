@@ -277,9 +277,6 @@ func (m *bpfRouteManager) calculateRoute(cidr ip.V4CIDR) *routes.Value {
 				}
 				if wepScore > bestWepScore || wepScore == bestWepScore && wepID.String() > bestWepID.String() {
 					flags |= routes.FlagsLocalWorkload
-					if cgRoute.LocalEgressGatewayClient {
-						flags |= routes.FlagEgressClient
-					}
 					routeVal := routes.NewValueWithIfIndex(flags, ifaceIdx)
 					route = &routeVal
 					bestWepID = wepID
