@@ -185,12 +185,20 @@ create:
 		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
 
 		// CALI_CT_FLAG_EGRESS_GW identifies a flow from or to an egress client,
-		// on the client node.  We whitelist the dst_to_src side here because
-		// there won't be a TC program that does this on the egress.calico device,
-		// but we need that side to be whitelisted for the return path (which
-		// passes through eth0 or the cluster encap device, not egress.calico).
-		// (Note that after passing through egress.calico, the CT state will be
-		// different.)
+		// on the client node.  We whitelist the FROM_HOST (dst_to_src) side here
+		// because there won't be a TC program that does this on the egress.calico
+		// device, but we need that side to be whitelisted for the return path
+		// (which passes through eth0 or the cluster encap device, not
+		// egress.calico).  (Note that after passing through egress.calico, the CT
+		// state will be different.)
+		//
+		// The EGRESS_GATEWAY case here is needed to whitelist the FROM_HOST side
+		// when CT state for the original client pod -> destination flow is
+		// created on egress from the egress gateway on the return path.  This
+		// happens when the egress gateway is on a different node than the client.
+		// The packet in hand at this point is mid-flow TCP and would be
+		// considered invalid if the FROM_HOST side of the CT state was not
+		// already whitelisted.
 		if ((ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW) || EGRESS_GATEWAY) {
 			CALI_DEBUG("CT-ALL Whitelisted dest side - egress gateway flow\n");
 			dst_to_src->whitelisted = 1;
@@ -456,7 +464,13 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 			return result;
 		}
 		if (CALI_F_TO_HOST && EGRESS_GATEWAY) {
-			// Return path from an egress gateway.
+			// On the return path of an egress gateway flow, on egress from
+			// the egress gateway, and when the egress gateway is on a
+			// different node than the client, we'll get a CT miss here for
+			// the original (unencapped) client pod -> destination flow.  We
+			// want to create that CT state, and normally a mid-flow TCP
+			// packet is not allowed to do that.  Jumping to out_lookup_fail
+			// means returning CT_NEW, and then the CT state will be created.
 			CALI_DEBUG("BPF CT Miss but from egress gateway\n");
 			goto out_lookup_fail;
 		}
@@ -761,6 +775,13 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		ct_tcp_entry_update(tcp_header, src_to_dst, dst_to_src);
 	}
 
+	// This is for an egress gateway flow with client and gateway on the same node.
+	// On the return path, on egress from the egress gateway, we get a CT hit for the
+	// original (unencapped) client pod -> destination flow, but src_to_dst->ifindex
+	// for that CT state is still CT_INVALID_IFINDEX because we didn't hit that CT
+	// state in a FROM_HOST context on the outbound path.  Therefore, if we continued
+	// through the code just below, we'd set the CALI_CT_RPF_FAILED flag.  We don't
+	// want that, so skip over the following section of code.
 	if (EGRESS_GATEWAY) {
 		CALI_CT_DEBUG("Skip RPF processing for egress gateway\n");
 		goto skip_rpf;

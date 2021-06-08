@@ -343,7 +343,10 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	}
 
 	if (CALI_F_FROM_WEP && !EGRESS_GATEWAY) {
-		/* Do RPF check since it's our responsibility to police that. */
+		/* Do RPF check since it's our responsibility to police that.  Skip this
+		 * on egress from an egress gateway, because the whole point of egress
+		 * gateways, on the return path, is to forward from destination IPs that
+		 * are not their own IP. */
 		CALI_DEBUG("Workload RPF check src=%x skb iface=%d.\n",
 				bpf_ntohl(ctx.state->ip_src), skb->ifindex);
 		struct cali_rt *r = cali_rt_lookup(ctx.state->ip_src);
@@ -363,6 +366,9 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 		if (EGRESS_CLIENT) {
 			if (cali_rt_flags_outside_cluster(cali_rt_lookup_flags(ctx.state->post_nat_ip_dst))) {
+				// Packet is from an egress client and destined to outside
+				// the cluster, so CT state will be marked as an egress
+				// gateway flow.
 				CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
 				ctx.state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
 			}
@@ -748,7 +754,8 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		// there are no cases where we successfully look up a CT entry and then
 		// create an equivalent entry for the same flow.  Rather, it's because we
 		// got a CT miss for this flow and then used the state->ct_result.flags
-		// field to record that the flow _should_ be trusted for DNS.
+		// field to record that the flow _should_ be trusted for DNS when the CT
+		// state is created.
 		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
 
 		// Similarly for the egress gateway flow flag.

@@ -3,6 +3,12 @@
 
 ## Egress gateway
 
+`EGRESS_CLIENT` and `EGRESS_GATEWAY` flags are patched into TC program
+for a pod iff:
+- `EGRESS_CLIENT`: the pod is an egress client
+- `EGRESS_GATEWAY`: the pod is an egress gateway.
+(Note, it isn't allowed to be both, so as to avoid loops.)
+
 Expected conntrack states:
 - CT-A:
   - src = client pod IP
@@ -23,7 +29,7 @@ When client and gateway are on different nodes:
  | | client  |-------> Host --->  calico ----> cluster ----> eth0 -------->
  | | pod     | [1]                encap         encap                  |
  | |         |                                                         |
- | |         | caliX            CT-A             opt                   |
+ | |         | caliX            CT-A       [4]   opt                   |
  | |         |<------- Host <----------------- cluster <---- eth0 <--------
  | |         |                                  decap                  |
  | +---------+                                                         |
@@ -61,40 +67,6 @@ Expected processing, different nodes:
 (Wherever we say "miss, create", we must allow for hit as well, for
 subsequent packets in same flow.)
 
-When client and gateway are on same node:
-
-```
- +--------------------------------------------------------------------------+
- | +---------+							      +---------+                   |
- | | Egress  | caliX   CT-A      egress. CT-B |  Egress |     CT-C          |
- | | client  |-------> Host --->  calico -------> gw  -----> Host --> eth0 ---> destination
- | | pod     | [1]                encap	      |   pod   |                   |
- | |         |							      | decap+  |                   |
- | |         |       					      |  SNAT   |                   |
- | |         | caliX              CT-A        |         |     CT-C          |
- | |         |<------- Host <-------------------- DNAT<----- Host <-- eth0 <--- destination
- | +---------+							      +---------+                   |
- +--------------------------------------------------------------------------+
-```
-
-Expected processing, same nodes:
-- outbound:
-  - client node client-E: miss, create CT-A
-  - gateway node gateway-I: miss, create CT-B
-  - gateway node gateway-E: miss, create CT-C
-  - gateway node eth0-E: hit CT-C
-- return:
-  - gateway node eth0-I: hit CT-C
-  - gateway node gateway-I: hit CT-C
-  - gateway node gateway-E: hit CT-A
-  - client node client-I: hit CT-A
-
-`EGRESS_CLIENT` and `EGRESS_GATEWAY` flags are patched into TC program
-for a pod iff:
-- `EGRESS_CLIENT`: the pod is an egress client
-- `EGRESS_GATEWAY`: the pod is an egress gateway.
-(Note, it isn't allowed to be both, so as to avoid loops.)
-
 [1] Outbound direction for EGRESS_CLIENT when destination is outside
 the cluster:
 - No FIB, i.e. drop to IP stack, and set EGRESS bit, so that `ip rule`
@@ -113,16 +85,56 @@ and client are on different nodes:
 - This would normally be mid-flow TCP, handled by drop to iptables,
   but in the `EGRESS_GATEWAY` case we handle as `CT_NEW`.
 - When creating CT state at EGRESS_GATEWAY, whitelist both sides,
-  because we shouldn't recheck policy at the following host interface
-  leaving the gateway node.
+  because otherwise a mid-flow TCP packet will be considered invalid
+  on the `FROM_HOST` side (at the following host or tunnel interface
+  leaving the gateway node).
 - Skip tc.c RPF check, because we expect source IP to differ from the
   egress gateway pod's own IP, on the return path.
 - Set `SKIP_RPF` mark when dropping to iptables, for same reason.
-
-
 - ??? Does it mean we're incorrectly skipping host interface policy on
   the outbound path, after egress from on egress gateway?
 
+[4] On the return path of an egress gateway flow with client and
+gateway on different nodes, TO_HOST from a cluster encap device:
+- Set `SKIP-RPF` mark when dropping to iptables, because source IP is
+  an external destination that would not normally be routed through
+  the device that the packet just arrived through.
 
-At EGRESS_GATEWAY, with CT hit, skip conntrack.h RPF check, so that
-`CALI_CT_RPF_FAILED` flag doesn't get set.
+When client and gateway are on same node:
+
+```
+ +--------------------------------------------------------------------------+
+ | +---------+							      +---------+                   |
+ | | Egress  | caliX   CT-A      egress. CT-B |  Egress |     CT-C          |
+ | | client  |-------> Host --->  calico -------> gw  -----> Host --> eth0 ---> destination
+ | | pod     | [1]                encap	      |   pod   |                   |
+ | |         |							      | decap+  |                   |
+ | |         |       					      |  SNAT   |                   |
+ | |         | caliX              CT-A    [3] |         |     CT-C          |
+ | |         |<------- Host <-------------------- DNAT<----- Host <-- eth0 <--- destination
+ | +---------+							      +---------+                   |
+ +--------------------------------------------------------------------------+
+```
+
+Expected processing, same nodes:
+- outbound:
+  - client node client-E: miss, create CT-A
+  - gateway node gateway-I: miss, create CT-B
+  - gateway node gateway-E: miss, create CT-C
+  - gateway node eth0-E: hit CT-C
+- return:
+  - gateway node eth0-I: hit CT-C
+  - gateway node gateway-I: hit CT-C
+  - gateway node gateway-E: hit CT-A
+  - client node client-I: hit CT-A
+
+[1] same as when client and gateway are on different nodes.
+
+[3] On the return path, on egress from an egress gateway, when gateway
+and client are on the same node:
+- We get CT hit, but `src_to_dst->ifindex` hasn't been set yet; skip
+  conntrack.h RPF checking passage to avoid setting
+  `CALI_CT_RPF_FAILED` flag.
+- Skip tc.c RPF check, because we expect source IP to differ from the
+  egress gateway pod's own IP, on the return path.
+- Set `SKIP_RPF` mark when dropping to iptables, for same reason.

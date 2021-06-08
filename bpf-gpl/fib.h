@@ -41,6 +41,9 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 		goto deny;
 	}
 
+	// If this is an egress gateway flow on the client node, and we're in the outbound
+	// direction, arrange to drop to the IP stack so that `ip rule` can take effect to
+	// route the packet.
 	if ((state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
 	    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
 	     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
@@ -206,8 +209,8 @@ skip_fib:
 		 * XXX We should check ourselves that we got our tunnel packets only from
 		 * XXX those devices where we expect them before we even decap.
 		 *
-		 * Also need to skip RPF when dropping to iptables on egress from an
-		 * egress gateway.  On the return path, source IP will be an IP outside
+		 * Also need to skip iptables RPF when dropping to iptables on egress from
+		 * an egress gateway.  On the return path, source IP will be an IP outside
 		 * the cluster, and routing for that IP would not be via the egress
 		 * gateway.
 		 */
@@ -225,9 +228,19 @@ skip_fib:
 		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
 			if ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
 			    (state->ct_result.ifindex_created == ctx->skb->ifindex)) {
+				// This is an egress gateway flow on the client node,
+				// we're in the outbound direction, and we already
+				// arranged above to drop to the IP stack.  Also now set
+				// the egress mark bit.
 				CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
 				ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
 			} else {
+				// This is an egress gateway flow on the client node and
+				// we're in the return direction.  Packet may have just
+				// arrived over a tunnel/VXLAN device with cluster encap,
+				// but the source IP is an external destination that would
+				// not be routed via that device.  Hence need to disable
+				// RPF checking.
 				CALI_DEBUG("Return path of egress gateway flow\n");
 				ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
 			}
