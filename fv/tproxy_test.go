@@ -491,32 +491,8 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		Context("Select Traffic ClusterIP", func() {
 			clusterIP := "10.101.0.10"
 			servicePort := "8090"
-			clusterIP2 := "10.101.0.20"
-			servicePort2 := "8090"
 
-			var pod string
 			var client *kubernetes.Clientset
-
-			JustBeforeEach(func() {
-				pod = w[0][0].IP + ":8055"
-
-				// Mimic the kube-proxy service iptable clusterIP rule.
-				for _, f := range felixes {
-					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-						"-p", "tcp",
-						"-d", clusterIP,
-						"-m", "tcp", "--dport", servicePort,
-						"-j", "DNAT", "--to-destination",
-						pod)
-					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-						"-p", "tcp",
-						"-d", clusterIP2,
-						"-m", "tcp", "--dport", servicePort2,
-						"-j", "DNAT", "--to-destination",
-						pod)
-				}
-
-			})
 
 			It("Should propagate annotated service update and deletions to tproxy ip set", func() {
 

@@ -105,8 +105,8 @@ func (tpr *L7FrontEndResolver) OnResourceUpdate(update api.Update) (_ bool) {
 }
 
 // flush emits ipSetUpdateCallbacks (OnIPSetAdded, OnIPSetMemberAdded, OnIPSetMemberRemoved) when endpoints
-//for tproxy traffic selection changes. It detects the change in state by comparing most up to date
-//members list maintained by ServiceUpdateHandler to the list maintained by L7FrontEndResolver.
+// for tproxy traffic selection changes. It detects the change in state by comparing most up to date
+// members list maintained by ServiceUpdateHandler to the list maintained by L7FrontEndResolver.
 func (tpr *L7FrontEndResolver) flush() {
 
 	addedSvs, removedSvs := tpr.resolveRegularServices()
@@ -115,11 +115,6 @@ func (tpr *L7FrontEndResolver) flush() {
 		tpr.flushRegularService(addedSvs, removedSvs)
 	}
 
-	// TODO: current release doesn't intend to support node ports
-	//addedNPs, removedNps := tpr.resolveNodePorts()
-	//if len(addedNPs) > 0 || len(removedNps) > 0 {
-	//	tpr.flushNodePorts(addedNPs, removedNps)
-	//}
 }
 
 func (tpr *L7FrontEndResolver) resolveRegularServices() (map[ipPortProtoKey][]proxy.ServicePortName,
@@ -131,12 +126,12 @@ func (tpr *L7FrontEndResolver) resolveRegularServices() (map[ipPortProtoKey][]pr
 	removed := make(map[ipPortProtoKey]struct{})
 
 	for ipPortProto := range tpr.activeServices {
-		// if member key exists in up-to-date list, update the value to latest in active service and continue to next
+		// if member key exists in up-to-date list, else add to removed
 		if latest, ok := tpr.suh.ipPortProtoToServices[ipPortProto]; ok {
 			tpr.activeServices[ipPortProto] = latest
-			continue
+		} else {
+			removed[ipPortProto] = struct{}{}
 		}
-		removed[ipPortProto] = struct{}{}
 	}
 	// add new items to tproxy from updated list of annotated services
 	for ipPortProto, value := range tpr.suh.ipPortProtoToServices {
@@ -160,11 +155,6 @@ func (tpr *L7FrontEndResolver) resolveRegularServices() (map[ipPortProtoKey][]pr
 func (tpr *L7FrontEndResolver) flushRegularService(added map[ipPortProtoKey][]proxy.ServicePortName,
 	removed map[ipPortProtoKey]struct{}) {
 
-	// before sending member callbacks create ipset if doesn't exists
-	//if len(tpr.activeServices) == 0 {
-	//	tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-	//}
-
 	if !tpr.createdIpSet {
 		tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
 		tpr.createdIpSet = true
@@ -181,13 +171,6 @@ func (tpr *L7FrontEndResolver) flushRegularService(added map[ipPortProtoKey][]pr
 		tpr.callbacks.OnIPSetMemberAdded(TPROXYServicesIPSet, member)
 		tpr.activeServices[ipPortProto] = value
 	}
-
-	// after sending member callbacks delete ipset if no active services present
-	// TODO: This can't be done since the deletion of ipset fails with following message
-	// Set cannot be destroyed: it is in use by a kernel component
-	//if len(tpr.activeServices) == 0 {
-	//	tpr.callbacks.OnIPSetRemoved(TPROXYServicesIPSet)
-	//}
 
 }
 
@@ -231,11 +214,6 @@ func (tpr *L7FrontEndResolver) resolveNodePorts() (map[portProtoKey][]proxy.Serv
 func (tpr *L7FrontEndResolver) flushNodePorts(added map[portProtoKey][]proxy.ServicePortName,
 	removed map[portProtoKey]struct{}) {
 
-	// before sending member callbacks create ipset if doesn't exists
-	//if len(tpr.activeNodePorts) == 0 {
-	//	tpr.callbacks.OnIPSetAdded(TRPOXYNodePortsIPSet, proto.IPSetUpdate_IP_AND_PORT)
-	//}
-
 	for portProto := range removed {
 		member := getIpSetMemberFromPortProto(portProto)
 		tpr.callbacks.OnIPSetMemberRemoved(TRPOXYNodePortsIPSet, member)
@@ -248,10 +226,6 @@ func (tpr *L7FrontEndResolver) flushNodePorts(added map[portProtoKey][]proxy.Ser
 		tpr.activeNodePorts[portProto] = value
 	}
 
-	// after sending member callbacks create ipset if doesn't exists
-	//if len(tpr.activeNodePorts) == 0 {
-	//	tpr.callbacks.OnIPSetRemoved(TRPOXYNodePortsIPSet)
-	//}
 }
 
 func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) labelindex.IPSetMember {

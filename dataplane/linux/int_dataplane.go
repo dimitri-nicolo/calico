@@ -763,7 +763,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.ipSets = append(dp.ipSets, ipSetsV6)
 
 	if config.RulesConfig.TPROXYMode == "Enabled" {
-		// add empty ipsets in data plan for felix ip table programming
+		// add empty ipsets in data plane for felix iptables programming
 		ipSetsV4.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
 			[]string{},
