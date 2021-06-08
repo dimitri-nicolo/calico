@@ -116,6 +116,20 @@ honeypod.port.scan     2020-10-22T03:44:31Z
 honeypod.vuln.svc      2020-10-22T03:44:40Z
 ```
 
+As an example, to trigger an alert for `honeypod.ip.enum`, first get the Pod IP for one of the honeypods:
+
+```bash
+kubectl get pod tigera-internal-app-28c85 -n tigera-internal -ojsonpath='{.status.podIP}'
+```
+
+Then run a `busybox` container with the command `ping` on the honeypod IP:
+
+```bash
+kubectl run --restart=Never --image busybox ping-runner -- ping -c1 <honeypod IP>
+```
+
+If the ICMP request reaches the honeypod, an alert will be generated within 5 minutes.
+
 Once you have verified that the honeypods are installed and working, it is recommended to remove the pull secret from the namespace:
 
 ```bash

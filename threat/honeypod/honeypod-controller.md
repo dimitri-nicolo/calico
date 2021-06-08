@@ -156,7 +156,23 @@ honeypod-controller-gk524                        1/1     Running     0          
 honeypod-controller-k9nz4                        1/1     Running     0          22s
 intrusion-detection-controller-bf9794dd7-5qxjs   1/1     Running     0          15m
 intrusion-detection-es-job-installer-nfd7t       0/1     Completed   0          15m
+
 ```
+
+As an example, to trigger an alert for the example custom signature, first get the Pod IP for one of the honeypods:
+
+```bash
+kubectl get pod tigera-internal-app-57vwk -n tigera-internal -ojsonpath='{.status.podIP}'
+```
+
+Then run a `busybox` container with the command `ping` on the honeypod IP:
+
+```bash
+kubectl run --restart=Never --image busybox ping-runner -- ping -c1 <honeypod IP>
+```
+
+An alert will be generated for `honeypod-controller.snort` with the example custom signature.
+
 
 ### Above and beyond
 
