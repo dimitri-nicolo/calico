@@ -20,6 +20,10 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list","get"]
+  - apiGroups: ["crd.projectcalico.org"]
+    resources: ["licensekeys"]
+    verbs: ["list","watch", "get"]
+
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -126,7 +130,6 @@ spec:
       - name: pcap
         hostPath:
           path: /var/log/calico/pcap/
-          type: Directory 
       - name: snort
         emptyDir: {}
 ---
@@ -163,6 +166,19 @@ spec:
       namespaceSelector: projectcalico.org/name == "openshift-dns"
       selector: dns.operator.openshift.io/daemonset-dns == "default"
       ports: [5353]
+  - action: Allow
+    protocol: TCP
+    source: {}
+    destination:
+      selector: >-
+        (provider == "kubernetes"&&component ==
+        "apiserver"&&endpoints.projectcalico.org/serviceName == "kubernetes")
+      namespaceSelector: projectcalico.org/name == "default"
+      ports:
+        - '443'
+        - '6443'
+        - '12388'
+
 ---
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
