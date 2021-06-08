@@ -184,6 +184,13 @@ create:
 		src_to_dst->whitelisted = 1;
 		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
 
+		// CALI_CT_FLAG_EGRESS_GW identifies a flow from or to an egress client,
+		// on the client node.  We whitelist the dst_to_src side here because
+		// there won't be a TC program that does this on the egress.calico device,
+		// but we need that side to be whitelisted for the return path (which
+		// passes through eth0 or the cluster encap device, not egress.calico).
+		// (Note that after passing through egress.calico, the CT state will be
+		// different.)
 		if ((ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW) || EGRESS_GATEWAY) {
 			CALI_DEBUG("CT-ALL Whitelisted dest side - egress gateway flow\n");
 			dst_to_src->whitelisted = 1;
