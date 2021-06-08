@@ -416,7 +416,7 @@ var baseTests = []StateList{
 	},
 
 	{
-		withOutL7Annotation, withL7Annotation, deleteL7Annotation,
+		withOutL7Annotation, clusterIPWithL7Annotation, externalIPWithL7Annotation, deleteClusterIPL7Annotation,
 	},
 }
 
@@ -727,6 +727,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 	var state State
 	var sentInSync bool
 	var lastStats StatsUpdate
+	var l7Resolver *L7FrontEndResolver
 
 	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
 	BeforeEach(func() {
@@ -743,11 +744,13 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		eventBuf.Callback = mockDataplane.OnEvent
 		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled)
 		calcGraph.EnableIPSec(eventBuf)
+		l7Resolver = NewL7FrontEndResolver(eventBuf, conf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			lastStats = stats
 			return nil
 		})
 		statsCollector.RegisterWith(calcGraph)
+		l7Resolver.RegisterWith(calcGraph.AllUpdDispatcher)
 		validationFilter = NewValidationFilter(calcGraph.AllUpdDispatcher)
 		sentInSync = false
 		lastState = empty

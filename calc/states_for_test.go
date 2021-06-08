@@ -2003,22 +2003,34 @@ var nodesWithMoreIPsDeleted = vxlanWithBlock.withKVUpdates(
 ).withRoutes(nodesWithMoreIPsRoutesDeletedExtras...).
 	withName("routes for nodes with more IPs deleted the extra IPs")
 
-var withOutL7Annotation = empty.withKVUpdates(
+var l7EnabledState = empty.withKVUpdates(
+	KVPair{Key: GlobalConfigKey{Name: "TPROXYMode"}, Value: "Enabled"},
+)
+
+var withOutL7Annotation = l7EnabledState.withKVUpdates(
 	svcWithOutL7Annotation,
-).withIPSet(allSelectorId, []string{})
+)
 
-var withL7Annotation = withOutL7Annotation.withKVUpdates(
-	svcWithL7Annotation,
-).withIPSet(allSelectorId,
-	[]string{
-		"2001:569:7007:1a00:45ac:2caa:a3be:5e10:tcp,123",
-		"10.0.0.20:tcp,123",
-		"10.0.0.0:tcp,123",
-	})
+var clusterIPWithL7Annotation = withOutL7Annotation.withKVUpdates(
+	clusterIPSvcWithL7Annotation,
+).withIPSet("tproxy-services", []string{
+	"10.0.0.0,tcp:123",
+})
 
-var deleteL7Annotation = withL7Annotation.withKVUpdates(
-	deleteSvcWithL7Annotation,
-).withIPSet("", []string{})
+var externalIPWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
+	externalIPSvcWithL7Annotation,
+).withIPSet("tproxy-services", []string{
+	"10.0.0.0,tcp:123",
+	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
+	"10.0.0.20,tcp:123",
+})
+
+var deleteClusterIPL7Annotation = l7EnabledState.withKVUpdates(
+	deleteClusterIPSvcWithL7Annotation,
+).withIPSet("tproxy-services", []string{
+	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
+	"10.0.0.20,tcp:123",
+})
 
 type StateList []State
 
