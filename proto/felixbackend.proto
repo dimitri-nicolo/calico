@@ -670,7 +670,6 @@ message Statistic {
     BYTES = 1;
     HTTP_REQUESTS = 2;
     HTTP_DATA = 3;
-    INGRESS_DATA = 4;
   }
   Kind kind = 3;
 
