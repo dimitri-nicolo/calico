@@ -17,9 +17,13 @@ import (
 
 type getIndex func(string) string
 
+// SearchParams contains the parameters for defining raw logs queries.
 type SearchParams struct {
 	// ClusterName defines the name of the cluster a connection will be performed on.
 	ClusterName string `json:"cluster" validate:"omitempty"`
+
+	// Selector defines a query string for raw logs. [Default: empty]
+	Selector string `json:"selector" validate:"omitempty"`
 
 	// PageSize defines the page size of raw flow logs to retrieve per search. [Default: 100]
 	PageSize int `json:"page_size" validate:"gte=0,lte=1000"`
