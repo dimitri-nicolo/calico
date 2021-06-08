@@ -191,7 +191,7 @@ create:
 		// passes through eth0 or the cluster encap device, not egress.calico).
 		// (Note that after passing through egress.calico, the CT state will be
 		// different.)
-		if ((ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW)) {
+		if ((ct_ctx->flags & CALI_CT_FLAG_EGRESS_GW) || EGRESS_GATEWAY) {
 			CALI_DEBUG("CT-ALL Whitelisted dest side - egress gateway flow\n");
 			dst_to_src->whitelisted = 1;
 		}
