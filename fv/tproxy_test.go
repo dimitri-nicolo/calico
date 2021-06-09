@@ -66,7 +66,7 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			}
 			cc.Protocol = "tcp"
 
-			options.FelixLogSeverity = "debug"
+			options.FelixLogSeverity = "info"
 			options.NATOutgoingEnabled = true
 			options.AutoHEPsEnabled = true
 			// override IPIP being enabled by default
@@ -92,6 +92,21 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			log.WithField("service", dumpResource(svc)).Info("created service")
 
 			return svc
+		}
+
+		assertIPPortInIPSet := func(ipSetID string, ip string, port string, felixes []*infrastructure.Felix, exists bool) {
+			results := make(map[*infrastructure.Felix]struct{}, len(felixes))
+			Eventually(func() bool {
+				for _, felix := range felixes {
+					out, err := felix.ExecOutput("ipset", "list", ipSetID)
+					log.Infof("felix ipset list output %s", out)
+					Expect(err).NotTo(HaveOccurred())
+					if (strings.Contains(out, ip) && strings.Contains(out, port)) == exists {
+						results[felix] = struct{}{}
+					}
+				}
+				return len(results) == len(felixes)
+			}, "60s", "5s").Should(BeTrue())
 		}
 
 		JustBeforeEach(func() {
@@ -497,59 +512,54 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			It("Should propagate annotated service update and deletions to tproxy ip set", func() {
 
 				By("setting up annotated service for the end points ")
-				// create service resource
+				// create service resource that has annotation at creation
 				client = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-				createService(v1Svc, client)
+				annotatedSvc := createService(v1Svc, client)
 
-				By("ensuring the ipaddress of service propagated to ipset ")
-				results := make(map[*infrastructure.Felix]struct{})
-				Eventually(func() bool {
-					for _, felix := range felixes {
-						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
-						Expect(err).NotTo(HaveOccurred())
-						if strings.Contains(out, clusterIP) && strings.Contains(out, servicePort) {
-							results[felix] = struct{}{}
-						}
-					}
-					return len(results) == len(felixes)
-				}, "60s", "5s").Should(BeTrue())
-
-				By("deleting the annotated service  ")
-				err := client.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+				By("asserting that ipaddress, port of service propagated to ipset ")
+				assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, true)
+				//
+				By("updating the service to not have l7 annotation ")
+				annotatedSvc.ObjectMeta.Annotations = map[string]string{}
+				_, err := client.CoreV1().Services(annotatedSvc.ObjectMeta.Namespace).Update(context.Background(), annotatedSvc, metav1.UpdateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				By("ensuring the ipaddress removal is propagated to ipset")
-				results = make(map[*infrastructure.Felix]struct{})
-				Eventually(func() bool {
-					for _, felix := range felixes {
-						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
-						Expect(err).NotTo(HaveOccurred())
-						if !strings.Contains(out, clusterIP) && !strings.Contains(out, servicePort) {
-							results[felix] = struct{}{}
-						}
-					}
-					return len(results) == len(felixes)
-				}, "60s", "5s").Should(BeTrue())
+				By("asserting that ipaddress, port of service removed from ipset")
+				assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
 
-				By("creating the service again, to verify the ipset callbacks")
-				createService(v1Svc, client)
+				By("deleting the now unannotated service  ")
+				err = client.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
 
-				// this case ensures that the process of annotating is repeatable
-				// fails if a call to already existing ipset is made
-				By("ensuring the ipaddress of service propagated to ipset again")
-				results = make(map[*infrastructure.Felix]struct{})
-				Eventually(func() bool {
-					for _, felix := range felixes {
-						out, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services")
-						Expect(err).NotTo(HaveOccurred())
-						if strings.Contains(out, clusterIP) && strings.Contains(out, servicePort) {
-							results[felix] = struct{}{}
-						}
-					}
-					return len(results) == len(felixes)
-				}, "60s", "5s").Should(BeTrue())
+				// In this second stage we create a service resource that does not have annotation at creation
+				// and repeat similar process as above again.
+
+				// this case ensures that the process of annotating is repeatable and certain IPSet callbacks are
+				// not called ex. IPSetAdded (Felix fails if a IPSetAdded call to already existing ipset is made)
+				By("creating unannotated service, to verify the ipset created callbacks")
+				v1Svc.ObjectMeta.Annotations = map[string]string{}
+				unannotatedSvc := createService(v1Svc, client)
+
+				By("asserting that ipaddress, port of service does not exist in ipset")
+				assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+
+				By("updating the service to have l7 annotation ")
+				unannotatedSvc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+				_, err = client.CoreV1().Services(unannotatedSvc.ObjectMeta.Namespace).Update(context.Background(), unannotatedSvc, metav1.UpdateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("asserting that ipaddress, port of service propagated to ipset ")
+				assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, true)
+
+				By("deleting the annotated service")
+				err = client.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("asserting that ipaddress, port of service removed from ipset")
+				assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+
 			})
 
 		})

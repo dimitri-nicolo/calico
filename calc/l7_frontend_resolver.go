@@ -94,6 +94,13 @@ func (tpr *L7FrontEndResolver) OnResourceUpdate(update api.Update) (_ bool) {
 					log.Infof("processing update for tproxy annotated service %s", k)
 					tpr.suh.AddOrUpdateService(k, service)
 					tpr.flush()
+				} else {
+					// case when service is present in services and no longer has annotation
+					if _, ok := tpr.suh.services[k]; ok {
+						log.Infof("removing unannotated service from ipset %s", k)
+						tpr.suh.RemoveService(k)
+						tpr.flush()
+					}
 				}
 			}
 		default:

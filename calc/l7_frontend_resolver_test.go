@@ -295,6 +295,73 @@ var _ = Describe("L7FrontEndResolver", func() {
 			}},
 			&config.Config{},
 		),
+		Entry("update for L7 annotated service without L7 annotation anymore should remove them from ipset",
+			[]api.Update{{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Value: &kapiv1.Service{
+						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
+						Spec: kapiv1.ServiceSpec{
+							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
+							Ports: []kapiv1.ServicePort{
+								{
+									Port:     123,
+									NodePort: 0,
+									Protocol: kapiv1.ProtocolTCP,
+									Name:     "namedport",
+								},
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}, {
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Value: &kapiv1.Service{
+						ObjectMeta: metav1.ObjectMeta{},
+					},
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}},
+			[]output{{
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.0",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}},
+			[]output{{
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.0",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}},
+			&config.Config{},
+		),
 		Entry("Service with L7 annotation with IPV6 should result in two OnIPSetMemberAdded callbacks",
 			[]api.Update{{
 				KVPair: model.KVPair{
