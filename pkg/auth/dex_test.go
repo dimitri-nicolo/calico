@@ -10,9 +10,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/stretchr/testify/mock"
 	"github.com/tigera/lma/pkg/auth"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 var _ = Describe("Test dex authenticator and options", func() {

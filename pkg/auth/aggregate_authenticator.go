@@ -3,8 +3,9 @@ package auth
 import (
 	"errors"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	k8suser "k8s.io/apiserver/pkg/authentication/user"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 // aggregateAuthenticator will authenticate the provided authenticator args in order. If an authenticator returns an

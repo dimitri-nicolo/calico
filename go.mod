@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/coreos/go-oidc v2.1.0+incompatible
+	github.com/go-openapi/runtime v0.19.28
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.14.1
