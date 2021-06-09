@@ -11,7 +11,7 @@ import (
 	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/es-proxy/pkg/k8s"
+	"github.com/tigera/lma/pkg/k8s"
 )
 
 // PerformAuthorizationReview performs an authorization review.

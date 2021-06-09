@@ -5,8 +5,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/tigera/lma/pkg/k8s"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/k8s"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
 
@@ -63,7 +64,7 @@ func (r *realServiceGraphBackend) GetEvents(cluster string, tr v1.TimeRange) ([]
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
-	cs, err := r.clientSetFactory.NewClientSetForUser(rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
+	cs, err := r.clientSetFactory.NewClientSetForUserRequest(rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
 	if err != nil {
 		return nil, err
 	}

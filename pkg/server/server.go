@@ -16,13 +16,13 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	celastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/k8s"
 	"github.com/tigera/lma/pkg/list"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/handler"
-	"github.com/tigera/es-proxy/pkg/k8s"
 	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
