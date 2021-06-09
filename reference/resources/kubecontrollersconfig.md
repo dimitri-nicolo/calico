@@ -19,7 +19,6 @@ metadata:
 spec:
   logSeverityScreen: Info
   healthChecks: Enabled
-  etcdv3CompactionPeriod: 10m
   prometheusMetricsPort: 9094
   controllers:
     node:
@@ -27,14 +26,6 @@ spec:
       syncLabels: Enabled
       hostEndpoint:
         autoCreate: Disabled
-    policy:
-      reconcilerPeriod: 5m
-    workloadEndpoint:
-      reconcilerPeriod: 5m
-    serviceAccount:
-      reconcilerPeriod: 5m
-    namespace:
-      reconcilerPeriod: 5m
 ```
 
 ### Kubernetes controllers configuration definition
@@ -55,7 +46,6 @@ spec:
 | logSeverityScreen      | The log severity above which logs are sent to the stdout. | Debug, Info, Warning, Error, Fatal | string | Info       |
 | healthChecks           | Enable support for health checks                          | Enabled, Disabled                  | string | Enabled    |
 | prometheusMetricsPort  | Port on which to serve prometheus metrics.                | Set to 0 to disable, > 0 to enable. | TCP port | 9094 |
-| etcdv3CompactionPeriod | The period between etcdv3 compaction requests. Only applies when using etcd as the {{site.prodname}} datastore. | Set to 0 to disable, > 0 to enable |  [Duration string][parse-duration] | 10m |
 | controllers            | Enabled controllers and their settings                    |                                    | [Controllers](#controllers) | |
 
 #### Controllers
@@ -63,10 +53,6 @@ spec:
 | Field            | Description                                           |  Schema                                        |
 |------------------|-------------------------------------------------------|------------------------------------------------|
 | node             | Enable and configure the node controller              | omit to disable, or [NodeController](#nodecontroller) |
-| policy           | Enable and configure the network policy controller    | omit to disable, or [PolicyController](#policycontroller)           |
-| workloadEndpoint | Enable and configure the workload endpoint controller | omit to disable, or [WorkloadEndpointController](#workloadendpointcontroller) |
-| serviceAccout    | Enable and configure the service account controller   | omit to disable, or [ServiceAccountController](#serviceaccountcontroller)  |
-| namespace        | Enable and configure the namespace controller         | omit to disable, or [NamespaceController](#namespacecontroller)        |
 | federatedservices | Enable and configure the federated services controller | omit to disable, or [FederatedServicesController](#federatedservicescontroller)        |
 
 #### NodeController
@@ -85,40 +71,6 @@ The node controller automatically cleans up configuration for nodes that no long
 |------------|------------------------------------------------------------------|-------------------|--------|------------|
 | autoCreate | When enabled, automatically create a host endpoint for each node | Enabled, Disabled | string | Disabled   |
 
-#### PolicyController
-
-The policy controller syncs Kubernetes network policies to the Calico datastore.  This controller is only valid when using etcd as the {{site.prodname}} datastore.
-
-| Field            | Description                                                           | Schema                            | Default |
-|------------------|-----------------------------------------------------------------------|-----------------------------------|---------|
-| reconcilerPeriod | Period to perform reconciliation with the {{site.prodname}} datastore | [Duration string][parse-duration] | 5m      |
-
-#### WorkloadEndpointController
-
-The workload endpoint controller automatically syncs Kubernetes pod label changes to the {{site.prodname}} datastore by updating the corresponding workload
-endpoints appropriately.  This controller is only valid when using etcd as the {{site.prodname}} datastore.
-
-| Field            | Description                                                           | Schema                            | Default |
-|------------------|-----------------------------------------------------------------------|-----------------------------------|---------|
-| reconcilerPeriod | Period to perform reconciliation with the {{site.prodname}} datastore | [Duration string][parse-duration] | 5m      |
-
-#### ServiceAccountController
-
-The service account controller syncs Kubernetes service account changes to the {{site.prodname}} datastore.  This controller is only valid when using etcd as
-the {{site.prodname}} datastore.
-
-| Field            | Description                                                           | Schema                            | Default |
-|------------------|-----------------------------------------------------------------------|-----------------------------------|---------|
-| reconcilerPeriod | Period to perform reconciliation with the {{site.prodname}} datastore | [Duration string][parse-duration] | 5m      |
-
-#### NamespaceController
-
-The namespace controller syncs Kubernetes namespace label changes to the {{site.prodname}} datastore. This controller is only valid when using etcd as the
-{{site.prodname}} datastore.
-
-| Field            | Description                                                           | Schema                            | Default |
-|------------------|-----------------------------------------------------------------------|-----------------------------------|---------|
-| reconcilerPeriod | Period to perform reconciliation with the {{site.prodname}} datastore | [Duration string][parse-duration] | 5m      |
 
 #### FederatedServicesController
 
@@ -132,7 +84,6 @@ The federated services controller syncs Kubernetes services from remote clusters
 
 | Datastore type        | Create  | Delete (Global `default`)  |  Update  | Get/List | Notes
 |-----------------------|---------|----------------------------|----------|----------|------
-| etcdv3                | Yes     | Yes                        | Yes      | Yes      |
 | Kubernetes API server | Yes     | Yes                        | Yes      | Yes      |
 
 [parse-duration]: https://golang.org/pkg/time/#ParseDuration

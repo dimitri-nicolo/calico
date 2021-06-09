@@ -20,7 +20,7 @@ allow access to these resources.
 
 For more details on the federation feature refer to the [Overview]({{site.baseurl}}/multicluster/federation/overview).
 
-The meaning of the fields matches the configuration used for configuring `calicoctl`, see the [etcd]({{site.baseurl}}/maintenance/clis/calicoctl/configure/etcd) and [kubernetes]({{site.baseurl}}/maintenance/clis/calicoctl/configure/kdd) instructions for more details.
+For the meaning of the fields matches the configuration used for configuring `calicoctl`, see [Kubernetes datastore]({{site.baseurl}}/maintenance/clis/calicoctl/configure/datastore) instructions for more details.
 
 For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
@@ -31,7 +31,7 @@ This resource is not supported in `kubectl`.
 
 ### Sample YAML
 
-For a remote KDD cluster:
+For a remote Kubernetes datastore cluster:
 ```yaml
 apiVersion: projectcalico.org/v3
 kind: RemoteClusterConfiguration

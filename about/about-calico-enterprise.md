@@ -30,10 +30,10 @@ Learn about the {{site.prodname}} features that remove these blockers.
             <li><a href="#visibility-and-troubleshooting">Visibility and troubleshooting</a></li>
             <li><a href="#enterprise-security-controls">Enterprise security controls</a></li>
             <li><a href="#extend-firewalls-to-kubernetes">Extend firewalls to Kubernetes</a></li>
-            <li><a href="#enable-self-service-network-security">Enable self service security policy</a></li>
+            <li><a href="#enable-self-service-security-policy">Enable self service security policy</a></li>
             <li><a href="#microsegmentation">Microsegmentation</a></li>
             <li><a href="#intrusion-detection">Intrusion detection</a></li>
-            <li><a href="#zero-trust-network-security">Zero trust security</a></li>
+            <li><a href="#zero-trust-security">Zero trust security</a></li>
         </ul>
   </div>
 </div>

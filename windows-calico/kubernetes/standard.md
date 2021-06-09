@@ -169,7 +169,7 @@ adjust other kube-proxy parameters.
 
 **If using {{site.prodname}} BGP networking**
 
-1. [Install Calico Enterprise for networking and policy]({{site.baseurl}}/getting-started/kubernetes/) for kdd.
+1. [Install Calico Enterprise for networking and policy]({{site.baseurl}}/getting-started/kubernetes/) for Kubernetes datastore (kdd).
 1. Disable the default {{site.prodname}} IP-in-IP networking (which is not compatible with Windows), by modifying the {{site.prodname}} manifest, and setting the `CALICO_IPV4POOL_IPIP` environment variable to "Never" before applying the manifest.
 
    If you do apply the manifest with the incorrect value, changing the manifest and re-applying will have no effect. To adjust the already-created IP pool:
@@ -244,7 +244,6 @@ Start-Service RemoteAccess
    | $env:K8S_SERVICE_CIDR | Your Kubernetes service cluster IP CIDR. |
    | $env:CALICO_DATASTORE_TYPE | {{site.prodname}} datastore you want to use. |
    | $env:KUBECONFIG | Location of the kubeconfig file {{site.prodname}} should use to access the Kubernetes API server. To set up a secure kubeconfig with  the correct permissions for {{site.prodnameWindows}}, see [Create a kubeconfig]({{site.baseurl}}/windows-calico/kubeconfig) for {{site.prodnameWindows}}. |
-   | $env:ETCD_ parameters | etcd3 datastore parameters. **Note**: Because of a limitation of the Windows dataplane, a Kubernetes service ClusterIP cannot    be used for the etcd endpoint (the host compartment cannot reach Kubernetes services). |
    | $env:NODENAME | Hostname used by kubelet. The default uses the node's hostname. **Note**: If you are using the sample kubelet start-up script from the {{site.prodname}} package, kubelet is started with a hostname override that forces it to use this value. |
    |  | For AWS to work properly, kubelet should use the node's internal domain name for the AWS integration. |
    | | If using {{site.prodname}} BGP networking, the install script will generate a CNI NetConf file from the file cni.conf.template. Certain advanced  configuration can be accessed by modifying the template before install. **Note**: Prior to Kubernetes v1.13, Kubernetes lacked support for setting the correct  DNS configuration on each pod. To work around that limitation, the CNI configuration includes DNS settings that are applied to pods whenever the kubelet fails to pass DNS configuration to the CNI plugin. For v1.13 and above, the DNS configuration of the template is ignored in favour of correct per-pod values  learned from the kubelet. |

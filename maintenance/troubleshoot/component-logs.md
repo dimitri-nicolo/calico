@@ -107,8 +107,7 @@ logging directory.
 ### confd
 
 The confd agent generates configuration files for Felix and Bird using
-configuration data present in the etcd datastore.  The logs are output in the
-`confd` sub-directory of the `{{site.nodecontainer}}` logging directory.
+configuration data present in the {{site.prodname}} datastore. The logs are output in the `confd` sub-directory of the `{{site.nodecontainer}}` logging directory.
 
 By default, the confd logging level is "debug" and cannot be changed without
 editing configuration within the node image.

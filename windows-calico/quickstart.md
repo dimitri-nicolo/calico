@@ -20,7 +20,7 @@ Get the {{site.prodnameWindows}} installation zip archive from your support repr
 
 **Datastore requirements**
 
-Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Windows node/Kubernetes cluster must be the same as the datastore for the Linux control node. (You cannot mix datastores in a {{site.prodnameWindows}} implementation.)
+Kubernetes datastore (kdd)
 
 **Kubernetes cluster requirements**
 - Kubernetes clusters with versions 1.20, 1.19, or 1.18
@@ -53,6 +53,7 @@ Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Window
       kubectl delete role calico-install-token --namespace calico-system
       ```
     
+
 **Linux control node requirements**
 - Installed with {{site.prodname}} v3.5+
 - If {{site.prodname}} networking is being used:
@@ -128,26 +129,12 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
    You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
 
-   **Kubernetes datastore (default)**
+   **Kubernetes datastore**
 
    ```powershell
    c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> `
                                  -ServiceCidr <your service cidr (default 10.96.0.0/12)> `
                                  -DNSServerIPs <your DNS service IP (default 10.96.0.10)>
-   ```
-
-   **etcd datastore**
-
-   ```powershell
-   c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> `
-                                 -Datastore etcdv3 `
-                                 -EtcdEndpoints <your etcd endpoint ip> `
-                                 -EtcdTlsSecretName <your etcd TLS secret name in calico-system namespace> (default no etcd TLS secret is used) `
-                                 -EtcdKey <path to key file> (default not using TLS) `
-                                 -EtcdCert <path to cert file> (default not using TLS) `
-                                 -EtcdCaCert <path to ca cert file> (default not using TLS) `
-                                 -ServiceCidr <your service cidr (default 10.96.0.0/12)> `
-                                 -DNSServerIPs <your DNS server IPs (default 10.96.0.10)>
    ```
 
    > **Note**: You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
@@ -225,26 +212,12 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
    You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
 
-   **Kubernetes datastore (default)**
+   **Kubernetes datastore**
 
    ```powershell
    c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> `
                                  -ServiceCidr <your service cidr (default 10.96.0.0/12)> `
                                  -DNSServerIPs <your DNS service IP (default 10.96.0.10)>
-   ```
-
-   **etcd datastore**
-
-   ```powershell
-   c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> `
-                                 -Datastore etcdv3 `
-                                 -EtcdEndpoints <your etcd endpoint ip> `
-                                 -EtcdTlsSecretName <your etcd TLS secret name in calico-system namespace> (default no etcd TLS secret is used) `
-                                 -EtcdKey <path to key file> (default not using TLS) `
-                                 -EtcdCert <path to cert file> (default not using TLS) `
-                                 -EtcdCaCert <path to ca cert file> (default not using TLS) `
-                                 -ServiceCidr <your service cidr (default 10.96.0.0/12)> `
-                                 -DNSServerIPs <your DNS server IPs (default 10.96.0.10)>
    ```
 
    > **Note**: You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
@@ -303,15 +276,6 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
                                  -DNSServerIPs <your DNS service IP (default 10.96.0.10)>
    ```
 
-   **etcd datastore**
-
-   ```powershell
-   c:\install-calico-windows.ps1 -Datastore etcdv3 `
-                                 -EtcdEndpoints <your etcd endpoint ip> `
-                                 -ServiceCidr <your service cidr (default 10.96.0.0/12)> `
-                                 -DNSServerIPs <your DNS server IPs (default 10.96.0.10)>
-   ```
-
    > **Note**: You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
    {: .alert .alert-info}
 
@@ -339,12 +303,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 | ------------------ | --------------------------------------------------------- |-------------|
 | KubeVersion        | Version of Kubernetes binaries to use. If the value is an empty string (default), the {{site.prodnameWindows}} installation script does not download Kubernetes binaries and run Kubernetes service. Use the default for managed public cloud. | "" |
 | DownloadOnly       | Download without installing {{site.prodnameWindows}}. Set to `yes` to manually install and configure {{site.prodnameWindows}}. For example, {{site.prodnameWindows}} the hard way. | no |
-| Datastore          | {{site.prodnameWindows}} datastore type [`kubernetes` or `etcdv3`] for reading endpoints and policy information. | kubernetes |
-| EtcdEndpoints      | Comma-delimited list of etcd connection endpoints. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`. Valid only if `Datastore` is set to `etcdv3`. | "" |
-| EtcdTlsSecretName  | Name of a secret in `calico-system` namespace which contains `etcd-key`, `etcd-cert`, `etcd-ca` for automatically configuring TLS. Either use this or parameters `EtcdKey`, `EtcdCert`, `EtcdCaCert` below. | "" |
-| EtcdKey            | Path to key file for etcd TLS connection. | "" |
-| EtcdCert           | Path to certificate file for etcd TLS connection. | "" |
-| EtcdCaCert         | Path to CA certificate file for etcd TLS connection. | "" |
+| Datastore          | {{site.prodnameWindows}} datastore type [`kubernetes`] for reading endpoints and policy information. | kubernetes |
 | ServiceCidr        | Service IP range of the Kubernetes cluster. Not required for most managed Kubernetes clusters. Note: EKS has non-default value. | 10.96.0.0/12 |
 | DNSServerIPs       | Comma-delimited list of DNS service IPs used by Windows pod. Not required for most managed Kubernetes clusters. Note: EKS has a non-default value. | 10.96.0.10 |
 | CalicoBackend      | Calico backend network type (`vxlan` or `bgp`). If the value is an empty string (default), backend network type is auto detected. | "" |

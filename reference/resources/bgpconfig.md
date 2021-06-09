@@ -83,5 +83,4 @@ spec:
 
 | Datastore type        | Create    | Delete    | Delete (Global `default`)  |  Update  | Get/List | Notes
 |-----------------------|------------|-----------|--------|----------|----------|------
-| etcdv3                | Yes       | Yes    | No     | Yes      | Yes      |
 | Kubernetes API server | Yes        | Yes   | No     | Yes      | Yes      |

@@ -4,7 +4,6 @@ description: Customize the Calico failsafe policy to protect host endpoints.
 canonical_url: '/reference/host-endpoints/connectivity'
 ---
 
-
 When a host endpoint is added, if there is no security policy for that
 endpoint, {{site.prodname}} will default to denying traffic to/from that endpoint,
 except for traffic that is allowed by the [failsafe rules](failsafe).
@@ -24,13 +23,11 @@ is tailored to your environment. The example command below shows one
 example of how you might do that; the command uses `calicoctl` to create a single
 policy resource, which:
 
-  - Applies to all known endpoints.
-  - Allows inbound ssh access from a defined "management" subnet.
-  - Allows outbound connectivity to etcd on a particular IP; if
-    you have multiple etcd servers you should duplicate the rule
-    for each destination.
-  - Allows inbound ICMP.
-  - Allows outbound UDP on port 67, for DHCP.
+- Applies to all known endpoints.
+- Allows inbound ssh access from a defined “management” subnet.
+- Allows outbound connectivity to etcd on a particular IP; if you have multiple etcd servers you should duplicate the rule for each destination.
+- Allows inbound ICMP.
+- Allows outbound UDP on port 67, for DHCP.
 
 When running this command, replace the placeholders in angle brackets with
 appropriate values for your deployment.
@@ -62,6 +59,8 @@ cat <<EOF | calicoctl create -f -
         nets:
         - "<your etcd IP>/32"
         ports: [<your etcd ports>]
+        - "<your Kubernetes apiserver IP"
+        ports: [<your Kubernetes apiserver IP ports>]
     - action: Allow
       protocol: UDP
       destination:

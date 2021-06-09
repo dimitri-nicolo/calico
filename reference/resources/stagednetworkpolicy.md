@@ -132,5 +132,4 @@ in order to use the following match criteria.
 
 | Datastore type           | Create/Delete | Update | Get/List | Notes
 |--------------------------|---------------|--------|----------|------
-| etcdv3                   | Yes           | Yes    | Yes      |
 | Kubernetes API datastore | Yes           | Yes    | Yes      |

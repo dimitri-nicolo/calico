@@ -78,5 +78,4 @@ is currently a singleton: the only valid name is `default`.
 
 | Datastore type        | Create | Delete | Update | Get/List | Notes
 |-----------------------|--------|--------|--------|----------|------
-| etcdv3                | Yes    |   No   | Yes    | Yes      |
 | Kubernetes API server | Yes    |   No   | Yes    | Yes      |

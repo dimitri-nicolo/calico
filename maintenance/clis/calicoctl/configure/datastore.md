@@ -1,11 +1,11 @@
 ---
-title: Configure calicoctl to connect to the Kubernetes API datastore
-description: Sample configuration files for kdd.
-canonical_url: '/maintenance/clis/calicoctl/configure/kdd'
+title: Configure calicoctl to connect to datastore
+description: Sample configuration files for the Kubernetes API datastore.
+canonical_url: '/maintenance/clis/calicoctl/configure/datastore'
 ---
 
 
-{% include content/cli-config-kdd.md %}
+{% include content/cli-config-datastore.md %}
 
 ## Examples
 

@@ -2,6 +2,8 @@
 title: Google Compute Engine
 description: Methods to ensure that traffic between containers on different hosts is not dropped by GCE fabric. 
 canonical_url: '/reference/public-cloud/gce'
+show_read_time: false
+show_toc: false
 ---
 
 To deploy {{site.prodname}} in [Google Compute Engine (GCE)][GCE], you must ensure

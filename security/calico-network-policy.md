@@ -70,10 +70,6 @@ metadata:
 
 Because global network policies use **kind: GlobalNetworkPolicy**, they are grouped seperately from **kind: NetworkPolicy**. For example, global network policies will not be returned from `kubectl get networkpolicy.p`, and are rather returned from `kubectl get globalnetworkpolicy`.
 
-#### kubectl vs calicoctl
-
-Calico network policies and Calico global network policies are applied using calicoctl. Syntax is similar to Kubernetes, but there a few differences. For help, see [calicoctl user reference]({{ site.baseurl }}/reference/calicoctl/overview).
-
 #### Ingress and egress
 
 Each network policy rule applies to either **ingress** or **egress** traffic. From the point of view of an endpoint (pod, VM, host interface), **ingress** is incoming traffic to the endpoint, and **egress** is outgoing traffic from the endpoint. In a Calico network policy, you create ingress and egress rules independently (egress, ingress, or both). 
@@ -101,7 +97,7 @@ For compatibility with Kubernetes, **Calico network policy** follows the same be
 
 ### Before you begin
 
-`calicoctl` must be **installed** and **configured** before use. `calicoctl` will use etcd as the datastore by default, but many {{site.prodname}} installation manifests configure Kubernetes as the datastore. You can find more information on how to configure `calicoctl` in the following link:
+`calicoctl` must be **installed** and **configured** before use. `calicoctl` will use Kubernetes as the datastore. You can find more information on how to configure `calicoctl` in the following link:
 
 - [Configure `calicoctl`]({{ site.baseurl }}/maintenance/clis/calicoctl/configure/overview)
 
@@ -274,5 +270,4 @@ Spec:
 
 - For additional Calico network policy features, see [Calico network policy]({{ site.baseurl }}/reference/resources/networkpolicy) and [Calico global network policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy)
 - For an alternative to using IP addresses or CIDRs in policy, see [Network sets]({{ site.baseurl }}/reference/resources/networkset) 
-- For details on the calicoctl command line tool, see [calicoctl user reference]({{ site.baseurl }}/reference/calicoctl/overview)
 - For details on how to stage network policy, see [Staged network policies]({{site.baseurl}}/security/staged-network-policies) 

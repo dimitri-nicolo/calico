@@ -1,14 +1,14 @@
 ---
 title: Install Calico Enterprise on host endpoints
 description: Choose a method to install Calico Enterprise on hosts.
-canonical_url: '/getting-started/bare-metal/installation/index'
+canonical_url: '/getting-started/bare-metal/installation/overview'
 ---
 
-You will need to install `calicoctl` and configure it to connect to your etcd datastore.
+You will need to install `calicoctl` and configure it to connect to your datastore.
 
 -  [Install calicoctl as a binary]({{site.baseurl}}/maintenance/clis/calicoctl/install).
 
--  [Configure calicoctl to connect to etcd]({{site.baseurl}}/maintenance/clis/calicoctl/configure/etcd).
+-  [Configure calicoctl to connect to database]({{site.baseurl}}/maintenance/clis/calicoctl/configure/database).
 
 Then you can use any of the following methods to install and run Felix, on each bare metal
 host where you want {{site.prodname}} host protection.

@@ -80,16 +80,6 @@ below.
 >
 {: .alert .alert-info}
 
-#### Configuring etcd Datastore Access
-
-| Environment   | Description | Schema |
-| ------------- | ----------- | ------ |
-| ETCD_ENDPOINTS     | A comma separated list of etcd endpoints [Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`] (required) | string |
-| ETCD_DISCOVERY_SRV | Domain name to discover etcd endpoints via SRV records. Mutually exclusive with `ETCD_ENDPOINTS`. [Example: `example.com`] (optional) | string |
-| ETCD_KEY_FILE      | Path to the file containing the private key matching the `{{site.nodecontainer}}` client certificate. Enables `{{site.nodecontainer}}` to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/node/key.pem` (optional) | string |
-| ETCD_CERT_FILE     | Path to the file containing the client certificate issued to `{{site.nodecontainer}}`. Enables `{{site.nodecontainer}}` to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/node/cert.pem` (optional) | string |
-| ETCD_CA_CERT_FILE  | Path to the file containing the root certificate of the certificate authority (CA) that issued the etcd server certificate. Configures `{{site.nodecontainer}}` to trust the CA that signed the root certificate. The file may contain multiple root certificates, causing `{{site.nodecontainer}}` to trust each of the CAs included. Example: `/etc/node/ca.pem` | string |
-
 ### Configuring Logging
 
 | Environment   | Description | Schema |

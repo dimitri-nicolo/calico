@@ -103,7 +103,6 @@ will peer with it.
 
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
-| etcdv3                | Yes           | Yes    | Yes      |
 | Kubernetes API server | Yes           | Yes    | Yes      |
 
 ### Selector

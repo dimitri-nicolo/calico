@@ -26,7 +26,7 @@ The full list of parameters which can be set is as follows.
 
 | Configuration parameter           | Environment variable                    | Description  | Schema |
 | --------------------------------- | --------------------------------------- | -------------| ------ |
-| `DatastoreType`                   | `TYPHA_DATASTORETYPE`                   | The datastore that Typha should read endpoints and policy information from. [Default: `etcdv3`] | `etcdv3`, `kubernetes`|
+| `DatastoreType`                   | `TYPHA_DATASTORETYPE`                   | The datastore that Typha should read endpoints and policy information from. [Default: `etcdv3`] |`etcdv3`, `kubernetes`|
 | `HealthEnabled`                   | `TYPHA_HEALTHENABLED`                   | When enabled, exposes Typha health information via an http endpoint. | boolean |
 | `HealthPort`                      | `TYPHA_HEALTHPORT`                      | The port that Typha will serve health information over. [Default: `9098`] | int |
 | `HealthHost`                      | `TYPHA_HEALTHHOST`                      | The address that Typha will bind its health endpoint to. [Default: `localhost`] | string |
@@ -46,15 +46,6 @@ The full list of parameters which can be set is as follows.
 > `calico-typha check (readiness|liveness) --port=<port>`.  If you modify the health port, you will need to add the
 > `--port=<port>` argument to the liveness and readiness probe commands in the manifest.
 {: .alert .alert-info}
-
-#### etcd datastore configuration
-
-| Configuration parameter | Environment variable  | Description | Schema |
-| ----------------------- | --------------------- | ----------- | ------ |
-| `EtcdCaFile`            | `TYPHA_ETCDCAFILE`    | Path to the file containing the root certificate of the certificate authority (CA) that issued the etcd server certificate. Configures Typha to trust the CA that signed the root certificate. The file may contain multiple root certificates, causing Typha to trust each of the CAs included. To disable authentication of the server by Typha, set the value to `none`. [Default: `/etc/ssl/certs/ca-certificates.crt`] | string |
-| `EtcdCertFile`          | `TYPHA_ETCDCERTFILE`  | Path to the file containing the client certificate issued to Typha. Enables Typha to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/typha/cert.pem` (optional) | string |
-| `EtcdEndpoints`         | `TYPHA_ETCDENDPOINTS` | Comma-delimited list of etcd endpoints to connect to. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`. | `<scheme>://<ip-or-fqdn>:<port>` |
-| `EtcdKeyFile`           | `TYPHA_ETCDKEYFILE`   | Path to the file containing the private key matching the Typha client certificate. Enables Typha to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/typha/key.pem` (optional) | string |
 
 #### Kubernetes API datastore configuration
 

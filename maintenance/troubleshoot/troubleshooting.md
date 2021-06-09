@@ -169,7 +169,7 @@ sudo -E calicoctl node run
 or you can set environment variables for `sudo` commands like this:
 
 ```bash
-sudo ETCD_ENDPOINTS=http://172.25.0.1:2379 calicoctl node run
+sudo DATASTORE_TYPE=kubernetes KUBECONFIG=~/.kube/config calicoctl node run
 ```
 
 Also be aware that connection information can be specified as a config file rather than using environment variables.  See [Installing calicoctl]({{ site.baseurl }}/maintenance/clis/calicoctl/install)

@@ -1,6 +1,8 @@
 ---
 title: Self-managed Kubernetes in Microsoft Azure
 description: Use Calico with a self-managed Kubernetes cluster in Microsoft Azure.
+show_read_time: false
+show_toc: false
 ---
 
 ### Big picture

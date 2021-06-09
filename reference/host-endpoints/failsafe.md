@@ -18,11 +18,7 @@ By default, {{site.prodname}} keeps the following ports open on *all* host endpo
 |   67   |   UDP    |  Outbound           |             DHCP access                        |
 |   68   |   UDP    |  Inbound            |             DHCP access                        |
 |   179  |   TCP    |  Inbound & Outbound |             BGP access (Calico networking)     |
-|   2379 |   TCP    |  Inbound & Outbound |             etcd access                        |
-|   2380 |   TCP    |  Inbound & Outbound |             etcd access                        |
 |   6443 |   TCP    |  Inbound & Outbound |             Kubernetes API server access       |
-|   6666 |   TCP    |  Inbound & Outbound |             etcd self-hosted service access    |
-|   6667 |   TCP    |  Inbound & Outbound |             etcd self-hosted service access    |
 
 
 The lists of failsafe ports can be configured via the configuration parameters
@@ -34,7 +30,7 @@ can be disabled by setting each configuration value to "none".
 > **Important**: Removing the inbound failsafe rules can leave a host inaccessible.
 >
 > Removing the outbound failsafe rules can leave Felix unable to connect
-> to etcd.
+> to the datastore.
 >
 > Before disabling the failsafe rules, we recommend creating a policy to
 > replace it with more-specific rules for your environment: see

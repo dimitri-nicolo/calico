@@ -51,8 +51,8 @@ section:
       section:
       - title: Overview
         path: /maintenance/clis/calicoctl/configure/overview
-      - title: Configure calicoctl to connect to the Kubernetes API datastore
-        path: /maintenance/clis/calicoctl/configure/kdd
+      - title: Configure calicoctl to connect to the datastore
+        path: /maintenance/clis/calicoctl/configure/database
   - title: calicoq
     path: /maintenance/clis/calicoq/
     section:

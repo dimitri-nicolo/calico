@@ -22,7 +22,7 @@ section:
     - title: Docker Enterprise
       path: /getting-started/kubernetes/docker-enterprise
     - title: Helm
-      path: /getting-started/kubernetes/helm      
+      path: /getting-started/kubernetes/helm 
   - title: AKS 
     path: /getting-started/kubernetes/aks
   - title: AWS using kOps

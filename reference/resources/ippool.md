@@ -110,5 +110,4 @@ For details on configuring IP pool node selectors, please read the
 
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
-| etcdv3                | Yes           | Yes    | Yes      |
 | Kubernetes API server | Yes           | Yes    | Yes      |

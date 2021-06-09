@@ -11,9 +11,7 @@ how to download and install `calicoq`.
 
 ## Datastore configuration
 
-`calicoq` works by querying the {{site.prodname}} datastore and needs configuration so that
-it knows what type of datastore you are using - either etcdv2 or the Kubernetes
-API - and where that is.  For this configuration calicoq uses exactly the same
+`calicoq` works by querying the {{site.prodname}} datastore.  For this configuration calicoq uses exactly the same
 setup as `calicoctl`, which means that:
 
 - You can create a YAML or JSON config file, and specify that with `calicoq`'s

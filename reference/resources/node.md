@@ -80,5 +80,4 @@ spec:
 
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
-| etcdv3                | Yes           | Yes    | Yes      |
 | Kubernetes API server | No            | Yes    | Yes      | `{{site.nodecontainer}}` data is directly tied to the Kubernetes nodes.

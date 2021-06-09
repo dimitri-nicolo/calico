@@ -149,20 +149,11 @@ url='https://github.com/containernetworking/cni/blob/master/SPEC.md#network-conf
 
 - **Kubernetes API datastore (kdd)**
 
-   The advantages of using the Kubernetes API datastore (kdd) with Calico Enterprise are:
+   The advantages of using the Kubernetes API datastore with Calico Enterprise are:
 
    - Simpler to manage because it does not require an extra datastore
    - Use Kubernetes RBAC to control access to Calico resources
    - Use Kubernetes audit logging to generate audit logs of changes to Calico resources
-
-- **etcd**
-
-   etcd is a consistent, highhly-available distributed key-value store that provides data storage for the {{site.prodname}} network, and for communications between components. etcd is supported only for protecting non-cluster hosts (as of {{site.prodname}} v3.1). For completeness, etcd advantages are:
-
-   - Lets you run {{site.prodname}} on non-Kubernetes platforms
-   - Separation of concerns between Kubernetes and {{site.prodname}} resources, for example allowing you to scale the datastores independently
-   - Lets you run a {{site.prodname}} cluster that contains more than just a single Kubernetes cluster, for example, bare metal servers with {{site.prodname}} host protection interworking with a Kubernetes cluster; or multiple Kubernetes clusters.
-   
 
 ### IPAM plugin
 

@@ -9,14 +9,6 @@ This sections describes the `calicoctl replace` command.
 Read the [calicoctl command line interface user reference]({{ site.baseurl }}/reference/calicoctl/overview)
 for a full list of calicoctl commands.
 
-> **Note**: The available actions for a specific resource type may be
-> limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API).
-> Please refer to the
-> [Resources section]({{ site.baseurl }}/reference/resources/overview)
-> for details about each resource type.
-{: .alert .alert-info}
-
-
 ## Displaying the help text for 'calicoctl replace' command
 
 Run `calicoctl replace --help` to display the following help menu for the

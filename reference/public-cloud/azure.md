@@ -2,6 +2,8 @@
 title: Azure
 description: Support for Calico Enterprise in Azure.
 canonical_url: '/reference/public-cloud/azure'
+show_read_time: false
+show_toc: false
 ---
 
 ## About {{site.prodname}} on Azure
@@ -12,7 +14,7 @@ While Azure does not support {{site.prodname}} networking, you can use
 - **Azure user-defined routes**: This option provides networking without overlays.
   Disable {{site.prodname}} networking by setting `CALICO_NETWORKING_BACKEND` to `none`
   in `{{site.nodecontainer}}`. (Also called "policy-only mode".) Refer to
-  [Configuring {{site.nodecontainer}}](../node/configuration) and [Azure user-defined routes](#azure-user-defined-routes) for more information. If you're on Kubernetes, refer to [Installing {{site.prodname}} for policy (advanced)]({{site.baseurl}}/getting-started/kubernetes/self-managed-public-cloud/azure).
+  [Configuring {{site.nodecontainer}}](../node/configuration) and [Azure user-defined routes](#azure-user-defined-routes) for more information. If you're on Kubernetes, refer to [Self-managed Kubernetes in Microsoft Azure]({{site.baseurl}}/getting-started/kubernetes/self-managed-public-cloud/azure).
 
 - **Calico VXLAN**: Install {{site.prodname}} using VXLAN encapsulation for pod traffic.
   

@@ -124,10 +124,10 @@ with a single running Felix instance (things like kernel routes, tap
 devices etc.). Local state is entirely stored by the Linux kernel on the
 host, with Felix storing it only as a temporary mirror. This makes Felix
 effectively stateless, with the kernel acting as a backing data store on
-one side and etcd as a data source on the other.
+one side and Kubernetes (kdd) as a data source on the other.
 
 If Felix is restarted, it learns current local state by interrogating
-the kernel at start up. It then reads from `etcd` all the local state
+the kernel at start up. It then reads from the etcd datastore all the local state
 which it should have, and updates the kernel to match. This approach has
 strong resiliency benefits, in that if Felix restarts you don't suddenly
 lose access to your VMs or containers. As long as the Linux kernel is

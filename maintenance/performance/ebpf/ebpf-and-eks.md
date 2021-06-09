@@ -75,7 +75,7 @@ container-optimised OS with an emphasis on security; it has a version of the ker
   EOF
   ```
   
-* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/eks) to install {{site.prodname}}
+* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/kubernetes/eks) to install {{site.prodname}}
   using the Amazon VPC CNI (Calico CNI cannot be installed on Bottlerocket at this time), with the following tweak:
   
   Set `spec.flexVolumePath` to `/var/lib/kubelet/plugins` in the `Installation` resource in the `custom-resources.yaml`.  
@@ -113,7 +113,7 @@ which is suitable:
    --without-nodegroup
   ```
 
-* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/eks) to install {{site.prodname}}
+* Follow the instructions in the [getting started guide]({{site.baseurl}}/getting-started/kubernetes/eks) to install {{site.prodname}}
   but when instructed to create the node group, use the AMI saved off above:
   
   * `--node-ami` should be set to the AMI ID of the image built above.

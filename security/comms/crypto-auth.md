@@ -4,25 +4,6 @@ description: Enable TLS authentication and encryption for various Calico Enterpr
 canonical_url: '/security/comms/crypto-auth'
 ---
 
-## Connections from {{site.prodname}} components to etcd
-
-If you are using the etcd datastore, we recommend enabling mutual TLS authentication on
-its connections as follows.
-
-- [Configure etcd](https://coreos.com/etcd/docs/latest/op-guide/security.html){:target="_blank"} to encrypt its
-  communications with TLS and require clients to present certificates signed by the etcd certificate
-  authority.
-
-- Configure each {{site.prodname}} component to verify the etcd server's identity and to present
-  a certificate to the etcd server that is signed by the etcd certificate authority.
-  - [{{site.nodecontainer}}]({{site.baseurl}}/reference/node/configuration)
-  - [`calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/configure/etcd)
-  - [CNI plugin]({{site.baseurl}}/reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
-  - [Kubernetes controllers]({{site.baseurl}}/reference/kube-controllers/configuration#configuring-datastore-access) (Kubernetes and OpenShift only)
-  - [Felix]({{site.baseurl}}/reference/felix/configuration#etcd-datastore-configuration)
-  - [Typha]({{site.baseurl}}/reference/typha/configuration#etcd-datastore-configuration) (often deployed in
-    larger Kubernetes deployments)
-
 ### Connections from {{site.prodname}} components to kube-apiserver (Kubernetes and OpenShift)
 
 We recommend enabling TLS on kube-apiserver, as well as the client certificate and JSON web token (JWT)
