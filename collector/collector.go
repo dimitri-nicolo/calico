@@ -755,7 +755,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 		data.AddOriginalSourceIPs(bs)
 	} else if httpDataCount != 0 && !isL7Data {
 		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
-	} else if httpDataCount != 0 && c.L7LogReporter != nil && isL7Data {
+	} else if httpDataCount != 0 && c.l7LogReporter != nil && isL7Data {
 		// Record overflow L7 log counts
 		// Create an empty HTTPData since this is an overflow log
 		hd := &proto.HTTPData{}
@@ -904,13 +904,13 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		Domain:        hd.Domain,
 	}
 
-	// Handle converting the response code. An empty response code is valid for overflow logs.
-	if hd.ResponseCode != "" {
+	// Handle setting the response code. An empty response code is valid for overflow logs.
+	if hd.ResponseCode != 0 {
 		update.ResponseCode = strconv.Itoa(int(hd.ResponseCode))
 	}
 
 	// Handle setting the count for overflow logs
-	if hd.Count != "" {
+	if hd.Count != 0 {
 		update.Count = int(hd.Count)
 	} else {
 		// overflow logs record the http request count per the tuple instead.
