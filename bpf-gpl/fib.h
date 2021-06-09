@@ -246,12 +246,6 @@ skip_fib:
 			}
 		}
 		CALI_DEBUG("Traffic is towards host namespace, marking with %x.\n", ctx->fwd.mark);
-
-		/* FIXME: this ignores the mask that we should be using.
-		 * However, if we mask off the bits, then clang spots that it
-		 * can do a 16-bit store instead of a 32-bit load/modify/store,
-		 * which trips up the validator.
-		 */
 		__u32 non_calico_mark = ctx->skb->mark & 0xfffff;
 		ctx->skb->mark = ctx->fwd.mark | non_calico_mark; /* make sure that each pkt has SEEN mark */
 	}

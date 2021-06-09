@@ -1402,6 +1402,10 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirect
 			if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
 				// BPF program needs reattaching with different patch options, so
 				// close and discard the old FD.
+				log.WithField("iface", ap.Iface).Infof(
+					"Reapplying BPF program because egress gateway state has changed (client %v gateway %v)",
+					ap.IsEgressClient, ap.IsEgressGateway,
+				)
 				err := jumpMapFD.Close()
 				if err != nil {
 					log.WithError(err).Warn("Failed to close jump map FD. Ignoring.")
