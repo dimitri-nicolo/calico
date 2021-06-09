@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var debug bool
+
 func init() {
 	ipsetsDumpCmd.Flags().BoolVar(&debug, "debug", false, "")
 	ipsetsCmd.AddCommand(ipsetsDumpCmd)
@@ -33,9 +35,12 @@ func init() {
 }
 
 var ipsetsDumpCmd = &cobra.Command{
-	Use:   "dump",
+	Use:   "dump [--debug]",
 	Short: "dumps ipsets",
 	Run: func(cmd *cobra.Command, args []string) {
+		if debug {
+			log.SetLevel(log.DebugLevel)
+		}
 		if err := dumpIPSets(); err != nil {
 			log.WithError(err).Error("Failed to dump IP sets map.")
 		}
