@@ -9,8 +9,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/tigera/lma/pkg/k8s"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 // The NameHelper is used to modify the names in the flow and event data based on request-specific parameters.

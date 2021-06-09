@@ -16,10 +16,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/k8s"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 const (

@@ -8,9 +8,10 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/tigera/lma/pkg/k8s"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/pkg/authorization"
-	"github.com/tigera/es-proxy/pkg/k8s"
 )
 
 // This file implements an RBAC flow filter. It parses the AuthorizedResourceVerbs returned by a authorization
