@@ -18,9 +18,9 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ip"
 
 	log "github.com/sirupsen/logrus"
@@ -63,6 +63,8 @@ func NewL7FrontEndResolver(callbacks ipSetUpdateCallbacks, conf *config.Config) 
 		activeServices:  make(map[ipPortProtoKey][]proxy.ServicePortName),
 		activeNodePorts: make(map[portProtoKey][]proxy.ServicePortName),
 	}
+	tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+
 	return tpr
 }
 
@@ -154,11 +156,6 @@ func (tpr *L7FrontEndResolver) resolveRegularServices() (map[ipPortProtoKey][]pr
 
 func (tpr *L7FrontEndResolver) flushRegularService(added map[ipPortProtoKey][]proxy.ServicePortName,
 	removed map[ipPortProtoKey]struct{}) {
-
-	if !tpr.createdIpSet {
-		tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-		tpr.createdIpSet = true
-	}
 
 	for ipPortProto := range removed {
 		member := getIpSetMemberFromIpPortProto(ipPortProto)

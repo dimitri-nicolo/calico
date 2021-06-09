@@ -55,9 +55,8 @@ var _ = Describe("L7FrontEndResolver", func() {
 		func(updates []api.Update, addedMembers []output, removedMembers []output, conf *config.Config) {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
-			if len(addedMembers) > 0 {
-				mockCallbacks.On("OnIPSetAdded", calc.TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-			}
+			mockCallbacks.On("OnIPSetAdded", calc.TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+
 			for _, addedMember := range addedMembers {
 				member := labelindex.IPSetMember{
 					PortNumber: uint16(addedMember.port),

@@ -416,7 +416,11 @@ var baseTests = []StateList{
 	},
 
 	{
-		withOutL7Annotation, clusterIPWithL7Annotation, externalIPWithL7Annotation, deleteClusterIPL7Annotation,
+		withOutL7Annotation,
+		clusterIPWithL7Annotation,
+		externalIPWithL7Annotation,
+		deleteClusterIPL7Annotation,
+		deleteExternalIPL7Annotation,
 	},
 }
 

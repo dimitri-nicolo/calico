@@ -39,7 +39,7 @@ import (
 // might prefer to start with a simpler state instead.
 
 // empty is the base state, with nothing in the datastore or dataplane.
-var empty = NewState().withName("<empty>")
+var empty = NewState().withName("<empty>").withIPSet("tproxy-services", []string{})
 
 // initialisedStore builds on empty, adding in the ready flag and global config.
 var initialisedStore = empty.withKVUpdates(
@@ -2005,32 +2005,37 @@ var nodesWithMoreIPsDeleted = vxlanWithBlock.withKVUpdates(
 
 var l7EnabledState = empty.withKVUpdates(
 	KVPair{Key: GlobalConfigKey{Name: "TPROXYMode"}, Value: "Enabled"},
-)
+).withIPSet(tproxyIpSetSelector, []string{}).withName("l7EnabledState")
 
 var withOutL7Annotation = l7EnabledState.withKVUpdates(
 	svcWithOutL7Annotation,
-)
+).withIPSet(tproxyIpSetSelector, []string{}).withName("withOutL7Annotation")
 
 var clusterIPWithL7Annotation = withOutL7Annotation.withKVUpdates(
-	clusterIPSvcWithL7Annotation,
-).withIPSet("tproxy-services", []string{
+	svcWithL7Annotation,
+).withIPSet(tproxyIpSetSelector, []string{
 	"10.0.0.0,tcp:123",
-})
+}).withName("clusterIPWithL7Annotation")
 
 var externalIPWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
-	externalIPSvcWithL7Annotation,
-).withIPSet("tproxy-services", []string{
+	externalSvcWithL7Annotation,
+).withIPSet(tproxyIpSetSelector, []string{
 	"10.0.0.0,tcp:123",
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
-})
+}).withName("externalIPWithL7Annotation")
 
-var deleteClusterIPL7Annotation = l7EnabledState.withKVUpdates(
-	deleteClusterIPSvcWithL7Annotation,
-).withIPSet("tproxy-services", []string{
+var deleteClusterIPL7Annotation = externalIPWithL7Annotation.withKVUpdates(
+	deleteSvcWithL7Annotation,
+).withIPSet(tproxyIpSetSelector, []string{
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
-})
+}).withName("deleteClusterIPL7Annotation")
+
+var deleteExternalIPL7Annotation = deleteClusterIPL7Annotation.withKVUpdates(
+	deleteExternalSvcWithL7Annotation,
+).withIPSet(tproxyIpSetSelector, []string{}).
+	withName("deleteExternalIPL7Annotation")
 
 type StateList []State
 

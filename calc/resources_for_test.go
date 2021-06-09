@@ -56,6 +56,7 @@ var (
 	namedPortInheritIPSetID     = namedPortID(inheritSelector, "tcp", "tcpport")
 	httpMatchMethod             = HTTPMatch{Methods: []string{"GET"}}
 	serviceAccountSelector      = "name == 'sa1'"
+	tproxyIpSetSelector         = "tproxy-services"
 )
 
 // Canned workload endpoints.
@@ -956,7 +957,7 @@ var svcWithOutL7Annotation = KVPair{
 	},
 }
 
-var clusterIPSvcWithL7Annotation = KVPair{
+var svcWithL7Annotation = KVPair{
 	Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service2", Namespace: "ns2"},
 	Value: &kapiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "service2", Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
@@ -974,7 +975,7 @@ var clusterIPSvcWithL7Annotation = KVPair{
 	},
 }
 
-var externalIPSvcWithL7Annotation = KVPair{
+var externalSvcWithL7Annotation = KVPair{
 	Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service3", Namespace: "ns2"},
 	Value: &kapiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "service3", Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
@@ -995,8 +996,13 @@ var externalIPSvcWithL7Annotation = KVPair{
 	},
 }
 
-var deleteClusterIPSvcWithL7Annotation = KVPair{
+var deleteSvcWithL7Annotation = KVPair{
 	Key:   model.ResourceKey{Kind: v3.KindK8sService, Name: "service2", Namespace: "ns2"},
+	Value: nil,
+}
+
+var deleteExternalSvcWithL7Annotation = KVPair{
+	Key:   model.ResourceKey{Kind: v3.KindK8sService, Name: "service3", Namespace: "ns2"},
 	Value: nil,
 }
 
