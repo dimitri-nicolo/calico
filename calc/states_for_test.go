@@ -39,7 +39,8 @@ import (
 // might prefer to start with a simpler state instead.
 
 // empty is the base state, with nothing in the datastore or dataplane.
-var empty = NewState().withName("<empty>").withIPSet("tproxy-services", []string{})
+// Note: Incase of Tproxy mode, the ipset exists even when no updates are present, this is a one off case
+var empty = NewState().withName("<empty>").withIPSet(tproxyIpSetSelector, []string{})
 
 // initialisedStore builds on empty, adding in the ready flag and global config.
 var initialisedStore = empty.withKVUpdates(
