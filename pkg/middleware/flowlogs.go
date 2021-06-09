@@ -417,7 +417,7 @@ func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, terms
 // This method will take a look at the request parameters made to the /flowLogs endpoint and return the results from elastic.
 func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client) (interface{}, int, error) {
 	query := buildFlowLogsQuery(params)
-	index := esindex.GetFlowsIndex(params.ClusterName)
+	index := esindex.GetFlowLogsIndex(params.ClusterName)
 	result, err := lmaelastic.GetCompositeAggrFlows(
 		context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit)
 	if err != nil {
@@ -428,7 +428,7 @@ func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsPa
 
 func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	query := buildFlowLogsQuery(params)
-	index := esindex.GetFlowsIndex(params.ClusterName)
+	index := esindex.GetFlowLogsIndex(params.ClusterName)
 
 	// Convert the input format to the PIP format.
 	// TODO(rlb): We don't need both formats, and the PIP format has the more generically named "Resource" field rather

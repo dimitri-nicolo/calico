@@ -3,10 +3,11 @@ package servicegraph
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/tigera/es-proxy/pkg/httputils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -41,8 +42,11 @@ func NewServiceGraphHandler(
 }
 
 func NewServiceGraphHandlerWithBackend(ctx context.Context, backend ServiceGraphBackend, cfg *Config) http.Handler {
+	noServiceGroups := NewServiceGroups()
+	noServiceGroups.FinishMappings()
 	return &serviceGraph{
-		sgCache: NewServiceGraphCache(ctx, backend, cfg),
+		sgCache:         NewServiceGraphCache(ctx, backend, cfg),
+		noServiceGroups: noServiceGroups,
 	}
 }
 
@@ -50,6 +54,9 @@ func NewServiceGraphHandlerWithBackend(ctx context.Context, backend ServiceGraph
 type serviceGraph struct {
 	// Flows cache.
 	sgCache ServiceGraphCache
+
+	// An empty service groups helper.  Used to initially validate the format of the view data.
+	noServiceGroups ServiceGroups
 }
 
 // RequestData encapsulates data parsed from the request that is shared between the various components that construct
@@ -63,15 +70,9 @@ func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
 	// Extract the request specific data used to collate and filter the data.
-	// - The parsed service graph request
-	// - A bunch of client sets:
-	//   - App/Cluster:     Query host names
-	//   - User/Management: Determine which ES tables the user has access to
-	//   - User/Cluster:    Flow endpoint RBAC, Events
-	// - RBAC filter.
-	sgr, err := s.getServiceGraphRequest(req)
+	sgr, err := s.getServiceGraphRequest(w, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputils.EncodeError(w, err)
 		return
 	}
 
@@ -85,24 +86,26 @@ func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		ServiceGraphRequest: sgr,
 	}
 
-	// Get the filtered flow from the cache.
-	if f, err := s.sgCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// Process the request:
+	// - do a first parse of the view IDs (but with no service group info)
+	// - get the filtered service graph raw data
+	// - parse the view IDs, this time with service group info
+	// - Compile the graph
+	// - Write the response.
+	if _, err := ParseViewIDs(rd, s.noServiceGroups); err != nil {
+		httputils.EncodeError(w, err)
+		return
+	} else if f, err := s.sgCache.GetFilteredServiceGraphData(ctx, rd); err != nil {
+		httputils.EncodeError(w, err)
 		return
 	} else if pv, err := ParseViewIDs(rd, f.ServiceGroups); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httputils.EncodeError(w, err)
 		return
 	} else if sg, err := GetServiceGraphResponse(f, pv); err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		httputils.EncodeError(w, err)
 		return
 	} else {
-		// Write the response.
-		w.Header().Set("Content-Type", "application/json")
-		if err = json.NewEncoder(w).Encode(sg); err != nil {
-			log.WithError(err).Info("Encoding search results failed")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		httputils.Encode(w, sg)
 
 		log.Infof("ServicePort graph request took %s; returning %d nodes and %d edges",
 			time.Since(start), len(sg.Nodes), len(sg.Edges))
@@ -110,12 +113,13 @@ func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 // getServiceGraphRequest parses the request from the HTTP request body.
-func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGraphRequest, error) {
+func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.Request) (*v1.ServiceGraphRequest, error) {
 	// Extract the request from the body.
-	sgr := &v1.ServiceGraphRequest{}
-	if err := json.NewDecoder(req.Body).Decode(&sgr); err != nil {
-		return nil, fmt.Errorf("invalid request: %v", err)
+	var sgr v1.ServiceGraphRequest
+	if err := httputils.Decode(w, req, &sgr); err != nil {
+		return nil, err
 	}
+
 	if sgr.Timeout == 0 {
 		sgr.Timeout = defaultRequestTimeout
 	}
@@ -128,10 +132,10 @@ func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGra
 	allLayers := set.New()
 	for _, layer := range sgr.SelectedView.Layers {
 		if !IDValueRegex.MatchString(layer.Name) {
-			return nil, fmt.Errorf("invalid layer name: %s", layer.Name)
+			return nil, httputils.NewHttpStatusErrorBadRequest(fmt.Sprintf("Request body contains an invalid layer name: %s", layer.Name), nil)
 		}
 		if allLayers.Contains(layer.Name) {
-			return nil, fmt.Errorf("duplicate layer name specified: %s", layer.Name)
+			return nil, httputils.NewHttpStatusErrorBadRequest(fmt.Sprintf("Request body contains a duplicate layer name: %s", layer.Name), nil)
 		}
 		allLayers.Add(layer.Name)
 	}
@@ -139,13 +143,13 @@ func (s *serviceGraph) getServiceGraphRequest(req *http.Request) (*v1.ServiceGra
 	allAggrHostnames := set.New()
 	for _, selector := range sgr.SelectedView.HostAggregationSelectors {
 		if !IDValueRegex.MatchString(selector.Name) {
-			return nil, fmt.Errorf("invalid aggregated host name: %s", selector.Name)
+			return nil, httputils.NewHttpStatusErrorBadRequest(fmt.Sprintf("Request body contains an invalid aggregated host name: %s", selector.Name), nil)
 		}
 		if allAggrHostnames.Contains(selector.Name) {
-			return nil, fmt.Errorf("duplicate aggregated host name specified: %s", selector.Name)
+			return nil, httputils.NewHttpStatusErrorBadRequest(fmt.Sprintf("Request body contains a duplicate aggregated host name: %s", selector.Name), nil)
 		}
 		allAggrHostnames.Add(selector.Name)
 	}
 
-	return sgr, nil
+	return &sgr, nil
 }

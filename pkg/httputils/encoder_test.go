@@ -9,6 +9,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+
+	"github.com/olivere/elastic/v7"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -250,6 +254,45 @@ var _ = Describe("Test /httputils/encoder", func() {
 			Expect(params.SearchAfter).To(BeEquivalentTo("sa_val"))
 
 			httputils.Encode(w, params)
+		})
+	})
+
+	Context("Test that EncodeError encodes correctly", func() {
+		It("Should encode a Kubernetes Status", func() {
+			w := httptest.NewRecorder()
+			err := kerrors.NewBadRequest("some reason or other")
+			httputils.EncodeError(w, err)
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(strings.TrimSpace(w.Body.String())).To(Equal("some reason or other"))
+		})
+
+		It("Should encode an elastic error", func() {
+			w := httptest.NewRecorder()
+			err := &elastic.Error{
+				Status: http.StatusBadGateway,
+			}
+			httputils.EncodeError(w, err)
+			Expect(w.Code).To(Equal(http.StatusBadGateway))
+			Expect(strings.TrimSpace(w.Body.String())).To(Equal("elastic: Error 502 (Bad Gateway)"))
+		})
+
+		It("Should encode an HttpStatusError error", func() {
+			w := httptest.NewRecorder()
+			err := &httputils.HttpStatusError{
+				Status: http.StatusConflict,
+				Msg:    "something",
+			}
+			httputils.EncodeError(w, err)
+			Expect(w.Code).To(Equal(http.StatusConflict))
+			Expect(strings.TrimSpace(w.Body.String())).To(Equal("something"))
+		})
+
+		It("Should encode a generic error", func() {
+			w := httptest.NewRecorder()
+			err := errors.New("it's an error")
+			httputils.EncodeError(w, err)
+			Expect(w.Code).To(Equal(http.StatusInternalServerError))
+			Expect(strings.TrimSpace(w.Body.String())).To(Equal("it's an error"))
 		})
 	})
 })

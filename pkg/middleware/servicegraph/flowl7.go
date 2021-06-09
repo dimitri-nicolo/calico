@@ -95,10 +95,10 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		}()
 	}
 
-	index := elastic.GetL7FlowsIndex(cluster)
+	index := elastic.GetL7LogsIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr),
+		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr.From, tr.To),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: l7CompositeSources,
 		AggSumInfos:             l7AggregationSums,

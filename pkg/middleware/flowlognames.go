@@ -318,7 +318,7 @@ func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]string, error) {
 	// form query
 	query := buildNamesQuery(params)
-	index := esindex.GetFlowsIndex(params.ClusterName)
+	index := esindex.GetFlowLogsIndex(params.ClusterName)
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,

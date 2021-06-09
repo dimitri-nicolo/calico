@@ -80,7 +80,7 @@ var _ = Describe("Service graph cache tests", func() {
 
 		// Create a service graph with a mock backend.
 		ctx, cancel = context.WithCancel(context.Background())
-		backend = CreateMockBackendWithData(MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
+		backend = CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
 		cache = NewServiceGraphCache(ctx, backend, cfg)
 	})
 

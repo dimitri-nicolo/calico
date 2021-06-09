@@ -40,21 +40,21 @@ var _ = Describe("Service graph data tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			err = ioutil.WriteFile(actualDataFilename, formatted, os.ModePerm)
 			Expect(err).NotTo(HaveOccurred())
-		}
 
-		_, err := GinkgoWriter.Write([]byte(fmt.Sprintf(`
-********************************************************************************
+			_, err = GinkgoWriter.Write([]byte(fmt.Sprintf(`
+**********************************************************************************
   Comparison failed comparing service graph response to expected response data.
 
   Expected response is in test file: %s
   Actual response has been written out to file: %s
 
   This may be a valid failure if the response format has been modified. If so,
-  check the difference in the files and once verifired correct the file may be
+  check the difference in the files and once verified as correct the file may be
   renamed so that the test no long errors.
-********************************************************************************
+**********************************************************************************
 `, expectDataFilename, actualDataFilename)))
-		Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		actualData = nil
 		actualDataFilename = ""
@@ -185,7 +185,7 @@ var _ = Describe("Service graph data tests", func() {
 			}
 		},
 		Entry("No request parameters",
-			v1.ServiceGraphRequest{}, http.StatusOK, "001-no-req-parms", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			v1.ServiceGraphRequest{}, http.StatusOK, "001-no-req-parms", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Non-nil empty request parameters",
 			v1.ServiceGraphRequest{
@@ -197,14 +197,14 @@ var _ = Describe("Service graph data tests", func() {
 					FollowedIngress:          []v1.GraphNodeID{},
 					Layers:                   []v1.Layer{},
 				},
-			}, http.StatusOK, "001-no-req-parms", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "001-no-req-parms", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Focus on storefront",
 			v1.ServiceGraphRequest{
 				SelectedView: v1.GraphView{
 					Focus: []v1.GraphNodeID{"namespace/storefront"},
 				},
-			}, http.StatusOK, "002-focus-storefront", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "002-focus-storefront", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Focus and expand storefront",
 			v1.ServiceGraphRequest{
@@ -212,7 +212,7 @@ var _ = Describe("Service graph data tests", func() {
 					Focus:    []v1.GraphNodeID{"namespace/storefront"},
 					Expanded: []v1.GraphNodeID{"namespace/storefront"},
 				},
-			}, http.StatusOK, "003-focus-expand-storefront", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "003-focus-expand-storefront", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Focus and expand storefront, follow ingress",
 			v1.ServiceGraphRequest{
@@ -221,7 +221,7 @@ var _ = Describe("Service graph data tests", func() {
 					Expanded:        []v1.GraphNodeID{"namespace/storefront"},
 					FollowedIngress: []v1.GraphNodeID{"hosts/*"},
 				},
-			}, http.StatusOK, "004-focus-expand-storefront-follow-ingress", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "004-focus-expand-storefront-follow-ingress", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Focus and expand storefront, follow egress",
 			v1.ServiceGraphRequest{
@@ -230,14 +230,14 @@ var _ = Describe("Service graph data tests", func() {
 					Expanded:       []v1.GraphNodeID{"namespace/storefront"},
 					FollowedEgress: []v1.GraphNodeID{"hosts/*"},
 				},
-			}, http.StatusOK, "005-focus-expand-storefront-follow-egress", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "005-focus-expand-storefront-follow-egress", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Split ingress and egress",
 			v1.ServiceGraphRequest{
 				SelectedView: v1.GraphView{
 					SplitIngressEgress: true,
 				},
-			}, http.StatusOK, "006-split-ingress-egress", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "006-split-ingress-egress", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Follow connection direction",
 			v1.ServiceGraphRequest{
@@ -245,7 +245,7 @@ var _ = Describe("Service graph data tests", func() {
 					Focus:                     []v1.GraphNodeID{"namespace/tigera-elasticsearch"},
 					FollowConnectionDirection: true,
 				},
-			}, http.StatusOK, "007-elastic-follow", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "007-elastic-follow", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Follow connection direction with split ingress/egress",
 			v1.ServiceGraphRequest{
@@ -254,7 +254,7 @@ var _ = Describe("Service graph data tests", func() {
 					FollowConnectionDirection: true,
 					SplitIngressEgress:        true,
 				},
-			}, http.StatusOK, "008-elastic-follow-split", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "008-elastic-follow-split", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("Infrastructure layer, no focus",
 			v1.ServiceGraphRequest{
@@ -282,13 +282,13 @@ var _ = Describe("Service graph data tests", func() {
 						},
 					}},
 				},
-			}, http.StatusOK, "009-infra-layers-no-focus", MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "009-infra-layers-no-focus", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("No request parameters, no permissions",
-			v1.ServiceGraphRequest{}, http.StatusOK, "010-no-req-parms-no-permissions", MockRBACFilterIncludeNone{}, NewMockNameHelper(nil, nil),
+			v1.ServiceGraphRequest{}, http.StatusOK, "010-no-req-parms-no-permissions", RBACFilterIncludeNone{}, NewMockNameHelper(nil, nil),
 		),
 		Entry("No request parameters, aggregating nodes",
-			v1.ServiceGraphRequest{}, http.StatusOK, "011-no-req-parms-host-aggr", MockRBACFilterIncludeAll{},
+			v1.ServiceGraphRequest{}, http.StatusOK, "011-no-req-parms-host-aggr", RBACFilterIncludeAll{},
 			NewMockNameHelper(map[string]string{
 				"rob-bz-q5fq-kadm-infra-0": "infra",
 				"rob-bz-q5fq-kadm-node-1":  "worker",
@@ -300,7 +300,7 @@ var _ = Describe("Service graph data tests", func() {
 				SelectedView: v1.GraphView{
 					Expanded: []v1.GraphNodeID{"hosts/worker"},
 				},
-			}, http.StatusOK, "012-no-req-parms-host-aggr-expand", MockRBACFilterIncludeAll{},
+			}, http.StatusOK, "012-no-req-parms-host-aggr-expand", RBACFilterIncludeAll{},
 			NewMockNameHelper(map[string]string{
 				"rob-bz-q5fq-kadm-infra-0": "infra",
 				"rob-bz-q5fq-kadm-node-1":  "worker",
@@ -312,7 +312,7 @@ var _ = Describe("Service graph data tests", func() {
 	DescribeTable("badly formatted requests",
 		func(sgr string, code int, resp string) {
 			// Create a mock backend.
-			mb := CreateMockBackendWithData(MockRBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
+			mb := CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
 
 			// Create a service graph.
 			ctx, cancel := context.WithCancel(context.Background())
@@ -335,7 +335,7 @@ var _ = Describe("Service graph data tests", func() {
 			writer := httptest.NewRecorder()
 			sg.ServeHTTP(writer, req)
 			Expect(writer.Code).To(Equal(code))
-			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp))
+			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp), writer.Body.String())
 		},
 		Entry("bad focus node ID",
 			`{
@@ -346,7 +346,7 @@ var _ = Describe("Service graph data tests", func() {
 				"selected_view": {
 					"focus": ["foobar/baz"]
 				}
-			}`, http.StatusBadRequest, "invalid focus node: unexpected format of node ID foobar/baz",
+			}`, http.StatusBadRequest, "Request body contains an invalid focus node: unexpected format of node ID foobar/baz",
 		),
 		Entry("bad expanded node ID",
 			`{
@@ -357,7 +357,7 @@ var _ = Describe("Service graph data tests", func() {
 				"selected_view": {
 					"expanded": ["namespace/abc/def"]
 				}
-			}`, http.StatusBadRequest, "invalid expanded node: unexpected format of node ID namespace/abc/def",
+			}`, http.StatusBadRequest, "Request body contains an invalid expanded node: unexpected format of node ID namespace/abc/def",
 		),
 		Entry("bad followed_ingress node ID",
 			`{
@@ -368,7 +368,7 @@ var _ = Describe("Service graph data tests", func() {
 				"selected_view": {
 					"followed_ingress": ["hosts/%Rlsdf!"]
 				}
-			}`, http.StatusBadRequest, "invalid followed_ingress node: unexpected format of node ID hosts/%Rlsdf!: badly formatted segment",
+			}`, http.StatusBadRequest, "Request body contains an invalid followed_ingress node: unexpected format of node ID hosts/%Rlsdf!: badly formatted segment",
 		),
 		Entry("bad followed_egress node ID",
 			`{
@@ -379,7 +379,7 @@ var _ = Describe("Service graph data tests", func() {
 				"selected_view": {
 					"followed_egress": ["port/tcp/thing;hosts/*"]
 				}
-			}`, http.StatusBadRequest, "invalid followed_egress node: unexpected format of node ID port/tcp/thing;hosts/*: port is not a number",
+			}`, http.StatusBadRequest, "Request body contains an invalid followed_egress node: unexpected format of node ID port/tcp/thing;hosts/*: port is not a number",
 		),
 		Entry("bad layer node ID",
 			`{
@@ -393,7 +393,7 @@ var _ = Describe("Service graph data tests", func() {
 						"nodes": ["svc"]
 					}]
 				}
-			}`, http.StatusBadRequest, "invalid layer node: unexpected format of node ID svc",
+			}`, http.StatusBadRequest, "Request body contains an invalid layer node: unexpected format of node ID svc",
 		),
 		Entry("bad layer name",
 			`{
@@ -407,7 +407,7 @@ var _ = Describe("Service graph data tests", func() {
 						"nodes": ["namespace/n"]
 					}]
 				}
-			}`, http.StatusBadRequest, "invalid layer name: test@",
+			}`, http.StatusBadRequest, "Request body contains an invalid layer name: test@",
 		),
 		Entry("duplicate layer name",
 			`{
@@ -424,7 +424,7 @@ var _ = Describe("Service graph data tests", func() {
 						"nodes": ["namespace/n2"]
 					}]
 				}
-			}`, http.StatusBadRequest, "duplicate layer name specified: test",
+			}`, http.StatusBadRequest, "Request body contains a duplicate layer name: test",
 		),
 		Entry("bad aggregated hosts name",
 			`{
@@ -438,7 +438,7 @@ var _ = Describe("Service graph data tests", func() {
 						"selector": "all()"
 					}]
 				}
-			}`, http.StatusBadRequest, "invalid aggregated host name: test@",
+			}`, http.StatusBadRequest, "Request body contains an invalid aggregated host name: test@",
 		),
 		Entry("duplicate aggregated host names",
 			`{
@@ -455,7 +455,7 @@ var _ = Describe("Service graph data tests", func() {
 						"selector": "all()"
 					}]
 				}
-			}`, http.StatusBadRequest, "duplicate aggregated host name specified: test",
+			}`, http.StatusBadRequest, "Request body contains a duplicate aggregated host name: test",
 		),
 		Entry("invalid host aggregation selector",
 			`{
@@ -469,7 +469,7 @@ var _ = Describe("Service graph data tests", func() {
 						"selector": "foobar()"
 					}]
 				}
-			}`, http.StatusBadRequest, "invalid request: invalid selector: foobar()",
+			}`, http.StatusBadRequest, "Request body contains an invalid selector: foobar()",
 		),
 		Entry("invalid json syntax",
 			`{
@@ -477,7 +477,7 @@ var _ = Describe("Service graph data tests", func() {
 					"from": "now-15m",
 					"to": "now"
 				},
-			}`, http.StatusBadRequest, "invalid request: invalid character '}' looking for beginning of object key string",
+			}`, http.StatusBadRequest, "Request body contains badly-formed JSON (at position 74)",
 		),
 		Entry("reversed relative time range",
 			`{
@@ -485,7 +485,7 @@ var _ = Describe("Service graph data tests", func() {
 					"from": "now",
 					"to": "now-15m"
 				}
-			}`, http.StatusBadRequest, "invalid request: invalid time range specified: from (now) is after to (now-15m)",
+			}`, http.StatusBadRequest, "Request body contains an invalid time range: from (now) is after to (now-15m)",
 		),
 		Entry("reversed absolute time range",
 			`{
@@ -493,7 +493,7 @@ var _ = Describe("Service graph data tests", func() {
 					"from": "2021-05-30T21:38:10Z",
 					"to": "2021-05-30T21:23:10Z"
 				}
-			}`, http.StatusBadRequest, "invalid request: invalid time range specified: from (2021-05-30T21:38:10Z) is after to (2021-05-30T21:23:10Z)",
+			}`, http.StatusBadRequest, "Request body contains an invalid time range: from (2021-05-30T21:38:10Z) is after to (2021-05-30T21:23:10Z)",
 		),
 		Entry("mix relative time range",
 			`{
@@ -501,7 +501,7 @@ var _ = Describe("Service graph data tests", func() {
 					"from": "now",
 					"to": "2021-05-30T21:38:10Z"
 				}
-			}`, http.StatusBadRequest, "invalid request: time range values must either both be explicit times or both be relative to now",
+			}`, http.StatusBadRequest, "Request body contains an invalid time range: values must either both be explicit times or both be relative to now",
 		),
 		Entry("bad time range from value",
 			`{
@@ -509,7 +509,7 @@ var _ = Describe("Service graph data tests", func() {
 					"from": "nox",
 					"to": "2021-05-30T21:38:10Z"
 				}
-			}`, http.StatusBadRequest, "invalid request: time range from value is invalid: nox",
+			}`, http.StatusBadRequest, "Request body contains an invalid value for the time range 'from' field: nox",
 		),
 	)
 })

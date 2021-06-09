@@ -2,7 +2,6 @@
 package middleware
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -84,15 +83,12 @@ func RequestToResource(h http.Handler) http.Handler {
 func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract the cluster name from the request body.
-		// Note: Decode maintains the request body's data to pass on to the next handler.
-		var params SearchParams
-		if err := httputils.Decode(w, r, &params); err != nil {
-			var mr *httputils.HttpStatusError
-			if errors.As(err, &mr) {
-				http.Error(w, mr.Msg, mr.Status)
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
+		// Note: DecodeIgnoreUnknownFields maintains the request body's data to pass on to the next handler.
+		var params = struct {
+			ClusterName string `json:"cluster,omitempty"`
+		}{}
+		if err := httputils.DecodeIgnoreUnknownFields(w, r, &params); err != nil {
+			httputils.EncodeError(w, err)
 			return
 		}
 		clusterName := params.ClusterName

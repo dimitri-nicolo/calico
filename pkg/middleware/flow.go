@@ -52,7 +52,7 @@ type flowRequestParams struct {
 }
 
 func (req flowRequestParams) clusterIndex() string {
-	return esindex.GetFlowsIndex(req.clusterName)
+	return esindex.GetFlowLogsIndex(req.clusterName)
 }
 
 // parseAndValidateFlowRequest parses the fields in the request query, validating that required parameters are set and or the
