@@ -267,15 +267,28 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	if (ct_result_rc(ctx.state->ct_result.rc) == CALI_CT_MID_FLOW_MISS) {
 		if (CALI_F_TO_HOST) {
-			/* Mid-flow miss: let iptables handle it in case it's an existing flow
-			 * in the Linux conntrack table. We can't apply policy or DNAT because
-			 * it's too late in the flow.  iptables will drop if the flow is not
-			 * known.
-			 */
-			CALI_DEBUG("CT mid-flow miss; fall through to iptables.\n");
-			ctx.fwd.mark = CALI_SKB_MARK_FALLTHROUGH;
-			fwd_fib_set(&ctx.fwd, false);
-			goto finalize;
+			/* Mid-flow miss */
+			if (EGRESS_GATEWAY) {
+				// On the return path of an egress gateway flow, on egress from the
+				// egress gateway, and when the egress gateway is on a different
+				// node than the client, we'll get a CT miss here for the original
+				// (unencapped) client pod -> destination flow.  We want to create
+				// that CT state and mark it as whitelisted on both sides, because a
+				// mid-flow TCP packet will not be allowed on the FROM_HOST side if
+				// it isn't already whitelisted.
+				CALI_DEBUG("CT mid-flow miss from egress gateway\n");
+				ctx.state->ct_result.rc = CALI_CT_NEW | CALI_CT_ALLOW_FROM_SIDE;
+			} else {
+				/* Other mid-flow miss cases: let iptables handle it in case it's an
+				 * existing flow in the Linux conntrack table. We can't apply policy
+				 * or DNAT because it's too late in the flow.  iptables will drop if
+				 * the flow is not known.
+				 */
+				CALI_DEBUG("CT mid-flow miss; fall through to iptables.\n");
+				ctx.fwd.mark = CALI_SKB_MARK_FALLTHROUGH;
+				fwd_fib_set(&ctx.fwd, false);
+				goto finalize;
+			}
 		} else {
 			if (CALI_F_HEP) {
 				// TODO-HEP for data interfaces, this should allow, for active HEPs it should drop or apply policy.
@@ -741,12 +754,16 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		ct_ctx_nat.dport = state->post_nat_dport;
 		ct_ctx_nat.tun_ip = state->tun_ip;
 		ct_ctx_nat.type = CALI_CT_TYPE_NORMAL;
-		ct_ctx_nat.allow_return = false;
+		ct_ctx_nat.allow_from_host_side = false;
 		if (state->flags & CALI_ST_NAT_OUTGOING) {
 			ct_ctx_nat.flags |= CALI_CT_FLAG_NAT_OUT;
 		}
 		if (CALI_F_FROM_WEP && state->flags & CALI_ST_SKIP_FIB) {
 			ct_ctx_nat.flags |= CALI_CT_FLAG_SKIP_FIB;
+		}
+		if (state->ct_result.rc & CALI_CT_ALLOW_FROM_SIDE) {
+			// See comment above where CALI_CT_ALLOW_FROM_SIDE is set.
+			ct_ctx_nat.allow_from_host_side = true;
 		}
 
 		// Propagate the trusted DNS flag when creating conntrack entry.  Note,
@@ -838,7 +855,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 						ct_ctx_nat.flags |= CALI_CT_FLAG_NP_FWD;
 					}
 
-					ct_ctx_nat.allow_return = true;
+					ct_ctx_nat.allow_from_host_side = true;
 					ct_ctx_nat.tun_ip = rt->next_hop;
 					state->ip_dst = rt->next_hop;
 				} else if (cali_rt_is_workload(rt) && state->ip_dst != state->post_nat_ip_dst) {

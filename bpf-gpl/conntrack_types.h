@@ -133,7 +133,7 @@ struct ct_create_ctx {
 			* initial CT entry for the tunneled traffic. */
 	__u8 flags;
 	enum cali_ct_type type;
-	bool allow_return;
+	bool allow_from_host_side;
 };
 
 CALI_MAP(cali_v4_ct, 3,
@@ -179,6 +179,7 @@ enum calico_ct_result_type {
 #define CALI_CT_RELATED         0x100
 #define CALI_CT_RPF_FAILED      0x200
 #define CALI_CT_TUN_SRC_CHANGED 0x400
+#define CALI_CT_ALLOW_FROM_SIDE 0x800
 
 #define ct_result_rc(rc)		((rc) & 0xff)
 #define ct_result_flags(rc)		((rc) & ~0xff)

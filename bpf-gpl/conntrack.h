@@ -184,29 +184,23 @@ create:
 		src_to_dst->whitelisted = 1;
 		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
 
-		// We need to whitelist the FROM_HOST side when CT state for the original
-		// client pod -> destination flow is created on egress from the egress
-		// gateway on the return path.  This happens when the egress gateway is on
-		// a different node than the client.  The packet in hand at this point is
-		// mid-flow TCP and would be considered invalid if the FROM_HOST side of
-		// the CT state was not already whitelisted.
-		if (EGRESS_GATEWAY) {
-			CALI_DEBUG("CT-ALL Whitelisted dest side - egress gateway return flow\n");
+		if (ct_ctx->allow_from_host_side) {
+			CALI_DEBUG("CT-ALL Whitelisted dest side - from WEP\n");
 			dst_to_src->whitelisted = 1;
 		}
 	} else if (CALI_F_FROM_HEP) {
 		/* src is the from the HEP, policy whitelisted this side */
 		src_to_dst->whitelisted = 1;
 
-		if (ct_ctx->allow_return) {
+		if (ct_ctx->allow_from_host_side) {
 			/* When we do NAT and forward through the tunnel, we go through
 			 * a single policy, what we forward we also accept back,
 			 * whitelist both sides.
 			 */
 			dst_to_src->whitelisted = 1;
 		}
-		CALI_DEBUG("CT-ALL Whitelisted source side - from HEP tun allow_return=%d\n",
-				ct_ctx->allow_return);
+		CALI_DEBUG("CT-ALL Whitelisted source side - from HEP tun allow_from_host_side=%d\n",
+				ct_ctx->allow_from_host_side);
 	} else if (CALI_F_FROM_HOST) {
 		/* dst is to the EP, policy whitelisted this side */
 		dst_to_src->whitelisted = 1;
@@ -453,17 +447,6 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 			CALI_DEBUG("BPF CT Miss but Linux CT entry not signalled\n");
 			result.rc = CALI_CT_MID_FLOW_MISS;
 			return result;
-		}
-		if (CALI_F_TO_HOST && EGRESS_GATEWAY) {
-			// On the return path of an egress gateway flow, on egress from
-			// the egress gateway, and when the egress gateway is on a
-			// different node than the client, we'll get a CT miss here for
-			// the original (unencapped) client pod -> destination flow.  We
-			// want to create that CT state, and normally a mid-flow TCP
-			// packet is not allowed to do that.  Jumping to out_lookup_fail
-			// means returning CT_NEW, and then the CT state will be created.
-			CALI_DEBUG("BPF CT Miss but from egress gateway\n");
-			goto out_lookup_fail;
 		}
 		if (CALI_F_TO_HOST && proto_orig == IPPROTO_TCP) {
 			// Miss for a mid-flow TCP packet towards the host.  This may be part of a
