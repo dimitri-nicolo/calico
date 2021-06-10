@@ -6,7 +6,8 @@ import (
 	"net/http"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/tigera/es-proxy/pkg/httputils"
+
+	"github.com/tigera/lma/pkg/httputils"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )

@@ -9,8 +9,8 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/lma/pkg/k8s"
 	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/k8s"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )

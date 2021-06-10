@@ -11,9 +11,9 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/tigera/lma/pkg/httputils"
 
-	"github.com/tigera/es-proxy/pkg/httputils"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 var (

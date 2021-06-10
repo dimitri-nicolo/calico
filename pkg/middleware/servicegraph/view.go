@@ -2,9 +2,9 @@
 package servicegraph
 
 import (
-	"github.com/tigera/es-proxy/pkg/httputils"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/lma/pkg/httputils"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )

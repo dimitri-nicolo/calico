@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tigera/es-proxy/pkg/httputils"
-
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
 
 	"github.com/projectcalico/libcalico-go/lib/set"

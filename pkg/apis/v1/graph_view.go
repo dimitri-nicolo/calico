@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tigera/es-proxy/pkg/httputils"
+	"github.com/tigera/lma/pkg/httputils"
 
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
