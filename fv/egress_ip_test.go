@@ -60,7 +60,7 @@ func (ov Overlay) String() string {
 	return "invalid value"
 }
 
-var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra        infrastructure.DatastoreInfra
 		felixes      []*infrastructure.Felix
