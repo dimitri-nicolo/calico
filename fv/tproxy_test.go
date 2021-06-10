@@ -274,6 +274,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
 				createService(v1Svc, client)
+
+				By("assert that ipaddress, port of service propagated to ipset ")
+				assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 			})
 
 			It("should have connectivity from all workloads via ClusterIP", func() {

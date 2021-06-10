@@ -557,6 +557,7 @@ func describeAsyncTests(baseTests []StateList, l license) {
 					conf.IPSecMode = "PSK"
 					conf.IPSecPSKFile = "/proc/1/cmdline"
 					conf.IPSecIKEAlgorithm = "somealgo"
+					conf.TPROXYMode = "Enabled"
 					conf.IPSecESPAlgorithm = "somealgo"
 					conf.SetUseNodeResourceUpdates(test.UsesNodeResources())
 					conf.RouteSource = test.RouteSource()
