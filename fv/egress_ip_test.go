@@ -196,6 +196,11 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		ippool.Spec.NATOutgoing = false
 		ippool.Spec.BlockSize = 29
 		ippool.Spec.NodeSelector = "!all()"
+		if overlay == OV_VXLAN {
+			ippool.Spec.VXLANMode = api.VXLANModeAlways
+		} else if overlay == OV_IPIP {
+			ippool.Spec.IPIPMode = api.IPIPModeAlways
+		}
 		_, err = client.IPPools().Create(context.Background(), ippool, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
