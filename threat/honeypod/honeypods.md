@@ -61,7 +61,7 @@ Use one of the following sample honeypods manifests or customize them for your i
 
 - **IP Enumeration** 
 
-  Expose an empty pod that can only be reached via PodIP, allowing you to see when the attacker is probing the pod network:
+  Expose an empty pod that can only be reached via PodIP; this allows you to see when the attacker is probing the pod network:
 
 ```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/ip-enum.yaml" | absolute_url }} 
@@ -122,7 +122,7 @@ As an example, to trigger an alert for `honeypod.ip.enum`, first get the Pod IP 
 kubectl get pod tigera-internal-app-28c85 -n tigera-internal -ojsonpath='{.status.podIP}'
 ```
 
-Then run a `busybox` container with the command `ping` on the honeypod IP:
+Then, run a `busybox` container with the command `ping` on the honeypod IP:
 
 ```bash
 kubectl run --restart=Never --image busybox ping-runner -- ping -c1 <honeypod IP>
@@ -130,7 +130,7 @@ kubectl run --restart=Never --image busybox ping-runner -- ping -c1 <honeypod IP
 
 If the ICMP request reaches the honeypod, an alert will be generated within 5 minutes.
 
-Once you have verified that the honeypods are installed and working, it is recommended to remove the pull secret from the namespace:
+After you have verified that the honeypods are installed and working, a best practice is to remove the pull secret from the namespace:
 
 ```bash
 kubectl delete secret tigera-pull-secret -n tigera-internal
