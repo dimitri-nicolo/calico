@@ -80,16 +80,13 @@ and client are on different nodes:
 - CT miss is expected because the unencapped flow has not previously
   been seen here.
 - This would normally be mid-flow TCP, handled by drop to iptables,
-  but in the `EGRESS_GATEWAY` case we handle as `CT_NEW`.
-- When creating CT state at EGRESS_GATEWAY, whitelist both sides,
-  because otherwise a mid-flow TCP packet will be considered invalid
-  on the `FROM_HOST` side (at the following host or tunnel interface
-  leaving the gateway node).
+  but in the `EGRESS_GATEWAY` case we handle as `CT_NEW` and whitelist
+  both sides, because otherwise a mid-flow TCP packet will be
+  considered invalid on the `FROM_HOST` side (at the following host or
+  tunnel interface leaving the gateway node).
 - Skip tc.c RPF check, because we expect source IP to differ from the
   egress gateway pod's own IP, on the return path.
 - Set `SKIP_RPF` mark when dropping to iptables, for same reason.
-- ??? Does it mean we're incorrectly skipping host interface policy on
-  the outbound path, after egress from on egress gateway?
 
 [4] On the return path of an egress gateway flow with client and
 gateway on different nodes, TO_HOST from a cluster encap device:
