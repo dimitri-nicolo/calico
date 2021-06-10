@@ -74,10 +74,6 @@ the cluster:
   will take effect to route packet via egress.calico device.
 - Mark CT state as egress flow so that we do this for subsequent
   packets in a flow as well as for the first.
-- When creating CT state for an egress gateway flow, whitelist both
-  outwards and return paths.  This is because we don't have a TC
-  program on the egress.calico device, and so won't see the same CT
-  state again, on that node, with `CALI_F_FROM_HOST`.
 
 [2] On the return path, on egress from an egress gateway, when gateway
 and client are on different nodes:
