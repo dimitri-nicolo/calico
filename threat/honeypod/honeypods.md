@@ -57,16 +57,17 @@ kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<
 Use one of the following sample honeypods manifests or customize them for your implementation. All images include a minimal container that runs or mimics a running application. The images provided have been hardened with built-in protections to reduce the risk of them being compromised.
 
 > **Note**: When modifying the provided honeypod manifests, be sure to update the [globalalert]({{site.baseurl}}/reference/resources/globalalert) section in the manifest to match your changes. Ensure the alert name has the prefix `honeypod`, for example `honeypod.new.alert`.
+{: .alert .alert-info} 
 
 - **IP Enumeration** 
 
-  Expose a empty pod that can only be reached via PodIP, we can see when the attacker is probing the pod network:
+  Expose an empty pod that can only be reached via PodIP; this allows you to see when the attacker is probing the pod network:
 
 ```bash
 kubectl apply -f {{ "/manifests/threatdef/honeypod/ip-enum.yaml" | absolute_url }} 
 ```
 
-- **Exposed service (nginx)**
+- **Expose an nginx service**
 
   Expose a nginx service that serves a generic page. The pod can be discovered via ClusterIP or DNS lookup. An unreachable service `tigera-dashboard-internal-service` is created to entice the attacker to find and reach, `tigera-dashboard-internal-debug`:
 
@@ -115,7 +116,21 @@ honeypod.port.scan     2020-10-22T03:44:31Z
 honeypod.vuln.svc      2020-10-22T03:44:40Z
 ```
 
-Once you have verified that the honeypods are installed and working, it is recommended to remove the pull secret from the namespace:
+As an example, to trigger an alert for `honeypod.ip.enum`, first get the Pod IP for one of the honeypods:
+
+```bash
+kubectl get pod tigera-internal-app-28c85 -n tigera-internal -ojsonpath='{.status.podIP}'
+```
+
+Then, run a `busybox` container with the command `ping` on the honeypod IP:
+
+```bash
+kubectl run --restart=Never --image busybox ping-runner -- ping -c1 <honeypod IP>
+```
+
+If the ICMP request reaches the honeypod, an alert will be generated within 5 minutes.
+
+After you have verified that the honeypods are installed and working, a best practice is to remove the pull secret from the namespace:
 
 ```bash
 kubectl delete secret tigera-pull-secret -n tigera-internal
