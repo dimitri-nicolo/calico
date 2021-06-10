@@ -766,18 +766,6 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		ct_tcp_entry_update(tcp_header, src_to_dst, dst_to_src);
 	}
 
-	// This is for an egress gateway flow with client and gateway on the same node.
-	// On the return path, on egress from the egress gateway, we get a CT hit for the
-	// original (unencapped) client pod -> destination flow, but src_to_dst->ifindex
-	// for that CT state is still CT_INVALID_IFINDEX because we didn't hit that CT
-	// state in a FROM_HOST context on the outbound path.  Therefore, if we continued
-	// through the code just below, we'd set the CALI_CT_RPF_FAILED flag.  We don't
-	// want that, so skip over the following section of code.
-	if (EGRESS_GATEWAY) {
-		CALI_CT_DEBUG("Skip RPF processing for egress gateway\n");
-		goto skip_rpf;
-	}
-
 	__u32 ifindex = skb_ingress_ifindex(tc_ctx->skb);
 
 	if (src_to_dst->ifindex != ifindex) {
@@ -821,7 +809,6 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 		result.ifindex_fwd = dst_to_src->ifindex;
 	}
 
-skip_rpf:
 	if ((CALI_F_INGRESS && CALI_F_TUNNEL) || !skb_seen(tc_ctx->skb)) {
 		/* Account for the src->dst leg if we haven't seen the packet yet.
 		 * Since when the traffic is tunneled, BPF program on the host

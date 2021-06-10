@@ -129,9 +129,6 @@ Expected processing, same nodes:
 
 [3] On the return path, on egress from an egress gateway, when gateway
 and client are on the same node:
-- We get CT hit, but `src_to_dst->ifindex` hasn't been set yet; skip
-  conntrack.h RPF checking passage to avoid setting
-  `CALI_CT_RPF_FAILED` flag.
 - Skip tc.c RPF check, because we expect source IP to differ from the
   egress gateway pod's own IP, on the return path.
 - Set `SKIP_RPF` mark when dropping to iptables, for same reason.
