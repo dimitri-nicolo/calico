@@ -85,10 +85,11 @@ func (w *Workload) Stop() {
 }
 
 func RunWithMTU(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu int) (w *Workload) {
-	w, err := run(c, name, profile, ip, ports, protocol, mtu)
+	w = New(c, name, profile, ip, ports, protocol, mtu)
+	err := w.Start()
 	if err != nil {
 		log.WithError(err).Info("Starting workload failed, retrying")
-		w, err = run(c, name, profile, ip, ports, protocol, mtu)
+		err = w.Start()
 	}
 	Expect(err).NotTo(HaveOccurred())
 
@@ -97,6 +98,18 @@ func RunWithMTU(c *infrastructure.Felix, name, profile, ip, ports, protocol stri
 
 func Run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w *Workload) {
 	return RunWithMTU(c, name, profile, ip, ports, protocol, defaultMTU)
+}
+
+func RunEgressGateway(c *infrastructure.Felix, name, profile, ip string) (w *Workload) {
+	w = New(c, name, profile, ip, "egress-gateway", "any", defaultMTU)
+	err := w.Start()
+	if err != nil {
+		log.WithError(err).Info("Starting workload failed, retrying")
+		err = w.Start()
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	return w
 }
 
 func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu ...int) *Workload {
@@ -143,11 +156,6 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu
 		WorkloadEndpoint:   wep,
 		MTU:                specifiedMTU,
 	}
-}
-
-func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu int) (w *Workload, err error) {
-	w = New(c, name, profile, ip, ports, protocol, mtu)
-	return w, w.Start()
 }
 
 func (w *Workload) Start() error {

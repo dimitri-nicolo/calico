@@ -74,8 +74,6 @@ func main() {
 	}
 	panicIfError(err)
 
-	ports := strings.Split(portsStr, ",")
-
 	var namespace ns.NetNS
 	if nsPath != "" {
 		namespace, err = ns.GetNS(nsPath)
@@ -394,8 +392,53 @@ func main() {
 			}
 		}
 
+		if portsStr == "egress-gateway" {
+			// Set up as an egress gateway.  The logic here should be the same
+			// as in the real egress-gateway image here:
+			// https://github.com/tigera/egress-gateway/blob/master/install-gateway.sh.
+			iptables := "iptables"
+			vni := "4097"
+			vxlanPort := "4790"
+			mac := "a2:2a"
+			for _, byteStr := range strings.Split(ipAddress, ".") {
+				b, err := strconv.Atoi(byteStr)
+				panicIfError(err)
+				mac += fmt.Sprintf(":%02x", b)
+			}
+
+			// Configure iptables MASQUERADE rule.
+			if err := utils.RunCommand(iptables, "-t", "nat", "-A", "POSTROUTING", "-j", "MASQUERADE"); err != nil {
+				return fmt.Errorf("failed to configure iptables MASQUERADE rule: %v", err)
+			}
+
+			// Configure VXLAN tunnel device.
+			if err := utils.RunCommand("ip", "link", "add", "vxlan0", "type", "vxlan", "id", vni, "dstport", vxlanPort, "dev", "eth0"); err != nil {
+				return fmt.Errorf("failed to create VXLAN egress device: %v", err)
+			}
+			if err := utils.RunCommand("ip", "link", "set", "vxlan0", "address", mac); err != nil {
+				return fmt.Errorf("failed to set MAC %v for VXLAN egress device: %v", mac, err)
+			}
+			if err := utils.RunCommand("ip", "link", "set", "vxlan0", "up"); err != nil {
+				return fmt.Errorf("failed to set VXLAN egress device up: %v", err)
+			}
+
+			// Configure forwarding and RPF.
+			if err := utils.RunCommand("sh", "-c", "echo 1 > /proc/sys/net/ipv4/ip_forward"); err != nil {
+				return fmt.Errorf("failed echo 1 > /proc/sys/net/ipv4/ip_forward: %v", err)
+			}
+			if err := utils.RunCommand("sh", "-c", "echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter"); err != nil {
+				return fmt.Errorf("failed echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter: %v", err)
+			}
+			if err := utils.RunCommand("sh", "-c", "echo 0 > /proc/sys/net/ipv4/conf/vxlan0/rp_filter"); err != nil {
+				return fmt.Errorf("failed echo 0 > /proc/sys/net/ipv4/conf/vxlan0/rp_filter: %v", err)
+			}
+
+			// Now sit waiting for traffic to forward.
+			goto idle
+		}
+
 		// Listen on each port.
-		for _, port := range ports {
+		for _, port := range strings.Split(portsStr, ",") {
 			var myAddr string
 			if strings.Contains(ipAddress, ":") {
 				myAddr = "[" + ipAddress + "]"
@@ -461,6 +504,7 @@ func main() {
 				}()
 			}
 		}
+	idle:
 		for {
 			time.Sleep(10 * time.Second)
 		}
