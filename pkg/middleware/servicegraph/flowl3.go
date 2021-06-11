@@ -10,6 +10,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
@@ -203,7 +204,7 @@ type L3FlowData struct {
 // - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
 //   when an endpoint is subjected to a port scan.
 // - Stats for TCP and Processes are aggregated for each flow.
-func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
+func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var fs []L3Flow

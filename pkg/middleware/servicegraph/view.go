@@ -84,13 +84,13 @@ func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 		SplitIngressEgress:        rd.ServiceGraphRequest.SelectedView.SplitIngressEgress,
 	}
 	var err error
-	if p.Focus, err = parseNodes("focus", rd.ServiceGraphRequest.SelectedView.Focus, sgs); err != nil {
+	if p.Focus, err = parseNodes(rd.ServiceGraphRequest.SelectedView.Focus, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid focus node: "+err.Error(), err)
-	} else if p.Expanded, err = parseNodes("expanded", rd.ServiceGraphRequest.SelectedView.Expanded, sgs); err != nil {
+	} else if p.Expanded, err = parseNodes(rd.ServiceGraphRequest.SelectedView.Expanded, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid expanded node: "+err.Error(), err)
-	} else if p.FollowedEgress, err = parseNodes("followed_egress", rd.ServiceGraphRequest.SelectedView.FollowedEgress, sgs); err != nil {
+	} else if p.FollowedEgress, err = parseNodes(rd.ServiceGraphRequest.SelectedView.FollowedEgress, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid followed_egress node: "+err.Error(), err)
-	} else if p.FollowedIngress, err = parseNodes("followed_ingress", rd.ServiceGraphRequest.SelectedView.FollowedIngress, sgs); err != nil {
+	} else if p.FollowedIngress, err = parseNodes(rd.ServiceGraphRequest.SelectedView.FollowedIngress, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid followed_ingress node: "+err.Error(), err)
 	} else if p.Layers, err = parseLayers(rd.ServiceGraphRequest.SelectedView.Layers, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid layer node: "+err.Error(), err)
@@ -99,7 +99,7 @@ func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 	return p, nil
 }
 
-func parseNodes(fieldname string, ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err error) {
+func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err error) {
 	pn = newParsedNodes()
 	for _, id := range ids {
 		log.Debugf("Processing ID in view: %s", id)

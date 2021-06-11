@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
@@ -63,7 +64,7 @@ var (
 )
 
 // GetDNSClientData queries and returns the set of DNS logs.
-func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]DNSLog, error) {
+func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]DNSLog, error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var logs []DNSLog

@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 
 	. "github.com/onsi/ginkgo"
@@ -97,19 +99,19 @@ var _ = Describe("Service graph cache tests", func() {
 
 		// Create two equivalent relative times (different actual times), and another different time.
 		now1 := time.Now().UTC()
-		tr1 := v1.TimeRange{
+		tr1 := lmav1.TimeRange{
 			From: now1.Add(-15 * time.Minute),
 			To:   now1,
 			Now:  &now1,
 		}
 		now2 := time.Now().UTC().Add(5 * time.Second)
-		tr2 := v1.TimeRange{
+		tr2 := lmav1.TimeRange{
 			From: now2.Add(-15 * time.Minute),
 			To:   now2,
 			Now:  &now2,
 		}
 		now3 := time.Now().UTC().Add(2 * time.Second)
-		tr3 := v1.TimeRange{
+		tr3 := lmav1.TimeRange{
 			From: now3.Add(-15 * time.Minute),
 			To:   now3.Add(-10 * time.Minute),
 			Now:  &now3,
@@ -198,7 +200,7 @@ var _ = Describe("Service graph cache tests", func() {
 		Expect(backend.GetNumCallsEvents()).To(Equal(10))
 
 		By("Querying a fix time interval")
-		trNonRelative := v1.TimeRange{
+		trNonRelative := lmav1.TimeRange{
 			From: now3.Add(-10 * time.Hour),
 			To:   now3.Add(-5 * time.Hour),
 		}
@@ -245,7 +247,7 @@ var _ = Describe("Service graph cache tests", func() {
 
 		By("Requesting more than the max number of relative times")
 		for i := 0; i < 50; i++ {
-			tri := v1.TimeRange{
+			tri := lmav1.TimeRange{
 				From: now3.Add(time.Duration(-i*6) * time.Minute),
 				To:   now3.Add(time.Duration(-i*5) * time.Minute),
 				Now:  &now3,

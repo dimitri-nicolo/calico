@@ -18,9 +18,9 @@ import (
 	"github.com/tigera/lma/pkg/api"
 	celastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
+	"github.com/tigera/lma/pkg/timeutils"
 
 	esindex "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/timeutils"
 )
 
 const (
@@ -92,7 +92,7 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 	}
 
 	if dateTimeStr := query.Get("startDateTime"); len(dateTimeStr) > 0 {
-		flowParams.startDateTime, _, err = timeutils.ParseElasticsearchTime(time.Now(), &dateTimeStr)
+		flowParams.startDateTime, _, err = timeutils.ParseTime(time.Now(), &dateTimeStr)
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to parse 'startDateTime' value '%s' as RFC3339 datetime or relative time", dateTimeStr)
 			return nil, fmt.Errorf(errMsg)
@@ -100,7 +100,7 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 	}
 
 	if dateTimeStr := query.Get("endDateTime"); len(dateTimeStr) > 0 {
-		flowParams.endDateTime, _, err = timeutils.ParseElasticsearchTime(time.Now(), &dateTimeStr)
+		flowParams.endDateTime, _, err = timeutils.ParseTime(time.Now(), &dateTimeStr)
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to parse 'endDateTime' value '%s' as RFC3339 datetime or relative time", dateTimeStr)
 			return nil, fmt.Errorf(errMsg)
