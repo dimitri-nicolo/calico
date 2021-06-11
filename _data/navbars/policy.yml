@@ -22,6 +22,8 @@ section:
     path: /security/generate-policy-recommendation
   - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx
+- title: DNS policy
+  path: /security/domain-based-policy
 - title: Policy for firewalls
   path: /security/policy-firewalls/
   section: 
@@ -103,8 +105,6 @@ section:
       path: /security/external-ips-policy
     - title: ICMP/ping rules
       path: /security/icmp-ping
-    - title: Use domain names in policy rules
-      path: /security/domain-based-policy
   - title: Policy for services
     path: /security/services
     section:

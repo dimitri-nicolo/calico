@@ -1,5 +1,5 @@
 ---
-title: Use domain names in policy rules
+title: DNS policy
 description: Use domain names to allow traffic to destinations outside of a cluster by their DNS names instead of by their IP addresses.
 canonical_url: '/security/domain-based-policy'
 ---
@@ -10,8 +10,7 @@ Use domain names to allow traffic to destinations outside of a cluster.
 
 ### Value
 
-Using domain names in policies to identify services outside of the cluster is often operationally simpler and more robust than using IP
-addresses. In particular, they are useful when an external service does not map to a well known set of static IP addresses.
+Using domain names in policies to identify services outside of the cluster is often operationally simpler and more robust than using IP addresses. In particular, they are useful when an external service does not map to a well known set of static IP addresses.
 
 Domain names can include a wildcard (`*`), making it easier to manage large numbers of domains/subdomains.
 
