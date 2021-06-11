@@ -44,7 +44,8 @@ static CALI_BPF_INLINE int forward_or_drop(struct cali_tc_ctx *ctx)
 	// If this is an egress gateway flow on the client node, and we're in the outbound
 	// direction, arrange to drop to the IP stack so that `ip rule` can take effect to
 	// route the packet.
-	if ((state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
+	if (CALI_F_TO_HOST &&
+	    (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) &&
 	    ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
 	     (state->ct_result.ifindex_created == ctx->skb->ifindex))) {
 		CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
