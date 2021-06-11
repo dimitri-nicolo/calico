@@ -17,7 +17,7 @@ type FlowConfig struct {
 }
 
 func GetFlowConfig(ctx context.Context, cs k8s.ClientSet) (*FlowConfig, error) {
-	felixConfig, err := cs.FelixConfigurations().Get(ctx, "default", v1.GetOptions{})
+	felixConfig, err := cs.ProjectcalicoV3().FelixConfigurations().Get(ctx, "default", v1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

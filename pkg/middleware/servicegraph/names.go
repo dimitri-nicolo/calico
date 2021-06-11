@@ -85,7 +85,7 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 
 		// Get the HostEndpoints to determine a HostEndpoint -> Host name mapping. We use this to correlate events
 		// related to HostEndpoint resources with the host or hosts node types.
-		hostEndpoints, err := cs.HostEndpoints().List(ctx, metav1.ListOptions{})
+		hostEndpoints, err := cs.ProjectcalicoV3().HostEndpoints().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			errHosts = err
 			return
