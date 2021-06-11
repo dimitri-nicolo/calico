@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	DateTimeFormat = "2006-01-02 15:04:05"
-	DateFormat     = "2006-01-02"
+	DateTimeFormat   = "2006-01-02 15:04:05"
+	DateFormat       = "2006-01-02"
+	MaxTCPUDPPortNum = 1<<16 - 1
 )
 
 type Validator func(*Atom) error
