@@ -73,8 +73,8 @@ var _ = Describe("GlobalAlert", func() {
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
-			_, err = e.executeQuery(ga)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = ga
+			e.executeQuery()
 		})
 	})
 
@@ -102,8 +102,8 @@ var _ = Describe("GlobalAlert", func() {
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_dns.test-cluster.*"))
 
-			_, err = e.executeQuery(a)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = a
+			e.executeQuery()
 		})
 	})
 
@@ -131,8 +131,8 @@ var _ = Describe("GlobalAlert", func() {
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
-			_, err = e.executeCompositeQuery(ga)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = ga
+			e.executeCompositeQuery()
 		})
 		It("multiple aggregation-should query elasticsearch", func() {
 			// Uses file with prefix 3_1_with_count_and_aggregateby_* for testing this scenario
@@ -156,9 +156,8 @@ var _ = Describe("GlobalAlert", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
-
-			_, err = e.executeCompositeQuery(ga)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = ga
+			e.executeCompositeQuery()
 		})
 	})
 
@@ -187,8 +186,8 @@ var _ = Describe("GlobalAlert", func() {
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
-			_, err = e.executeCompositeQuery(ga)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = ga
+			e.executeCompositeQuery()
 		})
 	})
 
@@ -218,8 +217,8 @@ var _ = Describe("GlobalAlert", func() {
 			// IDS calls /_search?scroll=5m&size=500 end point with scroll set
 			// resulting hits are transformed to docs that needs to go in events index, a /bulk request is made with transformed data
 			// IDS again calls /_search?scroll=5m&size=500 to get next batch of documents
-			_, err = e.executeQueryWithScroll(ga)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = ga
+			e.executeQueryWithScroll()
 		})
 	})
 
@@ -244,8 +243,8 @@ var _ = Describe("GlobalAlert", func() {
 			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
-			_, err = e.executeCompositeQuery(ga)
-			Expect(err).ShouldNot(HaveOccurred())
+			e.globalAlert = ga
+			e.executeCompositeQuery()
 		})
 	})
 

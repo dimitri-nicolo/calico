@@ -48,16 +48,20 @@ type service struct {
 	esCLI *elastic.Client
 	// esBulkProcessor used for sending bulk Elasticsearch request.
 	esBulkProcessor *elastic.BulkProcessor
-	// clusterName is name of the cluster
+	// clusterName is name of the cluster.
 	clusterName string
 	// sourceIndexName is name of the Elasticsearch index to query data from.
 	sourceIndexName string
 	// eventIndexName is name of the Elasticsearch events index to write documents do.
 	eventIndexName string
-	// query has the entire Elasticsearch query based on GlobalAlert fields
+	// query has the entire Elasticsearch query based on GlobalAlert fields.
 	query map[string]interface{}
 	// aggs has the composite aggregation query, this will be altered and reused during pagination with `after` key.
 	aggs map[string]interface{}
+	// globalAlert has the copy of GlobalAlert, it is updated periodically when Elasticsearch is queried for alert.
+	globalAlert *v3.GlobalAlert
+	// bulkFlushErrored is true if flushing to Elasticsearch encounters an error, this is reset every time the Elasticsearch is queried.
+	bulkFlushErrored bool
 }
 
 // NewService builds Elasticsearch query that will be used periodically to query Elasticsearch data.
@@ -73,8 +77,23 @@ func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert
 		return nil, err
 	}
 
+	AfterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+		if response.Errors {
+			e.bulkFlushErrored = true
+			for _, v := range response.Items {
+				for _, i := range v {
+					log.Errorf("Error during bulk flush for GlobalAlert %s : %#v", alert.Name, i.Error)
+					e.globalAlert.Status.Healthy = false
+					e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions,
+						libcalicov3.ErrorCondition{Message: i.Error.Reason, Type: i.Error.Type})
+				}
+			}
+		}
+	}
+
 	e.esBulkProcessor, err = e.esCLI.BulkProcessor().
 		BulkActions(AutoBulkFlush).
+		After(AfterFn).
 		Do(context.Background())
 	if err != nil {
 		log.WithError(err).Errorf("failed to initialize Elasticsearch bulk processor for GlobalAlert %s", alert.Name)
@@ -284,28 +303,19 @@ func (e *service) DeleteElasticWatchers(ctx context.Context) {
 func (e *service) ExecuteAlert(alert *v3.GlobalAlert) libcalicov3.GlobalAlertStatus {
 	log.Infof("Executing Elasticsearch query and processing result for GlobalAlert %s in cluster %s", alert.Name, e.clusterName)
 
-	var status libcalicov3.GlobalAlertStatus
-	var err error
-	if alert.Spec.AggregateBy != nil {
-		status, err = e.executeCompositeQuery(alert)
-		if err != nil {
-			log.WithError(err).Errorf("failed to query Elasticsearch for GlobalAlert %s", alert.Name)
-		}
-	} else if alert.Spec.Metric == "" {
-		status, err = e.executeQueryWithScroll(alert)
-		if err != nil {
-			log.WithError(err).Errorf("failed to query elasticsearch for GlobalAlert %s", alert.Name)
-		}
-	} else if alert.Spec.Metric != "" {
-		status, err = e.executeQuery(alert)
-		if err != nil {
-			log.WithError(err).Errorf("failed to query Elasticsearch for GlobalAlert %s", alert.Name)
-		}
+	e.globalAlert = alert
+	e.bulkFlushErrored = false
+	if e.globalAlert.Spec.AggregateBy != nil {
+		e.executeCompositeQuery()
+	} else if e.globalAlert.Spec.Metric == "" {
+		e.executeQueryWithScroll()
+	} else if e.globalAlert.Spec.Metric != "" {
+		e.executeQuery()
 	} else {
-		log.Errorf("failed to query elasticsearch for GlobalAlert %s", alert.Name)
+		log.Errorf("failed to query elasticsearch for GlobalAlert %s", e.globalAlert.Name)
 	}
 
-	return status
+	return e.globalAlert.Status
 }
 
 // executeCompositeQuery executes the composite aggregation Elasticsearch query,
@@ -313,28 +323,29 @@ func (e *service) ExecuteAlert(alert *v3.GlobalAlert) libcalicov3.GlobalAlertSta
 // Maximum number of buckets retrieved is based on AggregationBucketSize, if there are more buckets left it logs warning.
 // For each bucket retrieved, verifies the values against the metrics in GlobalAlert and creates a document in events index if alert conditions are satisfied.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *service) executeCompositeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
+func (e *service) executeCompositeQuery() {
 	query := e.query
-	status := alert.Status
 	var afterKey JsonObject
 	var bucketCounter int
 
 	for bucketCounter = 0; bucketCounter < AggregationBucketSize; {
 		searchResult, err := e.esCLI.Search().Index(e.sourceIndexName).Source(query).Do(context.Background())
-		status.LastExecuted = &metav1.Time{Time: time.Now()}
+		e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
 		if err != nil {
-			log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", alert.Name)
-			status.Healthy = false
-			status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-			return e.bulkFlush(status, err)
+			log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
+			e.setErrorAndFlush(libcalicov3.ErrorCondition{Message: err.Error()})
+			return
 		}
 		aggs := searchResult.Aggregations
 		aggBuckets, exists := aggs.Composite(CompositeAggregationName)
 		if !exists {
 			// If result doesn't have expected aggregation there is nothing to add to events index.
-			status.Healthy = true
-			status.ErrorConditions = nil
-			return e.bulkFlush(status, err)
+			if e.bulkFlushErrored {
+				return
+			}
+			e.globalAlert.Status.Healthy = true
+			e.globalAlert.Status.ErrorConditions = nil
+			return
 		}
 
 		afterKey = aggBuckets.AfterKey
@@ -353,31 +364,30 @@ func (e *service) executeCompositeQuery(alert *v3.GlobalAlert) (libcalicov3.Glob
 			record := JsonObject{}
 
 			// compare bucket value to GlobalAlert metric
-			switch alert.Spec.Metric {
+			switch e.globalAlert.Spec.Metric {
 			case "":
 				// nothing to compare if metric not set.
 			case libcalicov3.GlobalAlertMetricCount:
-				if compare(float64(b.DocCount), alert.Spec.Threshold, alert.Spec.Condition) {
+				if compare(float64(b.DocCount), e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
 					record["count"] = b.DocCount
 				} else {
 					// alert condition not satisfied
 					continue
 				}
 			default:
-				metricAggs, exists := b.Terms(alert.Spec.Field)
+				metricAggs, exists := b.Terms(e.globalAlert.Spec.Field)
 				if !exists {
 					// noting to add to events index for this bucket.
 					continue
 				}
 				var tempMetric float64
 				if err := json.Unmarshal(metricAggs.Aggregations["value"], &tempMetric); err != nil {
-					log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", alert.Name)
-					status.Healthy = false
-					status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-					return e.bulkFlush(status, err)
+					log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", e.globalAlert.Name)
+					e.setErrorAndFlush(libcalicov3.ErrorCondition{Message: err.Error()})
+					return
 				}
-				if compare(tempMetric, alert.Spec.Threshold, alert.Spec.Condition) {
-					record[alert.Spec.Metric] = tempMetric
+				if compare(tempMetric, e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
+					record[e.globalAlert.Spec.Metric] = tempMetric
 				} else {
 					// alert condition not satisfied
 					continue
@@ -387,176 +397,180 @@ func (e *service) executeCompositeQuery(alert *v3.GlobalAlert) (libcalicov3.Glob
 			for k, v := range b.Key {
 				record[k] = v
 			}
-			doc := e.buildEventsIndexDoc(alert, record)
+			doc := e.buildEventsIndexDoc(record)
 			r := elastic.NewBulkIndexRequest().Index(e.eventIndexName).Doc(doc)
 			e.esBulkProcessor.Add(r)
-			status.LastEvent = &metav1.Time{Time: time.Now()}
+			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
 		}
-
+		e.bulkFlush()
 		if afterKey == nil {
-			// we have processed all the buckets
+			// we have processed all the buckets.
 			break
 		}
 	}
-	if err := e.esBulkProcessor.Flush(); err != nil {
-		log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
-		status.Healthy = false
-		status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-		return status, err
-	}
+
 	if bucketCounter > AggregationBucketSize && afterKey != nil {
-		log.Warnf("More that %d buckets received in Elasticsearch query result for GlobalAlert %s", AggregationBucketSize, alert.Name)
+		log.Warnf("More that %d buckets received in Elasticsearch query result for GlobalAlert %s", AggregationBucketSize, e.globalAlert.Name)
 	}
 
-	status.Healthy = true
-	status.ErrorConditions = nil
-	return status, nil
+	if e.bulkFlushErrored {
+		return
+	}
+
+	e.globalAlert.Status.Healthy = true
+	e.globalAlert.Status.ErrorConditions = nil
+	return
 }
 
 // executeQueryWithScroll executes the Elasticsearch query using scroll and for each document in the search result adds a document into events index.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *service) executeQueryWithScroll(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
-	status := alert.Status
+func (e *service) executeQueryWithScroll() {
 	scroll := e.esCLI.Scroll(e.sourceIndexName).Body(e.query).Size(PaginationSize)
 	for {
 		results, err := scroll.Do(context.Background())
-		status.LastExecuted = &metav1.Time{Time: time.Now()}
+		e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
 
 		if err == io.EOF {
-			status.Healthy = true
-			status.ErrorConditions = nil
-			return e.bulkFlush(status, nil)
+			if e.bulkFlushErrored {
+				return
+			}
+			e.globalAlert.Status.Healthy = true
+			e.globalAlert.Status.ErrorConditions = nil
+			return
 		}
 		if err != nil {
-			log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", alert.Name)
-			status.Healthy = false
-			status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-			return e.bulkFlush(status, err)
+			log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
+			e.setErrorAndFlush(libcalicov3.ErrorCondition{Message: err.Error()})
+			return
 		}
 
 		for _, hit := range results.Hits.Hits {
 			var record JsonObject
 			err := json.Unmarshal(hit.Source, &record)
 			if err != nil {
-				log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", alert.Name)
-				status.Healthy = false
-				status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-				return e.bulkFlush(status, err)
+				log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", e.globalAlert.Name)
+				e.setErrorAndFlush(libcalicov3.ErrorCondition{Message: err.Error()})
+				return
 			}
-			doc := e.buildEventsIndexDoc(alert, record)
+			doc := e.buildEventsIndexDoc(record)
 			r := elastic.NewBulkIndexRequest().Index(e.eventIndexName).Doc(doc)
 			e.esBulkProcessor.Add(r)
-			status.LastEvent = &metav1.Time{Time: time.Now()}
+			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
 		}
-		if err := e.esBulkProcessor.Flush(); err != nil {
-			log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
-			return status, err
-		}
+
+		e.bulkFlush()
 	}
 }
 
 // executeQuery execute the Elasticsearch query, adds a document into events index is query result satisfies alert conditions.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *service) executeQuery(alert *v3.GlobalAlert) (libcalicov3.GlobalAlertStatus, error) {
-	status := alert.Status
+func (e *service) executeQuery() {
 	result, err := e.esCLI.Search().Index(e.sourceIndexName).Source(e.query).Do(context.Background())
-	status.LastExecuted = &metav1.Time{Time: time.Now()}
+	e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
 
 	if err != nil {
-		log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", alert.Name)
-		status.Healthy = false
-		status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-		return status, err
+		log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
+		e.globalAlert.Status.Healthy = false
+		e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
+		return
 	}
 
 	var doc JsonObject
-	switch alert.Spec.Metric {
+	switch e.globalAlert.Spec.Metric {
 	case libcalicov3.GlobalAlertMetricCount:
-		if compare(float64(result.Hits.TotalHits.Value), alert.Spec.Threshold, alert.Spec.Condition) {
+		if compare(float64(result.Hits.TotalHits.Value), e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
 			record := JsonObject{
 				"count": result.Hits.TotalHits.Value,
 			}
-			doc = e.buildEventsIndexDoc(alert, record)
+			doc = e.buildEventsIndexDoc(record)
 		}
 	default:
 		aggs := result.Aggregations
-		metricAggs, exists := aggs.Terms(alert.Spec.Field)
+		metricAggs, exists := aggs.Terms(e.globalAlert.Spec.Field)
 		if !exists {
-			status.Healthy = true
-			status.ErrorConditions = nil
-			return status, nil
+			e.globalAlert.Status.Healthy = true
+			e.globalAlert.Status.ErrorConditions = nil
+			return
 		}
 		var tempMetric float64
 		if err := json.Unmarshal(metricAggs.Aggregations["value"], &tempMetric); err != nil {
-			log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", alert.Name)
-			status.Healthy = false
-			status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-			return status, err
+			log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", e.globalAlert.Name)
+			e.globalAlert.Status.Healthy = false
+			e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
+			return
 		}
-		if compare(tempMetric, alert.Spec.Threshold, alert.Spec.Condition) {
-			doc = e.buildEventsIndexDoc(alert, JsonObject{alert.Spec.Metric: tempMetric})
+		if compare(tempMetric, e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
+			doc = e.buildEventsIndexDoc(JsonObject{e.globalAlert.Spec.Metric: tempMetric})
 		}
 	}
 
 	if doc != nil {
 		r := elastic.NewBulkIndexRequest().Index(e.eventIndexName).Doc(doc)
 		e.esBulkProcessor.Add(r)
-		status.LastEvent = &metav1.Time{Time: time.Now()}
-		if err := e.esBulkProcessor.Flush(); err != nil {
-			status.Healthy = false
-			status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-			log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
-			return status, err
-		}
+		e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
+		e.globalAlert.Status.Healthy = true
+		e.globalAlert.Status.ErrorConditions = nil
+		e.bulkFlush()
+		return
 	}
 
-	status.Healthy = true
-	status.ErrorConditions = nil
-	return status, nil
+	if e.bulkFlushErrored {
+		return
+	}
+	e.globalAlert.Status.Healthy = true
+	e.globalAlert.Status.ErrorConditions = nil
+	return
 }
 
-// bulkFlush flushes any remaining data in the BulkProcessor, if there is error during flush update the error condition in status before retuning.
-func (e *service) bulkFlush(status libcalicov3.GlobalAlertStatus, err error) (libcalicov3.GlobalAlertStatus, error) {
+// setErrorAndFlush sets the Status.Healthy to false, appends the given error to the Status
+// and flushes the BulkProcessor.
+func (e *service) setErrorAndFlush(err libcalicov3.ErrorCondition) {
+	e.globalAlert.Status.Healthy = false
+	e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, err)
+	e.bulkFlush()
+}
+
+// bulkFlush flushes any remaining data in the BulkProcessor, if there is error during flush update
+// the error condition in status before retuning.
+func (e *service) bulkFlush() {
 	if err := e.esBulkProcessor.Flush(); err != nil {
 		log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
-		status.Healthy = false
-		status.ErrorConditions = append(status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
-		return status, err
+		e.globalAlert.Status.Healthy = false
+		e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
 	}
-	return status, err
 }
 
 // buildEventsIndexDoc builds an object that can be sent to events index.
-func (e *service) buildEventsIndexDoc(alert *v3.GlobalAlert, record JsonObject) JsonObject {
-	description := e.substituteDescriptionOrSummaryContents(alert, record)
+func (e *service) buildEventsIndexDoc(record JsonObject) JsonObject {
+	description := e.substituteDescriptionOrSummaryContents(record)
 
 	return JsonObject{
 		"type":        AlertEventType,
 		"description": description,
-		"severity":    alert.Spec.Severity,
+		"severity":    e.globalAlert.Spec.Severity,
 		"time":        time.Now().Unix(),
 		"record":      record,
-		"alert":       alert.Name,
+		"alert":       e.globalAlert.Name,
 	}
 }
 
 // substituteDescriptionOrSummaryContents substitute bracketed variables in summary/description with it's value.
 // If there is an error in substitution log error and return the partly substituted value.
-func (e *service) substituteDescriptionOrSummaryContents(alert *v3.GlobalAlert, record JsonObject) string {
-	description := alert.Spec.Summary
-	if alert.Spec.Summary == "" {
-		description = alert.Spec.Description
+func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) string {
+	description := e.globalAlert.Spec.Summary
+	if e.globalAlert.Spec.Summary == "" {
+		description = e.globalAlert.Spec.Description
 	}
 
 	vars, err := extractVariablesFromDescriptionTemplate(description)
 	if err != nil {
-		log.WithError(err).Warnf("failed to build summary or description for alert %s due to invalid formatting of bracketed variables", alert.Name)
+		log.WithError(err).Warnf("failed to build summary or description for alert %s due to invalid formatting of bracketed variables", e.globalAlert.Name)
 	}
 
 	// replace extracted variables with it's value
 	for _, v := range vars {
 		if value, ok := record[v]; !ok {
-			log.Warnf("failed to build summary or description for alert %s due to missing value for variable %s", alert.Name, v)
+			log.Warnf("failed to build summary or description for alert %s due to missing value for variable %s", e.globalAlert.Name, v)
 		} else {
 			switch value.(type) {
 			case string:
@@ -566,7 +580,7 @@ func (e *service) substituteDescriptionOrSummaryContents(alert *v3.GlobalAlert, 
 			case float64:
 				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatFloat(value.(float64), 'f', 1, 64), 1)
 			default:
-				log.Warnf("failed to build summary or description for alert %s due to unsupported value type for variable %s", alert.Name, v)
+				log.Warnf("failed to build summary or description for alert %s due to unsupported value type for variable %s", e.globalAlert.Name, v)
 			}
 		}
 	}
