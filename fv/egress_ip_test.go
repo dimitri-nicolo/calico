@@ -27,7 +27,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/felix/fv/connectivity"
+	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -37,16 +40,38 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
-var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+type Overlay int
+
+const (
+	OV_NONE  Overlay = 1
+	OV_VXLAN Overlay = 2
+	OV_IPIP  Overlay = 3
+)
+
+func (ov Overlay) String() string {
+	switch ov {
+	case OV_NONE:
+		return "no overlay"
+	case OV_VXLAN:
+		return "VXLAN overlay"
+	case OV_IPIP:
+		return "IP-IP overlay"
+	}
+	return "invalid value"
+}
+
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra        infrastructure.DatastoreInfra
-		felix        *infrastructure.Felix
+		felixes      []*infrastructure.Felix
 		client       client.Interface
 		err          error
 		supportLevel string
 	)
 
-	makeGateway := func(wIP, wName string) *workload.Workload {
+	overlay := OV_NONE
+
+	makeGateway := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
 		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
 			IP:       net.MustParseIP(wIP),
 			HandleID: &wName,
@@ -56,13 +81,13 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			Hostname: felix.Hostname,
 		})
 		Expect(err).NotTo(HaveOccurred())
-		gw := workload.Run(felix, wName, "default", wIP, "8055", "tcp")
+		gw := workload.RunEgressGateway(felix, wName, "default", wIP)
 		gw.WorkloadEndpoint.Labels["egress-code"] = "red"
 		gw.ConfigureInInfra(infra)
 		return gw
 	}
 
-	makeClient := func(wIP, wName string) *workload.Workload {
+	makeClient := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
 		err := client.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
 			IP:       net.MustParseIP(wIP),
 			HandleID: &wName,
@@ -81,7 +106,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 	}
 
 	getIPRules := func() map[string]string {
-		rules, err := felix.ExecOutput("ip", "rule")
+		rules, err := felixes[0].ExecOutput("ip", "rule")
 		log.WithError(err).Infof("ip rule said:\n%v", rules)
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
@@ -98,14 +123,23 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 	}
 
 	getIPRoute := func(table string) string {
-		route, err := felix.ExecOutput("ip", "r", "l", "table", table)
+		route, err := felixes[0].ExecOutput("ip", "r", "l", "table", table)
 		log.WithError(err).Infof("ip r l said:\n%v", route)
 		Expect(err).NotTo(HaveOccurred())
 		return strings.TrimSpace(route)
 	}
 
+	checkIPRoute := func(table, expectedRoute string) {
+		Eventually(func() string {
+			return getIPRoute(table)
+		}, "10s", "1s").Should(Equal(expectedRoute))
+		Consistently(func() string {
+			return getIPRoute(table)
+		}).Should(Equal(expectedRoute))
+	}
+
 	getIPNeigh := func() map[string]string {
-		neigh, err := felix.ExecOutput("ip", "neigh", "show", "dev", "egress.calico")
+		neigh, err := felixes[0].ExecOutput("ip", "neigh", "show", "dev", "egress.calico")
 		log.WithError(err).Infof("ip neigh said:\n%v", neigh)
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
@@ -122,7 +156,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 	}
 
 	getBridgeFDB := func() map[string]string {
-		fdb, err := felix.ExecOutput("bridge", "fdb", "show", "dev", "egress.calico")
+		fdb, err := felixes[0].ExecOutput("bridge", "fdb", "show", "dev", "egress.calico")
 		log.WithError(err).Infof("bridge fdb said:\n%v", fdb)
 		Expect(err).NotTo(HaveOccurred())
 		mappings := map[string]string{}
@@ -141,32 +175,33 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 	JustBeforeEach(func() {
 		infra = getInfra()
 		topologyOptions := infrastructure.DefaultTopologyOptions()
-		topologyOptions.IPIPEnabled = false
-		topologyOptions.IPIPRoutesEnabled = false
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = supportLevel
 		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
-		felix, client = infrastructure.StartSingleNodeTopology(topologyOptions, infra)
+		if overlay == OV_VXLAN {
+			topologyOptions.VXLANMode = api.VXLANModeAlways
+		}
+		if overlay != OV_IPIP {
+			topologyOptions.IPIPEnabled = false
+			topologyOptions.IPIPRoutesEnabled = false
+		}
+		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		infra.AddDefaultAllow()
 
-		// Create the normal IP pool.
-		ctx := context.Background()
-		ippool := api.NewIPPool()
-		ippool.Name = "test-pool"
-		ippool.Spec.CIDR = "10.65.0.0/16"
-		ippool.Spec.NATOutgoing = false
-		_, err = client.IPPools().Create(ctx, ippool, options.SetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
 		// Create an egress IP pool.
-		ippool = api.NewIPPool()
+		ippool := api.NewIPPool()
 		ippool.Name = "egress-pool"
 		ippool.Spec.CIDR = "10.10.10.0/29"
 		ippool.Spec.NATOutgoing = false
 		ippool.Spec.BlockSize = 29
 		ippool.Spec.NodeSelector = "!all()"
-		_, err = client.IPPools().Create(ctx, ippool, options.SetOptions{})
+		if overlay == OV_VXLAN {
+			ippool.Spec.VXLANMode = api.VXLANModeAlways
+		} else if overlay == OV_IPIP {
+			ippool.Spec.IPIPMode = api.IPIPModeAlways
+		}
+		_, err = client.IPPools().Create(context.Background(), ippool, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -189,11 +224,99 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			supportLevel = "EnabledPerNamespaceOrPerPod"
 		})
 
+		Context("with external server", func() {
+
+			var (
+				extServer *workload.Workload
+				cc        *connectivity.Checker
+			)
+
+			JustBeforeEach(func() {
+				c := containers.Run("external-server",
+					containers.RunOpts{AutoRemove: true},
+					"--privileged", // So that we can add routes inside the container.
+					utils.Config.BusyboxImage,
+					"/bin/sh", "-c", "sleep 1000")
+
+				extServer = &workload.Workload{
+					C:        c,
+					Name:     "ext-server",
+					Ports:    "4321",
+					Protocol: "tcp",
+					IP:       c.IP,
+				}
+
+				err := extServer.Start()
+				Expect(err).NotTo(HaveOccurred())
+
+				cc = &connectivity.Checker{
+					CheckSNAT: true,
+					Protocol:  "tcp",
+				}
+			})
+
+			AfterEach(func() {
+				extServer.Stop()
+				extServer.C.Stop()
+			})
+
+			for _, sameNode := range []bool{true, false} {
+				sameNode := sameNode
+				for _, ov := range []Overlay{OV_NONE, OV_VXLAN, OV_IPIP} {
+					ov := ov
+					description := "with " + ov.String() + ", client and gateway on "
+					if sameNode {
+						description += "same node"
+					} else {
+						description += "different nodes"
+					}
+
+					Context(description, func() {
+
+						var client, gw *workload.Workload
+
+						BeforeEach(func() {
+							overlay = ov
+						})
+
+						JustBeforeEach(func() {
+							client = makeClient(felixes[0], "10.65.0.2", "client")
+							if sameNode {
+								gw = makeGateway(felixes[0], "10.10.10.1", "gw")
+							} else {
+								gw = makeGateway(felixes[1], "10.10.10.1", "gw")
+								switch ov {
+								case OV_NONE:
+									felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
+								case OV_VXLAN:
+									// Felix programs the routes in this case.
+								case OV_IPIP:
+									felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
+								}
+							}
+							extServer.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
+						})
+
+						AfterEach(func() {
+							client.Stop()
+							gw.Stop()
+						})
+
+						It("server should see gateway IP when client connects to it", func() {
+							cc.ResetExpectations()
+							cc.ExpectSNAT(client, gw.IP, extServer, 4321)
+							cc.CheckConnectivity()
+						})
+					})
+				}
+			}
+		})
+
 		It("keeps gateway device route when client goes away", func() {
 			By("Create a gateway and client")
-			gw := makeGateway("10.10.10.1", "gw1")
+			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
-			app := makeClient("10.65.0.2", "app")
+			app := makeClient(felixes[0], "10.65.0.2", "app")
 			appExists := true
 			defer func() {
 				if appExists {
@@ -203,7 +326,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 			By("Check gateway route exists")
 			checkGatewayRoute := func() (err error) {
-				routes, err := felix.ExecOutput("ip", "r")
+				routes, err := felixes[0].ExecOutput("ip", "r")
 				if err != nil {
 					return
 				}
@@ -228,14 +351,14 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 		It("updates rules and routing as gateways are added and removed", func() {
 			By("Create a gateway.")
-			gw := makeGateway("10.10.10.1", "gw1")
+			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
 
 			By("No egress ip rules expected yet.")
 			Consistently(getIPRules).Should(BeEmpty())
 
 			By("Create a client.")
-			app := makeClient("10.65.0.2", "app")
+			app := makeClient(felixes[0], "10.65.0.2", "app")
 			defer app.Stop()
 
 			By("Check ip rules.")
@@ -244,12 +367,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			table1 := getIPRules()["10.65.0.2"]
 
 			By("Check ip routes.")
-			Eventually(func() string {
-				return getIPRoute(table1)
-			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1")))
-			Consistently(func() string {
-				return getIPRoute(table1)
-			}).Should(Equal(expectedRoute("10.10.10.1")))
+			checkIPRoute(table1, expectedRoute("10.10.10.1"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -260,14 +378,12 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			}))
 
 			By("Create another client.")
-			app2 := makeClient("10.65.0.3", "app2")
+			app2 := makeClient(felixes[0], "10.65.0.3", "app2")
 			defer app2.Stop()
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			Consistently(func() string {
-				return getIPRoute(table1)
-			}).Should(Equal(expectedRoute("10.10.10.1")))
+			checkIPRoute(table1, expectedRoute("10.10.10.1"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -278,14 +394,12 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			}))
 
 			By("Create another gateway.")
-			gw2 := makeGateway("10.10.10.2", "gw2")
+			gw2 := makeGateway(felixes[0], "10.10.10.2", "gw2")
 			defer gw2.Stop()
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			Consistently(func() string {
-				return getIPRoute(table1)
-			}).Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
+			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -298,14 +412,12 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			}))
 
 			By("Create 3rd gateway.")
-			gw3 := makeGateway("10.10.10.3", "gw3")
+			gw3 := makeGateway(felixes[0], "10.10.10.3", "gw3")
 			defer gw3.Stop()
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			Eventually(func() string {
-				return getIPRoute(table1)
-			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3")))
+			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -324,9 +436,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			Eventually(func() string {
-				return getIPRoute(table1)
-			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
+			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -343,9 +453,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			Eventually(func() string {
-				return getIPRoute(table1)
-			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.2")))
+			checkIPRoute(table1, expectedRoute("10.10.10.2"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -360,9 +468,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 			By("Check ip rules and routes.")
 			Consistently(getIPRules, "5s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			Eventually(func() string {
-				return getIPRoute(table1)
-			}, "10s", "1s").Should(Equal(expectedRoute()))
+			checkIPRoute(table1, expectedRoute())
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{}))
@@ -377,11 +483,11 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 		It("does nothing when egress IP is disabled", func() {
 			By("Create a gateway.")
-			gw := makeGateway("10.10.10.1", "gw1")
+			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
 
 			By("Create a client.")
-			app := makeClient("10.65.0.2", "app")
+			app := makeClient(felixes[0], "10.65.0.2", "app")
 			defer app.Stop()
 
 			By("Should be no ip rules.")
@@ -396,11 +502,11 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 
 		It("honours namespace annotations but not per-pod", func() {
 			By("Create a gateway.")
-			gw := makeGateway("10.10.10.1", "gw1")
+			gw := makeGateway(felixes[0], "10.10.10.1", "gw1")
 			defer gw.Stop()
 
 			By("Create a client.")
-			app := makeClient("10.65.0.2", "app")
+			app := makeClient(felixes[0], "10.65.0.2", "app")
 			defer app.Stop()
 
 			By("Should be no ip rules.")
@@ -427,24 +533,23 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			table1 := rules["10.65.0.2"]
 
 			By("Check ip routes.")
-			Eventually(func() string {
-				return getIPRoute(table1)
-			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1")))
-			Consistently(func() string {
-				return getIPRoute(table1)
-			}).Should(Equal(expectedRoute("10.10.10.1")))
+			checkIPRoute(table1, expectedRoute("10.10.10.1"))
 		})
 	})
 
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ipset", "list")
-			felix.Exec("ip", "r")
-			felix.Exec("ip", "a")
+			for _, felix := range felixes {
+				felix.Exec("iptables-save", "-c")
+				felix.Exec("ipset", "list")
+				felix.Exec("ip", "r")
+				felix.Exec("ip", "a")
+			}
 		}
 
-		felix.Stop()
+		for _, felix := range felixes {
+			felix.Stop()
+		}
 
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()

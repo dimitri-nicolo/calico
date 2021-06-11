@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -20,6 +20,7 @@ import (
 
 	"github.com/golang-collections/collections/stack"
 
+	"github.com/projectcalico/felix/ethtool"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
@@ -746,6 +747,13 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		} else {
 			logCxt.Info("Updated vxlan tunnel MTU")
 		}
+	}
+
+	// Disable checksum offload.  Otherwise we end up with invalid checksums when a
+	// packet is encapped for egress gateway and then double-encapped for the regular
+	// cluster IP-IP or VXLAN overlay.
+	if err := ethtool.EthtoolTXOff(m.vxlanDevice); err != nil {
+		return fmt.Errorf("failed to disable checksum offload: %s", err)
 	}
 
 	// And the device is up.

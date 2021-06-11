@@ -106,7 +106,9 @@ type bpfInterfaceInfo struct {
 }
 
 type bpfInterfaceState struct {
-	jumpMapFDs [2]bpf.MapFD
+	jumpMapFDs                [2]bpf.MapFD
+	programmedAsEgressGateway bool
+	programmedAsEgressClient  bool
 }
 
 type bpfEndpointManager struct {
@@ -801,6 +803,10 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 
 	ap.EnableTCPStats = m.enableTcpStats
+	if endpoint != nil {
+		ap.IsEgressGateway = endpoint.IsEgressGateway
+		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
+	}
 
 	jumpMapFD, err := m.dp.ensureProgramAttached(&ap, polDirection)
 	if err != nil {
@@ -1392,6 +1398,21 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirect
 			}
 			m.setJumpMapFD(ap.Iface, polDirection, 0)
 			jumpMapFD = 0 // Trigger program to be re-added below.
+		} else {
+			if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
+				// BPF program needs reattaching with different patch options, so
+				// close and discard the old FD.
+				log.WithField("iface", ap.Iface).Infof(
+					"Reapplying BPF program because egress gateway state has changed (client %v gateway %v)",
+					ap.IsEgressClient, ap.IsEgressGateway,
+				)
+				err := jumpMapFD.Close()
+				if err != nil {
+					log.WithError(err).Warn("Failed to close jump map FD. Ignoring.")
+				}
+				m.setJumpMapFD(ap.Iface, polDirection, 0)
+				jumpMapFD = 0 // Trigger program to be re-added below.
+			}
 		}
 	}
 
@@ -1407,6 +1428,7 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirect
 			return 0, fmt.Errorf("failed to look up jump map: %w", err)
 		}
 		m.setJumpMapFD(ap.Iface, polDirection, jumpMapFD)
+		m.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 	}
 
 	return jumpMapFD, nil
@@ -1430,6 +1452,27 @@ func (m *bpfEndpointManager) setJumpMapFD(name string, direction PolDirection, f
 		iface.dpState.jumpMapFDs[direction] = fd
 		return false
 	})
+}
+
+func (m *bpfEndpointManager) isEgressProgrammingCorrect(ifaceName string, isEgressGateway, isEgressClient bool) (correct bool) {
+	m.ifacesLock.Lock()
+	defer m.ifacesLock.Unlock()
+	m.withIface(ifaceName, func(iface *bpfInterface) bool {
+		correct = ((iface.dpState.programmedAsEgressGateway == isEgressGateway) && (iface.dpState.programmedAsEgressClient == isEgressClient))
+		return false
+	})
+	return
+}
+
+func (m *bpfEndpointManager) setEgressProgramming(ifaceName string, isEgressGateway, isEgressClient bool) {
+	m.ifacesLock.Lock()
+	defer m.ifacesLock.Unlock()
+	m.withIface(ifaceName, func(iface *bpfInterface) bool {
+		iface.dpState.programmedAsEgressGateway = isEgressGateway
+		iface.dpState.programmedAsEgressClient = isEgressClient
+		return false
+	})
+	return
 }
 
 func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) error {

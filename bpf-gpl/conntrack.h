@@ -183,19 +183,24 @@ create:
 		/* src is the from the WEP, policy whitelisted this side */
 		src_to_dst->whitelisted = 1;
 		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
+
+		if (ct_ctx->allow_from_host_side) {
+			CALI_DEBUG("CT-ALL Whitelisted dest side - from WEP\n");
+			dst_to_src->whitelisted = 1;
+		}
 	} else if (CALI_F_FROM_HEP) {
 		/* src is the from the HEP, policy whitelisted this side */
 		src_to_dst->whitelisted = 1;
 
-		if (ct_ctx->allow_return) {
+		if (ct_ctx->allow_from_host_side) {
 			/* When we do NAT and forward through the tunnel, we go through
 			 * a single policy, what we forward we also accept back,
 			 * whitelist both sides.
 			 */
 			dst_to_src->whitelisted = 1;
 		}
-		CALI_DEBUG("CT-ALL Whitelisted source side - from HEP tun allow_return=%d\n",
-				ct_ctx->allow_return);
+		CALI_DEBUG("CT-ALL Whitelisted source side - from HEP tun allow_from_host_side=%d\n",
+				ct_ctx->allow_from_host_side);
 	} else if (CALI_F_FROM_HOST) {
 		/* dst is to the EP, policy whitelisted this side */
 		dst_to_src->whitelisted = 1;

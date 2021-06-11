@@ -41,6 +41,7 @@ enum cali_ct_type {
 #define CALI_CT_FLAG_NP_FWD	0x04 /* marks entry into the tunnel on the fwd node */
 #define CALI_CT_FLAG_SKIP_FIB	0x08 /* marks traffic that should pass through host IP stack */
 #define CALI_CT_FLAG_TRUST_DNS	0x10 /* marks connection to a trusted DNS server */
+#define CALI_CT_FLAG_EGRESS_GW	0x20 /* marks flow via an egress gateway to outside cluster */
 #define CALI_CT_FLAG_EXT_LOCAL	0x40 /* marks traffic from external client to a local serice */
 
 struct calico_ct_leg {
@@ -132,7 +133,7 @@ struct ct_create_ctx {
 			* initial CT entry for the tunneled traffic. */
 	__u8 flags;
 	enum cali_ct_type type;
-	bool allow_return;
+	bool allow_from_host_side;
 };
 
 CALI_MAP(cali_v4_ct, 3,
@@ -178,6 +179,7 @@ enum calico_ct_result_type {
 #define CALI_CT_RELATED         0x100
 #define CALI_CT_RPF_FAILED      0x200
 #define CALI_CT_TUN_SRC_CHANGED 0x400
+#define CALI_CT_ALLOW_FROM_SIDE 0x800
 
 #define ct_result_rc(rc)		((rc) & 0xff)
 #define ct_result_flags(rc)		((rc) & ~0xff)
