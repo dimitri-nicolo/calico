@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/transport"
 
 	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
-	clientv3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	projectcalicov3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const (
@@ -27,9 +27,6 @@ const (
 	XClusterIDHeader = "x-cluster-id"
 )
 
-type k8sInterface kubernetes.Interface
-type calicoInterface clientv3.ProjectcalicoV3Interface
-
 type ClientSetFactory interface {
 	NewClientSetForUserRequest(req *http.Request, cluster string) (ClientSet, error)
 	NewClientSetForApplication(cluster string) (ClientSet, error)
@@ -37,8 +34,8 @@ type ClientSetFactory interface {
 
 // ClientSet is a combined Calico/Kubernetes client set interface.
 type ClientSet interface {
-	k8sInterface
-	calicoInterface
+	kubernetes.Interface
+	ProjectcalicoV3() projectcalicov3.ProjectcalicoV3Interface
 }
 
 // clientSetFactory is a factory for creating user-specific and cluster specific kubernetes/calico clientsets.
@@ -51,8 +48,12 @@ type clientSetFactory struct {
 
 // The client set struct implementing the client set interface.
 type clientSet struct {
-	k8sInterface
-	calicoInterface
+	kubernetes.Interface
+	projectcalicov3 projectcalicov3.ProjectcalicoV3Interface
+}
+
+func (c *clientSet) ProjectcalicoV3() projectcalicov3.ProjectcalicoV3Interface {
+	return c.projectcalicov3
 }
 
 // NewClientSetFactory creates an implementation of the ClientSetHandlers.
@@ -70,7 +71,7 @@ func (f *clientSetFactory) NewClientSetForApplication(clusterID string) (ClientS
 	return f.getClientSet(nil, clusterID)
 }
 
-// NewClientSetForApplication creates a client set for the user (as per request) in the specified cluster. If no cluster
+// NewClientSetForUserRequest creates a client set for the user (as per request) in the specified cluster. If no cluster
 // is specified this defaults to the management cluster ("cluster").
 func (f *clientSetFactory) NewClientSetForUserRequest(req *http.Request, clusterID string) (ClientSet, error) {
 	return f.getClientSet(req, clusterID)
@@ -141,8 +142,8 @@ func (f *clientSetFactory) getClientSet(req *http.Request, clusterID string) (Cl
 	}
 
 	return &clientSet{
-		calicoInterface: calicoCli.ProjectcalicoV3(),
-		k8sInterface:    k8sCli,
+		projectcalicov3: calicoCli.ProjectcalicoV3(),
+		Interface: k8sCli,
 	}, nil
 }
 

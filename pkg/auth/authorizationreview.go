@@ -19,7 +19,7 @@ import (
 func PerformAuthorizationReview(
 	ctx context.Context, client k8s.ClientSet, attr []v3.AuthorizationReviewResourceAttributes,
 ) ([]v3.AuthorizedResourceVerbs, error) {
-	ar, err := client.AuthorizationReviews().Create(
+	ar, err := client.ProjectcalicoV3().AuthorizationReviews().Create(
 		ctx,
 		&apiv3.AuthorizationReview{Spec: v3.AuthorizationReviewSpec{
 			ResourceAttributes: attr,
