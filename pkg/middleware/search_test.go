@@ -16,11 +16,12 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	eselastic "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/httputils"
-	esSearch "github.com/tigera/es-proxy/pkg/search"
+	"github.com/tigera/lma/pkg/httputils"
 	calicojson "github.com/tigera/lma/pkg/test/json"
 	"github.com/tigera/lma/pkg/test/thirdpartymock"
+
+	eselastic "github.com/tigera/es-proxy/pkg/elastic"
+	esSearch "github.com/tigera/es-proxy/pkg/search"
 )
 
 const (

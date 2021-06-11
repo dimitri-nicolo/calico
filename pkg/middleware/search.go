@@ -9,10 +9,11 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-proxy/pkg/httputils"
-	esSearch "github.com/tigera/es-proxy/pkg/search"
+	"github.com/tigera/lma/pkg/httputils"
 
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
+
+	esSearch "github.com/tigera/es-proxy/pkg/search"
 )
 
 type getIndex func(string) string

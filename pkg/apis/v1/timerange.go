@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tigera/es-proxy/pkg/httputils"
+	"github.com/tigera/lma/pkg/httputils"
 
 	log "github.com/sirupsen/logrus"
 

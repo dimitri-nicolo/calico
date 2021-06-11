@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-proxy/pkg/httputils"
 	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/httputils"
 	authzv1 "k8s.io/api/authorization/v1"
 )
 
