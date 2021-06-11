@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/k8s"
 
@@ -89,7 +90,7 @@ type RawEventRecord struct {
 // view. If we have insufficient information in the event log to accurately pin the event to a service graph node then
 // we will not include it in the node. The unfiltered alerts table will still provide the user with the opportunity to
 // see all events.
-func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr v1.TimeRange) ([]Event, error) {
+func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr lmav1.TimeRange) ([]Event, error) {
 	// Trace stats at debug level.
 	if log.IsLevelEnabled(log.DebugLevel) {
 		start := time.Now()
@@ -128,7 +129,7 @@ func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.Clien
 	return append(tigeraEvents, kubernetesEvents...), nil
 }
 
-func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]Event, error) {
+func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]Event, error) {
 	// Issue the query to Elasticsearch and send results out through the results channel. We terminate the search if:
 	// - there are no more "buckets" returned by Elasticsearch or the equivalent no-or-empty "after_key" in the
 	//   aggregated search results,
@@ -190,7 +191,7 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, 
 	return results, nil
 }
 
-func getKubernetesEvents(ctx context.Context, cs k8s.ClientSet, tr v1.TimeRange) ([]Event, error) {
+func getKubernetesEvents(ctx context.Context, cs k8s.ClientSet, tr lmav1.TimeRange) ([]Event, error) {
 	var results []Event
 
 	// Query the Kubernetes events
@@ -215,7 +216,7 @@ func getKubernetesEvents(ctx context.Context, cs k8s.ClientSet, tr v1.TimeRange)
 	return results, nil
 }
 
-func parseKubernetesEvent(rawEvent corev1.Event, tr v1.TimeRange) *Event {
+func parseKubernetesEvent(rawEvent corev1.Event, tr lmav1.TimeRange) *Event {
 	// We only care about warning events where the first/last event time falls within our time window.
 	if rawEvent.Type != K8sEventTypeWarning {
 		return nil

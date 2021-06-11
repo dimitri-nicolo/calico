@@ -11,9 +11,6 @@ import (
 	"strings"
 	"time"
 
-	esindex "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/timeutils"
-
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,10 +22,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/datastore"
-	pippkg "github.com/tigera/es-proxy/pkg/pip"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
+	"github.com/tigera/lma/pkg/timeutils"
+
+	esindex "github.com/tigera/es-proxy/pkg/elastic"
+	pippkg "github.com/tigera/es-proxy/pkg/pip"
 )
 
 type FlowLogsParams struct {
@@ -240,12 +240,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	}
 
 	now := time.Now()
-	startDateTime, startDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &startDateTimeString)
+	startDateTime, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, errParseRequest
 	}
-	endDateTime, endDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &endDateTimeString)
+	endDateTime, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, errParseRequest

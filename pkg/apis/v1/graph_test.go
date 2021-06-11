@@ -9,6 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/tigera/es-proxy/pkg/apis/v1"
+
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -1276,7 +1278,7 @@ var _ = Describe("Graph API tests", func() {
 
 	It("Can parse the time range field", func() {
 		By("Parsing now-X format")
-		var tr TimeRange
+		var tr lmav1.TimeRange
 		err := json.Unmarshal([]byte(`{
 				"from": "now-1h",
 				"to": "now-30m"

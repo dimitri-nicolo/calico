@@ -7,7 +7,7 @@ import (
 
 	"github.com/tigera/lma/pkg/k8s"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
 
@@ -19,10 +19,10 @@ type ServiceGraphBackend interface {
 	// which can be embedded in the backend instance, therefore these methods do not include context parameters in the
 	// signature.
 	GetFlowConfig(cluster string) (*FlowConfig, error)
-	GetL3FlowData(cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
-	GetL7FlowData(cluster string, tr v1.TimeRange) ([]L7Flow, error)
-	GetDNSData(cluster string, tr v1.TimeRange) ([]DNSLog, error)
-	GetEvents(cluster string, tr v1.TimeRange) ([]Event, error)
+	GetL3FlowData(cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
+	GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error)
+	GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error)
+	GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error)
 
 	// These methods access data for a specific user request and therefore need to include the users request context.
 	NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error)
@@ -43,19 +43,19 @@ func (r *realServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, er
 	return GetFlowConfig(r.ctx, cs)
 }
 
-func (r *realServiceGraphBackend) GetL3FlowData(cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
+func (r *realServiceGraphBackend) GetL3FlowData(cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
 	return GetL3FlowData(r.ctx, r.elastic, cluster, tr, fc)
 }
 
-func (r *realServiceGraphBackend) GetDNSData(cluster string, tr v1.TimeRange) ([]DNSLog, error) {
+func (r *realServiceGraphBackend) GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error) {
 	return GetDNSClientData(r.ctx, r.elastic, cluster, tr)
 }
 
-func (r *realServiceGraphBackend) GetL7FlowData(cluster string, tr v1.TimeRange) ([]L7Flow, error) {
+func (r *realServiceGraphBackend) GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error) {
 	return GetL7FlowData(r.ctx, r.elastic, cluster, tr)
 }
 
-func (r *realServiceGraphBackend) GetEvents(cluster string, tr v1.TimeRange) ([]Event, error) {
+func (r *realServiceGraphBackend) GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (m *MockServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, er
 	return &m.FlowConfig, nil
 }
 
-func (m *MockServiceGraphBackend) GetL3FlowData(cluster string, tr v1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
+func (m *MockServiceGraphBackend) GetL3FlowData(cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -135,7 +135,7 @@ func (m *MockServiceGraphBackend) GetL3FlowData(cluster string, tr v1.TimeRange,
 	return m.L3, nil
 }
 
-func (m *MockServiceGraphBackend) GetL7FlowData(cluster string, tr v1.TimeRange) ([]L7Flow, error) {
+func (m *MockServiceGraphBackend) GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -146,7 +146,7 @@ func (m *MockServiceGraphBackend) GetL7FlowData(cluster string, tr v1.TimeRange)
 	return m.L7, nil
 }
 
-func (m *MockServiceGraphBackend) GetDNSData(cluster string, tr v1.TimeRange) ([]DNSLog, error) {
+func (m *MockServiceGraphBackend) GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -157,7 +157,7 @@ func (m *MockServiceGraphBackend) GetDNSData(cluster string, tr v1.TimeRange) ([
 	return m.DNS, nil
 }
 
-func (m *MockServiceGraphBackend) GetEvents(cluster string, tr v1.TimeRange) ([]Event, error) {
+func (m *MockServiceGraphBackend) GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()

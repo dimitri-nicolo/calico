@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
@@ -81,7 +82,7 @@ var (
 )
 
 // GetL7FlowData queries and returns the set of L7 flow data.
-func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr v1.TimeRange) ([]L7Flow, error) {
+func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]L7Flow, error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
 	var fs []L7Flow

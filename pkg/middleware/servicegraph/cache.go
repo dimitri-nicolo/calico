@@ -11,6 +11,8 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
@@ -69,7 +71,7 @@ func (t TimeSeriesFlow) String() string {
 }
 
 type ServiceGraphData struct {
-	TimeIntervals         []v1.TimeRange
+	TimeIntervals         []lmav1.TimeRange
 	FilteredFlows         []TimeSeriesFlow
 	FilteredDNSClientLogs []TimeSeriesDNS
 	ServiceGroups         ServiceGroups
@@ -147,7 +149,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	// Construct the service graph data by filtering the L3 and L7 data. Return the time range of the actual data
 	// rather than the request.
 	fd := &ServiceGraphData{
-		TimeIntervals: []v1.TimeRange{cacheData.timeRange},
+		TimeIntervals: []lmav1.TimeRange{cacheData.timeRange},
 		ServiceGroups: NewServiceGroups(),
 		NameHelper:    nameHelper,
 	}
@@ -466,7 +468,7 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	}
 
 	// Construct a time range for this data.
-	var tr v1.TimeRange
+	var tr lmav1.TimeRange
 	if d.relative {
 		tr.From = d.created.Add(time.Duration(-d.start) * time.Second)
 		tr.To = d.created.Add(time.Duration(-d.end) * time.Second)
@@ -553,7 +555,7 @@ type cacheData struct {
 	err error
 
 	// The time range for this data.
-	timeRange v1.TimeRange
+	timeRange lmav1.TimeRange
 
 	// The L3, L7 and events data.
 	l3     []L3Flow

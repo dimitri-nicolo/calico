@@ -10,7 +10,6 @@ import (
 	"time"
 
 	esindex "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/timeutils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -20,6 +19,7 @@ import (
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
+	"github.com/tigera/lma/pkg/timeutils"
 
 	"github.com/olivere/elastic/v7"
 
@@ -137,12 +137,12 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 
 	// Parse the start/end time to validate the format. We don't need the resulting time struct.
 	now := time.Now()
-	_, startDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &startDateTimeString)
+	_, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, errParseRequest
 	}
-	_, endDateTimeESParm, err := timeutils.ParseElasticsearchTime(now, &endDateTimeString)
+	_, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, errParseRequest
