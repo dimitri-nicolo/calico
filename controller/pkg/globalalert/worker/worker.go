@@ -193,7 +193,6 @@ func (w *worker) listenForPings(ponger health.PingPonger, stop <-chan struct{}) 
 			w.Add(pong)
 		case <-stop:
 			return
-		default:
 		}
 	}
 }
