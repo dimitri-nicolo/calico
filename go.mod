@@ -36,10 +36,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210601182200-a00d70665d97
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210612020000-cabc389f74bd
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210611151511-5ae26fb449ff
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210612014435-30c877c97208
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210601164159-0372d2f34d16
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210612015801-a00447ea2ea5
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
