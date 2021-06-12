@@ -7,10 +7,6 @@ import (
 	"strconv"
 )
 
-const (
-	MaxTCPUDPPortNum = 1<<16 - 1
-)
-
 func ProtoValidator(a *Atom) error {
 	switch a.Value {
 	case "icmp", "tcp", "udp", "ipip", "esp", "icmp6":
