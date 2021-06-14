@@ -44,8 +44,10 @@ func init() {
 	var V254 = 254
 	var V255 = 255
 	var V256 = 256
-	var Vffffffff = 0xffffffff
-	var V100000000 = 0x100000000
+	var Vxffff = 0xffff
+	var Vx10000 = 0x10000
+	var Vxffffffff = 0xffffffff
+	var Vx100000000 = 0x100000000
 
 	// Set up some values we use in various tests.
 	ipv4_1 := "1.2.3.4"
@@ -871,9 +873,9 @@ func init() {
 		Entry("should accept a valid BPFExternalServiceMode value 'DSR'", api.FelixConfigurationSpec{BPFExternalServiceMode: "DSR"}, true),
 
 		Entry("should reject a negative BPFExtToServiceConnmark value", api.FelixConfigurationSpec{BPFExtToServiceConnmark: &Vneg1}, false),
-		Entry("should reject a gte 32bit BPFExtToServiceConnmark value", api.FelixConfigurationSpec{BPFExtToServiceConnmark: &V100000000}, false),
+		Entry("should reject a gte 32bit BPFExtToServiceConnmark value", api.FelixConfigurationSpec{BPFExtToServiceConnmark: &Vx100000000}, false),
 		Entry("should accept a zero BPFExtToServiceConnmark value", api.FelixConfigurationSpec{BPFExtToServiceConnmark: &V0}, true),
-		Entry("should accept a 0xffffffff BPFExtToServiceConnmark value", api.FelixConfigurationSpec{BPFExtToServiceConnmark: &Vffffffff}, true),
+		Entry("should accept a 0xffffffff BPFExtToServiceConnmark value", api.FelixConfigurationSpec{BPFExtToServiceConnmark: &Vxffffffff}, true),
 
 		Entry("should reject an invalid BPFDataIfacePattern value '*'", api.FelixConfigurationSpec{BPFDataIfacePattern: "*"}, false),
 		Entry("should accept a valid BPFDataIfacePattern value 'eth.*'", api.FelixConfigurationSpec{BPFDataIfacePattern: "eth.*"}, true),
@@ -3071,6 +3073,16 @@ func init() {
 		Entry("should accept ServiceLoopPrevention Reject", api.FelixConfigurationSpec{ServiceLoopPrevention: "Reject"}, true),
 		Entry("should accept ServiceLoopPrevention Disabled", api.FelixConfigurationSpec{ServiceLoopPrevention: "Disabled"}, true),
 		Entry("should reject ServiceLoopPrevention Wibbly", api.FelixConfigurationSpec{ServiceLoopPrevention: "Wibbly"}, false),
+
+		Entry("should accept TPROXYMode value Disabled", api.FelixConfigurationSpec{TPROXYMode: "Disabled"}, true),
+		Entry("should accept TPROXYMode value Enabled", api.FelixConfigurationSpec{TPROXYMode: "Enabled"}, true),
+		Entry("should accept TPROXYMode value EnabledDebug", api.FelixConfigurationSpec{TPROXYMode: "EnabledDebug"}, true),
+		Entry("should reject TPROXYMode value blah", api.FelixConfigurationSpec{TPROXYMode: "blah"}, false),
+
+		Entry("should accept TPROXYPort value max port", api.FelixConfigurationSpec{TPROXYPort: &Vxffff}, true),
+		Entry("should reject TPROXYPort value negative", api.FelixConfigurationSpec{TPROXYPort: &Vneg1}, false),
+		Entry("should reject TPROXYPort value zero", api.FelixConfigurationSpec{TPROXYPort: &V0}, false),
+		Entry("should reject TPROXYPort value > 16 bit", api.FelixConfigurationSpec{TPROXYPort: &Vx10000}, false),
 
 		// KubeControllersConfiguration validation
 		Entry("should not accept invalid HealthChecks",
