@@ -32,7 +32,7 @@ var (
 			&proto.Statistic{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
-				Kind:       proto.Statistic_HTTP_DATA,
+				Kind:       proto.Statistic_INGRESS_DATA,
 				Action:     proto.Action_ALLOWED,
 				Value:      int64(1),
 			},
@@ -62,7 +62,7 @@ var (
 			&proto.Statistic{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
-				Kind:       proto.Statistic_HTTP_DATA,
+				Kind:       proto.Statistic_INGRESS_DATA,
 				Action:     proto.Action_ALLOWED,
 				Value:      int64(3),
 			},
@@ -100,7 +100,7 @@ var (
 			&proto.Statistic{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
-				Kind:       proto.Statistic_HTTP_DATA,
+				Kind:       proto.Statistic_INGRESS_DATA,
 				Action:     proto.Action_ALLOWED,
 				Value:      int64(6),
 			},
@@ -122,7 +122,7 @@ var (
 			&proto.Statistic{
 				Direction:  proto.Statistic_IN,
 				Relativity: proto.Statistic_DELTA,
-				Kind:       proto.Statistic_HTTP_DATA,
+				Kind:       proto.Statistic_INGRESS_DATA,
 				Action:     proto.Action_ALLOWED,
 				Value:      int64(1),
 			},
