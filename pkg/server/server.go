@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/es-gateway/pkg/elastic"
 	"github.com/tigera/es-gateway/pkg/handlers/gateway"
 	"github.com/tigera/es-gateway/pkg/handlers/health"
 	"github.com/tigera/es-gateway/pkg/middlewares"
@@ -26,19 +27,24 @@ const (
 type Server struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	http   *http.Server
 
-	internalCert tls.Certificate
+	http         *http.Server    // Server to accept incoming ES/Kibana requests
+	addr         string          // Address for server to listen on
+	internalCert tls.Certificate // Certificate chain used for all external requests
 
-	addr string
+	esClient elastic.Client // Elasticsearch client for making API calls required by ES Gateway
 }
 
-// New returns a new Server. k8s may be nil and options must check if it is nil
-// or not if they set its user and return an error if it is nil
+// New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
+// related routes and HTTP handlers.
 func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) {
+	var err error
 	srv := &Server{}
-
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
+
+	// -----------------------------------------------------------------------------------------------------
+	// Parse server options
+	// -----------------------------------------------------------------------------------------------------
 	for _, o := range opts {
 		if err := o(srv); err != nil {
 			return nil, errors.WithMessage(err, "applying option failed")
@@ -49,8 +55,11 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 	cfg.BuildNameToCertificate()
 
-	// Set up HTTP routes (using Gorilla mux framework). Routes consist of a path and a handler function.
+	// -----------------------------------------------------------------------------------------------------
+	// Set up all routing for ES Gateway server (using Gorilla Mux).
+	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
+	auth := middlewares.AuthenticateElasticCredentials
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
 	router.HandleFunc("/health", health.Health).Name("health")
@@ -62,7 +71,12 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	}
 	// The below path prefix syntax provides us a wildcard to specify that kibanaHandler will handle all
 	// requests with a path that begins with the given path prefix.
-	err = addRoutes(router, kibanaTarget.Routes, kibanaTarget.CatchAllRoute, http.HandlerFunc(kibanaHandler))
+	err = addRoutes(
+		router,
+		kibanaTarget.Routes,
+		kibanaTarget.CatchAllRoute,
+		auth(srv.esClient, http.HandlerFunc(kibanaHandler)),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -73,14 +87,22 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	if err != nil {
 		return nil, err
 	}
-	err = addRoutes(router, esTarget.Routes, esTarget.CatchAllRoute, http.HandlerFunc(esHandler))
+	err = addRoutes(
+		router,
+		esTarget.Routes,
+		esTarget.CatchAllRoute,
+		auth(srv.esClient, http.HandlerFunc(esHandler)),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add middlewares to the router
+	// Add common middlewares to the router.
 	router.Use(middlewares.LogRequests)
 
+	// -----------------------------------------------------------------------------------------------------
+	// Return configured ES Gateway server.
+	// -----------------------------------------------------------------------------------------------------
 	srv.http = &http.Server{
 		Addr:        srv.addr,
 		Handler:     router,

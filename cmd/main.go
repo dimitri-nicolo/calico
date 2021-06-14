@@ -8,6 +8,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/es-gateway/pkg/config"
+	"github.com/tigera/es-gateway/pkg/elastic"
 	"github.com/tigera/es-gateway/pkg/proxy"
 	"github.com/tigera/es-gateway/pkg/server"
 	"github.com/tigera/es-gateway/pkg/version"
@@ -36,6 +37,7 @@ func init() {
 
 	cfg = &config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, cfg); err != nil {
+		log.WithError(err).Warn("failed to get system cert pool, creating a new one")
 		log.Fatal(err)
 	}
 
@@ -64,12 +66,16 @@ func init() {
 		}
 	}
 
+	if len(cfg.ElasticUsername) == 0 || len(cfg.ElasticPassword) == 0 {
+		log.Fatal("Elastic credentials cannot be empty")
+	}
+
 	if len(cfg.ElasticEndpoint) == 0 {
-		log.Fatal("Elastic Endpoint configuration cannot be empty")
+		log.Fatal("Elastic endpoint cannot be empty")
 	}
 
 	if len(cfg.KibanaEndpoint) == 0 {
-		log.Fatal("Kibana Endpoint configuration cannot be empty")
+		log.Fatal("Kibana endpoint cannot be empty")
 	}
 }
 
@@ -99,9 +105,20 @@ func main() {
 		log.WithError(err).Fatal("failed to configure ES target for ES Gateway.")
 	}
 
+	esClient, err := elastic.NewClient(
+		cfg.ElasticEndpoint,
+		cfg.ElasticUsername,
+		cfg.ElasticPassword,
+		cfg.ElasticCABundlePath,
+	)
+	if err != nil {
+		log.WithError(err).Fatal("failed to configure ES client for ES Gateway.")
+	}
+
 	opts := []server.Option{
 		server.WithAddr(addr),
 		server.WithInternalTLSFiles(cfg.HTTPSCert, cfg.HTTPSKey),
+		server.WithESClient(esClient),
 	}
 
 	srv, err := server.New(esTarget, kibanaTarget, opts...)

@@ -3,6 +3,8 @@ package server
 import (
 	"crypto/tls"
 	"io/ioutil"
+
+	"github.com/tigera/es-gateway/pkg/elastic"
 )
 
 // Option is a common format for New() options
@@ -37,12 +39,21 @@ func WithInternalTLSFiles(certFile, keyFile string) Option {
 	}
 }
 
-// WithInternalCreds creates the cert and key from the given pem bytes to be used for the TLS connections for
-// external traffic (UI).
+// WithInternalCreds creates a tls.Certificate chain from the given key pair bytes.
+// This certificate chain is used for TLS connections for all external client requests.
 func WithInternalCreds(certBytes []byte, keyBytes []byte) Option {
 	return func(s *Server) error {
 		var err error
 		s.internalCert, err = tls.X509KeyPair(certBytes, keyBytes)
 		return err
+	}
+}
+
+// WithESClient sets the Elasticsearch client for the server (needed for Elasticsearch
+// API calls like authentication checking).
+func WithESClient(client elastic.Client) Option {
+	return func(s *Server) error {
+		s.esClient = client
+		return nil
 	}
 }

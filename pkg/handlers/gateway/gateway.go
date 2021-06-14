@@ -11,6 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
+	"github.com/tigera/es-gateway/pkg/elastic"
+	"github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )
 
@@ -65,7 +67,16 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Debugf("Received request %s will proxy to %s", r.RequestURI, t.Dest)
+		user, ok := r.Context().Value(middlewares.ESUserKey).(*elastic.User)
+		// This should never happen (logical bug somewhere else in the code). But we'll
+		// leave this check here to help catch it.
+		if !ok {
+			log.Error("unable to authenticate user: ES user cannot be pulled from context (this is a logical bug)")
+			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
+			return
+		}
+		log.Debugf("Received request %s from %s (with user %s), will proxy to %s", r.RequestURI, fmt.Sprintf("%s (%s)", r.RemoteAddr, r.Header), user.Username, t.Dest)
+
 		p.ServeHTTP(w, r)
 	}, nil
 }

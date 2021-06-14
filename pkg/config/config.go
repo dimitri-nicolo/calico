@@ -29,6 +29,8 @@ type Config struct {
 	ElasticEndpoint      string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
 	ElasticCatchAllRoute string `default:"/" split_words:"true"`
 	ElasticCABundlePath  string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
+	ElasticUsername      string `default:"" split_words:"true"`
+	ElasticPassword      string `default:"" split_words:"true"`
 
 	KibanaEndpoint      string `default:"https://tigera-secure-internal-kb-http.tigera-kibana.svc:5601" split_words:"true"`
 	KibanaCatchAllRoute string `default:"/tigera-kibana/" split_words:"true"` // Note: The ending "/" is important for prefix matching.
