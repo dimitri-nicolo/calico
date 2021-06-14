@@ -8909,6 +8909,20 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"tproxyMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TPROXYMode sets whether traffic is directed through a transparent proxy for further processing or not and how is the proxying done. [Default: Disabled]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tproxyPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TPROXYPort sets to which port proxied traffic should be redirected. [Default: 16001]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
