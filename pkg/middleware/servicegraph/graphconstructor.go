@@ -338,7 +338,7 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 // connected) and the service port (which will be an additional hop).
 func (s *serviceGraphConstructionData) trackNodes(
 	endpoint FlowEndpoint, svc *ServicePort, dir Direction,
-) (groupId, endpointId, serviceId v1.GraphNodeID) {
+) (groupId, endpointId, servicePortId v1.GraphNodeID) {
 	// Determine if this endpoint is in a layer - most granular wins.
 	var sg *ServiceGroup
 	if svc != nil {
@@ -354,6 +354,15 @@ func (s *serviceGraphConstructionData) trackNodes(
 	}
 	if svc != nil {
 		idi.Service = *svc
+	}
+
+	// Determine the group namespace for this node. If this node is part of service group then we use the namespace
+	// associated with the service group, otherwise this is just the endpoint namespace. Note that the service group
+	// namespace may be an aggregated name - this is fine - in this case the service group does not belong in a single
+	// namespace. Layer selection and namespace expansion is based on this group namespace.
+	groupNamespace := endpoint.Namespace
+	if sg != nil {
+		groupNamespace = sg.Namespace
 	}
 
 	// Determine the aggregated and full endpoint IDs and check if contained in a layer.
@@ -377,8 +386,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 		layerName = layerNameServiceGroup
 	}
 
-	if layerName == "" && endpoint.Namespace != "" {
-		layerNameNamespace = s.view.Layers.NamespaceToLayer[endpoint.Namespace]
+	if layerName == "" && groupNamespace != "" {
+		layerNameNamespace = s.view.Layers.NamespaceToLayer[groupNamespace]
 		layerName = layerNameNamespace
 	}
 
@@ -409,15 +418,15 @@ func (s *serviceGraphConstructionData) trackNodes(
 
 	// If the namespace is not Expanded then return the namespace node. If the namespace is part of an Expanded layer
 	// then include the layer name.
-	if endpoint.Namespace != "" && !s.view.Expanded.Namespaces[endpoint.Namespace] {
+	if groupNamespace != "" && !s.view.Expanded.Namespaces[groupNamespace] {
 		namespaceId := idi.GetNamespaceID()
 		if _, ok := s.nodesMap[namespaceId]; !ok {
-			sel := s.selh.GetNamespaceNodeSelectors(endpoint.Namespace)
+			sel := s.selh.GetNamespaceNodeSelectors(groupNamespace)
 			s.nodesMap[namespaceId] = trackedNode{
 				Node: &v1.GraphNode{
 					Type:       v1.GraphNodeTypeNamespace,
 					ID:         namespaceId,
-					Name:       endpoint.Namespace,
+					Name:       groupNamespace,
 					Layer:      layerNameNamespace,
 					Expandable: true,
 					Selectors:  sel.ToNodeSelectors(),
@@ -426,9 +435,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 			}
 			s.groupsMap[namespaceId] = newTrackedGroup(
 				namespaceId,
-				s.view.Focus.Namespaces[endpoint.Namespace] || s.view.Focus.Layers[layerName],
-				s.view.FollowedEgress.Namespaces[endpoint.Namespace] || s.view.FollowedEgress.Layers[layerName],
-				s.view.FollowedIngress.Namespaces[endpoint.Namespace] || s.view.FollowedIngress.Layers[layerName],
+				s.view.Focus.Namespaces[groupNamespace] || s.view.Focus.Layers[layerName],
+				s.view.FollowedEgress.Namespaces[groupNamespace] || s.view.FollowedEgress.Layers[layerName],
+				s.view.FollowedIngress.Namespaces[groupNamespace] || s.view.FollowedIngress.Layers[layerName],
 			)
 		}
 		return namespaceId, namespaceId, ""
@@ -454,13 +463,13 @@ func (s *serviceGraphConstructionData) trackNodes(
 			s.groupsMap[sg.ID] = newTrackedGroup(
 				sg.ID,
 				s.view.Focus.ServiceGroups[sg] ||
-					s.view.Focus.Namespaces[endpoint.Namespace] ||
+					s.view.Focus.Namespaces[groupNamespace] ||
 					s.view.Focus.Layers[layerName],
 				s.view.FollowedEgress.ServiceGroups[sg] ||
-					s.view.FollowedEgress.Namespaces[endpoint.Namespace] ||
+					s.view.FollowedEgress.Namespaces[groupNamespace] ||
 					s.view.FollowedEgress.Layers[layerName],
 				s.view.FollowedIngress.ServiceGroups[sg] ||
-					s.view.FollowedIngress.Namespaces[endpoint.Namespace] ||
+					s.view.FollowedIngress.Namespaces[groupNamespace] ||
 					s.view.FollowedIngress.Layers[layerName],
 			)
 		}
@@ -469,18 +478,37 @@ func (s *serviceGraphConstructionData) trackNodes(
 			return sg.ID, sg.ID, ""
 		}
 
+		// Service group is expanded.
 		groupId = sg.ID
 
-		// If there is a service we will need to add that node too, and return the ID.
+		// If there is a service we will need to add that node and the service port. We return the service port ID since
+		// this is an ingress point.
 		if svc != nil {
-			serviceId = idi.GetServicePortID()
+			serviceId := idi.GetServiceID()
 			if _, ok := s.nodesMap[serviceId]; !ok {
-				sel := s.selh.GetServicePortNodeSelectors(*svc)
+				sel := s.selh.GetServiceNodeSelectors(svc.NamespacedName)
 				s.nodesMap[serviceId] = trackedNode{
 					Node: &v1.GraphNode{
+						Type:      v1.GraphNodeTypeServicePort,
+						ID:        serviceId,
+						ParentID:  sg.ID,
+						Namespace: svc.Namespace,
+						Name:      svc.Name,
+						Selectors: sel.ToNodeSelectors(),
+					},
+					Selectors: sel,
+				}
+				s.groupsMap[groupId].update(serviceId, false, false, false)
+			}
+
+			servicePortId = idi.GetServicePortID()
+			if _, ok := s.nodesMap[servicePortId]; !ok {
+				sel := s.selh.GetServicePortNodeSelectors(*svc)
+				s.nodesMap[servicePortId] = trackedNode{
+					Node: &v1.GraphNode{
 						Type:        v1.GraphNodeTypeServicePort,
-						ID:          serviceId,
-						ParentID:    sg.ID,
+						ID:          servicePortId,
+						ParentID:    serviceId,
 						Namespace:   svc.Namespace,
 						Name:        svc.Name,
 						ServicePort: svc.Port,
@@ -488,7 +516,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 					},
 					Selectors: sel,
 				}
-				s.groupsMap[groupId].update(serviceId, false, false, false)
+				s.groupsMap[groupId].update(servicePortId, false, false, false)
 			}
 		}
 	}

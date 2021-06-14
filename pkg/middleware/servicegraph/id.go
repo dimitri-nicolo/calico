@@ -201,6 +201,13 @@ func (idf *IDInfo) GetLayerID() v1.GraphNodeID {
 // GetNamespaceID returns the ID of the Namespace that this endpoint is part of. This returns an empty string if the
 // node is not namespaced.
 func (idf *IDInfo) GetNamespaceID() v1.GraphNodeID {
+	// Use the service group namespace in preference to the endpoint namespace, since this is how the endpoint is
+	// grouped.
+	if idf.ServiceGroup != nil {
+		return v1.GraphNodeID(fmt.Sprintf("%s/%s", v1.GraphNodeTypeNamespace, idf.ServiceGroup.Namespace))
+	}
+
+	// No service group, use the endpoint namespace.
 	if idf.Endpoint.Namespace == "" {
 		return ""
 	}

@@ -307,6 +307,37 @@ var _ = Describe("Service graph data tests", func() {
 				"rob-bz-q5fq-kadm-node-0":  "worker",
 			}, nil),
 		),
+		Entry("Focus and expand storefront, expand emailservice",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"namespace/storefront"},
+					Expanded: []v1.GraphNodeID{"namespace/storefront", "svcgp;svc/storefront/emailservice"},
+				},
+			}, http.StatusOK, "013-focus-expand-storefront-expand-emailsvc", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus default",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus: []v1.GraphNodeID{"namespace/default"},
+				},
+			}, http.StatusOK, "014-focus-default", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus and expand default",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"namespace/default"},
+					Expanded: []v1.GraphNodeID{"namespace/default"},
+				},
+			}, http.StatusOK, "015-focus-expand-default", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Focus and expand default, expand kubernetes service",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"namespace/default"},
+					Expanded: []v1.GraphNodeID{"namespace/default", "svcgp;svc/default/kubernetes"},
+				},
+			}, http.StatusOK, "016-focus-expand-default-expand-kubernetes", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
 	)
 
 	DescribeTable("badly formatted requests",

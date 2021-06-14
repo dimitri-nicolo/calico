@@ -56,13 +56,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 		Entry("ServiceGroup",
 			IDInfo{
 				ServiceGroup: &ServiceGroup{
+					Namespace: "*",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace2", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "",
+			"", "namespace/*",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace2/service-name2", "", "",
 			"", "", "", "",
 		),
@@ -134,12 +135,13 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr:  "n1-ns",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "sns",
 					ID: GetServiceGroupID([]v1.NamespacedName{{
 						Namespace: "sns", Name: "sn",
 					}}),
 				},
 			},
-			"", "namespace/n1",
+			"", "namespace/sns",
 			"svcgp;svc/sns/sn", "", "",
 			"ns/n1/n1-ns;svcgp;svc/sns/sn", "", "", "",
 		),
@@ -185,13 +187,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "service-namespace",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "namespace/namespace1",
+			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/udp/http;svc/service-namespace/service-name",
 			"rep/namespace1/wepname*", "wep/namespace1/wepname/wepname*",
@@ -213,13 +216,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "tcp",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "service-namespace",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "namespace/ns",
+			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/tcp/;svc/service-namespace/service-name",
 			"rep/ns/repname", "", "", "",
@@ -240,13 +244,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "sctp",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "service-namespace",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "",
+			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/sctp/;svc/service-namespace/service-name",
 			"hosts/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
@@ -267,13 +272,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "service-namespace",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "",
+			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/udp/;svc/service-namespace/service-name",
 			"ns/global-ns;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
@@ -294,13 +300,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "service-namespace",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "namespace/n1",
+			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/udp/;svc/service-namespace/service-name",
 			"ns/n1/n1-ns;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
@@ -321,13 +328,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Proto: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
+					Namespace: "service-namespace",
 					ID: GetServiceGroupID([]v1.NamespacedName{
 						{Namespace: "service-namespace", Name: "service-name"},
 						{Namespace: "service-namespace", Name: "service-name2"},
 					}),
 				},
 			},
-			"", "",
+			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"svc/service-namespace/service-name", "svcport/udp/http;svc/service-namespace/service-name",
 			"net/pub;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
