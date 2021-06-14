@@ -76,6 +76,9 @@ func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
 }
 
 // GetNamespaceNodeSelectors returns the selectors for a namespace node.
+//TODO(rlb): When multiple services are part of the same group, we'll include these in an aggregated namespaces group
+//           which is not correctly handled below. However, you really have to go out of your way to have multiple
+//           service namespaces in the same group, so ignoring this for now.
 func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPairs {
 	return SelectorPairs{
 		Source: v1.GraphSelectors{
@@ -84,8 +87,14 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
 		},
 		Dest: v1.GraphSelectors{
-			L3Flows: v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
-			L7Flows: v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			L3Flows: v1.NewGraphSelector(v1.OpOr,
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			),
+			L7Flows: v1.NewGraphSelector(v1.OpOr,
+				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			),
 			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
 		},
 	}
