@@ -13,3 +13,14 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+.vscode
+
+.go-build-cache
+.go-pkg-cache
+.idea
+*.tar
+report
+cmd/server/server
+bin/
+Makefile.common*
+.DS_Store

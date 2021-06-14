@@ -1,2 +1,3 @@
-# prometheus-service
-REST API service for communication directed at a Prometheus instance
+# Prometheus Service
+
+L7 API Service for communication directed at a Prometheus instance.
