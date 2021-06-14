@@ -15,46 +15,88 @@ import (
 
 var (
 	versionFlag = flag.Bool("version", false, "Print version information")
+
+	// Configuration object for ES Gateway server.
+	cfg *config.Config
+
+	// Catch-all Route for Elasticsearch and Kibana.
+	elasticCatchAllRoute, kibanaCatchAllRoute *proxy.Route
 )
 
-func main() {
-	// Parse all command-line flags
+// Initialize ES Gateway configuration.
+func init() {
+	// Parse all command-line flags.
 	flag.Parse()
 
-	// For --version use case
+	// For --version use case (display version information and exit program).
 	if *versionFlag {
 		version.Version()
 		os.Exit(0)
 	}
 
-	cfg := &config.Config{}
+	cfg = &config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, cfg); err != nil {
 		log.Fatal(err)
 	}
 
+	// Setup logging. Default to WARN log level.
 	cfg.SetupLogging()
+
 	log.Infof("Starting %s with %s", config.EnvConfigPrefix, cfg)
 
-	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-
-	esTarget, err := proxy.CreateTarget(
-		cfg.ElasticPathPrefixes,
-		cfg.ElasticEndpoint,
-		cfg.ElasticCABundlePath,
-		false,
-	)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create Kibana target for ES Gateway.")
+	if len(cfg.ElasticCatchAllRoute) > 0 {
+		// Catch-all route should ...
+		elasticCatchAllRoute = &proxy.Route{
+			Name:         "es-catch-all",
+			Path:         cfg.ElasticCatchAllRoute,
+			IsPathPrefix: true,       // ... always be a prefix route.
+			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
+		}
 	}
 
+	if len(cfg.KibanaCatchAllRoute) > 0 {
+		// Catch-all route should ...
+		kibanaCatchAllRoute = &proxy.Route{
+			Name:         "kb-catch-all",
+			Path:         cfg.KibanaCatchAllRoute,
+			IsPathPrefix: true,       // ... always be a prefix route.
+			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
+		}
+	}
+
+	if len(cfg.ElasticEndpoint) == 0 {
+		log.Fatal("Elastic Endpoint configuration cannot be empty")
+	}
+
+	if len(cfg.KibanaEndpoint) == 0 {
+		log.Fatal("Kibana Endpoint configuration cannot be empty")
+	}
+}
+
+// Start up HTTPS server for ES Gateway.
+func main() {
+	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+
 	kibanaTarget, err := proxy.CreateTarget(
-		cfg.KibanaPathPrefixes,
+		kibanaCatchAllRoute,
+		config.KibanaRoutes,
 		cfg.KibanaEndpoint,
 		cfg.KibanaCABundlePath,
 		false,
 	)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to create ES target for ES Gateway.")
+		log.WithError(err).Fatal("failed to configure Kibana target for ES Gateway.")
+	}
+
+	esTarget, err := proxy.CreateTarget(
+		elasticCatchAllRoute,
+		config.ElasticsearchRoutes,
+		cfg.ElasticEndpoint,
+		cfg.ElasticCABundlePath,
+		false,
+	)
+	if err != nil {
+		log.WithError(err).Fatal("failed to configure ES target for ES Gateway.")
 	}
 
 	opts := []server.Option{
@@ -64,7 +106,7 @@ func main() {
 
 	srv, err := server.New(esTarget, kibanaTarget, opts...)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to create ES Gateway server.")
+		log.WithError(err).Fatal("failed to create ES Gateway server.")
 	}
 
 	log.Infof("ES Gateway listening for HTTPS requests at %s", addr)

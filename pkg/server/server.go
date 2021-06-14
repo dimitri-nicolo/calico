@@ -8,6 +8,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/es-gateway/pkg/handlers/gateway"
 	"github.com/tigera/es-gateway/pkg/handlers/health"
 	"github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
@@ -43,35 +46,37 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	}
 
 	cfg := &tls.Config{}
-
 	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
-
 	cfg.BuildNameToCertificate()
 
 	// Set up HTTP routes (using Gorilla mux framework). Routes consist of a path and a handler function.
 	router := mux.NewRouter()
 
-	// Route Pattern 1: Handle the ES Gateway health check endpoint
+	// Route Handling #1: Handle the ES Gateway health check endpoint
 	router.HandleFunc("/health", health.Health).Name("health")
 
-	// Route Pattern 2: Handle any Kibana request, which we expect will have the provided path prefix.
-	kibanaHandler, err := kibanaTarget.GetProxyHandler()
+	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
+	kibanaHandler, err := gateway.GetProxyHandler(kibanaTarget)
 	if err != nil {
 		return nil, err
 	}
 	// The below path prefix syntax provides us a wildcard to specify that kibanaHandler will handle all
 	// requests with a path that begins with the given path prefix.
-	router.PathPrefix(kibanaTarget.PathPrefix).HandlerFunc(kibanaHandler).Name("kibana")
-
-	// Route Pattern 3: Handle any Elasticsearch request, which we treat as a catch all cases.
-	esHandler, err := esTarget.GetProxyHandler()
+	err = addRoutes(router, kibanaTarget.Routes, kibanaTarget.CatchAllRoute, http.HandlerFunc(kibanaHandler))
 	if err != nil {
 		return nil, err
 	}
-	// We add a path prefix to enable wildcard. This base path is more generic and acts as a catch all.
-	// Since it has been added last (after the previous routes) will will only match if the previous
-	// routes did not match.
-	router.PathPrefix(esTarget.PathPrefix).HandlerFunc(esHandler).Name("elasticsearch")
+
+	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
+	// these routes do not have a universally common path prefix.
+	esHandler, err := gateway.GetProxyHandler(esTarget)
+	if err != nil {
+		return nil, err
+	}
+	err = addRoutes(router, esTarget.Routes, esTarget.CatchAllRoute, http.HandlerFunc(esHandler))
+	if err != nil {
+		return nil, err
+	}
 
 	// Add middlewares to the router
 	router.Use(middlewares.LogRequests)
@@ -89,4 +94,47 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 // ListenAndServeHTTPS starts listening and serving HTTPS requests
 func (s *Server) ListenAndServeHTTPS() error {
 	return s.http.ListenAndServeTLS("", "")
+}
+
+// addRoutes sets up the given Routes for the provided mux.Router.
+func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Route, f http.Handler) error {
+	// Set up provided list of Routes
+	for _, route := range routes {
+		muxRoute := router.NewRoute()
+		// Create a wrapping handler that will log the route name when executed.
+		wrapper := getHandlerWrapper(route.Name)
+
+		// If this Route has HTTP methods to filter on, then add those.
+		if len(route.HTTPMethods) > 0 {
+			muxRoute.Methods(route.HTTPMethods...)
+		}
+		if route.IsPathPrefix {
+			muxRoute.PathPrefix(route.Path).Handler(wrapper(f)).Name(route.Name)
+		} else {
+			muxRoute.Path(route.Path).Handler(wrapper(f)).Name(route.Name)
+		}
+	}
+
+	// Set up provided catch-all Route
+	if catchAllRoute != nil {
+		if !catchAllRoute.IsPathPrefix {
+			return errors.Errorf("catch-all route must be marked as a path prefix")
+		}
+		// Create a wrapping handler that will log the route name when executed.
+		wrapper := getHandlerWrapper(catchAllRoute.Name)
+		router.PathPrefix(catchAllRoute.Path).Handler(wrapper(f)).Name(catchAllRoute.Name)
+	}
+
+	return nil
+}
+
+// getHandlerWrapper returns a function that wraps a http.Handler in order to log the Mux route that was
+// matched. This is useful for troubleshooting and debugging.
+func getHandlerWrapper(routeName string) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Debugf("Request %s as been matched with route \"%s\"", r.RequestURI, routeName)
+			h.ServeHTTP(w, r)
+		})
+	}
 }

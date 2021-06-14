@@ -1,23 +1,46 @@
 package proxy
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
+
+// Route represents one (of possibly many) route paths that a Target will be matched for. This means
+// we only accept requests destined to the Target if it matches one of the defined Routes for that Target.
+type Route struct {
+	// String representing the path of the given route. This value can be a regex pattern,
+	// but if and only if the IsPathPrefix flag is not true. This is because Gorilla Mux (the
+	// routing library we are using) does not support path prefixes that are also regex expressions.
+	Path string
+	// IsPathPrefix indicates whether this Route should be treated as a path prefix. Note that
+	// if it is to be treated as a prefix, then it cannot contain a regrex pattern.
+	IsPathPrefix bool
+	// HTTPMethods specifies which HTTP method the Route should match with. If empty, then Route
+	// will match with any HTTP method.
+	HTTPMethods []string
+	// Name helps identify this Route (for logging purposes).
+	Name string
+}
+
+// Routes is a listing of Route paths that a Target possesses.
+type Routes []Route
 
 // Target defines a destination URL to which HTTP requests will be proxied. The path prefix dictates
 // which requests will be proxied to this particular target.
 type Target struct {
-	PathPrefix string
-	Dest       *url.URL
+	// Dest is the destination of this Target. Requests that match with a Route from this Target will
+	// be sent to this destination.
+	Dest *url.URL
+
+	// List of Routes that apply to this Target. Any request that matches one of these Routes will be
+	// directed to the Dest of this Target.
+	Routes Routes
+
+	// Catch-all Route for this Traget that is evaluated last (by virtue of being configured last).
+	// This is optional (defaults to nil).
+	CatchAllRoute *Route
 
 	// Provides the CA cert to use for TLS verification.
 	CAPem string
@@ -30,24 +53,29 @@ type Target struct {
 }
 
 // CreateTarget returns a Target instance based on the provided parameter values.
-func CreateTarget(pathPrefix, dest, caBundlePath string, allowInsecureTLS bool) (*Target, error) {
+func CreateTarget(catchAllRoute *Route, routes Routes, dest, caBundlePath string, allowInsecureTLS bool) (*Target, error) {
+	var err error
+
 	target := &Target{
-		PathPrefix:       pathPrefix,
+		Routes:           routes,
 		AllowInsecureTLS: allowInsecureTLS,
 	}
 
-	if pathPrefix == "" {
-		return nil, errors.New("proxy target path cannot be empty")
+	if len(routes) < 1 {
+		return nil, errors.New("target configuration requires at least one route")
 	}
 
-	var err error
+	if catchAllRoute != nil {
+		target.CatchAllRoute = catchAllRoute
+	}
+
 	target.Dest, err = url.Parse(dest)
 	if err != nil {
-		return nil, errors.Errorf("Incorrect URL %q for path %q: %s", dest, pathPrefix, err)
+		return nil, errors.Errorf("could not parse destination URL %q with associcated routes %+v: %s", dest, routes, err)
 	}
 
 	if target.Dest.Scheme == "https" && !allowInsecureTLS && caBundlePath == "" {
-		return nil, errors.Errorf("target for path '%s' must specify the ca bundle if AllowInsecureTLS is false when the scheme is https", pathPrefix)
+		return nil, errors.Errorf("target for '%s' must specify the CA bundle if AllowInsecureTLS is false when the scheme is https", dest)
 	}
 
 	if caBundlePath != "" {
@@ -55,53 +83,4 @@ func CreateTarget(pathPrefix, dest, caBundlePath string, allowInsecureTLS bool) 
 	}
 
 	return target, nil
-}
-
-// GetProxyHandler generates an HTTP proxy handler based on the given Target.
-func (t *Target) GetProxyHandler() (func(http.ResponseWriter, *http.Request), error) {
-	p := httputil.NewSingleHostReverseProxy(t.Dest)
-	p.FlushInterval = -1
-
-	if t.Transport != nil {
-		p.Transport = t.Transport
-	} else if t.Dest.Scheme == "https" {
-		var tlsCfg *tls.Config
-
-		if t.AllowInsecureTLS {
-			tlsCfg = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-		} else {
-			if len(t.CAPem) == 0 {
-				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", t.PathPrefix)
-			}
-
-			log.Debugf("Detected secure transport for %s. Will pick up system cert pool", t.Dest)
-			var ca *x509.CertPool
-			ca, err := x509.SystemCertPool()
-			if err != nil {
-				log.WithError(err).Warn("failed to get system cert pool, creating a new one")
-				ca = x509.NewCertPool()
-			}
-
-			file, err := ioutil.ReadFile(t.CAPem)
-			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("could not read cert from file %s", t.CAPem))
-			}
-
-			ca.AppendCertsFromPEM(file)
-			tlsCfg = &tls.Config{
-				RootCAs: ca,
-			}
-		}
-
-		p.Transport = &http.Transport{
-			TLSClientConfig: tlsCfg,
-		}
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Debugf("Received request %s will proxy to %s", r.RequestURI, t.Dest)
-		p.ServeHTTP(w, r)
-	}, nil
 }

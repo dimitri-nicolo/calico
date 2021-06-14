@@ -26,13 +26,13 @@ type Config struct {
 	HTTPSCert string `default:"/certs/https/cert" split_words:"true" json:"-"`
 	HTTPSKey  string `default:"/certs/https/key" split_words:"true" json:"-"`
 
-	ElasticEndpoint     string `default:"https://tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
-	ElasticPathPrefixes string `default:"/" split_words:"true"`
-	ElasticCABundlePath string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
+	ElasticEndpoint      string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
+	ElasticCatchAllRoute string `default:"/" split_words:"true"`
+	ElasticCABundlePath  string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
 
-	KibanaEndpoint     string `default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601" split_words:"true"`
-	KibanaPathPrefixes string `default:"/tigera-kibana" split_words:"true"`
-	KibanaCABundlePath string `default:"/certs/kibana/tls.crt" split_words:"true"`
+	KibanaEndpoint      string `default:"https://tigera-secure-internal-kb-http.tigera-kibana.svc:5601" split_words:"true"`
+	KibanaCatchAllRoute string `default:"/tigera-kibana/" split_words:"true"` // Note: The ending "/" is important for prefix matching.
+	KibanaCABundlePath  string `default:"/certs/kibana/tls.crt" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.
