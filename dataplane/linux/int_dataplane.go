@@ -57,16 +57,13 @@ import (
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
-	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/felix/netlinkshim"
 	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/throttle"
@@ -769,7 +766,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.RulesConfig.TPROXYModeEnabled() {
-		tproxyMgr := newTproxyManager(config.MaxIPSetSize, ipSetsV4, ipSetsV6)
+		tproxyMgr := newTproxyManager(config.RulesConfig.IptablesMarkProxy,
+			config.MaxIPSetSize,
+			ipSetsV4,
+			ipSetsV6,
+			config,
+			dp.loopSummarizer,
+		)
 		dp.RegisterManager(tproxyMgr)
 	}
 
@@ -1769,52 +1772,6 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			Action: iptables.JumpAction{Target: rules.ChainMangleOutput},
 		})
 		t.InsertOrAppendRules("OUTPUT", rs)
-
-		if d.config.RulesConfig.TPROXYModeEnabled() {
-			mark := d.config.RulesConfig.IptablesMarkProxy
-
-			// XXX rt and rr should not be GC I guess, so we will need to
-			// XXX maintain a reference
-			rt := routetable.New(
-				nil,
-				4,     // XXX we should for both
-				false, // vxlan
-				d.config.NetlinkTimeout,
-				nil, // deviceRouteSourceAddress
-				d.config.DeviceRouteProtocol,
-				true, // removeExternalRoutes
-				0xe0, // XXX to be configurable
-				d.loopSummarizer,
-			)
-			rr, err := routerule.New(
-				4,
-				1, // routing priority
-				set.From(0xe0),
-				routerule.RulesMatchSrcFWMarkTable,
-				routerule.RulesMatchSrcFWMarkTable,
-				d.config.NetlinkTimeout,
-				func() (routerule.HandleIface, error) {
-					return netlinkshim.NewRealNetlink()
-				},
-				d.loopSummarizer,
-			)
-			if err != nil {
-				log.WithError(err).Panic("Unexpected error creating rule manager")
-			}
-
-			anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
-			rt.RouteUpdate("lo", routetable.Target{
-				Type: routetable.TargetTypeLocal,
-				CIDR: anyV4,
-			})
-			rt.Apply()
-
-			rr.SetRule(routerule.NewRule(4, 1).
-				GoToTable(0xe0).
-				MatchFWMarkWithMask(uint32(mark), uint32(mark)),
-			)
-			rr.Apply()
-		}
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {
