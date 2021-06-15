@@ -26,6 +26,8 @@ build: prometheus-service
 BINDIR?=bin
 BUILD_DIR?=build
 TOP_SRC_DIRS=pkg
+TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
+                   -exec dirname {} \\; | sort | uniq")
 GO_FILES= $(shell sh -c "find pkg cmd -name \\*.go")
 
 PROMETHEUS_SERVICE_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
@@ -41,6 +43,8 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(PROMETHEUS_SERVICE_VERSIO
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
+###############################################################################
+# Build
 ###############################################################################
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
@@ -86,6 +90,40 @@ clean:
 	docker rmi -f $(PROMETHEUS_SERVICE_IMAGE):latest > /dev/null 2>&1
 	docker rmi -f $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) > /dev/null 2>&1
 	rm -rf $(BINDIR) .go-pkg-cache Makefile.common*
+
+##########################################################################
+# Testing
+##########################################################################
+report-dir:
+	mkdir -p report
+
+.PHONY: ut
+ut: report-dir
+	$(DOCKER_GO_BUILD) \
+		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
+			go test $(UNIT_TEST_FLAGS) \
+			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+
+###############################################################################
+# Static checks
+###############################################################################
+# See .golangci.yml for golangci-lint config
+# SA1019 are deprecation checks, we don't want to fail on those because it means a library update that deprecates something
+# requires immediate removing of the deprecated functions.
+LINT_ARGS += --exclude SA1019
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: ci cd
+
+## run CI cycle - build, test, etc.
+## Run UTs and only if they pass build image and continue along.
+ci: clean image-all static-checks ut
+
+## Deploys images to registry
+cd: image-all cd-common
+
 
 ###############################################################################
 # Utils
