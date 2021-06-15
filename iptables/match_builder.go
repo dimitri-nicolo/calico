@@ -156,14 +156,6 @@ func (m MatchCriteria) DestAddrType(addrType AddrType) MatchCriteria {
 	return append(m, fmt.Sprintf("-m addrtype --dst-type %s", addrType))
 }
 
-func (m MatchCriteria) NotDestAddrType(addrType AddrType, limitIfaceOut bool) MatchCriteria {
-	if limitIfaceOut {
-		return append(m, fmt.Sprintf("-m addrtype ! --dst-type %s --limit-iface-out", addrType))
-	} else {
-		return append(m, fmt.Sprintf("-m addrtype ! --dst-type %s", addrType))
-	}
-}
-
 func (m MatchCriteria) ConntrackState(stateNames string) MatchCriteria {
 	return append(m, fmt.Sprintf("-m conntrack --ctstate %s", stateNames))
 }

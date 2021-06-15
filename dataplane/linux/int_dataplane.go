@@ -1773,8 +1773,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 					// identify the upstream part and mark it.
 					Comment: []string{"Mark any non-local connection as local for return"},
 					Match: iptables.Match().
-						NotSrcAddrType(iptables.AddrTypeLocal, false).
-						NotDestAddrType(iptables.AddrTypeLocal, false),
+						NotSrcAddrType(iptables.AddrTypeLocal, false),
 					Action: iptables.SetConnMarkAction{Mark: mark, Mask: mark},
 				},
 			})
