@@ -198,7 +198,7 @@ func (c *resources) UpdateStatus(ctx context.Context, opts options.SetOptions, k
 	statusClient, ok := c.backend.(bapi.StatusClient)
 	if !ok {
 		return nil, cerrors.ErrorOperationNotSupported{
-			Operation: "UpdateStatus",
+			Operation:  "UpdateStatus",
 			Identifier: kind,
 		}
 	}
