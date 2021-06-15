@@ -619,7 +619,9 @@ func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 
 	for _, rule := range pktInfo.RuleHits {
 		ruleID := rule.RuleID
-
+		if ruleID == nil {
+			continue
+		}
 		if ruleID.IsProfile() {
 			// This is a profile verdict. Apply the rule unchanged, but at the profile match index (which is at the
 			// very end of the match slice).
