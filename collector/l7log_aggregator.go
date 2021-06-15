@@ -156,7 +156,16 @@ func (la *l7LogAggregator) FeedUpdate(update L7Update) error {
 		existing.Merge(spec)
 		la.l7Store[meta] = existing
 	} else if (la.perNodeLimit == 0) || (len(la.l7Store) < la.perNodeLimit) {
-		la.l7Store[meta] = spec
+		// TODO: Add another store for dealing with overflow logs
+		// (logs with only counts that represent rate limiting in
+		// the L7 collector.
+		// Since we expect there to be too many L7 logs, trim out
+		// overflow logs since we do not want to use up our log limit
+		// to record them since they have less data. Overflow logs will
+		// not have a type.
+		if meta.Type != "" {
+			la.l7Store[meta] = spec
+		}
 	} else {
 		la.numUnLoggedUpdates++
 	}
