@@ -550,7 +550,7 @@ func (c *Config) EgressIPCheckEnabled() bool {
 }
 
 func (c *Config) TPROXYModeEnabled() bool {
-	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledDebug"
+	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
 }
 
 func (c *Config) IPSecEnabled() bool {
