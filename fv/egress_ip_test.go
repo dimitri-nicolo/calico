@@ -307,7 +307,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("server should see gateway IP when client connects to it", func() {
-								cc.ResetExpectations()
 								cc.ExpectSNAT(client, gw.IP, extServer, 4321)
 								cc.CheckConnectivity()
 							})
