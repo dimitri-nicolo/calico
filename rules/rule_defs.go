@@ -60,6 +60,7 @@ const (
 	ChainManglePreroutingTProxy       = ChainNamePrefix + "pre-tproxy"
 	ChainManglePreroutingTProxyEstabl = ChainNamePrefix + "pre-tproxy-establ"
 	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
+	ChainMangleOutput                 = ChainNamePrefix + "OUTPUT"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"

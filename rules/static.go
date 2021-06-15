@@ -1230,6 +1230,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		r.failsafeOutChain("mangle", ipVersion),
 		r.StaticManglePreroutingChain(ipVersion),
 		r.StaticManglePostroutingChain(ipVersion),
+		r.StaticMangleOutputChain(ipVersion),
 	)
 
 	return chains
@@ -1303,6 +1304,27 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 
 	return &Chain{
 		Name:  ChainManglePrerouting,
+		Rules: rules,
+	}
+}
+
+func (r *DefaultRuleRenderer) StaticMangleOutputChain(ipVersion uint8) *Chain {
+	rules := []Rule{}
+
+	if r.TPROXYModeEnabled() {
+		mark := r.IptablesMarkProxy
+		rules = append(rules, Rule{
+			// Proxied connections for regular services do not have
+			// local source nor destination. This is how we can easily
+			// identify the upstream part and mark it.
+			Comment: []string{"Mark any non-local connection as local for return"},
+			Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
+			Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+		})
+	}
+
+	return &Chain{
+		Name:  ChainMangleOutput,
 		Rules: rules,
 	}
 }

@@ -1764,19 +1764,14 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		})
 		t.InsertOrAppendRules("POSTROUTING", rs)
 
+		rs = []iptables.Rule{}
+		rs = append(rs, iptables.Rule{
+			Action: iptables.JumpAction{Target: rules.ChainMangleOutput},
+		})
+		t.InsertOrAppendRules("OUTPUT", rs)
+
 		if d.config.RulesConfig.TPROXYModeEnabled() {
 			mark := d.config.RulesConfig.IptablesMarkProxy
-			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{
-				{
-					// Proxied connections for regular services do not have
-					// local source nor destination. This is how we can easily
-					// identify the upstream part and mark it.
-					Comment: []string{"Mark any non-local connection as local for return"},
-					Match: iptables.Match().
-						NotSrcAddrType(iptables.AddrTypeLocal, false),
-					Action: iptables.SetConnMarkAction{Mark: mark, Mask: mark},
-				},
-			})
 
 			// XXX rt and rr should not be GC I guess, so we will need to
 			// XXX maintain a reference
