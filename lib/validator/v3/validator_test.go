@@ -3076,7 +3076,7 @@ func init() {
 
 		Entry("should accept TPROXYMode value Disabled", api.FelixConfigurationSpec{TPROXYMode: "Disabled"}, true),
 		Entry("should accept TPROXYMode value Enabled", api.FelixConfigurationSpec{TPROXYMode: "Enabled"}, true),
-		Entry("should accept TPROXYMode value EnabledDebug", api.FelixConfigurationSpec{TPROXYMode: "EnabledDebug"}, true),
+		Entry("should accept TPROXYMode value EnabledAllServices", api.FelixConfigurationSpec{TPROXYMode: "EnabledAllServices"}, true),
 		Entry("should reject TPROXYMode value blah", api.FelixConfigurationSpec{TPROXYMode: "blah"}, false),
 
 		Entry("should accept TPROXYPort value max port", api.FelixConfigurationSpec{TPROXYPort: &Vxffff}, true),
