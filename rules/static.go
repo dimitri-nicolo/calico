@@ -1196,11 +1196,6 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
 			},
 			{
-				Comment: []string{"Divert the UDP connection to proxy"},
-				Match:   Match().Protocol("udp"),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
-			},
-			{
 				Comment: []string{"Unmark non-proxied"},
 				Action:  SetConnMarkAction{Mark: 0, Mask: mark},
 			},
