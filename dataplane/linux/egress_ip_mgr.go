@@ -242,9 +242,7 @@ func newEgressIPManager(
 		dpConfig,
 		nlHandle,
 		opRecorder,
-		func(ifName string) error {
-			return ethtool.EthtoolTXOff(ifName)
-		},
+		ethtool.EthtoolTXOff,
 	)
 }
 
