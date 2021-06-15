@@ -126,6 +126,16 @@ type Client interface {
 	Close() error
 }
 
+// StatusClient extends Client, is the interface to the backend datastore.
+type StatusClient interface {
+	Client
+
+	// UpdateStatus modifies the status section of the existing object specified in the KVPair.
+	// On success, returns a KVPair for the object with revision information filled-in.
+	// If the input KVPair has revision information then the update only succeeds if the revision is still current.
+	UpdateStatus(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
+}
+
 type Syncer interface {
 	// Starts the Syncer.  May start a background goroutine.
 	Start()

@@ -78,3 +78,10 @@ type K8sNodeResourceClient interface {
 	K8sResourceClient
 	ExtractResourcesFromNode(node *apiv1.Node) ([]*model.KVPair, error)
 }
+
+// K8sResourceStatusClient extends the K8sResourceClient to add a helper method to
+// update status section of resources.
+type K8sResourceStatusClient interface {
+	K8sResourceClient
+	UpdateStatus(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
+}

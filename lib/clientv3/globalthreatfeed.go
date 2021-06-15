@@ -26,6 +26,7 @@ import (
 type GlobalThreatFeedInterface interface {
 	Create(ctx context.Context, res *apiv3.GlobalThreatFeed, opts options.SetOptions) (*apiv3.GlobalThreatFeed, error)
 	Update(ctx context.Context, res *apiv3.GlobalThreatFeed, opts options.SetOptions) (*apiv3.GlobalThreatFeed, error)
+	UpdateStatus(ctx context.Context, res *apiv3.GlobalThreatFeed, opts options.SetOptions) (*apiv3.GlobalThreatFeed, error)
 	Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.GlobalThreatFeed, error)
 	Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.GlobalThreatFeed, error)
 	List(ctx context.Context, opts options.ListOptions) (*apiv3.GlobalThreatFeedList, error)
@@ -59,6 +60,20 @@ func (r globalThreatFeeds) Update(ctx context.Context, res *apiv3.GlobalThreatFe
 	}
 
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindGlobalThreatFeed, res)
+	if out != nil {
+		return out.(*apiv3.GlobalThreatFeed), err
+	}
+	return nil, err
+}
+
+// UpdateStatus takes the representation of a GlobalThreatFeed and updates the status section of it. Returns the stored
+// representation of the GlobalThreatFeed, and an error, if there is any.
+func (r globalThreatFeeds) UpdateStatus(ctx context.Context, res *apiv3.GlobalThreatFeed, opts options.SetOptions) (*apiv3.GlobalThreatFeed, error) {
+	if err := validator.Validate(res); err != nil {
+		return nil, err
+	}
+
+	out, err := r.client.resources.UpdateStatus(ctx, opts, apiv3.KindGlobalThreatFeed, res)
 	if out != nil {
 		return out.(*apiv3.GlobalThreatFeed), err
 	}

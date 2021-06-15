@@ -773,6 +773,29 @@ func (c *KubeClient) Update(ctx context.Context, d *model.KVPair) (*model.KVPair
 	return client.Update(ctx, d)
 }
 
+// UpdateStatus updates the status section of an existing entry in the datastore.  This errors if the entry does not exist.
+func (c *KubeClient) UpdateStatus(ctx context.Context, d *model.KVPair) (*model.KVPair, error) {
+	log.Debugf("Performing 'UpdateStatus' for %+v", d)
+	client := c.getResourceClientFromKey(d.Key)
+	if client == nil {
+		log.Debug("Attempt to 'UpdateStatus' using kubernetes backend is not supported.")
+		return nil, cerrors.ErrorOperationNotSupported{
+			Identifier: d.Key,
+			Operation:  "UpdateStatus",
+		}
+	}
+
+	statusClient, ok := client.(resources.K8sResourceStatusClient)
+	if !ok {
+		log.Debug("Attempt to 'UpdateStatus' using kubernetes backend is not supported.")
+		return nil, cerrors.ErrorOperationNotSupported{
+			Identifier: d.Key,
+			Operation:  "UpdateStatus",
+		}
+	}
+	return statusClient.UpdateStatus(ctx, d)
+}
+
 // Set an existing entry in the datastore.  This ignores whether an entry already
 // exists.  This is not exposed in the main client - but we keep here for the backend
 // API.

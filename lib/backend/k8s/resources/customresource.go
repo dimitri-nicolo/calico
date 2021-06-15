@@ -150,6 +150,56 @@ func (c *customK8sResourceClient) Update(ctx context.Context, kvp *model.KVPair)
 	return kvp, nil
 }
 
+// UpdateStatus updates status section of an existing Custom K8s Resource instance in the k8s API from the supplied KVPair.
+func (c *customK8sResourceClient) UpdateStatus(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
+	logContext := log.WithFields(log.Fields{
+		"Key":      kvp.Key,
+		"Value":    kvp.Value,
+		"Parent Resource": c.resource,
+	})
+	logContext.Debug("UpdateStatus custom Kubernetes resource")
+
+	// Create storage for the updated resource.
+	resOut := reflect.New(c.k8sResourceType).Interface().(Resource)
+
+	var updateError error
+	// Convert the KVPair to a K8s resource.
+	resIn, err := c.convertKVPairToResource(kvp)
+	if err != nil {
+		logContext.WithError(err).Debug("Error updating resource status")
+		return nil, err
+	}
+
+	// Send the update request using the name.
+	name := resIn.GetObjectMeta().GetName()
+	namespace := resIn.GetObjectMeta().GetNamespace()
+	logContext = logContext.WithField("Name", name)
+	logContext.Debug("Update resource status by name")
+	updateError = c.restClient.Put().
+		Resource(c.resource).
+		SubResource("status").
+		NamespaceIfScoped(namespace, c.namespaced).
+		Body(resIn).
+		Name(name).
+		Do(ctx).Into(resOut)
+	if updateError != nil {
+		// Failed to update the resource.
+		logContext.WithError(updateError).Error("Error updating resource status")
+		return nil, K8sErrorToCalico(updateError, kvp.Key)
+	}
+
+	// Update the return data with the metadata populated by the (Kubernetes) datastore.
+	kvp, err = c.convertResourceToKVPair(resOut)
+	if err != nil {
+		logContext.WithError(err).Debug("Error converting returned K8s resource to Calico resource")
+		return nil, K8sErrorToCalico(err, kvp.Key)
+	}
+	// Success. Update the revision information from the response.
+	kvp.Revision = resOut.GetObjectMeta().GetResourceVersion()
+
+	return kvp, nil
+}
+
 func (c *customK8sResourceClient) DeleteKVP(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	return c.Delete(ctx, kvp.Key, kvp.Revision, kvp.UID)
 }

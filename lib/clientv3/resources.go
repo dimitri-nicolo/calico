@@ -59,6 +59,7 @@ type resourceList interface {
 type resourceInterface interface {
 	Create(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error)
 	Update(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error)
+	UpdateStatus(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error)
 	Delete(ctx context.Context, opts options.DeleteOptions, kind, ns, name string) (resource, error)
 	Get(ctx context.Context, opts options.GetOptions, kind, ns, name string) (resource, error)
 	List(ctx context.Context, opts options.ListOptions, kind, listkind string, inout resourceList) error
@@ -190,6 +191,18 @@ func updateResource(ctx context.Context, opts options.SetOptions, kind string, i
 // Update updates a resource in the backend datastore using the Update function defined in the backend client.
 func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
 	return updateResource(ctx, opts, kind, in, c.backend.Update)
+}
+
+// UpdateStatus updates status section of a resource in the backend datastore using the UpdateStatus function defined in the backend client.
+func (c *resources) UpdateStatus(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
+	statusClient, ok := c.backend.(bapi.StatusClient)
+	if !ok {
+		return nil, cerrors.ErrorOperationNotSupported{
+			Operation: "UpdateStatus",
+			Identifier: kind,
+		}
+	}
+	return updateResource(ctx, opts, kind, in, statusClient.UpdateStatus)
 }
 
 // Delete deletes a resource from the backend datastore.
