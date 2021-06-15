@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -73,6 +73,7 @@ var _ = Describe("EgressIPManager", func() {
 				links: []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "egress.calico"}}},
 			},
 			logutils.NewSummarizer("test loop"),
+			func(ifName string) error { return nil },
 		)
 
 		err := manager.CompleteDeferredWork()
