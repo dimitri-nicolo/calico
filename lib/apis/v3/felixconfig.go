@@ -657,7 +657,7 @@ type FelixConfigurationSpec struct {
 	// TPROXYMode sets whether traffic is directed through a transparent proxy
 	// for further processing or not and how is the proxying done.
 	// [Default: Disabled]
-	TPROXYMode string `json:"tproxyMode,omitempty" validate:"omitempty,oneof=Enabled Disabled EnabledDebug"`
+	TPROXYMode string `json:"tproxyMode,omitempty" validate:"omitempty,oneof=Disabled Enabled EnabledAllServices"`
 	// TPROXYPort sets to which port proxied traffic should be redirected.
 	// [Default: 16001]
 	TPROXYPort *int `json:"tproxyPort,omitempty" validate:"omitempty,gt=0,lte=65535"`
