@@ -433,6 +433,8 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			RouteSource: configParams.RouteSource,
 
+			KubernetesProvider: configParams.KubernetesProvider(),
+
 			Collector:            collector,
 			DNSCacheFile:         configParams.GetDNSCacheFile(),
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
