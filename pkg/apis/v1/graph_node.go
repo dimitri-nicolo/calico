@@ -38,7 +38,6 @@ type GraphNode struct {
 	Type        GraphNodeType `json:"type"`
 	Namespace   string        `json:"namespace,omitempty"`
 	Name        string        `json:"name,omitempty"`
-	ServicePort string        `json:"service_port,omitempty"`
 	Protocol    string        `json:"protocol,omitempty"`
 	Port        int           `json:"port,omitempty"`
 	Layer       string        `json:"layer,omitempty"`
