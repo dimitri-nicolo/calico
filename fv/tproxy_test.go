@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -58,6 +59,9 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			options.IPIPRoutesEnabled = false
 
 			options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
+
+			// XXX this is temporary until service annotation does the job
+			options.ExtraEnvVars["FELIX_IPSETSREFRESHINTERVAL"] = "0"
 		})
 
 		createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
@@ -154,6 +158,17 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			_ = k8sClient
 		})
 
+		// XXX this is temporary method until service annotation does the job
+		ipsetsUpdate := func(value string) {
+			// XXX need to give felix enough time to be executed _after_ it
+			// XXX syncs the ipsets for the first time
+			time.Sleep(15 * time.Second)
+			for _, felix := range felixes {
+				err := felix.ExecMayFail("ipset", "add", "cali40tproxy-services", value)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
+
 		JustAfterEach(func() {
 			for _, p := range proxies {
 				p.Stop()
@@ -178,21 +193,37 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 		})
 
 		Context("Pod-Pod", func() {
+			var pod string
+
+			JustBeforeEach(func() {
+				pod = w[0][0].IP + ":8055"
+			})
+
 			It("should have connectivity from all workloads via w[0][0].IP", func() {
-				cc.ExpectSome(w[0][1], w[0][0], 8055)
-				cc.ExpectSome(w[1][0], w[0][0], 8055)
-				cc.ExpectSome(w[1][1], w[0][0], 8055)
+				ipsetsUpdate("10.65.0.2,tcp:8055")
+
+				cc.Expect(Some, w[0][1], w[0][0], ExpectWithPorts(8055))
+				cc.Expect(Some, w[1][0], w[0][0], ExpectWithPorts(8055))
+				cc.Expect(Some, w[1][1], w[0][0], ExpectWithPorts(8055))
 				cc.CheckConnectivity()
+
+				// Connection is proxied both on the client and server node
+				Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, pod)).To(BeNumerically(">", 0))
+				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, pod)).To(BeNumerically(">", 0))
 			})
 		})
 
 		Context("ClusterIP", func() {
 			clusterIP := "10.101.0.10"
 
-			var pod string
+			var pod, svc string
 
 			JustBeforeEach(func() {
 				pod = w[0][0].IP + ":8055"
+				svc = clusterIP + ":8090"
 
 				// Mimic the kube-proxy service iptable clusterIP rule.
 				for _, f := range felixes {
@@ -207,10 +238,21 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 			})
 
 			It("should have connectivity from all workloads via ClusterIP", func() {
-				cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-				cc.ExpectSome(w[1][1], TargetIP(clusterIP), 8090)
+				ipsetsUpdate("10.101.0.10,tcp:8090")
+
+				cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+				cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+				cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 				cc.CheckConnectivity()
+
+				// Connection should be proxied on the pod's local node
+				Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+				Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+				Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+				// Connection should not be proxied on the backend pod's node
+				Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
+				Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 			})
 
 			Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
@@ -234,10 +276,22 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						pol = createPolicy(pol)
 					})
 
-					cc.ExpectNone(w[0][1], TargetIP(clusterIP), 8090)
-					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+					ipsetsUpdate("10.101.0.10,tcp:8090")
+
+					cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(None, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()
+
+					// Connection should be proxied on the pod's local node
+
+					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 				})
 			})
 
@@ -262,10 +316,22 @@ var _ = infrastructure.DatastoreDescribe("tproxy tests",
 						pol = createPolicy(pol)
 					})
 
-					cc.ExpectSome(w[0][1], TargetIP(clusterIP), 8090)
-					cc.ExpectSome(w[1][0], TargetIP(clusterIP), 8090)
-					cc.ExpectNone(w[1][1], TargetIP(clusterIP), 8090)
+					ipsetsUpdate("10.101.0.10,tcp:8090")
+
+					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.Expect(None, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()
+
+					// Connection should be proxied on the pod's local node
+
+					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
 				})
 			})
 		})

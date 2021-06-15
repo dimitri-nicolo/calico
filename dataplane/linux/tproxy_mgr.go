@@ -5,9 +5,6 @@
 package intdataplane
 
 import (
-	"fmt"
-
-	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ipsets"
 )
 
@@ -16,20 +13,20 @@ type tproxyManager struct {
 	ipSetsV6 *ipsets.IPSets
 }
 
-func newTproxyManager(ipSetsV4, ipSetsV6 *ipsets.IPSets, dests []config.ServerPort) *tproxyManager {
-	maxsize := 1000
-	svcs := []string{}
-	for _, serverPort := range dests {
-		svcs = append(svcs, fmt.Sprintf("%v,tcp:%v", serverPort.IP, serverPort.Port))
+func newTproxyManager(maxsize int, ipSetsV4, ipSetsV6 *ipsets.IPSets) *tproxyManager {
+	if ipSetsV4 != nil {
+		ipSetsV4.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
+			[]string{},
+		)
 	}
-	ipSetsV4.AddOrReplaceIPSet(
-		ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-		svcs,
-	)
-	ipSetsV6.AddOrReplaceIPSet(
-		ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-		[]string{},
-	)
+
+	if ipSetsV6 != nil {
+		ipSetsV6.AddOrReplaceIPSet(
+			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
+			[]string{},
+		)
+	}
 
 	return &tproxyManager{
 		ipSetsV4: ipSetsV4,

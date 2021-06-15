@@ -760,20 +760,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-	ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
-	dp.ipSets = append(dp.ipSets, ipSetsV6)
+	var ipSetsV6 *ipsets.IPSets
+
+	if config.IPv6Enabled {
+		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
+		ipSetsV6 = ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
+		dp.ipSets = append(dp.ipSets, ipSetsV6)
+	}
 
 	if config.RulesConfig.TPROXYModeEnabled() {
-		// add empty ipsets in data plan for felix ip table programming
-		ipSetsV4.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
-			[]string{},
-		)
-		ipSetsV6.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: 1000},
-			[]string{},
-		)
+		tproxyMgr := newTproxyManager(config.MaxIPSetSize, ipSetsV4, ipSetsV6)
+		dp.RegisterManager(tproxyMgr)
 	}
 
 	if config.BPFEnabled {
