@@ -6,7 +6,7 @@ FROM centos:8
 MAINTAINER garwood@tigera.io
 
 # Note (karthik): This is a weird version number but looks like Snort is publishing this one.
-ENV SNORT_VERSION=2.9.17.1
+ENV SNORT_VERSION=2.9.18
 ENV SNORT_URL=https://www.snort.org/downloads/snort/snort-${SNORT_VERSION}-1.centos8.x86_64.rpm
 ENV RULES_URL=https://www.snort.org/downloads/community/community-rules.tar.gz
 
