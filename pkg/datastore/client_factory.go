@@ -21,6 +21,7 @@ const (
 // create methods for the clients require a cluster id which is used to create a client that communicates with the cluster
 // identified by that id.
 type ClusterCtxK8sClientFactory interface {
+	RestConfigForCluster(clusterID string) *rest.Config
 	ClientSetForCluster(clusterID string) (ClientSet, error)
 	RBACAuthorizerForCluster(clusterId string) (auth.RBACAuthorizer, error)
 }
@@ -54,7 +55,7 @@ func NewClusterCtxK8sClientFactory(baseRestConfig *rest.Config, multiClusterForw
 
 // ClientSetForCluster creates a new ClientSet that sends requests to k8s cluster identified with clusterID.
 func (f *clientSetFactory) ClientSetForCluster(clusterID string) (ClientSet, error) {
-	k8sConfig := f.restConfigForCluster(clusterID)
+	k8sConfig := f.RestConfigForCluster(clusterID)
 	calicoConfig := rest.CopyConfig(k8sConfig)
 
 	calicoCli, err := clientset.NewForConfig(calicoConfig)
@@ -84,7 +85,7 @@ func (f *clientSetFactory) RBACAuthorizerForCluster(clusterId string) (auth.RBAC
 	return auth.NewRBACAuthorizer(cs), nil
 }
 
-func (f *clientSetFactory) restConfigForCluster(clusterID string) *rest.Config {
+func (f *clientSetFactory) RestConfigForCluster(clusterID string) *rest.Config {
 	restConfig := f.copyRESTConfig()
 	if clusterID != "" && clusterID != DefaultCluster {
 		restConfig.Host = f.multiClusterForwardingEndpoint

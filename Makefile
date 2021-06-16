@@ -30,6 +30,7 @@ Makefile.common.$(MAKE_BRANCH):
 
 MOCKERY_FILE_PATHS= \
 	pkg/datastore/ClusterCtxK8sClientFactory \
+	pkg/datastore/ClientSet \
 	pkg/list/Source \
 	pkg/syncer/SyncerCallbacks
 
