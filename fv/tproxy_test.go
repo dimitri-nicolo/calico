@@ -245,13 +245,13 @@ func describeTProxyTest(ipip bool) bool {
 					cc.CheckConnectivity()
 
 					// Connection should be proxied on the pod's local node
-					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the backend pod's node
-					Expect(proxies[0].ProxiedCount(w[1][0].IP, pod, svc)).To(Equal(0))
-					Expect(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					Eventually(proxies[0].ProxiedCount(w[1][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[0].ProxiedCount(w[1][1].IP, pod, svc)).Should(Equal(0))
 				})
 
 				Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
@@ -284,13 +284,13 @@ func describeTProxyTest(ipip bool) bool {
 
 						// Connection should be proxied on the pod's local node
 
-						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
-						Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
-						Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).Should(Equal(0))
 					})
 				})
 
@@ -324,13 +324,13 @@ func describeTProxyTest(ipip bool) bool {
 
 						// Connection should be proxied on the pod's local node
 
-						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).Should(Equal(0))
 
-						Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).Should(Equal(0))
 					})
 				})
 			})
