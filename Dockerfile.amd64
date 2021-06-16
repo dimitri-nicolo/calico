@@ -11,4 +11,5 @@ COPY --chown=1001 --from=ubi /etc/prometheus-service /etc/prometheus-service
 ADD --chown=1001 bin/prometheus-service-amd64 /prometheus-service
 
 USER 1001
+
 ENTRYPOINT ["/prometheus-service"]

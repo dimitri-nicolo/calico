@@ -104,6 +104,21 @@ ut: report-dir
 			go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
+.PHONY: fv
+fv: image report-dir
+	$(MAKE) fv-no-setup
+
+## Developer friendly target to only run fvs and skip other
+## setup steps.
+.PHONY: fv-no-setup
+fv-no-setup:
+	PACKAGE_ROOT=$(CURDIR) \
+			     GO_BUILD_IMAGE=$(CALICO_BUILD) \
+		       PACKAGE_NAME=$(PACKAGE_NAME) \
+		       GINKGO_ARGS='$(GINKGO_ARGS)' \
+		       GOMOD_CACHE=$(GOMOD_CACHE) \
+		       ./fv/run_test.sh
+
 ###############################################################################
 # Static checks
 ###############################################################################
@@ -119,7 +134,7 @@ LINT_ARGS += --exclude SA1019
 
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
-ci: clean image-all static-checks ut
+ci: clean image-all static-checks ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
