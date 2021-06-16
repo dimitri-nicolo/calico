@@ -110,7 +110,7 @@ spec:
             mountPath: /certs/es-ca.pem
             subPath: es-ca.pem
         command: ["python3"]
-        args: ["main.py"]
+        args: ["-m", "adj"]
       volumes:
         - name: es-certs
           secret:
