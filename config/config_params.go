@@ -475,6 +475,10 @@ type Config struct {
 	// Configures MTU auto-detection.
 	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
 
+	// Configures Transparent proxying modes
+	TPROXYMode string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
+	TPROXYPort int    `config:"int;16001"`
+
 	// State tracking.
 
 	// internalOverrides contains our highest priority config source, generated from internal constraints
