@@ -143,7 +143,7 @@ func (f *clientSetFactory) getClientSet(req *http.Request, clusterID string) (Cl
 
 	return &clientSet{
 		projectcalicov3: calicoCli.ProjectcalicoV3(),
-		Interface: k8sCli,
+		Interface:       k8sCli,
 	}, nil
 }
 
