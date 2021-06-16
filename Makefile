@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/licensing
-GO_BUILD_VER?=v0.51
+GO_BUILD_VER?=v0.53
 
 GIT_USE_SSH = true
 
@@ -8,6 +8,15 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LICENSING_PRIVATE_PROJECT_ID)
 
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_FELIX_PRIVATE_PROJECT_ID) $(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID) \
 	$(SEMAPHORE_API_SERVER_PROJECT_ID)
+
+CARROTCTL_IMAGE       ?=tigera/carrotctl
+BUILD_IMAGES          ?=$(CARROTCTL_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 ###############################################################################
 # Download and include Makefile.common before anything else
@@ -22,20 +31,12 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
 include Makefile.common
 
 ###############################################################################
 
-BUILD_IMAGE?=calico/carrotctl
-#PUSH_IMAGES?=$(BUILD_IMAGE) quay.io/calico/carrotctl
-PUSH_IMAGES?=$(BUILD_IMAGE)
-RELEASE_IMAGES?=
 CARROTCTL_DIR=carrotctl
 SRC_FILES=$(shell find $(CARROTCTL_DIR) -name '*.go')
-
-GO_BUILD_CONTAINER?=calico/go-build:$(GO_BUILD_VER)-$(BUILDARCH)
 
 CARROTCTL_VERSION?=$(shell git describe --tags --dirty --always)
 CARROTCTL_GIT_REVISION?=$(shell git rev-parse --short HEAD)
@@ -49,11 +50,11 @@ LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/carrotctl/cmd.VERSION=$(CARROTCTL_VERSION) 
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
 	rm -rf bin build certs *.tar report/
-	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
-	docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH) || true
+	docker rmi $(CARROTCTL_IMAGE):latest-$(ARCH) || true
+	docker rmi $(CARROTCTL_IMAGE):$(VERSION)-$(ARCH) || true
 ifeq ($(ARCH),amd64)
-	docker rmi $(BUILD_IMAGE):latest || true
-	docker rmi $(BUILD_IMAGE):$(VERSION) || true
+	docker rmi $(CARROTCTL_IMAGE):latest || true
+	docker rmi $(CARROTCTL_IMAGE):$(VERSION) || true
 endif
 
 ###############################################################################
