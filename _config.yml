@@ -71,12 +71,14 @@ imageNames:
   honeypod: tigera/honeypod
   honeypod-exp-service: tigera/honeypod-exp-service
   honeypod-controller: tigera/honeypod-controller
-  prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
-  configMapReload: quay.io/coreos/configmap-reload
-  alertManager: quay.io/prometheus/alertmanager
-  prometheus: quay.io/prometheus/prometheus
-  elasticsearchOperator: upmcenterprises/elasticsearch-operator
-  prometheusOperator: quay.io/coreos/prometheus-operator
+ # The Prometheus + eck-operator images below are third-party images 
+ # that have been ported to quay.io/tigera as per customer request
+  prometheusConfigReloader: tigera/prometheus-config-reloader
+  configMapReload: tigera/configmap-reload
+  alertManager: tigera/alertmanager
+  prometheus: tigera/prometheus
+  elasticsearchOperator: tigera/elasticsearch-operator
+  prometheusOperator: tigera/prometheus-operator
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
@@ -162,10 +164,11 @@ defaults:
         envoy: tigera/envoy
         key-cert-provisioner: tigera/key-cert-provisioner
         elasticsearch-metrics: tigera/elasticsearch-metrics
-        prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
-        configMapReload: quay.io/coreos/configmap-reload
-        alertManager: quay.io/prometheus/alertmanager
-        prometheus: quay.io/prometheus/prometheus
-        elasticsearchOperator: upmcenterprises/elasticsearch-operator
-        prometheusOperator: quay.io/coreos/prometheus-operator
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
+        # The Prometheus + eck-operator images below are third-party images 
+        # that have been ported to quay.io/tigera as per customer request
+        configMapReload: tigera/configmap-reload
+        alertManager: tigera/alertmanager
+        prometheus: tigera/prometheus
+        elasticsearchOperator: tigera/elasticsearch-operator
+        prometheusOperator: tigera/prometheus-operator
