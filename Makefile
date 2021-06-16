@@ -1,25 +1,17 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.51
+GO_BUILD_VER?=v0.53
 
 GIT_USE_SSH = true
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
 
-###############################################################################
-# Download and include Makefile.common
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+NODE_IMAGE            ?=tigera/cnx-node
+BUILD_IMAGES          ?=$(NODE_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
@@ -52,12 +44,23 @@ EXCLUDEARCH?=s390x arm64 ppc64le
 CALICO_VERSION=v3.18.1
 
 ###############################################################################
-CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
-BUILD_IMAGE?=tigera/cnx-node
-PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
-RELEASE_IMAGES?=
+# Download and include Makefile.common
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 include Makefile.common
+
+###############################################################################
 
 # Versions and location of dependencies used in the build.
 BIRD_VERSION=v0.3.3-177-gd2c723b9
@@ -67,11 +70,12 @@ FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.gz
 INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 
 # Versions and locations of dependencies used in tests.
-CALICOCTL_VERSION?=master
-CNI_VERSION?=master
-TEST_CONTAINER_NAME_VER?=latest
-CTL_CONTAINER_NAME?=$(CNX_REPOSITORY)/tigera/calicoctl:$(CALICOCTL_VERSION)-$(ARCH)
-TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
+CNX_REPOSITORY          ?=gcr.io/unique-caldron-775/cnx
+CALICOCTL_VERSION       ?=master
+CNI_VERSION             ?=master
+TEST_CONTAINER_NAME_VER ?=latest
+CTL_CONTAINER_NAME      ?=$(CNX_REPOSITORY)/tigera/calicoctl:$(CALICOCTL_VERSION)-$(ARCH)
+TEST_CONTAINER_NAME     ?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 # If building on amd64 omit the arch in the container name.  Fixme!
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 ifneq ($(BUILDARCH),amd64)
@@ -143,13 +147,13 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 
 # TODO(doublek): The various version variables in use here will need some cleanup.
 # VERSION is used by cmd/calico-ipam and cmd/calico
-# CNXVERSION is used by cmd/calico-node and pkg/startup
-# CALICO_VERSION is used by pkg/startup
+# CNXVERSION is used by cmd/calico-node and pkg/lifecycle/startup
+# CALICO_VERSION is used by pkg/lifecycle/startup
 # All these are required for correct version reporting by the various binaries
 # as well as embedding this information within the ClusterInformation resource.
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(NODE_GIT_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CNXVERSION=$(NODE_GIT_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/lifecycle/startup.CALICOVERSION=$(CALICO_VERSION) \
 	-X main.VERSION=$(NODE_GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
@@ -177,7 +181,7 @@ clean:
 	rm -rf vendor
 	rm Makefile.common*
 	# Delete images that we built in this repo
-	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
+	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
 
 ###############################################################################
@@ -260,13 +264,13 @@ $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
 # Building the image
 ###############################################################################
 ## Create the image for the current ARCH
-image: remote-deps $(BUILD_IMAGE)
+image: remote-deps $(NODE_IMAGE)
 ## Create the images for all supported ARCHes
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(BUILD_IMAGE): $(NODE_CONTAINER_CREATED)
+$(NODE_IMAGE): $(NODE_CONTAINER_CREATED)
 $(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) remote-deps
 ifeq ($(LOCAL_BUILD),true)
 	# If doing a local build, copy in local confd templates in case there are changes.
@@ -279,7 +283,7 @@ endif
 	docker run --rm -v $(CURDIR)/dist/bin:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
 	  echo; echo calico-node-$(ARCH) -v;	 /go/bin/calico-node-$(ARCH) -v; \
 	"
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
+	docker build --pull -t $(NODE_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 	touch $@
 
 ##########################################################################################
@@ -292,7 +296,7 @@ GINKGO = ginkgo
 #############################################
 # Run unit level tests
 #############################################
-UT_PACKAGES_TO_SKIP?=pkg/startup,pkg/allocateip
+UT_PACKAGES_TO_SKIP?=pkg/lifecycle/startup,pkg/allocateip
 .PHONY: ut
 ut: CMD = go mod download && $(GINKGO) -r
 ut:
@@ -319,7 +323,7 @@ $(FELIX_GPL_SOURCE): go.mod
 ## Run the ginkgo FVs
 fv: run-k8s-apiserver
 	 $(DOCKER_RUN) -e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateip $(GINKGO_ARGS)'
+		ginkgo -cover -r -skipPackage vendor pkg/lifecycle/startup pkg/allocateip $(GINKGO_ARGS)'
 
 # etcd is used by the STs
 .PHONY: run-etcd
@@ -424,10 +428,10 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	# Check versions of the Calico binaries that will be in cnx-node.tar.
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
-	docker run --rm $(BUILD_IMAGE):latest-$(ARCH) /bin/sh -c "\
+	docker run --rm $(NODE_IMAGE):latest-$(ARCH) /bin/sh -c "\
 	  echo bird --version;	 /bin/bird --version; \
 	"
-	docker save --output $@ $(BUILD_IMAGE):latest-$(ARCH)
+	docker save --output $@ $(NODE_IMAGE):latest-$(ARCH)
 
 .PHONY: st-checks
 st-checks:
@@ -562,7 +566,7 @@ st: image-all remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar r
 		   -e HOST_CHECKOUT_DIR=$(CURDIR) \
 		   -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
 		   -e MY_IP=$(LOCAL_IP_ENV) \
-		   -e NODE_CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
+		   -e NODE_CONTAINER_NAME=$(NODE_IMAGE):latest-$(ARCH) \
 		   --rm -t \
 		   -v /var/run/docker.sock:/var/run/docker.sock \
 		   $(TEST_CONTAINER_NAME) \
@@ -597,108 +601,15 @@ cd: check-dirty cd-common
 golangci-lint: $(GENERATED_FILES)
 	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-tag
-	$(MAKE) CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) tag-base-images-all
-	$(MAKE) CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-	$(MAKE) image-all
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
-	# Generate the `latest` images.
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
-	$(MAKE) release-windows-archive
-
-## Produces the Windows ZIP archive for the release.
-release-windows-archive $(WINDOWS_ARCHIVE): ensure-version-defined
-	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	echo "" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-ifeq (, $(shell which ghr))
-	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
-endif
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=$(VERSION)
-
-	# Push Windows artifacts to GitHub release.
-	# Requires ghr: https://github.com/tcnksm/ghr
-	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u tigera -r node \
-		-n $(VERSION) \
-		$(VERSION) $(WINDOWS_ARCHIVE)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-verify
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
-
 .PHONY: node-test-at
 # Run docker-image acceptance tests
 node-test-at: release-prereqs
 	docker run -v $(PWD)/tests/at/calico_node_goss.yaml:/tmp/goss.yaml \
-	  $(BUILD_IMAGE):$(VERSION) /bin/sh -c ' \
+	  $(NODE_IMAGE):$(VERSION) /bin/sh -c ' \
 	   apk --no-cache add wget ca-certificates && \
 	   wget -q -O /tmp/goss https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \
 	   chmod +rx /tmp/goss && \
 	   /tmp/goss --gossfile /tmp/goss.yaml validate'
-
-ensure-version-defined:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
 
 ensure-local-build-not-defined:
 ifdef LOCAL_BUILD
@@ -710,13 +621,6 @@ ifndef CALICO_VERSION_RELEASE
 	$(error CALICO_VERSION_RELEASE is undefined - run using make release CALICO_VERSION_RELEASE=vX.Y.Z)
 endif
 
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs: ensure-version-defined ensure-local-build-not-defined ensure-calico-version-release-defined
-
-## tag version number build images i.e.  tigera/node:latest-amd64 -> tigera/node:v1.1.1-amd64
-tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
-sub-base-tag-images-%:
-	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
 
 ###############################################################################
 # Windows packaging
@@ -789,6 +693,11 @@ endif
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
+
+## Produces the Windows ZIP archive for the release.
+## NOTE: this is needed to make the hash release, don't remove until that's changed.
+release-windows-archive $(WINDOWS_ARCHIVE): var-require-all-VERSION
+	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
 
 ###############################################################################
 # Utilities
