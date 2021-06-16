@@ -1169,7 +1169,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		mark := r.IptablesMarkProxy
 
 		// We match in this chain if the packet is either on an established
-		// connection that is proxied and marked accordingly.
+		// connection that is proxied and marked accordingly or not.
 		tproxyEstablRules := []Rule{
 			{
 				Comment: []string{"Restore proxy mark from connection if not set"},
@@ -1179,7 +1179,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			{
 				Comment: []string{"Accept packets destined to proxy on existing connection"},
 				Match:   Match().MarkMatchesWithMask(mark, mark),
-				Action:  AcceptAction{}, // XXX should this be r.mangleAllowAction ?
+				Action:  AcceptAction{}, // No further processing to match TPROXY behavior.
 			},
 		}
 
