@@ -1234,15 +1234,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chain {
 	rules := []Rule{}
 
-	// ACCEPT or RETURN immediately if packet matches an existing connection.  Note that we also
-	// have a rule like this at the start of each pre-endpoint chain; the functional difference
-	// with placing this rule here is that it will also apply to packets that may be unrelated
-	// to Calico (i.e. not to or from Calico workloads, and not via Calico host endpoints).  We
-	// think this is appropriate in the mangle table here - whereas we don't have a rule like
-	// this in the filter table - because the mangle table is generally not used (except by us)
-	// for dropping packets, so it is very unlikely that we would be circumventing someone
-	// else's rule to drop a packet.  (And in that case, the user can configure
-	// IptablesMangleAllowAction to be RETURN.)
+	// First check if the connection is being proxied.
 	if r.TPROXYModeEnabled() {
 		rules = append(rules,
 			Rule{
@@ -1253,6 +1245,15 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 		)
 	}
 
+	// ACCEPT or RETURN immediately if packet matches an existing connection.  Note that we also
+	// have a rule like this at the start of each pre-endpoint chain; the functional difference
+	// with placing this rule here is that it will also apply to packets that may be unrelated
+	// to Calico (i.e. not to or from Calico workloads, and not via Calico host endpoints).  We
+	// think this is appropriate in the mangle table here - whereas we don't have a rule like
+	// this in the filter table - because the mangle table is generally not used (except by us)
+	// for dropping packets, so it is very unlikely that we would be circumventing someone
+	// else's rule to drop a packet.  (And in that case, the user can configure
+	// IptablesMangleAllowAction to be RETURN.)
 	rules = append(rules,
 		Rule{
 			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
