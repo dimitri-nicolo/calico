@@ -125,6 +125,13 @@ func main() {
 			AllowInsecureTLS: true,
 		},
 		{
+			Path:             "/packet-capture/",
+			Dest:             cfg.PacketCaptureEndpoint,
+			PathRegexp:       []byte("^/packet-capture/?"),
+			PathReplace:      []byte("/"),
+			AllowInsecureTLS: true,
+		},
+		{
 			Path:         cfg.KibanaBasePath,
 			Dest:         cfg.KibanaEndpoint,
 			CABundlePath: cfg.KibanaCABundlePath,
