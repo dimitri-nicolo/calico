@@ -229,6 +229,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			var (
 				extServer *workload.Workload
 				cc        *connectivity.Checker
+				protocol  string
 			)
 
 			JustBeforeEach(func() {
@@ -242,7 +243,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 					C:        c,
 					Name:     "ext-server",
 					Ports:    "4321",
-					Protocol: "tcp",
+					Protocol: protocol,
 					IP:       c.IP,
 				}
 
@@ -250,8 +251,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				Expect(err).NotTo(HaveOccurred())
 
 				cc = &connectivity.Checker{
-					CheckSNAT: true,
-					Protocol:  "tcp",
+					Protocol: protocol,
 				}
 			})
 
@@ -264,50 +264,54 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				sameNode := sameNode
 				for _, ov := range []Overlay{OV_NONE, OV_VXLAN, OV_IPIP} {
 					ov := ov
-					description := "with " + ov.String() + ", client and gateway on "
-					if sameNode {
-						description += "same node"
-					} else {
-						description += "different nodes"
-					}
+					for _, proto := range []string{"tcp", "udp"} {
+						proto := proto
+						description := "with " + ov.String() + ", client and gateway on "
+						if sameNode {
+							description += "same node"
+						} else {
+							description += "different nodes"
+						}
+						description += " (" + proto + ")"
 
-					Context(description, func() {
+						Context(description, func() {
 
-						var client, gw *workload.Workload
+							var client, gw *workload.Workload
 
-						BeforeEach(func() {
-							overlay = ov
-						})
+							BeforeEach(func() {
+								overlay = ov
+								protocol = proto
+							})
 
-						JustBeforeEach(func() {
-							client = makeClient(felixes[0], "10.65.0.2", "client")
-							if sameNode {
-								gw = makeGateway(felixes[0], "10.10.10.1", "gw")
-							} else {
-								gw = makeGateway(felixes[1], "10.10.10.1", "gw")
-								switch ov {
-								case OV_NONE:
-									felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
-								case OV_VXLAN:
-									// Felix programs the routes in this case.
-								case OV_IPIP:
-									felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
+							JustBeforeEach(func() {
+								client = makeClient(felixes[0], "10.65.0.2", "client")
+								if sameNode {
+									gw = makeGateway(felixes[0], "10.10.10.1", "gw")
+								} else {
+									gw = makeGateway(felixes[1], "10.10.10.1", "gw")
+									switch ov {
+									case OV_NONE:
+										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
+									case OV_VXLAN:
+										// Felix programs the routes in this case.
+									case OV_IPIP:
+										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
+									}
 								}
-							}
-							extServer.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
-						})
+								extServer.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
+							})
 
-						AfterEach(func() {
-							client.Stop()
-							gw.Stop()
-						})
+							AfterEach(func() {
+								client.Stop()
+								gw.Stop()
+							})
 
-						It("server should see gateway IP when client connects to it", func() {
-							cc.ResetExpectations()
-							cc.ExpectSNAT(client, gw.IP, extServer, 4321)
-							cc.CheckConnectivity()
+							It("server should see gateway IP when client connects to it", func() {
+								cc.ExpectSNAT(client, gw.IP, extServer, 4321)
+								cc.CheckConnectivity()
+							})
 						})
-					})
+					}
 				}
 			}
 		})

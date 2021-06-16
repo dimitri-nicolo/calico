@@ -587,7 +587,7 @@ var dpStatsEntryWithFwdFor = proto.DataplaneStats{
 		{
 			Direction:  proto.Statistic_IN,
 			Relativity: proto.Statistic_DELTA,
-			Kind:       proto.Statistic_HTTP_DATA,
+			Kind:       proto.Statistic_INGRESS_DATA,
 			Action:     proto.Action_ALLOWED,
 			Value:      int64(dpStatsHTTPDataValue),
 		},
@@ -1692,6 +1692,32 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.ServiceName).To(Equal("test-svc"))
 		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
 		Expect(update.ServicePort).To(Equal(80))
+	})
+
+	It("should handle empty HTTP data (overflow logs)", func() {
+		emptyHD := &proto.HTTPData{}
+		c.LogL7(emptyHD, d, t, 100)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Tuple).To(Equal(t))
+		Expect(update.SrcEp).NotTo(BeNil())
+		Expect(update.SrcEp).To(Equal(remoteEd1))
+		Expect(update.DstEp).NotTo(BeNil())
+		Expect(update.DstEp).To(Equal(remoteEd2))
+		Expect(update.Duration).To(Equal(0))
+		Expect(update.DurationMax).To(Equal(0))
+		Expect(update.BytesReceived).To(Equal(0))
+		Expect(update.BytesSent).To(Equal(0))
+		Expect(update.ResponseCode).To(Equal(""))
+		Expect(update.Method).To(Equal(""))
+		Expect(update.Path).To(Equal(""))
+		Expect(update.UserAgent).To(Equal(""))
+		Expect(update.Type).To(Equal(""))
+		Expect(update.Count).To(Equal(100))
+		Expect(update.Domain).To(Equal(""))
+		Expect(update.ServiceName).To(Equal(""))
+		Expect(update.ServiceNamespace).To(Equal(""))
+		Expect(update.ServicePort).To(Equal(0))
 	})
 })
 

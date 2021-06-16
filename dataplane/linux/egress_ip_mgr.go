@@ -198,6 +198,8 @@ type egressIPManager struct {
 	tableIndexSet set.Set
 
 	opRecorder logutils.OpRecorder
+
+	disableChecksumOffload func(ifName string) error
 }
 
 func newEgressIPManager(
@@ -240,6 +242,7 @@ func newEgressIPManager(
 		dpConfig,
 		nlHandle,
 		opRecorder,
+		ethtool.EthtoolTXOff,
 	)
 }
 
@@ -253,6 +256,7 @@ func newEgressIPManagerWithShims(
 	dpConfig Config,
 	nlHandle netlinkHandle,
 	opRecorder logutils.OpRecorder,
+	disableChecksumOffload func(ifName string) error,
 ) *egressIPManager {
 
 	return &egressIPManager{
@@ -273,6 +277,7 @@ func newEgressIPManagerWithShims(
 		dpConfig:                dpConfig,
 		nlHandle:                nlHandle,
 		opRecorder:              opRecorder,
+		disableChecksumOffload:  disableChecksumOffload,
 	}
 }
 
@@ -752,7 +757,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	// Disable checksum offload.  Otherwise we end up with invalid checksums when a
 	// packet is encapped for egress gateway and then double-encapped for the regular
 	// cluster IP-IP or VXLAN overlay.
-	if err := ethtool.EthtoolTXOff(m.vxlanDevice); err != nil {
+	if err := m.disableChecksumOffload(m.vxlanDevice); err != nil {
 		return fmt.Errorf("failed to disable checksum offload: %s", err)
 	}
 
