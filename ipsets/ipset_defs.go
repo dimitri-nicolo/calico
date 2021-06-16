@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,7 +76,6 @@ const (
 	IPSetTypeHashIP     IPSetType = "hash:ip"
 	IPSetTypeHashIPPort IPSetType = "hash:ip,port"
 	IPSetTypeHashNet    IPSetType = "hash:net"
-	IPSetTypeBitmapPort IPSetType = "bitmap:port"
 )
 
 func (t IPSetType) SetType() string {
@@ -101,12 +100,6 @@ type V6IPPort struct {
 
 func (p V6IPPort) String() string {
 	return fmt.Sprintf("%s,%s:%d", p.IP.String(), p.Protocol.String(), p.Port)
-}
-
-type Port uint16
-
-func (p Port) String() string {
-	return fmt.Sprintf("%d", p)
 }
 
 func (t IPSetType) IsMemberIPV6(member string) bool {
@@ -181,11 +174,6 @@ func (t IPSetType) CanonicaliseMember(member string) ipSetMember {
 		// pretty-printing, the hash:net ipset type prints IPs with no "/32" or "/128"
 		// suffix.
 		return ip.MustParseCIDROrIP(member)
-	case IPSetTypeBitmapPort:
-		port, err := strconv.Atoi(member)
-		if err == nil && port >= 0 && port <= 0xffff {
-			return Port(port)
-		}
 	}
 	log.WithField("type", string(t)).Panic("Unknown IPSetType")
 	return nil
@@ -230,11 +218,9 @@ func (f IPFamily) Version() int {
 
 // IPSetMetadata contains the metadata for a particular IP set, such as its name, type and size.
 type IPSetMetadata struct {
-	SetID    string
-	Type     IPSetType
-	MaxSize  int
-	RangeMin int
-	RangeMax int
+	SetID   string
+	Type    IPSetType
+	MaxSize int
 }
 
 // ipSet holds the state for a particular IP set.
