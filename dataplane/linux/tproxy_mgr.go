@@ -27,6 +27,7 @@ type tproxyManager struct {
 func newTproxyManager(
 	mark uint32,
 	maxsize int,
+	idx4, idx6 int,
 	ipSetsV4, ipSetsV6 *ipsets.IPSets,
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
@@ -48,13 +49,13 @@ func newTproxyManager(
 			nil, // deviceRouteSourceAddress
 			dpConfig.DeviceRouteProtocol,
 			true, // removeExternalRoutes
-			0xe0, // XXX to be configurable
+			idx4,
 			opRecorder,
 		)
 		rr, err := routerule.New(
 			4,
 			1, // routing priority
-			set.From(0xe0),
+			set.From(idx4),
 			routerule.RulesMatchSrcFWMarkTable,
 			routerule.RulesMatchSrcFWMarkTable,
 			dpConfig.NetlinkTimeout,
@@ -74,7 +75,7 @@ func newTproxyManager(
 		})
 
 		rr.SetRule(routerule.NewRule(4, 1).
-			GoToTable(0xe0).
+			GoToTable(idx4).
 			MatchFWMarkWithMask(uint32(mark), uint32(mark)),
 		)
 
@@ -96,13 +97,13 @@ func newTproxyManager(
 			nil, // deviceRouteSourceAddress
 			dpConfig.DeviceRouteProtocol,
 			true, // removeExternalRoutes
-			0xe0, // XXX to be configurable
+			idx6,
 			opRecorder,
 		)
 		rr, err := routerule.New(
 			4,
 			1, // routing priority
-			set.From(0xe6),
+			set.From(idx6),
 			routerule.RulesMatchSrcFWMarkTable,
 			routerule.RulesMatchSrcFWMarkTable,
 			dpConfig.NetlinkTimeout,
@@ -122,7 +123,7 @@ func newTproxyManager(
 		})
 
 		rr.SetRule(routerule.NewRule(6, 1).
-			GoToTable(0xe6).
+			GoToTable(idx6).
 			MatchFWMarkWithMask(uint32(mark), uint32(mark)),
 		)
 
