@@ -147,6 +147,10 @@ func (m *tproxyManager) GetRouteTableSyncers() []routeTableSyncer {
 		rts = append(rts, m.rt4)
 	}
 
+	if m.rt6 != nil {
+		rts = append(rts, m.rt6)
+	}
+
 	return rts
 }
 
@@ -155,6 +159,10 @@ func (m *tproxyManager) GetRouteRules() []routeRules {
 
 	if m.rr4 != nil {
 		rrs = append(rrs, m.rr4)
+	}
+
+	if m.rr6 != nil {
+		rrs = append(rrs, m.rr6)
 	}
 
 	return rrs
