@@ -76,6 +76,7 @@ type esConfigController struct {
 
 func New(
 	clusterName string,
+	ownerReference string,
 	managedK8sCLI kubernetes.Interface,
 	managementK8sCLI kubernetes.Interface,
 	esK8sCLI relasticsearch.RESTClient,
@@ -85,6 +86,7 @@ func New(
 	logCtx := log.WithField("cluster", clusterName)
 	r := &reconciler{
 		clusterName:      clusterName,
+		ownerReference:   ownerReference,
 		managementK8sCLI: managementK8sCLI,
 		managedK8sCLI:    managedK8sCLI,
 		esK8sCLI:         esK8sCLI,
