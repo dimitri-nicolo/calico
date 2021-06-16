@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/typha
-GO_BUILD_VER=v0.51
+GO_BUILD_VER=v0.53
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_TYPHA_PRIVATE_PROJECT_ID)
@@ -9,13 +9,12 @@ SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_FELIX_PRIVATE_PROJECT_ID) $(SE
 
 GIT_USE_SSH = true
 
-# This needs to be evaluated before the common makefile is included.
-# This var contains some default values that the common makefile may append to.
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/typha
-
-BUILD_IMAGE=tigera/typha
-
-RELEASE_IMAGES?=
+TYPHA_IMAGE           ?=tigera/typha
+BUILD_IMAGES          ?=$(TYPHA_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?= quay.io
+RELEASE_BRANCH_PREFIX ?= release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
 
 ###############################################################################
 # Download and include Makefile.common
@@ -131,8 +130,8 @@ bin/typha-client-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 # Building the image
 ###############################################################################
 # Build the calico/typha docker image, which contains only typha.
-.PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
-image: $(BUILD_IMAGE)
+.PHONY: $(TYPHA_IMAGE) $(TYPHA_IMAGE)-$(ARCH)
+image: $(BUILD_IMAGES)
 
 # Build the image for the target architecture
 .PHONY: image-all
@@ -141,22 +140,22 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 # Build the calico/typha docker image, which contains only Typha.
-.PHONY: image $(BUILD_IMAGE)
-$(BUILD_IMAGE): bin/calico-typha-$(ARCH) bin/wrapper-$(ARCH) register
+.PHONY: image $(TYPHA_IMAGE)
+$(TYPHA_IMAGE): bin/calico-typha-$(ARCH) bin/wrapper-$(ARCH) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-typha-$(ARCH) docker-image/bin/
 	cp bin/wrapper-$(ARCH) docker-image/bin/
 	cp LICENSE docker-image/
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build --pull -t $(TYPHA_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(TYPHA_IMAGE):latest-$(ARCH) $(TYPHA_IMAGE):latest
 endif
 
 ## tag version number build images i.e.  tigera/typha:latest-amd64 -> tigera/typha:v1.1.1-amd64
 tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
 sub-base-tag-images-%:
-	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
+	docker tag $(TYPHA_IMAGE):latest-$* $(call unescapefs,$(TYPHA_IMAGE):$(VERSION)-$*)
 
 
 ###############################################################################
@@ -172,7 +171,7 @@ ut combined.coverprofile: $(SRC_FILES)
 ###############################################################################
 .PHONY: cd ci version
 version: image
-	docker run --rm $(BUILD_IMAGE):latest-$(ARCH) calico-typha --version
+	docker run --rm $(TYPHA_IMAGE):latest-$(ARCH) calico-typha --version
 
 ci: mod-download image-all version static-checks ut
 ifeq (,$(filter k8sfv-test, $(EXCEPT)))
@@ -201,7 +200,7 @@ fv: k8sfv-test
 k8sfv-test: image
 	cd .. && git clone https://github.com/projectcalico/felix.git && cd felix; \
 	[ ! -e ../typha/semaphore-felix-branch ] || git checkout $(cat ../typha/semaphore-felix-branch); \
-	JUST_A_MINUTE=true USE_TYPHA=true FV_TYPHAIMAGE=$(BUILD_IMAGE):latest TYPHA_VERSION=latest $(MAKE) k8sfv-test
+	JUST_A_MINUTE=true USE_TYPHA=true FV_TYPHAIMAGE=$(TYPHA_IMAGE):latest TYPHA_VERSION=latest $(MAKE) k8sfv-test
 
 st:
 	@echo "No STs available."
@@ -223,78 +222,6 @@ release: release-prereqs
 	@echo ""
 	@echo "  make VERSION=$(VERSION) release-publish"
 	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-	$(MAKE) image-all
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
-	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	docker run --rm $(BUILD_IMAGE):$(VERSION)-$(ARCH) calico-typha --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE):$(VERSION)-$(ARCH) calico-typha --version` "\nExpected version: $(VERSION)" && exit 1 )
-
-	# TODO: Some sort of quick validation of the produced binaries.
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	echo "" >> release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo "Attach the $(DIST)/calico-typha-amd64 binary."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE):latest-$(ARCH) calico-typha --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE):latest-$(ARCH) calico-typha --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifeq ($(GIT_COMMIT),<unknown>)
-	$(error git commit ID could not be determined, releases must be done from a git working copy)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
