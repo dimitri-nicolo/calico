@@ -21,6 +21,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210615181405-ca4e15e867d7
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210616010729-14b4ed40eb8b
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
