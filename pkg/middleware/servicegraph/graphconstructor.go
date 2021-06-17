@@ -506,11 +506,11 @@ func (s *serviceGraphConstructionData) trackNodes(
 				sel := s.selh.GetServicePortNodeSelectors(*svc)
 				s.nodesMap[servicePortId] = trackedNode{
 					Node: &v1.GraphNode{
-						Type:        v1.GraphNodeTypeServicePort,
-						ID:          servicePortId,
-						ParentID:    serviceId,
-						Name:        svc.Port,
-						Selectors:   sel.ToNodeSelectors(),
+						Type:      v1.GraphNodeTypeServicePort,
+						ID:        servicePortId,
+						ParentID:  serviceId,
+						Name:      svc.Port,
+						Selectors: sel.ToNodeSelectors(),
 					},
 					Selectors: sel,
 				}

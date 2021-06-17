@@ -23,11 +23,19 @@ type Query struct {
 	// The page size per query.
 	PageSize int
 
-	// The sort values that indicates which docs this request should "search after".
-	SearchAfter interface{}
+	// The from value.
+	From int
 
 	// Query max duration.
 	Timeout time.Duration
+
+	// Sort by information.
+	SortBy []SortBy
+}
+
+type SortBy struct {
+	Field     string
+	Ascending bool
 }
 
 // ESResults encapsulates a set elastic search response items.
@@ -66,7 +74,7 @@ func Hits(
 
 	// Retrieve hits. Time request and decoding.
 	result, err := searchElastic(
-		ctx, client, query.Query, query.Index, query.PageSize, query.SearchAfter)
+		ctx, client, query.Query, query.Index, query.PageSize, query.From, query.SortBy)
 
 	// If there was an error, check for a timeout. If it timed out just flag this in the response,
 	// but return whatever data we already have. Otherwise return the error.
@@ -93,14 +101,14 @@ func searchElastic(
 	esq elastic.Query,
 	index string,
 	pageSize int,
-	searchAfter interface{},
+	from int,
+	sortby []SortBy,
 ) (*ESResults, error) {
 	// Query the hits at the document index.
 	// Return a page of results, starting at a given offset.
-	searchQuery := c.Search().Index(index).Size(pageSize).Query(esq)
-
-	if searchAfter != nil {
-		searchQuery.SearchAfter(searchAfter)
+	searchQuery := c.Search().Index(index).Size(pageSize).Query(esq).From(from)
+	for _, s := range sortby {
+		searchQuery.Sort(s.Field, s.Ascending)
 	}
 
 	var rawHits []json.RawMessage

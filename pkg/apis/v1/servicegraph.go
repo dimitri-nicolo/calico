@@ -2,7 +2,7 @@
 package v1
 
 import (
-	"time"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 )
@@ -18,7 +18,7 @@ type ServiceGraphRequest struct {
 	SelectedView GraphView `json:"selected_view"`
 
 	// Timeout for the request. Defaults to 60s.
-	Timeout time.Duration `json:"timeout"`
+	Timeout v1.Duration `json:"timeout"`
 
 	// Force a refresh of the data. Generally this should not be required.
 	ForceRefresh bool `json:"force_refresh"`
