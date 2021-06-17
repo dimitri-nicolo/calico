@@ -115,10 +115,19 @@ rules:
   - apiGroups:
       - monitoring.coreos.com
     resources:
+      - alertmanagers
+      - podmonitors
+      - prometheuses
+      - prometheusrules
       - servicemonitors
+      - thanosrulers
     verbs:
-      - get
       - create
+      - delete
+      - get
+      - list
+      - update
+      - watch
   - apiGroups:
       - policy
     resources:

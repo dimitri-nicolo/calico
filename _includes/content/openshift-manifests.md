@@ -16,6 +16,7 @@ curl {{ "/manifests/ocp/crds/01-crd-installation.yaml" | absolute_url }} -o mani
 curl {{ "/manifests/ocp/crds/01-crd-intrusiondetection.yaml" | absolute_url }} -o manifests/01-crd-intrusiondetection.yaml
 curl {{ "/manifests/ocp/crds/01-crd-logstorage.yaml" | absolute_url }} -o manifests/01-crd-logstorage.yaml
 curl {{ "/manifests/ocp/crds/01-crd-logcollector.yaml" | absolute_url }} -o manifests/01-crd-logcollector.yaml
+curl {{ "/manifests/ocp/crds/01-crd-monitor.yaml" | absolute_url }} -o manifests/01-crd-monitor.yaml
 curl {{ "/manifests/ocp/crds/01-crd-tigerastatus.yaml" | absolute_url }} -o manifests/01-crd-tigerastatus.yaml
 curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml" | absolute_url }} -o manifests/01-crd-managementclusterconnection.yaml
 curl {{ "/manifests/ocp/crds/01-crd-managementcluster.yaml" | absolute_url }} -o manifests/01-crd-managementcluster.yaml

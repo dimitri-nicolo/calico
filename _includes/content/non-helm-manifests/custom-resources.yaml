@@ -94,3 +94,12 @@ metadata:
   name: tigera-secure
 
 ---
+
+# This section configures Prometheus for Calico Enterprise.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Monitor
+apiVersion: operator.tigera.io/v1
+kind: Monitor
+metadata:
+  name: tigera-secure
+
+---
