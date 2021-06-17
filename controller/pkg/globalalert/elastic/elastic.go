@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
@@ -30,6 +32,7 @@ const (
 	QuerySize                = 10000
 	AutoBulkFlush            = 500
 	PaginationSize           = 500
+	MaxErrorsSize            = 10
 	AlertEventType           = "alert"
 	EventIndexPattern        = "tigera_secure_ee_events.%s"
 	AuditIndexPattern        = "tigera_secure_ee_audit_*.%s.*"
@@ -84,7 +87,7 @@ func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert
 				for _, i := range v {
 					log.Errorf("Error during bulk flush for GlobalAlert %s : %#v", alert.Name, i.Error)
 					e.globalAlert.Status.Healthy = false
-					e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions,
+					e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions,
 						libcalicov3.ErrorCondition{Message: i.Error.Reason, Type: i.Error.Type})
 				}
 			}
@@ -324,7 +327,18 @@ func (e *service) ExecuteAlert(alert *v3.GlobalAlert) libcalicov3.GlobalAlertSta
 // For each bucket retrieved, verifies the values against the metrics in GlobalAlert and creates a document in events index if alert conditions are satisfied.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
 func (e *service) executeCompositeQuery() {
-	query := e.query
+	query, err := maputil.Copy(e.query)
+	if err != nil {
+		log.WithError(err).Errorf("failed to copy Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
+		return
+	}
+
+	compositeAggs, err := maputil.Copy(e.aggs["composite"].(JsonObject))
+	if err != nil {
+		log.WithError(err).Errorf("failed to copy Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
+		return
+	}
+
 	var afterKey JsonObject
 	var bucketCounter int
 
@@ -351,11 +365,10 @@ func (e *service) executeCompositeQuery() {
 		afterKey = aggBuckets.AfterKey
 		bucketCounter += len(aggBuckets.Buckets)
 		if afterKey != nil {
-			caggs := e.aggs["composite"].(JsonObject)
-			caggs["after"] = afterKey
+			compositeAggs["after"] = afterKey
 			query["aggs"] = JsonObject{
 				CompositeAggregationName: JsonObject{
-					"composite": caggs,
+					"composite": compositeAggs,
 				},
 			}
 		}
@@ -471,7 +484,7 @@ func (e *service) executeQuery() {
 	if err != nil {
 		log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
 		e.globalAlert.Status.Healthy = false
-		e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
+		e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
 		return
 	}
 
@@ -496,7 +509,7 @@ func (e *service) executeQuery() {
 		if err := json.Unmarshal(metricAggs.Aggregations["value"], &tempMetric); err != nil {
 			log.WithError(err).Errorf("failed to unmarshal GlobalAlert %s Elasticsearch response", e.globalAlert.Name)
 			e.globalAlert.Status.Healthy = false
-			e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
+			e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
 			return
 		}
 		if compare(tempMetric, e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
@@ -526,7 +539,7 @@ func (e *service) executeQuery() {
 // and flushes the BulkProcessor.
 func (e *service) setErrorAndFlush(err libcalicov3.ErrorCondition) {
 	e.globalAlert.Status.Healthy = false
-	e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, err)
+	e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, err)
 	e.bulkFlush()
 }
 
@@ -536,7 +549,7 @@ func (e *service) bulkFlush() {
 	if err := e.esBulkProcessor.Flush(); err != nil {
 		log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
 		e.globalAlert.Status.Healthy = false
-		e.globalAlert.Status.ErrorConditions = append(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
+		e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, libcalicov3.ErrorCondition{Message: err.Error()})
 	}
 }
 
@@ -625,4 +638,13 @@ func compare(left, right float64, operation string) bool {
 		log.Errorf("unexpected comparison operation %s", operation)
 		return false
 	}
+}
+
+// appendError appends the given error to the list of errors, ensures there are only `MaxErrorsSize` recent errors.
+func appendError(errs []libcalicov3.ErrorCondition, err libcalicov3.ErrorCondition) []libcalicov3.ErrorCondition {
+	errs = append(errs, err)
+	if len(errs) > MaxErrorsSize {
+		errs = errs[1:]
+	}
+	return errs
 }

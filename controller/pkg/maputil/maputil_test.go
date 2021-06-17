@@ -1,0 +1,40 @@
+package maputil
+
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("maputil", func() {
+	Context("create a deep copy", func() {
+		It("should not reflect the changes made on copied map in source map", func() {
+			srcValue := "src_value"
+			cpValue := "cp_value"
+
+			src := map[string]interface{}{
+				"a": map[string]interface{}{"b": srcValue},
+				"c": srcValue,
+				"d": map[string]interface{}{"e": map[string]interface{}{"f": srcValue}},
+			}
+			Expect(src["a"].(map[string]interface{})["b"]).Should(Equal(srcValue))
+			Expect(src["c"]).Should(Equal(srcValue))
+			Expect(src["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(srcValue))
+
+			cp, err := Copy(src)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(src).Should(BeEquivalentTo(cp))
+
+			cp["a"].(map[string]interface{})["b"] = cpValue
+			cp["c"] = cpValue
+			cp["d"].(map[string]interface{})["e"].(map[string]interface{})["f"] = cpValue
+			Expect(src).ShouldNot(BeEquivalentTo(cp))
+
+			Expect(src["a"].(map[string]interface{})["b"]).Should(Equal(srcValue))
+			Expect(src["c"]).Should(Equal(srcValue))
+			Expect(src["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(srcValue))
+			Expect(cp["a"].(map[string]interface{})["b"]).Should(Equal(cpValue))
+			Expect(cp["c"]).Should(Equal(cpValue))
+			Expect(cp["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(cpValue))
+		})
+	})
+})

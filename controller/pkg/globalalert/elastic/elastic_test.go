@@ -10,7 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	url "net/url"
+	"net/url"
 	"os"
 	"strings"
 
@@ -22,7 +22,7 @@ import (
 
 	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 const (
@@ -36,14 +36,16 @@ var (
 var _ = Describe("GlobalAlert", func() {
 	var (
 		ecli *elastic.Client
+		rt   *testRoundTripper
 	)
 	BeforeEach(func() {
 
 		// set es client
 		u, err := url.Parse(baseURI)
 		Expect(err).ShouldNot(HaveOccurred())
+		rt = newTestRoundTripper()
 		client := &http.Client{
-			Transport: http.RoundTripper(&testRoundTripper{}),
+			Transport: http.RoundTripper(rt),
 		}
 
 		ecli, err = esClient.NewClient(client, u, "", "", false)
@@ -57,7 +59,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -85,7 +87,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "dns",
@@ -108,13 +110,13 @@ var _ = Describe("GlobalAlert", func() {
 	})
 
 	Context("with count as metric and with aggregateBy", func() {
-		It("one aggregation - should query elasticsearch", func() {
+		It("single aggregation - should query elasticsearch", func() {
 			// Uses file with prefix 3_with_count_and_aggregateby_* for testing this scenario
 			ga := &v3.GlobalAlert{
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Summary:     "test alert summary ${source_namespace} ${count}",
 					Severity:    100,
 					DataSet:     "flows",
@@ -133,6 +135,12 @@ var _ = Describe("GlobalAlert", func() {
 
 			e.globalAlert = ga
 			e.executeCompositeQuery()
+			rt.reset()
+			// Successive query to elasticsearch should be same as first query
+			e.executeCompositeQuery()
+			rt.reset()
+			e.executeCompositeQuery()
+			rt.reset()
 		})
 		It("multiple aggregation-should query elasticsearch", func() {
 			// Uses file with prefix 3_1_with_count_and_aggregateby_* for testing this scenario
@@ -140,7 +148,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -168,7 +176,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: "test alert description ${source_namespace}/${source_name_aggr} ${max}",
 					Severity:    100,
 					DataSet:     "flows",
@@ -199,7 +207,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -229,7 +237,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -245,6 +253,18 @@ var _ = Describe("GlobalAlert", func() {
 
 			e.globalAlert = ga
 			e.executeCompositeQuery()
+		})
+	})
+
+	Context("on error", func() {
+		It("should store only recent errors", func() {
+			var errs []libcalicov3.ErrorCondition
+			for i := 0; i < 12; i++ {
+				errs = appendError(errs, libcalicov3.ErrorCondition{Message: fmt.Sprintf("Error %v", i)})
+			}
+			Expect(len(errs)).Should(Equal(10))
+			Expect(errs[MaxErrorsSize-1].Message).Should(Equal("Error 11"))
+			Expect(errs[0].Message).Should(Equal("Error 2"))
 		})
 	})
 
@@ -285,7 +305,16 @@ type elasticQuery struct {
 }
 
 type testRoundTripper struct {
-	e error
+	e                   error
+	isStartOfAlertCycle bool
+}
+
+func newTestRoundTripper() *testRoundTripper {
+	return &testRoundTripper{isStartOfAlertCycle: true}
+}
+
+func (t *testRoundTripper) reset() {
+	t.isStartOfAlertCycle = true
 }
 
 func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -318,12 +347,17 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Body:       mustOpen("test_files/1_with_count_and_no_aggregation_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/3_with_count_and_aggregateby_query.json"):
+				// First call made to elasticsearch should be with 3_with_count_and_aggregateby_query.json
+				Expect(t.isStartOfAlertCycle).Should(BeTrue())
+				t.isStartOfAlertCycle = false
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
 					Body:       mustOpen("test_files/3_with_count_and_aggregateby_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/3_with_count_and_aggregateby_query_after_key.json"):
+				// Second call made to elasticsearch should be with 3_with_count_and_aggregateby_query_after_key.json
+				Expect(t.isStartOfAlertCycle).Should(BeFalse())
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
