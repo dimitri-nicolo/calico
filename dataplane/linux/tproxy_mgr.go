@@ -24,17 +24,21 @@ type tproxyManager struct {
 	rr4, rr6 *routerule.RouteRules
 }
 
-func newTproxyManager(
-	mark uint32,
-	maxsize int,
+func newTProxyManager(
+	dpConfig Config,
 	idx4, idx6 int,
 	ipSetsV4, ipSetsV6 *ipsets.IPSets,
-	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 ) *tproxyManager {
+
+	mark := dpConfig.RulesConfig.IptablesMarkProxy
+
 	tpm := &tproxyManager{
 		mark: mark,
 	}
+
+	enabled := dpConfig.RulesConfig.TPROXYModeEnabled()
+
 	if ipSetsV4 != nil {
 		if idx4 == 0 {
 			log.Fatal("RouteTable index for IPv4 is the default table")
@@ -51,6 +55,7 @@ func newTproxyManager(
 			idx4,
 			opRecorder,
 		)
+
 		rr, err := routerule.New(
 			4,
 			1, // routing priority
@@ -67,16 +72,18 @@ func newTproxyManager(
 			log.WithError(err).Panic("Unexpected error creating rule manager")
 		}
 
-		anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
-		rt.RouteUpdate("lo", routetable.Target{
-			Type: routetable.TargetTypeLocal,
-			CIDR: anyV4,
-		})
+		if enabled {
+			anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
+			rt.RouteUpdate("lo", routetable.Target{
+				Type: routetable.TargetTypeLocal,
+				CIDR: anyV4,
+			})
 
-		rr.SetRule(routerule.NewRule(4, 1).
-			GoToTable(idx4).
-			MatchFWMarkWithMask(uint32(mark), uint32(mark)),
-		)
+			rr.SetRule(routerule.NewRule(4, 1).
+				GoToTable(idx4).
+				MatchFWMarkWithMask(uint32(mark), uint32(mark)),
+			)
+		}
 
 		tpm.rr4 = rr
 		tpm.rt4 = rt
@@ -98,6 +105,7 @@ func newTproxyManager(
 			idx6,
 			opRecorder,
 		)
+
 		rr, err := routerule.New(
 			6,
 			1, // routing priority
@@ -114,16 +122,18 @@ func newTproxyManager(
 			log.WithError(err).Panic("Unexpected error creating rule manager")
 		}
 
-		anyV6, _ := ip.CIDRFromString("::/0")
-		rt.RouteUpdate("lo", routetable.Target{
-			Type: routetable.TargetTypeLocal,
-			CIDR: anyV6,
-		})
+		if enabled {
+			anyV6, _ := ip.CIDRFromString("::/0")
+			rt.RouteUpdate("lo", routetable.Target{
+				Type: routetable.TargetTypeLocal,
+				CIDR: anyV6,
+			})
 
-		rr.SetRule(routerule.NewRule(6, 1).
-			GoToTable(idx6).
-			MatchFWMarkWithMask(uint32(mark), uint32(mark)),
-		)
+			rr.SetRule(routerule.NewRule(6, 1).
+				GoToTable(idx6).
+				MatchFWMarkWithMask(uint32(mark), uint32(mark)),
+			)
+		}
 
 		tpm.rr6 = rr
 		tpm.rt6 = rt
