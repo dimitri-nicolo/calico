@@ -18,7 +18,7 @@ PACKAGES+=" libidn2 gnupg2 gnutls gnupg2 gpgme glib2 librepo elfutils-libs libso
 PACKAGES+=" libsolv gettext-libs gettext libcroco cyrus-sasl-lib util-linux libpwquality pam libnsl2 libtirpc iproute"
 PACKAGES+=" kbd"
 
-PACKAGES+=" sqlite-libs-3.26.0-11.el8.i686 sqlite-libs-3.26.0-11.el8.x86_64 nss-softokn-3.53.1-17.el8_3.x86_64"
+PACKAGES+=" sqlite-libs-3.26.0-13.el8.i686 sqlite-libs-3.26.0-13.el8.x86_64 nss-softokn-3.53.1-17.el8_3.x86_64"
 PACKAGES+=" nss-softokn-3.53.1-17.el8_3.i686 elfutils-default-yama-scope libyaml dbus-common dbus-tools dbus-libs"
 PACKAGES+=" dbus-daemon tar libseccomp"
 
