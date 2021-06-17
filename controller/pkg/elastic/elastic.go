@@ -359,7 +359,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) 
 	var fromTimestamp time.Time
 	currentIpSetHash := feed.Annotations[db.IpSetHashKey]
 	// If the ipSet has changed we need to query from the beginning of time, otherwise query from the last successful time
-	if strings.Compare(newIpSetHash, currentIpSetHash) == 0 {
+	if feed.Status.LastSuccessfulSearch != nil && strings.Compare(newIpSetHash, currentIpSetHash) == 0 {
 		fromTimestamp = feed.Status.LastSuccessfulSearch.Time
 	}
 

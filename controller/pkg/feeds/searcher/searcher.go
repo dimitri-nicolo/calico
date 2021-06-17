@@ -155,8 +155,8 @@ func updateFeedStatusAfterSuccessfulSearch(feedCacher cacher.GlobalThreatFeedCac
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
 		log.Debug(fmt.Sprintf("%d/%d attempt to update feed status after successful search", i, cacher.MaxUpdateRetry))
-		if lastSuccessfulSearch.After(toBeUpdated.Status.LastSuccessfulSearch.Time) {
-			toBeUpdated.Status.LastSuccessfulSearch = metav1.Time{Time: lastSuccessfulSearch}
+		if toBeUpdated.Status.LastSuccessfulSearch == nil || lastSuccessfulSearch.After(toBeUpdated.Status.LastSuccessfulSearch.Time) {
+			toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: lastSuccessfulSearch}
 		} else {
 			log.Error("abort updating feed status after successful search because the current attempt is out of date")
 			return

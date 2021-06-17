@@ -78,7 +78,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
+	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search time was not set")
 	g.Expect(status.ErrorConditions).Should(HaveLen(0), "FeedCacher errors were not reported")
 }
 
@@ -128,7 +128,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	// Pull should work as expected, but drop an error about GlobalNetworkSetSync
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
+	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search time was not set")
 	g.Expect(status.ErrorConditions).
 		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
 }

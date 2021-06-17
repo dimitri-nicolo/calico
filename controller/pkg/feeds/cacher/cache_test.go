@@ -138,11 +138,11 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatus(t *testing.T) 
 	go func() {
 		defer wg.Done()
 		cachedFeed := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed
-		g.Expect(cachedFeed.Status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}))
-		g.Expect(cachedFeed.Status.LastSuccessfulSync.Time).Should(Equal(time.Time{}))
+		g.Expect(cachedFeed.Status.LastSuccessfulSearch).Should(BeNil())
+		g.Expect(cachedFeed.Status.LastSuccessfulSync).Should(BeNil())
 		g.Expect(cachedFeed.Status.ErrorConditions).Should(BeEmpty())
-		cachedFeed.Status.LastSuccessfulSearch = metav1.Time{Time: now}
-		cachedFeed.Status.LastSuccessfulSync = metav1.Time{Time: now}
+		cachedFeed.Status.LastSuccessfulSearch = &metav1.Time{Time: now}
+		cachedFeed.Status.LastSuccessfulSync = &metav1.Time{Time: now}
 		cachedFeed.Status.ErrorConditions = append(errorConditions)
 		feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
 	}()
@@ -185,11 +185,11 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatusConcurrently(t 
 	go func() {
 		defer wg.Done()
 		cachedFeed := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed
-		g.Expect(cachedFeed.Status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}))
-		g.Expect(cachedFeed.Status.LastSuccessfulSync.Time).Should(Equal(time.Time{}))
+		g.Expect(cachedFeed.Status.LastSuccessfulSearch).Should(BeNil())
+		g.Expect(cachedFeed.Status.LastSuccessfulSync).Should(BeNil())
 		g.Expect(cachedFeed.Status.ErrorConditions).Should(BeEmpty())
-		cachedFeed.Status.LastSuccessfulSearch = metav1.Time{Time: oneMinuteAgo}
-		cachedFeed.Status.LastSuccessfulSync = metav1.Time{Time: oneMinuteAgo}
+		cachedFeed.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
+		cachedFeed.Status.LastSuccessfulSync = &metav1.Time{Time: oneMinuteAgo}
 		cachedFeed.Status.ErrorConditions = append(errorConditions)
 		feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
 	}()
@@ -201,8 +201,8 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatusConcurrently(t 
 		g.Expect(cachedFeed.Status.LastSuccessfulSearch.Time).Should(Equal(oneMinuteAgo))
 		g.Expect(cachedFeed.Status.LastSuccessfulSync.Time).Should(Equal(oneMinuteAgo))
 		g.Expect(cachedFeed.Status.ErrorConditions).Should(Equal(errorConditions))
-		cachedFeed.Status.LastSuccessfulSearch = metav1.Time{Time: now}
-		cachedFeed.Status.LastSuccessfulSync = metav1.Time{Time: now}
+		cachedFeed.Status.LastSuccessfulSearch = &metav1.Time{Time: now}
+		cachedFeed.Status.LastSuccessfulSync = &metav1.Time{Time: now}
 		cachedFeed.Status.ErrorConditions = append(errorConditions, v3.ErrorCondition{Type: "testErrType3", Message: "testErrMessage3"})
 		feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
 	}()

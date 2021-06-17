@@ -10,7 +10,6 @@ require (
 	github.com/emicklei/go-restful v2.11.2-0.20200112161605-a7c079c43d51+incompatible // indirect
 	github.com/go-openapi/jsonreference v0.19.4-0.20191224164422-1f9748e5f45e // indirect
 	github.com/go-openapi/swag v0.19.7 // indirect
-	github.com/hashicorp/golang-lru v0.5.4
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
 	github.com/onsi/ginkgo v1.14.1
@@ -20,7 +19,7 @@ require (
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/licensing v1.0.1-0.20210614154604-c4ddc83aac62
+	github.com/tigera/licensing v1.0.1-0.20210617000352-2d6eb69889af
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
@@ -32,9 +31,9 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210614155954-6c81406aa2d1
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210614154207-4eb379588ba0
-	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210614154604-c4ddc83aac62
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210617044425-6446d8fd133e
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210616010729-14b4ed40eb8b
+	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210617000352-2d6eb69889af
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
