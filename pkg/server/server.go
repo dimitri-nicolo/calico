@@ -32,7 +32,8 @@ type Server struct {
 	addr         string          // Address for server to listen on
 	internalCert tls.Certificate // Certificate chain used for all external requests
 
-	esClient elastic.Client // Elasticsearch client for making API calls required by ES Gateway
+	// Elasticsearch client for making API calls required by ES Gateway
+	esClient elastic.Client
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -59,7 +60,9 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
-	auth := middlewares.AuthenticateElasticCredentials
+	handlers := middlewares.HandlerMap{
+		middlewares.HandlerTypeAuth: middlewares.NewAuthMiddleware(srv.esClient),
+	}
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
 	router.HandleFunc("/health", health.Health).Name("health")
@@ -75,7 +78,8 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 		router,
 		kibanaTarget.Routes,
 		kibanaTarget.CatchAllRoute,
-		auth(srv.esClient, http.HandlerFunc(kibanaHandler)),
+		handlers,
+		http.HandlerFunc(kibanaHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -91,7 +95,8 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 		router,
 		esTarget.Routes,
 		esTarget.CatchAllRoute,
-		auth(srv.esClient, http.HandlerFunc(esHandler)),
+		handlers,
+		http.HandlerFunc(esHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -119,10 +124,12 @@ func (s *Server) ListenAndServeHTTPS() error {
 }
 
 // addRoutes sets up the given Routes for the provided mux.Router.
-func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Route, f http.Handler) error {
+func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Route, h middlewares.HandlerMap, f http.Handler) error {
 	// Set up provided list of Routes
 	for _, route := range routes {
 		muxRoute := router.NewRoute()
+		finalHandler := f
+
 		// Create a wrapping handler that will log the route name when executed.
 		wrapper := getHandlerWrapper(route.Name)
 
@@ -130,21 +137,33 @@ func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Rou
 		if len(route.HTTPMethods) > 0 {
 			muxRoute.Methods(route.HTTPMethods...)
 		}
+
+		if route.RequireAuth {
+			finalHandler = h[middlewares.HandlerTypeAuth](finalHandler)
+		}
+
 		if route.IsPathPrefix {
-			muxRoute.PathPrefix(route.Path).Handler(wrapper(f)).Name(route.Name)
+			muxRoute.PathPrefix(route.Path).Handler(wrapper(finalHandler)).Name(route.Name)
 		} else {
-			muxRoute.Path(route.Path).Handler(wrapper(f)).Name(route.Name)
+			muxRoute.Path(route.Path).Handler(wrapper(finalHandler)).Name(route.Name)
 		}
 	}
 
 	// Set up provided catch-all Route
 	if catchAllRoute != nil {
+		finalHandler := f
+
 		if !catchAllRoute.IsPathPrefix {
 			return errors.Errorf("catch-all route must be marked as a path prefix")
 		}
+
+		if catchAllRoute.RequireAuth {
+			finalHandler = h[middlewares.HandlerTypeAuth](finalHandler)
+		}
+
 		// Create a wrapping handler that will log the route name when executed.
 		wrapper := getHandlerWrapper(catchAllRoute.Name)
-		router.PathPrefix(catchAllRoute.Path).Handler(wrapper(f)).Name(catchAllRoute.Name)
+		router.PathPrefix(catchAllRoute.Path).Handler(wrapper(finalHandler)).Name(catchAllRoute.Name)
 	}
 
 	return nil

@@ -53,6 +53,7 @@ func init() {
 			Path:         cfg.ElasticCatchAllRoute,
 			IsPathPrefix: true,       // ... always be a prefix route.
 			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
+			RequireAuth:  true,
 		}
 	}
 
@@ -63,6 +64,7 @@ func init() {
 			Path:         cfg.KibanaCatchAllRoute,
 			IsPathPrefix: true,       // ... always be a prefix route.
 			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
+			RequireAuth:  true,
 		}
 	}
 

@@ -67,15 +67,19 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, ok := r.Context().Value(middlewares.ESUserKey).(*elastic.User)
-		// This should never happen (logical bug somewhere else in the code). But we'll
-		// leave this check here to help catch it.
-		if !ok {
-			log.Error("unable to authenticate user: ES user cannot be pulled from context (this is a logical bug)")
-			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
-			return
+		user := r.Context().Value(middlewares.ESUserKey)
+		// User could be nil if this is a path that does not require authentication.
+		if user != nil {
+			user, ok := r.Context().Value(middlewares.ESUserKey).(*elastic.User)
+			// This should never happen (logical bug somewhere else in the code). But we'll
+			// leave this check here to help catch it.
+			if !ok {
+				log.Error("unable to authenticate user: ES user cannot be pulled from context (this is a logical bug)")
+				http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
+				return
+			}
+			log.Debugf("Received request %s from %s (with user %s), will proxy to %s", r.RequestURI, fmt.Sprintf("%s (%s)", r.RemoteAddr, r.Header), user.Username, t.Dest)
 		}
-		log.Debugf("Received request %s from %s (with user %s), will proxy to %s", r.RequestURI, fmt.Sprintf("%s (%s)", r.RemoteAddr, r.Header), user.Username, t.Dest)
 
 		p.ServeHTTP(w, r)
 	}, nil

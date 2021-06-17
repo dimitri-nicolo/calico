@@ -17,6 +17,8 @@ type Route struct {
 	// IsPathPrefix indicates whether this Route should be treated as a path prefix. Note that
 	// if it is to be treated as a prefix, then it cannot contain a regrex pattern.
 	IsPathPrefix bool
+	// RequireAuth indicates whether this Route requires authentication.
+	RequireAuth bool
 	// HTTPMethods specifies which HTTP method the Route should match with. If empty, then Route
 	// will match with any HTTP method.
 	HTTPMethods []string
