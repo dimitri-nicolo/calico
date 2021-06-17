@@ -35,7 +35,7 @@ GCR_LOGIN="[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64S
 # - Login to gcr.io
 # - Tell git to ignore permission differences between Linux and Windows systems
 # - Build and push images
-CMD="powershell -Command \"7z x c:\\fluentd-docker.tar -oc:\\fluentd-docker ; cd c:\\fluentd-docker ; ${GCR_LOGIN} ; git config core.filemode false ; make cd IMAGETAG=${IMAGETAG} CONFIRM=${CONFIRM}\""
+CMD="powershell -Command \"7z x c:\\fluentd-docker.tar -oc:\\fluentd-docker ; cd c:\\fluentd-docker ; ${GCR_LOGIN} ; git config core.filemode false ; make cd BRANCH_NAME=${BRANCH_NAME} CONFIRM=${CONFIRM} PUSH_MANIFEST_IMAGES=""\""
 
 # Loop over all host IPs. hosts.txt is created by the Windows host creation
 # script and each host IP, one per line.

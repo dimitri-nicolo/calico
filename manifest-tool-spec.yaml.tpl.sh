@@ -1,14 +1,16 @@
-image: PUSH_IMAGE:VERSION
+cat <<EOF > "$1"
+image: $2:$3
 manifests:
-  - image: PUSH_IMAGE:VERSION-windows-1809
+  - image: $2:$3-windows-1809
     platform:
       architecture: amd64
       os: windows
-  - image: PUSH_IMAGE:VERSION-windows-2004
+  - image: $2:$3-windows-2004
     platform:
       architecture: amd64
       os: windows
-  - image: PUSH_IMAGE:VERSION-windows-20H2
+  - image: $2:$3-windows-20H2
     platform:
       architecture: amd64
       os: windows
+EOF
