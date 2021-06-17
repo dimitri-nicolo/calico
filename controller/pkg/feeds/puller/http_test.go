@@ -187,7 +187,7 @@ func TestQuery(t *testing.T) {
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
+	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search time was not set")
 	g.Expect(status.ErrorConditions).Should(HaveLen(0), "FeedCacher errors were not reported")
 }
 
@@ -231,8 +231,8 @@ func TestQueryHTTPError(t *testing.T) {
 	g.Expect(rt.Count).Should(Equal(attempts), "Retried max times")
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
-	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
+	g.Expect(status.LastSuccessfulSync).Should(BeNil(), "Sync was not successful")
+	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search was not successful")
 	g.Expect(status.ErrorConditions).Should(HaveLen(1), "1 error should have been reported")
 	g.Expect(status.ErrorConditions[0].Type).Should(Equal(cacher.PullFailed), "Error condition type is set correctly")
 }
@@ -269,8 +269,8 @@ func TestQueryHTTPStatus404(t *testing.T) {
 	g.Expect(rt.Count).Should(Equal(uint(1)), "Does not retry on error 404")
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
-	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
+	g.Expect(status.LastSuccessfulSync).Should(BeNil(), "Sync was not successful")
+	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search was not successful")
 	g.Expect(status.ErrorConditions).Should(HaveLen(1), "1 error should have been reported")
 	g.Expect(status.ErrorConditions[0].Type).Should(Equal(cacher.PullFailed), "Error condition type is set correctly")
 }
@@ -307,8 +307,8 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	g.Expect(rt.Count).Should(Equal(attempts))
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
-	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
+	g.Expect(status.LastSuccessfulSync).Should(BeNil(), "Sync was not successful")
+	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search was not successful")
 	g.Expect(status.ErrorConditions).Should(HaveLen(1), "1 error should have been reported")
 	g.Expect(status.ErrorConditions[0].Type).Should(Equal(cacher.PullFailed), "Error condition type is set correctly")
 }

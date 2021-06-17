@@ -98,12 +98,12 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.Susp
 	}
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
-	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync should not be marked as successful")
+	g.Expect(status.LastSuccessfulSync).Should(BeNil(), "Sync should not be marked as successful")
 	if successful {
 		g.Expect(status.LastSuccessfulSearch.Time).ShouldNot(Equal(time.Time{}), "Search should be marked as successful")
 		g.Expect(status.ErrorConditions).Should(HaveLen(0), "No errors should be reported")
 	} else {
-		g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search should be not marked as successful")
+		g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search should be not marked as successful")
 		g.Expect(status.ErrorConditions).ShouldNot(HaveLen(0), "Errors should be reported")
 	}
 }

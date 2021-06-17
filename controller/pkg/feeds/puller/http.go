@@ -330,8 +330,8 @@ func updateFeedStatusAfterSuccessfulPull(feedCacher cacher.GlobalThreatFeedCache
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
 		log.Debug(fmt.Sprintf("%d/%d attempt to update feed status after successful pull", i, cacher.MaxUpdateRetry))
-		if lastSuccessfulSync.After(toBeUpdated.Status.LastSuccessfulSync.Time) {
-			toBeUpdated.Status.LastSuccessfulSync = meta.Time{Time: lastSuccessfulSync}
+		if toBeUpdated.Status.LastSuccessfulSync == nil || lastSuccessfulSync.After(toBeUpdated.Status.LastSuccessfulSync.Time) {
+			toBeUpdated.Status.LastSuccessfulSync = &meta.Time{Time: lastSuccessfulSync}
 		} else {
 			log.Error("abort updating feed status after successful pull because the current attempt is out of date")
 			return

@@ -148,7 +148,7 @@ func TestElastic_QueryIPSet(t *testing.T) {
 	oneMinuteAgo = time.Now().Add(-1 * time.Minute)
 	toBeUpdated := &apiV3.GlobalThreatFeed{}
 	toBeUpdated.Name = "test"
-	toBeUpdated.Status.LastSuccessfulSearch = metav1.Time{Time: oneMinuteAgo}
+	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
 	itr, _, err := e.QueryIPSet(ctx, toBeUpdated)
 	g.Expect(err).ShouldNot(HaveOccurred())
@@ -185,7 +185,7 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
 	toBeUpdated := &apiV3.GlobalThreatFeed{}
 	toBeUpdated.Name = "test"
-	toBeUpdated.Status.LastSuccessfulSearch = metav1.Time{Time: oneMinuteAgo}
+	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
 	cachedIpSet, err := e.GetIPSet(ctx, "test1")
 	toBeUpdated.SetAnnotations(map[string]string{ db.IpSetHashKey: util.ComputeSha256Hash(cachedIpSet) })
