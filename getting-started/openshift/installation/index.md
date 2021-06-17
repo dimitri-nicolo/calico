@@ -1,6 +1,6 @@
 ---
 title: Install an OpenShift 4 cluster with Calico Enterprise
-description: Install Calico Enterprise on an OpenShift v4 cluster.
+description: Install Calico Enterprise on an OpenShift 4 cluster.
 canonical_url: '/getting-started/openshift/installation'
 ---
 
@@ -14,20 +14,7 @@ Augments the applicable steps in the {% include open-new-window.html text='OpenS
 
 ### Before you begin
 
-**Required**
-
-- Your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements)
-
-- [Private registry credentials and license key]({{site.baseurl}}/getting-started/calico-enterprise)
-
-- **If installing on AWS**, a {% include open-new-window.html text='configured an AWS account' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html' %} appropriate for OpenShift 4,
-  and have {% include open-new-window.html text='set up your AWS credentials' url='https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html' %}. Note that the OpenShift installer supports a subset of {% include open-new-window.html text='AWS regions' url='https://docs.openshift.com/container-platform/4.3/installing/installing_aws/installing-aws-account.html#installation-aws-regions_installing-aws-account' %}.
-
-- A {% include open-new-window.html text='RedHat account' url='https://cloud.redhat.com/' %} for the pull secret to provision an OpenShift cluster.
-
-- OpenShift installer **v4.6 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}
-
-- A {% include open-new-window.html text='generated a local SSH private key' url='https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-default.html#ssh-agent-using_installing-aws-default' %} that is added to your ssh-agent
+{% include content/install-openshift-before-you-begin.md %}
 
 ### How to
 

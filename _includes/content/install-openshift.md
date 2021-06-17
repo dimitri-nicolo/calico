@@ -37,6 +37,28 @@ openshift-install create manifests
 
 {% include content/openshift-manifests.md %}
 
+{% comment %} For IPI hybrid clusters (Linux + Windows) we need to enable VXLAN and disable BGP{% endcomment %}
+{% if include.clusterOS == "hybrid" %}
+Edit the Installation custom resource manifest `manifests/01-cr-installation.yaml` so that it enables VXLAN and disables BGP. This is required for {{site.prodnameWindows}}:
+
+```
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  name: default
+spec:
+  variant: Calico
+  calicoNetwork:
+    bgp: Disabled
+    ipPools:
+    - blockSize: 26
+      cidr: 10.128.0.0/14
+      encapsulation: VXLAN
+      natOutgoing: Enabled
+      nodeSelector: all()
+```
+{% endif %}
+
 #### Add an image pull secret
 
 {% include content/openshift-pull-secret.md %}
@@ -285,4 +307,7 @@ Let's define admin-level permissions for the service account (`mcm-user`) we cre
 oc create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-network-admin
 ```
 
+{% endif %}
+{% if include.clusterOS == "hybrid" %}
+{% include content/install-openshift-windows.md %}
 {% endif %}
