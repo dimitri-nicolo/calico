@@ -30,6 +30,7 @@ const (
 type ClientSetFactory interface {
 	NewClientSetForUserRequest(req *http.Request, cluster string) (ClientSet, error)
 	NewClientSetForApplication(cluster string) (ClientSet, error)
+	NewRestConfigForApplication(clusterID string) *rest.Config
 }
 
 // ClientSet is a combined Calico/Kubernetes client set interface.
@@ -75,6 +76,24 @@ func (f *clientSetFactory) NewClientSetForApplication(clusterID string) (ClientS
 // is specified this defaults to the management cluster ("cluster").
 func (f *clientSetFactory) NewClientSetForUserRequest(req *http.Request, clusterID string) (ClientSet, error) {
 	return f.getClientSet(req, clusterID)
+}
+
+// NewRestConfigForApplication returns a K8S *rest.Config tailored for a particular cluster. Managed clusters will forward
+// requests to the multicluster forwarding endpoint and add x-cluster-id header. If no cluster
+// is specified this defaults to the management cluster ("cluster").
+func (f *clientSetFactory) NewRestConfigForApplication(clusterID string) *rest.Config {
+	restConfig := f.copyRESTConfig()
+	if clusterID != "" && clusterID != DefaultCluster {
+		restConfig.Host = f.multiClusterForwardingEndpoint
+		restConfig.CAFile = f.multiClusterForwardingCA
+		restConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+			return &addHeaderRoundTripper{
+				headers: map[string][]string{XClusterIDHeader: {clusterID}},
+				rt:      rt,
+			}
+		}
+	}
+	return restConfig
 }
 
 func (f *clientSetFactory) getClientSet(req *http.Request, clusterID string) (ClientSet, error) {
