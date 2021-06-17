@@ -930,8 +930,8 @@ github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwD
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/apiserver v0.0.0-20210617044425-6446d8fd133e h1:Psl/I0ZHbweyHO8PTHwxfe/mONSCrvzrrjRxMs6tuQw=
-github.com/tigera/apiserver v0.0.0-20210617044425-6446d8fd133e/go.mod h1:+gPHCUPCzGhbTOx7HJvtiM6SqUdsruFM17roxlu+C4w=
+github.com/tigera/apiserver v0.0.0-20210617165602-bd9c6697d1ec h1:anJPuT3MvsoiXW5hJBflpnQpMNWGcFg7wSsLEQnWEj8=
+github.com/tigera/apiserver v0.0.0-20210617165602-bd9c6697d1ec/go.mod h1:+gPHCUPCzGhbTOx7HJvtiM6SqUdsruFM17roxlu+C4w=
 github.com/tigera/felix-private v0.0.0-20210616205254-58cc947abcd2 h1:E+NNiMuTlQTBdCcylEnr588Lyj/cv3bdJ+q9NluseQo=
 github.com/tigera/felix-private v0.0.0-20210616205254-58cc947abcd2/go.mod h1:TCSHuDayUwjQdRAFWRvT+wD6gAcXa5OQ0sUyba9xdG0=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210616010729-14b4ed40eb8b h1:leBQOgdt8IO6VQY+M9ZUKtQjE7ApibwlqEJu0oLAejc=
