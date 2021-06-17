@@ -1,5 +1,13 @@
 package math
 
+// MinInt returns the min value of a or b.
+func MinInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // MinIntGtZero returns the min of a and b, but ignoring values less than or equal to 0.
 // Returns 0 iff both values <= 0.
 func MinIntGtZero(a, b int) int {

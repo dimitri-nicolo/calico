@@ -76,7 +76,7 @@ func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Construct a context with timeout based on the service graph request.
-	ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout)
+	ctx, cancel := context.WithTimeout(req.Context(), sgr.Timeout.Duration)
 	defer cancel()
 
 	// Create the request data.
@@ -119,8 +119,8 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 		return nil, err
 	}
 
-	if sgr.Timeout == 0 {
-		sgr.Timeout = defaultRequestTimeout
+	if sgr.Timeout.Duration == 0 {
+		sgr.Timeout.Duration = defaultRequestTimeout
 	}
 	if sgr.Cluster == "" {
 		sgr.Cluster = elastic.DefaultClusterName

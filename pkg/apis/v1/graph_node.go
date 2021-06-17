@@ -35,12 +35,12 @@ type GraphNode struct {
 	ParentID GraphNodeID `json:"parent_id,omitempty"`
 
 	// Node metadata.
-	Type        GraphNodeType `json:"type"`
-	Namespace   string        `json:"namespace,omitempty"`
-	Name        string        `json:"name,omitempty"`
-	Protocol    string        `json:"protocol,omitempty"`
-	Port        int           `json:"port,omitempty"`
-	Layer       string        `json:"layer,omitempty"`
+	Type      GraphNodeType `json:"type"`
+	Namespace string        `json:"namespace,omitempty"`
+	Name      string        `json:"name,omitempty"`
+	Protocol  string        `json:"protocol,omitempty"`
+	Port      int           `json:"port,omitempty"`
+	Layer     string        `json:"layer,omitempty"`
 
 	// The services contained within this group.
 	Services NamespacedNames `json:"services,omitempty"`

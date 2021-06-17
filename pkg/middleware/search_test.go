@@ -20,8 +20,8 @@ import (
 	calicojson "github.com/tigera/lma/pkg/test/json"
 	"github.com/tigera/lma/pkg/test/thirdpartymock"
 
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	eselastic "github.com/tigera/es-proxy/pkg/elastic"
-	esSearch "github.com/tigera/es-proxy/pkg/search"
 )
 
 const (
@@ -29,25 +29,25 @@ const (
 {
   "cluster": "c_val",
   "page_size": 152,
-  "search_after": "sa_val"
+  "page_num": 1
 }`
 	validRequestBodyPageSizeGreaterThanLTE = `
 {
   "cluster": "c_val",
   "page_size": 1001,
-  "search_after": "sa_val"
+  "page_num": 1
 }`
 	validRequestBodyPageSizeLessThanGTE = `
 {
   "cluster": "c_val",
   "page_size": -1,
-  "search_after": "sa_val"
+  "page_num": 1
 }`
-	badlyFormedAtPosisitonRequestBody = `
+	invalidRequestBodyBadlyFormedStringValue = `
 {
   "cluster": c_val,
   "page_size": 152,
-  "search_after": "sa_val"
+  "page_num": 1
 }`
 )
 
@@ -140,11 +140,24 @@ var _ = Describe("SearchElasticHits", func() {
 				elastic.SetSniff(false),
 				elastic.SetHealthcheck(false),
 			)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
+				"from":  0,
 				"query": calicojson.Map{"bool": calicojson.Map{}},
 				"size":  100,
+				"sort": []calicojson.Map{
+					{
+						"test": calicojson.Map{
+							"order": "desc",
+						},
+					},
+					{
+						"test2": calicojson.Map{
+							"order": "asc",
+						},
+					},
+				},
 			}
 
 			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
@@ -152,15 +165,15 @@ var _ = Describe("SearchElasticHits", func() {
 				req := args.Get(0).(*http.Request)
 
 				body, err := ioutil.ReadAll(req.Body)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
+				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
 				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					Should(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
+					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
 				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
@@ -173,27 +186,35 @@ var _ = Describe("SearchElasticHits", func() {
 				}),
 			}, nil)
 
-			params := &SearchParams{
+			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
 				PageSize:    100,
-				SearchAfter: nil,
+				PageNum:     0,
+				SortBy: []v1.SearchRequestSortBy{{
+					Field:      "test",
+					Descending: true,
+				}, {
+					Field:      "test2",
+					Descending: false,
+				}},
 			}
 			results, err := search(eselastic.GetFlowLogsIndex, params, client)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(results.TotalHits).Should(Equal(int64(2)))
-			Expect(results.TimedOut).Should(Equal(false))
-			Expect(results.TookInMillis).Should(Equal(int64(631)))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results.NumPages).To(Equal(1))
+			Expect(results.TotalHits).To(Equal(2))
+			Expect(results.TimedOut).To(BeFalse())
+			Expect(results.Took.Milliseconds()).To(Equal(int64(631)))
 			var someLog *SomeLog
-			for i, hit := range results.RawHits {
+			for i, hit := range results.Hits {
 				s, _ := hit.MarshalJSON()
 				umerr := json.Unmarshal(s, &someLog)
-				Expect(umerr).ShouldNot(HaveOccurred())
-				Expect(someLog.Timestamp).Should(Equal(expectedJSONResponse[i].Timestamp))
-				Expect(someLog.StartTime).Should(Equal(expectedJSONResponse[i].StartTime))
-				Expect(someLog.EndTime).Should(Equal(expectedJSONResponse[i].EndTime))
-				Expect(someLog.Action).Should(Equal(expectedJSONResponse[i].Action))
-				Expect(someLog.BytesIn).Should(Equal(expectedJSONResponse[i].BytesIn))
-				Expect(someLog.BytesOut).Should(Equal(expectedJSONResponse[i].BytesOut))
+				Expect(umerr).NotTo(HaveOccurred())
+				Expect(someLog.Timestamp).To(Equal(expectedJSONResponse[i].Timestamp))
+				Expect(someLog.StartTime).To(Equal(expectedJSONResponse[i].StartTime))
+				Expect(someLog.EndTime).To(Equal(expectedJSONResponse[i].EndTime))
+				Expect(someLog.Action).To(Equal(expectedJSONResponse[i].Action))
+				Expect(someLog.BytesIn).To(Equal(expectedJSONResponse[i].BytesIn))
+				Expect(someLog.BytesOut).To(Equal(expectedJSONResponse[i].BytesOut))
 			}
 		})
 
@@ -205,9 +226,10 @@ var _ = Describe("SearchElasticHits", func() {
 				elastic.SetSniff(false),
 				elastic.SetHealthcheck(false),
 			)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
+				"from":  0,
 				"query": calicojson.Map{"bool": calicojson.Map{}},
 				"size":  100,
 			}
@@ -217,15 +239,15 @@ var _ = Describe("SearchElasticHits", func() {
 				req := args.Get(0).(*http.Request)
 
 				body, err := ioutil.ReadAll(req.Body)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
+				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
 				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					Should(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
+					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
 				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
@@ -238,18 +260,19 @@ var _ = Describe("SearchElasticHits", func() {
 				}),
 			}, nil)
 
-			params := &SearchParams{
+			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
 				PageSize:    100,
-				SearchAfter: nil,
+				PageNum:     0,
 			}
 			results, err := search(eselastic.GetFlowLogsIndex, params, client)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(results.TotalHits).Should(Equal(int64(0)))
-			Expect(results.TimedOut).Should(Equal(false))
-			Expect(results.TookInMillis).Should(Equal(int64(631)))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results.NumPages).To(Equal(1))
+			Expect(results.TotalHits).To(Equal(0))
+			Expect(results.TimedOut).To(BeFalse())
+			Expect(results.Took.Milliseconds()).To(Equal(int64(631)))
 			var emptyHitsResponse []json.RawMessage
-			Expect(results.RawHits).Should(Equal(emptyHitsResponse))
+			Expect(results.Hits).To(Equal(emptyHitsResponse))
 		})
 
 		It("Should return no hits when ElasticSearch Hits are empty (nil)", func() {
@@ -260,9 +283,10 @@ var _ = Describe("SearchElasticHits", func() {
 				elastic.SetSniff(false),
 				elastic.SetHealthcheck(false),
 			)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
+				"from":  0,
 				"query": calicojson.Map{"bool": calicojson.Map{}},
 				"size":  100,
 			}
@@ -272,15 +296,15 @@ var _ = Describe("SearchElasticHits", func() {
 				req := args.Get(0).(*http.Request)
 
 				body, err := ioutil.ReadAll(req.Body)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
+				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
 				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					Should(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
+					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
 				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
@@ -293,18 +317,19 @@ var _ = Describe("SearchElasticHits", func() {
 				}),
 			}, nil)
 
-			params := &SearchParams{
+			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
 				PageSize:    100,
-				SearchAfter: nil,
+				PageNum:     0,
 			}
 			results, err := search(eselastic.GetFlowLogsIndex, params, client)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(results.TotalHits).Should(Equal(int64(0)))
-			Expect(results.TimedOut).Should(Equal(false))
-			Expect(results.TookInMillis).Should(Equal(int64(631)))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results.NumPages).To(Equal(1))
+			Expect(results.TotalHits).To(Equal(0))
+			Expect(results.TimedOut).To(BeFalse())
+			Expect(results.Took.Milliseconds()).To(Equal(int64(631)))
 			var emptyHitsResponse []json.RawMessage
-			Expect(results.RawHits).Should(Equal(emptyHitsResponse))
+			Expect(results.Hits).To(Equal(emptyHitsResponse))
 		})
 
 		It("Should return an error with data when ElasticSearch returns TimeOut==true", func() {
@@ -315,9 +340,10 @@ var _ = Describe("SearchElasticHits", func() {
 				elastic.SetSniff(false),
 				elastic.SetHealthcheck(false),
 			)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
+				"from":  0,
 				"query": calicojson.Map{"bool": calicojson.Map{}},
 				"size":  100,
 			}
@@ -327,15 +353,15 @@ var _ = Describe("SearchElasticHits", func() {
 				req := args.Get(0).(*http.Request)
 
 				body, err := ioutil.ReadAll(req.Body)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
+				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
 				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					Should(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
+					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
 				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
@@ -348,20 +374,19 @@ var _ = Describe("SearchElasticHits", func() {
 				}),
 			}, nil)
 
-			params := &SearchParams{
+			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
 				PageSize:    100,
-				SearchAfter: nil,
+				PageNum:     0,
 			}
 			results, err := search(eselastic.GetFlowLogsIndex, params, client)
-			Expect(err).Should(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
-			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))
-			Expect(500).Should(BeEquivalentTo(se.Status))
-			Expect("timed out querying tigera_secure_ee_flows.cl_name_val.*").
-				Should(BeEquivalentTo(se.Msg))
-			var response *esSearch.ESResults
-			Expect(response).Should(BeEquivalentTo(results))
+			Expect(errors.As(err, &se)).To(BeTrue())
+			Expect(se.Status).To(Equal(500))
+			Expect(se.Msg).
+				To(Equal("timed out querying tigera_secure_ee_flows.cl_name_val.*"))
+			Expect(results).To(BeNil())
 		})
 
 		It("Should return an error when ElasticSearch returns an error", func() {
@@ -372,9 +397,10 @@ var _ = Describe("SearchElasticHits", func() {
 				elastic.SetSniff(false),
 				elastic.SetHealthcheck(false),
 			)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
+				"from":  0,
 				"query": calicojson.Map{"bool": calicojson.Map{}},
 				"size":  100,
 			}
@@ -384,15 +410,15 @@ var _ = Describe("SearchElasticHits", func() {
 				req := args.Get(0).(*http.Request)
 
 				body, err := ioutil.ReadAll(req.Body)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(req.Body.Close()).ShouldNot(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
 
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 				requestJson := map[string]interface{}{}
-				Expect(json.Unmarshal(body, &requestJson)).ShouldNot(HaveOccurred())
+				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
 				Expect(calicojson.MustUnmarshalToStandardObject(body)).
-					Should(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
+					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
 				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
@@ -405,19 +431,18 @@ var _ = Describe("SearchElasticHits", func() {
 				}),
 			}, errors.New("ESError: Elastic search generic error"))
 
-			params := &SearchParams{
+			params := &v1.SearchRequest{
 				ClusterName: "cl_name_val",
 				PageSize:    100,
-				SearchAfter: nil,
+				PageNum:     0,
 			}
 			results, err := search(eselastic.GetFlowLogsIndex, params, client)
-			Expect(err).Should(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
-			Expect(true).Should(BeEquivalentTo(errors.As(err, &se)))
-			Expect(500).Should(BeEquivalentTo(se.Status))
-			Expect("ESError: Elastic search generic error").Should(BeEquivalentTo(se.Msg))
-			var response *esSearch.ESResults
-			Expect(response).Should(BeEquivalentTo(results))
+			Expect(errors.As(err, &se)).To(BeTrue())
+			Expect(se.Status).To(Equal(500))
+			Expect(se.Msg).To(Equal("ESError: Elastic search generic error"))
+			Expect(results).To(BeNil())
 		})
 	})
 
@@ -430,12 +455,12 @@ var _ = Describe("SearchElasticHits", func() {
 			_, err = parseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
-			Expect(true).To(BeEquivalentTo(errors.As(err, &se)))
+			Expect(errors.As(err, &se)).To(BeTrue())
 		})
 
 		It("Should return a HttpStatusError when parsing a http status error body", func() {
 			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(badlyFormedAtPosisitonRequestBody)))
+				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyBadlyFormedStringValue)))
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
@@ -443,7 +468,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).To(HaveOccurred())
 
 			var mr *httputils.HttpStatusError
-			Expect(true).To(BeEquivalentTo(errors.As(err, &mr)))
+			Expect(errors.As(err, &mr)).To(BeTrue())
 		})
 
 		It("Should return an error when parsing a page size that is greater than lte", func() {
@@ -456,10 +481,10 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
-			Expect(true).To(BeEquivalentTo(errors.As(err, &se)))
-			Expect(400).To(BeEquivalentTo(se.Status))
-			Expect("error with field PageSize = '1001' (Reason: failed to validate Field: PageSize " +
-				"because of Tag: lte )").To(BeEquivalentTo(se.Msg))
+			Expect(errors.As(err, &se)).To(BeTrue())
+			Expect(se.Status).To(Equal(400))
+			Expect(se.Msg).To(Equal("error with field PageSize = '1001' (Reason: failed to validate Field: PageSize " +
+				"because of Tag: lte )"))
 		})
 
 		It("Should return an error when parsing a page size that is less than gte", func() {
@@ -472,10 +497,10 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
-			Expect(true).To(BeEquivalentTo(errors.As(err, &se)))
-			Expect(400).To(BeEquivalentTo(se.Status))
-			Expect("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize " +
-				"because of Tag: gte )").To(BeEquivalentTo(se.Msg))
+			Expect(errors.As(err, &se)).To(BeTrue())
+			Expect(se.Status).To(Equal(400))
+			Expect(se.Msg).To(Equal("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize "+
+				"because of Tag: gte )"), se.Msg)
 		})
 	})
 })
