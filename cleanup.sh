@@ -3,8 +3,10 @@
 set +e
 
 # Remove python and python dependencies
-PACKAGES="python3-libs platform-python python3-libcomps platform-python-setuptools platform-python-pip python3-rpm python3-unbound"
-PACKAGES+=" python3-dnf python3-hawkey python3-libdnf python3-gpg crypto-policies-scripts unbound-libs dnf libdnf yum"
+
+PACKAGES="python3-libs platform-python python3-libcomps platform-python-setuptools platform-python-pip python3-rpm"
+PACKAGES+=" python3-unbound python3-dnf python3-hawkey python3-libdnf python3-gpg shared-mime-info"
+PACKAGES+=" crypto-policies-scripts unbound-libs dnf libdnf yum"
 
 # delete systemd and dependent packages
 PACKAGES+=" systemd-udev systemd-pam systemd dracut-squash dracut-network dracut dbus trousers-lib trousers kexec-tools"
@@ -16,7 +18,8 @@ PACKAGES+=" gnupg2 gpgme gnupg2-smime glib2 libmodulemd1 pinentry libsecret libr
 PACKAGES+=" libmodulemd shadow-utils libsemanage zip unzip libsolv gettext-libs gettext libcroco nmap-ncat json-c cyrus-sasl-lib util-linux"
 PACKAGES+=" libpwquality kbd pam libnsl2 libtirpc iproute sqlite-libs elfutils-default-yama-scope tar file file-libs"
 PACKAGES+=" procps-ng libsmartcols dbus-libs dbus-tools dbus-daemon systemd-libs dhcp-libs libusbx libblkid libuuid libmount"
-PACKAGES+=" libfdisk binutils vim-minimal libyaml libseccomp"
+PACKAGES+=" libfdisk binutils vim-minimal libyaml libseccomp tpm2-tss pciutils rdma-core libibverbs libpcap"
+PACKAGES+=" iptables-libs nmap-ncat"
 
 # remove packages vulnerable packages that rpm relies on last
 PACKAGES+=" squashfs-tools libtasn1 lz4-libs lua-libs elfutils-libelf expat libcomps libmetalink readline gawk gdbm"
