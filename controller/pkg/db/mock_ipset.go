@@ -4,6 +4,7 @@ package db
 
 import (
 	"context"
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	"sync"
 	"time"
 )
@@ -24,7 +25,7 @@ type MockSets struct {
 	PutError          error
 
 	m     sync.Mutex
-	calls []Call
+	calls []spyutil.Call
 }
 
 func (m *MockSets) ListIPSets(ctx context.Context) ([]Meta, error) {
@@ -38,7 +39,7 @@ func (m *MockSets) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
 func (m *MockSets) DeleteIPSet(ctx context.Context, meta Meta) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "DeleteIPSet", Name: meta.Name, SeqNo: meta.SeqNo, PrimaryTerm: meta.PrimaryTerm})
+	m.calls = append(m.calls, spyutil.Call{Method: "DeleteIPSet", Name: meta.Name, SeqNo: meta.SeqNo, PrimaryTerm: meta.PrimaryTerm})
 	m.DeleteCalled = true
 	m.DeleteName = meta.Name
 	if meta.SeqNo == nil {
@@ -59,7 +60,7 @@ func (m *MockSets) DeleteIPSet(ctx context.Context, meta Meta) error {
 func (m *MockSets) DeleteDomainNameSet(ctx context.Context, meta Meta) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "DeleteDomainNameSet", Name: meta.Name, SeqNo: meta.SeqNo, PrimaryTerm: meta.PrimaryTerm})
+	m.calls = append(m.calls, spyutil.Call{Method: "DeleteDomainNameSet", Name: meta.Name, SeqNo: meta.SeqNo, PrimaryTerm: meta.PrimaryTerm})
 	m.DeleteCalled = true
 	m.DeleteName = meta.Name
 	if meta.SeqNo == nil {
@@ -95,7 +96,7 @@ func (m *MockSets) GetIPSet(ctx context.Context, name string) (IPSetSpec, error)
 func (m *MockSets) PutIPSet(ctx context.Context, name string, set IPSetSpec) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "PutIPSet", Name: name, Value: set})
+	m.calls = append(m.calls, spyutil.Call{Method: "PutIPSet", Name: name, Value: set})
 	m.Name = name
 	m.Value = set
 
@@ -109,7 +110,7 @@ func (m *MockSets) PutIPSet(ctx context.Context, name string, set IPSetSpec) err
 func (m *MockSets) PutDomainNameSet(ctx context.Context, name string, set DomainNameSetSpec) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "PutDomainNameSet", Name: name, Value: set})
+	m.calls = append(m.calls, spyutil.Call{Method: "PutDomainNameSet", Name: name, Value: set})
 	m.Name = name
 	m.Value = set
 
@@ -120,8 +121,8 @@ func (m *MockSets) PutDomainNameSet(ctx context.Context, name string, set Domain
 	return m.PutError
 }
 
-func (m *MockSets) Calls() []Call {
-	var out []Call
+func (m *MockSets) Calls() []spyutil.Call {
+	var out []spyutil.Call
 	m.m.Lock()
 	defer m.m.Unlock()
 	for _, c := range m.calls {

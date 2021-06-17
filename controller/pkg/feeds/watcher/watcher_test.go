@@ -17,7 +17,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -187,7 +187,7 @@ func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 	g.Expect(fw.puller).ShouldNot(BeNil())
 	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	w.stopFeedWatcher(ctx, f.Name)
@@ -242,7 +242,7 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 	g.Expect(fw.puller).ShouldNot(BeNil())
 	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(edn.NotGCable()).Should(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	w.stopFeedWatcher(ctx, f.Name)
@@ -302,7 +302,7 @@ func TestWatcher_startFeed_defaultcontent(t *testing.T) {
 	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
 	g.Expect(edn.NotGCable()).ShouldNot(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 }
@@ -345,7 +345,7 @@ func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+	g.Expect(fw.feedCacher).ShouldNot(BeNil(), "FeedCacher is not nil")
 }
 
 func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
@@ -387,7 +387,7 @@ func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+	g.Expect(fw.feedCacher).ShouldNot(BeNil(), "FeedCacher is not nil")
 }
 
 func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
@@ -423,7 +423,7 @@ func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(edn.NotGCable()).Should(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+	g.Expect(fw.feedCacher).ShouldNot(BeNil(), "FeedCacher is not nil")
 }
 
 func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
@@ -460,7 +460,7 @@ func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(edn.NotGCable()).Should(HaveKey(f.Name))
-	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+	g.Expect(fw.feedCacher).ShouldNot(BeNil(), "FeedCacher is not nil")
 }
 
 func TestWatcher_startFeed_Exists(t *testing.T) {
@@ -553,7 +553,7 @@ func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(1))
-	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+	g.Expect(fw.feedCacher).ShouldNot(BeNil(), "FeedCacher is not nil")
 }
 
 func TestWatcher_stopFeed_notExists(t *testing.T) {
@@ -970,7 +970,7 @@ func TestWatcher_restartPuller_IPSet(t *testing.T) {
 
 	g.Expect(fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	oldPuller := fw.puller
@@ -1022,7 +1022,7 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 
 	g.Expect(fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	oldPuller := fw.puller
@@ -1078,7 +1078,7 @@ func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
 
 	g.Expect(fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	oldPuller := fw.puller
@@ -1135,7 +1135,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 
 	g.Expect(fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	f.Spec.Pull = nil
@@ -1192,7 +1192,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 
 	g.Expect(fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.feedCacher).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	f.Spec.Pull.HTTP = nil
@@ -1294,7 +1294,7 @@ func (p *MockPuller) Close() {
 	p.CloseCalled = true
 }
 
-func (*MockPuller) Run(context.Context, statser.Statser) {
+func (*MockPuller) Run(context.Context, cacher.GlobalThreatFeedCacher) {
 	panic("implement me")
 }
 
@@ -1311,7 +1311,7 @@ func (s *MockSearcher) Close() {
 	s.CloseCalled = true
 }
 
-func (*MockSearcher) Run(context.Context, statser.Statser) {
+func (*MockSearcher) Run(context.Context, cacher.GlobalThreatFeedCacher) {
 	panic("implement me")
 }
 

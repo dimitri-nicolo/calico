@@ -5,6 +5,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"sync"
 	"time"
 
@@ -16,8 +18,8 @@ import (
 
 type Controller interface {
 	// Add or update a new Set including the spec. f is function the controller should call
-	// if we fail to update, and stat is the Statser we should report or clear errors on.
-	Add(ctx context.Context, name string, value interface{}, f func(error), stat Statser)
+	// if we fail to update, and feedCacher is the GlobalThreatFeedCacher we should report or clear errors on.
+	Add(ctx context.Context, name string, value interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
 
 	// Delete, and NoGC alter the desired state the controller will attempt to
 	// maintain, by syncing with the elastic database.
@@ -37,13 +39,6 @@ type Controller interface {
 
 	// Run starts processing Sets
 	Run(context.Context)
-}
-
-type Statser interface {
-	Run(context.Context)
-	Close()
-	Error(string, error)
-	ClearError(string)
 }
 
 type Data interface {
@@ -81,11 +76,11 @@ const (
 )
 
 type update struct {
-	name    string
-	op      op
-	value   interface{}
-	fail    func(error)
-	statser Statser
+	name       string
+	op         op
+	value      interface{}
+	fail       func(error)
+	feedCacher cacher.GlobalThreatFeedCacher
 }
 
 const DefaultUpdateQueueLen = 1000
@@ -96,11 +91,11 @@ var NewTicker = func() *time.Ticker {
 	return tkr
 }
 
-func (c *controller) Add(ctx context.Context, name string, value interface{}, f func(error), stat Statser) {
+func (c *controller) Add(ctx context.Context, name string, value interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	select {
 	case <-ctx.Done():
 		return
-	case c.updates <- update{name: name, op: opAdd, value: value, fail: f, statser: stat}:
+	case c.updates <- update{name: name, op: opAdd, value: value, fail: f, feedCacher: feedCacher}:
 		return
 	}
 }
@@ -196,7 +191,7 @@ func (c *controller) reconcile(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Error("failed to reconcile elastic object")
 		for _, u := range c.dirty {
-			u.statser.Error(c.errorType, err)
+			feedutils.AddErrorToFeedStatus(u.feedCacher, c.errorType, err)
 		}
 		return
 	}
@@ -224,11 +219,11 @@ func (c *controller) updateObject(ctx context.Context, u update) {
 	if err != nil {
 		log.WithError(err).WithField("name", u.name).Error("failed to update elastic object")
 		u.fail(err)
-		u.statser.Error(c.errorType, err)
+		feedutils.AddErrorToFeedStatus(u.feedCacher, c.errorType, err)
 		return
 	}
 	// success!
-	u.statser.ClearError(c.errorType)
+	feedutils.ClearErrorFromFeedStatus(u.feedCacher, c.errorType)
 	c.noGC[u.name] = struct{}{}
 	delete(c.dirty, u.name)
 }

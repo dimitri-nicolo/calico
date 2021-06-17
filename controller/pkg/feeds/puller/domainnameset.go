@@ -5,6 +5,7 @@ package puller
 import (
 	"context"
 	"errors"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"io"
 	"net/http"
 	"regexp"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -67,23 +68,23 @@ func (p dnSetPersistence) lastModified(ctx context.Context, name string) (time.T
 	return p.d.GetDomainNameSetModified(ctx, name)
 }
 
-func (p dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser) {
-	p.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, st)
+func (p dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+	p.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, feedCacher)
 }
 
-func (d *dnSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction) {
+func (d *dnSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
 	if d.enabled {
-		st.Error(statser.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
+		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
 	} else {
-		st.ClearError(statser.GlobalNetworkSetSyncFailed)
+		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}
 }
 
-func (d *dnSetGNSHandler) syncFromDB(ctx context.Context, st statser.Statser) {
+func (d *dnSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	if d.enabled {
-		st.Error(statser.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
+		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
 	} else {
-		st.ClearError(statser.GlobalNetworkSetSyncFailed)
+		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}
 }
 

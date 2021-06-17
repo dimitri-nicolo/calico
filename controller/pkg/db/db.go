@@ -5,6 +5,7 @@ package db
 import (
 	"context"
 	"encoding/json"
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"time"
 )
 
@@ -30,7 +31,7 @@ type DomainNameSet interface {
 }
 
 type SuspiciousSet interface {
-	QuerySet(ctx context.Context, name string) ([]SecurityEventInterface, error)
+	QuerySet(ctx context.Context, feed *apiV3.GlobalThreatFeed) ([]SecurityEventInterface, time.Time, string, error)
 }
 
 type SecurityEventInterface interface {
@@ -83,4 +84,9 @@ const (
 	QueryKeyDNSLogQName
 	QueryKeyDNSLogRRSetsName
 	QueryKeyDNSLogRRSetsRData
+)
+
+const (
+	IpSetHashKey         = "hash.intrusion-detection.tigera.io/ip-set"
+	DomainNameSetHashKey = "hash.intrusion-detection.tigera.io/domain-name-set"
 )

@@ -21,7 +21,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -155,7 +155,7 @@ func TestQuery(t *testing.T) {
 	client.Transport = &util.MockRoundTripper{
 		Response: resp,
 	}
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := elastic.NewMockElasticIPSetController()
 
@@ -165,7 +165,7 @@ func TestQuery(t *testing.T) {
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
 	go func() {
-		err := puller.query(ctx, s, 1, 0)
+		err := puller.query(ctx, feedCacher, 1, 0)
 		g.Expect(err).ShouldNot(HaveOccurred())
 	}()
 
@@ -185,10 +185,10 @@ func TestQuery(t *testing.T) {
 		g.Expect(actual).Should(Equal(expected[idx]))
 	}
 
-	status := s.Status()
+	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
-	g.Expect(status.ErrorConditions).Should(HaveLen(0), "Statser errors were not reported")
+	g.Expect(status.ErrorConditions).Should(HaveLen(0), "FeedCacher errors were not reported")
 }
 
 func TestNewHTTPPuller(t *testing.T) {
@@ -210,7 +210,7 @@ func TestQueryHTTPError(t *testing.T) {
 	}
 	client.Transport = rt
 
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -221,7 +221,7 @@ func TestQueryHTTPError(t *testing.T) {
 
 	attempts := uint(5)
 	go func() {
-		err := puller.query(ctx, s, attempts, 0)
+		err := puller.query(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
 
@@ -230,11 +230,11 @@ func TestQueryHTTPError(t *testing.T) {
 	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
 	g.Expect(rt.Count).Should(Equal(attempts), "Retried max times")
 
-	status := s.Status()
+	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
 	g.Expect(status.ErrorConditions).Should(HaveLen(1), "1 error should have been reported")
-	g.Expect(status.ErrorConditions[0].Type).Should(Equal(statser.PullFailed), "Error condition type is set correctly")
+	g.Expect(status.ErrorConditions[0].Type).Should(Equal(cacher.PullFailed), "Error condition type is set correctly")
 }
 
 func TestQueryHTTPStatus404(t *testing.T) {
@@ -248,7 +248,7 @@ func TestQueryHTTPStatus404(t *testing.T) {
 	}
 	client.Transport = rt
 
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -259,7 +259,7 @@ func TestQueryHTTPStatus404(t *testing.T) {
 
 	attempts := uint(5)
 	go func() {
-		err := puller.query(ctx, s, attempts, 0)
+		err := puller.query(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
 
@@ -268,11 +268,11 @@ func TestQueryHTTPStatus404(t *testing.T) {
 	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
 	g.Expect(rt.Count).Should(Equal(uint(1)), "Does not retry on error 404")
 
-	status := s.Status()
+	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
 	g.Expect(status.ErrorConditions).Should(HaveLen(1), "1 error should have been reported")
-	g.Expect(status.ErrorConditions[0].Type).Should(Equal(statser.PullFailed), "Error condition type is set correctly")
+	g.Expect(status.ErrorConditions[0].Type).Should(Equal(cacher.PullFailed), "Error condition type is set correctly")
 }
 
 func TestQueryHTTPStatus500(t *testing.T) {
@@ -286,7 +286,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	}
 	client.Transport = rt
 
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -297,7 +297,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 
 	attempts := uint(5)
 	go func() {
-		err := puller.query(ctx, s, attempts, 0)
+		err := puller.query(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
 
@@ -306,11 +306,11 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
 	g.Expect(rt.Count).Should(Equal(attempts))
 
-	status := s.Status()
+	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
 	g.Expect(status.ErrorConditions).Should(HaveLen(1), "1 error should have been reported")
-	g.Expect(status.ErrorConditions[0].Type).Should(Equal(statser.PullFailed), "Error condition type is set correctly")
+	g.Expect(status.ErrorConditions[0].Type).Should(Equal(cacher.PullFailed), "Error condition type is set correctly")
 }
 
 func TestNewHTTPPullerWithNilPull(t *testing.T) {
@@ -326,7 +326,7 @@ func TestNewHTTPPullerWithNilPull(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	g.Expect(func() { _ = puller.query(ctx, &statser.MockStatser{}, 1, 0) }).Should(Panic())
+	g.Expect(func() { _ = puller.query(ctx, &cacher.MockGlobalThreatFeedCache{}, 1, 0) }).Should(Panic())
 }
 
 func TestGetStartupDelay(t *testing.T) {
@@ -670,13 +670,13 @@ func TestSyncGNSFromDB(t *testing.T) {
 		Value: db.IPSetSpec([]string{"1.2.3.0/24", "2.3.4.5/32"}),
 	}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, feedCacher)
 
-	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(0))
+	g.Expect(len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions)).Should(Equal(0))
 	g.Expect(len(gns.Local())).Should(Equal(1))
 	g.Expect(gns.Local()).Should(HaveKey("threatfeed." + feed.Name))
 	g.Expect(gns.Local()["threatfeed."+feed.Name].Spec.Nets).Should(ConsistOf(ipSet.Value))
@@ -693,13 +693,13 @@ func TestSyncGNSFromDBElasticError(t *testing.T) {
 		Error: errors.New("error"),
 	}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, feedCacher)
 
-	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(1))
+	g.Expect(len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions)).Should(Equal(1))
 	g.Expect(len(gns.Local())).Should(Equal(0))
 }
 
@@ -714,12 +714,12 @@ func TestSyncGNSFromDBNoGNS(t *testing.T) {
 
 	ipSet := &db.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, feedCacher)
 
-	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(0))
+	g.Expect(len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions)).Should(Equal(0))
 	g.Expect(len(gns.Local())).Should(Equal(0))
 }

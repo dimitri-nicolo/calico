@@ -5,6 +5,7 @@ package ut
 import (
 	"context"
 	"encoding/json"
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -158,7 +159,9 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 
 	// Run the search
 	domains := db.DomainNameSetSpec{"xx.yy.zzz", "dd.ee.fff", "jj.kk.lll"}
-	iter, err := uut.QueryDomainNameSet(ctx, "test-feed", domains)
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test-feed"
+	iter, _, err := uut.QueryDomainNameSet(ctx, domains, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	var actual []events.DNSLog

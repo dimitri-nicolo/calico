@@ -6,9 +6,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-
 	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
@@ -25,13 +24,13 @@ type MockGlobalNetworkSetInterface struct {
 	W                *MockWatch
 
 	m     sync.Mutex
-	calls []db.Call
+	calls []spyutil.Call
 }
 
 func (m *MockGlobalNetworkSetInterface) Create(ctx context.Context, gns *v3.GlobalNetworkSet, options v1.CreateOptions) (*v3.GlobalNetworkSet, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, db.Call{Method: "Create", GNS: gns.DeepCopy()})
+	m.calls = append(m.calls, spyutil.Call{Method: "Create", GNS: gns.DeepCopy()})
 	var err error
 	if len(m.CreateError) > 0 {
 		err = m.CreateError[0]
@@ -47,7 +46,7 @@ func (m *MockGlobalNetworkSetInterface) Create(ctx context.Context, gns *v3.Glob
 func (m *MockGlobalNetworkSetInterface) Update(ctx context.Context, gns *v3.GlobalNetworkSet, options v1.UpdateOptions) (*v3.GlobalNetworkSet, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, db.Call{Method: "Update", GNS: gns.DeepCopy()})
+	m.calls = append(m.calls, spyutil.Call{Method: "Update", GNS: gns.DeepCopy()})
 	if m.UpdateError != nil {
 		return nil, m.UpdateError
 	}
@@ -58,7 +57,7 @@ func (m *MockGlobalNetworkSetInterface) Update(ctx context.Context, gns *v3.Glob
 func (m *MockGlobalNetworkSetInterface) Delete(ctx context.Context, name string, options v1.DeleteOptions) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, db.Call{Method: "Delete", Name: name})
+	m.calls = append(m.calls, spyutil.Call{Method: "Delete", Name: name})
 	return m.DeleteError
 }
 
@@ -96,8 +95,8 @@ func (m *MockGlobalNetworkSetInterface) Patch(ctx context.Context, name string, 
 	return nil, m.Error
 }
 
-func (m *MockGlobalNetworkSetInterface) Calls() []db.Call {
-	var out []db.Call
+func (m *MockGlobalNetworkSetInterface) Calls() []spyutil.Call {
+	var out []spyutil.Call
 	m.m.Lock()
 	defer m.m.Unlock()
 	for _, c := range m.calls {

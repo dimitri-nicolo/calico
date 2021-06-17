@@ -5,7 +5,7 @@ package elastic
 import (
 	"context"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 
@@ -17,7 +17,7 @@ type ipSetData struct {
 }
 
 func NewIPSetController(ipSet db.IPSet) controller.Controller {
-	return controller.NewController(ipSetData{ipSet}, statser.ElasticSyncFailed)
+	return controller.NewController(ipSetData{ipSet}, cacher.ElasticSyncFailed)
 }
 
 func (d ipSetData) Put(ctx context.Context, name string, value interface{}) error {

@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -337,34 +339,59 @@ func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Ti
 }
 
 type SetQuerier interface {
-	QueryIPSet(ctx context.Context, name string) (Iterator, error)
-	QueryDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) (Iterator, error)
+	// QueryIPSet queries the flow log by IPs specified in the feed's IPSet.
+	// It returns a queryIterator, the latest IPSet hash, and error if any happens during the querying
+	QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator, newSetHash string, err error)
+	// QueryDomainNameSet queries the DNS log by domain names specified in the feed's DomainNameSet.
+	// It returns a queryIterator, the latest DomainNameSet hash, and error if any happens during the querying
+	QueryDomainNameSet(ctx context.Context, set db.DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator, newSetHash string, err error)
+	// GetDomainNameSet queries and outputs all the domain names specified in the feed's DomainNameSet.
 	GetDomainNameSet(ctx context.Context, name string) (db.DomainNameSetSpec, error)
 }
 
-func (e *Elastic) QueryIPSet(ctx context.Context, name string) (Iterator, error) {
-	ipset, err := e.GetIPSet(ctx, name)
+func (e *Elastic) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (Iterator, string, error) {
+	ipset, err := e.GetIPSet(ctx, feed.Name)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+
+	newIpSetHash := util.ComputeSha256Hash(ipset)
+	var fromTimestamp time.Time
+	currentIpSetHash := feed.Annotations[db.IpSetHashKey]
+	// If the ipSet has changed we need to query from the beginning of time, otherwise query from the last successful time
+	if strings.Compare(newIpSetHash, currentIpSetHash) == 0 {
+		fromTimestamp = feed.Status.LastSuccessfulSearch.Time
+	}
+
 	queryTerms := splitIPSetToInterface(ipset)
 
 	f := func(ipset, field string, terms []interface{}) *elastic.ScrollService {
-		q := elastic.NewTermsQuery(field, terms...)
-		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize)
+		filters := []elastic.Query { elastic.NewTermsQuery(field, terms...) }
+		if !fromTimestamp.IsZero() {
+			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
+		}
+		boolQuery := elastic.NewBoolQuery().Filter(filters...)
+		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(boolQuery).Size(QuerySize)
 	}
 
 	var scrollers []scrollerEntry
 	for _, t := range queryTerms {
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogSourceIP, scroller: f(name, "source_ip", t), terms: t})
-		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogDestIP, scroller: f(name, "dest_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogSourceIP, scroller: f(feed.Name, "source_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogDestIP, scroller: f(feed.Name, "dest_ip", t), terms: t})
 	}
-
-	return newQueryIterator(ctx, scrollers, name), nil
+	return newQueryIterator(ctx, scrollers, feed.Name), newIpSetHash, nil
 }
 
-func (e *Elastic) QueryDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) (Iterator, error) {
-	queryTerms := splitDomainNameSetToInterface(set)
+func (e *Elastic) QueryDomainNameSet(ctx context.Context, domainNameSet db.DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator, string, error) {
+	newDomainNameSetHash := util.ComputeSha256Hash(domainNameSet)
+	var fromTimestamp time.Time
+	currentDomainNameSetHash := feed.Annotations[db.DomainNameSetHashKey]
+	// If the domainNameSet has changed we need to query from the beginning of time, otherwise query from the last successful time
+	if strings.Compare(newDomainNameSetHash, currentDomainNameSetHash) == 0 {
+		fromTimestamp = feed.Status.LastSuccessfulSearch.Time
+	}
+
+	queryTerms := splitDomainNameSetToInterface(domainNameSet)
 
 	var scrollers []scrollerEntry
 
@@ -376,41 +403,46 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, name string, set db.Do
 
 	// QName scrollers
 	for _, t := range queryTerms {
+		filters := []elastic.Query { elastic.NewTermsQuery("qname", t...) }
+		if !fromTimestamp.IsZero() {
+			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
+		}
+		qnameQuery := elastic.NewBoolQuery().Filter(filters...)
 		qname := e.c.Scroll(DNSLogIndex).
 			SortBy(elastic.SortByDoc{}).
 			Size(QuerySize).
-			Query(elastic.NewTermsQuery("qname", t...))
+			Query(qnameQuery)
 		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogQName, scroller: qname, terms: t})
 	}
 
 	// RRSet.name scrollers
 	for _, t := range queryTerms {
+		filters := []elastic.Query { elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.name", t...)) }
+		if !fromTimestamp.IsZero() {
+			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
+		}
+		rrsnQuery := elastic.NewBoolQuery().Filter(filters...)
 		rrsn := e.c.Scroll(DNSLogIndex).
 			SortBy(elastic.SortByDoc{}).
 			Size(QuerySize).
-			Query(
-				elastic.NewNestedQuery(
-					"rrsets",
-					elastic.NewTermsQuery("rrsets.name", t...),
-				),
-			)
+			Query(rrsnQuery)
 		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsName, scroller: rrsn, terms: t})
 	}
 
 	// RRSet.rdata scrollers
 	for _, t := range queryTerms {
+		filters := []elastic.Query { elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.rdata", t...)) }
+		if !fromTimestamp.IsZero() {
+			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
+		}
+		rrsrdQuery := elastic.NewBoolQuery().Filter(filters...)
 		rrsrd := e.c.Scroll(DNSLogIndex).
 			SortBy(elastic.SortByDoc{}).
 			Size(QuerySize).
-			Query(
-				elastic.NewNestedQuery(
-					"rrsets",
-					elastic.NewTermsQuery("rrsets.rdata", t...),
-				),
-			)
+			Query(rrsrdQuery)
 		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsRData, scroller: rrsrd, terms: t})
 	}
-	return newQueryIterator(ctx, scrollers, name), nil
+	return newQueryIterator(ctx, scrollers, feed.Name), newDomainNameSetHash, nil
 }
 
 func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {

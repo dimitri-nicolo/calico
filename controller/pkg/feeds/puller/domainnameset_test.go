@@ -14,7 +14,7 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
@@ -55,7 +55,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 	client.Transport = &util.MockRoundTripper{
 		Response: resp,
 	}
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 	edn := elastic.NewMockDomainNameSetsController()
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -64,7 +64,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &db.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
 	go func() {
-		err := puller.query(ctx, s, 1, 0)
+		err := puller.query(ctx, feedCacher, 1, 0)
 		g.Expect(err).ShouldNot(HaveOccurred())
 	}()
 
@@ -76,10 +76,10 @@ func TestQueryDomainNameSet(t *testing.T) {
 		g.Expect(actual).Should(Equal(expected[idx]))
 	}
 
-	status := s.Status()
+	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
-	g.Expect(status.ErrorConditions).Should(HaveLen(0), "Statser errors were not reported")
+	g.Expect(status.ErrorConditions).Should(HaveLen(0), "FeedCacher errors were not reported")
 }
 
 func TestQueryDomainNameSet_WithGNS(t *testing.T) {
@@ -102,7 +102,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	client.Transport = &util.MockRoundTripper{
 		Response: resp,
 	}
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 	edn := elastic.NewMockDomainNameSetsController()
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -113,7 +113,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	puller := NewDomainNameSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
 	go func() {
-		err := puller.query(ctx, s, 1, 0)
+		err := puller.query(ctx, feedCacher, 1, 0)
 		g.Expect(err).ShouldNot(HaveOccurred())
 	}()
 
@@ -125,12 +125,12 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 		g.Expect(actual).Should(Equal(expected[idx]))
 	}
 
-	status := s.Status()
+	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
 	// Pull should work as expected, but drop an error about GlobalNetworkSetSync
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
 	g.Expect(status.ErrorConditions).
-		Should(ConsistOf([]v3.ErrorCondition{{Type: statser.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
+		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
 }
 
 func TestGetStartupDelayDomainNameSet(t *testing.T) {
@@ -180,12 +180,12 @@ func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
 	dnSet := &db.MockSets{
 		Value: db.DomainNameSetSpec{"baddos.ooo"},
 	}
-	s := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 
 	puller := NewDomainNameSetHTTPPuller(feed, dnSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, feedCacher)
 
-	g.Expect(s.Status().ErrorConditions).
-		Should(ConsistOf([]v3.ErrorCondition{{Type: statser.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
+	g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions).
+		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
 }

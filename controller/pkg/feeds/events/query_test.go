@@ -6,14 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"testing"
-
 	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
-
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"testing"
 )
 
 func TestSuspiciousIP_Success(t *testing.T) {
@@ -83,7 +82,9 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	results, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(Equal(expected))
 }
@@ -125,7 +126,9 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	_, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	_, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).To(Equal(errors.New("test")))
 }
 
@@ -138,7 +141,9 @@ func TestSuspiciousIP_QueryFails(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	_, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	_, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).To(Equal(errors.New("query failed")))
 }
 
@@ -196,7 +201,9 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	results, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(HaveLen(2))
 	g.Expect(results[0].(SuspiciousDomainSecurityEvent).SuspiciousDomains).To(Equal([]string{"xx.yy.zzz"}))
@@ -240,7 +247,9 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	results, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).To(Equal(errors.New("iteration failed")))
 	g.Expect(results).To(HaveLen(0))
 }
@@ -254,7 +263,9 @@ func TestSuspiciousDomain_GetFails(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	results, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).To(Equal(errors.New("get failed")))
 	g.Expect(results).To(HaveLen(0))
 }
@@ -273,7 +284,9 @@ func TestSuspiciousDomain_QueryFails(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	results, err := uut.QuerySet(ctx, "test")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
+	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).To(Equal(errors.New("query failed")))
 	g.Expect(results).To(HaveLen(0))
 }

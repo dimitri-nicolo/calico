@@ -5,9 +5,11 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 )
@@ -16,11 +18,12 @@ type ipSetQuerier struct {
 	elastic.SetQuerier
 }
 
-func (i ipSetQuerier) QuerySet(ctx context.Context, name string) ([]db.SecurityEventInterface, error) {
+func (i ipSetQuerier) QuerySet(ctx context.Context, feed *apiV3.GlobalThreatFeed) ([]db.SecurityEventInterface, time.Time, string, error) {
 	var results []db.SecurityEventInterface
-	iter, err := i.QueryIPSet(ctx, name)
+	lastSuccessfulSearch := time.Now()
+	iter, ipSetHash, err := i.QueryIPSet(ctx, feed)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, ipSetHash, err
 	}
 	c := 0
 	for iter.Next() {
@@ -32,11 +35,11 @@ func (i ipSetQuerier) QuerySet(ctx context.Context, name string) ([]db.SecurityE
 			log.WithError(err).WithField("raw", hit.Source).Error("could not unmarshal")
 			continue
 		}
-		sEvent := ConvertFlowLog(l, key, hit, name)
+		sEvent := ConvertFlowLog(l, key, hit, feed.Name)
 		results = append(results, sEvent)
 	}
 	log.WithField("num", c).Debug("got events")
-	return results, iter.Err()
+	return results, lastSuccessfulSearch, ipSetHash, iter.Err()
 }
 
 func NewSuspiciousIP(q elastic.SetQuerier) db.SuspiciousSet {
@@ -47,15 +50,16 @@ type domainNameSetQuerier struct {
 	elastic.SetQuerier
 }
 
-func (d domainNameSetQuerier) QuerySet(ctx context.Context, name string) ([]db.SecurityEventInterface, error) {
-	set, err := d.GetDomainNameSet(ctx, name)
+func (d domainNameSetQuerier) QuerySet(ctx context.Context, feed *apiV3.GlobalThreatFeed) ([]db.SecurityEventInterface, time.Time, string, error) {
+	set, err := d.GetDomainNameSet(ctx, feed.Name)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, "", err
 	}
 	var results []db.SecurityEventInterface
-	iter, err := d.QueryDomainNameSet(ctx, name, set)
+	lastSuccessfulSearch := time.Now()
+	iter, domainNameSetHash, err := d.QueryDomainNameSet(ctx, set, feed)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, domainNameSetHash, err
 	}
 	// Hash the domain name set for use in conversion
 	domains := make(map[string]struct{})
@@ -75,12 +79,12 @@ func (d domainNameSetQuerier) QuerySet(ctx context.Context, name string) ([]db.S
 				log.WithError(err).WithField("raw", hit.Source).Error("could not unmarshal")
 				continue
 			}
-			sEvent := ConvertDNSLog(l, key, hit, domains, name)
+			sEvent := ConvertDNSLog(l, key, hit, domains, feed.Name)
 			results = append(results, sEvent)
 		}
 	}
 	log.WithField("num", c).Debug("got events")
-	return results, iter.Err()
+	return results, lastSuccessfulSearch, domainNameSetHash, iter.Err()
 }
 
 func NewSuspiciousDomainNameSet(q elastic.SetQuerier) db.SuspiciousSet {

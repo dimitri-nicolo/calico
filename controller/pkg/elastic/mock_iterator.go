@@ -4,10 +4,9 @@ package elastic
 
 import (
 	"context"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-
 	"github.com/olivere/elastic/v7"
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 type MockSetQuerier struct {
@@ -21,12 +20,12 @@ func (m *MockSetQuerier) GetDomainNameSet(ctx context.Context, name string) (db.
 	return m.Set, m.GetError
 }
 
-func (m *MockSetQuerier) QueryIPSet(ctx context.Context, name string) (Iterator, error) {
-	return m.Iterator, m.QueryError
+func (m *MockSetQuerier) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) (Iterator, string, error) {
+	return m.Iterator, "", m.QueryError
 }
 
-func (m *MockSetQuerier) QueryDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) (Iterator, error) {
-	return m.Iterator, m.QueryError
+func (m *MockSetQuerier) QueryDomainNameSet(ctx context.Context, set db.DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator, string, error) {
+	return m.Iterator, "", m.QueryError
 }
 
 type MockIterator struct {

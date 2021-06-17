@@ -5,19 +5,24 @@ package elastic
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"net/url"
 	url2 "net/url"
 	"os"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
+	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 
 	"github.com/araddon/dateparse"
 	. "github.com/onsi/gomega"
@@ -25,6 +30,10 @@ import (
 
 const (
 	baseURI = "http://127.0.0.1:9200"
+)
+
+var (
+	oneMinuteAgo time.Time
 )
 
 func TestNewElastic_Fail(t *testing.T) {
@@ -136,15 +145,67 @@ func TestElastic_QueryIPSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	itr, err := e.QueryIPSet(ctx, "test")
+	oneMinuteAgo = time.Now().Add(-1 * time.Minute)
+	toBeUpdated := &apiV3.GlobalThreatFeed{}
+	toBeUpdated.Name = "test"
+	toBeUpdated.Status.LastSuccessfulSearch = metav1.Time{Time: oneMinuteAgo}
+
+	itr, _, err := e.QueryIPSet(ctx, toBeUpdated)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
+	vals := make([]interface{}, 0)
 	for itr.Next() {
 		c++
+		_, val := itr.Value()
+		vals = append(vals, val.Source)
+	}
+	g.Expect(itr.Err()).ShouldNot(HaveOccurred())
+	g.Expect(c).Should(Equal(4))
+	g.Expect(len(vals)).Should(Equal(4))
+}
+
+func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	u, err := url2.Parse(baseURI)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	roundTripper := testRoundTripper{}
+	client := &http.Client{
+		Transport: http.RoundTripper(&roundTripper),
+	}
+
+	ecli, err := NewClient(client, u, "", "", false)
+	g.Expect(err).Should(BeNil())
+	e := NewService(ecli, u, DefaultIndexSettings())
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
+	toBeUpdated := &apiV3.GlobalThreatFeed{}
+	toBeUpdated.Name = "test"
+	toBeUpdated.Status.LastSuccessfulSearch = metav1.Time{Time: oneMinuteAgo}
+
+	cachedIpSet, err := e.GetIPSet(ctx, "test1")
+	toBeUpdated.SetAnnotations(map[string]string{ db.IpSetHashKey: util.ComputeSha256Hash(cachedIpSet) })
+
+	roundTripper.params = make(map[string]interface{})
+	roundTripper.params["fromTimeStamp"] = oneMinuteAgo.Format(time.RFC3339Nano)
+
+	itr, _, err := e.QueryIPSet(ctx, toBeUpdated)
+	g.Expect(err).ShouldNot(HaveOccurred())
+
+	c := 0
+	vals := make([]interface{}, 0)
+	for itr.Next() {
+		c++
+		_, val := itr.Value()
+		vals = append(vals, val.Source)
 	}
 	g.Expect(itr.Err()).ShouldNot(HaveOccurred())
 	g.Expect(c).Should(Equal(2))
+	g.Expect(len(vals)).Should(Equal(2))
 }
 
 func TestElastic_QueryIPSet_Big(t *testing.T) {
@@ -163,7 +224,9 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	i, err := e.QueryIPSet(ctx, "test_big")
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test_big"
+	i, _, err := e.QueryIPSet(ctx, testFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	itr := i.(*queryIterator)
@@ -302,6 +365,7 @@ type testRoundTripper struct {
 	e            error
 	listRespFile string
 	listStatus   int
+	params       map[string]interface{}
 }
 
 func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -425,6 +489,20 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Request:    req,
 					Body:       mustOpen("test_files/3.3.r.json"),
 				}, nil
+
+			case mustGetTemplate("test_files/source_ip_with_timestamp_query.json", t.params):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/source_ip_with_timestamp_result.json"),
+				}, nil
+
+			case mustGetTemplate("test_files/dest_ip_with_timestamp_query.json", t.params):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/dest_ip_with_timestamp_result.json"),
+				}, nil
 			}
 		case baseURI + "/_search/scroll":
 			switch body {
@@ -546,4 +624,27 @@ func mustGetString(name string) string {
 	}
 
 	return strings.Trim(string(b), " \r\n\t")
+}
+
+func mustGetTemplate(fileName string, replacements map[string]interface{}) string {
+	jsonTemplate, err := template.ParseFiles(fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	buf := bytes.Buffer{}
+	if jsonTemplate != nil {
+		err = jsonTemplate.Execute(&buf, replacements)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	compact := bytes.Buffer{}
+	err = json.Compact(&compact, buf.Bytes())
+	if err != nil {
+		panic(err)
+	}
+
+	return strings.Trim(compact.String(), " \r\n\t")
 }

@@ -5,7 +5,7 @@ package elastic
 import (
 	"context"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 
@@ -17,7 +17,7 @@ type dnSetData struct {
 }
 
 func NewDomainNameSetController(sets db.DomainNameSet) controller.Controller {
-	return controller.NewController(dnSetData{sets}, statser.ElasticSyncFailed)
+	return controller.NewController(dnSetData{sets}, cacher.ElasticSyncFailed)
 }
 
 func (d dnSetData) Put(ctx context.Context, name string, value interface{}) error {

@@ -4,36 +4,35 @@ package elastic
 
 import (
 	"context"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"sync"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 type MockElasticIPSetController struct {
-	m         sync.Mutex
-	sets      map[string]db.IPSetSpec
-	failFuncs map[string]func(error)
-	statsers  map[string]controller.Statser
-	noGC      map[string]struct{}
+	m           sync.Mutex
+	sets        map[string]db.IPSetSpec
+	failFuncs   map[string]func(error)
+	feedCachers map[string]cacher.GlobalThreatFeedCacher
+	noGC        map[string]struct{}
 }
 
 func NewMockElasticIPSetController() *MockElasticIPSetController {
 	return &MockElasticIPSetController{
-		sets:      make(map[string]db.IPSetSpec),
-		failFuncs: make(map[string]func(error)),
-		statsers:  make(map[string]controller.Statser),
-		noGC:      make(map[string]struct{}),
+		sets:        make(map[string]db.IPSetSpec),
+		failFuncs:   make(map[string]func(error)),
+		feedCachers: make(map[string]cacher.GlobalThreatFeedCacher),
+		noGC:        make(map[string]struct{}),
 	}
 }
 
-func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set interface{}, f func(error), stat controller.Statser) {
+func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set.(db.IPSetSpec)
 	c.failFuncs[name] = f
-	c.statsers[name] = stat
+	c.feedCachers[name] = feedCacher
 }
 
 func (c *MockElasticIPSetController) Delete(ctx context.Context, name string) {
@@ -41,7 +40,7 @@ func (c *MockElasticIPSetController) Delete(ctx context.Context, name string) {
 	defer c.m.Unlock()
 	delete(c.sets, name)
 	delete(c.failFuncs, name)
-	delete(c.statsers, name)
+	delete(c.feedCachers, name)
 	delete(c.noGC, name)
 }
 
@@ -80,28 +79,28 @@ func (c *MockElasticIPSetController) Sets() map[string]db.IPSetSpec {
 }
 
 type MockDomainNameSetsController struct {
-	m         sync.Mutex
-	sets      map[string]db.DomainNameSetSpec
-	failFuncs map[string]func(error)
-	statsers  map[string]controller.Statser
-	noGC      map[string]struct{}
+	m           sync.Mutex
+	sets        map[string]db.DomainNameSetSpec
+	failFuncs   map[string]func(error)
+	feedCachers map[string]cacher.GlobalThreatFeedCacher
+	noGC        map[string]struct{}
 }
 
 func NewMockDomainNameSetsController() *MockDomainNameSetsController {
 	return &MockDomainNameSetsController{
-		sets:      make(map[string]db.DomainNameSetSpec),
-		failFuncs: make(map[string]func(error)),
-		statsers:  make(map[string]controller.Statser),
-		noGC:      make(map[string]struct{}),
+		sets:        make(map[string]db.DomainNameSetSpec),
+		failFuncs:   make(map[string]func(error)),
+		feedCachers: make(map[string]cacher.GlobalThreatFeedCacher),
+		noGC:        make(map[string]struct{}),
 	}
 }
 
-func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(error), stat controller.Statser) {
+func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set.(db.DomainNameSetSpec)
 	c.failFuncs[name] = f
-	c.statsers[name] = stat
+	c.feedCachers[name] = feedCacher
 }
 
 func (c *MockDomainNameSetsController) Delete(ctx context.Context, name string) {
@@ -109,7 +108,7 @@ func (c *MockDomainNameSetsController) Delete(ctx context.Context, name string) 
 	defer c.m.Unlock()
 	delete(c.sets, name)
 	delete(c.failFuncs, name)
-	delete(c.statsers, name)
+	delete(c.feedCachers, name)
 	delete(c.noGC, name)
 }
 

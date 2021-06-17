@@ -4,6 +4,7 @@ package globalnetworksets
 
 import (
 	"context"
+	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"reflect"
 	"sync"
 	"time"
@@ -17,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 )
 
 const DefaultClientRetries = 5
@@ -30,7 +31,7 @@ type Controller interface {
 	// maintain, by syncing with the Kubernetes API server.
 
 	// Add or update a new GlobalNetworkSet including the spec
-	Add(*v3.GlobalNetworkSet, func(error), statser.Statser)
+	Add(*v3.GlobalNetworkSet, func(error), cacher.GlobalThreatFeedCacher)
 
 	// Delete removes a GlobalNetworkSet from the desired state.
 	Delete(*v3.GlobalNetworkSet)
@@ -58,7 +59,7 @@ type controller struct {
 	gcMutex sync.RWMutex
 
 	failFuncs map[string]func(error)
-	statsers  map[string]statser.Statser
+	feedCachers  map[string]cacher.GlobalThreatFeedCacher
 	fsMutex   sync.RWMutex
 }
 
@@ -122,11 +123,11 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 		informer:  informer,
 		noGC:      make(map[string]struct{}),
 		failFuncs: make(map[string]func(error)),
-		statsers:  make(map[string]statser.Statser),
+		feedCachers:  make(map[string]cacher.GlobalThreatFeedCacher),
 	}
 }
 
-func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(error), stat statser.Statser) {
+func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	ss := s.DeepCopy()
 
 	// The "creator" key ensures this object will be watched/listed by
@@ -149,7 +150,7 @@ func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(error), stat statser.
 	c.fsMutex.Lock()
 	defer c.fsMutex.Unlock()
 	c.failFuncs[s.Name] = fail
-	c.statsers[s.Name] = stat
+	c.feedCachers[s.Name] = feedCacher
 }
 
 func (c *controller) Delete(s *v3.GlobalNetworkSet) {
@@ -170,7 +171,7 @@ func (c *controller) Delete(s *v3.GlobalNetworkSet) {
 	// needed.
 	c.fsMutex.Lock()
 	delete(c.failFuncs, s.Name)
-	delete(c.statsers, s.Name)
+	delete(c.feedCachers, s.Name)
 	c.fsMutex.Unlock()
 
 	c.queue.Add(s.Name)
@@ -291,10 +292,10 @@ func (c *controller) handleErr(key string) {
 
 		// If we are tracking status for the key, clear any errors.
 		c.fsMutex.RLock()
-		stat, ok := c.statsers[key]
+		feedCacher, ok := c.feedCachers[key]
 		c.fsMutex.RUnlock()
 		if ok {
-			stat.ClearError(statser.GlobalNetworkSetSyncFailed)
+			feedutils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 		}
 		return
 	}
@@ -322,13 +323,13 @@ func (c *controller) handleErr(key string) {
 	}
 	c.fsMutex.RLock()
 	fn, fok := c.failFuncs[key]
-	stat, sok := c.statsers[key]
+	feedCacher, sok := c.feedCachers[key]
 	c.fsMutex.RUnlock()
 	if fok {
 		fn(f.e)
 	}
 	if sok {
-		stat.Error(statser.GlobalNetworkSetSyncFailed, f.e)
+		feedutils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, f.e)
 	}
 }
 

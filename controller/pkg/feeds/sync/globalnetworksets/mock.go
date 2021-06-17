@@ -7,32 +7,32 @@ import (
 	"sync"
 
 	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 )
 
 type MockGlobalNetworkSetController struct {
-	m         sync.Mutex
-	local     map[string]*v3.GlobalNetworkSet
-	noGC      map[string]struct{}
-	failFuncs map[string]func(error)
-	statsers  map[string]statser.Statser
+	m           sync.Mutex
+	local       map[string]*v3.GlobalNetworkSet
+	noGC        map[string]struct{}
+	failFuncs   map[string]func(error)
+	feedCachers map[string]cacher.GlobalThreatFeedCacher
 }
 
 func NewMockGlobalNetworkSetController() *MockGlobalNetworkSetController {
 	return &MockGlobalNetworkSetController{
-		local:     make(map[string]*v3.GlobalNetworkSet),
-		noGC:      make(map[string]struct{}),
-		failFuncs: make(map[string]func(error)),
-		statsers:  make(map[string]statser.Statser),
+		local:       make(map[string]*v3.GlobalNetworkSet),
+		noGC:        make(map[string]struct{}),
+		failFuncs:   make(map[string]func(error)),
+		feedCachers: make(map[string]cacher.GlobalThreatFeedCacher),
 	}
 }
 
-func (c *MockGlobalNetworkSetController) Add(s *v3.GlobalNetworkSet, f func(error), stat statser.Statser) {
+func (c *MockGlobalNetworkSetController) Add(s *v3.GlobalNetworkSet, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.local[s.Name] = s
 	c.failFuncs[s.Name] = f
-	c.statsers[s.Name] = stat
+	c.feedCachers[s.Name] = feedCacher
 }
 
 func (c *MockGlobalNetworkSetController) Delete(s *v3.GlobalNetworkSet) {
@@ -41,7 +41,7 @@ func (c *MockGlobalNetworkSetController) Delete(s *v3.GlobalNetworkSet) {
 	delete(c.local, s.Name)
 	delete(c.noGC, s.Name)
 	delete(c.failFuncs, s.Name)
-	delete(c.statsers, s.Name)
+	delete(c.feedCachers, s.Name)
 }
 
 func (c *MockGlobalNetworkSetController) NoGC(s *v3.GlobalNetworkSet) {

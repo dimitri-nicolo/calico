@@ -5,6 +5,7 @@ package globalnetworksets
 import (
 	"context"
 	"errors"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
 	"testing"
 	"time"
 
@@ -12,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -36,10 +37,12 @@ func TestController_Add_Success(t *testing.T) {
 
 	gns := util.NewGlobalNetworkSet("test")
 	fail := func(error) { t.Error("controller called fail func unexpectedly") }
-	stat := &statser.MockStatser{}
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
 	// Set an error which we expect to clear.
-	stat.Error(statser.GlobalNetworkSetSyncFailed, errors.New("test"))
-	uut.Add(gns, fail, stat)
+	cachedFeed := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed
+	errorcondition.AddError(&cachedFeed.Status, cacher.GlobalNetworkSetSyncFailed, errors.New("test"))
+	feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
+	uut.Add(gns, fail, feedCacher)
 	g.Expect(q.Len()).Should(Equal(1))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -52,8 +55,8 @@ func TestController_Add_Success(t *testing.T) {
 
 	// Wait for queue to be processed
 	g.Eventually(q.Len).Should(Equal(0))
-	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Create", GNS: ex}))
-	g.Expect(stat.Status().ErrorConditions).To(HaveLen(0))
+	g.Expect(client.Calls()).To(ContainElement(spyutil.Call{Method: "Create", GNS: ex}))
+	g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions).To(HaveLen(0))
 
 	// The watch will send the GNS back to the informer
 	client.W.C <- watch.Event{
@@ -93,7 +96,7 @@ func TestController_Delete(t *testing.T) {
 
 	uut.Delete(gns)
 	g.Eventually(countMethod(client, "Delete")).Should(Equal(1))
-	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Delete", Name: gns.Name}))
+	g.Expect(client.Calls()).To(ContainElement(spyutil.Call{Method: "Delete", Name: gns.Name}))
 }
 
 func TestController_Update(t *testing.T) {
@@ -109,8 +112,8 @@ func TestController_Update(t *testing.T) {
 	q := uut.(*controller).queue
 
 	fail := func(error) { t.Error("controller called fail func unexpectedly") }
-	stat := &statser.MockStatser{}
-	uut.Add(gns, fail, stat)
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
+	uut.Add(gns, fail, feedCacher)
 	g.Expect(q.Len()).Should(Equal(1))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -126,10 +129,10 @@ func TestController_Update(t *testing.T) {
 	gns1e := gns1.DeepCopy()
 	// added GNS doesn't know the ResourceVersion
 	gns1.ResourceVersion = ""
-	uut.Add(gns1, fail, stat)
+	uut.Add(gns1, fail, feedCacher)
 
 	g.Eventually(countMethod(client, "Update")).Should(Equal(1))
-	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns1e}))
+	g.Expect(client.Calls()).To(ContainElement(spyutil.Call{Method: "Update", GNS: gns1e}))
 
 	// Update labels
 	gns2 := gns1e.DeepCopy()
@@ -137,10 +140,10 @@ func TestController_Update(t *testing.T) {
 	gns2e := gns2.DeepCopy()
 	// added GNS doesn't know the resource version
 	gns2.ResourceVersion = ""
-	uut.Add(gns2, fail, stat)
+	uut.Add(gns2, fail, feedCacher)
 
 	g.Eventually(countMethod(client, "Update")).Should(Equal(2))
-	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns2e}))
+	g.Expect(client.Calls()).To(ContainElement(spyutil.Call{Method: "Update", GNS: gns2e}))
 }
 
 // Add and then delete a GNS before there is a chance to process it.
@@ -155,8 +158,8 @@ func TestController_AddDelete(t *testing.T) {
 	q := uut.(*controller).queue
 
 	fail := func(error) { t.Error("controller called fail func unexpectedly") }
-	stat := &statser.MockStatser{}
-	uut.Add(gns, fail, stat)
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
+	uut.Add(gns, fail, feedCacher)
 	g.Expect(q.Len()).Should(Equal(1))
 	uut.Delete(gns)
 	g.Expect(q.Len()).Should(Equal(1), "More more on same key should not add to workqueue")
@@ -182,8 +185,8 @@ func TestController_AddRetry(t *testing.T) {
 	q := uut.(*controller).queue
 
 	fail := func(error) { t.Error("controller called fail func unexpectedly") }
-	stat := &statser.MockStatser{}
-	uut.Add(gns, fail, stat)
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
+	uut.Add(gns, fail, feedCacher)
 	g.Expect(q.Len()).Should(Equal(1))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -210,8 +213,8 @@ func TestController_AddFail(t *testing.T) {
 
 	var failed bool
 	fail := func(error) { failed = true }
-	stat := &statser.MockStatser{}
-	uut.Add(gns, fail, stat)
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
+	uut.Add(gns, fail, feedCacher)
 	g.Expect(q.Len()).Should(Equal(1))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -221,8 +224,8 @@ func TestController_AddFail(t *testing.T) {
 	// Should be retried.
 	g.Eventually(countMethod(client, "Create")).Should(Equal(DefaultClientRetries + 1))
 	g.Eventually(failed).Should(BeTrue())
-	g.Eventually(func() int { return len(stat.Status().ErrorConditions) }).Should(Equal(1))
-	g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(statser.GlobalNetworkSetSyncFailed))
+	g.Eventually(func() int { return len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions) }).Should(Equal(1))
+	g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions[0].Type).To(Equal(cacher.GlobalNetworkSetSyncFailed))
 }
 
 func TestController_ResourceEventHandlerFuncs(t *testing.T) {
@@ -336,8 +339,8 @@ func TestController_UpdateFailure(t *testing.T) {
 	gnsUp := gns.DeepCopy()
 	gnsUp.Spec.Nets = []string{"4.5.6.7"}
 	fail := func(error) {}
-	stat := &statser.MockStatser{}
-	uut.Add(gnsUp, fail, stat)
+	feedCacher := &cacher.MockGlobalThreatFeedCache{}
+	uut.Add(gnsUp, fail, feedCacher)
 
 	uut.Run(ctx)
 

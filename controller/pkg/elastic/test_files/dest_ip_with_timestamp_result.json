@@ -55,47 +55,6 @@
         "sort": [
           0
         ]
-      },
-      {
-        "_index": "tigera_secure_ee_flows.cluster.20180914",
-        "_type": "fluentd",
-        "_id": "BQ15nGkBixKz5K3LBMRz",
-        "_score": null,
-        "_source": {
-          "start_time": 1536897620,
-          "end_time": 1536897920,
-          "source_ip": "35.32.82.134",
-          "source_name": "-",
-          "source_name_aggr": "pub",
-          "source_namespace": "-",
-          "source_port": null,
-          "source_type": "net",
-          "source_labels": null,
-          "dest_ip": "10.10.1.20",
-          "dest_name": "basic-6tn46e",
-          "dest_name_aggr": "basic-*",
-          "dest_namespace": "default",
-          "dest_port": 0,
-          "dest_type": "wep",
-          "dest_labels": null,
-          "proto": "tcp",
-          "action": "allow",
-          "reporter": "dst",
-          "policies": null,
-          "bytes_in": 18966,
-          "bytes_out": 10048,
-          "num_flows": 1,
-          "num_flows_started": 1,
-          "num_flows_completed": 1,
-          "packets_in": 172,
-          "packets_out": 84,
-          "http_requests_allowed_in": 0,
-          "http_requests_denied_in": 0,
-          "host": "node02"
-        },
-        "sort": [
-          0
-        ]
       }
     ]
   }

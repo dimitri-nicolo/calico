@@ -5,6 +5,9 @@ package puller
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"io"
 	"net"
 	"net/http"
@@ -15,10 +18,11 @@ import (
 	retry "github.com/avast/retry-go"
 	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
@@ -50,7 +54,7 @@ type httpPuller struct {
 
 type persistence interface {
 	lastModified(ctx context.Context, name string) (time.Time, error)
-	add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser)
+	add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
 }
 
 type content interface {
@@ -58,8 +62,8 @@ type content interface {
 }
 
 type gnsHandler interface {
-	handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction)
-	syncFromDB(ctx context.Context, st statser.Statser)
+	handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction)
+	syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher)
 }
 
 func (h *httpPuller) SetFeed(f *calico.GlobalThreatFeed) {
@@ -70,7 +74,7 @@ func (h *httpPuller) SetFeed(f *calico.GlobalThreatFeed) {
 	h.needsUpdate = true
 }
 
-func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
+func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	h.once.Do(func() {
 
 		h.lock.RLock()
@@ -83,7 +87,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 
 		syncRunFunc, enqueueSyncFunction := runloop.OnDemand()
 		go syncRunFunc(ctx, func(ctx context.Context, i interface{}) {
-			h.gnsHandler.syncFromDB(ctx, s)
+			h.gnsHandler.syncFromDB(ctx, feedCacher)
 		})
 		h.enqueueSyncFunction = func() {
 			enqueueSyncFunction(0)
@@ -95,7 +99,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 			}
 
 			// Synchronize the GlobalNetworkSet on startup
-			h.gnsHandler.syncFromDB(ctx, s)
+			h.gnsHandler.syncFromDB(ctx, feedCacher)
 
 			delay := h.getStartupDelay(ctx)
 			if delay > 0 {
@@ -110,7 +114,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 			case <-time.After(delay):
 				break
 			}
-			_ = runFunc(ctx, func() { _ = h.query(ctx, s, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
+			_ = runFunc(ctx, func() { _ = h.query(ctx, feedCacher, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
 		}()
 
 	})
@@ -201,7 +205,7 @@ func (h *httpPuller) getStartupDelay(ctx context.Context) time.Duration {
 }
 
 // queryInfo gets the information required for a query in a threadsafe way
-func (h *httpPuller) queryInfo(ctx context.Context, s statser.Statser) (name string, u *url.URL, header http.Header, err error) {
+func (h *httpPuller) queryInfo(ctx context.Context) (name string, u *url.URL, header http.Header, err error) {
 	h.lock.RLock()
 
 	if h.needsUpdate {
@@ -229,11 +233,11 @@ func (h *httpPuller) queryInfo(ctx context.Context, s statser.Statser) (name str
 	return
 }
 
-func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uint, delay time.Duration) error {
-	name, u, header, err := h.queryInfo(ctx, st)
+func (h *httpPuller) query(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher, attempts uint, delay time.Duration) error {
+	name, u, header, err := h.queryInfo(ctx)
 	if err != nil {
 		log.WithError(err).Error("failed to query")
-		st.Error(statser.PullFailed, err)
+		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
 	log.WithField("feed", name).Debug("querying HTTP feed")
@@ -287,7 +291,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 	)
 	if err != nil {
 		log.WithError(err).Error("failed to query")
-		st.Error(statser.PullFailed, err)
+		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
 	defer func() {
@@ -297,14 +301,54 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 	snapshot, err := h.content.snapshot(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("failed to parse snapshot")
-		st.Error(statser.PullFailed, err)
+		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
 
-	h.persistence.add(ctx, name, snapshot, h.syncFailFunction, st)
-	h.gnsHandler.handleSnapshot(ctx, snapshot, st, h.syncFailFunction)
-	st.ClearError(statser.PullFailed)
-	st.SuccessfulSync()
+	h.persistence.add(ctx, name, snapshot, h.syncFailFunction, feedCacher)
+	h.gnsHandler.handleSnapshot(ctx, snapshot, feedCacher, h.syncFailFunction)
+	updateFeedStatusAfterSuccessfulPull(feedCacher, time.Now())
 
 	return nil
+}
+
+// updateFeedStatusAfterSuccessfulPull is called after a sync to GlobalNetworkSet succeeds.
+// It updates the GlobalThreatFeed.Status.LastSuccessfulSync timestamp with a retry mechanism.
+// A retry only kicks off when the update failure is caused by a StatusConflict and it will retry at most cacher.MaxUpdateRetry times
+func updateFeedStatusAfterSuccessfulPull(feedCacher cacher.GlobalThreatFeedCacher, lastSuccessfulSync time.Time) {
+	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
+	if getCachedFeedResponse.Err != nil {
+		log.WithError(getCachedFeedResponse.Err).
+			Error("abort updating feed status after successful pull because failed to retrieve cached GlobalThreatFeed CR")
+		return
+	}
+	if getCachedFeedResponse.GlobalThreatFeed == nil {
+		log.Error("abort updating feed status after successful pull because cached GlobalThreatFeed CR cannot be empty")
+		return
+	}
+
+	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
+	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
+		log.Debug(fmt.Sprintf("%d/%d attempt to update feed status after successful pull", i, cacher.MaxUpdateRetry))
+		if lastSuccessfulSync.After(toBeUpdated.Status.LastSuccessfulSync.Time) {
+			toBeUpdated.Status.LastSuccessfulSync = meta.Time{Time: lastSuccessfulSync}
+		} else {
+			log.Error("abort updating feed status after successful pull because the current attempt is out of date")
+			return
+		}
+		errorcondition.ClearError(&toBeUpdated.Status, cacher.PullFailed)
+		updateResponse := feedCacher.UpdateGlobalThreatFeedStatus(toBeUpdated)
+		updateErr := updateResponse.Err
+		if updateErr == nil {
+			log.Debug("attempt to update feed status after successful pull succeeded, exiting the loop")
+			return
+		}
+		statusErr, ok := updateErr.(*apiErrors.StatusError)
+		if !ok || statusErr.Status().Code != http.StatusConflict {
+			log.WithError(updateErr).Error("abort updating feed status after successful pull due to unrecoverable failure")
+			return
+		}
+		log.WithError(updateErr).Error("failed updating feed status after successful pull")
+		toBeUpdated = updateResponse.GlobalThreatFeed
+	}
 }

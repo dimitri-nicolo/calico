@@ -5,6 +5,8 @@ package controller
 import (
 	"context"
 	"errors"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	"net/http"
 	"reflect"
 	"testing"
@@ -44,13 +46,13 @@ var cases = []testCase{
 // The following are convenience functions to make it easier to call the Add, Run, Delete, StartReconciliation, and NoGC
 // methods on the UUT, which is a reflect.Value containing the actual controller type.
 
-func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(error), stat Statser) {
+func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(error), feedCacher cacher.GlobalThreatFeedCacher) {
 	uut.MethodByName("Add").Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(name),
 		set,
 		reflect.ValueOf(fail),
-		reflect.ValueOf(stat),
+		reflect.ValueOf(feedCacher),
 	})
 }
 
@@ -86,15 +88,15 @@ func TestController_Add_Success(t *testing.T) {
 
 			name := "test"
 			fail := func(error) { t.Error("controller called fail func unexpectedly") }
-			stat := &mockStatser{}
-			add(uut, ctx, name, tc.set, fail, stat)
+			feedCacher := &cacher.MockGlobalThreatFeedCache{}
+			add(uut, ctx, name, tc.set, fail, feedCacher)
 
 			startReconciliation(uut, ctx)
 
 			tkr.reconcile(t, ctx)
 
 			g.Eventually(dbm.Calls).Should(ContainElement(
-				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
+				spyutil.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
 			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 
 			dbm.Metas = append(dbm.Metas, db.Meta{Name: name})
@@ -133,7 +135,7 @@ func TestController_Delete_Success(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: name}))
+			g.Eventually(dbm.Calls).Should(ContainElement(spyutil.Call{Method: "Delete" + tc.name, Name: name}))
 			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1))
 
 			dbm.Metas = nil
@@ -170,7 +172,7 @@ func TestController_GC_Success(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{
+			g.Eventually(dbm.Calls).Should(ContainElement(spyutil.Call{
 				Method:      "Delete" + tc.name,
 				Name:        gcName,
 				SeqNo:       &gcSeqNo,
@@ -200,15 +202,15 @@ func TestController_Update_Success(t *testing.T) {
 			run(uut, ctx)
 
 			fail := func(error) { t.Error("controller called fail func unexpectedly") }
-			stat := &mockStatser{}
-			add(uut, ctx, name, tc.set, fail, stat)
+			feedCacher := &cacher.MockGlobalThreatFeedCache{}
+			add(uut, ctx, name, tc.set, fail, feedCacher)
 
 			startReconciliation(uut, ctx)
 
 			tkr.reconcile(t, ctx)
 
 			g.Eventually(dbm.Calls).Should(ContainElement(
-				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
+				spyutil.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
 			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 
 			tkr.reconcile(t, ctx)
@@ -236,8 +238,8 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 			aName := "added"
 			var failed bool
 			fail := func(error) { failed = true }
-			stat := &mockStatser{}
-			add(uut, ctx, aName, tc.set, fail, stat)
+			feedCacher := &cacher.MockGlobalThreatFeedCache{}
+			add(uut, ctx, aName, tc.set, fail, feedCacher)
 
 			gName := "nogc"
 			noGC(uut, ctx, gName)
@@ -246,7 +248,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(func() []v3.ErrorCondition { return stat.Status().ErrorConditions }).Should(HaveLen(1))
+			g.Eventually(func() []v3.ErrorCondition { return feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(1))
 			g.Expect(failed).To(BeFalse())
 		})
 	}
@@ -269,21 +271,21 @@ func TestController_Add_FailToPut(t *testing.T) {
 			name := "test"
 			var failed bool
 			fail := func(error) { failed = true }
-			stat := &mockStatser{}
-			add(uut, ctx, name, tc.set, fail, stat)
+			feedCacher := &cacher.MockGlobalThreatFeedCache{}
+			add(uut, ctx, name, tc.set, fail, feedCacher)
 
 			startReconciliation(uut, ctx)
 
 			tkr.reconcile(t, ctx)
 
 			g.Eventually(dbm.Calls).Should(ContainElement(
-				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
+				spyutil.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
 			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 
 			// Potential race condition between call to Put and recording the error, so we just
 			// need the error to eventually be recorded.
-			g.Eventually(func() int { return len(stat.Status().ErrorConditions) }).Should(Equal(1))
-			g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(TestErrorType))
+			g.Eventually(func() int { return len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions) }).Should(Equal(1))
+			g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions[0].Type).To(Equal(TestErrorType))
 
 			// Potential race condition on calling of the fail function, so we just need it to eventually
 			// have been called.
@@ -294,7 +296,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 			g.Eventually(countMethod(dbm, "Put"+tc.name)).
 				Should(Equal(2), "should retry put")
-			g.Eventually(func() []v3.ErrorCondition { return stat.Status().ErrorConditions }).Should(HaveLen(0), "should clear error on success")
+			g.Eventually(func() []v3.ErrorCondition { return feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(0), "should clear error on success")
 		})
 	}
 }
@@ -321,7 +323,7 @@ func TestController_GC_NotFound(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{
+			g.Eventually(dbm.Calls).Should(ContainElement(spyutil.Call{
 				Method:      "Delete" + tc.name,
 				Name:        gcName,
 				SeqNo:       &gcSeqNo,
@@ -359,7 +361,7 @@ func TestController_GC_Error(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{
+			g.Eventually(dbm.Calls).Should(ContainElement(spyutil.Call{
 				Method:      "Delete" + tc.name,
 				Name:        gcName,
 				SeqNo:       &gcSeqNo,
@@ -435,7 +437,7 @@ func TestController_ContextExpiry(t *testing.T) {
 			aCtx, aCancel := context.WithCancel(ctx)
 			var aDone bool
 			go func() {
-				add(uut, aCtx, "add", tc.set, func(error) {}, &mockStatser{})
+				add(uut, aCtx, "add", tc.set, func(error) {}, &cacher.MockGlobalThreatFeedCache{})
 				aDone = true
 			}()
 

@@ -5,7 +5,7 @@ package puller
 import (
 	"context"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 
 	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 )
@@ -14,7 +14,7 @@ type SyncFailFunction func(error)
 
 type Puller interface {
 	// Run activates the puller to start pulling from the feed.
-	Run(context.Context, statser.Statser)
+	Run(context.Context, cacher.GlobalThreatFeedCacher)
 
 	// SetFeed updates the feed the puller should use.
 	SetFeed(*v3.GlobalThreatFeed)

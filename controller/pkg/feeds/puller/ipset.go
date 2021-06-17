@@ -4,6 +4,7 @@ package puller
 
 import (
 	"context"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"io"
 	"net"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
@@ -103,27 +104,27 @@ func (i ipSetPersistence) lastModified(ctx context.Context, name string) (time.T
 	return i.d.GetIPSetModified(ctx, name)
 }
 
-func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser) {
-	i.c.Add(ctx, name, snapshot.(db.IPSetSpec), f, st)
+func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+	i.c.Add(ctx, name, snapshot.(db.IPSetSpec), f, feedCacher)
 }
 
 func (h ipSetGNSHandler) get(ctx context.Context) (interface{}, error) {
 	return h.d.GetIPSet(ctx, h.name)
 }
 
-func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, s statser.Statser) {
+func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	if h.enabled {
-		log.WithField("feed", h.name).Info("Synchronizing GlobalNetworkSet from cached feed contents")
+		log.WithField("feed", h.name).Info("synchronizing GlobalNetworkSet from cached feed contents")
 		ipSet, err := h.get(ctx)
 		if err != nil {
-			log.WithError(err).WithField("feed", h.name).Error("Failed to load cached feed contents")
-			s.Error(statser.GlobalNetworkSetSyncFailed, err)
+			log.WithError(err).WithField("feed", h.name).Error("failed to load cached feed contents")
+			utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, err)
 		} else {
 			g := h.makeGNS(ipSet)
-			h.gnsController.Add(g, func(error) {}, s)
+			h.gnsController.Add(g, func(error) {}, feedCacher)
 		}
 	} else {
-		s.ClearError(statser.GlobalNetworkSetSyncFailed)
+		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}
 }
 
@@ -138,12 +139,12 @@ func (h *ipSetGNSHandler) makeGNS(snapshot interface{}) *calico.GlobalNetworkSet
 	return gns
 }
 
-func (h *ipSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction) {
+func (h *ipSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
 	if h.enabled {
 		g := h.makeGNS(snapshot)
-		h.gnsController.Add(g, f, st)
+		h.gnsController.Add(g, f, feedCacher)
 	} else {
-		st.ClearError(statser.GlobalNetworkSetSyncFailed)
+		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}
 }
 

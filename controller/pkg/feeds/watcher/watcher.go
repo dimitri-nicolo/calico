@@ -21,9 +21,9 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/searcher"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -73,10 +73,10 @@ type watcher struct {
 }
 
 type feedWatcher struct {
-	feed     *v3.GlobalThreatFeed
-	puller   puller.Puller
-	searcher searcher.Searcher
-	statser  statser.Statser
+	feed       *v3.GlobalThreatFeed
+	puller     puller.Puller
+	searcher   searcher.Searcher
+	feedCacher cacher.GlobalThreatFeedCacher
 }
 
 func NewWatcher(
@@ -248,20 +248,21 @@ func (s *watcher) startFeedWatcherIP(ctx context.Context, f *v3.GlobalThreatFeed
 	}
 
 	fCopy := f.DeepCopy()
-	st := statser.NewStatser(f.Name, s.globalThreatFeedClient)
-	st.Run(ctx)
+
+	feedCacher := cacher.NewGlobalThreatFeedCache(f.Name, s.globalThreatFeedClient)
+	feedCacher.Run(ctx)
 
 	fw := feedWatcher{
 		feed:     fCopy,
 		searcher: searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
-		statser:  st,
+		feedCacher: feedCacher,
 	}
 
 	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
 		fw.puller = puller.NewIPSetHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
-		fw.puller.Run(ctx, fw.statser)
+		fw.puller.Run(ctx, fw.feedCacher)
 	} else {
 		fw.puller = nil
 	}
@@ -271,7 +272,7 @@ func (s *watcher) startFeedWatcherIP(ctx context.Context, f *v3.GlobalThreatFeed
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
 	}
 
-	fw.searcher.Run(ctx, fw.statser)
+	fw.searcher.Run(ctx, fw.feedCacher)
 }
 
 func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThreatFeed) {
@@ -280,26 +281,27 @@ func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThrea
 	}
 
 	fCopy := f.DeepCopy()
-	st := statser.NewStatser(f.Name, s.globalThreatFeedClient)
-	st.Run(ctx)
+
+	feedCacher := cacher.NewGlobalThreatFeedCache(f.Name, s.globalThreatFeedClient)
+	feedCacher.Run(ctx)
 
 	fw := feedWatcher{
 		feed:     fCopy,
 		searcher: searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events),
-		statser:  st,
+		feedCacher: feedCacher,
 	}
 
 	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
 		fw.puller = puller.NewDomainNameSetHTTPPuller(fCopy, s.dnSet, s.configMapClient, s.secretsClient, s.httpClient, s.dnsController)
-		fw.puller.Run(ctx, fw.statser)
+		fw.puller.Run(ctx, fw.feedCacher)
 	} else {
 		fw.puller = nil
 	}
 	s.dnsController.NoGC(ctx, fCopy.Name)
 
-	fw.searcher.Run(ctx, fw.statser)
+	fw.searcher.Run(ctx, fw.feedCacher)
 }
 
 func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.GlobalThreatFeed) {
@@ -340,9 +342,10 @@ func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.Gl
 	}
 
 	gns := util.NewGlobalNetworkSet(fw.feed.Name)
-	if fw.feed.Spec.GlobalNetworkSet != nil {
+	if oldFeed.Spec.GlobalNetworkSet == nil && newFeed.Spec.GlobalNetworkSet != nil {
 		s.gnsController.NoGC(gns)
-	} else {
+	}
+	if oldFeed.Spec.GlobalNetworkSet != nil && newFeed.Spec.GlobalNetworkSet == nil {
 		s.gnsController.Delete(gns)
 	}
 
@@ -370,7 +373,7 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 			// Note: ThreatFeedContentIPset is the default
 			fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
 		}
-		fw.puller.Run(ctx, fw.statser)
+		fw.puller.Run(ctx, fw.feedCacher)
 	} else {
 		fw.puller = nil
 	}
@@ -395,7 +398,7 @@ func (s *watcher) stopFeedWatcher(ctx context.Context, name string) {
 	s.dnsController.Delete(ctx, name)
 
 	fw.searcher.Close()
-	fw.statser.Close()
+	fw.feedCacher.Close()
 	s.deleteFeedWatcher(name)
 }
 
