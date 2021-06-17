@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -200,17 +199,6 @@ func describeTProxyTest(ipip bool) bool {
 				_ = k8sClient
 			})
 
-			// XXX this is temporary method until service annotation does the job
-			ipsetsUpdate := func(value string) {
-				// XXX need to give felix enough time to be executed _after_ it
-				// XXX syncs the ipsets for the first time
-				time.Sleep(15 * time.Second)
-				for _, felix := range felixes {
-					err := felix.ExecMayFail("ipset", "add", "cali40tproxy-services", value)
-					Expect(err).NotTo(HaveOccurred())
-				}
-			}
-
 			JustAfterEach(func() {
 				for _, p := range proxies {
 					p.Stop()
@@ -260,11 +248,17 @@ func describeTProxyTest(ipip bool) bool {
 							"-j", "DNAT", "--to-destination",
 							pod)
 					}
+					// create service resource that has annotation at creation
+					svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					createService(svc, clientset)
+
+					By("asserting that ipaddress, port of service propagated to ipset ")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 				})
 
 				It("should have connectivity from all workloads via ClusterIP", func() {
-					ipsetsUpdate("10.101.0.10,tcp:8090")
 
 					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -301,8 +295,8 @@ func describeTProxyTest(ipip bool) bool {
 
 							pol = createPolicy(pol)
 						})
-
-						ipsetsUpdate("10.101.0.10,tcp:8090")
+						By("asserting that ipaddress, port of service propagated to ipset ")
+						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 						cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -341,8 +335,6 @@ func describeTProxyTest(ipip bool) bool {
 
 							pol = createPolicy(pol)
 						})
-
-						ipsetsUpdate("10.101.0.10,tcp:8090")
 
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
