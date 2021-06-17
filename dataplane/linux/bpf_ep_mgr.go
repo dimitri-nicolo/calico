@@ -40,6 +40,8 @@ import (
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/felix/logutils"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -104,7 +106,9 @@ type bpfInterfaceInfo struct {
 }
 
 type bpfInterfaceState struct {
-	jumpMapFDs [2]bpf.MapFD
+	jumpMapFDs                [2]bpf.MapFD
+	programmedAsEgressGateway bool
+	programmedAsEgressClient  bool
 }
 
 type bpfEndpointManager struct {
@@ -159,6 +163,7 @@ type bpfEndpointManager struct {
 	dp bpfDataplane
 
 	ifaceToIpMap map[string]net.IP
+	opReporter   logutils.OpRecorder
 
 	// CaliEnt features below
 
@@ -187,6 +192,7 @@ func newBPFEndpointManager(
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
+	opReporter logutils.OpRecorder,
 
 	// CaliEnt args below
 
@@ -237,6 +243,7 @@ func newBPFEndpointManager(
 		lookupsCache:     lookupsCache,
 		hostIfaceToEpMap: map[string]proto.HostEndpoint{},
 		ifaceToIpMap:     map[string]net.IP{},
+		opReporter:       opReporter,
 		actionOnDrop:     actionOnDrop,
 		enableTcpStats:   enableTcpStats,
 	}
@@ -537,6 +544,8 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			return set.RemoveItem
 		}
 
+		m.opReporter.RecordOperation("update-data-iface")
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -591,7 +600,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			log.WithField("id", iface).Info("Applied program to host interface")
 			return set.RemoveItem
 		}
-		if errors.Is(err, tc.ErrDeviceNotFound) {
+		if isLinkNotFoundError(err) {
 			log.WithField("iface", iface).Debug(
 				"Tried to apply BPF program to interface but the interface wasn't present.  " +
 					"Will retry if it shows up.")
@@ -618,6 +627,8 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 		if !m.isWorkloadIface(ifaceName) {
 			return nil
 		}
+
+		m.opReporter.RecordOperation("update-workload-iface")
 
 		if err := sem.Acquire(context.Background(), 1); err != nil {
 			// Should only happen if the context finishes.
@@ -664,7 +675,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 			return set.RemoveItem
 		} else {
 			if wlID != nil && m.happyWEPs[*wlID] != nil {
-				if !errors.Is(err, tc.ErrDeviceNotFound) {
+				if !isLinkNotFoundError(err) {
 					log.WithField("id", *wlID).WithError(err).Warning(
 						"Failed to add policy to workload, removing from iptables allow list")
 				}
@@ -672,7 +683,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 				m.happyWEPsDirty = true
 			}
 		}
-		if errors.Is(err, tc.ErrDeviceNotFound) {
+		if isLinkNotFoundError(err) {
 			log.WithField("wep", wlID).Debug(
 				"Tried to apply BPF program to interface but the interface wasn't present.  " +
 					"Will retry if it shows up.")
@@ -727,7 +738,7 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	// Attach the qdisc first; it is shared between the directions.
 	err := m.dp.ensureQdisc(ifaceName)
 	if err != nil {
-		if errors.Is(err, tc.ErrDeviceNotFound) {
+		if isLinkNotFoundError(err) {
 			// Interface is gone, nothing to do.
 			log.WithField("ifaceName", ifaceName).Debug(
 				"Ignoring request to program interface that is not present.")
@@ -766,6 +777,16 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	return nil
 }
 
+func isLinkNotFoundError(err error) bool {
+	if errors.Is(err, tc.ErrDeviceNotFound) { // From the tc package.
+		return true
+	}
+	if err.Error() == "Link not found" { // From netlink and friends.
+		return true
+	}
+	return false
+}
+
 var calicoRouterIP = net.IPv4(169, 254, 1, 1).To4()
 
 func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *proto.WorkloadEndpoint, polDirection PolDirection) error {
@@ -782,6 +803,10 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 
 	ap.EnableTCPStats = m.enableTcpStats
+	if endpoint != nil {
+		ap.IsEgressGateway = endpoint.IsEgressGateway
+		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
+	}
 
 	jumpMapFD, err := m.dp.ensureProgramAttached(&ap, polDirection)
 	if err != nil {
@@ -1373,6 +1398,21 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirect
 			}
 			m.setJumpMapFD(ap.Iface, polDirection, 0)
 			jumpMapFD = 0 // Trigger program to be re-added below.
+		} else {
+			if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
+				// BPF program needs reattaching with different patch options, so
+				// close and discard the old FD.
+				log.WithField("iface", ap.Iface).Infof(
+					"Reapplying BPF program because egress gateway state has changed (client %v gateway %v)",
+					ap.IsEgressClient, ap.IsEgressGateway,
+				)
+				err := jumpMapFD.Close()
+				if err != nil {
+					log.WithError(err).Warn("Failed to close jump map FD. Ignoring.")
+				}
+				m.setJumpMapFD(ap.Iface, polDirection, 0)
+				jumpMapFD = 0 // Trigger program to be re-added below.
+			}
 		}
 	}
 
@@ -1388,6 +1428,7 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap *tc.AttachPoint, polDirect
 			return 0, fmt.Errorf("failed to look up jump map: %w", err)
 		}
 		m.setJumpMapFD(ap.Iface, polDirection, jumpMapFD)
+		m.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 	}
 
 	return jumpMapFD, nil
@@ -1411,6 +1452,27 @@ func (m *bpfEndpointManager) setJumpMapFD(name string, direction PolDirection, f
 		iface.dpState.jumpMapFDs[direction] = fd
 		return false
 	})
+}
+
+func (m *bpfEndpointManager) isEgressProgrammingCorrect(ifaceName string, isEgressGateway, isEgressClient bool) (correct bool) {
+	m.ifacesLock.Lock()
+	defer m.ifacesLock.Unlock()
+	m.withIface(ifaceName, func(iface *bpfInterface) bool {
+		correct = ((iface.dpState.programmedAsEgressGateway == isEgressGateway) && (iface.dpState.programmedAsEgressClient == isEgressClient))
+		return false
+	})
+	return
+}
+
+func (m *bpfEndpointManager) setEgressProgramming(ifaceName string, isEgressGateway, isEgressClient bool) {
+	m.ifacesLock.Lock()
+	defer m.ifacesLock.Unlock()
+	m.withIface(ifaceName, func(iface *bpfInterface) bool {
+		iface.dpState.programmedAsEgressGateway = isEgressGateway
+		iface.dpState.programmedAsEgressClient = isEgressClient
+		return false
+	})
+	return
 }
 
 func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) error {

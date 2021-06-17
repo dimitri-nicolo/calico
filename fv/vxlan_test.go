@@ -42,24 +42,37 @@ import (
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before adding host IPs to IP sets", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 	for _, vxlanM := range []api.VXLANMode{api.VXLANModeCrossSubnet} {
 		vxlanMode := vxlanM
-		for _, routeSource := range []string{"CalicoIPAM", "WorkloadIPs"} {
-			routeSource := routeSource
-			Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s", vxlanMode, routeSource), func() {
+		type testConf struct {
+			RouteSource string
+			BrokenXSum  bool
+		}
+		for _, testConfig := range []testConf{
+			{"CalicoIPAM", true},
+			{"WorkloadIPs", false},
+		} {
+			routeSource := testConfig.RouteSource
+			brokenXSum := testConfig.BrokenXSum
+			Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v", vxlanMode, routeSource, brokenXSum), func() {
 				var (
-					infra   infrastructure.DatastoreInfra
-					felixes []*infrastructure.Felix
-					client  client.Interface
-					w       [3]*workload.Workload
-					hostW   [3]*workload.Workload
-					cc      *connectivity.Checker
+					infra           infrastructure.DatastoreInfra
+					felixes         []*infrastructure.Felix
+					client          client.Interface
+					w               [3]*workload.Workload
+					hostW           [3]*workload.Workload
+					cc              *connectivity.Checker
+					topologyOptions infrastructure.TopologyOptions
 				)
 
 				BeforeEach(func() {
 					infra = getInfra()
-					topologyOptions := infrastructure.DefaultTopologyOptions()
+					topologyOptions = infrastructure.DefaultTopologyOptions()
 					topologyOptions.VXLANMode = vxlanMode
 					topologyOptions.IPIPEnabled = false
 					topologyOptions.ExtraEnvVars["FELIX_ROUTESOURCE"] = routeSource
+					// We force the broken checksum handling on or off so that we're not dependent on kernel version
+					// for these tests.  Since we're testing in containers anyway, checksum offload can't really be
+					// tested but we can verify the state with ethtool.
+					topologyOptions.ExtraEnvVars["FELIX_FeatureDetectOverride"] = fmt.Sprintf("ChecksumOffloadBroken=%t", brokenXSum)
 					felixes, client = infrastructure.StartNNodeTopology(3, topologyOptions, infra)
 
 					// Install a default profile that allows all ingress and egress, in the absence of any Policy.
@@ -128,7 +141,27 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 					}
 					infra.Stop()
 				})
-
+				if brokenXSum {
+					It("should disable checksum offload", func() {
+						Eventually(func() string {
+							out, err := felixes[0].ExecOutput("ethtool", "-k", "vxlan.calico")
+							if err != nil {
+								return fmt.Sprintf("ERROR: %v", err)
+							}
+							return out
+						}, "10s", "100ms").Should(ContainSubstring("tx-checksumming: off"))
+					})
+				} else {
+					It("should not disable checksum offload", func() {
+						Eventually(func() string {
+							out, err := felixes[0].ExecOutput("ethtool", "-k", "vxlan.calico")
+							if err != nil {
+								return fmt.Sprintf("ERROR: %v", err)
+							}
+							return out
+						}, "10s", "100ms").Should(ContainSubstring("tx-checksumming: on"))
+					})
+				}
 				It("should use the --random-fully flag in the MASQUERADE rules", func() {
 					for _, felix := range felixes {
 						Eventually(func() string {
@@ -141,6 +174,38 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 					cc.ExpectSome(w[0], w[1])
 					cc.ExpectSome(w[1], w[0])
 					cc.CheckConnectivity()
+				})
+
+				It("should have some blackhole routes installed", func() {
+					if routeSource == "WorkloadIPs" {
+						Skip("not applicable for workload ips")
+						return
+					}
+
+					nodes := []string{
+						"blackhole 10.65.0.0/26 proto 80",
+						"blackhole 10.65.1.0/26 proto 80",
+						"blackhole 10.65.2.0/26 proto 80",
+					}
+
+					for n, result := range nodes {
+						Eventually(func() string {
+							o, _ := felixes[n].ExecOutput("ip", "r", "s", "type", "blackhole")
+							return o
+						}, "10s", "100ms").Should(ContainSubstring(result))
+						wName := fmt.Sprintf("w%d", n)
+
+						err := client.IPAM().ReleaseByHandle(context.TODO(), wName)
+						Expect(err).NotTo(HaveOccurred())
+
+						err = client.IPAM().ReleaseHostAffinities(context.TODO(), felixes[n].Hostname, true)
+						Expect(err).NotTo(HaveOccurred())
+
+						Eventually(func() string {
+							o, _ := felixes[n].ExecOutput("ip", "r", "s", "type", "blackhole")
+							return o
+						}, "10s", "100ms").Should(BeEmpty())
+					}
 				})
 
 				It("should have host to workload connectivity", func() {

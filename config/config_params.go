@@ -114,6 +114,56 @@ func (source Source) Local() bool {
 	}
 }
 
+// Provider represents a particular provider or flavor of Kubernetes.
+type Provider uint8
+
+const (
+	ProviderNone Provider = iota
+	ProviderEKS
+	ProviderGKE
+	ProviderAKS
+	ProviderOpenShift
+	ProviderDockerEE
+)
+
+func (p Provider) String() string {
+	switch p {
+	case ProviderNone:
+		return ""
+	case ProviderEKS:
+		return "EKS"
+	case ProviderGKE:
+		return "GKE"
+	case ProviderAKS:
+		return "AKS"
+	case ProviderOpenShift:
+		return "OpenShift"
+	case ProviderDockerEE:
+		return "DockerEnterprise"
+	default:
+		return fmt.Sprintf("<unknown-provider(%v)>", uint8(p))
+	}
+}
+
+func newProvider(s string) (Provider, error) {
+	switch strings.ToLower(s) {
+	case strings.ToLower(ProviderNone.String()):
+		return ProviderNone, nil
+	case strings.ToLower(ProviderEKS.String()):
+		return ProviderEKS, nil
+	case strings.ToLower(ProviderGKE.String()):
+		return ProviderGKE, nil
+	case strings.ToLower(ProviderAKS.String()):
+		return ProviderAKS, nil
+	case strings.ToLower(ProviderOpenShift.String()):
+		return ProviderOpenShift, nil
+	case strings.ToLower(ProviderDockerEE.String()):
+		return ProviderDockerEE, nil
+	default:
+		return 0, fmt.Errorf("unknown provider %s", s)
+	}
+}
+
 // Config contains the best, parsed config values loaded from the various sources.
 // We use tags to control the parsing and validation.
 type Config struct {
@@ -131,7 +181,7 @@ type Config struct {
 	BPFEnabled                         bool           `config:"bool;false"`
 	BPFDisableUnprivileged             bool           `config:"bool;true"`
 	BPFLogLevel                        string         `config:"oneof(off,info,debug);off;non-zero"`
-	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|wireguard.cali$)"`
+	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$)"`
 	BPFConnectTimeLoadBalancingEnabled bool           `config:"bool;true"`
 	BPFExternalServiceMode             string         `config:"oneof(tunnel,dsr);tunnel;non-zero"`
 	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
@@ -147,7 +197,7 @@ type Config struct {
 	DebugBPFCgroupV2 string `config:"string;;local"`
 	// DebugBPFMapRepinEnabled can be used to prevent Felix from repinning its BPF maps at startup.  This is useful for
 	// testing with multiple Felix instances running on one host.
-	DebugBPFMapRepinEnabled bool `config:"bool;true;local"`
+	DebugBPFMapRepinEnabled bool `config:"bool;false;local"`
 
 	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
@@ -268,12 +318,6 @@ type Config struct {
 	PrometheusMetricsKeyFile        string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
-	CloudWatchMetricsReporterEnabled  bool          `config:"bool;false"`
-	CloudWatchMetricsPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
-
-	CloudWatchNodeHealthStatusEnabled    bool          `config:"bool;false"`
-	CloudWatchNodeHealthPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
-
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 
@@ -294,19 +338,6 @@ type Config struct {
 	FlowLogsFlushInterval          time.Duration `config:"seconds;300"`
 	FlowLogsEnableNetworkSets      bool          `config:"bool;false"`
 	FlowLogsMaxOriginalIPsIncluded int           `config:"int;50"`
-
-	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
-	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;0"` // Deprecated
-	CloudWatchLogsLogGroupName              string        `config:"string;tigera-flowlogs-<cluster-guid>"`
-	CloudWatchLogsLogStreamName             string        `config:"string;<felix-hostname>_Flowlogs"`
-	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
-	CloudWatchLogsIncludePolicies           bool          `config:"bool;false"`
-	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
-	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
-	CloudWatchLogsRetentionDays             int           `config:"int(1,3,5,7,14,30,60,90,120,150,180,365,400,545,731,1827,3653);7;die-on-fail"`
-	CloudWatchLogsEnableHostEndpoint        bool          `config:"bool;false"` // Deprecated
-	CloudWatchLogsEnabledForAllowed         bool          `config:"bool;true"`
-	CloudWatchLogsEnabledForDenied          bool          `config:"bool;true"`
 
 	FlowLogsFileEnabled                   bool   `config:"bool;false"`
 	FlowLogsFileDirectory                 string `config:"string;/var/log/calico/flowlogs"`
@@ -380,6 +411,7 @@ type Config struct {
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
 	DebugUseShortPollIntervals      bool          `config:"bool;false"`
 	DebugCloudWatchLogsFile         string        `config:"file;;"`
+	DebugWindowsPktMonStartArgs     string        `config:"string;"`
 
 	// IPSecMode controls which mode IPSec is operating on.
 	// Default value means IPSec is not enabled.
@@ -443,9 +475,9 @@ type Config struct {
 	// Configures MTU auto-detection.
 	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
 
-	TPROXYMode  string       `config:"oneof(Disabled,Enabled,EnabledDebug);Disabled"`
-	TPROXYPort  int          `config:"int;16001"`
-	TPROXYDests []ServerPort `config:"server-list;"`
+	// Configures Transparent proxying modes
+	TPROXYMode string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
+	TPROXYPort int    `config:"int;16001"`
 
 	// State tracking.
 
@@ -569,7 +601,7 @@ func (c *Config) EgressIPCheckEnabled() bool {
 }
 
 func (c *Config) TPROXYModeEnabled() bool {
-	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledDebug"
+	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
 }
 
 func (c *Config) IPSecEnabled() bool {
@@ -595,6 +627,24 @@ func (c *Config) GetPSKFromFile() string {
 	}
 
 	return string(data)
+}
+
+// KubernetesProvider attempts to parse the kubernetes provider, e.g. AKS out of the ClusterType.
+// The ClusterType is a string which contains a set of comma-separated values in no particular order.
+func (config *Config) KubernetesProvider() Provider {
+	settings := strings.Split(config.ClusterType, ",")
+	for _, s := range settings {
+		p, err := newProvider(s)
+		if err == nil {
+			log.WithFields(log.Fields{"clusterType": config.ClusterType, "provider": p}).Debug(
+				"detected a known kubernetes provider")
+			return p
+		}
+	}
+
+	log.WithField("clusterType", config.ClusterType).Debug(
+		"failed to detect a known kubernetes provider, defaulting to none")
+	return ProviderNone
 }
 
 func (config *Config) resolve() (changed bool, err error) {
@@ -686,30 +736,6 @@ func (config *Config) resolve() (changed bool, err error) {
 		delete(newRawValues, "IpInIpEnabled")
 		config.IpInIpTunnelAddr = nil
 		delete(newRawValues, "IpInIpTunnelAddr")
-	}
-
-	// Preferentially use the new FlowLogsFlushInterval if explicitly set or if the deprecated
-	// CloudWatchLogsFlushInterval is not explicitly set, otherwise use the explicitly set CloudWatchLogsFlushInterval
-	// value.
-	if nameToSource["flowlogsflushinterval"] != Default || nameToSource["cloudwatchlogsflushinterval"] == Default {
-		config.CloudWatchLogsFlushInterval = config.FlowLogsFlushInterval
-		newRawValues["CloudWatchLogsFlushInterval"] = newRawValues["FlowLogsFlushInterval"]
-	} else {
-		log.Warning("Using deprecated CloudWatchLogsFlushInterval value for FlowLogsFlushInterval")
-		config.FlowLogsFlushInterval = config.CloudWatchLogsFlushInterval
-		newRawValues["FlowLogsFlushInterval"] = newRawValues["CloudWatchLogsFlushInterval"]
-	}
-
-	// Preferentially use the new FlowLogsEnableHostEndpoint if explicitly set or if the deprecated
-	// CloudWatchLogsEnableHostEndpoint is not explicitly set, otherwise use the explicitly set
-	// CloudWatchLogsEnableHostEndpoint value.
-	if nameToSource["flowlogsenablehostendpoint"] != Default || nameToSource["cloudwatchlogsenablehostendpoint"] == Default {
-		config.CloudWatchLogsEnableHostEndpoint = config.FlowLogsEnableHostEndpoint
-		newRawValues["CloudWatchLogsEnableHostEndpoint"] = newRawValues["FlowLogsEnableHostEndpoint"]
-	} else {
-		log.Warning("Using deprecated CloudWatchLogsEnableHostEndpoint value for FlowLogsEnableHostEndpoint")
-		config.FlowLogsEnableHostEndpoint = config.CloudWatchLogsEnableHostEndpoint
-		newRawValues["FlowLogsEnableHostEndpoint"] = newRawValues["CloudWatchLogsEnableHostEndpoint"]
 	}
 
 	changed = !reflect.DeepEqual(newRawValues, config.rawValues)
@@ -842,14 +868,6 @@ func (config *Config) Validate() (err error) {
 		}
 		if problems != nil {
 			err = errors.New("IPsec is misconfigured: " + strings.Join(problems, "; "))
-		}
-	}
-
-	if config.CloudWatchLogsReporterEnabled {
-		if !config.CloudWatchLogsEnabledForAllowed && !config.CloudWatchLogsEnabledForDenied {
-			err = errors.New("CloudWatchLogsReporterEnabled is set to true. " +
-				"Enable at least one of CloudWatchLogsEnabledForAllowed or " +
-				"CloudWatchLogsEnabledForDenied")
 		}
 	}
 

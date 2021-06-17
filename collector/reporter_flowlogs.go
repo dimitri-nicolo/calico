@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"sync"
 	"time"
 
 	"fmt"
@@ -11,31 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
-
-type FlowLogGetter interface {
-	GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog
-}
-
-type FlowLogAggregator interface {
-	FlowLogGetter
-	IncludeLabels(bool) FlowLogAggregator
-	IncludePolicies(bool) FlowLogAggregator
-	IncludeService(bool) FlowLogAggregator
-	IncludeProcess(bool) FlowLogAggregator
-	IncludeTcpStats(bool) FlowLogAggregator
-	MaxOriginalIPsSize(int) FlowLogAggregator
-	AggregateOver(FlowAggregationKind) FlowLogAggregator
-	ForAction(rules.RuleAction) FlowLogAggregator
-	PerFlowProcessLimit(limit int) FlowLogAggregator
-	FeedUpdate(MetricUpdate) error
-	HasAggregationLevelChanged() bool
-	GetCurrentAggregationLevel() FlowAggregationKind
-	GetDefaultAggregationLevel() FlowAggregationKind
-	AdjustLevel(newLevel FlowAggregationKind)
-}
 
 type LogDispatcher interface {
 	Initialize() error
@@ -47,10 +25,7 @@ type aggregatorRef struct {
 	d []LogDispatcher
 }
 
-var FlowLogAvg *FlowLogAverage
-var flushIntervalDuration float64
-
-type FlowLogAverage struct {
+type flowLogAverage struct {
 	totalFlows     int
 	lastReportTime time.Time
 }
@@ -69,6 +44,10 @@ type FlowLogsReporter struct {
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
 
+	flowLogAvg            *flowLogAverage
+	flushIntervalDuration float64
+	flowLogAvgMutex       sync.RWMutex
+
 	// TODO(rlb): Not currently used
 	//stats     *tupleStore
 }
@@ -78,30 +57,48 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func (f *FlowLogAverage) updateFlowLogs(numFlows int) {
-	f.totalFlows += numFlows
-}
-
-func (f *FlowLogAverage) ResetFlowLogs() {
-	FlowLogAvg = &FlowLogAverage{
+func newFlowLogAverage() *flowLogAverage {
+	return &flowLogAverage{
 		totalFlows:     0,
 		lastReportTime: time.Now(),
 	}
 }
 
-func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
-	if FlowLogAvg != nil && FlowLogAvg.totalFlows != 0 {
-		currentTime := time.Now()
-		elapsedTime := currentTime.Sub(FlowLogAvg.lastReportTime)
+func (fr *FlowLogsReporter) updateFlowLogsAvg(numFlows int) {
+	fr.flowLogAvgMutex.Lock()
+	defer fr.flowLogAvgMutex.Unlock()
 
-		if elapsedTime.Seconds() < flushIntervalDuration {
-			return
-		}
+	fr.flowLogAvg.totalFlows += numFlows
+}
 
-		flowsPerMinute = float64(FlowLogAvg.totalFlows) / elapsedTime.Minutes()
-		FlowLogAvg.ResetFlowLogs()
+func (fr *FlowLogsReporter) GetAndResetFlowLogsAvgPerMinute() (flowsPerMinute float64) {
+	fr.flowLogAvgMutex.Lock()
+	defer fr.flowLogAvgMutex.Unlock()
+
+	if fr.flowLogAvg == nil || fr.flowLogAvg.totalFlows == 0 {
+		return 0
 	}
-	return
+
+	currentTime := time.Now()
+	elapsedTime := currentTime.Sub(fr.flowLogAvg.lastReportTime)
+
+	if elapsedTime.Seconds() < fr.flushIntervalDuration {
+		return 0
+	}
+
+	flowsPerMinute = float64(fr.flowLogAvg.totalFlows) / elapsedTime.Minutes()
+
+	fr.resetFlowLogsAvg()
+
+	return flowsPerMinute
+}
+
+// resetFlowLogsAvg sets the flowAvg fields in FlowLogsReporter.
+// This method isn't safe to be used concurrently and the caller should acquire the
+// FlowLogsReporter.flowLogAvgMutex before calling this method.
+func (fr *FlowLogsReporter) resetFlowLogsAvg() {
+	fr.flowLogAvg.totalFlows = 0
+	fr.flowLogAvg.lastReportTime = time.Now()
 }
 
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
@@ -111,10 +108,6 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
 
-	// Initialize FlowLogAverage struct
-	FlowLogAvg.ResetFlowLogs()
-	flushIntervalDuration = flushInterval.Seconds()
-
 	return &FlowLogsReporter{
 		dispatchers:      dispatchers,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
@@ -123,7 +116,10 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
 		logOffset:        logOffset,
-
+		// Initialize FlowLogAverage struct
+		flowLogAvg:            newFlowLogAverage(),
+		flushIntervalDuration: flushInterval.Seconds(),
+		flowLogAvgMutex:       sync.RWMutex{},
 		// TODO(rlb): Not currently used
 		//stats:            NewTupleStore(),
 	}
@@ -134,9 +130,6 @@ func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggrega
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
 
-	// Initialize FlowLogAverage struct
-	FlowLogAvg.ResetFlowLogs()
-
 	return &FlowLogsReporter{
 		dispatchers:      dispatchers,
 		flushTicker:      flushTicker,
@@ -145,6 +138,10 @@ func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggrega
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
 		logOffset:        logOffset,
+
+		// Initialize FlowLogAverage struct
+		flowLogAvg:      newFlowLogAverage(),
+		flowLogAvgMutex: sync.RWMutex{},
 
 		// TODO(rlb): Not currently used
 		//stats:            NewTupleStore(),
@@ -182,38 +179,38 @@ func (c *FlowLogsReporter) Report(mu MetricUpdate) error {
 	}
 
 	for _, agg := range c.aggregators {
-		agg.a.FeedUpdate(mu)
+		agg.a.FeedUpdate(&mu)
 	}
 	return nil
 }
 
-func (c *FlowLogsReporter) run() {
+func (fr *FlowLogsReporter) run() {
 	healthTicks := time.NewTicker(healthInterval)
 	defer healthTicks.Stop()
-	c.reportHealth()
+	fr.reportHealth()
 	for {
 		// TODO(doublek): Stop and flush cases.
 		select {
-		case <-c.flushTicker.Done():
+		case <-fr.flushTicker.Done():
 			log.Debugf("Stopping flush ticker")
 			healthTicks.Stop()
 			return
-		case <-c.flushTicker.Channel():
+		case <-fr.flushTicker.Channel():
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
 			log.Debug("Flow log flush tick")
-			var offsets = c.logOffset.Read()
-			var isBehind = c.logOffset.IsBehind(offsets)
-			var factor = c.logOffset.GetIncreaseFactor(offsets)
+			var offsets = fr.logOffset.Read()
+			var isBehind = fr.logOffset.IsBehind(offsets)
+			var factor = fr.logOffset.GetIncreaseFactor(offsets)
 
-			for _, agg := range c.aggregators {
+			for _, agg := range fr.aggregators {
 				// Evaluate if the external pipeline is stalled
 				// and increase / decrease the aggregation level if needed
-				newLevel := c.estimateLevel(agg, FlowAggregationKind(factor), isBehind)
+				newLevel := fr.estimateLevel(agg, FlowAggregationKind(factor), isBehind)
 
 				// Retrieve values from cache and calibrate the cache to the new aggregation level
 				fl := agg.a.GetAndCalibrate(newLevel)
-				FlowLogAvg.updateFlowLogs(len(fl))
+				fr.updateFlowLogsAvg(len(fl))
 				if len(fl) > 0 {
 					// Dispatch logs
 					for _, d := range agg.d {
@@ -227,7 +224,7 @@ func (c *FlowLogsReporter) run() {
 			}
 		case <-healthTicks.C:
 			// Periodically report current health.
-			c.reportHealth()
+			fr.reportHealth()
 		}
 	}
 }

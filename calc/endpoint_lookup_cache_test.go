@@ -148,9 +148,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			// re-fetching the entry after expected time it was deleted
 			time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
 			_, ok = ec.GetEndpoint(addrB)
-			// to ensure deletion delegation was cancelled
 			Expect(ok).To(BeTrue(), c)
-
 		},
 		Entry("Host Endpoint IPv4", hostEpWithNameKey, &hostEpWithName, hostEpWithName.ExpectedIPv4Addrs[0].IP),
 		Entry("Host Endpoint IPv6", hostEpWithNameKey, &hostEpWithName, hostEpWithName.ExpectedIPv6Addrs[0].IP),
@@ -171,6 +169,9 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			"y":  "y",
 		}
 		ec.OnUpdate(update)
+
+		// take delay with deletion into account
+		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
 
 		verifyIpToEndpoint := func(key model.Key, ipAddr net.IP, exists bool, labels map[string]string) {
 			var name string
@@ -197,8 +198,6 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 					}
 				}
 			} else {
-				// take delay with deletion into account
-				time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
 				_, ok = ec.GetEndpoint(addrB)
 				Expect(ok).To(BeFalse(), name+".\n"+ec.DumpEndpoints())
 			}

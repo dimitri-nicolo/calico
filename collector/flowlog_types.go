@@ -170,16 +170,18 @@ type FlowSpec struct {
 	resetAggrData bool
 }
 
-func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit int) *FlowSpec {
+func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit int) *FlowSpec {
+	// NewFlowStatsByProcess potentially needs to update fields in mu *MetricUpdate hence passing it by pointer
+	// TODO: reconsider/refactor the inner functions called in NewFlowStatsByProcess to avoid above scenario
 	return &FlowSpec{
-		FlowLabels:         NewFlowLabels(mu),
-		FlowPolicies:       NewFlowPolicies(mu),
+		FlowLabels:         NewFlowLabels(*mu),
+		FlowPolicies:       NewFlowPolicies(*mu),
 		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit),
-		flowExtrasRef:      NewFlowExtrasRef(mu, maxOriginalIPsSize),
+		flowExtrasRef:      NewFlowExtrasRef(*mu, maxOriginalIPsSize),
 	}
 }
 
-func (f *FlowSpec) ContainsActiveRefs(mu MetricUpdate) bool {
+func (f *FlowSpec) ContainsActiveRefs(mu *MetricUpdate) bool {
 	return f.FlowStatsByProcess.containsActiveRefs(mu)
 }
 
@@ -217,7 +219,7 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 	return flogs
 }
 
-func (f *FlowSpec) AggregateMetricUpdate(mu MetricUpdate) {
+func (f *FlowSpec) AggregateMetricUpdate(mu *MetricUpdate) {
 	if f.resetAggrData {
 		// Reset the aggregated data from this metric update.
 		f.FlowPolicies = make(FlowPolicies)
@@ -226,10 +228,10 @@ func (f *FlowSpec) AggregateMetricUpdate(mu MetricUpdate) {
 		f.resetAggrData = false
 	}
 
-	f.aggregateFlowLabels(mu)
-	f.aggregateFlowPolicies(mu)
+	f.aggregateFlowLabels(*mu)
+	f.aggregateFlowPolicies(*mu)
+	f.aggregateFlowExtrasRef(*mu)
 	f.aggregateFlowStatsByProcess(mu)
-	f.aggregateFlowExtrasRef(mu)
 }
 
 // MergeWith merges two flow specs. This means copying the flowRefsActive that contains a reference
@@ -685,7 +687,7 @@ func (f *FlowStats) reset() {
 // slice with FlowMeta and other FlowLog information such as policies and labels.
 type FlowStatsByProcess struct {
 	// statsByProcessName stores aggregated flow statistics grouped by a process name.
-	statsByProcessName map[string]FlowStats
+	statsByProcessName map[string]*FlowStats
 	// processNames stores the order in which process information is tracked and aggrgated.
 	// this is done so that when we export flow logs, we do so in the order they appeared.
 	processNames   *list.List
@@ -696,9 +698,9 @@ type FlowStatsByProcess struct {
 	// only tracks insertion order.
 }
 
-func NewFlowStatsByProcess(mu MetricUpdate, includeProcess bool, processLimit int) FlowStatsByProcess {
+func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit int) FlowStatsByProcess {
 	f := FlowStatsByProcess{
-		statsByProcessName: make(map[string]FlowStats),
+		statsByProcessName: make(map[string]*FlowStats),
 		processNames:       list.New(),
 		includeProcess:     includeProcess,
 		processLimit:       processLimit,
@@ -707,21 +709,21 @@ func NewFlowStatsByProcess(mu MetricUpdate, includeProcess bool, processLimit in
 	return f
 }
 
-func (f *FlowStatsByProcess) aggregateFlowStatsByProcess(mu MetricUpdate) {
+func (f *FlowStatsByProcess) aggregateFlowStatsByProcess(mu *MetricUpdate) {
 	if !f.includeProcess || mu.processName == "" {
 		mu.processName = flowLogFieldNotIncluded
 		mu.processID = 0
 	}
 	if stats, ok := f.statsByProcessName[mu.processName]; ok {
 		log.Debugf("Process stats found %+v for metric update %+v", stats, mu)
-		stats.aggregateFlowStats(mu)
+		stats.aggregateFlowStats(*mu)
 		log.Debugf("Aggregated stats %+v after processing metric update %+v", stats, mu)
 		f.statsByProcessName[mu.processName] = stats
 	} else {
 		log.Debugf("Process stats not found for metric update %+v", mu)
 		f.processNames.PushBack(mu.processName)
-		stats := NewFlowStats(mu)
-		f.statsByProcessName[mu.processName] = stats
+		stats := NewFlowStats(*mu)
+		f.statsByProcessName[mu.processName] = &stats
 	}
 }
 
@@ -733,7 +735,7 @@ func (f *FlowStatsByProcess) getActiveFlowsCount() int {
 	return activeCount
 }
 
-func (f *FlowStatsByProcess) containsActiveRefs(mu MetricUpdate) bool {
+func (f *FlowStatsByProcess) containsActiveRefs(mu *MetricUpdate) bool {
 	if !f.includeProcess || mu.processName == "" {
 		mu.processName = flowLogFieldNotIncluded
 	}

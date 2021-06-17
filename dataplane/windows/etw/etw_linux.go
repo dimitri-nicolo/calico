@@ -30,7 +30,11 @@ type ServerPort struct {
 
 type EtwOperations struct{}
 
-func (t *EtwOperations) SubscribeToPktMon(ch chan<- *PktEvent, done <-chan struct{}, serverPorts []ServerPort) error {
+func (t *EtwOperations) SubscribeToPktMon(ch chan<- *PktEvent,
+	done <-chan struct{},
+	serverPorts []ServerPort,
+	useTrustedServers bool,
+	startArgs string) error {
 	return nil
 }
 

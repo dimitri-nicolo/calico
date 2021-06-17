@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 
 	"github.com/projectcalico/felix/rules"
 
-	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/dataplane/common"
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/routetable"
 
 	. "github.com/onsi/ginkgo"
@@ -86,12 +86,15 @@ func (m *mockVXLANDataplane) LinkDel(netlink.Link) error {
 
 var _ = Describe("VXLANManager", func() {
 	var manager *vxlanManager
-	var rt *mockRouteTable
-	var prt *mockRouteTable
+	var rt, brt, prt *mockRouteTable
 	var mockProcSys *testProcSys
 
 	BeforeEach(func() {
 		rt = &mockRouteTable{
+			currentRoutes:   map[string][]routetable.Target{},
+			currentL2Routes: map[string][]routetable.L2Target{},
+		}
+		brt = &mockRouteTable{
 			currentRoutes:   map[string][]routetable.Target{},
 			currentL2Routes: map[string][]routetable.L2Target{},
 		}
@@ -103,7 +106,7 @@ var _ = Describe("VXLANManager", func() {
 
 		manager = newVXLANManagerWithShims(
 			common.NewMockIPSets(),
-			rt,
+			rt, brt,
 			"vxlan.calico",
 			Config{
 				MaxIPSetSize:       5,
@@ -146,7 +149,7 @@ var _ = Describe("VXLANManager", func() {
 
 		manager.noEncapRouteTable = prt
 
-		err := manager.configureVXLANDevice(50, localVTEP)
+		err := manager.configureVXLANDevice(50, localVTEP, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(manager.myVTEP).NotTo(BeNil())
@@ -173,17 +176,38 @@ var _ = Describe("VXLANManager", func() {
 			DstNodeIp:   "172.8.8.8",
 		})
 
+		manager.OnUpdate(&proto.RouteUpdate{
+			Type:        proto.RouteType_LOCAL_WORKLOAD,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "172.0.0.0/26",
+			DstNodeName: "node0",
+			DstNodeIp:   "172.8.8.8",
+			SameSubnet:  true,
+		})
+
+		// Borrowed /32 should not be programmed as blackhole.
+		manager.OnUpdate(&proto.RouteUpdate{
+			Type:        proto.RouteType_LOCAL_WORKLOAD,
+			IpPoolType:  proto.IPPoolType_VXLAN,
+			Dst:         "172.0.0.1/32",
+			DstNodeName: "node1",
+			DstNodeIp:   "172.8.8.7",
+			SameSubnet:  true,
+		})
+
 		Expect(rt.currentRoutes["vxlan.calico"]).To(HaveLen(0))
+		Expect(brt.currentRoutes[routetable.InterfaceNone]).To(HaveLen(0))
 
 		err = manager.CompleteDeferredWork()
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rt.currentRoutes["vxlan.calico"]).To(HaveLen(1))
+		Expect(brt.currentRoutes[routetable.InterfaceNone]).To(HaveLen(1))
 		Expect(prt.currentRoutes["eth0"]).NotTo(BeNil())
 	})
 
 	It("adds the route to the default table on next try when the parent route table is not immediately found", func() {
-		go manager.KeepVXLANDeviceInSync(1400, 1*time.Second)
+		go manager.KeepVXLANDeviceInSync(1400, false, 1*time.Second)
 		manager.OnUpdate(&proto.VXLANTunnelEndpointUpdate{
 			Node:           "node2",
 			Mac:            "00:0a:95:9d:68:16",
@@ -218,7 +242,7 @@ var _ = Describe("VXLANManager", func() {
 		localVTEP := manager.getLocalVTEP()
 		Expect(localVTEP).NotTo(BeNil())
 
-		err = manager.configureVXLANDevice(50, localVTEP)
+		err = manager.configureVXLANDevice(50, localVTEP, false)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(prt.currentRoutes["eth0"]).To(HaveLen(0))

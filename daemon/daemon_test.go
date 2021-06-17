@@ -55,24 +55,18 @@ var _ = Describe("FelixDaemon license checks", func() {
 		// Create a config resource with all of the licensed features.
 		cfg = config.New()
 		cfg.UpdateFrom(map[string]string{
-			"IPSecMode":                         "PSK",
-			"IPSecAllowUnsecuredTraffic":        "false",
-			"PrometheusReporterEnabled":         "true",
-			"DropActionOverride":                "ACCEPT",
-			"CloudWatchLogsReporterEnabled":     "true",
-			"CloudWatchMetricsReporterEnabled":  "true",
-			"CloudWatchNodeHealthStatusEnabled": "true",
-			"FlowLogsFileEnabled":               "true",
-			"EgressIPSupport":                   "EnabledPerNamespace",
+			"IPSecMode":                  "PSK",
+			"IPSecAllowUnsecuredTraffic": "false",
+			"PrometheusReporterEnabled":  "true",
+			"DropActionOverride":         "ACCEPT",
+			"FlowLogsFileEnabled":        "true",
+			"EgressIPSupport":            "EnabledPerNamespace",
 		}, config.DatastoreGlobal)
 
 		Expect(cfg.IPSecMode).To(Equal("PSK"))
 		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeTrue())
 		Expect(cfg.DropActionOverride).To(Equal("ACCEPT"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeTrue())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeTrue())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeTrue())
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
 		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
 	})
@@ -84,9 +78,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecMode).To(Equal(""))
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})
@@ -102,9 +93,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeTrue())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 	})
 
@@ -119,9 +107,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecAllowUnsecuredTraffic).To(BeFalse())
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 	})
 
@@ -135,9 +120,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecMode).To(Equal(""))
 		Expect(cfg.PrometheusReporterEnabled).To(BeTrue())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 	})
 
@@ -151,41 +133,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecMode).To(Equal(""))
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("ACCEPT"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
-		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
-	})
-
-	It("Should leave AWSCloudwatchFlowLogs setting unchanged if AWSCloudwatchFlowLogs license is valid", func() {
-		removeUnlicensedFeaturesFromConfig(cfg, dlc{
-			status: lclient.Valid,
-			features: map[string]bool{
-				features.AWSCloudwatchFlowLogs: true,
-			},
-		})
-		Expect(cfg.IPSecMode).To(Equal(""))
-		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
-		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeTrue())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
-		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
-	})
-
-	It("Should leave AWSCloudwatchMetrics setting unchanged if AWSCloudwatchMetrics license is valid", func() {
-		removeUnlicensedFeaturesFromConfig(cfg, dlc{
-			status: lclient.Valid,
-			features: map[string]bool{
-				features.AWSCloudwatchMetrics: true,
-			},
-		})
-		Expect(cfg.IPSecMode).To(Equal(""))
-		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
-		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeTrue())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeTrue())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 	})
 
@@ -199,9 +146,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecMode).To(Equal(""))
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
 	})
 
@@ -215,9 +159,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecMode).To(Equal(""))
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 		Expect(cfg.EgressIPSupport).To(Equal("EnabledPerNamespace"))
 	})
@@ -232,9 +173,6 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.IPSecMode).To(Equal(""))
 		Expect(cfg.PrometheusReporterEnabled).To(BeFalse())
 		Expect(cfg.DropActionOverride).To(Equal("DROP"))
-		Expect(cfg.CloudWatchLogsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
-		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeFalse())
 		Expect(cfg.EgressIPSupport).To(Equal("Disabled"))
 	})

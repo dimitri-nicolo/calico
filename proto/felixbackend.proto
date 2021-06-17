@@ -181,6 +181,9 @@ message FromDataplane {
     // WireguardStatusUpdate is sent when the wireguard is available with the
     // crypto primitives set up.
     WireguardStatusUpdate wireguard_status_update = 9;
+
+    // PacketCaptureStatusUpdate is sent when a capture file is created/removed
+    PacketCaptureStatusUpdate packet_capture_status_update = 10;
   }
 }
 
@@ -667,6 +670,7 @@ message Statistic {
     BYTES = 1;
     HTTP_REQUESTS = 2;
     HTTP_DATA = 3;
+    INGRESS_DATA = 4;
   }
   Kind kind = 3;
 
@@ -743,6 +747,7 @@ message WireguardEndpointRemove {
 message GlobalBGPConfigUpdate {
   repeated string service_cluster_cidrs = 1;
   repeated string service_external_cidrs = 2;
+  repeated string service_loadbalancer_cidrs = 3;
 }
 
 message PacketCaptureUpdate {
@@ -758,4 +763,9 @@ message PacketCaptureRemove {
 message PacketCaptureID {
   string name = 1;
   string namespace = 2;
+}
+
+message PacketCaptureStatusUpdate {
+  PacketCaptureID id = 1;
+  repeated string capture_files = 2;
 }

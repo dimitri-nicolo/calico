@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/felix/capture"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/aws"
@@ -122,7 +123,14 @@ func StartDataplaneDriver(configParams *config.Config,
 				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
 			}
 		}
-		if configParams.EgressIPCheckEnabled() {
+
+		// Egress mark is hard-coded in BPF mode - because then it needs to
+		// interop between the BPF C code and Felix golang code - but dynamically
+		// allocated in iptables mode.
+		if configParams.BPFEnabled {
+			// We need it to be just a single bit.
+			markEgressIP = tc.MarkEgress &^ tc.MarkCalico
+		} else if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
 			if markEgressIP == 0 {
@@ -151,7 +159,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		var markProxy uint32
 
-		if configParams.TPROXYMode == "Enabled" {
+		if configParams.TPROXYModeEnabled() {
 			log.Infof("TPROXYMode %s, allocating a mark bit", configParams.TPROXYMode)
 			markProxy, _ = markBitsManager.NextSingleBitMark()
 			if markProxy == 0 {
@@ -190,6 +198,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			"scratch1Mark":        markScratch1,
 			"endpointMark":        markEndpointMark,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
+			"wireguardMark":       markWireguard,
+			"ipsecMark":           markIPsec,
+			"egressMark":          markEgressIP,
 		}).Info("Calculated iptables mark bits")
 
 		// Create a routing table manager. There are certain components that should take specific indices in the range
@@ -316,6 +327,9 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				WireguardEnabled:       configParams.WireguardEnabled,
 				WireguardInterfaceName: configParams.WireguardInterfaceName,
+				WireguardIptablesMark:  markWireguard,
+				WireguardListeningPort: configParams.WireguardListeningPort,
+				RouteSource:            configParams.RouteSource,
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
@@ -340,7 +354,6 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				TPROXYMode:        configParams.TPROXYMode,
 				TPROXYPort:        configParams.TPROXYPort,
-				TPROXYDests:       configParams.TPROXYDests,
 				IptablesMarkProxy: markProxy,
 			},
 
@@ -352,6 +365,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				RoutingTableIndex:   wireguardTableIndex,
 				InterfaceName:       configParams.WireguardInterfaceName,
 				MTU:                 configParams.WireguardMTU,
+				RouteSource:         configParams.RouteSource,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
@@ -434,6 +448,10 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
 
+			RouteSource: configParams.RouteSource,
+
+			KubernetesProvider: configParams.KubernetesProvider(),
+
 			Collector:            collector,
 			DNSCacheFile:         configParams.GetDNSCacheFile(),
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
@@ -461,21 +479,9 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		// Set source-destination-check on AWS EC2 instance.
 		if configParams.AWSSrcDstCheck != string(apiv3.AWSSrcDstCheckOptionDoNothing) {
-			const healthName = "aws-source-destination-check"
-			healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, 0)
-
-			go func(check, healthName string, healthAgg *health.HealthAggregator) {
-				log.Infof("Setting AWS EC2 source-destination-check to %s", check)
-				err := aws.UpdateSrcDstCheck(check)
-				if err != nil {
-					log.WithField("src-dst-check", check).Errorf("Failed to set source-destination-check: %v", err)
-					// set not-ready.
-					healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: false})
-					return
-				}
-				// set ready.
-				healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
-			}(configParams.AWSSrcDstCheck, healthName, healthAggregator)
+			c := &clock.RealClock{}
+			updater := aws.NewEC2SrcDstCheckUpdater()
+			go aws.WaitForEC2SrcDstCheckUpdate(configParams.AWSSrcDstCheck, healthAggregator, updater, c)
 		}
 
 		return intDP, nil, stopChan

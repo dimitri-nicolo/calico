@@ -564,13 +564,11 @@ func (p *Processor) maybeSendStartOfDayConfigUpdate(ei *EndpointInfo) {
 	if ei.syncRequest.SupportsDataplaneStats {
 		clog.Debug("Endpoint supports FlowLogs")
 		enabledForAllowed :=
-			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForAllowed) ||
-				(p.config.CloudWatchLogsReporterEnabled && p.config.CloudWatchLogsEnabledForAllowed)
+			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForAllowed)
 		cu["DataplaneStatsEnabledForAllowed"] = strconv.FormatBool(enabledForAllowed)
 
 		enabledForDenied :=
-			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForDenied) ||
-				(p.config.CloudWatchLogsReporterEnabled && p.config.CloudWatchLogsEnabledForDenied)
+			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForDenied)
 		cu["DataplaneStatsEnabledForDenied"] = strconv.FormatBool(enabledForDenied)
 	}
 

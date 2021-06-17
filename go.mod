@@ -17,6 +17,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/gopacket v1.1.19
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
+	github.com/google/uuid v1.2.0
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
@@ -31,24 +32,23 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20210421215417-6a02764eed37
-	github.com/projectcalico/typha v0.7.3-0.20210410010014-a43ccfa508a1
-	github.com/prometheus/client_golang v1.7.1
+	github.com/projectcalico/pod2daemon v0.0.0-20210528184151-6b0d4d6c18cf
+	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
+	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/licensing v1.0.1-0.20210428213812-1013ca7dbb37
+	github.com/tigera/licensing v1.0.1-0.20210528232903-d09dc4403179
 	github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133
-	github.com/tigera/windows-networking v0.0.0-20210429153057-93a015addafc
+	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.0
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210225134936-a50acf3fe073
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -58,14 +58,15 @@ require (
 	k8s.io/client-go v0.21.0
 	k8s.io/kubernetes v1.21.0-rc.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	modernc.org/memory v1.0.4
 	sigs.k8s.io/kind v0.9.0
 )
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210520221741-a8c1a5de0486
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210520222218-3f44abdc7c6a
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210615173129-b82024732d9f
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210615200824-f800383e9b60
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

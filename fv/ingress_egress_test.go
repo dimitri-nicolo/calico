@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/collector"
@@ -52,9 +53,9 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
-		opts.EnableCloudWatchLogs()
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
+		opts.EnableFlowLogsFile()
 		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
@@ -86,7 +87,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 		etcd.Stop()
 		infra.Stop()
 	})
-
 	It("full connectivity to and from workload 0", func() {
 		cc.ExpectSome(w[1], w[0])
 		cc.ExpectSome(w[2], w[0])
@@ -136,7 +136,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 				"end-" + w[2].Name + "--" + w[0].Name + "--dst":   true,
 				"end-" + w[2].Name + "--" + w[0].Name + "--src":   true,
 			}
-			cwlogs, err := felix.ReadCloudWatchLogs()
+			cwlogs, err := felix.ReadFlowLogsFile()
 			if err != nil {
 				return err
 			}

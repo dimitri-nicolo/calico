@@ -4,13 +4,37 @@ package collector
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/rules"
 )
+
+type FlowLogGetter interface {
+	GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog
+}
+
+type FlowLogAggregator interface {
+	FlowLogGetter
+	IncludeLabels(bool) FlowLogAggregator
+	IncludePolicies(bool) FlowLogAggregator
+	IncludeService(bool) FlowLogAggregator
+	IncludeProcess(bool) FlowLogAggregator
+	IncludeTcpStats(bool) FlowLogAggregator
+	MaxOriginalIPsSize(int) FlowLogAggregator
+	AggregateOver(FlowAggregationKind) FlowLogAggregator
+	ForAction(rules.RuleAction) FlowLogAggregator
+	PerFlowProcessLimit(limit int) FlowLogAggregator
+	FeedUpdate(*MetricUpdate) error
+	HasAggregationLevelChanged() bool
+	GetCurrentAggregationLevel() FlowAggregationKind
+	GetDefaultAggregationLevel() FlowAggregationKind
+	AdjustLevel(newLevel FlowAggregationKind)
+}
 
 // FlowAggregationKind determines the flow log key
 type FlowAggregationKind int
@@ -34,6 +58,18 @@ const (
 	defaultMaxOrigIPSize = 50
 )
 
+var (
+	gaugeFlowStoreCacheSizeLength = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "felix_collector_allowed_flowlog_aggregator_store",
+		Help: "Total number of FlowEntries with action=allow currently residing in the FlowStore cache used by the aggregator.",
+	},
+		[]string{"action"})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeFlowStoreCacheSizeLength)
+}
+
 // flowLogAggregator builds and implements the FlowLogAggregator and
 // FlowLogGetter interfaces.
 // The flowLogAggregator is responsible for creating, aggregating, and storing
@@ -42,7 +78,7 @@ type flowLogAggregator struct {
 	current              FlowAggregationKind
 	previous             FlowAggregationKind
 	initial              FlowAggregationKind
-	flowStore            map[FlowMeta]flowEntry
+	flowStore            map[FlowMeta]*flowEntry
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	includePolicies      bool
@@ -94,7 +130,7 @@ func NewFlowLogAggregator() FlowLogAggregator {
 	return &flowLogAggregator{
 		current:              FlowDefault,
 		initial:              FlowDefault,
-		flowStore:            make(map[FlowMeta]flowEntry),
+		flowStore:            make(map[FlowMeta]*flowEntry),
 		flMutex:              sync.RWMutex{},
 		maxOriginalIPsSize:   defaultMaxOrigIPSize,
 		aggregationStartTime: time.Now(),
@@ -148,51 +184,58 @@ func (c *flowLogAggregator) PerFlowProcessLimit(n int) FlowLogAggregator {
 }
 
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
-func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
+func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
+	defer fa.reportFlowLogStoreMetrics()
+
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no last rule id present")
-		return fmt.Errorf("Invalid metric update")
+		return fmt.Errorf("invalid metric update")
 	}
 	// Filter out any action that we aren't configured to handle.
-	if c.handledAction != noRuleActionDefined && c.handledAction != lastRuleID.Action {
-		log.Debugf("Update %v not handled", mu)
+	if fa.handledAction != noRuleActionDefined && fa.handledAction != lastRuleID.Action {
+		log.Debugf("Update %v not handled", *mu)
 		return nil
 	}
 
-	log.WithField("update", mu).Debug("Flow Log Aggregator got Metric Update")
-	flowMeta, err := NewFlowMeta(mu, c.current, c.includeService)
+	flowMeta, err := NewFlowMeta(*mu, fa.current, fa.includeService)
 	if err != nil {
 		return err
 	}
-	c.flMutex.Lock()
-	defer c.flMutex.Unlock()
 
-	fl, ok := c.flowStore[flowMeta]
+	fa.flMutex.Lock()
+	defer fa.flMutex.Unlock()
+
+	log.Debugf("Flow Log Aggregator got Metric Update: %+v", *mu)
+
+	fl, ok := fa.flowStore[flowMeta]
+
 	if !ok {
-		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, mu)
-		spec := NewFlowSpec(mu, c.maxOriginalIPsSize, c.includeProcess, c.perFlowProcessLimit)
+		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
+		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit)
 
-		fl = flowEntry{
+		newEntry := &flowEntry{
 			spec:         spec,
-			aggregation:  c.current,
+			aggregation:  fa.current,
 			shouldExport: true,
 		}
-		if c.HasAggregationLevelChanged() {
-			for flowMeta, flowEntry := range c.flowStore {
+		if fa.HasAggregationLevelChanged() {
+			for flowMeta, flowEntry := range fa.flowStore {
 				//TODO: Instead of iterating through all the entries, we should store the reverse mappings
 				if !flowEntry.shouldExport && flowEntry.spec.ContainsActiveRefs(mu) {
-					fl.spec.MergeWith(mu, flowEntry.spec)
-					delete(c.flowStore, flowMeta)
+					newEntry.spec.MergeWith(*mu, flowEntry.spec)
+					delete(fa.flowStore, flowMeta)
 				}
 			}
 		}
-		c.flowStore[flowMeta] = fl
+
+		fa.flowStore[flowMeta] = newEntry
 	} else {
-		log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, mu)
+		log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, *mu)
+
 		fl.spec.AggregateMetricUpdate(mu)
 		fl.shouldExport = true
-		c.flowStore[flowMeta] = fl
+		fa.flowStore[flowMeta] = fl
 	}
 
 	return nil
@@ -206,30 +249,33 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 // be set. By changing aggregation levels, all previous entries with a different level will be marked accordingly as not
 // be exported at the next call for GetAndCalibrate().They will be kept in the store flow in order to provide an
 // accurate number for numFlowCounts.
-func (c *flowLogAggregator) GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog {
+func (fa *flowLogAggregator) GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog {
 	log.Debug("Get from flow log aggregator")
-	resp := make([]*FlowLog, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
-	c.flMutex.Lock()
-	defer c.flMutex.Unlock()
 
-	c.AdjustLevel(newLevel)
+	fa.flMutex.Lock()
+	defer fa.flMutex.Unlock()
 
-	for flowMeta, flowEntry := range c.flowStore {
+	resp := make([]*FlowLog, 0, len(fa.flowStore))
+	fa.AdjustLevel(newLevel)
+
+	for flowMeta, flowEntry := range fa.flowStore {
 		if flowEntry.shouldExport {
 			log.Debug("Converting to flowlogs")
-			flowLogs := flowEntry.spec.ToFlowLogs(flowMeta, c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.includePolicies)
+			flowLogs := flowEntry.spec.ToFlowLogs(flowMeta, fa.aggregationStartTime, aggregationEndTime, fa.includeLabels, fa.includePolicies)
 			resp = append(resp, flowLogs...)
 		}
-		c.calibrateFlowStore(flowMeta, c.current)
+		fa.calibrateFlowStore(flowMeta, fa.current)
 	}
-	c.aggregationStartTime = aggregationEndTime
+
+	fa.aggregationStartTime = aggregationEndTime
 
 	return resp
 }
 
-func (c *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel FlowAggregationKind) {
-	entry, ok := c.flowStore[flowMeta]
+func (fa *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel FlowAggregationKind) {
+	defer fa.reportFlowLogStoreMetrics()
+	entry, ok := fa.flowStore[flowMeta]
 	if !ok {
 		// This should never happen as calibrateFlowStore is called right after we
 		// generate flow logs using the entry.
@@ -246,11 +292,12 @@ func (c *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel FlowA
 	// flow meta if no more associated 5-tuples exist.
 	if remainingActiveFlowsCount == 0 {
 		log.Debugf("Deleting %v", flowMeta)
-		delete(c.flowStore, flowMeta)
+		delete(fa.flowStore, flowMeta)
+
 		return
 	}
 
-	if entry.shouldExport == false {
+	if !entry.shouldExport {
 		return
 	}
 
@@ -260,7 +307,18 @@ func (c *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel FlowA
 	}
 
 	log.Debugf("Resetting %v", flowMeta)
+
 	// reset flow stats for the next interval
 	entry.spec.Reset()
-	c.flowStore[flowMeta] = flowEntry{entry.spec, entry.aggregation, entry.shouldExport}
+
+	fa.flowStore[flowMeta] = &flowEntry{
+		spec:         entry.spec,
+		aggregation:  entry.aggregation,
+		shouldExport: entry.shouldExport,
+	}
+}
+
+// reportFlowLogStoreMetrics reporting of current FlowStore cache metrics to Prometheus
+func (fa *flowLogAggregator) reportFlowLogStoreMetrics() {
+	gaugeFlowStoreCacheSizeLength.WithLabelValues(strings.ToLower(fa.handledAction.String())).Set(float64(len(fa.flowStore)))
 }

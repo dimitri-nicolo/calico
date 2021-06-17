@@ -523,7 +523,7 @@ var _ = Describe("Static", func() {
 						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-failsafe-out")).To(Equal(expRawFailsafeOut))
 					})
 					It("should return only the expected raw chains", func() {
-						Expect(len(rr.StaticRawTableChains(ipVersion))).To(Equal(4))
+						Expect(len(rr.StaticRawTableChains(ipVersion))).To(Equal(5))
 					})
 				})
 			}
@@ -651,7 +651,7 @@ var _ = Describe("Static", func() {
 			})
 		})
 
-		Describe("with IPIP enabled", func() {
+		Describe(fmt.Sprintf("with IPIP enabled and IPVS=%v", kubeIPVSEnabled), func() {
 			epMark := uint32(0xff000)
 			BeforeEach(func() {
 				conf = Config{
@@ -1529,6 +1529,63 @@ var _ = Describe("Static", func() {
 				}))
 			})
 		}
+	})
+
+	Describe("with WireGuard enabled", func() {
+		BeforeEach(func() {
+			conf = Config{
+				WorkloadIfacePrefixes:       []string{"cali"},
+				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				IptablesMarkAccept:          0x10,
+				IptablesMarkPass:            0x20,
+				IptablesMarkScratch0:        0x40,
+				IptablesMarkScratch1:        0x80,
+				IptablesMarkDrop:            0x200,
+				IptablesMarkEndpoint:        0xff000,
+				IptablesMarkNonCaliEndpoint: 0x1000,
+				WireguardEnabled:            true,
+				WireguardInterfaceName:      "wireguard.cali",
+				WireguardIptablesMark:       0x100000,
+				WireguardListeningPort:      51820,
+				RouteSource:                 "WorkloadIPs",
+			}
+		})
+
+		var ipVersion uint8 = 4
+
+		It("should include the expected WireGuard PREROUTING chain in the raw chains", func() {
+			Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-PREROUTING")).To(Equal(&Chain{
+				Name: "cali-PREROUTING",
+				Rules: []Rule{
+					{Match: nil,
+						Action: ClearMarkAction{Mark: 0xf0}},
+					{Match: nil,
+						Action: JumpAction{Target: "cali-wireguard-incoming-mark"}},
+					{Match: Match().InInterface("cali+"),
+						Action: SetMarkAction{Mark: 0x40}},
+					{Match: Match().MarkMatchesWithMask(0x40, 0x40),
+						Action: JumpAction{Target: "cali-from-wl-dispatch"}},
+					{Match: Match().MarkClear(0x40),
+						Action: JumpAction{Target: "cali-from-host-endpoint"}},
+					{Match: Match().MarkMatchesWithMask(0x10, 0x10),
+						Action: AcceptAction{}},
+				},
+			}))
+			Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-wireguard-incoming-mark")).To(Equal(&Chain{
+				Name: "cali-wireguard-incoming-mark",
+				Rules: []Rule{
+					{Match: Match().InInterface("lo"),
+						Action: ReturnAction{}},
+					{Match: Match().InInterface("wireguard.cali"),
+						Action: ReturnAction{}},
+					{Match: Match().InInterface("cali+"),
+						Action: ReturnAction{}},
+					{Match: nil,
+						Action: SetMarkAction{Mark: 0x100000}},
+				},
+			}))
+		})
 	})
 
 	Describe("with drop override and multiple prefixes", func() {

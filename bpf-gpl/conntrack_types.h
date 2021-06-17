@@ -41,7 +41,7 @@ enum cali_ct_type {
 #define CALI_CT_FLAG_NP_FWD	0x04 /* marks entry into the tunnel on the fwd node */
 #define CALI_CT_FLAG_SKIP_FIB	0x08 /* marks traffic that should pass through host IP stack */
 #define CALI_CT_FLAG_TRUST_DNS	0x10 /* marks connection to a trusted DNS server */
-#define CALI_CT_FLAG_WORKLOAD	0x20 /* marks a flow that was originated from a workload */
+#define CALI_CT_FLAG_EGRESS_GW	0x20 /* marks flow via an egress gateway to outside cluster */
 #define CALI_CT_FLAG_EXT_LOCAL	0x40 /* marks traffic from external client to a local serice */
 
 struct calico_ct_leg {
@@ -109,11 +109,16 @@ static CALI_BPF_INLINE void __xxx_compile_asserts(void) {
 #pragma clang diagnostic pop
 }
 
-#define CT_CREATE_NORMAL	0
-#define CT_CREATE_NAT		1
-#define CT_CREATE_NAT_FWD	2
+struct ct_lookup_ctx {
+	__u8 proto;
+	__be32 src;
+	__be32 dst;
+	__u16 sport;
+	__u16 dport;
+	struct tcphdr *tcp;
+};
 
-struct ct_ctx {
+struct ct_create_ctx {
 	struct __sk_buff *skb;
 	__u8 proto;
 	__be32 src;
@@ -127,6 +132,8 @@ struct ct_ctx {
 			* It is also set on the first node when we create the
 			* initial CT entry for the tunneled traffic. */
 	__u8 flags;
+	enum cali_ct_type type;
+	bool allow_from_host_side;
 };
 
 CALI_MAP(cali_v4_ct, 3,
@@ -137,11 +144,11 @@ CALI_MAP(cali_v4_ct, 3,
 enum calico_ct_result_type {
 	/* CALI_CT_NEW means that the packet is not part of a known conntrack flow.
 	 * TCP SYN packets are always treated as NEW so they always go through policy. */
-	CALI_CT_NEW,
+	CALI_CT_NEW = 0,
 	/* CALI_CT_MID_FLOW_MISS indicates that the packet is known to be of a type that
 	 * cannot be the start of a flow but it also has no matching conntrack entry.  For
 	 * example, a TCP packet without SYN set. */
-	CALI_CT_MID_FLOW_MISS,
+	CALI_CT_MID_FLOW_MISS = 1,
 	/* CALI_CT_ESTABLISHED indicates the packet is part of a known flow, approved at "this"
 	 * side.  I.e. it's safe to let this packet through _this_ program.  If a packet is
 	 * ESTABLISHED but not ESTABLISHED_BYPASS then it has only been approved by _this_
@@ -149,29 +156,30 @@ enum calico_ct_result_type {
 	 * is a workload egress program then it implements egress policy for one workload. If
 	 * that workload communicates with another workload on the same host then the packet
 	 * needs to be approved by the ingress policy program attached to the other workload. */
-	CALI_CT_ESTABLISHED,
+	CALI_CT_ESTABLISHED = 2,
 	/* CALI_CT_ESTABLISHED_BYPASS indicates the packet is part of a known flow and *both*
 	 * legs of the conntrack entry have been approved.  Hence it is safe to set the bypass
 	 * mark bit on the traffic so that any downstream BPF programs let the packet through
 	 * automatically. */
-	CALI_CT_ESTABLISHED_BYPASS,
+	CALI_CT_ESTABLISHED_BYPASS = 3,
 	/* CALI_CT_ESTABLISHED_SNAT means the packet is a response packet on a NATted flow;
 	 * hence the packet needs to be SNATted. The new src IP and port are returned in
 	 * result.nat_ip and result.nat_port. */
-	CALI_CT_ESTABLISHED_SNAT,
+	CALI_CT_ESTABLISHED_SNAT = 4,
 	/* CALI_CT_ESTABLISHED_DNAT means the packet is a request packet on a NATted flow;
 	 * hence the packet needs to be DNATted. The new dst IP and port are returned in
 	 * result.nat_ip and result.nat_port. */
-	CALI_CT_ESTABLISHED_DNAT,
+	CALI_CT_ESTABLISHED_DNAT = 5,
 	/* CALI_CT_INVALID is returned for packets that cannot be parsed (e.g. invalid ICMP response)
 	 * or for packet that have a conntrack entry that is only approved by the other leg
 	 * (indicating that policy on this leg failed to allow the packet). */
-	CALI_CT_INVALID,
+	CALI_CT_INVALID = 6,
 };
 
-#define CALI_CT_RELATED		(1 << 8)
-#define CALI_CT_RPF_FAILED	(1 << 9)
-#define CALI_CT_TUN_SRC_CHANGED	(1 << 10)
+#define CALI_CT_RELATED         0x100
+#define CALI_CT_RPF_FAILED      0x200
+#define CALI_CT_TUN_SRC_CHANGED 0x400
+#define CALI_CT_ALLOW_FROM_SIDE 0x800
 
 #define ct_result_rc(rc)		((rc) & 0xff)
 #define ct_result_flags(rc)		((rc) & ~0xff)

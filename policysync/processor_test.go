@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1466,61 +1466,6 @@ var _ = DescribeTable("Config negotiation tests",
 		},
 		map[string]string{
 			"DataplaneStatsEnabledForAllowed": "false",
-			"DataplaneStatsEnabledForDenied":  "true",
-		},
-	),
-
-	Entry("Supports DataplaneStats (CloudWatch allowed/denied enabled, but overall disabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			CloudWatchLogsReporterEnabled:   false,
-			CloudWatchLogsEnabledForAllowed: true,
-			CloudWatchLogsEnabledForDenied:  true,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "false",
-			"DataplaneStatsEnabledForDenied":  "false",
-		},
-	),
-
-	Entry("Supports DataplaneStats (CloudWatch enabled; allowed enabled, denied disabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			CloudWatchLogsReporterEnabled:   true,
-			CloudWatchLogsEnabledForAllowed: true,
-			CloudWatchLogsEnabledForDenied:  false,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "true",
-			"DataplaneStatsEnabledForDenied":  "false",
-		},
-	),
-
-	Entry("Supports DataplaneStats (CloudWatch enabled; allowed disabled, denied enabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			CloudWatchLogsReporterEnabled:   true,
-			CloudWatchLogsEnabledForAllowed: false,
-			CloudWatchLogsEnabledForDenied:  true,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "false",
-			"DataplaneStatsEnabledForDenied":  "true",
-		},
-	),
-
-	Entry("Supports DataplaneStats (Cloudwatch enabled allowed, Files enabled denied)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
-		config.Config{
-			FlowLogsFileEnabled:             true,
-			FlowLogsFileEnabledForAllowed:   false,
-			FlowLogsFileEnabledForDenied:    true,
-			CloudWatchLogsReporterEnabled:   true,
-			CloudWatchLogsEnabledForAllowed: true,
-			CloudWatchLogsEnabledForDenied:  false,
-		},
-		map[string]string{
-			"DataplaneStatsEnabledForAllowed": "true",
 			"DataplaneStatsEnabledForDenied":  "true",
 		},
 	),

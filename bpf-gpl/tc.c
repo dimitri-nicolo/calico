@@ -157,7 +157,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			goto deny;
 		case -2:
 			/* Non-BPF VXLAN packet from another Calico node. */
-			CALI_DEBUG("VXLAN packet from known Calico host, allow.");
+			CALI_DEBUG("VXLAN packet from known Calico host, allow.\n");
 			fwd_fib_set(&ctx.fwd, false);
 			goto allow;
 		}
@@ -267,15 +267,28 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	if (ct_result_rc(ctx.state->ct_result.rc) == CALI_CT_MID_FLOW_MISS) {
 		if (CALI_F_TO_HOST) {
-			/* Mid-flow miss: let iptables handle it in case it's an existing flow
-			 * in the Linux conntrack table. We can't apply policy or DNAT because
-			 * it's too late in the flow.  iptables will drop if the flow is not
-			 * known.
-			 */
-			CALI_DEBUG("CT mid-flow miss; fall through to iptables.\n");
-			ctx.fwd.mark = CALI_SKB_MARK_FALLTHROUGH;
-			fwd_fib_set(&ctx.fwd, false);
-			goto finalize;
+			/* Mid-flow miss */
+			if (EGRESS_GATEWAY) {
+				// On the return path of an egress gateway flow, on egress from the
+				// egress gateway, and when the egress gateway is on a different
+				// node than the client, we'll get a CT miss here for the original
+				// (unencapped) client pod -> destination flow.  We want to create
+				// that CT state and mark it as whitelisted on both sides, because a
+				// mid-flow TCP packet will not be allowed on the FROM_HOST side if
+				// it isn't already whitelisted.
+				CALI_DEBUG("CT mid-flow miss from egress gateway\n");
+				ctx.state->ct_result.rc = CALI_CT_NEW | CALI_CT_ALLOW_FROM_SIDE;
+			} else {
+				/* Other mid-flow miss cases: let iptables handle it in case it's an
+				 * existing flow in the Linux conntrack table. We can't apply policy
+				 * or DNAT because it's too late in the flow.  iptables will drop if
+				 * the flow is not known.
+				 */
+				CALI_DEBUG("CT mid-flow miss; fall through to iptables.\n");
+				ctx.fwd.mark = CALI_SKB_MARK_FALLTHROUGH;
+				fwd_fib_set(&ctx.fwd, false);
+				goto finalize;
+			}
 		} else {
 			if (CALI_F_HEP) {
 				// TODO-HEP for data interfaces, this should allow, for active HEPs it should drop or apply policy.
@@ -303,6 +316,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	 * This will make it to skip fib in calico_tc_skb_accepted()
 	 */
 	if (CALI_F_FROM_HEP) {
+		CALI_DEBUG("Arrange for Linux to do RPF check\n");
 		ct_result_set_flag(ctx.state->ct_result.rc, CALI_CT_RPF_FAILED);
 	}
 
@@ -341,8 +355,11 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		goto skip_policy;
 	}
 
-	if (CALI_F_FROM_WEP) {
-		/* Do RPF check since it's our responsibility to police that. */
+	if (CALI_F_FROM_WEP && !EGRESS_GATEWAY) {
+		/* Do RPF check since it's our responsibility to police that.  Skip this
+		 * on egress from an egress gateway, because the whole point of egress
+		 * gateways, on the return path, is to forward from destination IPs that
+		 * are not their own IP. */
 		CALI_DEBUG("Workload RPF check src=%x skb iface=%d.\n",
 				bpf_ntohl(ctx.state->ip_src), skb->ifindex);
 		struct cali_rt *r = cali_rt_lookup(ctx.state->ip_src);
@@ -360,6 +377,16 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			goto deny;
 		}
 
+		if (EGRESS_CLIENT) {
+			if (cali_rt_flags_outside_cluster(cali_rt_lookup_flags(ctx.state->post_nat_ip_dst))) {
+				// Packet is from an egress client and destined to outside
+				// the cluster, so CT state will be marked as an egress
+				// gateway flow.
+				CALI_DEBUG("Flow from egress gateway client to outside cluster\n");
+				ctx.state->ct_result.flags |= CALI_CT_FLAG_EGRESS_GW;
+			}
+		}
+
 		// Check whether the workload needs outgoing NAT to this address.
 		if (r->flags & CALI_RT_NAT_OUT) {
 			if (!(cali_rt_lookup_flags(ctx.state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
@@ -367,7 +394,8 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 					   "but dest is not, need to SNAT.\n");
 				ctx.state->flags |= CALI_ST_NAT_OUTGOING;
 			}
-		} if (!(r->flags & CALI_RT_IN_POOL)) {
+		}
+		if (!(r->flags & CALI_RT_IN_POOL)) {
 			CALI_DEBUG("Source %x not in IP pool\n", bpf_ntohl(ctx.state->ip_src));
 			r = cali_rt_lookup(ctx.state->post_nat_ip_dst);
 			if (!r || !(r->flags & (CALI_RT_WORKLOAD | CALI_RT_HOST))) {
@@ -548,7 +576,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 	enum calico_reason reason = CALI_REASON_UNKNOWN;
 	int rc = TC_ACT_UNSPEC;
 	bool fib = false;
-	struct ct_ctx ct_ctx_nat = {};
+	struct ct_create_ctx ct_ctx_nat = {};
 	int ct_rc = ct_result_rc(state->ct_result.rc);
 	bool ct_related = ct_result_is_related(state->ct_result.rc);
 	__u32 seen_mark;
@@ -560,7 +588,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 	CALI_DEBUG("pol_rc=%d\n", state->pol_rc);
 	CALI_DEBUG("sport=%d\n", state->sport);
 	CALI_DEBUG("flags=%x\n", state->flags);
-	CALI_DEBUG("ct_rc=%d\n", ct_rc);
+	CALI_DEBUG("ct_rc=%d\n", state->ct_result.rc);
 	CALI_DEBUG("ct_related=%d\n", ct_related);
 
 	// Set the dport to 0, to make sure conntrack entries for icmp is proper as we use
@@ -725,16 +753,30 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		ct_ctx_nat.dst = state->post_nat_ip_dst;
 		ct_ctx_nat.dport = state->post_nat_dport;
 		ct_ctx_nat.tun_ip = state->tun_ip;
+		ct_ctx_nat.type = CALI_CT_TYPE_NORMAL;
+		ct_ctx_nat.allow_from_host_side = false;
 		if (state->flags & CALI_ST_NAT_OUTGOING) {
 			ct_ctx_nat.flags |= CALI_CT_FLAG_NAT_OUT;
 		}
 		if (CALI_F_FROM_WEP && state->flags & CALI_ST_SKIP_FIB) {
 			ct_ctx_nat.flags |= CALI_CT_FLAG_SKIP_FIB;
 		}
-		/* Propagate the trusted DNS flag when updating conntrack entry. */
+		if (state->ct_result.rc & CALI_CT_ALLOW_FROM_SIDE) {
+			// See comment above where CALI_CT_ALLOW_FROM_SIDE is set.
+			ct_ctx_nat.allow_from_host_side = true;
+		}
+
+		// Propagate the trusted DNS flag when creating conntrack entry.  Note,
+		// this isn't propagation from a previously looked up CT entry, because
+		// there are no cases where we successfully look up a CT entry and then
+		// create an equivalent entry for the same flow.  Rather, it's because we
+		// got a CT miss for this flow and then used the state->ct_result.flags
+		// field to record that the flow _should_ be trusted for DNS when the CT
+		// state is created.
 		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_TRUST_DNS);
-		/* Propagate the workload flag when updating conntrack entry. */
-		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_WORKLOAD);
+
+		// Similarly for the egress gateway flow flag.
+		ct_ctx_nat.flags |= (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW);
 
 		if (state->ip_proto == IPPROTO_TCP) {
 			if (skb_refresh_validate_ptrs(ctx, TCP_SIZE)) {
@@ -747,7 +789,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		// If we get here, we've passed policy.
 
 		if (nat_dest == NULL) {
-			if (conntrack_create(ctx, &ct_ctx_nat, CT_CREATE_NORMAL)) {
+			if (conntrack_create(ctx, &ct_ctx_nat)) {
 				CALI_DEBUG("Creating normal conntrack failed\n");
 
 				if ((CALI_F_FROM_HEP && rt_addr_is_local_host(ct_ctx_nat.dst)) ||
@@ -791,7 +833,6 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		 */
 		if (ct_rc == CALI_CT_NEW) {
 			struct cali_rt * rt;
-			int nat_type = CT_CREATE_NAT;
 
 			if (encap_needed) {
 				/* When we need to encap, we need to find out if the backend is
@@ -814,7 +855,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 						ct_ctx_nat.flags |= CALI_CT_FLAG_NP_FWD;
 					}
 
-					nat_type = CT_CREATE_NAT_FWD;
+					ct_ctx_nat.allow_from_host_side = true;
 					ct_ctx_nat.tun_ip = rt->next_hop;
 					state->ip_dst = rt->next_hop;
 				} else if (cali_rt_is_workload(rt) && state->ip_dst != state->post_nat_ip_dst) {
@@ -835,7 +876,8 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 				}
 			}
 
-			if (conntrack_create(ctx, &ct_ctx_nat, nat_type)) {
+			ct_ctx_nat.type = CALI_CT_TYPE_NAT_REV;
+			if (conntrack_create(ctx, &ct_ctx_nat)) {
 				CALI_DEBUG("Creating NAT conntrack failed\n");
 				goto deny;
 			}
@@ -1174,8 +1216,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 {
 	CALI_DEBUG("Entering calico_tc_skb_drop\n");
 
-	__u32 key = 0;
-	struct cali_tc_state *state = cali_v4_state_lookup_elem(&key);
+	struct cali_tc_state *state = state_get();
 	if (!state) {
 		CALI_DEBUG("State map lookup failed: no event generated\n");
 		goto drop;

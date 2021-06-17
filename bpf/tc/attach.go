@@ -57,11 +57,14 @@ type AttachPoint struct {
 	ExtToServiceConnmark uint32
 	VethNS               uint16
 	EnableTCPStats       bool
+	IsEgressGateway      bool
+	IsEgressClient       bool
 }
 
 var tcLock sync.RWMutex
 
 var ErrDeviceNotFound = errors.New("device not found")
+var ErrInterrupted = errors.New("dump interrupted")
 var prefHandleRe = regexp.MustCompile(`pref ([^ ]+) .* handle ([^ ]+)`)
 
 // AttachProgram attaches a BPF program from a file to the TC attach point
@@ -110,8 +113,17 @@ func (ap AttachPoint) AttachProgram() error {
 	var progErrs []error
 	for _, p := range progsToClean {
 		log.WithField("prog", p).Debug("Cleaning up old calico program")
-		_, err = ExecTC("filter", "del", "dev", ap.Iface, string(ap.Hook), "pref", p.pref, "handle", p.handle, "bpf")
-		if err == ErrDeviceNotFound {
+		attemptCleanup := func() error {
+			_, err := ExecTC("filter", "del", "dev", ap.Iface, string(ap.Hook), "pref", p.pref, "handle", p.handle, "bpf")
+			return err
+		}
+		err = attemptCleanup()
+		if errors.Is(err, ErrInterrupted) {
+			// This happens if the interface is deleted in the middle of calling tc.
+			log.Debug("First cleanup hit 'Dump was interrupted', retrying (once).")
+			err = attemptCleanup()
+		}
+		if errors.Is(err, ErrDeviceNotFound) {
 			continue
 		}
 		if err != nil {
@@ -153,6 +165,8 @@ func ExecTC(args ...string) (out string, err error) {
 	if err != nil {
 		if isCannotFindDevice(err) {
 			err = ErrDeviceNotFound
+		} else if isDumpInterrupted(err) {
+			err = ErrInterrupted
 		} else if err2, ok := err.(*exec.ExitError); ok {
 			err = fmt.Errorf("failed to execute tc %v: rc=%v stderr=%v (%w)",
 				args, err2.ExitCode(), string(err2.Stderr), err)
@@ -172,6 +186,19 @@ func isCannotFindDevice(err error) bool {
 		stderr := string(err.Stderr)
 		if strings.Contains(stderr, "Cannot find device") ||
 			strings.Contains(stderr, "No such device") {
+			return true
+		}
+	}
+	return false
+}
+
+func isDumpInterrupted(err error) bool {
+	if errors.Is(err, ErrInterrupted) {
+		return true
+	}
+	if err, ok := err.(*exec.ExitError); ok {
+		stderr := string(err.Stderr)
+		if strings.Contains(stderr, "Dump was interrupted") {
 			return true
 		}
 	}
@@ -245,6 +272,8 @@ func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error 
 	b.PatchExtToServiceConnmark(uint32(ap.ExtToServiceConnmark))
 	b.PatchIfNS(ap.VethNS)
 	b.PatchTcpStats(ap.EnableTCPStats)
+	b.PatchIsEgressGateway(ap.IsEgressGateway)
+	b.PatchIsEgressClient(ap.IsEgressClient)
 
 	err = b.PatchIntfAddr(ap.IntfIP)
 	if err != nil {

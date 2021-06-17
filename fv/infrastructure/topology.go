@@ -76,23 +76,6 @@ func DefaultTopologyOptions() TopologyOptions {
 	}
 }
 
-func (opts TopologyOptions) EnableCloudWatchLogs(settings ...string) {
-
-	// Enable CloudWatch logs.
-	opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSREPORTERENABLED"] = "true"
-
-	// Set particular settings for the calling test.
-	param := ""
-	for _, arg := range settings {
-		if param == "" {
-			param = "FELIX_CLOUDWATCHLOGS" + strings.ToUpper(arg)
-		} else {
-			opts.ExtraEnvVars[param] = arg
-			param = ""
-		}
-	}
-}
-
 func (opts TopologyOptions) EnableFlowLogsFile(settings ...string) {
 
 	// Enable CloudWatch logs.
@@ -108,6 +91,35 @@ func (opts TopologyOptions) EnableFlowLogsFile(settings ...string) {
 			param = ""
 		}
 	}
+}
+
+const (
+	DefaultIPPoolName = "test-pool"
+	DefaultIPPoolCIDR = "10.65.0.0/16"
+)
+
+func CreateDefaultIPPoolFromOpts(ctx context.Context, client client.Interface, opts TopologyOptions) (*api.IPPool, error) {
+	ipPool := api.NewIPPool()
+	ipPool.Name = DefaultIPPoolName
+	ipPool.Spec.CIDR = DefaultIPPoolCIDR
+	ipPool.Spec.NATOutgoing = opts.NATOutgoingEnabled
+	if opts.IPIPEnabled {
+		ipPool.Spec.IPIPMode = api.IPIPModeAlways
+	} else {
+		ipPool.Spec.IPIPMode = api.IPIPModeNever
+	}
+
+	ipPool.Spec.VXLANMode = opts.VXLANMode
+
+	return client.IPPools().Create(ctx, ipPool, options.SetOptions{})
+}
+
+func DeleteIPPoolByName(ctx context.Context, client client.Interface, name string) (*api.IPPool, error) {
+	return client.IPPools().Delete(ctx, name, options.DeleteOptions{})
+}
+
+func DeleteDefaultIPPool(ctx context.Context, client client.Interface) (*api.IPPool, error) {
+	return DeleteIPPoolByName(ctx, client, DefaultIPPoolName)
 }
 
 // StartSingleNodeEtcdTopology starts an etcd container and a single Felix container; it initialises
@@ -205,19 +217,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if opts.UseIPPools {
-				ipPool := api.NewIPPool()
-				ipPool.Name = "test-pool"
-				ipPool.Spec.CIDR = "10.65.0.0/16"
-				ipPool.Spec.NATOutgoing = opts.NATOutgoingEnabled
-				if opts.IPIPEnabled {
-					ipPool.Spec.IPIPMode = api.IPIPModeAlways
-				} else {
-					ipPool.Spec.IPIPMode = api.IPIPModeNever
-				}
-
-				ipPool.Spec.VXLANMode = opts.VXLANMode
-
-				_, err = client.IPPools().Create(ctx, ipPool, options.SetOptions{})
+				_, err = CreateDefaultIPPoolFromOpts(ctx, client, opts)
 			}
 			return err
 		}).ShouldNot(HaveOccurred())
@@ -232,28 +232,38 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 
 	felixes = make([]*Felix, n)
 	var wg sync.WaitGroup
+
+	// Make a separate copy of TopologyOptions for each Felix that we will run.  This
+	// is because we need to modify ExtraEnvVars for some of them.  If we kept using
+	// the same copy, while starting Felixes, we could hit a concurrent map read/write
+	// problem.
+	optsPerFelix := make([]TopologyOptions, n)
 	for i := 0; i < n; i++ {
-		// Then start Felix and create a node for it.
-		opts.ExtraEnvVars["BPF_LOG_PFX"] = fmt.Sprintf("%d-", i)
-		// Arrange for only the first Felix to enable the BPF connect-time load balancer, as
-		// we get unpredictable behaviour if more than one Felix enables it on the same
-		// host.
-		optsFirstFelix := opts
-		opts.ExtraEnvVars = map[string]string{}
-		for k, v := range optsFirstFelix.ExtraEnvVars {
-			opts.ExtraEnvVars[k] = v
+		optsPerFelix[i] = opts
+		optsPerFelix[i].ExtraEnvVars = map[string]string{}
+		for k, v := range opts.ExtraEnvVars {
+			optsPerFelix[i].ExtraEnvVars[k] = v
 		}
-		opts.ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancingEnabled"] = "false"
-		opts.ExtraEnvVars["FELIX_DebugSkipCTLBCleanup"] = "true"
+
+		// Different log prefix for each Felix.
+		optsPerFelix[i].ExtraEnvVars["BPF_LOG_PFX"] = fmt.Sprintf("%d-", i)
+
+		// Only the first Felix enables the BPF connect-time load balancer, as
+		// we get unpredictable behaviour if more than one Felix enables it on the same
+		// host.  So, disable CTLB handling for subsequent Felixes.
+		if i > 0 {
+			optsPerFelix[i].ExtraEnvVars["FELIX_BPFConnectTimeLoadBalancingEnabled"] = "false"
+			optsPerFelix[i].ExtraEnvVars["FELIX_DebugSkipCTLBCleanup"] = "true"
+		}
+	}
+
+	// Now start the Felixes.
+	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			defer ginkgo.GinkgoRecover()
-			if i == 0 {
-				felixes[i] = RunFelix(infra, i, optsFirstFelix)
-			} else {
-				felixes[i] = RunFelix(infra, i, opts)
-			}
+			felixes[i] = RunFelix(infra, i, optsPerFelix[i])
 		}(i)
 	}
 	wg.Wait()

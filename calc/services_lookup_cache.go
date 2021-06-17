@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/projectcalico/felix/k8sutils"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +28,17 @@ import (
 const (
 	multiPortsSameService = "*"
 )
+
+var (
+	gaugeServicesCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_lookupcache_services",
+		Help: "Total number of entries currently residing in the services lookup cache.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeServicesCacheLength)
+}
 
 // IP/port/proto key used to lookup a service.
 type ipPortProtoKey struct {

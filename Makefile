@@ -34,7 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-GO_BUILD_VER?=v0.51
+GO_BUILD_VER?=v0.53
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins
@@ -44,23 +44,6 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_FELIX_PRIVATE_PROJECT_ID)
 
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID) $(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID) \
 	$(SEMAPHORE_TS_QUERYSERVER_PROJECT_ID) $(SEMAPHORE_CALICOQ_PROJECT_ID) $(SEMAPHORE_CLOUD_CONTROLLERS_PRIVATE_PROJECT_ID)
-
-###############################################################################
-# Download and include Makefile.common
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
@@ -78,22 +61,40 @@ $(LOCAL_BUILD_DEP):
 	-replace=github.com/projectcalico/pod2daemon=../pod2daemon
 endif
 
-include Makefile.common
+FELIX_IMAGE        ?=tigera/felix
+BUILD_IMAGES       ?=$(FELIX_IMAGE)
+DEV_REGISTRIES     ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES ?=quay.io
+RELEASE_BRANCH_PREFIX ?= release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
+
+# All Felix go files.
+SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
+FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
+EXTRA_DOCKER_ARGS += --init -v $(CURDIR)/../pod2daemon:/go/src/github.com/projectcalico/pod2daemon:rw
+EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
 
 ###############################################################################
-BUILD_IMAGE?=tigera/felix
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
-RELEASE_IMAGES?=
+# Download and include Makefile.common
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-PUSH_IMAGES+=$(RELEASE_IMAGES)
-endif
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-FV_ETCDIMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
-FV_K8SIMAGE ?= gcr.io/google_containers/hyperkube-$(BUILDARCH):$(K8S_VERSION)
-FV_TYPHAIMAGE ?= tigera/typha:latest-$(BUILDARCH)
-FV_FELIXIMAGE?=$(BUILD_IMAGE)-test:latest-$(BUILDARCH)
+include Makefile.common
+
+FV_ETCDIMAGE  ?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
+FV_K8SIMAGE   ?=gcr.io/google_containers/hyperkube-$(BUILDARCH):$(K8S_VERSION)
+FV_TYPHAIMAGE ?=calico/typha:master-$(BUILDARCH)
+FV_FELIXIMAGE ?=$(FELIX_IMAGE)-test:latest-$(BUILDARCH)
 
 # If building on amd64 omit the arch in the container name.  Fixme!
 ifeq ($(BUILDARCH),amd64)
@@ -134,10 +135,6 @@ LDFLAGS=-ldflags "\
 # depend on these, clean removes them.
 GENERATED_FILES:=proto/felixbackend.pb.go bpf/asm/opcode_string.go
 
-# All Felix go files.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
-FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
-
 # Files to include in the Windows ZIP archive.
 WINDOWS_ARCHIVE_FILES := bin/tigera-felix.exe windows-packaging/README.txt windows-packaging/*.ps1
 # Name of the Windows release ZIP archive.
@@ -165,8 +162,8 @@ clean:
 	find . -name "*.pyc" -type f -delete
 	$(DOCKER_GO_BUILD) make -C bpf-apache clean
 	$(DOCKER_GO_BUILD) make -C bpf-gpl clean
-	-docker rmi $(BUILD_IMAGE)-wgtool:latest-amd64
-	-docker rmi $(BUILD_IMAGE)-wgtool:latest
+	-docker rmi $(FELIX_IMAGE)-wgtool:latest-amd64
+	-docker rmi $(FELIX_IMAGE)-wgtool:latest
 
 ###############################################################################
 # Updating pins
@@ -305,8 +302,8 @@ bpf/asm/opcode_string.go: bpf/asm/asm.go
 ###############################################################################
 # Building the image
 ###############################################################################
-# Build the tigera/felix docker image, which contains only Felix.
-.PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
+# Build the calico/felix docker image, which contains only Felix.
+.PHONY: $(FELIX_IMAGE) $(FELIX_IMAGE)-$(ARCH)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -314,9 +311,9 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-image: $(BUILD_IMAGE)
-$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
+image: $(FELIX_IMAGE)
+$(FELIX_IMAGE): $(FELIX_IMAGE)-$(ARCH)
+$(FELIX_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
                         bin/calico-bpf \
                         build-bpf \
                         docker-image/calico-felix-wrapper \
@@ -333,9 +330,9 @@ $(BUILD_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
 	mkdir -p docker-image/bpf/bin
 	# Copy only the files we're explicitly expecting (in case we have left overs after switching branch).
 	cp $(ALL_BPF_PROGS) docker-image/bpf/bin
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image;
+	docker build --pull -t $(FELIX_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image;
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(FELIX_IMAGE):latest-$(ARCH) $(FELIX_IMAGE):latest
 endif
 
 ifeq ($(FV_RACE_DETECTOR_ENABLED),true)
@@ -345,15 +342,15 @@ FV_BINARY=calico-felix-amd64
 endif
 
 image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/tproxy bin/$(FV_BINARY) image-wgtool
-	docker build -t $(BUILD_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin;
+	docker build -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin;
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE)-test:latest-$(ARCH) $(BUILD_IMAGE)-test:latest
+	docker tag $(FELIX_IMAGE)-test:latest-$(ARCH) $(FELIX_IMAGE)-test:latest
 endif
 
 image-wgtool: fv/Dockerfile.wgtool.amd64
-	docker build -t $(BUILD_IMAGE)-wgtool:latest-$(ARCH) --file ./fv/Dockerfile.wgtool.$(ARCH) fv;
+	docker build -t $(FELIX_IMAGE)-wgtool:latest-$(ARCH) --file ./fv/Dockerfile.wgtool.$(ARCH) fv;
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE)-wgtool:latest-$(ARCH) $(BUILD_IMAGE)-wgtool:latest
+	docker tag $(FELIX_IMAGE)-wgtool:latest-$(ARCH) $(FELIX_IMAGE)-wgtool:latest
 endif
 
 
@@ -608,134 +605,6 @@ cd: cd-common
 .PHONY: vendor
 vendor:
 	@echo "vendoring not required for gomod"
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-GIT_VERSION?=$(shell git describe --tags --dirty)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-windows-archive
-	$(MAKE) VERSION=$(VERSION) tag-base-images-all
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-	@echo "Then, archive the Windows ZIP file, created at $(WINDOWS_ARCHIVE)."
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-
-	$(MAKE) image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
-	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest
-
-## Produces the Windows ZIP archive for the release.
-release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_ARCHIVE_FILES)
-	-rm -f "$(WINDOWS_ARCHIVE)"
-	mkdir -p dist
-	zip --junk-paths "$(WINDOWS_ARCHIVE)" $(WINDOWS_ARCHIVE_FILES)
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	for img in $(BUILD_IMAGE):$(VERSION)-$(ARCH) quay.io/$(BUILD_IMAGE):$(VERSION)-$(ARCH); do \
-	  if docker run $$img calico-felix --version | grep -q '$(VERSION)$$'; \
-	  then \
-	    echo "Check successful. ($$img)"; \
-	  else \
-	    echo "Incorrect version in docker image $$img!"; \
-	    result=false; \
-	  fi \
-	done; \
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	# Disabling for now since no-one is consuming the images.
-	# $(MAKE) push-all IMAGETAG=$(VERSION)
-
-	# Push binaries to GitHub release.
-	# Requires ghr: https://github.com/tcnksm/ghr
-	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u tigera -r felix-private \
-		-b "Release notes can be found at https://docs.projectcalico.org" \
-		-n $(VERSION) \
-		$(VERSION) ./bin/
-
-	@echo "Confirm that the release was published at the following URL."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "Build and publish the debs and rpms for this release."
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	for img in $(BUILD_IMAGE):latest-$(ARCH) quay.io/$(BUILD_IMAGE):latest-$(ARCH); do \
-	  if docker run $$img calico-felix --version | grep -q '$(VERSION)$$'; \
-	  then \
-	    echo "Check successful. ($$img)"; \
-	  else \
-	    echo "Incorrect version in docker image $$img!"; \
-	    result=false; \
-	  fi \
-	done; \
-
-	# Disabling for now since no-one is consuming the images.
-	# $(MAKE) push-all IMAGETAG=latest
-
-## release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN must be set for a release)
-endif
-ifeq (, $(shell which ghr))
-	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
-endif
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)

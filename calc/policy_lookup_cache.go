@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/idalloc"
@@ -20,6 +21,13 @@ type pcRuleID struct {
 	ruleID *RuleID
 	id64   uint64
 }
+
+var (
+	gaugePolicyCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_collector_lookups_cache_policies",
+		Help: "Total number of entries currently residing in the endpoints lookup cache.",
+	})
+)
 
 // PolicyLookupsCache provides an API to lookup policy to NFLOG prefix mapping.
 // To do this, the PolicyLookupsCache hooks into the calculation graph
@@ -55,6 +63,7 @@ func NewPolicyLookupsCache() *PolicyLookupsCache {
 		rules.CalculateNoMatchProfileNFLOGPrefixStr(rules.RuleDirEgress),
 		NewRuleID("", "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny),
 	)
+
 	return pc
 }
 
@@ -156,6 +165,8 @@ func (pc *PolicyLookupsCache) updatePolicyRulesNFLOGPrefixes(key model.PolicyKey
 		policy.InboundRules,
 		policy.OutboundRules,
 	)
+
+	pc.reportPolicyCacheMetrics(1)
 }
 
 // removePolicyRulesNFLOGPrefixes removes the prefix to RuleID maps for a policy.
@@ -178,6 +189,8 @@ func (pc *PolicyLookupsCache) removePolicyRulesNFLOGPrefixes(key model.PolicyKey
 	oldPrefixes := pc.nflogPrefixesPolicy[key]
 	pc.deleteRulesNFLOGPrefixes(oldPrefixes)
 	delete(pc.nflogPrefixesPolicy, key)
+
+	pc.reportPolicyCacheMetrics(1)
 }
 
 // updateProfileRulesNFLOGPrefixes stores the required prefix to RuleID maps for a profile, deleting any
@@ -569,7 +582,7 @@ func deconstructPolicyName(name string) (string, string, string, error) {
 		namespace = parts[0]
 		name = parts[1]
 	default:
-		return "", "", "", fmt.Errorf("Could not parse policy %s", name)
+		return "", "", "", fmt.Errorf("could not parse policy %s", name)
 	}
 
 	// Remove the staged prefix if present so we can extract the tier.
@@ -589,7 +602,7 @@ func deconstructPolicyName(name string) (string, string, string, error) {
 		return namespace, parts[0], stagedPrefix + parts[1], nil
 	}
 
-	return "", "", "", fmt.Errorf("Could not parse policy %s", name)
+	return "", "", "", fmt.Errorf("could not parse policy %s", name)
 }
 
 // Dump returns the contents of important structures in the LookupManager used for
@@ -602,4 +615,9 @@ func (pc *PolicyLookupsCache) Dump() string {
 		lines = append(lines, string(p[:])+": "+r.ruleID.String())
 	}
 	return strings.Join(lines, "\n")
+}
+
+//reportPolicyCacheMetrics reports policy cache performance metrics to prometheus
+func (pc *PolicyLookupsCache) reportPolicyCacheMetrics(policyCacheWritesDelta uint32) {
+	gaugePolicyCacheLength.Set(float64(len(pc.nflogPrefixesPolicy)))
 }

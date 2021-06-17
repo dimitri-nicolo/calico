@@ -1,16 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -31,7 +19,7 @@ import (
 const usage = `tproxy: acts as a transparent proxy for Felix fv testing.
 
 Usage:
-  tproxy <port-svc> <port-np> [--gid=<gid>]`
+  tproxy <port>`
 
 func main() {
 	log.SetLevel(log.InfoLevel)
@@ -43,97 +31,39 @@ func main() {
 
 	log.WithField("args", args).Info("Parsed arguments")
 
-	gid := -1
-	if args["--gid"] != nil {
-		gid, err = strconv.Atoi(args["--gid"].(string))
+	port, err := strconv.Atoi(args["<port>"].(string))
+	if err != nil {
+		log.WithError(err).Fatal("port not a number")
+	}
+
+	listener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: port})
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to listen on port %d", port)
+	}
+
+	f, err := listener.File()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to get listener fd")
+	}
+
+	if err = syscall.SetsockoptInt(int(f.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
+		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on listener")
+	}
+
+	log.Infof("Listening on port %d", port)
+
+	f.Close()
+
+	for {
+		log.Infof("Accepting on port %d", port)
+		down, err := listener.Accept()
 		if err != nil {
-			log.WithError(err).Fatal("gid not a number")
+			log.WithError(err).Errorf("Failed to accept connection")
+			continue
 		}
+
+		go handleConnection(down)
 	}
-
-	if gid >= 0 {
-		if err := syscall.Setgid(gid); err != nil {
-			log.WithError(err).Fatalf("Failed to set gid to %d", gid)
-		}
-	}
-
-	portSvc, err := strconv.Atoi(args["<port-svc>"].(string))
-	if err != nil {
-		log.WithError(err).Fatal("port not a number")
-	}
-
-	listenerSvc, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: portSvc})
-	if err != nil {
-		log.WithError(err).Fatalf("Failed to listen on port %d", portSvc)
-	}
-
-	f, err := listenerSvc.File()
-	if err != nil {
-		log.WithError(err).Fatal("Failed to get listener fd")
-	}
-
-	if err = syscall.SetsockoptInt(int(f.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
-		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on listener")
-	}
-
-	log.Infof("Listening on port %d", portSvc)
-
-	f.Close()
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			down, err := listenerSvc.Accept()
-			if err != nil {
-				log.WithError(err).Errorf("Failed to accept connection")
-				continue
-			}
-
-			go handleConnection(down, true)
-		}
-	}()
-
-	portNp, err := strconv.Atoi(args["<port-np>"].(string))
-	if err != nil {
-		log.WithError(err).Fatal("port not a number")
-	}
-
-	listenerNp, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: portNp})
-	if err != nil {
-		log.WithError(err).Fatalf("Failed to listen on port %d", portNp)
-	}
-
-	f, err = listenerNp.File()
-	if err != nil {
-		log.WithError(err).Fatal("Failed to get listener fd")
-	}
-
-	if err = syscall.SetsockoptInt(int(f.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
-		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on listener")
-	}
-
-	log.Infof("Listening on port %d for node ports", portNp)
-
-	f.Close()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			down, err := listenerNp.Accept()
-			if err != nil {
-				log.WithError(err).Errorf("Failed to accept connection")
-				continue
-			}
-
-			go handleConnection(down, false)
-		}
-	}()
-
-	wg.Wait() // infinitely
 }
 
 func getPreDNATDest(c net.Conn) net.Addr {
@@ -163,7 +93,7 @@ func getPreDNATDest(c net.Conn) net.Addr {
 	return &ret
 }
 
-func handleConnection(down net.Conn, origSrc bool) {
+func handleConnection(down net.Conn) {
 	defer down.Close()
 
 	preDNATDest := getPreDNATDest(down)
@@ -188,11 +118,9 @@ func handleConnection(down net.Conn, origSrc bool) {
 		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on socket")
 	}
 
-	if origSrc {
-		if err = syscall.Bind(s, &clientAddr); err != nil {
-			log.WithError(err).Infof("Failed to bind socket to %v", clientAddr)
-			return
-		}
+	if err = syscall.Bind(s, &clientAddr); err != nil {
+		log.WithError(err).Infof("Failed to bind socket to %v", clientAddr)
+		return
 	}
 
 	if err = syscall.Connect(s, &serverAddr); err != nil {

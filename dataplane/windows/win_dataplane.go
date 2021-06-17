@@ -80,6 +80,7 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 	DNSTrustedServers    []config.ServerPort
+	PktMonStartArgs      string
 
 	Hostname     string
 	VXLANEnabled bool
@@ -229,7 +230,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 		epEventListeners = append(epEventListeners, vfpInfoReader.EndpointEventHandler())
 	}
 
-	dp.domainInfoReader = NewDomainInfoReader(config.DNSTrustedServers)
+	dp.domainInfoReader = NewDomainInfoReader(config.DNSTrustedServers, config.PktMonStartArgs)
 	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges,
 		&common.DnsConfig{
 			Collector:            config.Collector,

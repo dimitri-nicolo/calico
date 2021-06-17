@@ -15,6 +15,7 @@
 package rules
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -101,7 +102,7 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain 
 	if r.KubeIPVSSupportEnabled {
 		result = append(result, r.StaticFilterInputForwardCheckChain(ipVersion))
 	}
-	if r.TPROXYMode == "Enabled" && r.BPFEnabled == false {
+	if r.TPROXYModeEnabled() && r.BPFEnabled == false {
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterInputTProxy,
@@ -267,7 +268,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *Chai
 func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
 
-	if r.TPROXYMode == "Enabled" {
+	if r.TPROXYModeEnabled() {
 		mark := r.IptablesMarkProxy
 		inputRules = append(inputRules,
 			Rule{
@@ -826,7 +827,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain
 		result = append(result, r.StaticFilterOutputForwardEndpointMarkChain())
 	}
 
-	if r.TPROXYMode == "Enabled" && r.BPFEnabled == false {
+	if r.TPROXYModeEnabled() && r.BPFEnabled == false {
 		result = append(result,
 			&Chain{
 				Name:  ChainFilterOutputTProxy,
@@ -840,15 +841,14 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain
 func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 	var rules []Rule
 
-	if r.TPROXYMode == "Enabled" {
+	if r.TPROXYModeEnabled() {
 		rules = append(rules,
 			Rule{
 				Comment: []string{"Police packets from proxy"},
 				// Atm any traffic from local host that does not have a local source.
 				// XXX that would not work well for nodeports if we let proxy to use local
 				// XXX source instead of passing it through MASQUERADE
-				//				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
-				Match:  Match().OwnerGroup("tproxy"),
+				Match:  Match().NotSrcAddrType(AddrTypeLocal, false),
 				Action: JumpAction{Target: ChainFilterOutputTProxy},
 			},
 		)
@@ -1165,11 +1165,11 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		}
 	}
 
-	if r.TPROXYMode == "Enabled" {
+	if r.TPROXYModeEnabled() {
 		mark := r.IptablesMarkProxy
 
 		// We match in this chain if the packet is either on an established
-		// connection that is proxied and marked accordingly.
+		// connection that is proxied and marked accordingly or not.
 		tproxyEstablRules := []Rule{
 			{
 				Comment: []string{"Restore proxy mark from connection if not set"},
@@ -1179,7 +1179,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			{
 				Comment: []string{"Accept packets destined to proxy on existing connection"},
 				Match:   Match().MarkMatchesWithMask(mark, mark),
-				Action:  AcceptAction{}, // XXX should this be r.mangleAllowAction ?
+				Action:  AcceptAction{}, // No further processing to match TPROXY behavior.
 			},
 		}
 
@@ -1187,18 +1187,21 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		tproxyRules := []Rule{
 			{
+				Comment: []string{"Mark the connection so that subsequent packets go to proxy"},
+				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			},
+			{
 				Comment: []string{"Divert the TCP connection to proxy"},
 				Match:   Match().Protocol("tcp"),
 				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
 			},
 			{
-				Comment: []string{"Divert the UDP connection to proxy"},
-				Match:   Match().Protocol("udp"),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
+				Comment: []string{"Unmark non-proxied"},
+				Action:  SetConnMarkAction{Mark: 0, Mask: mark},
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxySvc, Rules: tproxyRules})
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxy, Rules: tproxyRules})
 
 		nameForIPSet := func(ipsetID string) string {
 			if ipVersion == 4 {
@@ -1207,40 +1210,14 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
 			}
 		}
-
 		chains = append(chains, &Chain{
 			Name: ChainManglePreroutingTProxySelect,
-			Rules: []Rule{
-				{
-					Comment: []string{"Proxy selected services"},
-					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
-				},
-				{
-					Comment: []string{"Proxy selected nodeports"},
-					Match: Match().
-						DestAddrType(AddrTypeLocal).
-						// We use a single port ipset for both V4 and V6
-						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports")),
-					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
-				},
-			},
+			Rules: []Rule{{
+				Comment: []string{"Proxy selected destinations"},
+				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
+			}},
 		})
-
-		tproxyRules = []Rule{
-			{
-				Comment: []string{"Divert the TCP connection to proxy"},
-				Match:   Match().Protocol("tcp").DestAddrType(AddrTypeLocal),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
-			},
-			{
-				Comment: []string{"Divert the TCP connection to proxy"},
-				Match:   Match().Protocol("udp").DestAddrType(AddrTypeLocal),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
-			},
-		}
-
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 	}
 
 	chains = append(chains,
@@ -1248,6 +1225,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		r.failsafeOutChain("mangle", ipVersion),
 		r.StaticManglePreroutingChain(ipVersion),
 		r.StaticManglePostroutingChain(ipVersion),
+		r.StaticMangleOutputChain(ipVersion),
 	)
 
 	return chains
@@ -1255,6 +1233,17 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chain {
 	rules := []Rule{}
+
+	// First check if the connection is being proxied.
+	if r.TPROXYModeEnabled() {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Check if should be proxied when established"},
+				Match:   Match().ConntrackState("RELATED,ESTABLISHED"),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+			},
+		)
+	}
 
 	// ACCEPT or RETURN immediately if packet matches an existing connection.  Note that we also
 	// have a rule like this at the start of each pre-endpoint chain; the functional difference
@@ -1310,7 +1299,7 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 		},
 	)
 
-	if r.TPROXYMode == "Enabled" {
+	if r.TPROXYModeEnabled() {
 		rules = append(rules,
 			Rule{
 				Comment: []string{"Check if it is a new connection to be proxied"},
@@ -1321,6 +1310,27 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 
 	return &Chain{
 		Name:  ChainManglePrerouting,
+		Rules: rules,
+	}
+}
+
+func (r *DefaultRuleRenderer) StaticMangleOutputChain(ipVersion uint8) *Chain {
+	rules := []Rule{}
+
+	if r.TPROXYModeEnabled() {
+		mark := r.IptablesMarkProxy
+		rules = append(rules, Rule{
+			// Proxied connections for regular services do not have
+			// local source nor destination. This is how we can easily
+			// identify the upstream part and mark it.
+			Comment: []string{"Mark any non-local connection as local for return"},
+			Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
+			Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+		})
+	}
+
+	return &Chain{
+		Name:  ChainMangleOutput,
 		Rules: rules,
 	}
 }
@@ -1401,6 +1411,7 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*Chain {
 		r.failsafeInChain("raw", ipVersion),
 		r.failsafeOutChain("raw", ipVersion),
 		r.StaticRawPreroutingChain(ipVersion),
+		r.WireguardIncomingMarkChain(),
 		r.StaticRawOutputChain(),
 	}
 }
@@ -1413,6 +1424,15 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 	rules = append(rules,
 		Rule{Action: ClearMarkAction{Mark: r.allCalicoMarkBits()}},
 	)
+
+	// Set a mark on encapsulated packets coming from WireGuard to ensure the RPF check allows it
+	if ipVersion == 4 && r.WireguardEnabled && len(r.WireguardInterfaceName) > 0 && r.RouteSource == "WorkloadIPs" {
+		log.Debug("Adding Wireguard iptables rule")
+		rules = append(rules, Rule{
+			Match:  nil,
+			Action: JumpAction{Target: ChainSetWireguardIncomingMark},
+		})
+	}
 
 	// Set a mark on the packet if it's from a workload interface.
 	markFromWorkload := r.IptablesMarkScratch0
@@ -1520,6 +1540,33 @@ func (r *DefaultRuleRenderer) allCalicoMarkBits() uint32 {
 		r.IptablesMarkScratch0 |
 		r.IptablesMarkScratch1 |
 		r.IptablesMarkIPsec
+}
+
+func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *Chain {
+	rules := []Rule{
+		{
+			Match:  Match().InInterface("lo"),
+			Action: ReturnAction{},
+		},
+		{
+			Match:  Match().InInterface(r.WireguardInterfaceName),
+			Action: ReturnAction{},
+		},
+	}
+
+	for _, ifacePrefix := range r.WorkloadIfacePrefixes {
+		rules = append(rules, Rule{
+			Match:  Match().InInterface(fmt.Sprintf("%s+", ifacePrefix)),
+			Action: ReturnAction{},
+		})
+	}
+
+	rules = append(rules, Rule{Match: nil, Action: SetMarkAction{Mark: r.WireguardIptablesMark}})
+
+	return &Chain{
+		Name:  ChainSetWireguardIncomingMark,
+		Rules: rules,
+	}
 }
 
 func (r *DefaultRuleRenderer) StaticRawOutputChain() *Chain {

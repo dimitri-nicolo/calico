@@ -57,10 +57,10 @@ const (
 	ChainManglePostrouting            = ChainNamePrefix + "POSTROUTING"
 	ChainManglePreroutingEgress       = ChainNamePrefix + "pre-egress"
 	ChainManglePostroutingEgress      = ChainNamePrefix + "post-egress"
-	ChainManglePreroutingTProxySvc    = ChainNamePrefix + "pre-tproxy-svc"
-	ChainManglePreroutingTProxyNP     = ChainNamePrefix + "pre-tproxy-np"
+	ChainManglePreroutingTProxy       = ChainNamePrefix + "pre-tproxy"
 	ChainManglePreroutingTProxyEstabl = ChainNamePrefix + "pre-tproxy-establ"
 	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
+	ChainMangleOutput                 = ChainNamePrefix + "OUTPUT"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -92,6 +92,8 @@ const (
 
 	ChainForwardCheck        = ChainNamePrefix + "forward-check"
 	ChainForwardEndpointMark = ChainNamePrefix + "forward-endpoint-mark"
+
+	ChainSetWireguardIncomingMark = ChainNamePrefix + "wireguard-incoming-mark"
 
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadPfxSpecialAllow = "ALLOW"
@@ -305,6 +307,8 @@ type RuleRenderer interface {
 	BlockedCIDRsToIptablesChains(cidrs []string, ipVersion uint8) []*iptables.Chain
 
 	RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled, acceptLocal bool) []iptables.Rule
+
+	WireguardIncomingMarkChain() *iptables.Chain
 }
 
 type DefaultRuleRenderer struct {
@@ -372,6 +376,9 @@ type Config struct {
 
 	WireguardEnabled       bool
 	WireguardInterfaceName string
+	WireguardIptablesMark  uint32
+	WireguardListeningPort int
+	RouteSource            string
 
 	IptablesLogPrefix         string
 	IncludeDropActionInPrefix bool
@@ -403,9 +410,8 @@ type Config struct {
 
 	DNSTrustedServers []config.ServerPort
 
-	TPROXYMode  string
-	TPROXYPort  int
-	TPROXYDests []config.ServerPort
+	TPROXYMode string
+	TPROXYPort int
 }
 
 var unusedBitsInBPFMode = map[string]bool{
@@ -432,7 +438,7 @@ func (c *Config) validate() {
 			continue
 		}
 		// Not set if Proxy is not enabled
-		if fieldName == "IptablesMarkProxy" && c.TPROXYMode != "Enabled" {
+		if fieldName == "IptablesMarkProxy" && !c.TPROXYModeEnabled() {
 			continue
 		}
 		if strings.HasPrefix(fieldName, "IptablesMark") {
@@ -538,4 +544,8 @@ func NewRenderer(config Config) RuleRenderer {
 		mangleAllowAction:  mangleAllowAction,
 		blockCIDRAction:    blockCIDRAction,
 	}
+}
+
+func (c *Config) TPROXYModeEnabled() bool {
+	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
 }

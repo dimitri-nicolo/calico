@@ -4,20 +4,16 @@ package collector
 
 import (
 	"fmt"
+	"net"
 	"reflect"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/felix/collector/testutil"
 	"github.com/projectcalico/libcalico-go/lib/health"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -35,32 +31,50 @@ var (
 	pubMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "-", AggregatedName: "pub"}
 )
 
-const CWDispatcher = "cloudwatch"
+type testFlowLogDispatcher struct {
+	mutex sync.Mutex
+	logs  []*FlowLog
+}
+
+func (d *testFlowLogDispatcher) Initialize() error {
+	return nil
+}
+
+func (d *testFlowLogDispatcher) Dispatch(logSlice interface{}) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	log.Info("In dispatch")
+	fl := logSlice.([]*FlowLog)
+	d.logs = append(d.logs, fl...)
+	return nil
+}
+
+func (d *testFlowLogDispatcher) getLogs() []*FlowLog {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	return d.logs
+}
 
 var _ = Describe("FlowLog Reporter verification", func() {
 	var (
-		cr *FlowLogsReporter
-		cd LogDispatcher
-		ca FlowLogAggregator
-		cl cloudwatchlogsiface.CloudWatchLogsAPI
+		cr         *FlowLogsReporter
+		ca         FlowLogAggregator
+		dispatcher *testFlowLogDispatcher
 	)
 
 	mt := &mockTime{}
-	getEventsFromLogStream := func() []*cloudwatchlogs.OutputLogEvent {
-		logEventsInput := &cloudwatchlogs.GetLogEventsInput{
-			LogGroupName:  &logGroupName,
-			LogStreamName: &logStreamName,
-		}
-		logEventsOutput, _ := cl.GetLogEvents(logEventsInput)
-		return logEventsOutput.Events
-	}
 	expectFlowLogsInEventStream := func(fls ...FlowLog) {
-		events := getEventsFromLogStream()
+		flogs := dispatcher.getLogs()
 		count := 0
 		for _, fl := range fls {
-			for _, ev := range events {
-				flMsg, _ := getFlowLog(*ev.Message)
-				if reflect.DeepEqual(flMsg, fl) {
+			for _, flog := range flogs {
+				if reflect.DeepEqual(flog.FlowMeta, fl.FlowMeta) &&
+					reflect.DeepEqual(flog.FlowPolicies, fl.FlowPolicies) &&
+					reflect.DeepEqual(flog.FlowExtras, fl.FlowExtras) &&
+					reflect.DeepEqual(flog.FlowLabels, fl.FlowLabels) &&
+					reflect.DeepEqual(flog.FlowProcessReportedStats, fl.FlowProcessReportedStats) {
 					count++
 					if count == len(fls) {
 						break
@@ -70,6 +84,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		}
 		Expect(count).Should(Equal(len(fls)))
 	}
+
 	calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
 		for _, mu := range mus {
 			epi += mu.inMetric.deltaPackets
@@ -98,7 +113,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				NumOriginalSourceIPs: ipBs.TotalCount(),
 			}
 		} else {
-			return FlowExtras{}
+			return FlowExtras{OriginalSourceIPs: []net.IP{}, NumOriginalSourceIPs: 0}
 		}
 	}
 	extractFlowPolicies := func(mus ...MetricUpdate) FlowPolicies {
@@ -117,21 +132,19 @@ var _ = Describe("FlowLog Reporter verification", func() {
 	}
 	Context("No Aggregation kind specified", func() {
 		BeforeEach(func() {
-			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			dispatcherMap := map[string]LogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap["testFlowLog"] = dispatcher
 			ca = NewFlowLogAggregator()
 			ca.IncludePolicies(true)
-			ds := map[string]LogDispatcher{CWDispatcher: cd}
-			cr = NewFlowLogsReporter(ds, flushInterval, nil, false, &NoOpLogOffset{})
-			cr.AddAggregator(ca, []string{CWDispatcher})
+			cr = NewFlowLogsReporter(dispatcherMap, flushInterval, nil, false, &NoOpLogOffset{})
+			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 
 		})
-		AfterEach(func() {
-			Expect(cl.(testutil.CloudWatchLogsExpectation).RetentionPeriod()).To(BeNumerically("==", 7))
-		})
-		It("reports the given metric update in form of a flow to cloudwatchlogs", func() {
+
+		It("reports the given metric update in form of a flowLog", func() {
 			By("reporting the first MetricUpdate")
 			cr.Report(muNoConn1Rule1AllowUpdate)
 			// Wait for aggregation and export to happen.
@@ -190,7 +203,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 		})
-		It("aggregates metric updates for the duration of aggregation when reporting to cloudwatch logs", func() {
+		It("aggregates metric updates for the duration of aggregation when reporting to flow logs", func() {
 
 			By("reporting the same MetricUpdate twice and expiring it immediately")
 			cr.Report(muConn1Rule1AllowUpdate)
@@ -296,7 +309,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 		})
-		It("reports the given metric update with original source IPs in a flow to cloudwatchlogs", func() {
+		It("reports the given metric update with original source IPs in a flow log", func() {
 			By("reporting the first MetricUpdate")
 			cr.Report(muWithOrigSourceIPs)
 			// Wait for aggregation and export to happen.
@@ -314,13 +327,13 @@ var _ = Describe("FlowLog Reporter verification", func() {
 	})
 	Context("Enable Flowlogs for HEPs", func() {
 		BeforeEach(func() {
-			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			dispatcherMap := map[string]LogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap["testFlowLog"] = dispatcher
 			ca = NewFlowLogAggregator()
 			ca.IncludePolicies(true)
-			ds := map[string]LogDispatcher{CWDispatcher: cd}
-			cr = NewFlowLogsReporter(ds, flushInterval, nil, true, &NoOpLogOffset{})
-			cr.AddAggregator(ca, []string{CWDispatcher})
+			cr = NewFlowLogsReporter(dispatcherMap, flushInterval, nil, true, &NoOpLogOffset{})
+			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -347,22 +360,22 @@ var _ = Describe("FlowLog Reporter verification", func() {
 	})
 })
 
-var _ = Describe("CloudWatch Reporter health verification", func() {
+var _ = Describe("Flowlog Reporter health verification", func() {
 	var (
-		cr *FlowLogsReporter
-		cd LogDispatcher
-		cl cloudwatchlogsiface.CloudWatchLogsAPI
-		hr *health.HealthAggregator
+		cr         *FlowLogsReporter
+		hr         *health.HealthAggregator
+		dispatcher *testFlowLogDispatcher
 	)
 
 	mt := &mockTime{}
 	Context("Test with no errors", func() {
+
 		BeforeEach(func() {
-			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			dispatcherMap := map[string]LogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap["testFlowLog"] = dispatcher
 			hr = health.NewHealthAggregator()
-			ds := map[string]LogDispatcher{CWDispatcher: cd}
-			cr = NewFlowLogsReporter(ds, flushInterval, hr, false, &NoOpLogOffset{})
+			cr = NewFlowLogsReporter(dispatcherMap, flushInterval, hr, false, &NoOpLogOffset{})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -374,11 +387,11 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 	})
 	Context("Test with client that times out requests", func() {
 		BeforeEach(func() {
-			cl = &timingoutCWFLMockClient{timeout: time.Second}
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			dispatcherMap := map[string]LogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap["testFlowLog"] = dispatcher
 			hr = health.NewHealthAggregator()
-			ds := map[string]LogDispatcher{CWDispatcher: cd}
-			cr = NewFlowLogsReporter(ds, flushInterval, hr, false, &NoOpLogOffset{})
+			cr = NewFlowLogsReporter(dispatcherMap, flushInterval, hr, false, &NoOpLogOffset{})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -392,10 +405,9 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 
 var _ = Describe("FlowLog per minute verification", func() {
 	var (
-		cr *FlowLogsReporter
-		cd LogDispatcher
-		ca FlowLogAggregator
-		cl cloudwatchlogsiface.CloudWatchLogsAPI
+		cr         *FlowLogsReporter
+		ca         FlowLogAggregator
+		dispatcher *testFlowLogDispatcher
 	)
 
 	mt := &mockTime{}
@@ -403,34 +415,79 @@ var _ = Describe("FlowLog per minute verification", func() {
 	Context("Flow logs per minute verification", func() {
 		It("Usage report is triggered before flushIntervalDuration", func() {
 			By("Triggering report right away before flushIntervalDuration")
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewFlowLogAggregator()
-			ds := map[string]LogDispatcher{CWDispatcher: cd}
+			dispatcherMap := map[string]LogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap["testFlowLog"] = dispatcher
 			mockFlushInterval := 600 * time.Second
-			cr = NewFlowLogsReporter(ds, mockFlushInterval, nil, false, &NoOpLogOffset{})
-			cr.AddAggregator(ca, []string{CWDispatcher})
+			cr = NewFlowLogsReporter(dispatcherMap, mockFlushInterval, nil, false, &NoOpLogOffset{})
+			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 
-			Expect(GetAndResetFlowsPerMinute()).Should(Equal(0.0))
+			Expect(cr.GetAndResetFlowLogsAvgPerMinute()).Should(Equal(0.0))
 		})
 		It("Usage report is triggered post flushIntervalDuration", func() {
 			By("Triggering report post flushIntervalDuration by mocking flushInterval")
-			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewFlowLogAggregator()
 			ca.IncludePolicies(true)
-			ds := map[string]LogDispatcher{CWDispatcher: cd}
-			cr = NewFlowLogsReporter(ds, flushInterval, nil, false, &NoOpLogOffset{})
-			cr.AddAggregator(ca, []string{CWDispatcher})
+			dispatcherMap := map[string]LogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{}
+			dispatcherMap["testFlowLog"] = dispatcher
+			cr = NewFlowLogsReporter(dispatcherMap, flushInterval, nil, false, &NoOpLogOffset{})
+			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 
 			cr.Report(muNoConn1Rule1AllowUpdate)
 			time.Sleep(1 * time.Second)
 
-			Expect(GetAndResetFlowsPerMinute()).Should(BeNumerically(">", 0))
+			Expect(cr.GetAndResetFlowLogsAvgPerMinute()).Should(BeNumerically(">", 0))
 		})
+	})
+})
+
+var _ = Describe("FlowLogAvg reporting for a FlowLogReporter", func() {
+	var (
+		cr         *FlowLogsReporter
+		ca         FlowLogAggregator
+		dispatcher *testFlowLogDispatcher
+	)
+
+	BeforeEach(func() {
+		ca = NewFlowLogAggregator()
+		ca.IncludePolicies(true)
+		dispatcherMap := map[string]LogDispatcher{}
+		dispatcher = &testFlowLogDispatcher{}
+		dispatcherMap["testFlowLog"] = dispatcher
+
+		cr = NewFlowLogsReporter(dispatcherMap, flushInterval, nil, false, &NoOpLogOffset{})
+	})
+
+	It("updateFlowLogsAvg does not cause a data race contention  with resetFlowLogsAvg", func() {
+		previousTotal := 10
+		newTotal := previousTotal + 5
+
+		cr.updateFlowLogsAvg(previousTotal)
+
+		var timeResetStart time.Time
+		var timeResetEnd time.Time
+
+		time.AfterFunc(2*time.Second, func() {
+			timeResetStart = time.Now()
+			cr.resetFlowLogsAvg()
+			timeResetEnd = time.Now()
+		})
+
+		// ok  update is a little after resetFlowLogsAvg because feedupdate has some preprocesssing
+		// before ti accesses flowAvg
+		time.AfterFunc(2*time.Second+10*time.Millisecond, func() {
+			cr.updateFlowLogsAvg(newTotal)
+		})
+
+		Eventually(func() int { return cr.flowLogAvg.totalFlows }, "6s", "2s").Should(Equal(newTotal))
+		Expect(cr.flowLogAvg.lastReportTime.Before(timeResetEnd)).To(BeTrue())
+		Expect(cr.flowLogAvg.lastReportTime.After(timeResetStart)).To(BeTrue())
 	})
 })
 
@@ -694,27 +751,6 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 
 	})
 })
-
-type timingoutCWFLMockClient struct {
-	cloudwatchlogsiface.CloudWatchLogsAPI
-	timeout time.Duration
-}
-
-func (c *timingoutCWFLMockClient) DescribeLogGroupsWithContext(ctx aws.Context, input *cloudwatchlogs.DescribeLogGroupsInput, req ...request.Option) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
-	time.Sleep(c.timeout)
-	return nil, awserr.New(cloudwatchlogs.ErrCodeServiceUnavailableException, "cloudwatch logs service not available", nil)
-}
-
-func (c *timingoutCWFLMockClient) CreateLogGroupWithContext(ctx aws.Context, input *cloudwatchlogs.CreateLogGroupInput, req ...request.Option) (*cloudwatchlogs.CreateLogGroupOutput, error) {
-	time.Sleep(c.timeout)
-	return nil, awserr.New(cloudwatchlogs.ErrCodeServiceUnavailableException, "cloudwatch logs service not available", nil)
-}
-
-func getFlowLog(fl string) (FlowLog, error) {
-	flowLog := &FlowLog{}
-	err := flowLog.Deserialize(fl)
-	return *flowLog, err
-}
 
 func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, srcMeta, dstMeta EndpointMetadata, dstService FlowService, srcLabels, dstLabels map[string]string, fp FlowPolicies, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) FlowLog {
 	return FlowLog{
