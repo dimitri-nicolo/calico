@@ -1358,8 +1358,8 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	globalThreatFeed := &v3.GlobalThreatFeed{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Status: calico.GlobalThreatFeedStatus{
-			LastSuccessfulSync:   metav1.Time{time.Now()},
-			LastSuccessfulSearch: metav1.Time{time.Now()},
+			LastSuccessfulSync:   &metav1.Time{Time: time.Now()},
+			LastSuccessfulSearch: &metav1.Time{Time: time.Now()},
 			ErrorConditions: []calico.ErrorCondition{
 				{
 					Type:    "foo",
@@ -1409,7 +1409,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 
 	globalThreatFeedUpdate := globalThreatFeedServer.DeepCopy()
 	globalThreatFeedUpdate.Spec.Content = "IPSet"
-	globalThreatFeedUpdate.Status.LastSuccessfulSync = v1.Time{Time: time.Now()}
+	globalThreatFeedUpdate.Status.LastSuccessfulSync = &v1.Time{Time: time.Now()}
 	globalThreatFeedServer, err = globalThreatFeedClient.Update(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
@@ -1417,7 +1417,7 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	if globalThreatFeedServer.Spec.Content != globalThreatFeedUpdate.Spec.Content {
 		return errors.New("didn't update spec.content")
 	}
-	if !globalThreatFeedServer.Status.LastSuccessfulSync.Time.Equal(time.Time{}) {
+	if globalThreatFeedServer.Status.LastSuccessfulSync != nil {
 		return errors.New("status was updated by Update()")
 	}
 

@@ -10010,14 +10010,12 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref common.Reference
 				Properties: map[string]spec.Schema{
 					"lastSuccessfulSync": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"lastSuccessfulSearch": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"errorConditions": {
@@ -10034,7 +10032,6 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref common.Reference
 						},
 					},
 				},
-				Required: []string{"lastSuccessfulSync", "lastSuccessfulSearch", "errorConditions"},
 			},
 		},
 		Dependencies: []string{
