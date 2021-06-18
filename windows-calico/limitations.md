@@ -8,8 +8,8 @@ canonical_url: '/windows-calico/limitations'
 
 | Feature                        |                                                              |
 | ------------------------------ | ------------------------------------------------------------ |
-| Distributions                  | **Supported:** EKS ([non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy)), AWS, GCE, Azure, Kubernetes on-premises, OpenShift. <br />**Not supported**: AKS, GKE, IKS, and Typha component for scaling (Linux-based feature) |
-| Install and upgrade            | **Supported**: Manifest with manual upgrade<br /><br />**Not supported**: <br />- Operator install<br />- Non-cluster hosts |
+| Distributions                  | **Supported:**<br />- EKS ([non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy))<br />- AWS<br />- GCE<br />- Azure<br />- Kubernetes on-premises<br />- OpenShift<br /><br />**Not supported:**<br />- AKS<br />- GKE<br />- IKS |
+| Install and upgrade            | **Supported**: Manifest with manual upgrade<br /><br />**Not supported**: <br />- Operator install<br />- Non-cluster hosts<br />- Typha component for scaling (Linux-based feature) |
 | Networking                     | **Supported**:<br />- Calico Enterprise VXLAN, no cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise non-overlay mode with BGP peering with [limitations](#bgp-networking-limitations)<br />- IPv4 |
 |                                | **Not supported**: <br />- Overlay mode with BGP peering<br />- IP in IP overlay with BPG routing<br />- Cross-subnet support and MTU setting for VXLAN<br />- IPv6 and dual stack<br />- Dual-ToR<br />- Service advertisement<br />- Multiple networks to pods |
 | Policy                         | **Supported**: <br />- Tiered policy with [limitations](#network-policy-with-tiers)<br />- DNS policy with [limitations](#dns-policy-limitations)<br />- Policy recommendations<br />- Policy impact preview |
