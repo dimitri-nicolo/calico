@@ -2,7 +2,7 @@ version: v1.0
 name: App Policy Private
 
 execution_time_limit:
-  minutes: 30
+  hours: 4
 
 agent:
   machine:
@@ -39,6 +39,8 @@ blocks:
     task:
       jobs:
         - name: Run CI
+          execution_time_limit:
+            minutes: 30
           commands:
             - make ci
             - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
@@ -63,6 +65,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 30
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
