@@ -2,7 +2,7 @@ version: v1.0
 name: CNIPlugin
 
 execution_time_limit:
-  hours: 2
+  hours: 4
 
 agent:
   machine:
@@ -16,18 +16,18 @@ auto_cancel:
     when: "branch != 'master'"
 
 promotions:
-- name: Cleanup
-  pipeline_file: cleanup.yml
-  auto_promote:
-    when: "result = 'stopped'"
-# Run the pin update process in case there were a backlog of pin update requests
-- name: Update Pins
-  pipeline_file: update_pins.yml
-  auto_promote:
-    # If the block has passed and the branch is for master or a release branch then run the pin updates. Note that
-    # this doesn't try to restrict which release branches, as the presence of this auto promotion code means that
-    # it can handle updating the pins in this fashion.
-    when: "(result = 'passed') and ((branch = 'master') or (branch =~ '^release-calient-v\d*\.\d*'))"
+  - name: Cleanup
+    pipeline_file: cleanup.yml
+    auto_promote:
+      when: "result = 'stopped'"
+  # Run the pin update process in case there were a backlog of pin update requests
+  - name: Update Pins
+    pipeline_file: update_pins.yml
+    auto_promote:
+      # If the block has passed and the branch is for master or a release branch then run the pin updates. Note that
+      # this doesn't try to restrict which release branches, as the presence of this auto promotion code means that
+      # it can handle updating the pins in this fashion.
+      when: "(result = 'passed') and ((branch = 'master') or (branch =~ '^release-calient-v\d*\.\d*'))"
 
 global_job_config:
   secrets:
@@ -59,9 +59,13 @@ blocks:
           - git fetch --unshallow
       jobs:
         - name: Test Version
+          execution_time_limit:
+            minutes: 120
           commands:
             - make test-cni-versions
         - name: Test Install
+          execution_time_limit:
+            minutes: 120
           commands:
             - make test-install-cni
 
@@ -76,6 +80,8 @@ blocks:
           - git fetch --unshallow
       jobs:
         - name: Static Checks
+          execution_time_limit:
+            minutes: 15
           commands:
             - make build
             - make static-checks
@@ -121,6 +127,8 @@ blocks:
           value: 1.17.2
       jobs:
         - name: FV Test matrix
+          execution_time_limit:
+            minutes: 120
           commands:
             - ./.semaphore/run-win-fv.sh
 
@@ -169,6 +177,8 @@ blocks:
           value: 1.4.4
       jobs:
         - name: FV Test matrix
+          execution_time_limit:
+            minutes: 120
           commands:
             - ./.semaphore/run-win-fv.sh
 
@@ -194,6 +204,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
@@ -207,6 +219,8 @@ blocks:
         - name: semaphore-api
       jobs:
         - name: Trigger pin updates
+          execution_time_limit:
+            minutes: 5
           commands:
             - checkout
             - make semaphore-run-auto-pin-update-workflows
