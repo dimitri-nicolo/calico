@@ -2,7 +2,7 @@ version: v1.0
 name: felix-private
 
 execution_time_limit:
-  hours: 2
+  hours: 4
 
 agent:
   machine:
@@ -59,6 +59,8 @@ blocks:
         os_image: ubuntu1804
     jobs:
     - name: Build and run UT, k8sfv
+      execution_time_limit:
+        minutes: 30
       commands:
       - checkout
       - cache restore go-pkg-cache
@@ -100,6 +102,8 @@ blocks:
       - sudo modprobe ipip
     jobs:
     - name: FV Test matrix
+      execution_time_limit:
+        minutes: 120
       commands:
       - make check-wireguard
       - make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
@@ -126,6 +130,8 @@ blocks:
       - ./.semaphore/create-test-vms ${VM_PREFIX}
     jobs:
     - name: UT/FV tests on new kernel
+      execution_time_limit:
+        minutes: 120
       commands:
       - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
     epilogue:
@@ -180,6 +186,8 @@ blocks:
         value: 1.20.1
     jobs:
       - name: FV Test matrix
+        execution_time_limit:
+          minutes: 120
         commands:
           - ./.semaphore/run-win-fv
 
@@ -198,6 +206,8 @@ blocks:
       - cache restore go-mod-cache
     jobs:
     - name: Static checks
+      execution_time_limit:
+        minutes: 15
       commands:
       - make static-checks
 - name: Trigger pin updates
@@ -209,6 +219,8 @@ blocks:
       - name: semaphore-api
     jobs:
       - name: Trigger pin updates
+        execution_time_limit:
+          minutes: 5
         commands:
           - checkout
           - make semaphore-run-auto-pin-update-workflows
