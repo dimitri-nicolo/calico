@@ -6,7 +6,7 @@ agent:
     os_image: ubuntu1804
 
 execution_time_limit:
-  minutes: 120
+  hours: 4
 
 global_job_config:
   secrets:
@@ -64,6 +64,8 @@ blocks:
           - make mod-download
       jobs:
       - name: "Static Checks / UT and FV tests"
+        execution_time_limit:
+          minutes: 120
         commands:
           - make static-checks
           - make ut
@@ -96,9 +98,13 @@ blocks:
           - make mod-download
       jobs:
         - name: "BGP Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/bgp/ make st
         - name: "CalicoCtl Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/calicoctl/ make st
 #        Config tests don't seem to work and seem like they were never run
@@ -106,18 +112,28 @@ blocks:
 #          commands:
 #            - ST_TO_RUN=tests/st/config/ make st
         - name: "Enterprise Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/enterprise/ make st
         - name: "IPAM Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/ipam/ make st
         - name: "Policy Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/policy/ make st
         - name: "Utils Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/utils/ make st
         - name: "Early Networking Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - ST_TO_RUN=tests/st/early/ make st
 
@@ -147,12 +163,18 @@ blocks:
           - git fetch --unshallow
       jobs:
         - name: "Dual Stack Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - make k8s-test
         - name: "Vanilla Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - make k8s-test K8ST_RIG=vanilla
         - name: "Dual Tor Tests"
+          execution_time_limit:
+            minutes: 120
           commands:
             - make dual-tor-test
 
@@ -169,6 +191,8 @@ blocks:
           - git fetch --unshallow
       jobs:
       - name: "build Windows archive"
+        execution_time_limit:
+          minutes: 45
         commands:
         - if [ ! -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make build-windows-archive; fi
 
@@ -196,10 +220,14 @@ blocks:
           - git fetch --unshallow
       jobs:
       - name: "make cd"
+        execution_time_limit:
+          minutes: 30
         commands:
         - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
       - name: "make windows"
+        execution_time_limit:
+          minutes: 30
         commands:
         - |
           if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
