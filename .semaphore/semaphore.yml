@@ -2,7 +2,7 @@ version: v1.0
 name: Intrusion Detection
 
 execution_time_limit:
-  minutes: 30
+  hours: 4
 
 agent:
   machine:
@@ -42,6 +42,8 @@ blocks:
     task:
       jobs:
         - name: Controller CI
+          execution_time_limit:
+            minutes: 30
           commands:
             - cd controller
             - make ci
@@ -51,6 +53,8 @@ blocks:
     task:
       jobs:
         - name: Installer CI
+          execution_time_limit:
+            minutes: 30
           commands:
             - cd install
             - make ci
@@ -73,6 +77,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - cd controller
@@ -96,6 +102,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - cd install
