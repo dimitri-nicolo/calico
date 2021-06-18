@@ -2,7 +2,7 @@ version: v1.0
 name: Kibana Docker Image
 
 execution_time_limit:
-  minutes: 90
+  hours: 4
 
 agent:
   machine:
@@ -42,6 +42,8 @@ blocks:
     task:
       jobs:
         - name: Build
+          execution_time_limit:
+            minutes: 90
           commands:
             - make kibana-image
             - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
@@ -68,6 +70,8 @@ blocks:
           - docker load -i ${KIBANA_IMAGE_TAR_PATH}
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 30
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
@@ -77,6 +81,8 @@ blocks:
             - name: GTM_INTEGRATION
               value: disabled
         - name: Run CD (Tesla)
+          execution_time_limit:
+            minutes: 30
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
