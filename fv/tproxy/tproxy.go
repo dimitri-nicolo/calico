@@ -154,6 +154,12 @@ func (t *TProxy) ProxiedCount(client, pod, service string) int {
 	return t.proxied[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
 }
 
+func (t *TProxy) ProxiedCountFn(client, pod, service string) func() int {
+	return func() int {
+		return t.ProxiedCount(client, pod, service)
+	}
+}
+
 func (t *TProxy) acceptedAdd(client, pod, service string) {
 	t.connLock.Lock()
 	t.accepted[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]++
@@ -164,4 +170,10 @@ func (t *TProxy) AcceptedCount(client, pod, service string) int {
 	t.connLock.Lock()
 	defer t.connLock.Unlock()
 	return t.accepted[ConnKey{ClientIP: client, PodIPPort: pod, ServiceIPPort: service}]
+}
+
+func (t *TProxy) AcceptedCountFn(client, pod, service string) func() int {
+	return func() int {
+		return t.AcceptedCount(client, pod, service)
+	}
 }
