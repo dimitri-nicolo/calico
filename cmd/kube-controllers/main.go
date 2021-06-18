@@ -524,6 +524,13 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				true,
 				*cfg.Controllers.ElasticsearchConfiguration),
 		}
+	} else {
+		// Elasticsearch is often removed due to the removal of the LogStorage CR, in which case calico-kube-controllers
+		// will restart without the elasticsearch controller. For this use-case we can do a one-time attempt to delete them.
+		err := elasticsearchconfiguration.CleanUpESUserSecrets(k8sClientset)
+		if err != nil {
+			log.WithError(err).Warn("failed to remove existing elasticsearch secrets")
+		}
 	}
 	if cfg.Controllers.ManagedCluster != nil {
 		// We only want these clients created if the managedcluster controller type is enabled
