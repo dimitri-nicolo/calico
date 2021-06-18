@@ -1,11 +1,14 @@
 version: v1.0
 name: egress-gateway build and test
+
+execution_time_limit:
+  hours: 4
+
 agent:
   machine:
     type: e1-standard-4
     os_image: ubuntu1804
-execution_time_limit:
-  minutes: 120
+
 global_job_config:
   secrets:
     - name: docker-hub
@@ -28,23 +31,23 @@ global_job_config:
       - git fetch --unshallow || true
 
 promotions:
-- name: Push images
-  pipeline_file: push-images.yml
-  auto_promote:
-    # Push images only if build passed and only for branches, not PRs.
-    when: "result = 'passed' and branch =~ '.+'"
+  - name: Push images
+    pipeline_file: push-images.yml
+    auto_promote:
+      # Push images only if build passed and only for branches, not PRs.
+      when: "result = 'passed' and branch =~ '.+'"
 
 blocks:
-# Run the full set of tests. Each job can potentially be run in parallel,
-# provided Semaphore has enough boxes available.
-- name: "Tests"
-  execution_time_limit:
-    # Semaphore's default is 1 hour, and these tests take about that time or a little
-    # longer.
-    minutes: 90
-  dependencies: []
-  task:
-    jobs:
-    - name: "make ci"
-      commands:
-      - make ci
+  # Run the full set of tests. Each job can potentially be run in parallel,
+  # provided Semaphore has enough boxes available.
+  - name: "Tests"
+    dependencies: []
+    task:
+      jobs:
+        - name: "make ci"
+          execution_time_limit:
+            # Semaphore's default is 1 hour, and these tests take about that time or a little
+            # longer.
+            minutes: 90
+          commands:
+           - make ci
