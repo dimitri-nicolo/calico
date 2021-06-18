@@ -36,10 +36,6 @@ func newTproxyManager(
 		mark: mark,
 	}
 	if ipSetsV4 != nil {
-		ipSetsV4.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			[]string{},
-		)
 
 		rt := routetable.New(
 			nil,
@@ -84,10 +80,6 @@ func newTproxyManager(
 	}
 
 	if ipSetsV6 != nil {
-		ipSetsV6.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			[]string{},
-		)
 
 		rt := routetable.New(
 			nil,

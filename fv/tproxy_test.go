@@ -16,17 +16,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
-
 	. "github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/tproxy"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
 var _ = describeTProxyTest(false)
@@ -54,29 +53,6 @@ func describeTProxyTest(ipip bool) bool {
 				w            [numNodes][2]*workload.Workload
 				clientset    *kubernetes.Clientset
 			)
-
-			BeforeEach(func() {
-				options = infrastructure.DefaultTopologyOptions()
-
-				cc = &Checker{
-					CheckSNAT: true,
-				}
-				cc.Protocol = "tcp"
-
-				options.FelixLogSeverity = "debug"
-				options.NATOutgoingEnabled = true
-				options.AutoHEPsEnabled = true
-
-				if !ipip {
-					options.IPIPEnabled = false
-					options.IPIPRoutesEnabled = false
-				}
-
-				options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
-
-				// XXX this is temporary until service annotation does the job
-				options.ExtraEnvVars["FELIX_IPSETSREFRESHINTERVAL"] = "0"
-			})
 
 			createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
 				log.WithField("policy", dumpResource(policy)).Info("Creating policy")
@@ -111,7 +87,28 @@ func describeTProxyTest(ipip bool) bool {
 				}, "60s", "5s").Should(BeTrue())
 			}
 
-			JustBeforeEach(func() {
+			BeforeEach(func() {
+				options = infrastructure.DefaultTopologyOptions()
+
+				cc = &Checker{
+					CheckSNAT: true,
+				}
+				cc.Protocol = "tcp"
+
+				options.FelixLogSeverity = "debug"
+				options.NATOutgoingEnabled = true
+				options.AutoHEPsEnabled = true
+
+				if !ipip {
+					options.IPIPEnabled = false
+					options.IPIPRoutesEnabled = false
+				}
+
+				options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
+
+				// XXX this is temporary until service annotation does the job
+				options.ExtraEnvVars["FELIX_IPSETSREFRESHINTERVAL"] = "0"
+
 				infra = getInfra()
 				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
