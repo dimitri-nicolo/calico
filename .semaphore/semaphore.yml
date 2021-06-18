@@ -1,7 +1,9 @@
 version: v1.0
 name: libcalico-go
+
 execution_time_limit:
-  hours: 2
+  hours: 4
+
 agent:
   machine:
     type: e1-standard-2
@@ -19,6 +21,8 @@ blocks:
     task:
       jobs:
         - name: Build
+          execution_time_limit:
+            minutes: 120
           commands:
             - checkout
             - make ci
@@ -32,6 +36,8 @@ blocks:
         - name: semaphore-api
       jobs:
         - name: Trigger pin updates
+          execution_time_limit:
+            minutes: 5
           commands:
             - checkout
             - make semaphore-run-auto-pin-update-workflows
