@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ type LogAction struct {
 }
 
 func (g LogAction) ToFragment(features *Features) string {
-	return fmt.Sprintf(`--jump LOG --log-prefix "%s: "`, g.Prefix)
+	return fmt.Sprintf(`--jump LOG --log-prefix "%s: " --log-level 5`, g.Prefix)
 }
 
 func (g LogAction) String() string {

@@ -85,7 +85,7 @@ func describeTProxyTest(ipip bool) bool {
 						}
 					}
 					return len(results) == len(felixes)
-				}, "60s", "5s").Should(BeTrue())
+				}, "90s", "5s").Should(BeTrue())
 			}
 
 			BeforeEach(func() {
@@ -197,10 +197,6 @@ func describeTProxyTest(ipip bool) bool {
 
 				k8sClient = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				_ = k8sClient
-
-				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-				createService(v1Svc, clientset)
 			})
 
 			JustAfterEach(func() {
@@ -251,6 +247,10 @@ func describeTProxyTest(ipip bool) bool {
 							"-j", "DNAT", "--to-destination",
 							pod)
 					}
+					// for this context create service before each test
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					createService(v1Svc, clientset)
 				})
 
 				It("should have connectivity from all workloads via ClusterIP", func() {
