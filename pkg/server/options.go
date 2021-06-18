@@ -4,7 +4,9 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 
-	"github.com/tigera/es-gateway/pkg/elastic"
+	"github.com/tigera/es-gateway/pkg/clients/elastic"
+	"github.com/tigera/es-gateway/pkg/clients/kibana"
+	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 )
 
 // Option is a common format for New() options
@@ -54,6 +56,24 @@ func WithInternalCreds(certBytes []byte, keyBytes []byte) Option {
 func WithESClient(client elastic.Client) Option {
 	return func(s *Server) error {
 		s.esClient = client
+		return nil
+	}
+}
+
+// WithKibanaClient sets the Kibana client for the server (needed for Kibana API call
+// to perform health checking).
+func WithKibanaClient(client kibana.Client) Option {
+	return func(s *Server) error {
+		s.kbClient = client
+		return nil
+	}
+}
+
+// WithK8sClient sets the K8s clientset for the server (needed for retrieving K8s resources
+// related to ES users).
+func WithK8sClient(client kubernetes.Client) Option {
+	return func(s *Server) error {
+		s.k8sClient = client
 		return nil
 	}
 }

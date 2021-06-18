@@ -26,6 +26,8 @@ type Config struct {
 	HTTPSCert string `default:"/certs/https/cert" split_words:"true" json:"-"`
 	HTTPSKey  string `default:"/certs/https/key" split_words:"true" json:"-"`
 
+	K8sConfigPath string `split_words:"true"`
+
 	ElasticEndpoint      string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
 	ElasticCatchAllRoute string `default:"/" split_words:"true"`
 	ElasticCABundlePath  string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`

@@ -11,7 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
-	"github.com/tigera/es-gateway/pkg/elastic"
+
+	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )

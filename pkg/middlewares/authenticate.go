@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-gateway/pkg/elastic"
+	"github.com/tigera/es-gateway/pkg/clients/elastic"
 )
 
 type GatewayContextKey string

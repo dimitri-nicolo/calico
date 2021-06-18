@@ -10,7 +10,9 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/es-gateway/pkg/elastic"
+	"github.com/tigera/es-gateway/pkg/clients/elastic"
+	"github.com/tigera/es-gateway/pkg/clients/kibana"
+	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 	"github.com/tigera/es-gateway/pkg/handlers/gateway"
 	"github.com/tigera/es-gateway/pkg/handlers/health"
 	"github.com/tigera/es-gateway/pkg/middlewares"
@@ -32,8 +34,9 @@ type Server struct {
 	addr         string          // Address for server to listen on
 	internalCert tls.Certificate // Certificate chain used for all external requests
 
-	// Elasticsearch client for making API calls required by ES Gateway
-	esClient elastic.Client
+	esClient  elastic.Client    // Elasticsearch client for making API calls required by ES Gateway
+	kbClient  kibana.Client     // Kibana client for making API calls required by ES Gateway
+	k8sClient kubernetes.Client // K8s client for retrieving K8s resources related to ES users
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -65,7 +68,8 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	}
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
-	router.HandleFunc("/health", health.Health).Name("health")
+	healthHandler := health.GetHealthHandler(srv.esClient, srv.kbClient, srv.k8sClient)
+	router.HandleFunc("/health", healthHandler).Name("health")
 
 	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
 	kibanaHandler, err := gateway.GetProxyHandler(kibanaTarget)

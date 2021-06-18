@@ -7,8 +7,11 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/es-gateway/pkg/clients/elastic"
+	"github.com/tigera/es-gateway/pkg/clients/kibana"
+	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 	"github.com/tigera/es-gateway/pkg/config"
-	"github.com/tigera/es-gateway/pkg/elastic"
 	"github.com/tigera/es-gateway/pkg/proxy"
 	"github.com/tigera/es-gateway/pkg/server"
 	"github.com/tigera/es-gateway/pkg/version"
@@ -85,6 +88,7 @@ func init() {
 func main() {
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 
+	// Create Kibana target that will be used to configure all routing to Kibana target.
 	kibanaTarget, err := proxy.CreateTarget(
 		kibanaCatchAllRoute,
 		config.KibanaRoutes,
@@ -96,6 +100,7 @@ func main() {
 		log.WithError(err).Fatal("failed to configure Kibana target for ES Gateway.")
 	}
 
+	// Create Elasticsearch target that will be used to configure all routing to ES target.
 	esTarget, err := proxy.CreateTarget(
 		elasticCatchAllRoute,
 		config.ElasticsearchRoutes,
@@ -107,6 +112,7 @@ func main() {
 		log.WithError(err).Fatal("failed to configure ES target for ES Gateway.")
 	}
 
+	// Create client for Elasticsearch API calls.
 	esClient, err := elastic.NewClient(
 		cfg.ElasticEndpoint,
 		cfg.ElasticUsername,
@@ -117,10 +123,29 @@ func main() {
 		log.WithError(err).Fatal("failed to configure ES client for ES Gateway.")
 	}
 
+	// Create client for Kibana API calls.
+	kbClient, err := kibana.NewClient(
+		cfg.KibanaEndpoint,
+		cfg.ElasticUsername,
+		cfg.ElasticPassword,
+		cfg.KibanaCABundlePath,
+	)
+	if err != nil {
+		log.WithError(err).Fatal("failed to configure Kibana client for ES Gateway.")
+	}
+
+	// Create client for Kube API calls.
+	k8sClient, err := kubernetes.NewClient(cfg.K8sConfigPath)
+	if err != nil {
+		log.WithError(err).Fatal("failed to configure Kibana client for ES Gateway.")
+	}
+
 	opts := []server.Option{
 		server.WithAddr(addr),
 		server.WithInternalTLSFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithESClient(esClient),
+		server.WithKibanaClient(kbClient),
+		server.WithK8sClient(k8sClient),
 	}
 
 	srv, err := server.New(esTarget, kibanaTarget, opts...)
