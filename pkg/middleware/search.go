@@ -14,6 +14,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/httputils"
 
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
@@ -26,13 +27,15 @@ const (
 	maxNumResults = 10000
 )
 
-type getIndex func(string) string
-
 // SearchHandler is a handler for the /search endpoint.
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func SearchHandler(getIndex getIndex, client *elastic.Client) http.Handler {
+func SearchHandler(
+	idxHelper lmaindex.Helper,
+	authReview AuthorizationReview,
+	client *elastic.Client,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
@@ -42,7 +45,7 @@ func SearchHandler(getIndex getIndex, client *elastic.Client) http.Handler {
 			return
 		}
 		// Search.
-		response, err := search(getIndex, params, client)
+		response, err := search(idxHelper, params, authReview, client, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -105,18 +108,19 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	if params.PageNum*params.PageSize > maxNumResults {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
-			Msg:    "Page number overflow",
-			Err:    errors.New("Page number / Page size combination is too large"),
+			Msg:    "page number overflow",
+			Err:    errors.New("page number / Page size combination is too large"),
 		}
 	}
 
 	// At the moment, we only support a single sort by field.
-	//TODO(rlb): Need to check the fields are valid for the index type. Maybe something else for the index helper.
+	//TODO(rlb): Need to check the fields are valid for the index type. Maybe something else for the
+	// index helper.
 	if len(params.SortBy) > 1 {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
-			Msg:    "Too many sort fields specified",
-			Err:    errors.New("Too many sort fields specified"),
+			Msg:    "too many sort fields specified",
+			Err:    errors.New("too many sort fields specified"),
 		}
 	}
 
@@ -125,11 +129,49 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 
 // search returns the results of ES search.
 func search(
-	getIndex getIndex, params *v1.SearchRequest, esClient *elastic.Client,
+	idxHelper lmaindex.Helper,
+	params *v1.SearchRequest,
+	authReview AuthorizationReview,
+	esClient *elastic.Client,
+	r *http.Request,
 ) (*v1.SearchResponse, error) {
-	query := elastic.NewBoolQuery()
-	index := getIndex(params.ClusterName)
+	// Create a context with timeout to ensure we don't block for too long with this query.
+	ctx, cancelWithTimeout := context.WithTimeout(context.Background(), params.Timeout.Duration)
+	// Releases timer resources if the operation completes before the timeout.
+	defer cancelWithTimeout()
 
+	index := idxHelper.GetIndex(params.ClusterName)
+
+	esquery := elastic.NewBoolQuery()
+	// Selector query.
+	var selector elastic.Query
+	var err error
+	if len(params.Selector) > 0 {
+		selector, err = idxHelper.NewSelectorQuery(params.Selector)
+		if err != nil {
+			// NewSelectorQuery returns an HttpStatusError.
+			return nil, err
+		}
+		esquery = esquery.Must(selector)
+	}
+
+	// Time range query.
+	timeRange := idxHelper.NewTimeRangeQuery(params.TimeRange.From, params.TimeRange.To)
+	esquery = esquery.Filter(timeRange)
+
+	// Rbac query.
+	verbs, err := authReview.PerformReviewForElasticLogs(ctx, r, params.ClusterName)
+	if err != nil {
+		return nil, err
+	}
+	if rbac, err := idxHelper.NewRBACQuery(verbs); err != nil {
+		// NewRBACQuery returns an HttpStatusError.
+		return nil, err
+	} else if rbac != nil {
+		esquery = esquery.Filter(rbac)
+	}
+
+	// Sorting.
 	var sortby []esSearch.SortBy
 	for _, s := range params.SortBy {
 		if s.Field == "" {
@@ -142,8 +184,8 @@ func search(
 		})
 	}
 
-	rquery := &esSearch.Query{
-		Query:    query,
+	query := &esSearch.Query{
+		EsQuery:  esquery,
 		PageSize: params.PageSize,
 		From:     params.PageNum * params.PageSize,
 		Index:    index,
@@ -151,7 +193,7 @@ func search(
 		SortBy:   sortby,
 	}
 
-	result, err := esSearch.Hits(context.TODO(), esClient, rquery)
+	result, err := esSearch.Hits(ctx, query, esClient)
 	if err != nil {
 		log.WithError(err).Info("Error getting search results from elastic")
 		return nil, &httputils.HttpStatusError{
