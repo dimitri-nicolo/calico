@@ -2,7 +2,7 @@ version: v1.0
 name: Typha
 
 execution_time_limit:
-  hours: 2
+  hours: 4
 
 agent:
   machine:
@@ -44,6 +44,8 @@ blocks:
     task:
       jobs:
         - name: Build
+          execution_time_limit:
+            minutes: 30
           commands:
             - make build
             - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
@@ -55,6 +57,8 @@ blocks:
     task:
       jobs:
         - name: Run UT
+          execution_time_limit:
+            minutes: 120
           commands:
             - make ci EXCEPT=k8sfv-test
 
@@ -63,6 +67,8 @@ blocks:
     task:
       jobs:
         - name: Run FV
+          execution_time_limit:
+            minutes: 120
           commands:
             - make image
             - cd .. && git clone git@github.com:tigera/felix-private.git && cd felix-private
@@ -75,6 +81,8 @@ blocks:
         - name: foss-api-key
       jobs:
         - name: Foss Checks
+          execution_time_limit:
+            minutes: 30
           commands:
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make foss-checks; fi
 
@@ -96,6 +104,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
@@ -109,6 +119,8 @@ blocks:
         - name: semaphore-api
       jobs:
         - name: Trigger pin updates
+          execution_time_limit:
+            minutes: 5
           commands:
             - checkout
             - make semaphore-run-auto-pin-update-workflows
