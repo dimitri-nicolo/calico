@@ -100,6 +100,18 @@ func (g RejectAction) String() string {
 	return "Reject"
 }
 
+type TraceAction struct {
+	TypeTrace struct{}
+}
+
+func (g TraceAction) ToFragment(features *Features) string {
+	return "--jump TRACE"
+}
+
+func (g TraceAction) String() string {
+	return "Trace"
+}
+
 type LogAction struct {
 	Prefix  string
 	TypeLog struct{}
@@ -326,4 +338,22 @@ func (g ChecksumAction) ToFragment(features *Features) string {
 
 func (g ChecksumAction) String() string {
 	return "Checksum-fill"
+}
+
+type TProxyAction struct {
+	Mark uint32
+	Mask uint32
+	Port uint16
+}
+
+func (tp TProxyAction) ToFragment(_ *Features) string {
+	if tp.Mask == 0 {
+		return fmt.Sprintf("--jump TPROXY --tproxy-mark %#x --on-port %d", tp.Mark, tp.Port)
+	}
+
+	return fmt.Sprintf("--jump TPROXY --tproxy-mark %#x/%#x --on-port %d", tp.Mark, tp.Mask, tp.Port)
+}
+
+func (tp TProxyAction) String() string {
+	return fmt.Sprintf("TProxy mark %#x/%#x port %d", tp.Mark, tp.Mask, tp.Port)
 }

@@ -600,6 +600,10 @@ func (c *Config) EgressIPCheckEnabled() bool {
 	return c.EgressIPSupport == "EnabledPerNamespace" || c.EgressIPSupport == "EnabledPerNamespaceOrPerPod"
 }
 
+func (c *Config) TPROXYModeEnabled() bool {
+	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
+}
+
 func (c *Config) IPSecEnabled() bool {
 	return c.IPSecMode != "" && c.IPSecIKEAlgorithm != "" && c.IPSecESPAlgorithm != ""
 }

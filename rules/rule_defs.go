@@ -53,10 +53,14 @@ const (
 	ChainNATOutput           = ChainNamePrefix + "OUTPUT"
 	ChainNATOutgoing         = ChainNamePrefix + "nat-outgoing"
 
-	ChainManglePrerouting        = ChainNamePrefix + "PREROUTING"
-	ChainManglePostrouting       = ChainNamePrefix + "POSTROUTING"
-	ChainManglePreroutingEgress  = ChainNamePrefix + "pre-egress"
-	ChainManglePostroutingEgress = ChainNamePrefix + "post-egress"
+	ChainManglePrerouting             = ChainNamePrefix + "PREROUTING"
+	ChainManglePostrouting            = ChainNamePrefix + "POSTROUTING"
+	ChainManglePreroutingEgress       = ChainNamePrefix + "pre-egress"
+	ChainManglePostroutingEgress      = ChainNamePrefix + "post-egress"
+	ChainManglePreroutingTProxy       = ChainNamePrefix + "pre-tproxy"
+	ChainManglePreroutingTProxyEstabl = ChainNamePrefix + "pre-tproxy-establ"
+	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
+	ChainMangleOutput                 = ChainNamePrefix + "OUTPUT"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -130,6 +134,9 @@ const (
 		`-A POSTROUTING -o tunl0 -m addrtype ! --src-type LOCAL --limit-iface-out -m addrtype --src-type LOCAL -j MASQUERADE`
 
 	KubeProxyInsertRuleRegex = `-j KUBE-[a-zA-Z0-9-]*SERVICES|-j KUBE-FORWARD`
+
+	ChainFilterInputTProxy  = ChainNamePrefix + "input-filter-tproxy"
+	ChainFilterOutputTProxy = ChainNamePrefix + "output-filter-tproxy"
 )
 
 type RuleAction byte
@@ -343,6 +350,9 @@ type Config struct {
 	// to mark non-calico (workload or host) endpoint.
 	IptablesMarkNonCaliEndpoint uint32
 
+	// IptablesMarkProxy marks packets that are to/from proxy.
+	IptablesMarkProxy uint32
+
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
 
@@ -399,6 +409,9 @@ type Config struct {
 	EgressIPInterface string
 
 	DNSTrustedServers []config.ServerPort
+
+	TPROXYMode string
+	TPROXYPort int
 }
 
 var unusedBitsInBPFMode = map[string]bool{
@@ -422,6 +435,10 @@ func (c *Config) validate() {
 			fieldName == "IptablesMarkEgress" {
 			// These mark bits are only used when needed (by IPVS, IPsec and Egress IP support, respectively) so we allow them to
 			// be zero.
+			continue
+		}
+		// Not set if Proxy is not enabled
+		if fieldName == "IptablesMarkProxy" && !c.TPROXYModeEnabled() {
 			continue
 		}
 		if strings.HasPrefix(fieldName, "IptablesMark") {
@@ -527,4 +544,8 @@ func NewRenderer(config Config) RuleRenderer {
 		mangleAllowAction:  mangleAllowAction,
 		blockCIDRAction:    blockCIDRAction,
 	}
+}
+
+func (c *Config) TPROXYModeEnabled() bool {
+	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
 }

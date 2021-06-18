@@ -538,6 +538,23 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		cleanUpVXLANDevice()
 	}
 
+	// Allocate the tproxy route table indices before Egress grabs them all
+	var tproxyRTIndex4, tproxyRTIndex6 int
+
+	if config.RulesConfig.TPROXYModeEnabled() {
+		var err error
+		tproxyRTIndex4, err = config.RouteTableManager.GrabIndex()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v4")
+		}
+		if config.IPv6Enabled {
+			tproxyRTIndex6, err = config.RouteTableManager.GrabIndex()
+			if err != nil {
+				log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v6")
+			}
+		}
+	}
+
 	if config.EgressIPEnabled {
 		// If IPIP or VXLAN is enabled, MTU of egress.calico device should be 50 bytes less than
 		// MTU of IPIP or VXLAN device. MTU of the VETH device of a workload should be set to
@@ -748,6 +765,25 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 
 		}
+	}
+
+	var ipSetsV6 *ipsets.IPSets
+
+	if config.IPv6Enabled {
+		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
+		ipSetsV6 = ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
+		dp.ipSets = append(dp.ipSets, ipSetsV6)
+	}
+
+	if config.RulesConfig.TPROXYModeEnabled() {
+		tproxyMgr := newTproxyManager(config.RulesConfig.IptablesMarkProxy,
+			config.MaxIPSetSize,
+			tproxyRTIndex4, tproxyRTIndex6,
+			ipSetsV4, ipSetsV6,
+			config,
+			dp.loopSummarizer,
+		)
+		dp.RegisterManager(tproxyMgr)
 	}
 
 	if config.BPFEnabled {
@@ -1042,9 +1078,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			iptablesOptions,
 		)
 
-		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6, dp.loopSummarizer)
-		dp.ipSets = append(dp.ipSets, ipSetsV6)
 		dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV6)
 		dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV6)
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
@@ -1772,6 +1805,12 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			Action: iptables.JumpAction{Target: rules.ChainManglePostrouting},
 		})
 		t.InsertOrAppendRules("POSTROUTING", rs)
+
+		rs = []iptables.Rule{}
+		rs = append(rs, iptables.Rule{
+			Action: iptables.JumpAction{Target: rules.ChainMangleOutput},
+		})
+		t.InsertOrAppendRules("OUTPUT", rs)
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {

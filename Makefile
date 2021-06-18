@@ -341,7 +341,7 @@ else
 FV_BINARY=calico-felix-amd64
 endif
 
-image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/$(FV_BINARY) image-wgtool
+image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/tproxy bin/$(FV_BINARY) image-wgtool
 	docker build -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin;
 ifeq ($(ARCH),amd64)
 	docker tag $(FELIX_IMAGE)-test:latest-$(ARCH) $(FELIX_IMAGE)-test:latest
@@ -558,6 +558,12 @@ bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES) $(LOCAL_BUILD_DEP)
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
+
+bin/tproxy: $(SRC_FILES) $(FV_SRC_FILES) $(LOCAL_BUILD_DEP)
+	@echo Building tproxy...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/tproxy/cmd"'
 
 bin/iptables-locker: $(LOCAL_BUILD_DEP) go.mod $(shell find iptables -type f -name '*.go' -print)
 	@echo Building iptables-locker...
