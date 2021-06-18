@@ -36,28 +36,26 @@ global_job_config:
 
 blocks:
   - name: Unit Tests
-    execution_time_limit:
-      minutes: 30
     dependencies: []
     task:
       jobs:
         - name: "make ci"
+          execution_time_limit:
+            minutes: 30
           commands:
             - make ci
 
   - name: Static Checks
-    execution_time_limit:
-      minutes: 30
     dependencies: []
     task:
       jobs:
         - name: Static Checks
+          execution_time_limit:
+            minutes: 15
           commands:
             - make static-checks
 
   - name: 'Push Images (non-PR builds only)'
-    execution_time_limit:
-      minutes: 15
     dependencies: ["Unit Tests", "Static Checks"]
     skip:
       # Only run on branches, not PRs.
@@ -75,13 +73,13 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
 
   - name: Trigger pin updates
-    execution_time_limit:
-      minutes: 5
     dependencies: []
     skip:
       when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"
@@ -90,6 +88,8 @@ blocks:
         - name: semaphore-api
       jobs:
         - name: Trigger pin updates
+          execution_time_limit:
+            minutes: 5
           commands:
             - checkout
             - make semaphore-run-auto-pin-update-workflows
