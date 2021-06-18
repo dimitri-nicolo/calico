@@ -65,6 +65,9 @@ func describeTProxyTest(ipip bool) bool {
 				options.NATOutgoingEnabled = true
 				options.AutoHEPsEnabled = true
 
+				// XXX until we can safely remove roting rules and not break other tests
+				options.EnableIPv6 = false
+
 				if !ipip {
 					options.IPIPEnabled = false
 					options.IPIPRoutesEnabled = false
