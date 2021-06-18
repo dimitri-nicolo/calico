@@ -42,6 +42,7 @@ func describeTProxyTest(ipip bool) bool {
 		[]apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 			const numNodes = 2
+			const clusterIP = "10.101.0.10"
 
 			var (
 				infra        infrastructure.DatastoreInfra
@@ -105,9 +106,8 @@ func describeTProxyTest(ipip bool) bool {
 				}
 
 				options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
-
-				// XXX this is temporary until service annotation does the job
-				options.ExtraEnvVars["FELIX_IPSETSREFRESHINTERVAL"] = "0"
+				// XXX until we can safely remove roting rules and not break other tests
+				options.EnableIPv6 = false
 
 				infra = getInfra()
 				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
@@ -194,6 +194,10 @@ func describeTProxyTest(ipip bool) bool {
 
 				k8sClient = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				_ = k8sClient
+
+				v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+				v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+				createService(v1Svc, clientset)
 			})
 
 			JustAfterEach(func() {
@@ -226,7 +230,6 @@ func describeTProxyTest(ipip bool) bool {
 			})
 
 			Context("ClusterIP", func() {
-				clusterIP := "10.101.0.10"
 
 				var pod, svc string
 
@@ -249,12 +252,7 @@ func describeTProxyTest(ipip bool) bool {
 
 				It("should have connectivity from all workloads via ClusterIP", func() {
 
-					// create service resource that has annotation at creation
-					svcV1 := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-					svcV1.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-					createService(svcV1, clientset)
-
-					By("asserting that ipaddress, port of service propagated to ipset ")
+					By("asserting that ipaddress, port exists in ipset ")
 					assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -292,12 +290,7 @@ func describeTProxyTest(ipip bool) bool {
 
 							pol = createPolicy(pol)
 						})
-						// create service resource that has annotation at creation
-						svcV1 := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-						svcV1.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-						createService(svcV1, clientset)
-
-						By("asserting that ipaddress, port of service propagated to ipset ")
+						By("asserting that ipaddress, port exists in ipset ")
 						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 						cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -338,12 +331,7 @@ func describeTProxyTest(ipip bool) bool {
 							pol = createPolicy(pol)
 						})
 
-						// create service resource that has annotation at creation
-						svcV1 := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-						svcV1.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
-						createService(svcV1, clientset)
-
-						By("asserting that ipaddress, port of service propagated to ipset ")
+						By("asserting that ipaddress, port exists in ipset ")
 						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -365,14 +353,13 @@ func describeTProxyTest(ipip bool) bool {
 			})
 
 			Context("Select Traffic ClusterIP", func() {
-				clusterIP := "10.101.0.10"
 				servicePort := "8090"
 
 				It("Should propagate annotated service update and deletions to tproxy ip set", func() {
 
 					By("setting up annotated service for the end points ")
-					// create service resource that has annotation at creation
-					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					//create service resource that has annotation at creation
+					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 					v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
 					annotatedSvc := createService(v1Svc, clientset)
 
