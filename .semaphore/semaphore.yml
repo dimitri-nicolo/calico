@@ -2,7 +2,7 @@ version: v1.0
 name: Honeypod Controller
 
 execution_time_limit:
-  minutes: 30
+  hours: 4
 
 agent:
   machine:
@@ -39,6 +39,8 @@ blocks:
     task:
       jobs:
         - name: Build
+          execution_time_limit:
+            minutes: 30
           commands:
             - make image 
             - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
@@ -50,6 +52,8 @@ blocks:
     task:
       jobs:
         - name: Static Checks
+          execution_time_limit:
+            minutes: 15
           commands:
             - make static-checks
 
@@ -58,6 +62,8 @@ blocks:
     task:
       jobs:
         - name: Run UT
+          execution_time_limit:
+            minutes: 30
           commands:
             - make ut
 
@@ -80,6 +86,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make images-all cd CONFIRM=true; fi
