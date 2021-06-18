@@ -28,17 +28,15 @@ global_job_config:
       - checkout
 blocks:
   - name: 'Build Image'
-    execution_time_limit:
-      minutes: 30
     dependencies: []
     task:
       jobs:
         - name: Build Image
+          execution_time_limit:
+            minutes: 30
           commands:
             - make image
   - name: 'Push Images (non-PR builds only)'
-    execution_time_limit:
-      minutes: 15
     dependencies: ["Build Image"]
     skip:
       # Only run on branches, not PRs.
@@ -56,6 +54,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
