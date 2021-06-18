@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os/exec"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -28,6 +29,9 @@ import (
 	windataplane "github.com/projectcalico/felix/dataplane/windows"
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/security"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -74,4 +78,37 @@ func SupportsBPF() error {
 
 func SupportsBPFKprobe() error {
 	return fmt.Errorf("BPF Kprobe is not supported on Windows")
+}
+
+func ServePrometheusMetrics(configParams *config.Config) {
+	for {
+		log.WithFields(log.Fields{
+			"host": configParams.PrometheusMetricsHost,
+			"port": configParams.PrometheusMetricsPort,
+		}).Info("Starting prometheus metrics endpoint")
+		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
+			log.Info("Including Golang, and Process metrics")
+		} else {
+			if !configParams.PrometheusGoMetricsEnabled {
+				log.Info("Discarding Golang metrics")
+				prometheus.Unregister(prometheus.NewGoCollector())
+			}
+			if !configParams.PrometheusProcessMetricsEnabled {
+				log.Info("Discarding process metrics")
+				prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+			}
+		}
+
+		err := security.ServePrometheusMetrics(
+			prometheus.DefaultGatherer,
+			"",
+			configParams.PrometheusMetricsPort,
+			configParams.PrometheusMetricsCertFile,
+			configParams.PrometheusMetricsKeyFile,
+			configParams.PrometheusMetricsCAFile,
+		)
+		log.WithError(err).Error(
+			"Prometheus metrics endpoint failed, trying to restart it...")
+		time.Sleep(1 * time.Second)
+	}
 }
