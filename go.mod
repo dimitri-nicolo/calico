@@ -15,7 +15,7 @@ require (
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/licensing v1.0.1-0.20210617000352-2d6eb69889af
+	github.com/tigera/licensing v1.0.1-0.20210618190127-9f51d7c481d0
 )
 
 replace (
