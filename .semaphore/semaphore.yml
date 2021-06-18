@@ -2,7 +2,7 @@ version: v1.0
 name: Confd
 
 execution_time_limit:
-  minutes: 30
+  hours: 4
 
 agent:
   machine:
@@ -33,6 +33,8 @@ blocks:
     task:
       jobs:
         - name: CI
+          execution_time_limit:
+            minutes: 30
           commands:
             - make ci
 
@@ -45,6 +47,8 @@ blocks:
         - name: semaphore-api
       jobs:
         - name: Trigger pin updates
+          execution_time_limit:
+            minutes: 15
           commands:
             - checkout
             - make semaphore-run-auto-pin-update-workflows
