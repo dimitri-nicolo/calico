@@ -100,9 +100,9 @@ spec:
     protocol: TCP
     source: {}
     destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure' 
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-      ports: [9200]
+      ports: [5554]
   - action: Allow
     protocol: TCP
     destination:
@@ -110,13 +110,6 @@ spec:
       namespaceSelector: projectcalico.org/name == 'tigera-compliance'
       selector: k8s-app == 'compliance-server'
       ports: [5443]
-  - action: Allow
-    protocol: TCP
-    destination:
-      # This rule allows to communicate with tigera-kibana.
-      namespaceSelector: projectcalico.org/name == 'tigera-kibana'
-      selector: k8s-app == 'tigera-secure'
-      ports: [5601]
   - action: Allow
     protocol: TCP
     destination:
@@ -195,9 +188,9 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-      ports: [9200]
+      ports: [5554]
 ---
 
 # Allow internal communication to compliance-server from Manager.
@@ -235,8 +228,8 @@ spec:
     protocol: TCP
     destination:
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
-      ports: [9200]
+      selector: k8s-app == 'tigera-secure-es-gateway'
+      ports: [5554]
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
     protocol: UDP
@@ -476,8 +469,165 @@ spec:
         ports: [443, 6443, 12388]
 ---
 
-# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
-# intrusion detection installer
+# Allow access to ES Gateway from components that need to talk to Elasticsearch or Kibana.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.es-gateway-access
+  namespace: tigera-elasticsearch
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-secure-es-gateway'
+  types:
+    - Ingress
+    - Egress
+  ingress:
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: k8s-app == 'fluentd-node' || k8s-app == 'fluentd-node-windows'
+        namespaceSelector: name == 'tigera-fluentd'
+      destination:
+        ports: [5554]
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: k8s-app == 'eks-log-forwarder'
+        namespaceSelector: name == 'tigera-fluentd'
+      destination:
+        ports: [5554]
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: job-name == 'intrusion-detection-es-job-installer'
+        namespaceSelector: name == 'tigera-intrusion-detection'
+      destination:
+        ports: [5554]
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: k8s-app == 'elastic-curator'
+        namespaceSelector: name == 'tigera-elasticsearch'
+      destination:
+        ports: [5554]
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: k8s-app == 'tigera-manager'
+        namespaceSelector: name == 'tigera-manager'
+      destination:
+        ports: [5554]
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-benchmarker'
+        namespaceSelector: name == 'tigera-compliance'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-controller'
+        namespaceSelector: name == 'tigera-compliance'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-server'
+        namespaceSelector: name == 'tigera-compliance'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-snapshotter'
+        namespaceSelector: name == 'tigera-compliance'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-reporter'
+        namespaceSelector: name == 'tigera-compliance'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'intrusion-detection-controller'
+        namespaceSelector: name == 'tigera-intrusion-detection'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'elastic-operator'
+        namespaceSelector: name == 'tigera-eck-operator'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'tigera-elasticsearch-metrics'
+        namespaceSelector: name == 'tigera-elasticsearch'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
+      # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
+  egress:
+  {%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+    {%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports: [53]
+    {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule allows to communicate with tigera-dex.
+      namespaceSelector: projectcalico.org/name == 'tigera-dex'
+      selector: k8s-app == 'tigera-dex'
+      ports: [5556]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule in this policy allows compliance to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == 'default'
+      selector: (provider == 'kubernetes' && component == 'apiserver' && endpoints.projectcalico.org/serviceName == 'kubernetes')
+      # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
+      ports: [443, 6443, 12388]
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: projectcalico.org/name == 'tigera-kibana'
+      selector: k8s-app == 'tigera-secure'
+      ports: [5601]
+---
+
+# Allow access to Elasticsearch client nodes from Kibana, ECK Operator and ES Gateway.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -494,20 +644,6 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'fluentd-node' || k8s-app == 'fluentd-node-windows'
-      namespaceSelector: name == 'tigera-fluentd'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'eks-log-forwarder'
-      namespaceSelector: name == 'tigera-fluentd'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
       selector: k8s-app == 'tigera-secure'
       namespaceSelector: name == 'tigera-kibana'
     destination:
@@ -515,66 +651,10 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: job-name == 'intrusion-detection-es-job-installer'
-      namespaceSelector: name == 'tigera-intrusion-detection'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'elastic-curator'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: name == 'tigera-elasticsearch'
     destination:
       ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'tigera-manager'
-      namespaceSelector: name == 'tigera-manager'
-    destination:
-      ports: [9200]
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-benchmarker'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-controller'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-server'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-snapshotter'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-reporter'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'intrusion-detection-controller'
-      namespaceSelector: name == 'tigera-intrusion-detection'
   - action: Allow
     destination:
       ports: [9200]
@@ -582,13 +662,6 @@ spec:
     source:
       selector: k8s-app == 'elastic-operator'
       namespaceSelector: name == 'tigera-eck-operator'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'tigera-elasticsearch-metrics'
-      namespaceSelector: name == 'tigera-elasticsearch'
   - action: Allow
     destination:
       ports: [9200]
@@ -619,6 +692,13 @@ spec:
       namespaceSelector: projectcalico.org/name == 'tigera-dex'
       selector: k8s-app == 'tigera-dex'
       ports: [5556]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule allows to communicate with 'tigera-secure-es-gateway'.
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      selector: k8s-app == 'tigera-secure-es-gateway'
+      ports: [5554]
   - action: Allow
     protocol: TCP
     destination:
@@ -687,10 +767,10 @@ spec:
     protocol: TCP
     source: {}
     destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == "tigera-secure"
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == "tigera-elasticsearch"
       ports:
-      - '9200'
+      - '5554'
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
     protocol: UDP
@@ -737,9 +817,8 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      # Allow the installer to access Kibana
-      selector: job-name == 'intrusion-detection-es-job-installer'
-      namespaceSelector: name == 'tigera-intrusion-detection'
+      selector: k8s-app == 'tigera-secure-es-gateway'
+      namespaceSelector: name == 'tigera-elasticsearch'
     destination:
       ports: [5601]
   - action: Allow
@@ -784,6 +863,13 @@ spec:
       # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
       # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
       ports: [443, 6443, 12388]
+  - action: Allow
+    destination:
+      ports: [5554]
+      selector: k8s-app == 'tigera-secure-es-gateway'
+      namespaceSelector: name == 'tigera-elasticsearch'
+    protocol: TCP
+
 ---
 
 apiVersion: projectcalico.org/v3
@@ -834,9 +920,9 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-      ports: [9200]
+      ports: [5554]
   - action: Allow
     protocol: TCP
     destination:
@@ -878,9 +964,9 @@ spec:
     protocol: TCP
     source: {}
     destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == "tigera-elasticsearch"
-      notPorts: [9200]
+      notPorts: [5554]
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
     protocol: UDP
@@ -925,7 +1011,7 @@ spec:
     - action: Allow
       protocol: TCP
       source:
-        selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+        selector: k8s-app == 'tigera-secure-es-gateway'
         namespaceSelector: name == 'tigera-elasticsearch'
       destination:
         ports: [5556]
@@ -1001,8 +1087,8 @@ spec:
     - action: Allow
       destination:
         namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-        ports: [9200]
-        selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+        ports: [5554]
+        selector: k8s-app == 'tigera-secure-es-gateway'
       protocol: TCP
       source: {}
   order: 1
@@ -1046,16 +1132,9 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      # This rule allows to communicate with tigera-kibana.
-      namespaceSelector: projectcalico.org/name == 'tigera-kibana'
-      selector: k8s-app == 'tigera-secure'
-      ports: [5601]
-  - action: Allow
-    protocol: TCP
-    destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-      ports: [9200]
+      ports: [5554]
 
 ---
 
@@ -1098,9 +1177,9 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
-      ports: [9200]
+      ports: [5554]
   - action: Allow
     protocol: TCP
     destination:
