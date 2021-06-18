@@ -2,7 +2,7 @@ version: v1.0
 name: Calicoctl
 
 execution_time_limit:
-  minutes: 30
+  hours: 4
 
 agent:
   machine:
@@ -40,6 +40,8 @@ blocks:
     task:
       jobs:
         - name: Build
+          execution_time_limit:
+            minutes: 20
           commands:
             - make build
             - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
@@ -51,6 +53,8 @@ blocks:
     task:
       jobs:
         - name: Run CI
+          execution_time_limit:
+            minutes: 30
           commands:
             - make ci EXCEPT=k8sfv-test
 
@@ -63,6 +67,8 @@ blocks:
         - name: semaphore-api
       jobs:
         - name: Trigger pin updates
+          execution_time_limit:
+            minutes: 5
           commands:
             - checkout
             - make semaphore-run-auto-pin-update-workflows
@@ -85,6 +91,8 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       jobs:
         - name: Run CD
+          execution_time_limit:
+            minutes: 15
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
