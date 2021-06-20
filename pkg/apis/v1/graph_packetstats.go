@@ -219,6 +219,7 @@ func (l GraphL7PacketStats) Combine(l2 GraphL7PacketStats) GraphL7PacketStats {
 
 // GraphL7Stats contains L7 statistics grouped by response code.
 type GraphL7Stats struct {
+	NoResponse      GraphL7PacketStats `json:"no_response"`
 	ResponseCode1xx GraphL7PacketStats `json:"response_code_1xx"`
 	ResponseCode2xx GraphL7PacketStats `json:"response_code_2xx"`
 	ResponseCode3xx GraphL7PacketStats `json:"response_code_3xx"`
@@ -235,6 +236,7 @@ func (l *GraphL7Stats) Combine(l2 *GraphL7Stats) *GraphL7Stats {
 		return l
 	}
 	return &GraphL7Stats{
+		NoResponse:      l.NoResponse.Combine(l2.NoResponse),
 		ResponseCode1xx: l.ResponseCode1xx.Combine(l2.ResponseCode1xx),
 		ResponseCode2xx: l.ResponseCode2xx.Combine(l2.ResponseCode2xx),
 		ResponseCode3xx: l.ResponseCode3xx.Combine(l2.ResponseCode3xx),

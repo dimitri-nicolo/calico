@@ -17,14 +17,16 @@ import (
 //
 // The JSON formatted output of this is actually a simple set of selector strings for each search option:
 // {
-//   "l3_flows": "xx == 'y'",
-//   "l7_flows": "xx == 'y'",
-//   "dns_logs": "xx == 'y'"
+//   "l3_flows": "xx = 'y'",
+//   "l7_flows": "xx = 'y'",
+//   "dns_logs": "xx = 'y'"
+//   "alerts": "_id = 'abcdef'"
 // }
 type GraphSelectors struct {
 	L3Flows *GraphSelector
 	L7Flows *GraphSelector
 	DNSLogs *GraphSelector
+	Alerts  *GraphSelector
 }
 
 // And combines two sets of selectors by ANDing them together.
@@ -33,6 +35,7 @@ func (s GraphSelectors) And(s2 GraphSelectors) GraphSelectors {
 		L3Flows: NewGraphSelector(OpAnd, s.L3Flows, s2.L3Flows),
 		L7Flows: NewGraphSelector(OpAnd, s.L7Flows, s2.L7Flows),
 		DNSLogs: NewGraphSelector(OpAnd, s.DNSLogs, s2.DNSLogs),
+		Alerts:  NewGraphSelector(OpAnd, s.Alerts, s2.Alerts),
 	}
 }
 
@@ -42,6 +45,7 @@ func (s GraphSelectors) Or(s2 GraphSelectors) GraphSelectors {
 		L3Flows: NewGraphSelector(OpOr, s.L3Flows, s2.L3Flows),
 		L7Flows: NewGraphSelector(OpOr, s.L7Flows, s2.L7Flows),
 		DNSLogs: NewGraphSelector(OpOr, s.DNSLogs, s2.DNSLogs),
+		Alerts:  NewGraphSelector(OpOr, s.Alerts, s2.Alerts),
 	}
 }
 
@@ -51,10 +55,12 @@ func (s GraphSelectors) MarshalJSON() ([]byte, error) {
 		L3Flows string `json:"l3_flows,omitempty"`
 		L7Flows string `json:"l7_flows,omitempty"`
 		DNSLogs string `json:"dns_logs,omitempty"`
+		Alerts  string `json:"alerts,omitempty"`
 	}{
 		L3Flows: s.L3Flows.SelectorString(),
 		L7Flows: s.L7Flows.SelectorString(),
 		DNSLogs: s.DNSLogs.SelectorString(),
+		Alerts:  s.Alerts.SelectorString(),
 	}
 	return json.Marshal(val)
 }
@@ -66,7 +72,7 @@ const (
 	OpIn       GraphSelectorOperator = " IN "
 	OpAnd      GraphSelectorOperator = " AND "
 	OpOr       GraphSelectorOperator = " OR "
-	OpEqual    GraphSelectorOperator = " == "
+	OpEqual    GraphSelectorOperator = " = "
 	OpNotEqual GraphSelectorOperator = " != "
 
 	// Special case internal operator used to indicate an impossible match. This is used to simplify the construction
@@ -106,8 +112,18 @@ func (s *GraphSelector) selectorString(nested bool) (sel string, noMatch bool) {
 	if s == nil {
 		return "", false
 	}
-
 	sb := strings.Builder{}
+
+	writeKey := func(key string) {
+		// The key needs to be quoted if it contains a "."
+		if strings.Contains(key, ".") {
+			sb.WriteString("\"")
+			sb.WriteString(s.key)
+			sb.WriteString("\"")
+		} else {
+			sb.WriteString(s.key)
+		}
+	}
 	switch s.operator {
 	case OpAnd, OpOr:
 		parts := make(map[string]struct{})
@@ -144,7 +160,7 @@ func (s *GraphSelector) selectorString(nested bool) (sel string, noMatch bool) {
 			return "", true
 		}
 	case OpEqual, OpNotEqual:
-		sb.WriteString(s.key)
+		writeKey(s.key)
 		sb.WriteString(string(s.operator))
 		if _, ok := s.value.(string); ok {
 			sb.WriteString(fmt.Sprintf("\"%s\"", s.value))
@@ -152,20 +168,42 @@ func (s *GraphSelector) selectorString(nested bool) (sel string, noMatch bool) {
 			sb.WriteString(fmt.Sprintf("%v", s.value))
 		}
 	case OpIn:
-		sb.WriteString(s.key)
-		sb.WriteString(string(s.operator))
-		sb.WriteString(OpInListStart)
-		sb.WriteString("\"")
+		if nested {
+			sb.WriteString("(")
+		}
 		value := s.value.([]string)
-		for i := 0; i < len(value)-1; i++ {
+		writeKey(s.key)
+		sb.WriteString(string(OpEqual))
+		sb.WriteString("\"")
+		sb.WriteString(value[0])
+		sb.WriteString("\"")
+		for i := 1; i < len(value); i++ {
+			sb.WriteString(string(OpOr))
+			sb.WriteString(s.key)
+			sb.WriteString(string(OpEqual))
+			sb.WriteString("\"")
 			sb.WriteString(value[i])
 			sb.WriteString("\"")
-			sb.WriteString(OpInListSep)
-			sb.WriteString("\"")
 		}
-		sb.WriteString(value[len(value)-1])
-		sb.WriteString("\"")
-		sb.WriteString(OpInListEnd)
+		if nested {
+			sb.WriteString(")")
+		}
+		/*
+			sb.WriteString(s.key)
+			sb.WriteString(string(s.operator))
+			sb.WriteString(OpInListStart)
+			sb.WriteString("\"")
+			value := s.value.([]string)
+			for i := 0; i < len(value)-1; i++ {
+				sb.WriteString(value[i])
+				sb.WriteString("\"")
+				sb.WriteString(OpInListSep)
+				sb.WriteString("\"")
+			}
+			sb.WriteString(value[len(value)-1])
+			sb.WriteString("\"")
+			sb.WriteString(OpInListEnd)
+		*/
 	case OpNoMatch:
 		return "", true
 	}
