@@ -17,14 +17,18 @@ import (
 // The NameHelper is used to modify the names in the flow and event data based on request-specific parameters.
 
 type NameHelper interface {
-	// Methods used to modify name data in flows and events.  These methods may update the helper with additional
-	// data found in the logs.
+	// ConvertL3Flow used to modify name data in an L3Flow.
 	ConvertL3Flow(f L3Flow) L3Flow
+
+	// ConvertL7Flow used to modify name data in an L7Flow.
 	ConvertL7Flow(f L7Flow) L7Flow
+
+	// ConvertEvent used to modify name data in an Event.
 	ConvertEvent(e Event) Event
 
-	// Return the set of host names associated with a host aggregated name.  This method does not update the helper.
-	// It returns the final compiled set of hosts associated with the aggregated name.
+	// GetCompiledHostNamesFromAggregatedName returns the set of host names associated with a host aggregated name.
+	// This method does not update the helper. It returns the final compiled set of hosts associated with the
+	// aggregated name.
 	GetCompiledHostNamesFromAggregatedName(aggrName string) []string
 }
 

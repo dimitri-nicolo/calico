@@ -20,7 +20,6 @@ const (
 	GraphNodeTypeHostEndpoint GraphNodeType = "hep" // Never exposed over the API, we expose these as Host
 	GraphNodeTypeNetwork      GraphNodeType = "net"
 	GraphNodeTypeNetworkSet   GraphNodeType = "ns"
-	GraphNodeTypeNode         GraphNodeType = "node"
 	GraphNodeTypePort         GraphNodeType = "port"
 	GraphNodeTypeUnknown      GraphNodeType = ""
 )
@@ -40,7 +39,6 @@ type GraphNode struct {
 	Name      string        `json:"name,omitempty"`
 	Protocol  string        `json:"protocol,omitempty"`
 	Port      int           `json:"port,omitempty"`
-	Layer     string        `json:"layer,omitempty"`
 
 	// The services contained within this group.
 	Services NamespacedNames `json:"services,omitempty"`
@@ -54,8 +52,11 @@ type GraphNode struct {
 	Stats []GraphStats `json:"stats,omitempty"`
 
 	// Whether this node is further expandable. In other words if this node is added as an `Expanded` node to
-	// the `GraphView` then the results will return additional nodes and edges.
+	// the `GraphView` then the results may return additional nodes and edges.
 	Expandable bool `json:"expandable,omitempty"`
+
+	// Whether this node is expanded.
+	Expanded bool `json:"expanded,omitempty"`
 
 	// Whether this node may be further followed in the egress connection direction or ingress connection direction.
 	// If true, this node can be added to FollowedEgress or FollowedIngress in the `GraphView` to return additional

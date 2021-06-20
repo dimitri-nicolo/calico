@@ -134,15 +134,15 @@ var _ = Describe("Service graph data tests", func() {
 			Expect(expected).To(HaveKey("time_intervals"))
 			Expect(expected).To(HaveKey("nodes"))
 			Expect(expected).To(HaveKey("edges"))
-			if actual["edges"] == nil {
-				Expect(expected["edges"]).To(BeNil())
+			if expected["edges"] == nil {
+				Expect(actual["edges"]).To(BeNil())
 			} else {
-				Expect(expected["edges"]).To(BeAssignableToTypeOf([]interface{}{}))
+				Expect(actual["edges"]).To(BeAssignableToTypeOf([]interface{}{}))
 			}
-			if actual["nodes"] == nil {
+			if expected["nodes"] == nil {
 				Expect(actual["nodes"]).To(BeNil())
 			} else {
-				Expect(expected["nodes"]).To(BeAssignableToTypeOf([]interface{}{}))
+				Expect(actual["nodes"]).To(BeAssignableToTypeOf([]interface{}{}))
 			}
 
 			// Compile the set of node and edge IDs and compare - just comparing the node and edge IDs makes development
@@ -337,6 +337,41 @@ var _ = Describe("Service graph data tests", func() {
 					Expanded: []v1.GraphNodeID{"namespace/default", "svcgp;svc/default/kubernetes"},
 				},
 			}, http.StatusOK, "016-focus-expand-default-expand-kubernetes", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Storefront layer, focus on storefront namespace",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus: []v1.GraphNodeID{"namespace/storefront"},
+					Layers: []v1.Layer{{
+						Name: "storefront-layer",
+						Nodes: []v1.GraphNodeID{
+							"namespace/storefront",
+						},
+					}},
+				},
+			}, http.StatusOK, "017-storefront-layer-focus-storefront", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Expand and focus shippingservice",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					Expanded: []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+				},
+			}, http.StatusOK, "018-expand-focus-shippingservice", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Expand and focus shippingservice in layer",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					Expanded: []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					Layers: []v1.Layer{{
+						Name: "shippingservice-layer",
+						Nodes: []v1.GraphNodeID{
+							"svcgp;svc/storefront/shippingservice",
+						},
+					}},
+				},
+			}, http.StatusOK, "019-expand-focus-shippingservice-layer", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 	)
 

@@ -47,29 +47,34 @@ type IDInfo struct {
 // GetNormalizedID can be called on a parsed ID to return the same ID as originally parsed, but normalized for the
 // specific invocation. This allows us to tweak the original ID to use an updated service group or perhaps to handle
 // version migration.
-func (id *IDInfo) GetNormalizedID() v1.GraphNodeID {
-	switch id.ParsedIDType {
-	case v1.GraphNodeTypeLayer:
-		return id.GetLayerID()
-	case v1.GraphNodeTypeNamespace:
-		return id.GetNamespaceID()
-	case v1.GraphNodeTypeServiceGroup:
-		return id.GetServiceGroupID()
-	case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
-		return id.GetAggrEndpointID()
-	case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
-		return id.GetEndpointID()
-	case v1.GraphNodeTypePort:
-		if id := id.GetEndpointPortID(); id != "" {
-			return id
-		}
-		return id.GetAggrEndpointPortID()
-	case v1.GraphNodeTypeServicePort:
-		return id.GetServicePortID()
-	case v1.GraphNodeTypeService:
-		return id.GetServiceID()
+func GetNormalizedID(id v1.GraphNodeID, sgs ServiceGroups) (v1.GraphNodeID, error) {
+	idi, err := ParseGraphNodeID(id, sgs)
+	if err != nil {
+		return "", err
 	}
-	return ""
+
+	switch idi.ParsedIDType {
+	case v1.GraphNodeTypeLayer:
+		return idi.GetLayerID(), nil
+	case v1.GraphNodeTypeNamespace:
+		return idi.GetNamespaceID(), nil
+	case v1.GraphNodeTypeServiceGroup:
+		return idi.GetServiceGroupID(), nil
+	case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
+		return idi.GetAggrEndpointID(), nil
+	case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
+		return idi.GetEndpointID(), nil
+	case v1.GraphNodeTypePort:
+		if id := idi.GetEndpointPortID(); id != "" {
+			return id, nil
+		}
+		return idi.GetAggrEndpointPortID(), nil
+	case v1.GraphNodeTypeServicePort:
+		return idi.GetServicePortID(), nil
+	case v1.GraphNodeTypeService:
+		return idi.GetServiceID(), nil
+	}
+	return "", nil
 }
 
 // GetAggrEndpointID returns the aggregated endpoint ID used both internally by the script and externally by the
@@ -201,17 +206,20 @@ func (idf *IDInfo) GetLayerID() v1.GraphNodeID {
 // GetNamespaceID returns the ID of the Namespace that this endpoint is part of. This returns an empty string if the
 // node is not namespaced.
 func (idf *IDInfo) GetNamespaceID() v1.GraphNodeID {
+	if n := idf.GetEffectiveNamespace(); n != "" {
+		return v1.GraphNodeID(fmt.Sprintf("%s/%s", v1.GraphNodeTypeNamespace, n))
+	}
+	return ""
+}
+
+// GetEffectiveNamespace the namespace used to group this endpoint.
+func (idf *IDInfo) GetEffectiveNamespace() string {
 	// Use the service group namespace in preference to the endpoint namespace, since this is how the endpoint is
 	// grouped.
 	if idf.ServiceGroup != nil {
-		return v1.GraphNodeID(fmt.Sprintf("%s/%s", v1.GraphNodeTypeNamespace, idf.ServiceGroup.Namespace))
+		return idf.ServiceGroup.Namespace
 	}
-
-	// No service group, use the endpoint namespace.
-	if idf.Endpoint.Namespace == "" {
-		return ""
-	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s", v1.GraphNodeTypeNamespace, idf.Endpoint.Namespace))
+	return idf.Endpoint.Namespace
 }
 
 // getDirectionID() is an additional ID used to separate out ingress and egress.
@@ -399,6 +407,11 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 		}
 
 		previousType = thisType
+	}
+
+	if idf.ServiceGroup == nil {
+		// Set the service group for this endpoint if known.
+		idf.ServiceGroup = sgs.GetByEndpoint(idf.Endpoint)
 	}
 
 	return idf, nil
