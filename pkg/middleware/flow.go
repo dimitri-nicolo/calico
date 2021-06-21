@@ -17,10 +17,9 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/api"
 	celastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/rbac"
 	"github.com/tigera/lma/pkg/timeutils"
-
-	esindex "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 const (
@@ -52,7 +51,7 @@ type flowRequestParams struct {
 }
 
 func (req flowRequestParams) clusterIndex() string {
-	return esindex.GetFlowLogsIndex(req.clusterName)
+	return lmaindex.FlowLogs().GetIndex(req.clusterName)
 }
 
 // parseAndValidateFlowRequest parses the fields in the request query, validating that required parameters are set and or the

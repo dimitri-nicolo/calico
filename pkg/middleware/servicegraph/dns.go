@@ -9,9 +9,9 @@ import (
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/elastic"
 )
 
 type DNSLog struct {
@@ -78,10 +78,10 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 		}()
 	}
 
-	index := elastic.GetDNSLogsIndex(cluster)
+	index := lmaindex.DnsLogs().GetIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeQuery(tr.From, tr.To),
+		Query:                   lmaindex.DnsLogs().NewTimeRangeQuery(tr.From, tr.To),
 		Name:                    dnsBucketName,
 		AggCompositeSourceInfos: dnsCompositeSources,
 		AggSumInfos:             dnsAggregationSums,

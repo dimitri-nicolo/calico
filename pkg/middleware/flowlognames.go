@@ -17,12 +17,11 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/rbac"
 	"github.com/tigera/lma/pkg/timeutils"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
-
-	esindex "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 const (
@@ -318,7 +317,7 @@ func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]string, error) {
 	// form query
 	query := buildNamesQuery(params)
-	index := esindex.GetFlowLogsIndex(params.ClusterName)
+	index := lmaindex.FlowLogs().GetIndex(params.ClusterName)
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
