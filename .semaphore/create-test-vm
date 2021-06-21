@@ -43,7 +43,9 @@ function create-vm() {
   set +x && \
   echo "$DOCKERHUB_PASSWORD" | gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- docker login --username "$DOCKERHUB_USERNAME" --password-stdin && \
   set -x && \
-  gcloud --quiet compute scp --zone=${ZONE} --recurse --compress "$(pwd)" "ubuntu@${vm_name}:"
+  gcloud --quiet compute scp --zone=${ZONE} --recurse --compress "$(pwd)" "ubuntu@${vm_name}:" && \
+  gcloud --quiet compute scp --zone=${ZONE} -- /home/semaphore/tigera-dev-ci.json ubuntu@${vm_name}:/tmp/tigera-dev-ci.json && \
+  echo 'docker login --username casey@tigera.io -u _json_key -p "$(cat /tmp/tigera-dev-ci.json)" https://gcr.io' | gcloud --quiet compute ssh --zone=${ZONE} ubuntu@${vm_name} -- -A -o ServerAliveInterval=10 sh
 }
 
 function delete-vm() {
