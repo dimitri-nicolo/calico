@@ -407,7 +407,7 @@ func main() {
 			}
 
 			// Configure iptables MASQUERADE rule.
-			if err := utils.RunCommand(iptables, "-t", "nat", "-A", "POSTROUTING", "-j", "MASQUERADE"); err != nil {
+			if err := utils.RunCommand(iptables, "-w", "-t", "nat", "-A", "POSTROUTING", "-j", "MASQUERADE"); err != nil {
 				return fmt.Errorf("failed to configure iptables MASQUERADE rule: %v", err)
 			}
 
