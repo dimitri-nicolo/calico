@@ -31,9 +31,9 @@ global_job_config:
 
 auto_cancel:
   running:
-    when: "branch != 'master'"
+    when: "true"
   queued:
-    when: "branch != 'master'"
+    when: "true"
 
 promotions:
 - name: Cleanup
