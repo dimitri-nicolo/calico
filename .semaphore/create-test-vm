@@ -36,7 +36,7 @@ function create-vm() {
     gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- echo "Success" && break
     sleep 1
   done  && \
-  gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- sudo bash -c "for i in `seq 1 5`; do apt-get update -y && break; sleep 5; done" && \
+  gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- sudo bash -c "for i in 1 2 3 4 5; do apt-get update -y && break; sleep 5; done" && \
   gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- sudo apt-get install -y --no-install-recommends git make iproute2 docker.io wireguard && \
   gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- sudo usermod -a -G docker ubuntu && \
   gcloud --quiet compute ssh --zone=${ZONE} "ubuntu@${vm_name}" -- sudo modprobe ipip && \
