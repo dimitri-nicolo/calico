@@ -48,15 +48,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service1",
 					},
-					Port:  "",
-					Proto: "tcp",
+					PortName: "",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name1*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -65,15 +65,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service1",
 					},
-					Port:  "",
-					Proto: "tcp",
+					PortName: "",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name2*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -82,15 +82,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service2",
 					},
-					Port:  "",
-					Proto: "tcp",
+					PortName: "",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name3*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -99,15 +99,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service2",
 					},
-					Port:  "",
-					Proto: "tcp",
+					PortName: "",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name4*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -116,15 +116,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service3",
 					},
-					Port:  "",
-					Proto: "tcp",
+					PortName: "",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name1*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -133,15 +133,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service3",
 					},
-					Port:  "",
-					Proto: "tcp",
+					PortName: "",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name4*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}},
@@ -164,10 +164,10 @@ var _ = Describe("ServicePort relationships test", func() {
 						Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name2*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name2*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 					},
 					ServicePort{
@@ -177,10 +177,10 @@ var _ = Describe("ServicePort relationships test", func() {
 						Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name3*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name3*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name4*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name4*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 					},
 					ServicePort{
@@ -190,10 +190,10 @@ var _ = Describe("ServicePort relationships test", func() {
 						Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name4*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name4*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 					},
 				},
@@ -207,15 +207,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service1",
 					},
-					Port:  "port1",
-					Proto: "tcp",
+					PortName: "port1",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name1*",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -224,15 +224,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service1",
 					},
-					Port:  "port2",
-					Proto: "tcp",
+					PortName: "port2",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "rep",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "name2*",
-					Port:      9444,
+					PortNum:   9444,
 					Proto:     "tcp",
 				},
 			}},
@@ -248,20 +248,20 @@ var _ = Describe("ServicePort relationships test", func() {
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
-						Port: "port1", Proto: "tcp",
+						PortName: "port1", Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", Port: 9443, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name1*", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 					},
 					ServicePort{
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
-						Port: "port2", Proto: "tcp",
+						PortName: "port2", Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "rep", Namespace: "namespace1", NameAggr: "name2*", Name: "", Port: 9444, Proto: "tcp",
+							Type: "rep", Namespace: "namespace1", NameAggr: "name2*", Name: "", PortNum: 9444, Proto: "tcp",
 						}: struct{}{},
 					},
 				},
@@ -275,15 +275,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service1",
 					},
-					Port:  "port1",
-					Proto: "tcp",
+					PortName: "port1",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "ns",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "net1",
-					Port:      9443,
+					PortNum:   9443,
 					Proto:     "tcp",
 				},
 			}, {
@@ -292,15 +292,15 @@ var _ = Describe("ServicePort relationships test", func() {
 						Namespace: "namespace1",
 						Name:      "service2",
 					},
-					Port:  "port2",
-					Proto: "tcp",
+					PortName: "port2",
+					Proto:    "tcp",
 				},
 				FlowEndpoint{
 					Type:      "ns",
 					Namespace: "namespace1",
 					Name:      "",
 					NameAggr:  "net1",
-					Port:      9444,
+					PortNum:   9444,
 					Proto:     "tcp",
 				},
 			}},
@@ -318,10 +318,10 @@ var _ = Describe("ServicePort relationships test", func() {
 						NamespacedName: v1.NamespacedName{
 							Name: "service1", Namespace: "namespace1",
 						},
-						Port: "port1", Proto: "tcp",
+						PortName: "port1", Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "ns", Namespace: "namespace1", NameAggr: "net1", Name: "", Port: 9443, Proto: "tcp",
+							Type: "ns", Namespace: "namespace1", NameAggr: "net1", Name: "", PortNum: 9443, Proto: "tcp",
 						}: struct{}{},
 					},
 				},
@@ -337,10 +337,10 @@ var _ = Describe("ServicePort relationships test", func() {
 						NamespacedName: v1.NamespacedName{
 							Name: "service2", Namespace: "namespace1",
 						},
-						Port: "port2", Proto: "tcp",
+						PortName: "port2", Proto: "tcp",
 					}: {
 						FlowEndpoint{
-							Type: "ns", Namespace: "namespace1", NameAggr: "net1", Name: "", Port: 9444, Proto: "tcp",
+							Type: "ns", Namespace: "namespace1", NameAggr: "net1", Name: "", PortNum: 9444, Proto: "tcp",
 						}: struct{}{},
 					},
 				},

@@ -45,9 +45,10 @@ const (
 	FlowDestNameAggrIdx
 	FlowDestServiceNamespaceIdx
 	FlowDestServiceNameIdx
-	FlowDestServicePortIdx
+	FlowDestServicePortNameIdx
+	FlowDestServicePortNumIdx
 	FlowProtoIdx
-	FlowDestPortIdx
+	FlowDestPortNumIdx
 	FlowSourceTypeIdx
 	FlowSourceNamespaceIdx
 	FlowSourceNameAggrIdx
@@ -65,9 +66,10 @@ var (
 		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
 		{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
 		{Name: "dest_service_name", Field: "dest_service_name"},
-		{Name: "dest_service_port", Field: "dest_service_port"},
+		{Name: "dest_service_port_name", Field: "dest_service_port_name"},
+		{Name: "dest_service_port_num", Field: "dest_service_port_num"},
 		{Name: "proto", Field: "proto"},
-		{Name: "dest_port", Field: "dest_port"},
+		{Name: "dest_port_num", Field: "dest_port_num"},
 		{Name: "source_type", Field: "source_type"},
 		{Name: "source_namespace", Field: "source_namespace"},
 		{Name: "source_name_aggr", Field: "source_name_aggr"},
@@ -144,12 +146,12 @@ type FlowEndpoint struct {
 	Namespace string
 	Name      string
 	NameAggr  string
-	Port      int
+	PortNum   int
 	Proto     string
 }
 
 func (e FlowEndpoint) String() string {
-	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Proto, e.Port)
+	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Proto, e.PortNum)
 }
 
 type L3Flow struct {
@@ -178,12 +180,13 @@ func (e FlowEdge) String() string {
 
 type ServicePort struct {
 	v1.NamespacedName
-	Port  string
-	Proto string
+	PortNum  int
+	PortName string
+	Proto    string
 }
 
 func (s ServicePort) String() string {
-	return fmt.Sprintf("ServicePort(%s/%s:%s %s)", s.Namespace, s.Name, s.Port, s.Proto)
+	return fmt.Sprintf("ServicePort(%s/%s:%s %s)", s.Namespace, s.Name, s.PortName, s.Proto)
 }
 
 // Internal value used for tracking.
@@ -252,14 +255,15 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 				Name:      singleDashToBlank(key[FlowDestServiceNameIdx].String()),
 				Namespace: singleDashToBlank(key[FlowDestServiceNamespaceIdx].String()),
 			},
-			Port:  singleDashToBlank(key[FlowDestServicePortIdx].String()),
-			Proto: proto,
+			PortName: singleDashToBlank(key[FlowDestServicePortNameIdx].String()),
+			PortNum:  int(key[FlowDestServicePortNumIdx].Float64()),
+			Proto:    proto,
 		}
 		dest := FlowEndpoint{
 			Type:      mapRawTypeToGraphNodeType(key[FlowDestTypeIdx].String(), true),
 			NameAggr:  singleDashToBlank(key[FlowDestNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[FlowDestNamespaceIdx].String()),
-			Port:      int(key[FlowDestPortIdx].Float64()),
+			PortNum:   int(key[FlowDestPortNumIdx].Float64()),
 			Proto:     proto,
 		}
 		gcs := v1.GraphConnectionStats{
@@ -417,7 +421,7 @@ type ports struct {
 func (p *ports) add(port int) {
 	for i := range p.ranges {
 		if p.ranges[i].MinPort >= port && p.ranges[i].MaxPort <= port {
-			// Already have this Port range. Nothing to do.
+			// Already have this PortName range. Nothing to do.
 			return
 		}
 		if p.ranges[i].MinPort == port+1 {
@@ -448,7 +452,7 @@ func (p *ports) add(port int) {
 			return
 		}
 	}
-	// Extend the slice with this Port.
+	// Extend the slice with this port.
 	p.ranges = append(p.ranges, v1.PortRange{MinPort: port, MaxPort: port})
 }
 
@@ -522,14 +526,14 @@ func (s *sourceData) add(
 		return
 	}
 
-	// Aggregate the Port and Proto information.
+	// Aggregate the port and Proto information.
 	log.Debug("  endpoint is not part of a service - aggregate port and proto info")
 
 	// We do not have a flowReconciliationData which means we must be aggregating out the Port and Proto for this
 	// (non-service related) flow.
 	if rc = s.other; rc == nil {
 		// There is no existing service destination and this flow does not contain a service. Since services are
-		// enumerated first then this Proto Port combination is not part of a service and we should consolidate
+		// enumerated first then this Port and Proto combination is not part of a service and we should consolidate
 		// the Proto and ports.
 		log.Debug("  create new aggregated reconciliation data")
 		rc = newFlowReconciliationData()
@@ -538,13 +542,13 @@ func (s *sourceData) add(
 
 	p, ok := s.protoPorts[svc.Proto]
 	if !ok {
-		if destination.Port != 0 {
+		if destination.PortNum != 0 {
 			p = &ports{}
 		}
 		s.protoPorts[svc.Proto] = p
 	}
 	if p != nil {
-		p.add(destination.Port)
+		p.add(destination.PortNum)
 	}
 
 	// Combine the data to the aggregated data set.

@@ -571,7 +571,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 						Type:      v1.GraphNodeTypeServicePort,
 						ID:        servicePortId,
 						ParentID:  serviceId,
-						Name:      svc.Port,
+						Name:      svc.PortName,
+						Port:      svc.PortNum,
+						Protocol:  svc.Proto,
 						Selectors: sel.ToNodeSelectors(),
 					},
 					parent:    service,
@@ -642,7 +644,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 					endpoint.Name,
 					endpoint.NameAggr,
 					endpoint.Proto,
-					endpoint.Port,
+					endpoint.PortNum,
 					idi.Direction,
 				)
 				aggrEndpointPort = &trackedNode{
@@ -650,7 +652,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 						Type:      v1.GraphNodeTypePort,
 						ID:        aggrEndpointPortId,
 						ParentID:  aggrEndpointId,
-						Port:      endpoint.Port,
+						Port:      endpoint.PortNum,
 						Protocol:  endpoint.Proto,
 						Selectors: sel.ToNodeSelectors(),
 					},
@@ -704,7 +706,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 				endpoint.Name,
 				endpoint.NameAggr,
 				endpoint.Proto,
-				endpoint.Port,
+				endpoint.PortNum,
 				idi.Direction,
 			)
 			nonAggrEndpointPort = &trackedNode{
@@ -712,7 +714,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 					Type:      v1.GraphNodeTypePort,
 					ID:        nonAggrEndpointPortId,
 					ParentID:  nonAggrEndpointId,
-					Port:      endpoint.Port,
+					Port:      endpoint.PortNum,
 					Protocol:  endpoint.Proto,
 					Selectors: sel.ToNodeSelectors(),
 				},

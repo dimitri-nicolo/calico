@@ -28,7 +28,7 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 	switch ep.Type {
 	case v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
 		// All pods within a replica set are part of the same service group, so just use name_aggr for the key and
-		// exclude the Port.
+		// exclude the port.
 		return &FlowEndpoint{
 			Type:      v1.GraphNodeTypeReplicaSet,
 			Namespace: ep.Namespace,
@@ -43,7 +43,7 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 			Namespace: ep.Namespace,
 			Name:      ep.Name,
 			NameAggr:  ep.NameAggr,
-			Port:      ep.Port,
+			PortNum:   ep.PortNum,
 			Proto:     ep.Proto,
 		}
 	}
@@ -197,7 +197,7 @@ func (sd *serviceGroups) FinishMappings() {
 					Namespace: ep.Namespace,
 					NameAggr:  ep.NameAggr,
 					Proto:     ep.Proto,
-					Port:      ep.Port,
+					PortNum:   ep.PortNum,
 				}
 				m := aggrs[ae]
 				if m == nil {
