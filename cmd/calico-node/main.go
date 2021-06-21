@@ -119,7 +119,7 @@ func main() {
 
 	// Decide which action to take based on the given flags.
 	if *version {
-		fmt.Println(startup.CNXVERSION)
+		fmt.Printf("Version: %s; Release Version: %s\n", startup.CNXVERSION, startup.CNXRELEASEVERSION)
 		os.Exit(0)
 	} else if *runFelix {
 		logrus.SetFormatter(&logutils.Formatter{Component: "felix"})

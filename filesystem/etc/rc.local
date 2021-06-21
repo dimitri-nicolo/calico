@@ -85,4 +85,6 @@ fi
 
 echo "CNX Version: $CNXVERSION"
 
+echo "CNX Release Version: $CNXRELEASEVERSION"
+
 echo "Calico node started successfully"
