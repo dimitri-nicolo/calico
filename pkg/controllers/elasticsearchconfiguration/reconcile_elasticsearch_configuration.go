@@ -226,3 +226,16 @@ func randomPassword(length int) (string, error) {
 
 	return base64.URLEncoding.EncodeToString(byts), err
 }
+
+// CleanUpESUserSecrets removes elasticsearch user secrets by label from the operator namespace.
+// If Elasticsearch is removed, the secrets present in the tigera-operator namespace should expire.
+func CleanUpESUserSecrets(clientset kubernetes.Interface) error {
+	log.Info("removing expired elasticsearch secrets")
+	// If no secrets are found, no 404/NotFound is returned when using labels.
+	return clientset.CoreV1().Secrets(resource.OperatorNamespace).DeleteCollection(
+		context.Background(),
+		metav1.DeleteOptions{},
+		metav1.ListOptions{
+			LabelSelector: ElasticsearchUserNameLabel,
+		})
+}
