@@ -899,8 +899,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20210618195735-fb5fafa91fa9 h1:A
 github.com/tigera/libcalico-go-private v1.7.2-0.20210618195735-fb5fafa91fa9/go.mod h1:Y7V1TdsckJJkwMUH9A+hbJ1b74a/qsyNMJt+nQK2jvo=
 github.com/tigera/licensing v1.0.1-0.20210617000352-2d6eb69889af h1:UKX9UKOJ7QJ0d6ZlRi8XF2s6fnY0KZiRm1WgobF3MeU=
 github.com/tigera/licensing v1.0.1-0.20210617000352-2d6eb69889af/go.mod h1:SRACrvWm2nOJr+qgYTEzszh/BnpUlmYVmklbOAUmp3M=
-github.com/tigera/licensing v1.0.1-0.20210618190127-9f51d7c481d0 h1:gjMcH4SAvDdobkq4nmnEZ9/tfUnnarvsFymosjlxd2M=
-github.com/tigera/licensing v1.0.1-0.20210618190127-9f51d7c481d0/go.mod h1:SRACrvWm2nOJr+qgYTEzszh/BnpUlmYVmklbOAUmp3M=
+github.com/tigera/licensing v1.0.1-0.20210621224921-ddf424d0f7f3 h1:xXSn1DDY9pJb8eXuiX6V8Mexmi22bQjid5Ft1nSAkP4=
+github.com/tigera/licensing v1.0.1-0.20210621224921-ddf424d0f7f3/go.mod h1:fuOhbxLyF/+x15Etz++V/V/05vg4eF68L5fPzPPxpx8=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320/go.mod h1:erKr0bew1q/9lZOLYs49JrRBaUBIj/zAfJylAmcrGD0=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133 h1:/y3vUmVwRQiLX07zgkx5Za49765WOdKW6taCD8PiXnU=
