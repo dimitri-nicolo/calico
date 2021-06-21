@@ -1,0 +1,29 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+*.coverprofile
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+report/
+bin
+.go-pkg-cache
+
+# Ignore IDE files
+.vscode/
+*/__debug_bin
+.idea/
+
+# Ignore Go build files
+Makefile.common*
+
+release-notes-*
