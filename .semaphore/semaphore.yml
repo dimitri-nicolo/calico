@@ -58,19 +58,22 @@ blocks:
         type: e1-standard-4
         os_image: ubuntu1804
     jobs:
-    - name: Build
+    - name: Build and run UT, k8sfv
       commands:
       - checkout
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
       - >-
-        make image fv/fv.test bin/test-workload bin/test-connection
+        make image-all fv/fv.test bin/test-workload bin/test-connection
         bin/calico-felix bin/calico-felix.exe
       - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
       - cache store go-pkg-cache .go-pkg-cache
       - 'cache store go-mod-cache ${HOME}/go/pkg/mod/cache'
       - docker save -o /tmp/tigera-felix.tar tigera/felix:latest-amd64
       - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/tigera-felix.tar'
+      - make ut
+      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 - name: FV Tests
   dependencies: ["Build"]
   task:
@@ -107,7 +110,7 @@ blocks:
         - ./.semaphore/collect-artifacts
         - ./.semaphore/publish-artifacts
 - name: BPF UT/FV tests on new kernel
-  dependencies: []
+  dependencies: ["Build"]
   task:
     prologue:
       commands:
@@ -187,8 +190,8 @@ blocks:
         commands:
           - ./.semaphore/run-win-fv
 
-- name: Static checks
-  dependencies: []
+- name: Static checks on e1-standard-8
+  dependencies: ["Build"]
   task:
     agent:
       machine:
@@ -204,27 +207,6 @@ blocks:
     - name: Static checks
       commands:
       - make static-checks
-- name: Multi-arch builds, UT, k8sfv-tests
-  dependencies: []
-  task:
-    prologue:
-      commands:
-      - checkout
-      - cache restore go-pkg-cache
-      - cache restore go-mod-cache
-    jobs:
-    - name: Build All
-      commands:
-        - make image-all
-    - name: UT
-      commands:
-        - make ut
-    - name: K8sfv with Typha
-      commands:
-        - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
-    - name: K8sfv without Typha
-      commands:
-        - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 - name: Trigger pin updates
   dependencies: []
   skip:
