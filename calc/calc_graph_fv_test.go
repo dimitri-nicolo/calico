@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -414,6 +414,14 @@ var baseTests = []StateList{
 		twoRemoteEpsSimilarEgressSelectorLocalGateway,
 		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways,
 	},
+
+	{
+		withOutL7Annotation,
+		clusterIPWithL7Annotation,
+		externalIPWithL7Annotation,
+		deleteClusterIPL7Annotation,
+		deleteExternalIPL7Annotation,
+	},
 }
 
 var logOnce sync.Once
@@ -549,6 +557,7 @@ func describeAsyncTests(baseTests []StateList, l license) {
 					conf.IPSecMode = "PSK"
 					conf.IPSecPSKFile = "/proc/1/cmdline"
 					conf.IPSecIKEAlgorithm = "somealgo"
+					conf.TPROXYMode = "Enabled"
 					conf.IPSecESPAlgorithm = "somealgo"
 					conf.SetUseNodeResourceUpdates(test.UsesNodeResources())
 					conf.RouteSource = test.RouteSource()
@@ -723,6 +732,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 	var state State
 	var sentInSync bool
 	var lastStats StatsUpdate
+	var l7Resolver *L7FrontEndResolver
 
 	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
 	BeforeEach(func() {
@@ -739,11 +749,13 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		eventBuf.Callback = mockDataplane.OnEvent
 		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled)
 		calcGraph.EnableIPSec(eventBuf)
+		l7Resolver = NewL7FrontEndResolver(eventBuf, conf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			lastStats = stats
 			return nil
 		})
 		statsCollector.RegisterWith(calcGraph)
+		l7Resolver.RegisterWith(calcGraph.AllUpdDispatcher)
 		validationFilter = NewValidationFilter(calcGraph.AllUpdDispatcher)
 		sentInSync = false
 		lastState = empty

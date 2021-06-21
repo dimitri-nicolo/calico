@@ -40,11 +40,6 @@ func newTproxyManager(
 			log.Fatal("RouteTable index for IPv4 is the default table")
 		}
 
-		ipSetsV4.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			[]string{},
-		)
-
 		rt := routetable.New(
 			nil,
 			4,
@@ -91,11 +86,6 @@ func newTproxyManager(
 		if idx6 == 0 {
 			log.Fatal("RouteTable index for IPv6 is the default table")
 		}
-
-		ipSetsV6.AddOrReplaceIPSet(
-			ipsets.IPSetMetadata{SetID: "tproxy-services", Type: ipsets.IPSetTypeHashIPPort, MaxSize: maxsize},
-			[]string{},
-		)
 
 		rt := routetable.New(
 			nil,

@@ -1254,6 +1254,16 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chai
 	// for dropping packets, so it is very unlikely that we would be circumventing someone
 	// else's rule to drop a packet.  (And in that case, the user can configure
 	// IptablesMangleAllowAction to be RETURN.)
+	if r.TPROXYMode == "Enabled" {
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Check if should be proxied when established"},
+				Match:   Match().ConntrackState("RELATED,ESTABLISHED"),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+			},
+		)
+	}
+
 	rules = append(rules,
 		Rule{
 			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),

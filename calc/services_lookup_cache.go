@@ -52,118 +52,31 @@ type portProtoKey struct {
 	proto int
 }
 
-// ServiceLookupsCache provides an API to lookup endpoint information given
-// an IP address.
+// ServiceUpdateHandler handles all the service related updates coming from
+// update dispatcher.
 //
-// To do this, the ServiceLookupsCache hooks into the calculation graph
-// by handling callbacks for updated local endpoint tier information.
+// This component should included in other components which can register
+// themselves with update dispatcher. Ex ServiceLookupsCache and L7FrontEndResolver
 //
-// It also functions as a node that is part of the calculation graph
-// to handle remote endpoint information. To do this, it registers
-// with the remote endpoint dispatcher and updates the endpoint
-// cache appropriately.
-type ServiceLookupsCache struct {
-	epMutex sync.RWMutex
-
+// It processes the updates passed to it and creates three maps. One contains all services
+// passed to it, other two contains node port services, regular services.
+type ServiceUpdateHandler struct {
 	// Service relationships and cached resource info.
 	ipPortProtoToServices map[ipPortProtoKey][]proxy.ServicePortName
 	nodePortServices      map[portProtoKey][]proxy.ServicePortName
 	services              map[model.ResourceKey]kapiv1.ServiceSpec
 }
 
-func NewServiceLookupsCache() *ServiceLookupsCache {
-	ec := &ServiceLookupsCache{
-		epMutex:               sync.RWMutex{},
+func NewServiceUpdateHandler() *ServiceUpdateHandler {
+	suh := &ServiceUpdateHandler{
 		ipPortProtoToServices: make(map[ipPortProtoKey][]proxy.ServicePortName),
 		nodePortServices:      make(map[portProtoKey][]proxy.ServicePortName),
 		services:              make(map[model.ResourceKey]kapiv1.ServiceSpec),
 	}
-
-	return ec
+	return suh
 }
 
-func (sc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
-	allUpdateDisp.Register(model.ResourceKey{}, sc.OnResourceUpdate)
-}
-
-// OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
-// kubernetes services updates.
-func (ec *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
-	switch k := update.Key.(type) {
-	case model.ResourceKey:
-		switch k.Kind {
-		case v3.KindK8sService:
-			if update.Value == nil {
-				ec.removeService(k)
-			} else {
-				ec.addOrUpdateService(k, update.Value.(*kapiv1.Service))
-			}
-		default:
-			log.Debugf("Ignoring update for resource: %s", k)
-		}
-	default:
-		log.Errorf("Ignoring unexpected update: %v %#v",
-			reflect.TypeOf(update.Key), update)
-	}
-	return
-}
-
-// GetServiceFromNATedDest returns the service associated with a pre-DNAT destination address.
-func (ec *ServiceLookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNAT int, proto int) (svc proxy.ServicePortName, found bool) {
-	ec.epMutex.Lock()
-	defer ec.epMutex.Unlock()
-
-	svcs := ec.ipPortProtoToServices[ipPortProtoKey{ip: ipPreDNAT, port: portPreDNAT, proto: proto}]
-	if len(svcs) != 0 {
-		log.Debug("Pre-DNAT matches cluster/externalIP service")
-		return uniqueService(svcs), true
-	}
-	log.Debugf("IP/Port/Protocol (%v/%d/%d) combination does not match a known node port", ipPreDNAT, portPreDNAT, proto)
-
-	// The pre-DNAT entry was not a cluster IP or external IP.  If the port/proto match a node port service then assume
-	// this is a node port.
-	if nps := ec.nodePortServices[portProtoKey{port: portPreDNAT, proto: proto}]; len(nps) == 0 {
-		log.Debugf("Port/Protocol (%d/%d) combination does not match a known node port", portPreDNAT, proto)
-		return
-	} else {
-		log.Debugf("Port/Protocol (%d/%d) combination matches %d service(s)", portPreDNAT, proto, len(nps))
-		return uniqueService(nps), true
-	}
-}
-
-// GetNodePortService returns a matching node port service.
-func (ec *ServiceLookupsCache) GetNodePortService(port int, proto int) (svc proxy.ServicePortName, found bool) {
-	ec.epMutex.Lock()
-	defer ec.epMutex.Unlock()
-
-	// Check to see if the port/protocol corresponds to a node port service.
-	if nps := ec.nodePortServices[portProtoKey{port: port, proto: proto}]; len(nps) == 0 {
-		log.Debugf("Port/Protocol (%d/%d) combination does not match a known node port", port, proto)
-		return
-	} else {
-		log.Debugf("Port/Protocol (%d/%d) combination matches %d service(s)", port, proto, len(nps))
-		return uniqueService(nps), true
-	}
-}
-
-// IPStringToArray converts the cluster IP into a [16]bytes array.  Returns nil if not a valid IP.
-func IPStringToArray(str string) (res [16]byte, parsed bool) {
-	// Remove subnet len if included.
-	parts := strings.Split(str, "/")
-	str = parts[0]
-
-	if str == "" || str == kapiv1.ClusterIPNone {
-		return
-	}
-	if cidr, err := ip.ParseCIDROrIP(str); err == nil {
-		var addrB [16]byte
-		copy(addrB[:], cidr.ToIPNet().IP.To16()[:16])
-		return addrB, true
-	}
-	return
-}
-
-func (sc *ServiceLookupsCache) handleService(
+func (suh *ServiceUpdateHandler) handleService(
 	key model.ResourceKey, svc kapiv1.ServiceSpec,
 	epOperator func(key ipPortProtoKey, svc proxy.ServicePortName),
 	nodePortOperator func(key portProtoKey, svc proxy.ServicePortName),
@@ -227,12 +140,12 @@ func (sc *ServiceLookupsCache) handleService(
 	}
 }
 
-func (ec *ServiceLookupsCache) addServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
-	ec.ipPortProtoToServices[key] = append(ec.ipPortProtoToServices[key], svc)
+func (suh *ServiceUpdateHandler) addServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
+	suh.ipPortProtoToServices[key] = append(suh.ipPortProtoToServices[key], svc)
 }
 
-func (ec *ServiceLookupsCache) removeServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
-	svcs := ec.ipPortProtoToServices[key]
+func (suh *ServiceUpdateHandler) removeServiceMap(key ipPortProtoKey, svc proxy.ServicePortName) {
+	svcs := suh.ipPortProtoToServices[key]
 	// Remove entry from the services slice and update the mapping. We can just iterate through the slice and
 	// shift across once we find the entry.
 	found := false
@@ -245,56 +158,50 @@ func (ec *ServiceLookupsCache) removeServiceMap(key ipPortProtoKey, svc proxy.Se
 	}
 	if found {
 		svcs = svcs[:len(svcs)-1]
-		ec.ipPortProtoToServices[key] = svcs
+		suh.ipPortProtoToServices[key] = svcs
 	}
 	if len(svcs) == 0 {
 		// No more services for the cluster IP, so just remove the cluster IP to service mapping
-		delete(ec.ipPortProtoToServices, key)
+		delete(suh.ipPortProtoToServices, key)
 		return
 	}
 }
 
-// addOrUpdateService tracks service cluster IP to service mappings.
-func (sc *ServiceLookupsCache) addOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
-	sc.epMutex.Lock()
-	defer sc.epMutex.Unlock()
+// AddOrUpdateService tracks service cluster IP to service mappings.
+func (suh *ServiceUpdateHandler) AddOrUpdateService(key model.ResourceKey, service *kapiv1.Service) {
 
-	if existing, ok := sc.services[key]; ok {
+	if existing, ok := suh.services[key]; ok {
 		if reflect.DeepEqual(existing, service.Spec) {
 			// Service data has not changed. Do nothing.
 			return
 		}
 
 		// Service data has changed, keep the logic simple by removing the old service and re-adding the new one.
-		sc.handleService(key, existing, sc.removeServiceMap, sc.removeNodePortMap)
+		suh.handleService(key, existing, suh.removeServiceMap, suh.removeNodePortMap)
 	}
 
-	sc.handleService(key, service.Spec, sc.addServiceMap, sc.addNodePortMap)
-	sc.services[key] = service.Spec
-	sc.reportServicesCacheMetrics()
+	suh.handleService(key, service.Spec, suh.addServiceMap, suh.addNodePortMap)
+	suh.services[key] = service.Spec
 }
 
-func (sc *ServiceLookupsCache) removeService(key model.ResourceKey) {
-	sc.epMutex.Lock()
-	defer sc.epMutex.Unlock()
+func (suh *ServiceUpdateHandler) RemoveService(key model.ResourceKey) {
 
 	// Look up service by key and remove the entry.
-	if existing, ok := sc.services[key]; ok {
+	if existing, ok := suh.services[key]; ok {
 		// Remove the service maps.
-		sc.handleService(key, existing, sc.removeServiceMap, sc.removeNodePortMap)
-		delete(sc.services, key)
-		sc.reportServicesCacheMetrics()
+		suh.handleService(key, existing, suh.removeServiceMap, suh.removeNodePortMap)
+		delete(suh.services, key)
 	}
 }
 
-func (ec *ServiceLookupsCache) addNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
-	ec.nodePortServices[key] = append(ec.nodePortServices[key], svc)
+func (suh *ServiceUpdateHandler) addNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
+	suh.nodePortServices[key] = append(suh.nodePortServices[key], svc)
 }
 
-func (ec *ServiceLookupsCache) removeNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
+func (suh *ServiceUpdateHandler) removeNodePortMap(key portProtoKey, svc proxy.ServicePortName) {
 	// Remove entry from the services slice and update the mapping. We can just iterate through the slice and
 	// shift across once we find the entry.
-	svcs := ec.nodePortServices[key]
+	svcs := suh.nodePortServices[key]
 	found := false
 	for i := range svcs {
 		if found {
@@ -305,19 +212,14 @@ func (ec *ServiceLookupsCache) removeNodePortMap(key portProtoKey, svc proxy.Ser
 	}
 	if found {
 		svcs = svcs[:len(svcs)-1]
-		ec.nodePortServices[key] = svcs
+		suh.nodePortServices[key] = svcs
 	}
 
 	if len(svcs) == 0 {
 		// This is the only service for the node port, so just remove the node port to service mapping
-		delete(ec.nodePortServices, key)
+		delete(suh.nodePortServices, key)
 		return
 	}
-}
-
-func (ec *ServiceLookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
-	spec, found := ec.services[key]
-	return spec, found
 }
 
 // uniqueService converts a slice of services into a single service by marking multiple valued fields with a "*".
@@ -343,7 +245,113 @@ func uniqueService(svcs []proxy.ServicePortName) proxy.ServicePortName {
 	return svc
 }
 
-//reportServicesCacheMetrics  reports servies cache performance metrics to prometheus
-func (sc *ServiceLookupsCache) reportServicesCacheMetrics() {
-	gaugeServicesCacheLength.Set(float64(len(sc.services)))
+// ServiceLookupsCache provides an API to lookup endpoint information given
+// an IP address.
+//
+// To do this, the ServiceLookupsCache hooks into the calculation graph
+// by handling callbacks for updated local endpoint tier information.
+//
+// It also functions as a node that is part of the calculation graph
+// to handle remote endpoint information. To do this, it registers
+// with the remote endpoint dispatcher and updates the endpoint
+// cache appropriately.
+type ServiceLookupsCache struct {
+	suh *ServiceUpdateHandler
+
+	mutex sync.RWMutex
+}
+
+func NewServiceLookupsCache() *ServiceLookupsCache {
+	slc := &ServiceLookupsCache{
+		suh:   NewServiceUpdateHandler(),
+		mutex: sync.RWMutex{},
+	}
+	return slc
+}
+
+func (slc *ServiceLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatcher) {
+	allUpdateDisp.Register(model.ResourceKey{}, slc.OnResourceUpdate)
+}
+
+// OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
+// kubernetes services updates.
+func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
+	switch k := update.Key.(type) {
+	case model.ResourceKey:
+		switch k.Kind {
+		case v3.KindK8sService:
+			log.Debugf("processing update for service %s", k)
+			if update.Value == nil {
+				slc.suh.RemoveService(k)
+			} else {
+				slc.suh.AddOrUpdateService(k, update.Value.(*kapiv1.Service))
+			}
+		default:
+			log.Debugf("Ignoring update for resource: %s", k)
+		}
+	default:
+		log.Errorf("Ignoring unexpected update: %v %#v",
+			reflect.TypeOf(update.Key), update)
+	}
+	return
+}
+
+func (slc *ServiceLookupsCache) GetServiceSpecFromResourceKey(key model.ResourceKey) (kapiv1.ServiceSpec, bool) {
+	spec, found := slc.suh.services[key]
+	return spec, found
+}
+
+// GetNodePortService returns a matching node port service.
+func (slc *ServiceLookupsCache) GetNodePortService(port int, proto int) (svc proxy.ServicePortName, found bool) {
+	slc.mutex.Lock()
+	defer slc.mutex.Unlock()
+
+	// Check to see if the port/protocol corresponds to a node port service.
+	if nps := slc.suh.nodePortServices[portProtoKey{port: port, proto: proto}]; len(nps) == 0 {
+		log.Debugf("Port/Protocol (%d/%d) combination does not match a known node port", port, proto)
+		return
+	} else {
+		log.Debugf("Port/Protocol (%d/%d) combination matches %d service(s)", port, proto, len(nps))
+		return uniqueService(nps), true
+	}
+}
+
+// GetServiceFromNATedDest returns the service associated with a pre-DNAT destination address.
+func (slc *ServiceLookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNAT int, proto int) (svc proxy.ServicePortName, found bool) {
+	slc.mutex.Lock()
+	defer slc.mutex.Unlock()
+
+	svcs := slc.suh.ipPortProtoToServices[ipPortProtoKey{ip: ipPreDNAT, port: portPreDNAT, proto: proto}]
+	if len(svcs) != 0 {
+		log.Debug("Pre-DNAT matches cluster/externalIP service")
+		return uniqueService(svcs), true
+	}
+	log.Debugf("IP/Port/Protocol (%v/%d/%d) combination does not match a known node port", ipPreDNAT, portPreDNAT, proto)
+
+	// The pre-DNAT entry was not a cluster IP or external IP.  If the port/proto match a node port service then assume
+	// this is a node port.
+	if nps := slc.suh.nodePortServices[portProtoKey{port: portPreDNAT, proto: proto}]; len(nps) == 0 {
+		log.Debugf("Port/Protocol (%d/%d) combination does not match a known node port", portPreDNAT, proto)
+		return
+	} else {
+		log.Debugf("Port/Protocol (%d/%d) combination matches %d service(s)", portPreDNAT, proto, len(nps))
+		return uniqueService(nps), true
+	}
+}
+
+// IPStringToArray converts the cluster IP into a [16]bytes array.  Returns nil if not a valid IP.
+func IPStringToArray(str string) (res [16]byte, parsed bool) {
+	// Remove subnet len if included.
+	parts := strings.Split(str, "/")
+	str = parts[0]
+
+	if str == "" || str == kapiv1.ClusterIPNone {
+		return
+	}
+	if cidr, err := ip.ParseCIDROrIP(str); err == nil {
+		var addrB [16]byte
+		copy(addrB[:], cidr.ToIPNet().IP.To16()[:16])
+		return addrB, true
+	}
+	return
 }

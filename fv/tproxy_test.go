@@ -1,6 +1,5 @@
 // +build fvtests
-
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+//Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -8,24 +7,25 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
 
 	. "github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/tproxy"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
 var _ = describeTProxyTest(false)
@@ -42,6 +42,7 @@ func describeTProxyTest(ipip bool) bool {
 		[]apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 			const numNodes = 2
+			const clusterIP = "10.101.0.10"
 
 			var (
 				infra        infrastructure.DatastoreInfra
@@ -51,7 +52,41 @@ func describeTProxyTest(ipip bool) bool {
 				options      infrastructure.TopologyOptions
 				calicoClient client.Interface
 				w            [numNodes][2]*workload.Workload
+				clientset    *kubernetes.Clientset
 			)
+
+			createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
+				log.WithField("policy", dumpResource(policy)).Info("Creating policy")
+				policy, err := calicoClient.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+				return policy
+			}
+
+			createService := func(service *v1.Service, client *kubernetes.Clientset) *v1.Service {
+				log.WithField("service", dumpResource(service)).Info("Creating service")
+				svc, err := client.CoreV1().Services(service.ObjectMeta.Namespace).Create(context.Background(), service, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(k8sGetEpsForServiceFunc(client, service), "10s").Should(HaveLen(1),
+					"Service endpoints didn't get created? Is controller-manager happy?")
+				log.WithField("service", dumpResource(svc)).Info("created service")
+
+				return svc
+			}
+
+			assertIPPortInIPSet := func(ipSetID string, ip string, port string, felixes []*infrastructure.Felix, exists bool) {
+				results := make(map[*infrastructure.Felix]struct{}, len(felixes))
+				Eventually(func() bool {
+					for _, felix := range felixes {
+						out, err := felix.ExecOutput("ipset", "list", ipSetID)
+						log.Infof("felix ipset list output %s", out)
+						Expect(err).NotTo(HaveOccurred())
+						if (strings.Contains(out, ip) && strings.Contains(out, port)) == exists {
+							results[felix] = struct{}{}
+						}
+					}
+					return len(results) == len(felixes)
+				}, "90s", "5s").Should(BeTrue())
+			}
 
 			BeforeEach(func() {
 				options = infrastructure.DefaultTopologyOptions()
@@ -74,20 +109,11 @@ func describeTProxyTest(ipip bool) bool {
 				}
 
 				options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
+				// XXX until we can safely remove roting rules and not break other tests
+				options.EnableIPv6 = false
 
-				// XXX this is temporary until service annotation does the job
-				options.ExtraEnvVars["FELIX_IPSETSREFRESHINTERVAL"] = "0"
-			})
-
-			createPolicy := func(policy *api.GlobalNetworkPolicy) *api.GlobalNetworkPolicy {
-				log.WithField("policy", dumpResource(policy)).Info("Creating policy")
-				policy, err := calicoClient.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-				Expect(err).NotTo(HaveOccurred())
-				return policy
-			}
-
-			JustBeforeEach(func() {
 				infra = getInfra()
+				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
 				felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
 
@@ -173,17 +199,6 @@ func describeTProxyTest(ipip bool) bool {
 				_ = k8sClient
 			})
 
-			// XXX this is temporary method until service annotation does the job
-			ipsetsUpdate := func(value string) {
-				// XXX need to give felix enough time to be executed _after_ it
-				// XXX syncs the ipsets for the first time
-				time.Sleep(15 * time.Second)
-				for _, felix := range felixes {
-					err := felix.ExecMayFail("ipset", "add", "cali40tproxy-services", value)
-					Expect(err).NotTo(HaveOccurred())
-				}
-			}
-
 			JustAfterEach(func() {
 				for _, p := range proxies {
 					p.Stop()
@@ -214,7 +229,6 @@ func describeTProxyTest(ipip bool) bool {
 			})
 
 			Context("ClusterIP", func() {
-				clusterIP := "10.101.0.10"
 
 				var pod, svc string
 
@@ -233,11 +247,16 @@ func describeTProxyTest(ipip bool) bool {
 							"-j", "DNAT", "--to-destination",
 							pod)
 					}
-
+					// for this context create service before each test
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					createService(v1Svc, clientset)
 				})
 
 				It("should have connectivity from all workloads via ClusterIP", func() {
-					ipsetsUpdate("10.101.0.10,tcp:8090")
+
+					By("asserting that ipaddress, port exists in ipset ")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -274,8 +293,8 @@ func describeTProxyTest(ipip bool) bool {
 
 							pol = createPolicy(pol)
 						})
-
-						ipsetsUpdate("10.101.0.10,tcp:8090")
+						By("asserting that ipaddress, port exists in ipset ")
+						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 						cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -315,7 +334,8 @@ func describeTProxyTest(ipip bool) bool {
 							pol = createPolicy(pol)
 						})
 
-						ipsetsUpdate("10.101.0.10,tcp:8090")
+						By("asserting that ipaddress, port exists in ipset ")
+						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
 
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -334,5 +354,63 @@ func describeTProxyTest(ipip bool) bool {
 					})
 				})
 			})
+
+			Context("Select Traffic ClusterIP", func() {
+				servicePort := "8090"
+
+				It("Should propagate annotated service update and deletions to tproxy ip set", func() {
+
+					By("setting up annotated service for the end points ")
+					//create service resource that has annotation at creation
+					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					annotatedSvc := createService(v1Svc, clientset)
+
+					By("asserting that ipaddress, port of service propagated to ipset ")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, true)
+					//
+					By("updating the service to not have l7 annotation ")
+					annotatedSvc.ObjectMeta.Annotations = map[string]string{}
+					_, err := clientset.CoreV1().Services(annotatedSvc.ObjectMeta.Namespace).Update(context.Background(), annotatedSvc, metav1.UpdateOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					By("asserting that ipaddress, port of service removed from ipset")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+
+					By("deleting the now unannotated service  ")
+					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					// In this second stage we create a service resource that does not have annotation at creation
+					// and repeat similar process as above again.
+
+					// this case ensures that the process of annotating is repeatable and certain IPSet callbacks are
+					// not called ex. IPSetAdded (Felix fails if a IPSetAdded call to already existing ipset is made)
+					By("creating unannotated service, to verify the ipset created callbacks")
+					v1Svc.ObjectMeta.Annotations = map[string]string{}
+					unannotatedSvc := createService(v1Svc, clientset)
+
+					By("asserting that ipaddress, port of service does not exist in ipset")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+
+					By("updating the service to have l7 annotation ")
+					unannotatedSvc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					_, err = clientset.CoreV1().Services(unannotatedSvc.ObjectMeta.Namespace).Update(context.Background(), unannotatedSvc, metav1.UpdateOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					By("asserting that ipaddress, port of service propagated to ipset ")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, true)
+
+					By("deleting the annotated service")
+					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
+					Expect(err).NotTo(HaveOccurred())
+
+					By("asserting that ipaddress, port of service removed from ipset")
+					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+
+				})
+
+			})
+
 		})
 }

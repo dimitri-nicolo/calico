@@ -48,6 +48,7 @@ htmlcov/
 /version.txt
 /.dir-locals.el
 /report/*.xml
+bpf/report/
 # Old go sub-dir, used to be where we kept go source.
 /go/
 
