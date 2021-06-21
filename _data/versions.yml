@@ -129,28 +129,29 @@
       version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
+    # The Prometheus + eck-operator images are third-party images that have been ported to quay.io/tigera
     elasticsearch-operator:
-      registry: docker.elastic.co
-      image: eck/eck-operator
+      registry: quay.io
+      image: tigera/eck-operator
       version: 1.2.1
     prometheus-operator:
-      image: coreos/prometheus-operator
+      image: tigera/prometheus-operator
       version: v0.38.1
       registry: quay.io
     prometheus:
-      image: prometheus/prometheus
+      image: tigera/prometheus
       version: v2.17.2
       registry: quay.io
     alertmanager:
-      image: prometheus/alertmanager
+      image: tigera/alertmanager
       version: v0.20.0
       registry: quay.io
     prometheus-config-reloader:
-      image: coreos/prometheus-config-reloader
+      image: tigera/prometheus-config-reloader
       version: v0.38.1
       registry: quay.io
     configmap-reload:
-      image: coreos/configmap-reload
+      image: tigera/configmap-reload
       version: v0.0.1
       registry: quay.io
     flexvol:
