@@ -25,6 +25,10 @@ This how-to guide uses the following {{site.prodname}} features:
 The following platforms using only IPv4:
 - Kubernetes, on-premises
 - EKS using Calico CNI only
+- AKS using Calico CNI
+- AKS using Azure CNI
+
+All platforms listed above will encrypt pod-to-pod traffic. Additionally, when using AKS and Azure CNI, host-to-host traffic will also be encrypted.
 
 > Note: WireGuard encryption is not currently compatible with egress gateway functionality.
 {: .alert .alert-info }
