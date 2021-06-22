@@ -11,5 +11,5 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/licensing v1.0.1-0.20210618190127-9f51d7c481d0
+	github.com/tigera/licensing v1.0.1-0.20210621224921-ddf424d0f7f3
 )
