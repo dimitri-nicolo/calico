@@ -59,6 +59,16 @@ var (
 			},
 		},
 		L7: &GraphL7Stats{
+			NoResponse: GraphL7PacketStats{
+				GraphByteStats: GraphByteStats{
+					BytesIn:  136,
+					BytesOut: 138,
+				},
+				MeanDuration: 148,
+				MinDuration:  150,
+				MaxDuration:  156,
+				Count:        1,
+			},
 			ResponseCode1xx: GraphL7PacketStats{
 				GraphByteStats: GraphByteStats{
 					BytesIn:  103,
@@ -277,6 +287,16 @@ var (
 			},
 		},
 		L7: &GraphL7Stats{
+			NoResponse: GraphL7PacketStats{
+				GraphByteStats: GraphByteStats{
+					BytesIn:  826,
+					BytesOut: 828,
+				},
+				MeanDuration: 838,
+				MinDuration:  852,
+				MaxDuration:  856,
+				Count:        3,
+			},
 			ResponseCode2xx: GraphL7PacketStats{
 				GraphByteStats: GraphByteStats{
 					BytesIn:  827,
@@ -388,6 +408,16 @@ var (
 			},
 		},
 		L7: &GraphL7Stats{
+			NoResponse: GraphL7PacketStats{
+				GraphByteStats: GraphByteStats{
+					BytesIn:  136,
+					BytesOut: 138,
+				},
+				MeanDuration: 148,
+				MinDuration:  150,
+				MaxDuration:  156,
+				Count:        1,
+			},
 			ResponseCode1xx: GraphL7PacketStats{
 				GraphByteStats: GraphByteStats{
 					BytesIn:  103 + 467,
@@ -538,6 +568,16 @@ var (
 			},
 		},
 		L7: &GraphL7Stats{
+			NoResponse: GraphL7PacketStats{
+				GraphByteStats: GraphByteStats{
+					BytesIn:  136 + 826,
+					BytesOut: 138 + 828,
+				},
+				MeanDuration: float64((148*1)+(838*3)) / float64(4),
+				MinDuration:  150,
+				MaxDuration:  856,
+				Count:        4,
+			},
 			ResponseCode1xx: GraphL7PacketStats{
 				GraphByteStats: GraphByteStats{
 					BytesIn:  103 + 467,
@@ -813,6 +853,14 @@ var _ = Describe("Graph API tests", func() {
               }
             },
             "l7": {
+              "no_response": {
+                "bytes_in": 962,
+                "bytes_out": 966,
+                "mean_duration": 665.5,
+                "min_duration": 150,
+                "max_duration": 856,
+                "count": 4
+              },
               "response_code_1xx": {
                 "bytes_in": 570,
                 "bytes_out": 576,
@@ -1316,7 +1364,7 @@ var _ = Describe("Graph API tests", func() {
 			NewGraphSelector(OpEqual, "b", 2),
 			nil,
 		)
-		Expect(sel1.SelectorString()).To(Equal("a == \"b\" OR b == 2"))
+		Expect(sel1.SelectorString()).To(Equal("a = \"b\" OR b = 2"))
 
 		By("ORing with another selector with all ORs and a duplicate entry")
 		sel2 := NewGraphSelector(OpOr,
@@ -1325,14 +1373,14 @@ var _ = Describe("Graph API tests", func() {
 			nil,
 		)
 		sel3 := NewGraphSelector(OpOr, sel1, sel2)
-		Expect(sel3.SelectorString()).To(Equal("a == \"b\" OR a == \"b2\" OR b == 2"))
+		Expect(sel3.SelectorString()).To(Equal("a = \"b\" OR a = \"b2\" OR b = 2"))
 
 		By("ANDing with another selector")
 		sel4 := NewGraphSelector(OpAnd,
 			sel3,
 			sel1,
 		)
-		Expect(sel4.SelectorString()).To(Equal("(a == \"b\" OR a == \"b2\" OR b == 2) AND (a == \"b\" OR b == 2)"))
+		Expect(sel4.SelectorString()).To(Equal("(a = \"b\" OR a = \"b2\" OR b = 2) AND (a = \"b\" OR b = 2)"))
 
 		By("ANDing with another selector")
 		sel5 := NewGraphSelector(OpAnd,
@@ -1343,7 +1391,7 @@ var _ = Describe("Graph API tests", func() {
 			sel5,
 			sel4,
 		)
-		Expect(sel6.SelectorString()).To(Equal("(a == \"b\" OR a == \"b2\" OR b == 2) AND (a == \"b\" OR b == 2) AND x != \"y\""))
+		Expect(sel6.SelectorString()).To(Equal("(a = \"b\" OR a = \"b2\" OR b = 2) AND (a = \"b\" OR b = 2) AND x != \"y\""))
 
 		By("Checking the JSON renders with no selectors")
 		js, err := json.Marshal(GraphSelectors{})
@@ -1362,15 +1410,15 @@ var _ = Describe("Graph API tests", func() {
 		}).Or(GraphSelectors{
 			L3Flows: NewGraphSelector(OpEqual, "a2", "b2"),
 			L7Flows: NewGraphSelector(OpEqual, "c2", "d2"),
-			DNSLogs: NewGraphSelector(OpEqual, "e2", "f2"),
+			DNSLogs: NewGraphSelector(OpEqual, "e.2", "f.2"),
 		})
 
 		js, err = json.Marshal(gsel1)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(js).To(MatchJSON(`{
-			"l3_flows": "(a == \"b\" AND a1 == \"b1\") OR a2 == \"b2\"",
-			"l7_flows": "(c == \"d\" AND c1 == \"d1\") OR c2 == \"d2\"",
-			"dns_logs": "(e == \"f\" AND e1 == \"f1\") OR e2 == \"f2\""
+			"l3_flows": "(a = \"b\" AND a1 = \"b1\") OR a2 = \"b2\"",
+			"l7_flows": "(c = \"d\" AND c1 = \"d1\") OR c2 = \"d2\"",
+			"dns_logs": "\"e.2\" = \"f.2\" OR (e = \"f\" AND e1 = \"f1\")"
         }`))
 
 		By("Checking in-operator")
@@ -1378,7 +1426,8 @@ var _ = Describe("Graph API tests", func() {
 			"a",
 			[]string{"b", "c", "d"},
 		)
-		Expect(selIn.SelectorString()).To(Equal("a IN (\"b\", \"c\", \"d\")"))
+		//Expect(selIn.SelectorString()).To(Equal("a IN (\"b\", \"c\", \"d\")"))
+		Expect(selIn.SelectorString()).To(Equal("a = \"b\" OR a = \"c\" OR a = \"d\""))
 
 		selIn = NewGraphSelector(OpIn,
 			"a",

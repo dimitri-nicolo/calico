@@ -14,39 +14,26 @@ import (
 
 // ParsedView contains the view specified in the service graph request, parsed into an internally useful format.
 type ParsedView struct {
-	Focus                     *ParsedNodes
-	Expanded                  *ParsedNodes
-	FollowedIngress           *ParsedNodes
-	FollowedEgress            *ParsedNodes
+	NodeViewData              map[v1.GraphNodeID]NodeViewData
 	Layers                    *ParsedLayers
 	FollowConnectionDirection bool
 	SplitIngressEgress        bool
+	EmptyFocus                bool
 }
 
-// ParsedNodes contains details about a set of parsed node IDs in the view. The different aggregation levels are split
-// out for easier lookup in the graph constructor.
-type ParsedNodes struct {
-	Layers        map[string]bool
-	Namespaces    map[string]bool
-	ServiceGroups map[*ServiceGroup]bool
-	Endpoints     map[v1.GraphNodeID]bool
+type NodeViewData struct {
+	InFocus         bool
+	Expanded        bool
+	FollowedIngress bool
+	FollowedEgress  bool
 }
 
-// isEmpty returns true if there are no entries in the data.
-func (pn *ParsedNodes) isEmpty() bool {
-	return len(pn.Layers) == 0 &&
-		len(pn.Namespaces) == 0 &&
-		len(pn.ServiceGroups) == 0 &&
-		len(pn.Endpoints) == 0
-}
-
-// newParsedNodes initializes a new ParsedNode struct.
-func newParsedNodes() *ParsedNodes {
-	return &ParsedNodes{
-		Layers:        make(map[string]bool),
-		Namespaces:    make(map[string]bool),
-		ServiceGroups: make(map[*ServiceGroup]bool),
-		Endpoints:     make(map[v1.GraphNodeID]bool),
+func (d NodeViewData) Combine(d2 NodeViewData) NodeViewData {
+	return NodeViewData{
+		InFocus:         d.InFocus || d2.InFocus,
+		Expanded:        d.Expanded || d2.Expanded,
+		FollowedIngress: d.FollowedIngress || d2.FollowedIngress,
+		FollowedEgress:  d.FollowedEgress || d2.FollowedEgress,
 	}
 }
 
@@ -80,52 +67,68 @@ func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 	// Parse the Focus and Expanded node IDs.
 	log.Debug("Parse view data")
 	p := &ParsedView{
+		NodeViewData:              make(map[v1.GraphNodeID]NodeViewData),
 		FollowConnectionDirection: rd.ServiceGraphRequest.SelectedView.FollowConnectionDirection,
 		SplitIngressEgress:        rd.ServiceGraphRequest.SelectedView.SplitIngressEgress,
+		EmptyFocus:                len(rd.ServiceGraphRequest.SelectedView.Focus) == 0,
 	}
-	var err error
-	if p.Focus, err = parseNodes(rd.ServiceGraphRequest.SelectedView.Focus, sgs); err != nil {
-		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid focus node: "+err.Error(), err)
-	} else if p.Expanded, err = parseNodes(rd.ServiceGraphRequest.SelectedView.Expanded, sgs); err != nil {
+	if ids, err := parseNodes(rd.ServiceGraphRequest.SelectedView.Expanded, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid expanded node: "+err.Error(), err)
-	} else if p.FollowedEgress, err = parseNodes(rd.ServiceGraphRequest.SelectedView.FollowedEgress, sgs); err != nil {
-		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid followed_egress node: "+err.Error(), err)
-	} else if p.FollowedIngress, err = parseNodes(rd.ServiceGraphRequest.SelectedView.FollowedIngress, sgs); err != nil {
+	} else {
+		for _, id := range ids {
+			p.NodeViewData[id] = p.NodeViewData[id].Combine(NodeViewData{Expanded: true})
+		}
+	}
+	if ids, err := parseNodes(rd.ServiceGraphRequest.SelectedView.FollowedIngress, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid followed_ingress node: "+err.Error(), err)
-	} else if p.Layers, err = parseLayers(rd.ServiceGraphRequest.SelectedView.Layers, sgs); err != nil {
+	} else {
+		for _, id := range ids {
+			p.NodeViewData[id] = p.NodeViewData[id].Combine(NodeViewData{FollowedIngress: true})
+		}
+	}
+	if ids, err := parseNodes(rd.ServiceGraphRequest.SelectedView.FollowedEgress, sgs); err != nil {
+		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid followed_egress node: "+err.Error(), err)
+	} else {
+		for _, id := range ids {
+			p.NodeViewData[id] = p.NodeViewData[id].Combine(NodeViewData{FollowedEgress: true})
+		}
+	}
+
+	if layers, err := parseLayers(rd.ServiceGraphRequest.SelectedView.Layers, sgs); err != nil {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid layer node: "+err.Error(), err)
+	} else {
+		p.Layers = layers
+	}
+
+	// Now parse the focus nodes. We need to ensure that the set of expanded nodes contains all of the required nodes
+	// to view the focus nodes.
+	if ids, err := parseNodes(rd.ServiceGraphRequest.SelectedView.Focus, sgs); err != nil {
+		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains an invalid focus node: "+err.Error(), err)
+	} else {
+		for _, id := range ids {
+			p.NodeViewData[id] = p.NodeViewData[id].Combine(NodeViewData{InFocus: true})
+
+			expandedNodes := getExpandedNodesForNode(id, p.Layers, sgs)
+			for _, expandedNodeId := range expandedNodes {
+				p.NodeViewData[expandedNodeId] = p.NodeViewData[expandedNodeId].Combine(NodeViewData{Expanded: true})
+			}
+		}
 	}
 
 	return p, nil
 }
 
-func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) (pn *ParsedNodes, err error) {
-	pn = newParsedNodes()
+func parseNodes(ids []v1.GraphNodeID, sgs ServiceGroups) ([]v1.GraphNodeID, error) {
+	var pn []v1.GraphNodeID
 	for _, id := range ids {
 		log.Debugf("Processing ID in view: %s", id)
-		if pid, err := ParseGraphNodeID(id, sgs); err != nil {
+		if pid, err := GetNormalizedID(id, sgs); err != nil {
 			return nil, err
 		} else {
-			switch pid.ParsedIDType {
-			case v1.GraphNodeTypeLayer:
-				pn.Layers[pid.Layer] = true
-			case v1.GraphNodeTypeNamespace:
-				pn.Namespaces[pid.Endpoint.Namespace] = true
-			case v1.GraphNodeTypeService, v1.GraphNodeTypeServicePort:
-				if sgs == nil {
-					continue
-				}
-				if sg := sgs.GetByService(pid.Service.NamespacedName); sg != nil {
-					pn.ServiceGroups[sg] = true
-				}
-			case v1.GraphNodeTypeServiceGroup:
-				pn.ServiceGroups[pid.ServiceGroup] = true
-			default:
-				pn.Endpoints[pid.GetNormalizedID()] = true
-			}
+			pn = append(pn, pid)
 		}
 	}
-	return
+	return pn, nil
 }
 
 func parseLayers(layers []v1.Layer, sgs ServiceGroups) (pn *ParsedLayers, err error) {
@@ -155,10 +158,16 @@ func parseLayers(layers []v1.Layer, sgs ServiceGroups) (pn *ParsedLayers, err er
 						pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], pid.ServiceGroup)
 					}
 				default:
-					// Otherwise assume it's the endpoint we parsed. In this case we also need to include the service
-					// group to disambiguate.
-					id := pid.GetNormalizedID()
-					if _, ok := pn.EndpointToLayer[id]; !ok {
+					// Otherwise assume it's the endpoint we parsed.  Note that we always include the group of related
+					// endpoints in the layer so that we are not trying to pick apart endpoints in a service, or
+					// endpoints in an aggregated endpoint group. This is important because expanding a layer could end
+					// up with some very odd layouts.
+					if pid.ServiceGroup != nil {
+						pn.ServiceGroupToLayer[pid.ServiceGroup] = layer.Name
+						pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], pid.ServiceGroup)
+					} else if id := pid.GetAggrEndpointID(); id != "" {
+						// There is no service group associated with this endpoint - include the aggregated endpoint in
+						// the layer.
 						pn.EndpointToLayer[id] = layer.Name
 						pn.LayerToEndpoints[layer.Name] = append(pn.LayerToEndpoints[layer.Name], pid.Endpoint)
 					}
@@ -167,4 +176,73 @@ func parseLayers(layers []v1.Layer, sgs ServiceGroups) (pn *ParsedLayers, err er
 		}
 	}
 	return
+}
+
+// getExpandedNodesForNode returns the set of expanded nodes required to view the node specified by `id`.
+func getExpandedNodesForNode(id v1.GraphNodeID, layers *ParsedLayers, sgs ServiceGroups) []v1.GraphNodeID {
+	var nodes []v1.GraphNodeID
+	pid, err := ParseGraphNodeID(id, sgs)
+	if err != nil {
+		// We've already parsed the node so should never hit an error.
+		return nodes
+	}
+
+	if id := pid.GetEndpointID(); id != "" {
+		// This is an endpoint.  If this is part of a layer then include the layer in the expansion.
+		if layer := layers.EndpointToLayer[id]; layer != "" {
+			pid.Layer = layer
+			nodes = append(nodes, pid.GetLayerID())
+			return nodes
+		}
+
+		// The endpoint is in view, so make sure the aggregated endpoint is expanded.
+		if id := pid.GetAggrEndpointID(); id != "" {
+			nodes = append(nodes, id)
+		}
+	}
+
+	if id := pid.GetAggrEndpointID(); id != "" {
+		// This is an aggregated endpoint (or contained within one).  If this is part of a layer then include the layer
+		// in the expansion.
+		if layer := layers.EndpointToLayer[id]; layer != "" {
+			pid.Layer = layer
+			nodes = append(nodes, pid.GetLayerID())
+			return nodes
+		}
+
+		// The aggregated endpoint is in view, so make sure the service group or namespace (whichever is appropriate)
+		// is expanded.
+		if id := pid.GetServiceGroupID(); id != "" {
+			nodes = append(nodes, id)
+		} else if ns := pid.GetNamespaceID(); ns != "" {
+			nodes = append(nodes, id)
+		}
+	}
+
+	if pid.ServiceGroup != nil {
+		// This is a service group (or contained within one).  If this is part of a layer then include the layer in the
+		// expansion.
+		if layer := layers.ServiceGroupToLayer[pid.ServiceGroup]; layer != "" {
+			pid.Layer = layer
+			nodes = append(nodes, pid.GetLayerID())
+			return nodes
+		}
+
+		// The service group is in view so make sure the namespace is expanded.
+		if id := pid.GetNamespaceID(); id != "" {
+			nodes = append(nodes, id)
+		}
+	}
+
+	if ns := pid.GetEffectiveNamespace(); ns != "" {
+		// This is a namespace (or contained within one).  If this is part of a layer then include the layer in the
+		// expansion.
+		if layer := layers.NamespaceToLayer[ns]; layer != "" {
+			pid.Layer = layer
+			nodes = append(nodes, pid.GetLayerID())
+			return nodes
+		}
+	}
+
+	return nodes
 }

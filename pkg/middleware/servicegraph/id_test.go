@@ -536,3 +536,7 @@ type mockServiceGroups struct {
 func (m mockServiceGroups) GetByService(svc v1.NamespacedName) *ServiceGroup {
 	return m.sg
 }
+
+func (m mockServiceGroups) GetByEndpoint(ep FlowEndpoint) *ServiceGroup {
+	return nil
+}

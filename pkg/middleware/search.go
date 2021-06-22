@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	maxNumResults   = 10000
+	maxNumResults = 10000
 )
 
 type getIndex func(string) string

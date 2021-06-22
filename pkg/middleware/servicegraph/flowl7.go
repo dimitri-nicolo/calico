@@ -195,7 +195,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			}
 		}
 
-		if code_val, err := strconv.Atoi(code); err == nil {
+		if code_val, err := strconv.Atoi(code); err == nil && code_val >= 100 && code_val < 600 {
 			if code_val < 200 {
 				l7Stats.ResponseCode1xx = l7Stats.ResponseCode1xx.Combine(l7PacketStats)
 			} else if code_val < 300 {
@@ -207,6 +207,9 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			} else {
 				l7Stats.ResponseCode5xx = l7Stats.ResponseCode5xx.Combine(l7PacketStats)
 			}
+		} else {
+			// Either not a number or not a valid response code.  Bucket in the no-response category.
+			l7Stats.NoResponse = l7Stats.NoResponse.Combine(l7PacketStats)
 		}
 	}
 	if foundFlow {
