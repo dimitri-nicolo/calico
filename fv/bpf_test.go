@@ -2953,10 +2953,16 @@ func dumpBPFMap(felix *infrastructure.Felix, m bpf.Map, iter bpf.IterCallback) {
 	}).Should(BeTrue(), fmt.Sprintf("dumpBPFMap: map %s didn't show up inside container", m.Path()))
 	cmd, err := bpf.DumpMapCmd(m)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get BPF map dump command: "+m.Path())
+	retriesAllowed := 4
+retry:
 	log.WithField("cmd", cmd).Debug("dumpBPFMap")
 	out, err := felix.ExecOutput(cmd...)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get dump BPF map: "+m.Path())
 	err = bpf.IterMapCmdOutput([]byte(out), iter)
+	if err != nil && retriesAllowed > 0 {
+		retriesAllowed--
+		goto retry
+	}
 	Expect(err).NotTo(HaveOccurred(), "Failed to parse BPF map dump: "+m.Path())
 }
 
