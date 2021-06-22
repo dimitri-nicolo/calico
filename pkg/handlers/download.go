@@ -10,6 +10,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"strings"
 
 	"github.com/tigera/packetcapture-api/pkg/cache"
 	"github.com/tigera/packetcapture-api/pkg/capture"
@@ -152,7 +153,8 @@ func readErrorFromStream(errorReader io.Reader) error {
 		return err
 	}
 
-	if len(error.String()) != 0 {
+	const ignoringTarError = "tar: removing leading '/' from member names"
+	if len(error.String()) != 0 && !strings.Contains(error.String(), ignoringTarError) {
 		return fmt.Errorf("%s", error.String())
 	}
 	return nil

@@ -231,6 +231,50 @@ var _ = Describe("Download", func() {
 		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
 	})
 
+	It("Ignore tar output that gets written to stderr", func() {
+		// Create a temp directory to store all the files needed for the test
+		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create dummy files and add them to a tar archive
+		var tarFile = createTarArchive(tempDir, files)
+		defer os.RemoveAll(tempDir)
+
+		tarFileReader, err := os.Open(tarFile.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		var errorWriter bytes.Buffer
+		_, err = errorWriter.WriteString("tar: removing leading '/' from member names")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileRetrieval{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
+		var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusOK))
+		Expect(recorder.Header().Get("Content-Type")).To(Equal("application/zip"))
+		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
+		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
+
+		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Write the body to file
+		_, err = io.Copy(archive, recorder.Body)
+		Expect(err).NotTo(HaveOccurred())
+		validateArchive(archive, files)
+	})
+
 	It("Fails to locate an entry pod", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
