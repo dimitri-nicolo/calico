@@ -9,10 +9,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
