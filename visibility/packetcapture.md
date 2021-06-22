@@ -35,6 +35,8 @@ This feature is in a technical preview stage. PacketCapture does not support:
 - Capping a capture using either time or size
 - Storing traffic in pcapng traffic
 - Capturing traffic from a multi-nic setup
+- Capture traffic from Calico nodes running on Windows hosts
+- Capture traffic from installations using a CNI other than Calico
 
 ### How To
 
@@ -44,6 +46,10 @@ This feature is in a technical preview stage. PacketCapture does not support:
 - [Access packet capture files](#access-packet-capture-files)
 
 #### Capture live traffic
+
+
+<iframe width="260" height="127" src="https://www.youtube.com/embed/bKTkvywT7s4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 
 Capturing live traffic will start by creating a [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource.
 
@@ -110,7 +116,7 @@ metadata:
   namespace: sample
   name: tigera-packet-capture-role
 rules:
-- apiGroups: ["projectcalico.org"] 
+- apiGroups: ["projectcalico.org"]
   resources: ["packetcaptures"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
@@ -129,28 +135,80 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
+In order to allow user jane to access the capture files generated for a specific namespace, a role/role binding similar to the one below can be used:
+
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: sample
+  name: tigera-capture-files-role
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["packetcaptures/files"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tigera-capture-files-role-jane
+  namespace: sample
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: tigera-capture-files-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
 #### Access packet capture files
 
 Capture files will be stored on the host mounted volume used for calico nodes. These can be visualized using tools such as Wireshark.
 
-To access the capture files locally, you can use [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI:
+In order to locate the capture files generated, query the status of the [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture)
+
+```shell
+kubectl get packetcaptures -ntigera-compliance test -o yaml
+```
+
+```
+apiVersion: projectcalico.org/v3
+kind: PacketCapture
+metadata:
+  name: sample-capture-all
+  namespace: sample
+spec:
+  selector: all()
+status:
+  files:
+  - directory: /var/log/calico/pcap
+    fileNames:
+    - pod_cali.pcap
+    node: node-0
+```
+
+To access the capture files locally, you can use the following api that is available via tigera-manager service:
+
+```shell
+kubectl port-forward -ntigera-manager service/tigera-manager 9443:9443 &
+NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> \
+curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
+-H "Authorizaton: Bearer $TOKEN"
+```
+
+Next, get the token from the service account.
+Using the running example of a service account named, `jane` in the default namespace:
+
+```bash
+{% raw %}kubectl get secret $(kubectl get serviceaccount jane -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep token) -o go-template='{{.data.token | base64decode}}' && echo{% endraw %}
+```
+
+Alternatively, you can access the capture files locally using [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI:
 
 ```shell
 calicoctl captured-packets copy sample-capture -namespace sample --destination /tmp
-```
-
-Alternatively, you can access the capture files locally from the Fluentd pods using similar commands like the ones below:
-
-```shell
-kubectl get pods -A -l <REPLACE_WITH_LABEL_SELECTOR> -o jsonpath="{..nodeName}"
-```
-
-```shell
-kubectl get pods -ntigera-fluentd --no-headers --field-selector spec.nodeName="<REPLACE_WITH_NODE_NAME>"
-```
-
-```shell
-kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sample-capture/ .
 ```
 
 Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
@@ -162,10 +220,4 @@ Packet capture files will not be deleted after a capture has stopped.
 
 ```shell
 calicoctl captured-packets clean sample-capture -namespace sample
-```
-
-Alternatively, the following command can be used to clean up capture files:
-
-```shell
-kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"
 ```
