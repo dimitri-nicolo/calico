@@ -76,6 +76,7 @@ const (
 // Version strings, set during build.
 var CALICOVERSION string
 var CNXVERSION string
+var CNXRELEASEVERSION string
 
 var (
 	// Default values, names for different configs.
@@ -96,7 +97,7 @@ func Run() {
 
 	// Determine the name for this node.
 	nodeName := utils.DetermineNodeName()
-	log.Infof("Starting node %s with version %s", nodeName, CNXVERSION)
+	log.Infof("Starting node %s with version %s (release version %s)", nodeName, CNXVERSION, CNXRELEASEVERSION)
 
 	// Create the Calico API cli.
 	cfg, cli := calicoclient.CreateClient()
@@ -1178,7 +1179,7 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 		}
 	}
 
-	if err := c.EnsureInitialized(ctx, CALICOVERSION, CNXVERSION, clusterType); err != nil {
+	if err := c.EnsureInitialized(ctx, CALICOVERSION, CNXRELEASEVERSION, clusterType); err != nil {
 		return nil
 	}
 
