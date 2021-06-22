@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
@@ -167,16 +170,31 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
+	sm.Handle("/flowLogs/aggregation",
+		middleware.ClusterRequestToResource(flowLogsResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.FlowLogs())))))
 	sm.Handle("/flowLogs/search",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetFlowLogsIndex, esClient.Backend())))))
+	sm.Handle("/dnsLogs/aggregation",
+		middleware.ClusterRequestToResource(dnsLogsResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.DnsLogs())))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(eselastic.GetDNSLogsIndex, esClient.Backend())))))
+	sm.Handle("/l7Logs/aggregation",
+		middleware.ClusterRequestToResource(l7ResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.L7Logs())))))
 	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authenticator,
