@@ -90,7 +90,7 @@ var _ = Describe("Download", func() {
 	BeforeEach(func() {
 		// Create a new request
 		var err error
-		req, err = http.NewRequest("GET", "/download/ns/name?files.zip", nil)
+		req, err = http.NewRequest("GET", "/download/ns/name/files.zip", nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Setup the variables on the context to be used for authN/authZ

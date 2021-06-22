@@ -134,7 +134,7 @@ func (d *Download) Download(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write headers for the request
-	cd := mime.FormatMediaType("attachment", map[string]string{"filename": middleware.QueryString})
+	cd := mime.FormatMediaType("attachment", map[string]string{"filename": middleware.ZipFiles})
 	w.Header().Set("Content-Disposition", cd)
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Length", fmt.Sprint(totalContentLength))

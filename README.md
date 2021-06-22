@@ -7,9 +7,9 @@ Sample call for management or standalone cluster:
 ```
 kubectl port-forward -ntigera-manager service/tigera-manager 9443:9443 &
 NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> \
-curl 'https://localhost:9443/packet-capture/download/$NS/$NAME?files.zip \
--H "Authorizaton: Bearer $TOKEN"'
---output files.zip
+curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
+-H "Authorizaton: Bearer $TOKEN" \
+-O -L
 ```
 
 Files from a managed cluster can be retrieved via the management cluster:
@@ -17,10 +17,10 @@ Files from a managed cluster can be retrieved via the management cluster:
 ```
 kubectl port-forward -ntigera-manager service/tigera-manager 9443:9443 &
 NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> CLUSTER=<REPLACE_WITH_CLUSTER> \
-curl 'https://localhost:9443/packet-capture/download/$NS/$NAME?files.zip \
+curl 'https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip \
 -H "Authorizaton: Bearer $TOKEN" \
--H "X-CLUSTER-ID: $CLUSTER"'
---output files.zip
+-H "X-CLUSTER-ID: $CLUSTER" \
+-O -L
 ```
 
 A request like above will retrieve all the generated pcap files at the moment of download as a zip archive.
@@ -95,14 +95,14 @@ This API makes use of tigera-manager service account and requires the following 
 - GET for api group `projectcalico.org` for resource `packetcaptures`
 - CREATE for api group `projectcalico.org` for resource `authenticationreviews`
 - LIST,WATCH,GET for api group `projectcalico.org` for resource `managedclusters`
-- LIST for core v1 group for resource `pods`
-- CREATE for core v1 group for subresource `pods/exec`
+- LIST for core v1 group for resource `pods` in namespace tigera-fluentd
+- CREATE for core v1 group for subresource `pods/exec` in namespace tigera-fluentd
 - CREATE for api group `authorization.k8s.io` for resource `subjectaccessreviews`
 
 
 ## Docs
-- [How To - Packet Capture] (https://docs.tigera.io/visibility/packetcapture)
-- [PacketCapture Resource definition] (https://docs.tigera.io/reference/resources/packetcapture)
-- [Technical spec - V1] (https://docs.google.com/document/d/1gsiogi9kdXDTFjtIOiXoI2uFk47kVZclqc0Gqqs8fLg/edit?usp=sharing)  
-- [Technical spec - V2] (https://docs.google.com/document/d/14suOeADcIcH8pmG64VjFiCjC44J3JQYRZTfXr6cpfEc/edit?usp=sharing)
-- [3.3 TOI] (https://docs.google.com/presentation/d/1LRYT9Aqm8ak5crg0UGGIQwui7LgcUTXhI8AK-dO1E7U/edit?usp=sharing)
+- [How To - Packet Capture](https://docs.tigera.io/visibility/packetcapture)
+- [PacketCapture Resource definition](https://docs.tigera.io/reference/resources/packetcapture)
+- [Technical spec - V1](https://docs.google.com/document/d/1gsiogi9kdXDTFjtIOiXoI2uFk47kVZclqc0Gqqs8fLg/edit?usp=sharing)  
+- [Technical spec - V2](https://docs.google.com/document/d/14suOeADcIcH8pmG64VjFiCjC44J3JQYRZTfXr6cpfEc/edit?usp=sharing)
+- [3.3 TOI](https://docs.google.com/presentation/d/1LRYT9Aqm8ak5crg0UGGIQwui7LgcUTXhI8AK-dO1E7U/edit?usp=sharing)

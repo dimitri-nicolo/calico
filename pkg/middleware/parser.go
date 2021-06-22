@@ -13,8 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// QueryString represents the expected query for the download API
-const QueryString = "files.zip"
+// ZipFiles represents the expected query for the download API
+const ZipFiles = "files.zip"
 
 // MalformedRequest is the error message when the API received an invalid request
 var MalformedRequest = fmt.Errorf("request URL is malformed")
@@ -43,10 +43,10 @@ func Parse(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 func parse(url *url.URL) (string, string, error) {
 	var tokens = strings.Split(url.Path, "/")
-	if len(tokens) != 4 {
+	if len(tokens) != 5 {
 		return "", "", MalformedRequest
 	}
-	if url.RawQuery != QueryString {
+	if tokens[4] != ZipFiles {
 		return "", "", MalformedRequest
 	}
 	return tokens[2], tokens[3], nil
