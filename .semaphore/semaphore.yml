@@ -31,9 +31,9 @@ global_job_config:
 
 auto_cancel:
   running:
-    when: "branch != 'master'"
+    when: "true"
   queued:
-    when: "branch != 'master'"
+    when: "true"
 
 promotions:
 - name: Cleanup
@@ -58,19 +58,22 @@ blocks:
         type: e1-standard-4
         os_image: ubuntu1804
     jobs:
-    - name: Build
+    - name: Build and run UT, k8sfv
       commands:
       - checkout
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
       - >-
-        make image fv/fv.test bin/test-workload bin/test-connection
+        make image-all fv/fv.test bin/test-workload bin/test-connection
         bin/calico-felix bin/calico-felix.exe
       - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
       - cache store go-pkg-cache .go-pkg-cache
       - 'cache store go-mod-cache ${HOME}/go/pkg/mod/cache'
       - docker save -o /tmp/tigera-felix.tar tigera/felix:latest-amd64
       - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/tigera-felix.tar'
+      - make ut
+      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 - name: FV Tests
   dependencies: ["Build"]
   task:
@@ -115,29 +118,22 @@ blocks:
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
       - export ZONE=europe-west3-c
-      - export VM_NAME=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${SEMAPHORE_JOB_INDEX:-ut}
-      - echo VM_NAME=${VM_NAME}
+      - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-
+      - echo VM_PREFIX=${VM_PREFIX}
       - export REPO_NAME=$(basename $(pwd))
+      - export NUM_FV_BATCHES=8
       - mkdir artifacts
-      - ./.semaphore/create-test-vm ${VM_NAME}
-      - 'gcloud --quiet compute scp --zone=${ZONE} -- /home/semaphore/tigera-dev-ci.json ubuntu@${VM_NAME}:/tmp/tigera-dev-ci.json'
-      - echo 'docker login --username casey@tigera.io -u _json_key -p "$(cat /tmp/tigera-dev-ci.json)" https://gcr.io' | gcloud --quiet compute ssh --zone=${ZONE} ubuntu@${VM_NAME} -- -A -o ServerAliveInterval=10 sh
+      - ./.semaphore/create-test-vms ${VM_PREFIX}
     jobs:
-    - name: UT and Wireguard non-BPF FV on newer kernel
+    - name: UT/FV tests on new kernel
       commands:
-      - ./.semaphore/on-test-vm make --directory=${REPO_NAME} ut-bpf
-      - ./.semaphore/on-test-vm make --directory=${REPO_NAME} check-wireguard
-    - name: FV on newer kernel
-      commands:
-      - ./.semaphore/on-test-vm make --directory=${REPO_NAME} fv-bpf GINKGO_FOCUS=BPF-SAFE FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT} FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}"
-      parallelism: 8
+      - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
     epilogue:
       always:
         commands:
-        - ./.semaphore/on-test-vm ${REPO_NAME}/.semaphore/collect-artifacts
-        - gcloud --quiet compute scp "--zone=${ZONE}" "ubuntu@${VM_NAME}:${REPO_NAME}/artifacts" ./ --recurse
+        - ./.semaphore/collect-artifacts-from-vms ${VM_PREFIX}
         - ./.semaphore/publish-artifacts
-        - gcloud --quiet compute instances delete ${VM_NAME} --zone=${ZONE}
+        - ./.semaphore/clean-up-vms ${VM_PREFIX}
     secrets:
     - name: google-service-account-for-gce
     - name: private-repo
@@ -187,7 +183,7 @@ blocks:
         commands:
           - ./.semaphore/run-win-fv
 
-- name: Static checks
+- name: Static checks on e1-standard-8
   dependencies: []
   task:
     agent:
@@ -204,27 +200,6 @@ blocks:
     - name: Static checks
       commands:
       - make static-checks
-- name: Multi-arch builds, UT, k8sfv-tests
-  dependencies: []
-  task:
-    prologue:
-      commands:
-      - checkout
-      - cache restore go-pkg-cache
-      - cache restore go-mod-cache
-    jobs:
-    - name: Build All
-      commands:
-        - make image-all
-    - name: UT
-      commands:
-        - make ut
-    - name: K8sfv with Typha
-      commands:
-        - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
-    - name: K8sfv without Typha
-      commands:
-        - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 - name: Trigger pin updates
   dependencies: []
   skip:
