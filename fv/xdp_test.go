@@ -61,7 +61,6 @@ var _ = infrastructure.DatastoreDescribe("with initialized Felix", []apiconfig.D
 		opts.ExtraEnvVars = map[string]string{
 			"FELIX_GENERICXDPENABLED":  "1",
 			"FELIX_XDPREFRESHINTERVAL": "10",
-			"FELIX_LOGSEVERITYSCREEN":  "info",
 		}
 		felixes, client = infrastructure.StartNNodeTopology(4, opts, infra)
 

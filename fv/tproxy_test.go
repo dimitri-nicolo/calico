@@ -96,7 +96,6 @@ func describeTProxyTest(ipip bool) bool {
 				}
 				cc.Protocol = "tcp"
 
-				options.FelixLogSeverity = "debug"
 				options.NATOutgoingEnabled = true
 				options.AutoHEPsEnabled = true
 
