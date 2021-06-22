@@ -40,8 +40,8 @@ type GraphNode struct {
 	Protocol  string        `json:"protocol,omitempty"`
 	Port      int           `json:"port,omitempty"`
 
-	// The services contained within this group.
-	Services NamespacedNames `json:"services,omitempty"`
+	// The service ports contained within this group.
+	ServicePorts ServicePorts `json:"service_ports,omitempty"`
 
 	// Aggregated protocol and port information for this node. Protocols and ports that are explicitly included in the
 	// graph because they are part of an expanded service are not included in this aggregated set.
@@ -108,11 +108,11 @@ func (n *GraphNode) IncludeAggregatedProtoPorts(p *AggregatedProtoPorts) {
 	n.AggregatedProtoPorts = n.AggregatedProtoPorts.Combine(p)
 }
 
-func (n *GraphNode) IncludeService(s NamespacedName) {
-	if n.Services == nil {
-		n.Services = make(NamespacedNames)
+func (n *GraphNode) IncludeServicePort(s ServicePort) {
+	if n.ServicePorts == nil {
+		n.ServicePorts = make(ServicePorts)
 	}
-	n.Services[s] = struct{}{}
+	n.ServicePorts[s] = struct{}{}
 }
 
 func (n *GraphNode) IncludeEvent(id GraphEventID, event GraphEventDetails) {

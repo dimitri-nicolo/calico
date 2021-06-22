@@ -3,6 +3,7 @@ package servicegraph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -520,6 +521,23 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	d.l7 = rawL7
 	d.dns = rawDNS
 	d.events = rawEvents
+
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.Debug(" ========= Tracing output from raw queries ========= ")
+		if b, err := json.Marshal(d.l3); err == nil {
+			log.Debugf("RawL3: %s", b)
+		}
+		if b, err := json.Marshal(d.l7); err == nil {
+			log.Debugf("RawL7: %s", b)
+		}
+		if b, err := json.Marshal(d.dns); err == nil {
+			log.Debugf("RawDNS: %s", b)
+		}
+		if b, err := json.Marshal(d.events); err == nil {
+			log.Debugf("RawEvents: %s", b)
+		}
+		log.Debug(" ========= End of tracing ========= ")
+	}
 
 	log.Debugf("Updated data: %s", d.cacheKey)
 }

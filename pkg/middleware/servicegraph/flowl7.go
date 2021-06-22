@@ -111,7 +111,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		AggMeanInfos:            l7AggregationMean,
 	}
 
-	addFlow := func(source, dest FlowEndpoint, svc ServicePort, stats v1.GraphL7Stats) {
+	addFlow := func(source, dest FlowEndpoint, svc v1.ServicePort, stats v1.GraphL7Stats) {
 		if svc.Name != "" {
 			fs = append(fs, L7Flow{
 				Edge: FlowEdge{
@@ -144,7 +144,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 	var foundFlow bool
 	var l7Stats v1.GraphL7Stats
 	var lastSource, lastDest FlowEndpoint
-	var lastSvc ServicePort
+	var lastSvc v1.ServicePort
 	for bucket := range rcvdL7Buckets {
 		totalBuckets++
 		key := bucket.CompositeAggregationKey
@@ -154,21 +154,21 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			NameAggr:  singleDashToBlank(key[l7SourceNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[l7SourceNamespaceIdx].String()),
 		}
-		svc := ServicePort{
+		svc := v1.ServicePort{
 			NamespacedName: v1.NamespacedName{
 				Name:      singleDashToBlank(key[l7DestServiceNameIdx].String()),
 				Namespace: singleDashToBlank(key[l7DestServiceNamespaceIdx].String()),
 			},
-			Proto: l7Proto,
-			PortName:  singleDashToBlank(key[l7DestServicePortNameIdx].String()),
-			PortNum:  int(key[l7DestServicePortNumIdx].Float64()),
+			Protocol: l7Proto,
+			PortName: singleDashToBlank(key[l7DestServicePortNameIdx].String()),
+			Port:     int(key[l7DestServicePortNumIdx].Float64()),
 		}
 		dest := FlowEndpoint{
 			Type:      mapRawTypeToGraphNodeType(key[l7DestTypeIdx].String(), true),
 			NameAggr:  singleDashToBlank(key[l7DestNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[l7DestNamespaceIdx].String()),
 			PortNum:   int(key[l7DestPortNumIdx].Float64()),
-			Proto: l7Proto,
+			Proto:     l7Proto,
 		}
 
 		if !foundFlow {

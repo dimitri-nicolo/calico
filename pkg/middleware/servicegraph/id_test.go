@@ -178,13 +178,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					PortNum:   20000,
 					Proto:     "udp",
 				},
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
 					PortName: "http",
-					Proto:    "udp",
+					Port:     8080,
+					Protocol: "udp",
 				},
 				ServiceGroup: &ServiceGroup{
 					Namespace: "service-namespace",
@@ -196,7 +197,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"svc/service-namespace/service-name", "svcport/udp/http;svc/service-namespace/service-name",
+			"svc/service-namespace/service-name", "svcport/udp/http/8080;svc/service-namespace/service-name",
 			"rep/namespace1/wepname*", "wep/namespace1/wepname/wepname*",
 			"port/udp/20000;rep/namespace1/wepname*", "port/udp/20000;wep/namespace1/wepname/wepname*",
 		),
@@ -208,12 +209,13 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr:  "repname",
 					Proto:     "tcp",
 				},
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
-					Proto: "tcp",
+					Protocol: "tcp",
+					Port:     1111,
 				},
 				ServiceGroup: &ServiceGroup{
 					Namespace: "service-namespace",
@@ -225,7 +227,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"svc/service-namespace/service-name", "svcport/tcp/;svc/service-namespace/service-name",
+			"svc/service-namespace/service-name", "svcport/tcp//1111;svc/service-namespace/service-name",
 			"rep/ns/repname", "", "", "",
 		),
 		Entry("Host endpoint with service",
@@ -236,12 +238,13 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr: "*",
 					Proto:    "sctp",
 				},
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
-					Proto: "sctp",
+					Protocol: "sctp",
+					Port:     1234,
 				},
 				ServiceGroup: &ServiceGroup{
 					Namespace: "service-namespace",
@@ -253,7 +256,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"svc/service-namespace/service-name", "svcport/sctp/;svc/service-namespace/service-name",
+			"svc/service-namespace/service-name", "svcport/sctp//1234;svc/service-namespace/service-name",
 			"hosts/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
 			"host/hepname/*;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "",
 		),
@@ -264,12 +267,13 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr: "global-ns",
 					Proto:    "udp",
 				},
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
-					Proto: "udp",
+					Protocol: "udp",
+					Port:     1212,
 				},
 				ServiceGroup: &ServiceGroup{
 					Namespace: "service-namespace",
@@ -281,7 +285,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"svc/service-namespace/service-name", "svcport/udp/;svc/service-namespace/service-name",
+			"svc/service-namespace/service-name", "svcport/udp//1212;svc/service-namespace/service-name",
 			"ns/global-ns;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
 		),
 		Entry("Namespaced network set with service",
@@ -292,12 +296,13 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr:  "n1-ns",
 					Proto:     "udp",
 				},
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
-					Proto: "udp",
+					Protocol: "udp",
+					Port:     1313,
 				},
 				ServiceGroup: &ServiceGroup{
 					Namespace: "service-namespace",
@@ -309,7 +314,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"svc/service-namespace/service-name", "svcport/udp/;svc/service-namespace/service-name",
+			"svc/service-namespace/service-name", "svcport/udp//1313;svc/service-namespace/service-name",
 			"ns/n1/n1-ns;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
 		),
 		Entry("Network with service",
@@ -319,13 +324,14 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					NameAggr: "pub",
 					Proto:    "udp",
 				},
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "service-namespace",
 						Name:      "service-name",
 					},
 					PortName: "http",
-					Proto:    "udp",
+					Protocol: "udp",
+					Port:     88,
 				},
 				ServiceGroup: &ServiceGroup{
 					Namespace: "service-namespace",
@@ -337,7 +343,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 			},
 			"", "namespace/service-namespace",
 			"svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2",
-			"svc/service-namespace/service-name", "svcport/udp/http;svc/service-namespace/service-name",
+			"svc/service-namespace/service-name", "svcport/udp/http/88;svc/service-namespace/service-name",
 			"net/pub;svcgp;svc/service-namespace/service-name;svc/service-namespace/service-name2", "", "", "",
 		),
 	)
@@ -368,28 +374,30 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 				ServiceGroup: dummySg,
 			},
 		),
-		Entry("service PortName with no port name",
-			"svcport/udp/;svc/svc-namespace/svc-name", IDInfo{
+		Entry("service port with no port name",
+			"svcport/udp//1233;svc/svc-namespace/svc-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeServicePort,
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "svc-namespace",
 						Name:      "svc-name",
 					},
-					Proto: "udp",
+					Protocol: "udp",
+					Port:     1233,
 				},
 			},
 		),
-		Entry("service PortName with port name",
-			"svcport/sctp/po.rt-name;svc/svc-namespace/svc-name", IDInfo{
+		Entry("service port with port name",
+			"svcport/sctp/po.rt-name/1234;svc/svc-namespace/svc-name", IDInfo{
 				ParsedIDType: v1.GraphNodeTypeServicePort,
-				Service: ServicePort{
+				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
 						Namespace: "svc-namespace",
 						Name:      "svc-name",
 					},
-					Proto:    "sctp",
+					Protocol: "sctp",
 					PortName: "po.rt-name",
+					Port:     1234,
 				},
 			},
 		),

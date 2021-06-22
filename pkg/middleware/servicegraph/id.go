@@ -38,7 +38,7 @@ type IDInfo struct {
 
 	// The following is extracted from an ID, or used to construct an ID.
 	Endpoint     FlowEndpoint
-	Service      ServicePort
+	Service      v1.ServicePort
 	ServiceGroup *ServiceGroup
 	Layer        string
 	Direction    Direction
@@ -189,7 +189,7 @@ func (idf *IDInfo) GetServiceGroupID() v1.GraphNodeID {
 // an empty string if the service port is not present.
 func (idf *IDInfo) GetServicePortID() v1.GraphNodeID {
 	if id := idf.GetServiceID(); id != "" {
-		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s;%s", v1.GraphNodeTypeServicePort, idf.Service.Proto, idf.Service.PortName, id))
+		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s/%d;%s", v1.GraphNodeTypeServicePort, idf.Service.Protocol, idf.Service.PortName, idf.Service.Port, id))
 	}
 	return ""
 }
@@ -242,7 +242,8 @@ const (
 	idpPortNum
 	idpServiceNamespace
 	idpServiceName
-	idpServicePort
+	idpServicePortName
+	idpServicePortNum
 	idpServiceProtocol
 	idpDirection
 )
@@ -262,7 +263,7 @@ var (
 		v1.GraphNodeTypeWorkload:     {{idpType, idpNamespace, idpName, idpNameAggr}},
 		v1.GraphNodeTypePort:         {{idpType, idpProtocol, idpPortNum}},
 		v1.GraphNodeTypeService:      {{idpType, idpServiceNamespace, idpServiceName}},
-		v1.GraphNodeTypeServicePort:  {{idpType, idpServiceProtocol, idpServicePort}},
+		v1.GraphNodeTypeServicePort:  {{idpType, idpServiceProtocol, idpServicePortName, idpServicePortNum}},
 		graphNodeTypeDirection:       {{idpType, idpDirection}},
 	}
 
@@ -342,7 +343,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 			for idx, field := range mappings {
 				// Check the segment syntax. Only the service port is allowed to be empty.
 				switch field {
-				case idpServicePort:
+				case idpServicePortName:
 					if !IDValueAllowedEmptyRegex.MatchString(parts[idx]) {
 						return nil, fmt.Errorf("unexpected format of node ID %s: unexpected empty segment", id)
 					}
@@ -366,7 +367,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				case idpProtocol:
 					idf.Endpoint.Proto = parts[idx]
 				case idpServiceProtocol:
-					idf.Service.Proto = parts[idx]
+					idf.Service.Protocol = parts[idx]
 				case idpPortNum:
 					val, err := strconv.Atoi(parts[idx])
 					if err != nil {
@@ -377,8 +378,14 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 					idf.Service.Namespace = parts[idx]
 				case idpServiceName:
 					idf.Service.Name = parts[idx]
-				case idpServicePort:
+				case idpServicePortName:
 					idf.Service.PortName = parts[idx]
+				case idpServicePortNum:
+					val, err := strconv.Atoi(parts[idx])
+					if err != nil {
+						return nil, fmt.Errorf("unexpected format of node ID %s: port is not a number", id)
+					}
+					idf.Service.Port = val
 				case idpDirection:
 					idf.Direction = Direction(parts[idx])
 				default:
@@ -399,7 +406,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 			if sg != nil {
 				idf.ServiceGroup = sg
 			}
-			idf.Service = ServicePort{}
+			idf.Service = v1.ServicePort{}
 		}
 
 		if !foundMapping {
