@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	esindex "github.com/tigera/es-proxy/pkg/elastic"
-
 	log "github.com/sirupsen/logrus"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -18,6 +16,7 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/rbac"
 	"github.com/tigera/lma/pkg/timeutils"
 
@@ -232,7 +231,7 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	// form query
 	query := buildESQuery(params)
-	index := esindex.GetFlowLogsIndex(params.ClusterName)
+	index := lmaindex.FlowLogs().GetIndex(params.ClusterName)
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,

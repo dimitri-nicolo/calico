@@ -12,9 +12,9 @@ import (
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/elastic"
 )
 
 // This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given
@@ -218,10 +218,10 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		}()
 	}
 
-	index := elastic.GetFlowLogsIndex(cluster)
+	index := lmaindex.FlowLogs().GetIndex(cluster)
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr.From, tr.To),
+		Query:                   lmaindex.FlowLogs().NewTimeRangeQuery(tr.From, tr.To),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: flowCompositeSources,
 		AggSumInfos:             flowAggregationSums,

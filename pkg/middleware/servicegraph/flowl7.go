@@ -10,9 +10,9 @@ import (
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/elastic"
 )
 
 type L7Flow struct {
@@ -96,10 +96,10 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		}()
 	}
 
-	index := elastic.GetL7LogsIndex(cluster)
+	index := lmaindex.L7Logs().GetIndex(cluster)
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
-		Query:                   elastic.GetEndTimeRangeEpochSecondQuery(tr.From, tr.To),
+		Query:                   lmaindex.L7Logs().NewTimeRangeQuery(tr.From, tr.To),
 		Name:                    flowsBucketName,
 		AggCompositeSourceInfos: l7CompositeSources,
 		AggSumInfos:             l7AggregationSums,
