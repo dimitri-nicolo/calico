@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,7 +61,6 @@ var _ = infrastructure.DatastoreDescribe("with initialized Felix", []apiconfig.D
 		opts.ExtraEnvVars = map[string]string{
 			"FELIX_GENERICXDPENABLED":  "1",
 			"FELIX_XDPREFRESHINTERVAL": "10",
-			"FELIX_LOGSEVERITYSCREEN":  "debug",
 		}
 		felixes, client = infrastructure.StartNNodeTopology(4, opts, infra)
 
