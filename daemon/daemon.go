@@ -542,7 +542,7 @@ configRetry:
 		// Use the syncer locally. If we are not including flow logs, or flow log services then there is no need
 		// to watch the services and service endpoints.
 		syncServices := configParams.FlowLogsFileEnabled && configParams.FlowLogsFileIncludeService
-		syncServices = syncServices || configParams.TPROXYMode == "Enabled"
+		syncServices = syncServices || configParams.TPROXYModeEnabled()
 		syncer = felixsyncer.New(backendClient, datastoreConfig.Spec, syncerToValidator, syncServices, configParams.IsLeader())
 
 		log.Info("using resource updates where applicable")

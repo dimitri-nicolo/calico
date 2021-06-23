@@ -49,7 +49,7 @@ type output struct {
 
 var _ = Describe("L7FrontEndResolver", func() {
 
-	var configEnabled = &config.Config{TPROXYMode: "EnabledDebug"}
+	var configEnabled = &config.Config{TPROXYMode: "EnabledAllServices"}
 
 	DescribeTable("Check ipset callbacks for updates",
 		func(updates []api.Update, addedMembers []output, removedMembers []output, conf *config.Config) {
