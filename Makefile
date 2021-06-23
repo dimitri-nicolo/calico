@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/lma
-GO_BUILD_VER    ?= v0.51
+GO_BUILD_VER    ?= v0.53
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 APISERVER_REPO   = github.com/tigera/apiserver
@@ -10,6 +10,9 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LMA_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_COMPLIANCE_PROJECT_ID) $(SEMAPHORE_VOLTRON_PROJECT_ID)
+
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 build: ut
 
