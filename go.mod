@@ -37,7 +37,7 @@ require (
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210623021754-44a2abaf25f8
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210623172214-0e7fae0e19b4
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210623205743-04e822c99016
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210623020156-436b93b384c9
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210623021606-324296a0318e
 
