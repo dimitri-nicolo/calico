@@ -382,22 +382,22 @@ var _ = Describe("Query Converter", func() {
 		})
 
 		It("should return an error if the value is invalid", func() {
-			query := "src_type=invalid_value"
+			query := "source_type=invalid_value"
 			_, err := L7Logs().NewSelectorQuery(query)
 			Expect(err).Should(HaveOccurred())
-			Expect(err.Error()).Should(Equal("Invalid selector (src_type=invalid_value) in request: " +
-				"invalid value for src_type: invalid_value"))
+			Expect(err.Error()).Should(Equal("Invalid selector (source_type=invalid_value) in request: " +
+				"invalid value for source_type: invalid_value"))
 		})
 
 		It("should handle a simple clause", func() {
 			result := JsonObject{
 				"term": JsonObject{
-					"src_type": JsonObject{
+					"source_type": JsonObject{
 						"value": "wep",
 					},
 				},
 			}
-			query := "src_type=wep"
+			query := "source_type=wep"
 			esquery, err := L7Logs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -444,7 +444,7 @@ var _ = Describe("Query Converter", func() {
 						},
 						{
 							"term": JsonObject{
-								"dest_service_port": JsonObject{
+								"dest_service_port_num": JsonObject{
 									"value": "65535",
 								},
 							},
@@ -452,7 +452,7 @@ var _ = Describe("Query Converter", func() {
 					},
 				},
 			}
-			query := "url=\"http://www.yolo.com\" OR dest_service_port=65535"
+			query := "url=\"http://www.yolo.com\" OR dest_service_port_num=65535"
 			esquery, err := L7Logs().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
