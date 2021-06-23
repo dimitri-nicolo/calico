@@ -44,7 +44,7 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 			Name:      ep.Name,
 			NameAggr:  ep.NameAggr,
 			PortNum:   ep.PortNum,
-			Proto:     ep.Proto,
+			Protocol:  ep.Protocol,
 		}
 	}
 	return nil
@@ -196,7 +196,7 @@ func (sd *serviceGroups) FinishMappings() {
 					Type:      ConvertEndpointTypeToAggrEndpointType(ep.Type),
 					Namespace: ep.Namespace,
 					NameAggr:  ep.NameAggr,
-					Proto:     ep.Proto,
+					Protocol:  ep.Protocol,
 					PortNum:   ep.PortNum,
 				}
 				m := aggrs[ae]

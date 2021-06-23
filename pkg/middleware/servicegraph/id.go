@@ -153,7 +153,7 @@ func (idf *IDInfo) GetEndpointPortID() v1.GraphNodeID {
 	if epID == "" {
 		return idf.GetAggrEndpointPortID()
 	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Proto, idf.Endpoint.PortNum, epID))
+	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Protocol, idf.Endpoint.PortNum, epID))
 }
 
 // GetAggrEndpointPortID returns the ID of the endpoint port. This contains the parent aggregataed endpoint ID embedded
@@ -166,7 +166,7 @@ func (idf *IDInfo) GetAggrEndpointPortID() v1.GraphNodeID {
 	if epID == "" {
 		return ""
 	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Proto, idf.Endpoint.PortNum, epID))
+	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Protocol, idf.Endpoint.PortNum, epID))
 }
 
 // GetServiceID returns the destination service ID of the service contained in this node.
@@ -365,7 +365,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				case idpLayer:
 					idf.Layer = parts[idx]
 				case idpProtocol:
-					idf.Endpoint.Proto = parts[idx]
+					idf.Endpoint.Protocol = parts[idx]
 				case idpServiceProtocol:
 					idf.Service.Protocol = parts[idx]
 				case idpPortNum:

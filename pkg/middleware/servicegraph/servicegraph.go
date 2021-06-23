@@ -9,6 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
+
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
@@ -116,6 +118,15 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 	var sgr v1.ServiceGraphRequest
 	if err := httputils.Decode(w, req, &sgr); err != nil {
 		return nil, err
+	}
+
+	// Validate parameters.
+	if err := validator.Validate(sgr); err != nil {
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Msg:    err.Error(),
+			Err:    err,
+		}
 	}
 
 	if sgr.Timeout.Duration == 0 {

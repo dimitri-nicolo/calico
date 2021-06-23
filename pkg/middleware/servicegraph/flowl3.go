@@ -147,11 +147,11 @@ type FlowEndpoint struct {
 	Name      string
 	NameAggr  string
 	PortNum   int
-	Proto     string
+	Protocol  string
 }
 
 func (e FlowEndpoint) String() string {
-	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Proto, e.PortNum)
+	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Protocol, e.PortNum)
 }
 
 type L3Flow struct {
@@ -253,7 +253,7 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			NameAggr:  singleDashToBlank(key[FlowDestNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[FlowDestNamespaceIdx].String()),
 			PortNum:   int(key[FlowDestPortNumIdx].Float64()),
-			Proto:     proto,
+			Protocol:  proto,
 		}
 		gcs := v1.GraphConnectionStats{
 			TotalPerSampleInterval: int64(bucket.AggregatedSums[FlowAggSumNumFlows]),

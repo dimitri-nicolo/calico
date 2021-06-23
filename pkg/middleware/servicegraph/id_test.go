@@ -176,7 +176,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Name:      "wepname",
 					NameAggr:  "wepname*",
 					PortNum:   20000,
-					Proto:     "udp",
+					Protocol:  "udp",
 				},
 				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
@@ -207,7 +207,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Type:      v1.GraphNodeTypeReplicaSet,
 					Namespace: "ns",
 					NameAggr:  "repname",
-					Proto:     "tcp",
+					Protocol:  "tcp",
 				},
 				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
@@ -236,7 +236,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Type:     v1.GraphNodeTypeHost,
 					Name:     "hepname",
 					NameAggr: "*",
-					Proto:    "sctp",
+					Protocol: "sctp",
 				},
 				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
@@ -265,7 +265,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeNetworkSet,
 					NameAggr: "global-ns",
-					Proto:    "udp",
+					Protocol: "udp",
 				},
 				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
@@ -294,7 +294,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 					Type:      v1.GraphNodeTypeNetworkSet,
 					Namespace: "n1",
 					NameAggr:  "n1-ns",
-					Proto:     "udp",
+					Protocol:  "udp",
 				},
 				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{
@@ -322,7 +322,7 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 				Endpoint: FlowEndpoint{
 					Type:     v1.GraphNodeTypeNetwork,
 					NameAggr: "pub",
-					Proto:    "udp",
+					Protocol: "udp",
 				},
 				Service: v1.ServicePort{
 					NamespacedName: v1.NamespacedName{

@@ -70,7 +70,7 @@ func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
 		gs = gs.Or(s.GetServiceGroupNodeSelectors(sg))
 	}
 	for _, ep := range s.view.Layers.LayerToEndpoints[layer] {
-		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.PortNum, NoDirection))
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
 	}
 	return gs
 }
@@ -162,7 +162,7 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 		}
 	}
 	for ep := range allEps {
-		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.PortNum, NoDirection))
+		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
 	}
 
 	// Only include the endpoint dest selectors, not the source.
@@ -194,7 +194,7 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 		gs = gs.Or(s.GetServiceNodeSelectors(svc))
 	}
 	for ep := range allEps {
-		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.PortNum, NoDirection))
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
 	}
 	return gs
 }

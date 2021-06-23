@@ -9,19 +9,19 @@ import (
 
 type ServiceGraphRequest struct {
 	// The cluster name. Defaults to "cluster".
-	Cluster string `json:"cluster"`
+	Cluster string `json:"cluster" validate:"omitempty"`
 
 	// Time range.
-	TimeRange lmav1.TimeRange `json:"time_range"`
+	TimeRange *lmav1.TimeRange `json:"time_range" validate:"required"`
 
 	// The selected view.
-	SelectedView GraphView `json:"selected_view"`
+	SelectedView GraphView `json:"selected_view" validate:"omitempty"`
 
 	// Timeout for the request. Defaults to 60s.
-	Timeout v1.Duration `json:"timeout"`
+	Timeout v1.Duration `json:"timeout" validate:"omitempty"`
 
 	// Force a refresh of the data. Generally this should not be required.
-	ForceRefresh bool `json:"force_refresh"`
+	ForceRefresh bool `json:"force_refresh" validate:"omitempty"`
 }
 
 type ServiceGraphResponse struct {

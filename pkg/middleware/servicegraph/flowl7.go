@@ -168,7 +168,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			NameAggr:  singleDashToBlank(key[l7DestNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[l7DestNamespaceIdx].String()),
 			PortNum:   int(key[l7DestPortNumIdx].Float64()),
-			Proto:     l7Proto,
+			Protocol:  l7Proto,
 		}
 
 		if !foundFlow {

@@ -419,7 +419,7 @@ func getEventEndpointsFromFlowEndpoint(epType, epNamespace, epName, epNameAggr s
 			Name:      eventEndpointName,
 			NameAggr:  eventEndpointNameAggr,
 			PortNum:   epPort,
-			Proto:     proto,
+			Protocol:  proto,
 		}
 	}
 	return eps

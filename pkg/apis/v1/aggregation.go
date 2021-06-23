@@ -11,26 +11,26 @@ import (
 
 type AggregationRequest struct {
 	// The cluster name. Defaults to "cluster".
-	Cluster string `json:"cluster"`
+	Cluster string `json:"cluster" validate:"omitempty"`
 
 	// Time range used to limit the record selection by time.
-	TimeRange lmav1.TimeRange `json:"time_range"`
+	TimeRange *lmav1.TimeRange `json:"time_range" validate:"required"`
 
 	// The selector used to select the records to be aggregated. The dataset is further limited by the time range and
 	// by the users RBAC.
-	Selector string `json:"selector"`
+	Selector string `json:"selector" validate:"omitempty"`
 
 	// Whether a time series is requested. If this is set to true, the time interval will be automatically
 	// determined based on the time range.  Note that for small time ranges the interval may contain only one
 	// time bucket.
-	IncludeTimeSeries bool `json:"include_time_series"`
+	IncludeTimeSeries bool `json:"include_time_series" validate:"omitempty"`
 
 	// The aggregation to perform. This is a set of named aggregations, each aggregation is a raw elasticsearch
 	// aggregation type.
-	Aggregations map[string]json.RawMessage `json:"aggregations"`
+	Aggregations map[string]json.RawMessage `json:"aggregations" validate:"required"`
 
 	// Timeout for the request. Defaults to 60s.
-	Timeout time.Duration `json:"timeout"`
+	Timeout time.Duration `json:"timeout" validate:"omitempty"`
 }
 
 type AggregationResponse struct {

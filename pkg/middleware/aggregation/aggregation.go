@@ -11,6 +11,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
+
 	log "github.com/sirupsen/logrus"
 
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -153,6 +155,15 @@ func (s *aggregation) getAggregationRequest(w http.ResponseWriter, req *http.Req
 
 	if err := httputils.Decode(w, req, &ar); err != nil {
 		return nil, err
+	}
+
+	// Validate parameters.
+	if err := validator.Validate(ar); err != nil {
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Msg:    err.Error(),
+			Err:    err,
+		}
 	}
 
 	if ar.Timeout == 0 {
