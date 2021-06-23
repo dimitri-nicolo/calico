@@ -34,6 +34,7 @@
       "count": {
         "type": "long"
       },
+      /*The current fields prefixed with src_ are deprecated. Please use source_ prefixed fields.*/
       "src_name_aggr": {
         "type": "keyword"
       },
@@ -43,6 +44,22 @@
       "src_type": {
         "type": "keyword"
       },
+      "source_name_aggr": {
+        "type": "alias",
+        "path": "src_name_aggr"
+      },
+      "source_namespace": {
+        "type": "alias",
+        "path": "src_namespace"
+      },
+      "source_type": {
+        "type": "alias",
+        "path": "src_type"
+      },
+      "source_port_num": {
+        "type": "long",
+        "null_value": "0"
+      },
       "dest_service_name": {
         "type": "keyword"
       },
@@ -50,8 +67,28 @@
         "type": "keyword"
       },
       "dest_service_port": {
+        /*dest_service_port is deprecated please use dest_service_port_num*/
         "type": "long",
         "null_value": "0"
+      },
+      "dest_service_port_name": {
+          /*
+            dest_service_port_name - Destination Service Port Name is the name of the port exposed by the service which the connection is trying to reach.  
+            Described in the Service resource specs as specs.[]ports.name. It will have the empty L7 Log character field value of '-' when:
+            - the optional port name field in the Service resource is not provided
+            - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
+        */
+        "type": "keyword"
+      },
+      "dest_service_port_num": {
+        /*
+          dest_service_port_num - Destination Service Port Number is the numerical value of the port exposed by the service which the connection is trying to reach.  
+          Described in the Service resource specs as specs.[]ports.port. It will have the empty L7 Log numerical field value of 0 when:
+          - in rare cases where the Service is unavailable (ie. deleted or down) while processing the Service information
+          This field replaces dest_service_port.
+        */
+        "type": "alias",
+        "path": "dest_service_port"
       },
       "dest_name_aggr": {
         "type": "keyword"
@@ -61,6 +98,10 @@
       },
       "dest_type": {
         "type": "keyword"
+      },
+      "dest_port_num": {
+        "type": "long",
+        "null_value": "0"
       },
       "url": {
         "type": "keyword"
