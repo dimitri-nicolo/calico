@@ -83,7 +83,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 1
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -132,7 +132,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 10
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -250,7 +250,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		var timeChan = make(chan time.Time)
 		var ticker = &time.Ticker{C: timeChan}
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -324,7 +324,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var maxAge = 1
 		var timeChan = make(chan time.Time)
 		var ticker = &time.Ticker{C: timeChan}
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -382,7 +382,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var packets = make(chan gopacket.Packet)
 		defer close(packets)
 		pcap = capture.NewRotatingPcapFile(baseDir, "", "", podName, deviceName,
-			make(chan interface{}),
+			make(chan interface{}, 100),
 			capture.WithRotationSeconds(maxAge),
 			capture.WithMaxSizeBytes(maxSize),
 			capture.WithTicker(ticker),
@@ -443,7 +443,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var maxSize = capture.GlobalHeaderLen + half*(dummyPacketDataSize()+capture.PacketInfoLen)
 		var timeChan = make(chan time.Time)
 		var ticker = &time.Ticker{C: timeChan}
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -511,7 +511,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var numberOfPackets = 10
 		var maxSize = capture.GlobalHeaderLen + (dummyPacketDataSize() + capture.PacketInfoLen)
 		var maxFiles = 2
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -580,7 +580,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		defer close(done)
 
 		var err error
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -642,7 +642,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	It("Close capture after write channel has been stopped", func(done Done) {
 		defer close(done)
 		var err error
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -682,7 +682,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 
 		// Initialise a new capture
-		var pcap = capture.NewRotatingPcapFile(baseDir, "", "", podName, deviceName, make(chan interface{}))
+		var pcap = capture.NewRotatingPcapFile(baseDir, "", "", podName, deviceName, make(chan interface{}, 100))
 
 		// Capture listens to incoming packets
 		var packets = make(chan gopacket.Packet)
@@ -720,7 +720,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 1
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Write a pcap file in order to simulate a previous capture
@@ -786,7 +786,7 @@ type outputFile struct {
 }
 
 func assertPcapFiles(baseDir string, expected []outputFile) {
-	Eventually(func() []os.FileInfo { return read(baseDir) }).Should(HaveLen(len(expected)))
+	Eventually(func() []os.FileInfo { return read(baseDir) }).Should(HaveLen(len(expected)), "wrong length in assertPcapFiles")
 	sort.Slice(expected, func(i, j int) bool {
 		return expected[i].Order < expected[j].Order
 	})
@@ -802,7 +802,7 @@ func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []out
 	sort.Slice(expected, func(i, j int) bool {
 		return expected[i].Order < expected[j].Order
 	})
-	Expect(update.CaptureFiles).To(HaveLen(len(expected)))
+	Expect(update.CaptureFiles).To(HaveLen(len(expected)), "wrong length in assertStatusUpdates")
 	for i := range expected {
 		Expect(update.CaptureFiles[i]).To(MatchRegexp(expected[i].Name))
 	}
