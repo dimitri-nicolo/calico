@@ -170,9 +170,10 @@ var _ = Describe("L7 Log Reporter", func() {
 		time.Sleep(1 * time.Second)
 
 		commonChecks := func(l *L7Log) {
-			Expect(l.SrcNameAggr).To(Equal("remoteworkloadid1"))
-			Expect(l.SrcNamespace).To(Equal("default"))
-			Expect(l.SrcType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(l.SourceNameAggr).To(Equal("remoteworkloadid1"))
+			Expect(l.SourceNamespace).To(Equal("default"))
+			Expect(l.SourceType).To(Equal(FlowLogEndpointTypeWep))
+
 			Expect(l.Method).To(Equal("GET"))
 			Expect(l.UserAgent).To(Equal("firefox"))
 			Expect(l.ResponseCode).To(Equal("200"))
@@ -185,24 +186,29 @@ var _ = Describe("L7 Log Reporter", func() {
 
 		for _, l := range logs {
 			commonChecks(l)
-			if l.DstNameAggr == "remoteworkloadid2" {
+
+			if l.DestNameAggr == "remoteworkloadid2" {
 				// TODO: Add service name checks
 				Expect(l.DurationMean).To(Equal(10 * time.Millisecond))
 				Expect(l.DurationMax).To(Equal(12 * time.Millisecond))
 				Expect(l.BytesIn).To(Equal(500))
 				Expect(l.BytesOut).To(Equal(30))
-				Expect(l.DstNameAggr).To(Equal("remoteworkloadid2"))
-				Expect(l.DstNamespace).To(Equal("default"))
-				Expect(l.DstType).To(Equal(FlowLogEndpointTypeWep))
+
+				Expect(l.DestNameAggr).To(Equal("remoteworkloadid2"))
+				Expect(l.DestNamespace).To(Equal("default"))
+				Expect(l.DestType).To(Equal(FlowLogEndpointTypeWep))
+
 				Expect(l.URL).To(Equal("www.test.com/test/path"))
 			} else {
 				Expect(l.DurationMean).To(Equal(20 * time.Millisecond))
 				Expect(l.DurationMax).To(Equal(22 * time.Millisecond))
 				Expect(l.BytesIn).To(Equal(30))
 				Expect(l.BytesOut).To(Equal(50))
-				Expect(l.DstNameAggr).To(Equal("localworkloadid1"))
-				Expect(l.DstNamespace).To(Equal("default"))
-				Expect(l.DstType).To(Equal(FlowLogEndpointTypeWep))
+
+				Expect(l.DestNameAggr).To(Equal("localworkloadid1"))
+				Expect(l.DestNamespace).To(Equal("default"))
+				Expect(l.DestType).To(Equal(FlowLogEndpointTypeWep))
+
 				Expect(l.URL).To(Equal("www.testanother.com/test/different"))
 			}
 		}

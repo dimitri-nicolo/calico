@@ -108,7 +108,7 @@ var _ = Describe("Windows flow logs test", func() {
 				err = flowTester.CheckFlow(
 					"wep demo porter porter", porter,
 					"wep demo nginx nginx", nginx,
-					"demo nginx -", 1, 1,
+					"demo nginx - 80", 1, 1,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|default|demo/knp.default.allow-nginx|allow"}},
 					})
@@ -129,7 +129,7 @@ var _ = Describe("Windows flow logs test", func() {
 				err = flowTester.CheckFlow(
 					"wep demo - porter", "",
 					"wep demo - nginx", "",
-					"demo nginx -", 1, 1,
+					"demo nginx - 80", 1, 1,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|default|demo/knp.default.allow-nginx|allow"}},
 					})

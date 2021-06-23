@@ -697,8 +697,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 	})
 
 	Context("Flow log aggregator service aggregation", func() {
-		service := FlowService{Namespace: "foo-ns", Name: "foo-svc", Port: "foo-port"}
-		serviceNoPort := FlowService{Namespace: "foo-ns", Name: "foo-svc", Port: "-"}
+		service := FlowService{Namespace: "foo-ns", Name: "foo-svc", PortName: "foo-port", PortNum: 8080}
+		serviceNoPortName := FlowService{Namespace: "foo-ns", Name: "foo-svc", PortName: "-", PortNum: 8080}
 
 		It("Does not aggregate endpoints with and without service with Default aggregation", func() {
 			By("Creating an aggregator for allow")
@@ -757,7 +757,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages := caa.GetAndCalibrate(FlowNoDestPorts)
 			Expect(len(messages)).Should(Equal(2))
 			services := []FlowService{messages[0].DstService, messages[1].DstService}
-			Expect(services).To(ConsistOf(noService, serviceNoPort))
+			Expect(services).To(ConsistOf(noService, serviceNoPortName))
 		})
 	})
 

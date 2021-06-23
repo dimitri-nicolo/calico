@@ -24,7 +24,7 @@ const (
 )
 
 const (
-	NoService = "- - -"
+	NoService = "- - - 0"
 )
 
 type FlowLogReader interface {

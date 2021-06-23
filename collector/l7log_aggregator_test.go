@@ -174,12 +174,22 @@ var _ = Describe("L7 logs aggregation tests", func() {
 			for i := 0; i < 15; i++ {
 				src := [16]byte{127, 0, 0, byte(i)}
 				dst := [16]byte{127, 0, 0, byte(5 + i)}
+
 				err := la.FeedUpdate(
-					L7Update{Tuple: MakeTuple(src, dst, i, i, i), Duration: i,
-						DurationMax: i, BytesSent: i, BytesReceived: i,
-						ResponseCode: "200", Path: fmt.Sprintf("/%s", strconv.Itoa(i)), Count: 1, Type: "tcp"})
+					L7Update{
+						Tuple:         MakeTuple(src, dst, i, i, i),
+						Duration:      i,
+						DurationMax:   i,
+						BytesSent:     i,
+						BytesReceived: i,
+						ResponseCode:  "200",
+						Path:          fmt.Sprintf("/%s", strconv.Itoa(i)),
+						Count:         1,
+						Type:          "tcp",
+					})
 				Expect(err).ShouldNot(HaveOccurred())
 			}
+
 			Expect(la.l7Store).Should(HaveLen(5))
 			// l.Get() will return the 5 stored logs, plus an extra one to say
 			// that there were 10 more updates that could not be fully logged.

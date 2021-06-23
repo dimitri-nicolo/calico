@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	emptyService = FlowService{"-", "-", "-"}
+	emptyService = FlowService{"-", "-", "-", 0}
 )
 
 type FlowLogEndpointType string
@@ -38,7 +38,8 @@ type EndpointMetadata struct {
 type FlowService struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
-	Port      string `json:"port"`
+	PortName  string `json:"port_name"`
+	PortNum   int    `json:"port_num"`
 }
 
 type FlowMeta struct {
@@ -83,6 +84,7 @@ func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 
 	f.SrcMeta = srcMeta
 	f.DstMeta = dstMeta
+
 	if includeService {
 		f.DstService = getFlowLogService(mu.dstService)
 	} else {
@@ -139,7 +141,7 @@ func newFlowMetaWithNoDestPortsAggregation(mu MetricUpdate, includeService bool)
 	f.Tuple.dst = [16]byte{}
 	f.SrcMeta.Name = flowLogFieldNotIncluded
 	f.DstMeta.Name = flowLogFieldNotIncluded
-	f.DstService.Port = flowLogFieldNotIncluded
+	f.DstService.PortName = flowLogFieldNotIncluded
 
 	return f, nil
 }
@@ -1042,37 +1044,43 @@ func (f *FlowLog) Deserialize(fl string) error {
 		f.FlowExtras.NumOriginalSourceIPs, _ = strconv.Atoi(parts[28])
 	}
 
+	svcPortNum, err := strconv.Atoi(parts[32])
+	if err != nil {
+		svcPortNum = 0
+	}
+
 	f.DstService = FlowService{
 		Namespace: parts[29],
 		Name:      parts[30],
-		Port:      parts[31],
+		PortName:  parts[31],
+		PortNum:   svcPortNum,
 	}
 
-	f.ProcessName = parts[32]
-	f.NumProcessNames, _ = strconv.Atoi(parts[33])
-	f.ProcessID = parts[34]
-	f.NumProcessIDs, _ = strconv.Atoi(parts[35])
-	temp, _ := strconv.Atoi(parts[36])
+	f.ProcessName = parts[33]
+	f.NumProcessNames, _ = strconv.Atoi(parts[34])
+	f.ProcessID = parts[35]
+	f.NumProcessIDs, _ = strconv.Atoi(parts[36])
+	temp, _ := strconv.Atoi(parts[37])
 	f.SendCongestionWnd.Mean = temp
-	temp, _ = strconv.Atoi(parts[37])
-	f.SendCongestionWnd.Min = temp
 	temp, _ = strconv.Atoi(parts[38])
-	f.SmoothRtt.Mean = temp
+	f.SendCongestionWnd.Min = temp
 	temp, _ = strconv.Atoi(parts[39])
-	f.SmoothRtt.Max = temp
+	f.SmoothRtt.Mean = temp
 	temp, _ = strconv.Atoi(parts[40])
-	f.MinRtt.Mean = temp
+	f.SmoothRtt.Max = temp
 	temp, _ = strconv.Atoi(parts[41])
-	f.MinRtt.Max = temp
+	f.MinRtt.Mean = temp
 	temp, _ = strconv.Atoi(parts[42])
-	f.Mss.Mean = temp
+	f.MinRtt.Max = temp
 	temp, _ = strconv.Atoi(parts[43])
-	f.Mss.Min = temp
+	f.Mss.Mean = temp
 	temp, _ = strconv.Atoi(parts[44])
-	f.TotalRetrans = temp
+	f.Mss.Min = temp
 	temp, _ = strconv.Atoi(parts[45])
-	f.LostOut = temp
+	f.TotalRetrans = temp
 	temp, _ = strconv.Atoi(parts[46])
+	f.LostOut = temp
+	temp, _ = strconv.Atoi(parts[47])
 	f.UnrecoveredRTO = temp
 
 	return nil
