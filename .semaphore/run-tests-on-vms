@@ -85,7 +85,7 @@ done
 echo
 echo "===== Shutting down test monitors ====="
 for pid in "${monitor_pids[@]}"; do
-  kill $pid
+  kill $pid || true
 done
 
 echo "===== Results summary ====="

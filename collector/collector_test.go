@@ -13,6 +13,8 @@ import (
 
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/kubernetes/pkg/proxy"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -1591,6 +1593,13 @@ var _ = Describe("L7 logging", func() {
 
 		t = *NewTuple(remoteIp1, remoteIp2, proto_tcp, srcPort, dstPort)
 		d = NewData(t, remoteEd1, remoteEd2, 0)
+		d.dstSvc = proxy.ServicePortName{
+			Port: "test-port",
+			NamespacedName: types.NamespacedName{
+				Name:      svcKey1.Name,
+				Namespace: svcKey1.Namespace,
+			},
+		}
 	})
 
 	It("should get client and server endpoint data", func() {
@@ -1615,7 +1624,8 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Domain).To(Equal("www.test.com"))
 		Expect(update.ServiceName).To(Equal(""))
 		Expect(update.ServiceNamespace).To(Equal(""))
-		Expect(update.ServicePort).To(Equal(0))
+		Expect(update.ServicePortName).To(Equal(""))
+		Expect(update.ServicePortNum).To(Equal(0))
 	})
 
 	It("should properly return kubernetes service names", func() {
@@ -1640,10 +1650,12 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Domain).To(Equal("test-svc.test-namespace.svc.cluster.local:80"))
 		Expect(update.ServiceName).To(Equal("test-svc"))
 		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
-		Expect(update.ServicePort).To(Equal(80))
+		// from service cache
+		Expect(update.ServicePortName).To(Equal("nginx"))
+		Expect(update.ServicePortNum).To(Equal(80))
 	})
 
-	It("should properly look up service names by cluster IP", func() {
+	It("should properly look up service names by cluster IP and store update based on the value stored in ServiceCache", func() {
 		c.LogL7(hdsvcip, d, t, 1)
 		Expect(r.updates).To(HaveLen(1))
 		update := r.updates[0]
@@ -1665,8 +1677,9 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Domain).To(Equal("10.10.10.10:80"))
 		Expect(update.ServiceName).To(Equal("test-svc"))
 		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
-		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
-		Expect(update.ServicePort).To(Equal(80))
+		// from service cache
+		Expect(update.ServicePortName).To(Equal("nginx"))
+		Expect(update.ServicePortNum).To(Equal(80))
 	})
 
 	It("should properly return kubernetes service names and fill out the protocol default port when not specified", func() {
@@ -1691,7 +1704,9 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Domain).To(Equal("test-svc.test-namespace.svc.cluster.local"))
 		Expect(update.ServiceName).To(Equal("test-svc"))
 		Expect(update.ServiceNamespace).To(Equal("test-namespace"))
-		Expect(update.ServicePort).To(Equal(80))
+		// from service cache
+		Expect(update.ServicePortName).To(Equal("nginx"))
+		Expect(update.ServicePortNum).To(Equal(80))
 	})
 
 	It("should handle empty HTTP data (overflow logs)", func() {
@@ -1717,7 +1732,7 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.Domain).To(Equal(""))
 		Expect(update.ServiceName).To(Equal(""))
 		Expect(update.ServiceNamespace).To(Equal(""))
-		Expect(update.ServicePort).To(Equal(0))
+		Expect(update.ServicePortNum).To(Equal(0))
 	})
 })
 

@@ -135,7 +135,7 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Count:            1,
 			ServiceName:      "test-service",
 			ServiceNamespace: "test-namespace",
-			ServicePort:      80,
+			ServicePortName:  "test-port",
 		}
 	})
 
@@ -160,15 +160,20 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Path).To(Equal(update.Path))
 		Expect(meta.UserAgent).To(Equal(update.UserAgent))
 		Expect(meta.Type).To(Equal(update.Type))
+
 		Expect(meta.ServiceName).To(Equal(update.ServiceName))
 		Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-		Expect(meta.ServicePort).To(Equal(update.ServicePort))
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 		Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 		Expect(meta.SrcNamespace).To(Equal("default"))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-		Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-		Expect(meta.DstNamespace).To(Equal("default"))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+		Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+		Expect(meta.DestNamespace).To(Equal("default"))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.DestPortNum).To(Equal(dstPort))
 	})
 
 	It("Should aggregate out the correct HTTP header details appropriately", func() {
@@ -192,15 +197,20 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Path).To(Equal(update.Path))
 		Expect(meta.UserAgent).To(Equal(flowLogFieldNotIncluded))
 		Expect(meta.Type).To(Equal(flowLogFieldNotIncluded))
+
 		Expect(meta.ServiceName).To(Equal(update.ServiceName))
 		Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-		Expect(meta.ServicePort).To(Equal(update.ServicePort))
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 		Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 		Expect(meta.SrcNamespace).To(Equal("default"))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-		Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-		Expect(meta.DstNamespace).To(Equal("default"))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+		Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+		Expect(meta.DestNamespace).To(Equal("default"))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.DestPortNum).To(Equal(dstPort))
 	})
 
 	It("Should aggregate out the HTTP method", func() {
@@ -226,13 +236,18 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Type).To(Equal(update.Type))
 		Expect(meta.ServiceName).To(Equal(update.ServiceName))
 		Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-		Expect(meta.ServicePort).To(Equal(update.ServicePort))
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
 		Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 		Expect(meta.SrcNamespace).To(Equal("default"))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-		Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-		Expect(meta.DstNamespace).To(Equal("default"))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+		Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+		Expect(meta.DestNamespace).To(Equal("default"))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.DestPortNum).To(Equal(dstPort))
 	})
 
 	It("Should aggregate over service information properly", func() {
@@ -258,13 +273,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Type).To(Equal(update.Type))
 		Expect(meta.ServiceName).To(Equal(flowLogFieldNotIncluded))
 		Expect(meta.ServiceNamespace).To(Equal(flowLogFieldNotIncluded))
-		Expect(meta.ServicePort).To(Equal(0))
+
+		Expect(meta.ServicePortName).To(Equal(flowLogFieldNotIncluded))
 		Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 		Expect(meta.SrcNamespace).To(Equal("default"))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-		Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-		Expect(meta.DstNamespace).To(Equal("default"))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+		Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+		Expect(meta.DestNamespace).To(Equal("default"))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.DestPortNum).To(Equal(dstPort))
 	})
 
 	It("Should aggregate out the destination information properly", func() {
@@ -290,13 +309,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Type).To(Equal(update.Type))
 		Expect(meta.ServiceName).To(Equal(update.ServiceName))
 		Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-		Expect(meta.ServicePort).To(Equal(update.ServicePort))
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 		Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 		Expect(meta.SrcNamespace).To(Equal("default"))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-		Expect(meta.DstNameAggr).To(Equal(flowLogFieldNotIncluded))
-		Expect(meta.DstNamespace).To(Equal(flowLogFieldNotIncluded))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointType(flowLogFieldNotIncluded)))
+		Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+		Expect(meta.DestNameAggr).To(Equal(flowLogFieldNotIncluded))
+		Expect(meta.DestNamespace).To(Equal(flowLogFieldNotIncluded))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointType(flowLogFieldNotIncluded)))
+		Expect(meta.DestPortNum).To(Equal(0))
 	})
 
 	It("Should aggregate out the source information properly", func() {
@@ -322,13 +345,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Type).To(Equal(update.Type))
 		Expect(meta.ServiceName).To(Equal(update.ServiceName))
 		Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-		Expect(meta.ServicePort).To(Equal(update.ServicePort))
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 		Expect(meta.SrcNameAggr).To(Equal(flowLogFieldNotIncluded))
 		Expect(meta.SrcNamespace).To(Equal(flowLogFieldNotIncluded))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointType(flowLogFieldNotIncluded)))
-		Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-		Expect(meta.DstNamespace).To(Equal("default"))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.SourcePortNum).To(Equal(0))
+
+		Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+		Expect(meta.DestNamespace).To(Equal("default"))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.DestPortNum).To(Equal(dstPort))
 	})
 
 	It("Should aggregate out the response code", func() {
@@ -354,13 +381,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 		Expect(meta.Type).To(Equal(update.Type))
 		Expect(meta.ServiceName).To(Equal(update.ServiceName))
 		Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-		Expect(meta.ServicePort).To(Equal(update.ServicePort))
+		Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 		Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 		Expect(meta.SrcNamespace).To(Equal("default"))
 		Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-		Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-		Expect(meta.DstNamespace).To(Equal("default"))
-		Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+		Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+		Expect(meta.DestNamespace).To(Equal("default"))
+		Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+		Expect(meta.DestPortNum).To(Equal(dstPort))
 	})
 
 	Context("With URL aggregating on", func() {
@@ -387,13 +418,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should remove only the query parameters", func() {
@@ -419,13 +454,16 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should remove the path", func() {
@@ -451,13 +489,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should properly truncate parts of the URL path", func() {
@@ -483,13 +525,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should properly truncate all parts of the URL path", func() {
@@ -515,13 +561,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should output full url with query params when URLCharLimit is more than length of the URL", func() {
@@ -547,13 +597,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should output truncated domain, empty path when URLCharLimit is less than length of domain", func() {
@@ -579,13 +633,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should output full domain, parts of path when URLCharLimit is more than domain length but less than full path url", func() {
@@ -611,13 +669,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should output empty domain and path for L7URLNone case no matter what URLCharLimit is passed", func() {
@@ -643,13 +705,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should output full domain and empty path for L7BaseURL case when URLCharLimit is more than domain length", func() {
@@ -675,13 +741,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 
 		It("Should output full domain and max path for L7URLWithoutQuery case when URLCharLimit is between domain length and full url length", func() {
@@ -707,13 +777,17 @@ var _ = Describe("Test L7 Aggregation options", func() {
 			Expect(meta.Type).To(Equal(update.Type))
 			Expect(meta.ServiceName).To(Equal(update.ServiceName))
 			Expect(meta.ServiceNamespace).To(Equal(update.ServiceNamespace))
-			Expect(meta.ServicePort).To(Equal(update.ServicePort))
+			Expect(meta.ServicePortName).To(Equal(update.ServicePortName))
+
 			Expect(meta.SrcNameAggr).To(Equal("remoteworkloadid1"))
 			Expect(meta.SrcNamespace).To(Equal("default"))
 			Expect(meta.SrcType).To(Equal(FlowLogEndpointTypeWep))
-			Expect(meta.DstNameAggr).To(Equal("remoteworkloadid2"))
-			Expect(meta.DstNamespace).To(Equal("default"))
-			Expect(meta.DstType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.SourcePortNum).To(Equal(srcPort))
+
+			Expect(meta.DestNameAggr).To(Equal("remoteworkloadid2"))
+			Expect(meta.DestNamespace).To(Equal("default"))
+			Expect(meta.DestType).To(Equal(FlowLogEndpointTypeWep))
+			Expect(meta.DestPortNum).To(Equal(dstPort))
 		})
 	})
 })

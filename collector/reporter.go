@@ -84,6 +84,13 @@ func (tm *TCPMetricValue) Reset() {
 	tm.deltaUnRecoveredRTO = 0
 }
 
+// MetricServiceInfo holds information of a service for a MetricUpdate
+type MetricServiceInfo struct {
+	proxy.ServicePortName
+	// the preDNATPort used to query from the Service info in dstService
+	PortNum int
+}
+
 type MetricUpdate struct {
 	updateType UpdateType
 
@@ -95,7 +102,7 @@ type MetricUpdate struct {
 	// Endpoint information.
 	srcEp      *calc.EndpointData
 	dstEp      *calc.EndpointData
-	dstService proxy.ServicePortName
+	dstService MetricServiceInfo
 
 	// isConnection is true if this update is from an active connection.
 	isConnection bool
