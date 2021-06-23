@@ -153,8 +153,8 @@ func (c *customK8sResourceClient) Update(ctx context.Context, kvp *model.KVPair)
 // UpdateStatus updates status section of an existing Custom K8s Resource instance in the k8s API from the supplied KVPair.
 func (c *customK8sResourceClient) UpdateStatus(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	logContext := log.WithFields(log.Fields{
-		"Key":      kvp.Key,
-		"Value":    kvp.Value,
+		"Key":             kvp.Key,
+		"Value":           kvp.Value,
 		"Parent Resource": c.resource,
 	})
 	logContext.Debug("UpdateStatus custom Kubernetes resource")
