@@ -882,10 +882,10 @@ spec:
               syslogReporterNetwork:
                 type: string
               tproxyMode:
-								description: 'Sets the transparent proxy mode. [Default: Disabled]'
+                description: 'Sets the transparent proxy mode. [Default: Disabled]'
                 type: string
               tproxyPort:
-								description: 'What local ports is the proxied traffic sent to. [Default: 16001]'
+                description: 'Local port that the proxied traffic is sent to. [Default: 16001]'
                 type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
