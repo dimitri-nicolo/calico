@@ -77,8 +77,8 @@ func (tpr *L7FrontEndResolver) OnResourceUpdate(update api.Update) (_ bool) {
 			} else {
 				service := update.Value.(*kapiv1.Service)
 				annotations := service.ObjectMeta.Annotations
-				// process services annotated with l7 or all service when in debug mode
-				if hasAnnotation(annotations, l7LoggingAnnotation) || tpr.conf.TPROXYMode == "EnabledDebug" {
+				// process services annotated with l7 or all service when in EnabledAllServices mode
+				if hasAnnotation(annotations, l7LoggingAnnotation) || tpr.conf.TPROXYModeEnabledAllServices() {
 					log.Infof("processing update for tproxy annotated service %s", k)
 					tpr.suh.AddOrUpdateService(k, service)
 					tpr.flush()

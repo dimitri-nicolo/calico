@@ -28,10 +28,13 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
-var _ = describeTProxyTest(false)
-var _ = describeTProxyTest(true)
+var _ = describeTProxyTest(false, "Enabled")
+var _ = describeTProxyTest(true, "Enabled")
+var _ = describeTProxyTest(false, "EnabledAllServices")
 
-func describeTProxyTest(ipip bool) bool {
+func describeTProxyTest(ipip bool, TPROXYMode string) bool {
+	const l7LoggingAnnotation = "projectcalico.org/l7-logging"
+	const TPROXYServicesIPSetV4 = "cali40tproxy-services"
 
 	tunnel := "none"
 	if ipip {
@@ -107,7 +110,7 @@ func describeTProxyTest(ipip bool) bool {
 					options.IPIPRoutesEnabled = false
 				}
 
-				options.ExtraEnvVars["FELIX_TPROXYMODE"] = "Enabled"
+				options.ExtraEnvVars["FELIX_TPROXYMODE"] = TPROXYMode
 				// XXX until we can safely remove roting rules and not break other tests
 				options.EnableIPv6 = false
 
@@ -206,7 +209,7 @@ func describeTProxyTest(ipip bool) bool {
 				if CurrentGinkgoTestDescription().Failed {
 					for _, felix := range felixes {
 						felix.Exec("iptables-save", "-c")
-						felix.Exec("ipset", "list", "cali40tproxy-services")
+						felix.Exec("ipset", "list", TPROXYServicesIPSetV4)
 						felix.Exec("ip", "route")
 					}
 				}
@@ -251,14 +254,16 @@ func describeTProxyTest(ipip bool) bool {
 					}
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-					v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					if TPROXYMode == "Enabled" {
+						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+					}
 					createService(v1Svc, clientset)
 				})
 
 				It("should have connectivity from all workloads via ClusterIP", func() {
 
 					By("asserting that ipaddress, port exists in ipset ")
-					assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
 
 					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -296,7 +301,7 @@ func describeTProxyTest(ipip bool) bool {
 							pol = createPolicy(pol)
 						})
 						By("asserting that ipaddress, port exists in ipset ")
-						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
+						assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
 
 						cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -337,7 +342,7 @@ func describeTProxyTest(ipip bool) bool {
 						})
 
 						By("asserting that ipaddress, port exists in ipset ")
-						assertIPPortInIPSet("cali40tproxy-services", clusterIP, "8090", felixes, true)
+						assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
 
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -365,23 +370,26 @@ func describeTProxyTest(ipip bool) bool {
 					By("setting up annotated service for the end points ")
 					//create service resource that has annotation at creation
 					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
-					v1Svc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					annotatedSvc := createService(v1Svc, clientset)
 
-					By("asserting that ipaddress, port of service propagated to ipset ")
-					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, true)
-					//
+					By("asserting that ipaddress, port of service updated in ipset ")
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, servicePort, felixes, true)
+
 					By("updating the service to not have l7 annotation ")
 					annotatedSvc.ObjectMeta.Annotations = map[string]string{}
 					_, err := clientset.CoreV1().Services(annotatedSvc.ObjectMeta.Namespace).Update(context.Background(), annotatedSvc, metav1.UpdateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
-					By("asserting that ipaddress, port of service removed from ipset")
-					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+					By("asserting that ip, port exists for EnabledAllServices case and doesn't exist for others case when l7 annotation removed")
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, servicePort, felixes, TPROXYMode == "EnabledAllServices")
 
-					By("deleting the now unannotated service  ")
+					By("deleting the now unannotated service")
 					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
+
+					By("assert that ip, port is removed from ipset when service is deleted")
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, servicePort, felixes, false)
 
 					// In this second stage we create a service resource that does not have annotation at creation
 					// and repeat similar process as above again.
@@ -392,23 +400,23 @@ func describeTProxyTest(ipip bool) bool {
 					v1Svc.ObjectMeta.Annotations = map[string]string{}
 					unannotatedSvc := createService(v1Svc, clientset)
 
-					By("asserting that ipaddress, port of service does not exist in ipset")
-					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+					By("asserting that ip, port exists for EnabledAllServices and doesn't exist for others case when l7 annotation not present")
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, servicePort, felixes, TPROXYMode == "EnabledAllServices")
 
 					By("updating the service to have l7 annotation ")
-					unannotatedSvc.ObjectMeta.Annotations = map[string]string{"projectcalico.org/l7-logging": "true"}
+					unannotatedSvc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					_, err = clientset.CoreV1().Services(unannotatedSvc.ObjectMeta.Namespace).Update(context.Background(), unannotatedSvc, metav1.UpdateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
-					By("asserting that ipaddress, port of service propagated to ipset ")
-					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, true)
+					By("asserting that ipaddress, port of service propagated to ipset")
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, servicePort, felixes, true)
 
 					By("deleting the annotated service")
 					err = clientset.CoreV1().Services(v1Svc.ObjectMeta.Namespace).Delete(context.Background(), v1Svc.ObjectMeta.Name, metav1.DeleteOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
 					By("asserting that ipaddress, port of service removed from ipset")
-					assertIPPortInIPSet("cali40tproxy-services", clusterIP, servicePort, felixes, false)
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, servicePort, felixes, false)
 
 				})
 
