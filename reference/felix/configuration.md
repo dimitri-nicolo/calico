@@ -86,7 +86,7 @@ The full list of parameters which can be set is as follows.
 | `TyphaK8sServiceName`             | `FELIX_TYPHAK8SSERVICENAME`             | Name of the Typha Kubernetes service | string |
 | `Ipv6Support`                     | `FELIX_IPV6SUPPORT`                     | Enable {{site.prodname}} networking and security for IPv6 traffic as well as for IPv4. | boolean |
 | `RouteSource`                     | `FELIX_ROUTESOURCE`                     | Where Felix gets is routing information from for VXLAN and the BPF dataplane. The CalicoIPAM setting is more efficient because it supports route aggregation, but it only works when Calico's IPAM or host-local IPAM is in use. Use the WorkloadIPs setting if you are using Calico's VXLAN or BPF dataplane and not using Calico IPAM or host-local IPAM. [Default: "CalicoIPAM"] | 'CalicoIPAM', or 'WorkloadIPs' |
-| `TPROXYMode`                      | `FELIX_TPROXYMODE`                      | Sets transparent proxying mode. [Default: "Disabled"] | 'Disabled', 'Enabled', or 'EnabledDebug' |
+| `TPROXYMode`                      | `FELIX_TPROXYMODE`                      | Sets transparent proxying mode. [Default: "Disabled"] | 'Disabled', 'Enabled' |
 | `TPROXYPort`                      | `FELIX_TPROXYPORT`                      | What local ports is the proxied traffic sent to. [Default: `16001`] | int |
 
 #### etcd datastore configuration
