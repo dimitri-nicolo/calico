@@ -214,6 +214,9 @@ func describeTProxyTest(ipip bool) bool {
 
 			AfterEach(func() {
 				log.Info("AfterEach starting")
+				for _, f := range felixes {
+					f.Stop()
+				}
 				infra.Stop()
 				log.Info("AfterEach done")
 			})
