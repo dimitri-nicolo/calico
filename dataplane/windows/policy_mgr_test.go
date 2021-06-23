@@ -114,6 +114,22 @@ func TestPolicyManager(t *testing.T) {
 		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
 	}), "unexpected rules returned after ActiveProfileRemove event for profile-prof1")
 
+	// Should skip stagged policy
+	// Apply policy update
+	policyMgr.OnUpdate(&proto.ActivePolicyUpdate{
+		Id: &proto.PolicyID{Name: "staged:pol1", Tier: "tier1"},
+		Policy: &proto.Policy{
+			InboundRules: []*proto.Rule{
+				{Action: "allow"},
+			},
+		},
+	})
+
+	//assertion for ingress rules
+	Expect(ps.GetPolicySetRules([]string{"policy-staged:pol1"}, true)).To(Equal([]*hns.ACLPolicy{
+		// Default deny rule.
+		{Type: hns.ACL, Id: "DRI", Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+	}), "unexpected rules returned for ingress rules update for policy-staged:pol1")
 }
 
 type mockHNS struct {
