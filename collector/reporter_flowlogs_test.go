@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -32,11 +33,15 @@ var (
 )
 
 type testFlowLogDispatcher struct {
-	mutex sync.Mutex
-	logs  []*FlowLog
+	mutex    sync.Mutex
+	logs     []*FlowLog
+	failInit bool
 }
 
 func (d *testFlowLogDispatcher) Initialize() error {
+	if d.failInit {
+		return errors.New("failed to initialize testFlowLogDispatcher")
+	}
 	return nil
 }
 
@@ -385,10 +390,10 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 			Eventually(func() health.HealthReport { return *hr.Summary() }, 15, 1).Should(Equal(expectedReport))
 		})
 	})
-	Context("Test with client that times out requests", func() {
+	Context("Test with dispatcher that fails to initialize", func() {
 		BeforeEach(func() {
 			dispatcherMap := map[string]LogDispatcher{}
-			dispatcher = &testFlowLogDispatcher{}
+			dispatcher = &testFlowLogDispatcher{failInit: true}
 			dispatcherMap["testFlowLog"] = dispatcher
 			hr = health.NewHealthAggregator()
 			cr = NewFlowLogsReporter(dispatcherMap, flushInterval, hr, false, &NoOpLogOffset{})
