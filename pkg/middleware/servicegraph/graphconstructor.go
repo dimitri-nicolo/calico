@@ -548,7 +548,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 				sel := s.selh.GetServiceNodeSelectors(svc.NamespacedName)
 				service = &trackedNode{
 					graphNode: v1.GraphNode{
-						Type:      v1.GraphNodeTypeServicePort,
+						Type:      v1.GraphNodeTypeService,
 						ID:        serviceId,
 						ParentID:  sg.ID,
 						Namespace: svc.Namespace,

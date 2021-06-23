@@ -123,7 +123,7 @@ var _ = Describe("Service graph data tests", func() {
 			// file in the event of an error.  It makes dev cycles easier.
 			actualData = actual
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
 
 			// Parse the expected response.
 			var expected map[string]interface{}
@@ -165,6 +165,17 @@ var _ = Describe("Service graph data tests", func() {
 				for _, node := range actual["nodes"].([]interface{}) {
 					Expect(node).To(BeAssignableToTypeOf(map[string]interface{}{}))
 					actualNodeIds = append(actualNodeIds, node.(map[string]interface{})["id"])
+
+					// Sanity check the node ID and node type match.
+					id, ok := node.(map[string]interface{})["id"].(string)
+					Expect(ok).To(BeTrue())
+					tp, ok := node.(map[string]interface{})["type"].(string)
+					Expect(ok).To(BeTrue())
+
+					idt := strings.Split(id, "/")
+					idt = strings.Split(idt[0], ";")
+
+					Expect(idt[0]).To(Equal(tp))
 				}
 				for _, node := range expected["nodes"].([]interface{}) {
 					Expect(node).To(BeAssignableToTypeOf(map[string]interface{}{}))
