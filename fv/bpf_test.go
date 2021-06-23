@@ -2957,6 +2957,10 @@ func dumpBPFMap(felix *infrastructure.Felix, m bpf.Map, iter bpf.IterCallback) {
 retry:
 	log.WithField("cmd", cmd).Debug("dumpBPFMap")
 	out, err := felix.ExecOutput(cmd...)
+	if err != nil && retriesAllowed > 0 {
+		retriesAllowed--
+		goto retry
+	}
 	Expect(err).NotTo(HaveOccurred(), "Failed to get dump BPF map: "+m.Path())
 	err = bpf.IterMapCmdOutput([]byte(out), iter)
 	if err != nil && retriesAllowed > 0 {
