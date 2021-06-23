@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/libcalico-go
-GO_BUILD_VER=v0.51
+GO_BUILD_VER=v0.53
 
 ORGANIZATION=tigera
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
@@ -9,6 +9,9 @@ SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_TYPHA_PRIVATE_PROJECT_ID) $(SE
 
 GOMOD_VENDOR = false
 LOCAL_CHECKS = goimports check-gen-files
+
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ###############################################################################
 # Download and include Makefile.common
