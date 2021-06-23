@@ -37,7 +37,8 @@ for batch in ${FV_BATCHES_TO_RUN}; do
                -ginkgo.focus="${GINKGO_FOCUS}" \
                ${GINKGO_ARGS} \
                -ginkgo.v \
-               -ginkgo.dryRun
+               -ginkgo.noColor \
+               -ginkgo.dryRun 2>&1 | awk test-list-filter.awk
      # Now really run them.
      ./fv.test -ginkgo.parallel.node ${batch} \
                -ginkgo.parallel.total ${FV_NUM_BATCHES} \
