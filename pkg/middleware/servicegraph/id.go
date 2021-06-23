@@ -153,7 +153,7 @@ func (idf *IDInfo) GetEndpointPortID() v1.GraphNodeID {
 	if epID == "" {
 		return idf.GetAggrEndpointPortID()
 	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Service.Proto, idf.Endpoint.Port, epID))
+	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Proto, idf.Endpoint.Port, epID))
 }
 
 // GetAggrEndpointPortID returns the ID of the endpoint Port. This contains the parent aggregataed endpoint ID embedded
@@ -166,7 +166,7 @@ func (idf *IDInfo) GetAggrEndpointPortID() v1.GraphNodeID {
 	if epID == "" {
 		return ""
 	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Service.Proto, idf.Endpoint.Port, epID))
+	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Proto, idf.Endpoint.Port, epID))
 }
 
 // GetServiceID returns the destination service ID of the service contained in this node.
@@ -239,7 +239,7 @@ const (
 	idpName
 	idpNameAggr
 	idpProtocol
-	idpPort
+	idpPortNum
 	idpServiceNamespace
 	idpServiceName
 	idpServicePort
@@ -260,7 +260,7 @@ var (
 		v1.GraphNodeTypeHosts:        {{idpType, idpNameAggr}},
 		v1.GraphNodeTypeNetworkSet:   {{idpType, idpNameAggr}, {idpType, idpNamespace, idpNameAggr}},
 		v1.GraphNodeTypeWorkload:     {{idpType, idpNamespace, idpName, idpNameAggr}},
-		v1.GraphNodeTypePort:         {{idpType, idpProtocol, idpPort}},
+		v1.GraphNodeTypePort:         {{idpType, idpProtocol, idpPortNum}},
 		v1.GraphNodeTypeService:      {{idpType, idpServiceNamespace, idpServiceName}},
 		v1.GraphNodeTypeServicePort:  {{idpType, idpServiceProtocol, idpServicePort}},
 		graphNodeTypeDirection:       {{idpType, idpDirection}},
@@ -367,7 +367,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 					idf.Endpoint.Proto = parts[idx]
 				case idpServiceProtocol:
 					idf.Service.Proto = parts[idx]
-				case idpPort:
+				case idpPortNum:
 					val, err := strconv.Atoi(parts[idx])
 					if err != nil {
 						return nil, fmt.Errorf("unexpected format of node ID %s: port is not a number", id)
