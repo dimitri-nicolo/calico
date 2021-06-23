@@ -36,8 +36,8 @@ for batch in ${FV_BATCHES_TO_RUN}; do
                -ginkgo.slowSpecThreshold ${FV_SLOW_SPEC_THRESH} \
                -ginkgo.focus="${GINKGO_FOCUS}" \
                ${GINKGO_ARGS} \
-	       -ginkgo.v \
-	       -ginkgo.dryRun
+               -ginkgo.v \
+               -ginkgo.dryRun
      # Now really run them.
      ./fv.test -ginkgo.parallel.node ${batch} \
                -ginkgo.parallel.total ${FV_NUM_BATCHES} \
