@@ -142,6 +142,8 @@ func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName 
 		capture.ticker = time.NewTicker(time.Duration(capture.rotationSeconds) * time.Second)
 	}
 
+	log.WithField("CAPTURE", capture.loggingID).Debugf("NewRotatingPcapFile: %+v", *capture)
+
 	return capture
 }
 func (capture *rotatingPcapFile) currentCaptureFileAbsolutePath() string {
@@ -164,10 +166,10 @@ func (capture *rotatingPcapFile) open() error {
 	var currentFile = capture.currentCaptureFileAbsolutePath()
 	var info os.FileInfo
 	if info, err = os.Stat(currentFile); err == nil {
-		log.WithField("CAPTURE", capture.loggingID).Debug("Open existing pcap file")
+		log.WithField("CAPTURE", capture.loggingID).Debugf("Open existing pcap file %v", currentFile)
 		capture.output, err = os.OpenFile(currentFile, os.O_APPEND|os.O_WRONLY, 0644)
 	} else {
-		log.WithField("CAPTURE", capture.loggingID).Debug("Creating pcap file")
+		log.WithField("CAPTURE", capture.loggingID).Debugf("Creating pcap file %v", currentFile)
 		capture.output, err = os.OpenFile(currentFile, os.O_CREATE|os.O_WRONLY, 0644)
 	}
 
@@ -235,7 +237,7 @@ func (capture *rotatingPcapFile) rotate() error {
 
 	var files = capture.cleanOlderFiles()
 
-	go capture.updateStatus(capture.extractFileNames(files))
+	capture.updateStatus(capture.extractFileNames(files))
 
 	return nil
 }
@@ -326,7 +328,7 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	if err != nil {
 		return err
 	}
-	go capture.updateStatus(capture.extractFileNames(files))
+	capture.updateStatus(capture.extractFileNames(files))
 
 	for {
 		select {
