@@ -12,6 +12,8 @@ layout: null
 
 {% include content/ocp/01-cr-logcollector.yaml %}
 
+{% include content/ocp/01-cr-monitor.yaml %}
+
 {% helm tigera-operator --execute templates/prometheus/00-namespace-tigera-prometheus.yaml %}
 installation:
   kubernetesProvider: openshift
