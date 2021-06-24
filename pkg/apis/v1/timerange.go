@@ -41,12 +41,12 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 
 	if strings.TrimSpace(s.From) == "" {
 		return httputils.NewHttpStatusErrorBadRequest(
-			"invalid value for the time range: missing `from` field", nil,
+			"Request body contains an invalid value for the time range: missing `from` field", nil,
 		)
 	}
 	if strings.TrimSpace(s.To) == "" {
 		return httputils.NewHttpStatusErrorBadRequest(
-			"invalid value for the time range: missing `to` field", nil,
+			"Request body contains an invalid value for the time range: missing `to` field", nil,
 		)
 	}
 
@@ -54,21 +54,21 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 	if from, fromQp, err := timeutils.ParseTime(now, &s.From); err != nil {
 		log.WithError(err).Debug("Unable to parse 'from' time")
 		return httputils.NewHttpStatusErrorBadRequest(
-			fmt.Sprintf("invalid value for the time range 'from' field: %s", s.From), err,
+			fmt.Sprintf("Request body contains an invalid value for the time range 'from' field: %s", s.From), err,
 		)
 	} else if to, toQp, err := timeutils.ParseTime(now, &s.To); err != nil {
 		return httputils.NewHttpStatusErrorBadRequest(
-			fmt.Sprintf("invalid value for the time range 'to' field: %s", s.To), err,
+			fmt.Sprintf("Request body contains an invalid value for the time range 'to' field: %s", s.To), err,
 		)
 	} else if isstring(fromQp) != isstring(toQp) {
 		log.Debug("time range is specified as a mixture of explicit time and relative time")
 		return httputils.NewHttpStatusErrorBadRequest(
-			"invalid time range: values must either both be explicit times or both be relative to now", nil,
+			"Request body contains an invalid time range: values must either both be explicit times or both be relative to now", nil,
 		)
 	} else if from.After(*to) {
 		log.Debug("From is after To")
 		return httputils.NewHttpStatusErrorBadRequest(
-			fmt.Sprintf("invalid time range: from (%s) is after to (%s)", s.From, s.To), nil,
+			fmt.Sprintf("Request body contains an invalid time range: from (%s) is after to (%s)", s.From, s.To), nil,
 		)
 	} else {
 		t.From = *from

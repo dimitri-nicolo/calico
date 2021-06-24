@@ -17,7 +17,7 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid value for the time range: missing `from` field"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range: missing `from` field"))
 	})
 
 	It("Errors with no to field", func() {
@@ -26,7 +26,7 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid value for the time range: missing `to` field"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range: missing `to` field"))
 	})
 
 	It("Parses relative times", func() {
@@ -56,7 +56,7 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid time range: values must either both be explicit times or both be relative to now"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid time range: values must either both be explicit times or both be relative to now"))
 	})
 
 	It("Errors with reversed relative times", func() {
@@ -65,7 +65,7 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid time range: from (now) is after to (now-15m)"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid time range: from (now) is after to (now-15m)"))
 	})
 
 	It("Errors with reversed actual times", func() {
@@ -74,7 +74,7 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid time range: from (2021-05-30T21:23:10Z) is after to (2021-05-30T21:22:10Z)"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid time range: from (2021-05-30T21:23:10Z) is after to (2021-05-30T21:22:10Z)"))
 	})
 
 	It("Errors with bad time in from", func() {
@@ -83,7 +83,7 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid value for the time range 'from' field: now-X"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range 'from' field: now-X"))
 	})
 
 	It("Errors with bad time in to", func() {
@@ -92,6 +92,6 @@ var _ = Describe("Unmarshaling works correctly", func() {
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(Equal("invalid value for the time range 'to' field: now-X"))
+		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range 'to' field: now-X"))
 	})
 })
