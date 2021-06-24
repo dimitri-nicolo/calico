@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,12 +18,12 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	celastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/k8s"
 	"github.com/tigera/lma/pkg/list"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 
-	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
@@ -179,32 +178,38 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetFlowLogsIndex, esClient.Backend())))))
-	sm.Handle("/dnsLogs/aggregation",
-		middleware.ClusterRequestToResource(dnsLogsResourceName,
-			middleware.AuthenticateRequest(authenticator,
-				middleware.AuthorizeRequest(authz,
-					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.DnsLogs())))))
+					middleware.SearchHandler(
+						lmaindex.FlowLogs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+					)))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetDNSLogsIndex, esClient.Backend())))))
-	sm.Handle("/l7Logs/aggregation",
-		middleware.ClusterRequestToResource(l7ResourceName,
-			middleware.AuthenticateRequest(authenticator,
-				middleware.AuthorizeRequest(authz,
-					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.L7Logs())))))
+					middleware.SearchHandler(
+						lmaindex.DnsLogs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+					)))))
 	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetL7LogsIndex, esClient.Backend())))))
+					middleware.SearchHandler(
+						lmaindex.L7Logs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+					)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(eselastic.GetEventsIndex, esClient.Backend())))))
+					middleware.SearchHandler(
+						lmaindex.Alerts(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(

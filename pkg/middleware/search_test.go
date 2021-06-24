@@ -3,6 +3,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -16,12 +17,15 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/httputils"
 	calicojson "github.com/tigera/lma/pkg/test/json"
 	"github.com/tigera/lma/pkg/test/thirdpartymock"
 
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	eselastic "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 const (
@@ -29,27 +33,75 @@ const (
 {
   "cluster": "c_val",
   "page_size": 152,
-  "page_num": 1
+  "page_num": 1,
+	"time_range": {
+		"from": "2021-04-19T14:25:30.169821857-07:00",
+		"to": "2021-04-19T14:25:30.169827009-07:00"
+	}
 }`
 	validRequestBodyPageSizeGreaterThanLTE = `
 {
   "cluster": "c_val",
   "page_size": 1001,
-  "page_num": 1
+  "page_num": 1,
+	"time_range": {
+		"from": "2021-04-19T14:25:30.169821857-07:00",
+		"to": "2021-04-19T14:25:30.169827009-07:00"
+	}
 }`
 	validRequestBodyPageSizeLessThanGTE = `
 {
   "cluster": "c_val",
   "page_size": -1,
-  "page_num": 1
+  "page_num": 1,
+	"time_range": {
+		"from": "2021-04-19T14:25:30.169821857-07:00",
+		"to": "2021-04-19T14:25:30.169827009-07:00"
+	}
 }`
 	invalidRequestBodyBadlyFormedStringValue = `
 {
   "cluster": c_val,
   "page_size": 152,
+  "page_num": 1,
+	"time_range": {
+		"from": "2021-04-19T14:25:30.169821857-07:00",
+		"to": "2021-04-19T14:25:30.169827009-07:00"
+	}
+}`
+
+	invalidRequestBodyTimeRangeMissing = `
+{
+  "cluster": "c_val",
+  "page_size": 152,
   "page_num": 1
 }`
+
+	invalidRequestBodyTimeRangeContainsInvalidTimeValue = `
+{
+  "cluster": "c_val",
+  "page_size": 152,
+  "page_num": 1,
+	"time_range": {
+		"from": 143435,
+		"to": "2021-04-19T14:25:30.169827009-07:00"
+	}
+}`
 )
+
+// The user authentication review mock struct implementing the authentication review interface.
+type userAuthorizationReviewMock struct {
+	verbs []libcalicov3.AuthorizedResourceVerbs
+	err   error
+}
+
+// PerformReviewForElasticLogs wraps a mocked version of the authorization review method
+// PerformReviewForElasticLogs.
+func (a userAuthorizationReviewMock) PerformReviewForElasticLogs(
+	ctx context.Context, req *http.Request, cluster string,
+) ([]libcalicov3.AuthorizedResourceVerbs, error) {
+	return a.verbs, a.err
+}
 
 var _ = Describe("SearchElasticHits", func() {
 	var (
@@ -74,6 +126,9 @@ var _ = Describe("SearchElasticHits", func() {
 	})
 
 	Context("Elasticsearch /search request and response validation", func() {
+		fromTime := time.Date(2021, 04, 19, 14, 25, 30, 169827009, time.Local)
+		toTime := time.Date(2021, 04, 19, 15, 25, 30, 169827009, time.Local)
+
 		esResponse := []*elastic.SearchHit{
 			{
 				Index: "tigera_secure_ee_flows",
@@ -132,6 +187,43 @@ var _ = Describe("SearchElasticHits", func() {
 			},
 		}
 
+		userAuthReview := userAuthorizationReviewMock{verbs: []libcalicov3.AuthorizedResourceVerbs{
+			{
+				APIGroup: "APIGroupVal1",
+				Resource: "hostendpoints",
+				Verbs: []libcalicov3.AuthorizedResourceVerb{
+					{
+						Verb: "list",
+						ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+							{
+								Tier:      "tierVal1",
+								Namespace: "namespaceVal1",
+							},
+							{
+								Tier:      "tierVal2",
+								Namespace: "namespaceVal2",
+							},
+						},
+					},
+					{
+						Verb: "list",
+						ResourceGroups: []libcalicov3.AuthorizedResourceGroup{
+							{
+								Tier:      "tierVal1",
+								Namespace: "namespaceVal1",
+							},
+							{
+								Tier:      "tierVal2",
+								Namespace: "namespaceVal2",
+							},
+						},
+					},
+				},
+			},
+		},
+			err: nil,
+		}
+
 		It("Should return a valid Elastic search response", func() {
 			mockDoer = new(thirdpartymock.MockDoer)
 
@@ -143,9 +235,42 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
-				"from":  0,
-				"query": calicojson.Map{"bool": calicojson.Map{}},
-				"size":  100,
+				"from": 0,
+				"query": calicojson.Map{
+					"bool": calicojson.Map{
+						"filter": []calicojson.Map{
+							{
+								"range": calicojson.Map{
+									"end_time": calicojson.Map{
+										"from":          fromTime.Unix(),
+										"include_lower": false,
+										"include_upper": true,
+										"to":            toTime.Unix(),
+									},
+								},
+							},
+							{
+								"bool": calicojson.Map{
+									"should": []calicojson.Map{
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"size": 100,
 				"sort": []calicojson.Map{
 					{
 						"test": calicojson.Map{
@@ -190,6 +315,10 @@ var _ = Describe("SearchElasticHits", func() {
 				ClusterName: "cl_name_val",
 				PageSize:    100,
 				PageNum:     0,
+				TimeRange: &lmav1.TimeRange{
+					From: fromTime,
+					To:   toTime,
+				},
 				SortBy: []v1.SearchRequestSortBy{{
 					Field:      "test",
 					Descending: true,
@@ -198,7 +327,12 @@ var _ = Describe("SearchElasticHits", func() {
 					Descending: false,
 				}},
 			}
-			results, err := search(eselastic.GetFlowLogsIndex, params, client)
+
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
+			Expect(err).NotTo(HaveOccurred())
+
+			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, client, r)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(2))
@@ -229,9 +363,42 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
-				"from":  0,
-				"query": calicojson.Map{"bool": calicojson.Map{}},
-				"size":  100,
+				"from": 0,
+				"query": calicojson.Map{
+					"bool": calicojson.Map{
+						"filter": []calicojson.Map{
+							{
+								"range": calicojson.Map{
+									"end_time": calicojson.Map{
+										"from":          fromTime.Unix(),
+										"include_lower": false,
+										"include_upper": true,
+										"to":            toTime.Unix(),
+									},
+								},
+							},
+							{
+								"bool": calicojson.Map{
+									"should": []calicojson.Map{
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"size": 100,
 			}
 
 			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
@@ -264,8 +431,17 @@ var _ = Describe("SearchElasticHits", func() {
 				ClusterName: "cl_name_val",
 				PageSize:    100,
 				PageNum:     0,
+				TimeRange: &lmav1.TimeRange{
+					From: fromTime,
+					To:   toTime,
+				},
 			}
-			results, err := search(eselastic.GetFlowLogsIndex, params, client)
+
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
+			Expect(err).NotTo(HaveOccurred())
+
+			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, client, r)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(0))
@@ -286,9 +462,42 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
-				"from":  0,
-				"query": calicojson.Map{"bool": calicojson.Map{}},
-				"size":  100,
+				"from": 0,
+				"query": calicojson.Map{
+					"bool": calicojson.Map{
+						"filter": []calicojson.Map{
+							{
+								"range": calicojson.Map{
+									"end_time": calicojson.Map{
+										"from":          fromTime.Unix(),
+										"include_lower": false,
+										"include_upper": true,
+										"to":            toTime.Unix(),
+									},
+								},
+							},
+							{
+								"bool": calicojson.Map{
+									"should": []calicojson.Map{
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"size": 100,
 			}
 
 			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
@@ -321,8 +530,17 @@ var _ = Describe("SearchElasticHits", func() {
 				ClusterName: "cl_name_val",
 				PageSize:    100,
 				PageNum:     0,
+				TimeRange: &lmav1.TimeRange{
+					From: fromTime,
+					To:   toTime,
+				},
 			}
-			results, err := search(eselastic.GetFlowLogsIndex, params, client)
+
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
+			Expect(err).NotTo(HaveOccurred())
+
+			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, client, r)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(0))
@@ -343,9 +561,42 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
-				"from":  0,
-				"query": calicojson.Map{"bool": calicojson.Map{}},
-				"size":  100,
+				"from": 0,
+				"query": calicojson.Map{
+					"bool": calicojson.Map{
+						"filter": []calicojson.Map{
+							{
+								"range": calicojson.Map{
+									"end_time": calicojson.Map{
+										"from":          fromTime.Unix(),
+										"include_lower": false,
+										"include_upper": true,
+										"to":            toTime.Unix(),
+									},
+								},
+							},
+							{
+								"bool": calicojson.Map{
+									"should": []calicojson.Map{
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"size": 100,
 			}
 
 			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
@@ -378,8 +629,16 @@ var _ = Describe("SearchElasticHits", func() {
 				ClusterName: "cl_name_val",
 				PageSize:    100,
 				PageNum:     0,
+				TimeRange: &lmav1.TimeRange{
+					From: fromTime,
+					To:   toTime,
+				},
 			}
-			results, err := search(eselastic.GetFlowLogsIndex, params, client)
+
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
+			Expect(err).NotTo(HaveOccurred())
+			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, client, r)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
@@ -400,9 +659,42 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			exp := calicojson.Map{
-				"from":  0,
-				"query": calicojson.Map{"bool": calicojson.Map{}},
-				"size":  100,
+				"from": 0,
+				"query": calicojson.Map{
+					"bool": calicojson.Map{
+						"filter": []calicojson.Map{
+							{
+								"range": calicojson.Map{
+									"end_time": calicojson.Map{
+										"from":          fromTime.Unix(),
+										"include_lower": false,
+										"include_upper": true,
+										"to":            toTime.Unix(),
+									},
+								},
+							},
+							{
+								"bool": calicojson.Map{
+									"should": []calicojson.Map{
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"source_type": "hep"},
+										},
+										{
+											"term": calicojson.Map{"dest_type": "hep"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"size": 100,
 			}
 
 			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
@@ -435,13 +727,23 @@ var _ = Describe("SearchElasticHits", func() {
 				ClusterName: "cl_name_val",
 				PageSize:    100,
 				PageNum:     0,
+				TimeRange: &lmav1.TimeRange{
+					From: fromTime,
+					To:   toTime,
+				},
 			}
-			results, err := search(eselastic.GetFlowLogsIndex, params, client)
+
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
+			Expect(err).NotTo(HaveOccurred())
+
+			results, err := search(lmaindex.FlowLogs(), params, userAuthReview, client, r)
 			Expect(err).To(HaveOccurred())
-			var se *httputils.HttpStatusError
-			Expect(errors.As(err, &se)).To(BeTrue())
-			Expect(se.Status).To(Equal(500))
-			Expect(se.Msg).To(Equal("ESError: Elastic search generic error"))
+
+			var httpErr *httputils.HttpStatusError
+			Expect(errors.As(err, &httpErr)).To(BeTrue())
+			Expect(httpErr.Status).To(Equal(500))
+			Expect(httpErr.Msg).To(Equal("ESError: Elastic search generic error"))
 			Expect(results).To(BeNil())
 		})
 	})
@@ -501,6 +803,38 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(se.Status).To(Equal(400))
 			Expect(se.Msg).To(Equal("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize "+
 				"because of Tag: gte )"), se.Msg)
+		})
+
+		It("Should return an error when parsing an empty value for time_range", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyTimeRangeMissing)))
+			Expect(err).NotTo(HaveOccurred())
+
+			var w http.ResponseWriter
+			_, err = parseRequestBodyForParams(w, r)
+			Expect(err).To(HaveOccurred())
+
+			var se *httputils.HttpStatusError
+			Expect(errors.As(err, &se)).To(BeTrue())
+			Expect(se.Status).To(Equal(400))
+			Expect(se.Msg).To(Equal("error with field TimeRange = '<nil>' (Reason: failed to validate "+
+				"Field: TimeRange because of Tag: required )"), se.Msg)
+		})
+
+		It("Should return an error when parsing an invalid value for time_range value", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyTimeRangeContainsInvalidTimeValue)))
+			Expect(err).NotTo(HaveOccurred())
+
+			var w http.ResponseWriter
+			_, err = parseRequestBodyForParams(w, r)
+			Expect(err).To(HaveOccurred())
+
+			var se *httputils.HttpStatusError
+			Expect(errors.As(err, &se)).To(BeTrue())
+			Expect(se.Status).To(Equal(400))
+			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range\" "+
+				"field (at position 18)"), se.Msg)
 		})
 	})
 })

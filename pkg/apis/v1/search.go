@@ -21,8 +21,8 @@ type SearchRequest struct {
 	// ClusterName defines the name of the cluster a connection will be performed on.
 	ClusterName string `json:"cluster" validate:"omitempty"`
 
-	// Time range.
-	TimeRange lmav1.TimeRange `json:"time_range"`
+	// Time range. Required.
+	TimeRange *lmav1.TimeRange `json:"time_range" validate:"required"`
 
 	// Selector defines a query string for raw logs. [Default: empty]
 	Selector string `json:"selector" validate:"omitempty"`
