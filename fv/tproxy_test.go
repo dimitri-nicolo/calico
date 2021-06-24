@@ -199,6 +199,18 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				k8sClient = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 				_ = k8sClient
+
+				// Make sure the ipsets exist before we do testing. This means
+				// that we can sync with the content of the maps.
+				Eventually(func() bool {
+					for _, felix := range felixes {
+						if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services"); err != nil {
+							return false
+						}
+					}
+					return true
+				}, "20s", "1s").Should(BeTrue())
+
 			})
 
 			JustAfterEach(func() {
