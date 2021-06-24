@@ -224,31 +224,41 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 	srcGp, srcEp, _ := s.trackNodes(flow.Edge.Source, nil, egress)
 	dstGp, dstEp, servicePortDst := s.trackNodes(flow.Edge.Dest, flow.Edge.ServicePort, ingress)
 
-	// Include any aggregated port proto info in either the group or the endpoint.  If there is a service, include in
-	// the group.
+	// Determine the set of aggregated flows for the flow.  A flow will either have a specific endpoint port and
+	// protocol or will be an aggregated set. For a graph edge we always aggregate the port and protocols together.
+	var aggProtoPort *v1.AggregatedProtoPorts
+	if flow.Edge.Dest.PortNum != 0 {
+		aggProtoPort = &v1.AggregatedProtoPorts{
+			ProtoPorts: []v1.AggregatedPorts{{
+				Protocol: flow.Edge.Dest.Protocol,
+				PortRanges: []v1.PortRange{{
+					MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
+				}},
+			}},
+		}
+	} else {
+		aggProtoPort = flow.AggregatedProtoPorts
+	}
+
+	// Include any aggregated port proto info in the endpoint, and service port info in the service.
 	if flow.AggregatedProtoPorts != nil {
 		dstEp.graphNode.IncludeAggregatedProtoPorts(flow.AggregatedProtoPorts)
 	}
-	if flow.Edge.ServicePort != nil {
-		dstGp.node.graphNode.IncludeServicePort(*flow.Edge.ServicePort)
+	if servicePortDst != nil && servicePortDst.graphNode.Type == v1.GraphNodeTypeService {
+		servicePortDst.graphNode.IncludeServicePort(*flow.Edge.ServicePort)
 	}
 
-	// If any of the source and dest nodes (including parents) are the same, add the stats to those nodes. Note the
-	// hierarchy should be small, so doing this cross-product of checks will not be heavyweight.
-	for srcNode := srcEp; srcNode != nil; srcNode = srcNode.parent {
-		for dstNode := dstEp; dstNode != nil; dstNode = dstNode.parent {
-			if srcNode == dstNode {
-				srcNode.graphNode.IncludeStats(flow.Stats)
-				break
-			}
-		}
-	}
-
-	// If the source and dest group are the same then do not add edges since this overly complicates the graph.
-	// TODO(rlb): We could add an option to return these edges.
-	if srcGp == dstGp {
+	// If source and dest are the same, include the stats but don't add any edges.
+	if srcEp == dstEp {
+		srcEp.graphNode.IncludeStats(flow.Stats)
 		return nil
 	}
+
+	// Split the stats up into source and dest parts, add the source stats to the source node, and the dest stats to the
+	// dest node.
+	sourceStats, destStats := splitFlowStats(flow.Stats)
+	srcEp.graphNode.IncludeStats(sourceStats)
+	dstEp.graphNode.IncludeStats(destStats)
 
 	// Stitch together the source and dest nodes going via the service if present.
 	if servicePortDst != nil {
@@ -263,19 +273,17 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 		log.Debugf("Tracking: %s", id)
 		if sourceEdge, ok = s.edgesMap[id]; ok {
 			sourceEdge.IncludeStats(flow.Stats)
+			sourceEdge.IncludeServicePort(*flow.Edge.ServicePort)
+			sourceEdge.IncludeEndpointProtoPorts(aggProtoPort)
 		} else {
 			sourceEdge = &v1.GraphEdge{
-				ID:        id,
-				Stats:     flow.Stats,
-				Selectors: srcEp.selectors.Source.And(dstEp.selectors.Dest),
+				ID:                 id,
+				Stats:              flow.Stats,
+				Selectors:          srcEp.selectors.Source.And(dstEp.selectors.Dest),
+				ServicePorts:       v1.ServicePorts{*flow.Edge.ServicePort: struct{}{}},
+				EndpointProtoPorts: aggProtoPort,
 			}
 			s.edgesMap[id] = sourceEdge
-		}
-
-		// Add the service port to the edge. This is somewhat superfluous since the edge is connected to the port, but
-		// nicer for symmetry with the non-expanded case.
-		if flow.Edge.ServicePort != nil {
-			sourceEdge.IncludeServicePort(*flow.Edge.ServicePort)
 		}
 
 		id = v1.GraphEdgeID{
@@ -285,29 +293,15 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 		log.Debugf("Tracking: %s", id)
 		if destEdge, ok = s.edgesMap[id]; ok {
 			destEdge.IncludeStats(flow.Stats)
+			sourceEdge.IncludeEndpointProtoPorts(aggProtoPort)
 		} else {
 			destEdge = &v1.GraphEdge{
-				ID:        id,
-				Stats:     flow.Stats,
-				Selectors: servicePortDst.selectors.Source.And(dstEp.selectors.Dest),
+				ID:                 id,
+				Stats:              flow.Stats,
+				Selectors:          servicePortDst.selectors.Source.And(dstEp.selectors.Dest),
+				EndpointProtoPorts: aggProtoPort,
 			}
 			s.edgesMap[id] = destEdge
-		}
-
-		// Add the aggregated endpoint ports and the non-aggregated endpoint ports to both edges.
-		sourceEdge.IncludeEndpointProtoPorts(flow.AggregatedProtoPorts)
-		destEdge.IncludeEndpointProtoPorts(flow.AggregatedProtoPorts)
-		if flow.Edge.Dest.PortNum != 0 {
-			aggr := v1.AggregatedProtoPorts{
-				ProtoPorts: []v1.AggregatedPorts{{
-					Protocol: flow.Edge.Dest.Protocol,
-					PortRanges: []v1.PortRange{{
-						MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
-					}},
-				}},
-			}
-			sourceEdge.IncludeEndpointProtoPorts(&aggr)
-			destEdge.IncludeEndpointProtoPorts(&aggr)
 		}
 
 		// Track the edges associated with a service node - we need to do this to fix up the service selectors since
@@ -330,31 +324,18 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 		var ok bool
 		if edge, ok = s.edgesMap[id]; ok {
 			edge.IncludeStats(flow.Stats)
+			edge.IncludeEndpointProtoPorts(aggProtoPort)
 		} else {
 			edge = &v1.GraphEdge{
-				ID:        id,
-				Stats:     flow.Stats,
-				Selectors: srcEp.selectors.Source.And(dstEp.selectors.Dest),
+				ID:                 id,
+				Stats:              flow.Stats,
+				Selectors:          srcEp.selectors.Source.And(dstEp.selectors.Dest),
+				EndpointProtoPorts: aggProtoPort,
 			}
 			s.edgesMap[id] = edge
 		}
-
-		// Add the service port to the edge.
 		if flow.Edge.ServicePort != nil {
 			edge.IncludeServicePort(*flow.Edge.ServicePort)
-		}
-
-		edge.IncludeEndpointProtoPorts(flow.AggregatedProtoPorts)
-		if flow.Edge.Dest.PortNum != 0 {
-			aggr := v1.AggregatedProtoPorts{
-				ProtoPorts: []v1.AggregatedPorts{{
-					Protocol: flow.Edge.Dest.Protocol,
-					PortRanges: []v1.PortRange{{
-						MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
-					}},
-				}},
-			}
-			edge.IncludeEndpointProtoPorts(&aggr)
 		}
 	}
 
@@ -586,6 +567,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 		// this is an ingress point.
 		if svc != nil {
 			serviceId := idi.GetServiceID()
+
 			var service *trackedNode
 			if service = s.nodesMap[serviceId]; service == nil {
 				sel := s.selh.GetServiceNodeSelectors(svc.NamespacedName)
@@ -602,29 +584,40 @@ func (s *serviceGraphConstructionData) trackNodes(
 					selectors: sel,
 					viewData:  s.view.NodeViewData[serviceId],
 				}
+
+				// Set whether the node is expanded (we could do this as part of creating the node, but this reduces the
+				// NodeViewData lookups), and then store the node. We only set expanded if the node is expandable.
+				service.graphNode.Expanded = service.viewData.Expanded && service.graphNode.Expandable
+
 				s.nodesMap[serviceId] = service
 				group.addChild(service)
 			}
 
+			// Include the port if known and we are either auto-expanding or the service has been expanded.
 			servicePortId := idi.GetServicePortID()
-			if servicePortNode = s.nodesMap[servicePortId]; servicePortNode == nil {
-				sel := s.selh.GetServicePortNodeSelectors(*svc)
-				servicePortNode = &trackedNode{
-					graphNode: v1.GraphNode{
-						Type:      v1.GraphNodeTypeServicePort,
-						ID:        servicePortId,
-						ParentID:  serviceId,
-						Name:      svc.PortName,
-						Port:      svc.Port,
-						Protocol:  svc.Protocol,
-						Selectors: sel.ToNodeSelectors(),
-					},
-					parent:    service,
-					selectors: sel,
-					viewData:  s.view.NodeViewData[servicePortId],
+			if servicePortId != "" && s.view.ExpandPorts {
+				if servicePortNode = s.nodesMap[servicePortId]; servicePortNode == nil {
+					sel := s.selh.GetServicePortNodeSelectors(*svc)
+					servicePortNode = &trackedNode{
+						graphNode: v1.GraphNode{
+							Type:      v1.GraphNodeTypeServicePort,
+							ID:        servicePortId,
+							ParentID:  serviceId,
+							Name:      svc.PortName,
+							Port:      svc.Port,
+							Protocol:  svc.Protocol,
+							Selectors: sel.ToNodeSelectors(),
+						},
+						parent:    service,
+						selectors: sel,
+						viewData:  s.view.NodeViewData[servicePortId],
+					}
+					s.nodesMap[servicePortId] = servicePortNode
+					group.addChild(servicePortNode)
 				}
-				s.nodesMap[servicePortId] = servicePortNode
-				group.addChild(servicePortNode)
+			} else {
+				// No service port - return the service as the service port.
+				servicePortNode = service
 			}
 		}
 	}
@@ -657,9 +650,7 @@ func (s *serviceGraphConstructionData) trackNodes(
 
 		// Set whether the node is expanded (we could do this as part of creating the node, but this reduces the
 		// NodeViewData lookups), and then store the node.
-		if aggrEndpoint.graphNode.Expandable {
-			aggrEndpoint.graphNode.Expanded = aggrEndpoint.viewData.Expanded
-		}
+		aggrEndpoint.graphNode.Expanded = aggrEndpoint.graphNode.Expandable && aggrEndpoint.viewData.Expanded
 		s.nodesMap[aggrEndpointId] = aggrEndpoint
 	}
 
@@ -674,39 +665,41 @@ func (s *serviceGraphConstructionData) trackNodes(
 		group.addChild(aggrEndpoint)
 	}
 
-	// If the endpoint is expanded then add the port if present.
+	// If the endpoint is not expanded then add the port if present.
 	if !aggrEndpoint.graphNode.Expanded {
 		log.Debugf("Group is not expanded or not expandable: %s; %s, %s", group.node.graphNode.ID, aggrEndpointId, nonAggrEndpointId)
 
-		if aggrEndpointPortId := idi.GetAggrEndpointPortID(); aggrEndpointPortId != "" {
-			var aggrEndpointPort *trackedNode
-			if aggrEndpointPort = s.nodesMap[aggrEndpointPortId]; aggrEndpointPort == nil {
-				sel := s.selh.GetEndpointNodeSelectors(
-					idi.GetAggrEndpointType(),
-					endpoint.Namespace,
-					endpoint.Name,
-					endpoint.NameAggr,
-					endpoint.Protocol,
-					endpoint.PortNum,
-					idi.Direction,
-				)
-				aggrEndpointPort = &trackedNode{
-					graphNode: v1.GraphNode{
-						Type:      v1.GraphNodeTypePort,
-						ID:        aggrEndpointPortId,
-						ParentID:  aggrEndpointId,
-						Port:      endpoint.PortNum,
-						Protocol:  endpoint.Protocol,
-						Selectors: sel.ToNodeSelectors(),
-					},
-					parent:    aggrEndpoint,
-					selectors: sel,
-					viewData:  s.view.NodeViewData[aggrEndpointPortId],
+		if s.view.ExpandPorts {
+			if aggrEndpointPortId := idi.GetAggrEndpointPortID(); aggrEndpointPortId != "" {
+				var aggrEndpointPort *trackedNode
+				if aggrEndpointPort = s.nodesMap[aggrEndpointPortId]; aggrEndpointPort == nil {
+					sel := s.selh.GetEndpointNodeSelectors(
+						idi.GetAggrEndpointType(),
+						endpoint.Namespace,
+						endpoint.Name,
+						endpoint.NameAggr,
+						endpoint.Protocol,
+						endpoint.PortNum,
+						idi.Direction,
+					)
+					aggrEndpointPort = &trackedNode{
+						graphNode: v1.GraphNode{
+							Type:      v1.GraphNodeTypePort,
+							ID:        aggrEndpointPortId,
+							ParentID:  aggrEndpointId,
+							Port:      endpoint.PortNum,
+							Protocol:  endpoint.Protocol,
+							Selectors: sel.ToNodeSelectors(),
+						},
+						parent:    aggrEndpoint,
+						selectors: sel,
+						viewData:  s.view.NodeViewData[aggrEndpointPortId],
+					}
+					s.nodesMap[aggrEndpointPortId] = aggrEndpointPort
+					group.addChild(aggrEndpointPort)
 				}
-				s.nodesMap[aggrEndpointPortId] = aggrEndpointPort
-				group.addChild(aggrEndpointPort)
+				return group, aggrEndpointPort, servicePortNode
 			}
-			return group, aggrEndpointPort, servicePortNode
 		}
 		return group, aggrEndpoint, servicePortNode
 	}
@@ -740,35 +733,37 @@ func (s *serviceGraphConstructionData) trackNodes(
 		group.addChild(nonAggrEndpoint)
 	}
 
-	if nonAggrEndpointPortId := idi.GetEndpointPortID(); nonAggrEndpointPortId != "" {
-		var nonAggrEndpointPort *trackedNode
-		if nonAggrEndpointPort = s.nodesMap[nonAggrEndpointId]; nonAggrEndpointPort == nil {
-			sel := s.selh.GetEndpointNodeSelectors(
-				idi.Endpoint.Type,
-				endpoint.Namespace,
-				endpoint.Name,
-				endpoint.NameAggr,
-				endpoint.Protocol,
-				endpoint.PortNum,
-				idi.Direction,
-			)
-			nonAggrEndpointPort = &trackedNode{
-				graphNode: v1.GraphNode{
-					Type:      v1.GraphNodeTypePort,
-					ID:        nonAggrEndpointPortId,
-					ParentID:  nonAggrEndpointId,
-					Port:      endpoint.PortNum,
-					Protocol:  endpoint.Protocol,
-					Selectors: sel.ToNodeSelectors(),
-				},
-				parent:    nonAggrEndpoint,
-				selectors: sel,
-				viewData:  s.view.NodeViewData[nonAggrEndpointPortId],
+	if s.view.ExpandPorts {
+		if nonAggrEndpointPortId := idi.GetEndpointPortID(); nonAggrEndpointPortId != "" {
+			var nonAggrEndpointPort *trackedNode
+			if nonAggrEndpointPort = s.nodesMap[nonAggrEndpointId]; nonAggrEndpointPort == nil {
+				sel := s.selh.GetEndpointNodeSelectors(
+					idi.Endpoint.Type,
+					endpoint.Namespace,
+					endpoint.Name,
+					endpoint.NameAggr,
+					endpoint.Protocol,
+					endpoint.PortNum,
+					idi.Direction,
+				)
+				nonAggrEndpointPort = &trackedNode{
+					graphNode: v1.GraphNode{
+						Type:      v1.GraphNodeTypePort,
+						ID:        nonAggrEndpointPortId,
+						ParentID:  nonAggrEndpointId,
+						Port:      endpoint.PortNum,
+						Protocol:  endpoint.Protocol,
+						Selectors: sel.ToNodeSelectors(),
+					},
+					parent:    nonAggrEndpoint,
+					selectors: sel,
+					viewData:  s.view.NodeViewData[nonAggrEndpointPortId],
+				}
+				s.nodesMap[nonAggrEndpointPortId] = nonAggrEndpointPort
+				group.addChild(nonAggrEndpointPort)
 			}
-			s.nodesMap[nonAggrEndpointPortId] = nonAggrEndpointPort
-			group.addChild(nonAggrEndpointPort)
+			return group, nonAggrEndpointPort, servicePortNode
 		}
-		return group, nonAggrEndpointPort, servicePortNode
 	}
 
 	return group, nonAggrEndpoint, servicePortNode
@@ -1040,4 +1035,35 @@ func (s *serviceGraphConstructionData) getMostGranularNodeInView(
 	}
 
 	return nodesInView[idi.GetLayerID()]
+}
+
+// splitFlowStats splits the flow stats in separate sets of stats to be added to the source and dest nodes. This
+// currently just amounts to the process info.
+func splitFlowStats(stats []v1.GraphStats) (source, dest []v1.GraphStats) {
+	var includeSource, includeDest bool
+	source = make([]v1.GraphStats, len(stats))
+	dest = make([]v1.GraphStats, len(stats))
+	for i := range stats {
+		if processes := stats[i].Processes; processes != nil {
+			if len(processes.Source) != 0 {
+				includeSource = true
+				source[i].Processes = &v1.GraphProcesses{
+					Source: processes.Source,
+				}
+			}
+			if len(processes.Dest) != 0 {
+				includeDest = true
+				dest[i].Processes = &v1.GraphProcesses{
+					Dest: processes.Dest,
+				}
+			}
+		}
+	}
+	if !includeSource {
+		source = nil
+	}
+	if !includeDest {
+		dest = nil
+	}
+	return source, dest
 }

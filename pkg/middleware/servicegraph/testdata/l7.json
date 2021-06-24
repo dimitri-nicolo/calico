@@ -43,12 +43,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 6957,
-        "bytes_out": 73609,
-        "mean_duration": 975663,
-        "min_duration": 975663,
-        "max_duration": 6000000,
-        "count": 452
+        "bytes_in": 7731,
+        "bytes_out": 81413,
+        "mean_duration": 979919,
+        "min_duration": 979919,
+        "max_duration": 7000000,
+        "count": 498
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -103,7 +103,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 452
+        "count": 498
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -191,12 +191,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 3268,
-        "bytes_out": 1740,
-        "mean_duration": 1921052.6315789474,
+        "bytes_in": 2064,
+        "bytes_out": 1264,
+        "mean_duration": 1750000,
         "min_duration": 1000000,
-        "max_duration": 10000000,
-        "count": 76
+        "max_duration": 7000000,
+        "count": 48
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -268,12 +268,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 34538,
-        "bytes_out": 21286,
-        "mean_duration": 5981906.5,
-        "min_duration": 2650000,
-        "max_duration": 833000000,
-        "count": 766
+        "bytes_in": 32916,
+        "bytes_out": 21132,
+        "mean_duration": 3973727.5,
+        "min_duration": 2355555,
+        "max_duration": 537000000,
+        "count": 732
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -328,7 +328,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 76
+        "count": 48
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -399,7 +399,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 766
+        "count": 732
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -487,12 +487,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 5344,
-        "bytes_out": 7056,
-        "mean_duration": 72843750,
-        "min_duration": 72843750,
-        "max_duration": 204000000,
-        "count": 32
+        "bytes_in": 3841,
+        "bytes_out": 5434,
+        "mean_duration": 96434782,
+        "min_duration": 96434782,
+        "max_duration": 249000000,
+        "count": 23
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -547,7 +547,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 32
+        "count": 23
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -635,12 +635,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 2466,
-        "bytes_out": 1929,
-        "mean_duration": 1038461.5384615385,
-        "min_duration": 0,
-        "max_duration": 4000000,
-        "count": 104
+        "bytes_in": 1835,
+        "bytes_out": 1407,
+        "mean_duration": 1350649.3506493506,
+        "min_duration": 1000000,
+        "max_duration": 8000000,
+        "count": 77
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -712,12 +712,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 43297,
-        "bytes_out": 141011,
-        "mean_duration": 1018397.5,
-        "min_duration": 729697,
-        "max_duration": 44000000,
-        "count": 2335
+        "bytes_in": 46153,
+        "bytes_out": 147441,
+        "mean_duration": 1998067,
+        "min_duration": 1439755,
+        "max_duration": 298000000,
+        "count": 2475
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -772,7 +772,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 104
+        "count": 77
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -843,7 +843,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 2335
+        "count": 2475
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -931,12 +931,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 8986,
-        "bytes_out": 185,
-        "mean_duration": 2054054.054054054,
+        "bytes_in": 5883,
+        "bytes_out": 115,
+        "mean_duration": 1826086.956521739,
         "min_duration": 1000000,
-        "max_duration": 5000000,
-        "count": 37
+        "max_duration": 2000000,
+        "count": 23
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -991,7 +991,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 37
+        "count": 23
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1079,20 +1079,20 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 9984,
-        "bytes_out": 7591158,
-        "mean_duration": 42736919.72268908,
-        "min_duration": 24000000,
-        "max_duration": 872000000,
-        "count": 728
+        "bytes_in": 5632,
+        "bytes_out": 6744840,
+        "mean_duration": 47590674.88983051,
+        "min_duration": 27000000,
+        "max_duration": 588000000,
+        "count": 642
       },
       "response_code_3xx": {
-        "bytes_in": 4217,
+        "bytes_in": 3853,
         "bytes_out": 0,
-        "mean_duration": 3762981.4,
-        "min_duration": 625000,
-        "max_duration": 15000000,
-        "count": 156
+        "mean_duration": 4550776.55,
+        "min_duration": 333333,
+        "max_duration": 78000000,
+        "count": 150
       },
       "response_code_4xx": {
         "bytes_in": 0,
@@ -1139,7 +1139,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 66
+        "count": 60
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1151,11 +1151,11 @@
       },
       "response_code_2xx": {
         "bytes_in": 0,
-        "bytes_out": 132,
-        "mean_duration": 530303.0303030303,
+        "bytes_out": 120,
+        "mean_duration": 816666.6666666666,
         "min_duration": 0,
-        "max_duration": 3000000,
-        "count": 66
+        "max_duration": 5000000,
+        "count": 60
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -1210,7 +1210,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 884
+        "count": 792
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1298,12 +1298,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 2032,
-        "bytes_out": 1677,
-        "mean_duration": 2153846.153846154,
+        "bytes_in": 1195,
+        "bytes_out": 989,
+        "mean_duration": 1956521.7391304348,
         "min_duration": 1000000,
-        "max_duration": 6000000,
-        "count": 39
+        "max_duration": 2000000,
+        "count": 23
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -1358,7 +1358,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 39
+        "count": 23
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1446,12 +1446,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 1241,
-        "bytes_out": 11604,
-        "mean_duration": 209677.4193548387,
+        "bytes_in": 1020,
+        "bytes_out": 9253,
+        "mean_duration": 124761.85,
         "min_duration": 0,
-        "max_duration": 4000000,
-        "count": 73
+        "max_duration": 1000000,
+        "count": 60
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -1523,12 +1523,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 60203,
-        "bytes_out": 680177,
-        "mean_duration": 141817.5,
-        "min_duration": 68582,
-        "max_duration": 8000000,
-        "count": 3607
+        "bytes_in": 63963,
+        "bytes_out": 720751,
+        "mean_duration": 255409.5,
+        "min_duration": 195876,
+        "max_duration": 76000000,
+        "count": 3831
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -1600,12 +1600,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 2775,
-        "bytes_out": 774780,
-        "mean_duration": 124324,
-        "min_duration": 124324,
-        "max_duration": 5000000,
-        "count": 555
+        "bytes_in": 2900,
+        "bytes_out": 809680,
+        "mean_duration": 467241,
+        "min_duration": 467241,
+        "max_duration": 71000000,
+        "count": 580
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -1660,7 +1660,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 73
+        "count": 60
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1731,7 +1731,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 3607
+        "count": 3831
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1802,7 +1802,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 555
+        "count": 580
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -1890,12 +1890,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 34914,
-        "bytes_out": 39270,
-        "mean_duration": 5326732,
-        "min_duration": 5326732,
-        "max_duration": 222000000,
-        "count": 606
+        "bytes_in": 33535,
+        "bytes_out": 37349,
+        "mean_duration": 5741767,
+        "min_duration": 5741767,
+        "max_duration": 149000000,
+        "count": 577
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -1950,7 +1950,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 606
+        "count": 577
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -2038,12 +2038,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 6560,
-        "bytes_out": 1316,
-        "mean_duration": 600000,
+        "bytes_in": 5072,
+        "bytes_out": 930,
+        "mean_duration": 2047619.0476190476,
         "min_duration": 0,
-        "max_duration": 1000000,
-        "count": 60
+        "max_duration": 45000000,
+        "count": 42
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -2115,12 +2115,12 @@
         "count": 0
       },
       "response_code_2xx": {
-        "bytes_in": 6004,
-        "bytes_out": 2927,
-        "mean_duration": 609756,
-        "min_duration": 609756,
-        "max_duration": 3000000,
-        "count": 164
+        "bytes_in": 7081,
+        "bytes_out": 3187,
+        "mean_duration": 729281,
+        "min_duration": 729281,
+        "max_duration": 5000000,
+        "count": 181
       },
       "response_code_3xx": {
         "bytes_in": 0,
@@ -2175,7 +2175,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 60
+        "count": 42
       },
       "response_code_1xx": {
         "bytes_in": 0,
@@ -2246,7 +2246,7 @@
         "mean_duration": 0,
         "min_duration": 0,
         "max_duration": 0,
-        "count": 164
+        "count": 181
       },
       "response_code_1xx": {
         "bytes_in": 0,

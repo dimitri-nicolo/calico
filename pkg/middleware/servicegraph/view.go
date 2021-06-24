@@ -18,6 +18,7 @@ type ParsedView struct {
 	Layers                    *ParsedLayers
 	FollowConnectionDirection bool
 	SplitIngressEgress        bool
+	ExpandPorts               bool
 	EmptyFocus                bool
 }
 
@@ -69,6 +70,7 @@ func ParseViewIDs(rd *RequestData, sgs ServiceGroups) (*ParsedView, error) {
 	p := &ParsedView{
 		NodeViewData:              make(map[v1.GraphNodeID]NodeViewData),
 		FollowConnectionDirection: rd.ServiceGraphRequest.SelectedView.FollowConnectionDirection,
+		ExpandPorts:               rd.ServiceGraphRequest.SelectedView.ExpandPorts,
 		SplitIngressEgress:        rd.ServiceGraphRequest.SelectedView.SplitIngressEgress,
 		EmptyFocus:                len(rd.ServiceGraphRequest.SelectedView.Focus) == 0,
 	}
@@ -145,31 +147,23 @@ func parseLayers(layers []v1.Layer, sgs ServiceGroups) (pn *ParsedLayers, err er
 						pn.NamespaceToLayer[pid.Endpoint.Namespace] = layer.Name
 						pn.LayerToNamespaces[layer.Name] = append(pn.LayerToNamespaces[layer.Name], pid.Endpoint.Namespace)
 					}
-				case v1.GraphNodeTypeService, v1.GraphNodeTypeServicePort:
-					if sg := sgs.GetByService(pid.Service.NamespacedName); sg != nil {
-						if _, ok := pn.ServiceGroupToLayer[sg]; !ok {
-							pn.ServiceGroupToLayer[sg] = layer.Name
-							pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], sg)
-						}
-					}
-				case v1.GraphNodeTypeServiceGroup:
-					if _, ok := pn.ServiceGroupToLayer[pid.ServiceGroup]; !ok {
-						pn.ServiceGroupToLayer[pid.ServiceGroup] = layer.Name
-						pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], pid.ServiceGroup)
-					}
 				default:
-					// Otherwise assume it's the endpoint we parsed.  Note that we always include the group of related
-					// endpoints in the layer so that we are not trying to pick apart endpoints in a service, or
-					// endpoints in an aggregated endpoint group. This is important because expanding a layer could end
-					// up with some very odd layouts.
+					// Otherwise assume it's a service group or endpoint we parsed.  Note that we always include the
+					// group of related endpoints in the layer so that we are not trying to pick apart endpoints in a
+					// service, or endpoints in an aggregated endpoint group. This is important because expanding a
+					// layer could end up with some very odd layouts.
 					if pid.ServiceGroup != nil {
-						pn.ServiceGroupToLayer[pid.ServiceGroup] = layer.Name
-						pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], pid.ServiceGroup)
+						if _, ok := pn.ServiceGroupToLayer[pid.ServiceGroup]; !ok {
+							pn.ServiceGroupToLayer[pid.ServiceGroup] = layer.Name
+							pn.LayerToServiceGroups[layer.Name] = append(pn.LayerToServiceGroups[layer.Name], pid.ServiceGroup)
+						}
 					} else if id := pid.GetAggrEndpointID(); id != "" {
 						// There is no service group associated with this endpoint - include the aggregated endpoint in
 						// the layer.
-						pn.EndpointToLayer[id] = layer.Name
-						pn.LayerToEndpoints[layer.Name] = append(pn.LayerToEndpoints[layer.Name], pid.Endpoint)
+						if _, ok := pn.EndpointToLayer[id]; !ok {
+							pn.EndpointToLayer[id] = layer.Name
+							pn.LayerToEndpoints[layer.Name] = append(pn.LayerToEndpoints[layer.Name], pid.Endpoint)
+						}
 					}
 				}
 			}

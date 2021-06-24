@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"math"
 	"sort"
+
+	esmath "github.com/tigera/es-proxy/pkg/math"
 )
 
 // GraphByteStats contains byte statistics.
@@ -131,7 +133,7 @@ type GraphTCPStats struct {
 	MeanMinRTT               float64 `json:"mean_min_mss"`
 	MeanMSS                  float64 `json:"mean_mss"`
 
-	Count int64 `json:"-"`
+	Count int64 `json:"count"`
 }
 
 // Combine returns a pointer to a GraphPacketStats that combines the stats from t and t2. Depending on the stat
@@ -149,8 +151,8 @@ func (t *GraphTCPStats) Combine(t2 *GraphTCPStats) *GraphTCPStats {
 		SumTotalRetransmissions:  t.SumTotalRetransmissions + t2.SumTotalRetransmissions,
 		SumLostPackets:           t.SumLostPackets + t2.SumLostPackets,
 		SumUnrecoveredTo:         t.SumUnrecoveredTo + t2.SumUnrecoveredTo,
-		MinSendCongestionWindow:  math.Min(t.MinSendCongestionWindow, t2.MinSendCongestionWindow),
-		MinSendMSS:               math.Min(t.MinSendMSS, t2.MinSendMSS),
+		MinSendCongestionWindow:  esmath.MinFloat64GtZero(t.MinSendCongestionWindow, t2.MinSendCongestionWindow),
+		MinSendMSS:               esmath.MinFloat64GtZero(t.MinSendMSS, t2.MinSendMSS),
 		MaxSmoothRTT:             math.Max(t.MaxSmoothRTT, t2.MaxSmoothRTT),
 		MaxMinRTT:                math.Max(t.MaxMinRTT, t2.MaxMinRTT),
 		MeanSendCongestionWindow: ((float64(t.Count) * t.MeanSendCongestionWindow) + (float64(t2.Count) * t2.MeanSendCongestionWindow)) / float64(totalCount),
@@ -267,10 +269,10 @@ func (d *GraphDNSStats) Combine(d2 *GraphDNSStats) *GraphDNSStats {
 }
 
 type GraphLatencyStats struct {
-	MeanRequestLatency float64 `json:"mean_request_latency,omitempty"`
-	MaxRequestLatency  float64 `json:"max_request_latency,omitempty"`
-	MinRequestLatency  float64 `json:"min_request_latency,omitempty"`
-	LatencyCount       int64   `json:"-"`
+	MeanRequestLatency float64 `json:"mean_request_latency"`
+	MaxRequestLatency  float64 `json:"max_request_latency"`
+	MinRequestLatency  float64 `json:"min_request_latency"`
+	LatencyCount       int64   `json:"latency_count"`
 }
 
 // Combine returns a pointer to a GraphDNSStats that combines the stats from d and d2. Depending on the stat
@@ -286,7 +288,7 @@ func (l GraphLatencyStats) Combine(l2 GraphLatencyStats) GraphLatencyStats {
 	return GraphLatencyStats{
 		MeanRequestLatency: ((float64(l.LatencyCount) * l.MeanRequestLatency) + (float64(l2.LatencyCount) * l2.MeanRequestLatency)) / float64(totalLatencyCount),
 		MaxRequestLatency:  math.Max(l.MaxRequestLatency, l2.MaxRequestLatency),
-		MinRequestLatency:  math.Min(l.MinRequestLatency, l2.MinRequestLatency),
+		MinRequestLatency:  esmath.MinFloat64GtZero(l.MinRequestLatency, l2.MinRequestLatency),
 		LatencyCount:       totalLatencyCount,
 	}
 }

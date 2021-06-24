@@ -127,7 +127,7 @@ var _ = Describe("Service graph data tests", func() {
 			// file in the event of an error.  It makes dev cycles easier.
 			actualData = actual
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
 
 			// Parse the expected response.
 			var expected map[string]interface{}
@@ -387,6 +387,62 @@ var _ = Describe("Service graph data tests", func() {
 					}},
 				},
 			}, http.StatusOK, "019-expand-focus-shippingservice-layer", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("With expanded ports: Focus and expand storefront, expand emailservice",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:       []v1.GraphNodeID{"namespace/storefront"},
+					Expanded:    []v1.GraphNodeID{"namespace/storefront", "svcgp;svc/storefront/emailservice"},
+					ExpandPorts: true,
+				},
+			}, http.StatusOK, "020-focus-expand-storefront-expand-emailsvc-expand-ports", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("With expanded ports: Focus and expand default, expand kubernetes service",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:       []v1.GraphNodeID{"namespace/default"},
+					Expanded:    []v1.GraphNodeID{"namespace/default", "svcgp;svc/default/kubernetes"},
+					ExpandPorts: true,
+				},
+			}, http.StatusOK, "021-focus-expand-default-expand-kubernetes-expand-ports", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("With expanded ports: Expand and focus shippingservice",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:       []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					Expanded:    []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					ExpandPorts: true,
+				},
+			}, http.StatusOK, "022-expand-focus-shippingservice-expand-ports", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("With expanded ports: Expand and focus shippingservice in layer",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					Expanded: []v1.GraphNodeID{"svcgp;svc/storefront/shippingservice"},
+					Layers: []v1.Layer{{
+						Name: "shippingservice-layer",
+						Nodes: []v1.GraphNodeID{
+							"svcgp;svc/storefront/shippingservice",
+						},
+					}},
+					ExpandPorts: true,
+				},
+			}, http.StatusOK, "023-expand-focus-shippingservice-layer-expand-ports", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Foobar layer with non-existent nodes",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Layers: []v1.Layer{{
+						Name: "infrastructure-tigera",
+						Nodes: []v1.GraphNodeID{
+							"namespace/foobarbaz",
+							"svc/foo/bar",
+						},
+					}},
+				},
+				// Should be same results as if no request params.
+			}, http.StatusOK, "001-no-req-parms", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 	)
 

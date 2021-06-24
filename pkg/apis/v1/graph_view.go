@@ -35,6 +35,9 @@ type GraphView struct {
 	// Expanded nodes.
 	Expanded []GraphNodeID `json:"expanded,omitempty" validate:"omitempty"`
 
+	// Whether expanded service groups are expanded down to the port level.
+	ExpandPorts bool `json:"expand_ports" validate:"omitempty"`
+
 	// Whether or not to automatically follow directly connected nodes.
 	FollowConnectionDirection bool `json:"follow_connection_direction" validate:"omitempty"`
 

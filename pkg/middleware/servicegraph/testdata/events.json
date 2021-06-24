@@ -2,54 +2,12 @@
   {
     "ID": {
       "type": "kubernetes",
-      "namespace": "storefront",
-      "name": "cartservice-5468974d8-lng9x.168b6a1b2f5cddea"
-    },
-    "Details": {
-      "description": "Readiness probe failed: ",
-      "time": "2021-06-24T17:45:35Z"
-    },
-    "Endpoints": [
-      {
-        "Type": "wep",
-        "Namespace": "storefront",
-        "Name": "cartservice-5468974d8-lng9x",
-        "NameAggr": "cartservice-5468974d8-lng9x",
-        "PortNum": 0,
-        "Protocol": ""
-      }
-    ]
-  },
-  {
-    "ID": {
-      "type": "kubernetes",
-      "namespace": "storefront",
-      "name": "cartservice-5468974d8-lng9x.168b6a1cbc84adbe"
-    },
-    "Details": {
-      "description": "Liveness probe failed: ",
-      "time": "2021-06-24T18:03:22Z"
-    },
-    "Endpoints": [
-      {
-        "Type": "wep",
-        "Namespace": "storefront",
-        "Name": "cartservice-5468974d8-lng9x",
-        "NameAggr": "cartservice-5468974d8-lng9x",
-        "PortNum": 0,
-        "Protocol": ""
-      }
-    ]
-  },
-  {
-    "ID": {
-      "type": "kubernetes",
       "namespace": "tigera-fluentd",
-      "name": "fluentd-node-4cmmh.168b6a62ac21648f"
+      "name": "fluentd-node-4cmmh.168bbcfa03153747"
     },
     "Details": {
       "description": "Readiness probe failed: ",
-      "time": "2021-06-24T18:05:02Z"
+      "time": "2021-06-25T20:51:52Z"
     },
     "Endpoints": [
       {
@@ -66,11 +24,11 @@
     "ID": {
       "type": "kubernetes",
       "namespace": "tigera-fluentd",
-      "name": "fluentd-node-bqk9p.168b6a6457eb8a18"
+      "name": "fluentd-node-bqk9p.168bbcf7731bff60"
     },
     "Details": {
       "description": "Readiness probe failed: ",
-      "time": "2021-06-24T18:02:04Z"
+      "time": "2021-06-25T20:52:01Z"
     },
     "Endpoints": [
       {
@@ -87,11 +45,11 @@
     "ID": {
       "type": "kubernetes",
       "namespace": "tigera-fluentd",
-      "name": "fluentd-node-k6wd2.168b6a62d8b5ef45"
+      "name": "fluentd-node-k6wd2.168bbcfb0179cdd2"
     },
     "Details": {
       "description": "Readiness probe failed: ",
-      "time": "2021-06-24T18:03:03Z"
+      "time": "2021-06-25T20:51:21Z"
     },
     "Endpoints": [
       {
@@ -108,11 +66,11 @@
     "ID": {
       "type": "kubernetes",
       "namespace": "tigera-fluentd",
-      "name": "fluentd-node-pq6cq.168b6a60eb8e1d17"
+      "name": "fluentd-node-pq6cq.168bbcf9bd8f59be"
     },
     "Details": {
       "description": "Readiness probe failed: ",
-      "time": "2021-06-24T18:06:10Z"
+      "time": "2021-06-25T20:51:56Z"
     },
     "Endpoints": [
       {
@@ -129,11 +87,11 @@
     "ID": {
       "type": "kubernetes",
       "namespace": "tigera-fluentd",
-      "name": "fluentd-node-tt85d.168b6a5ca1895c9e"
+      "name": "fluentd-node-tt85d.168bbcfc40012fe3"
     },
     "Details": {
       "description": "Readiness probe failed: ",
-      "time": "2021-06-24T18:03:36Z"
+      "time": "2021-06-25T20:51:06Z"
     },
     "Endpoints": [
       {

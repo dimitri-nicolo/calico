@@ -55,8 +55,6 @@ const (
 	FlowProcessIdx
 	FlowReporterIdx
 	FlowActionIdx
-
-	FlowIdxMax
 )
 
 var (
