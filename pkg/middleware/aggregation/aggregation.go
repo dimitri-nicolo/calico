@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -161,7 +162,7 @@ func (s *aggregation) getAggregationRequest(w http.ResponseWriter, req *http.Req
 	if err := validator.Validate(ar); err != nil {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
-			Msg:    err.Error(),
+			Msg:    fmt.Sprintf("Request body contains invalid data: %v", err),
 			Err:    err,
 		}
 	}

@@ -490,19 +490,19 @@ var _ = Describe("Aggregation tests", func() {
 			writer := httptest.NewRecorder()
 			sg.ServeHTTP(writer, req)
 			Expect(writer.Code).To(Equal(code))
-			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp))
+			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp), writer.Body.String())
 		},
 
 		Entry("Missing time range",
 			`{"aggregations": {"test": {}}}`,
 			http.StatusBadRequest,
-			"error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )",
+			"Request body contains invalid data: error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )",
 		),
 
 		Entry("Missing time range fields",
 			`{"time_range": {}, "aggregations": {"test": {}}}`,
 			http.StatusBadRequest,
-			"error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )",
+			"Request body contains an invalid value for the time range: missing `from` field",
 		),
 	)
 })

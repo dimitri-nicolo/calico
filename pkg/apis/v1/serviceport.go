@@ -17,7 +17,7 @@ func (s ServicePort) String() string {
 	return fmt.Sprintf("ServicePort(%s/%s:%d %s %s)", s.Namespace, s.Name, s.Port, s.PortName, s.Protocol)
 }
 
-// ServicePorts is the set of service ports. This is JSON marshaled as a slice., but stored as a map to avoid
+// ServicePorts is the set of service ports. This is JSON marshaled as a slice, but stored as a map to avoid
 // duplication.
 type ServicePorts map[ServicePort]struct{}
 

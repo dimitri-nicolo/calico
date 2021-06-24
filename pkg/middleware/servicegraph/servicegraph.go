@@ -124,7 +124,7 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 	if err := validator.Validate(sgr); err != nil {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
-			Msg:    err.Error(),
+			Msg:    fmt.Sprintf("Request body contains invalid data: %v", err),
 			Err:    err,
 		}
 	}
