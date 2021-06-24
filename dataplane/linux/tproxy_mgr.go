@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/netlinkshim"
 	"github.com/projectcalico/felix/routerule"
@@ -18,55 +17,58 @@ import (
 
 type tproxyManager struct {
 	mark     uint32
-	ipSetsV4 *ipsets.IPSets
-	ipSetsV6 *ipsets.IPSets
 	rt4, rt6 *routetable.RouteTable
 	rr4, rr6 *routerule.RouteRules
 }
 
-func newTproxyManager(
-	mark uint32,
-	maxsize int,
-	idx4, idx6 int,
-	ipSetsV4, ipSetsV6 *ipsets.IPSets,
+func newTProxyManager(
 	dpConfig Config,
+	idx4, idx6 int,
 	opRecorder logutils.OpRecorder,
 ) *tproxyManager {
+
+	ipv6Enabled := dpConfig.IPv6Enabled
+	mark := dpConfig.RulesConfig.IptablesMarkProxy
+
 	tpm := &tproxyManager{
 		mark: mark,
 	}
-	if ipSetsV4 != nil {
-		if idx4 == 0 {
-			log.Fatal("RouteTable index for IPv4 is the default table")
-		}
 
-		rt := routetable.New(
-			nil,
-			4,
-			false, // vxlan
-			dpConfig.NetlinkTimeout,
-			nil, // deviceRouteSourceAddress
-			dpConfig.DeviceRouteProtocol,
-			true, // removeExternalRoutes
-			idx4,
-			opRecorder,
-		)
-		rr, err := routerule.New(
-			4,
-			1, // routing priority
-			set.From(idx4),
-			routerule.RulesMatchSrcFWMarkTable,
-			routerule.RulesMatchSrcFWMarkTable,
-			dpConfig.NetlinkTimeout,
-			func() (routerule.HandleIface, error) {
-				return netlinkshim.NewRealNetlink()
-			},
-			opRecorder,
-		)
-		if err != nil {
-			log.WithError(err).Panic("Unexpected error creating rule manager")
-		}
+	enabled := dpConfig.RulesConfig.TPROXYModeEnabled()
 
+	if idx4 == 0 {
+		log.Fatal("RouteTable index for IPv4 is the default table")
+	}
+
+	rt := routetable.New(
+		nil,
+		4,
+		false, // vxlan
+		dpConfig.NetlinkTimeout,
+		nil, // deviceRouteSourceAddress
+		dpConfig.DeviceRouteProtocol,
+		true, // removeExternalRoutes
+		idx4,
+		opRecorder,
+	)
+
+	rr, err := routerule.New(
+		4,
+		1, // routing priority
+		set.From(idx4),
+		routerule.RulesMatchSrcFWMarkTable,
+		routerule.RulesMatchSrcFWMarkTable,
+		dpConfig.NetlinkTimeout,
+		func() (routerule.HandleIface, error) {
+			return netlinkshim.NewRealNetlink()
+		},
+		opRecorder,
+	)
+	if err != nil {
+		log.WithError(err).Panic("Unexpected error creating rule manager")
+	}
+
+	if enabled {
 		anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
 		rt.RouteUpdate("lo", routetable.Target{
 			Type: routetable.TargetTypeLocal,
@@ -77,12 +79,12 @@ func newTproxyManager(
 			GoToTable(idx4).
 			MatchFWMarkWithMask(uint32(mark), uint32(mark)),
 		)
-
-		tpm.rr4 = rr
-		tpm.rt4 = rt
 	}
 
-	if ipSetsV6 != nil {
+	tpm.rr4 = rr
+	tpm.rt4 = rt
+
+	if ipv6Enabled {
 		if idx6 == 0 {
 			log.Fatal("RouteTable index for IPv6 is the default table")
 		}
@@ -98,6 +100,7 @@ func newTproxyManager(
 			idx6,
 			opRecorder,
 		)
+
 		rr, err := routerule.New(
 			6,
 			1, // routing priority
@@ -114,16 +117,18 @@ func newTproxyManager(
 			log.WithError(err).Panic("Unexpected error creating rule manager")
 		}
 
-		anyV6, _ := ip.CIDRFromString("::/0")
-		rt.RouteUpdate("lo", routetable.Target{
-			Type: routetable.TargetTypeLocal,
-			CIDR: anyV6,
-		})
+		if enabled {
+			anyV6, _ := ip.CIDRFromString("::/0")
+			rt.RouteUpdate("lo", routetable.Target{
+				Type: routetable.TargetTypeLocal,
+				CIDR: anyV6,
+			})
 
-		rr.SetRule(routerule.NewRule(6, 1).
-			GoToTable(idx6).
-			MatchFWMarkWithMask(uint32(mark), uint32(mark)),
-		)
+			rr.SetRule(routerule.NewRule(6, 1).
+				GoToTable(idx6).
+				MatchFWMarkWithMask(uint32(mark), uint32(mark)),
+			)
+		}
 
 		tpm.rr6 = rr
 		tpm.rt6 = rt

@@ -538,20 +538,19 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		cleanUpVXLANDevice()
 	}
 
-	// Allocate the tproxy route table indices before Egress grabs them all
+	// Allocate the tproxy route table indices before Egress grabs them all.
+	// Always allocate so that we can clean up the tables if proxy was
+	// previously enabled but is disabled now.
 	var tproxyRTIndex4, tproxyRTIndex6 int
 
-	if config.RulesConfig.TPROXYModeEnabled() {
-		var err error
-		tproxyRTIndex4, err = config.RouteTableManager.GrabIndex()
+	tproxyRTIndex4, err = config.RouteTableManager.GrabIndex()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v4")
+	}
+	if config.IPv6Enabled {
+		tproxyRTIndex6, err = config.RouteTableManager.GrabIndex()
 		if err != nil {
-			log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v4")
-		}
-		if config.IPv6Enabled {
-			tproxyRTIndex6, err = config.RouteTableManager.GrabIndex()
-			if err != nil {
-				log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v6")
-			}
+			log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v6")
 		}
 	}
 
@@ -775,16 +774,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.ipSets = append(dp.ipSets, ipSetsV6)
 	}
 
-	if config.RulesConfig.TPROXYModeEnabled() {
-		tproxyMgr := newTproxyManager(config.RulesConfig.IptablesMarkProxy,
-			config.MaxIPSetSize,
-			tproxyRTIndex4, tproxyRTIndex6,
-			ipSetsV4, ipSetsV6,
-			config,
-			dp.loopSummarizer,
-		)
-		dp.RegisterManager(tproxyMgr)
-	}
+	tproxyMgr := newTProxyManager(config,
+		tproxyRTIndex4, tproxyRTIndex6,
+		dp.loopSummarizer,
+	)
+	dp.RegisterManager(tproxyMgr)
 
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")

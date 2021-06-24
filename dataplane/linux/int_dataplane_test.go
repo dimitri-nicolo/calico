@@ -28,6 +28,7 @@ import (
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	intdataplane "github.com/projectcalico/felix/dataplane/linux"
+	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
@@ -122,6 +123,8 @@ var _ = Describe("Constructor test", func() {
 			PacketCapture: capture.Config{
 				Directory: "/tmp",
 			},
+
+			RouteTableManager: idalloc.NewIndexAllocator(idalloc.IndexRange{Min: 1, Max: 255}),
 
 			KubernetesProvider: kubernetesProvider,
 			RouteSource:        routeSource,
