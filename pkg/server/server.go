@@ -183,6 +183,11 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))
+	sm.Handle("/dnsLogs/aggregation",
+		middleware.ClusterRequestToResource(dnsLogsResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.DnsLogs())))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
@@ -192,6 +197,11 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))
+	sm.Handle("/l7Logs/aggregation",
+		middleware.ClusterRequestToResource(l7ResourceName,
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.L7Logs())))))
 	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authenticator,
