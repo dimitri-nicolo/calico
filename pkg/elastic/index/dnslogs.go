@@ -10,9 +10,10 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
+	"github.com/tigera/lma/pkg/httputils"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
-	"github.com/tigera/lma/pkg/httputils"
 )
 
 const esDnsLogsIndexPrefix = "tigera_secure_ee_dns"
