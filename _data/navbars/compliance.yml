@@ -3,12 +3,7 @@ path: /compliance/
 order: 7
 section:
 - title: Compliance reports
-  path: /compliance/compliance-reports/
-  section:
-  - title: Configure compliance reports
-    path: /compliance/compliance-reports/overview
-  - title: Configure compliance reports for managed cloud providers
-    path: /compliance/compliance-reports/compliance-managed-cloud
+  path: /compliance/overview
 - title: CIS benchmark reports
   path: /compliance/compliance-reports-cis
 - title: Encrypt data in transit
