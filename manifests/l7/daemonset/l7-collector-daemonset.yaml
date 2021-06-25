@@ -19,6 +19,9 @@ spec:
         app: l7-log-collector
       name: l7-log-collector
     spec:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
       hostIPC: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
