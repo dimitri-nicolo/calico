@@ -19,6 +19,23 @@ type GraphEdge struct {
 	// The selectors provide the set of selector expressions used to access the raw data that corresponds to this
 	// graph edge.
 	Selectors GraphSelectors `json:"selectors"`
+
+	// The set of service ports accessed by these connections.
+	ServicePorts ServicePorts `json:"service_ports,omitempty"`
+
+	// Set of endpoint protocol and ports (aggregated) accessed by these connections.
+	EndpointProtoPorts *AggregatedProtoPorts `json:"endpoint_proto_ports,omitempty"`
+}
+
+func (e *GraphEdge) IncludeEndpointProtoPorts(p *AggregatedProtoPorts) {
+	e.EndpointProtoPorts = e.EndpointProtoPorts.Combine(p)
+}
+
+func (e *GraphEdge) IncludeServicePort(s ServicePort) {
+	if e.ServicePorts == nil {
+		e.ServicePorts = make(ServicePorts)
+	}
+	e.ServicePorts[s] = struct{}{}
 }
 
 func (e *GraphEdge) IncludeStats(ts []GraphStats) {

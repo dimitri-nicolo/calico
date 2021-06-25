@@ -1,44 +1,22 @@
 [
   {
     "ID": {
-      "type": "alert",
-      "id": "UNctv3kBPSVHO0tt0Ucj",
-      "name": "policy.pod"
-    },
-    "Details": {
-      "severity": 100,
-      "description": "[audit] [privileged access] change detected for pod tigera-operator/tigera-operator-7f49946589-hjr52",
-      "time": "1970-01-01T00:00:01Z"
-    },
-    "Endpoints": [
-      {
-        "Type": "namespace",
-        "Namespace": "tigera-operator",
-        "Name": "",
-        "NameAggr": "",
-        "Port": 0,
-        "Proto": ""
-      }
-    ]
-  },
-  {
-    "ID": {
       "type": "kubernetes",
-      "namespace": "calico-system",
-      "name": "calico-node-7plxd.1683f5c8412c9733"
+      "namespace": "storefront",
+      "name": "cartservice-5468974d8-lng9x.168b6a1b2f5cddea"
     },
     "Details": {
       "description": "Readiness probe failed: ",
-      "time": "2021-05-30T21:35:31Z"
+      "time": "2021-06-24T17:45:35Z"
     },
     "Endpoints": [
       {
         "Type": "wep",
-        "Namespace": "calico-system",
-        "Name": "calico-node-7plxd",
-        "NameAggr": "calico-node-7plxd",
-        "Port": 0,
-        "Proto": ""
+        "Namespace": "storefront",
+        "Name": "cartservice-5468974d8-lng9x",
+        "NameAggr": "cartservice-5468974d8-lng9x",
+        "PortNum": 0,
+        "Protocol": ""
       }
     ]
   },
@@ -46,62 +24,125 @@
     "ID": {
       "type": "kubernetes",
       "namespace": "storefront",
-      "name": "cartservice-5468974d8-dkw94.1683f4d4c9cee2d7"
+      "name": "cartservice-5468974d8-lng9x.168b6a1cbc84adbe"
     },
     "Details": {
-      "description": "Readiness probe failed: ",
-      "time": "2021-05-30T21:32:25Z"
+      "description": "Liveness probe failed: ",
+      "time": "2021-06-24T18:03:22Z"
     },
     "Endpoints": [
       {
         "Type": "wep",
         "Namespace": "storefront",
-        "Name": "cartservice-5468974d8-dkw94",
-        "NameAggr": "cartservice-5468974d8-dkw94",
-        "Port": 0,
-        "Proto": ""
+        "Name": "cartservice-5468974d8-lng9x",
+        "NameAggr": "cartservice-5468974d8-lng9x",
+        "PortNum": 0,
+        "Protocol": ""
       }
     ]
   },
   {
     "ID": {
       "type": "kubernetes",
-      "namespace": "tigera-compliance",
-      "name": "compliance-reporter.hourly-accounts-networkaccess-16223760swnnr.1683f5e8b0f05626"
+      "namespace": "tigera-fluentd",
+      "name": "fluentd-node-4cmmh.168b6a62ac21648f"
     },
     "Details": {
-      "description": "Liveness probe failed: Get \"http://192.168.240.187:9099/liveness\": dial tcp 192.168.240.187:9099: connect: connection refused",
-      "time": "2021-05-30T21:37:50Z"
+      "description": "Readiness probe failed: ",
+      "time": "2021-06-24T18:05:02Z"
     },
     "Endpoints": [
       {
         "Type": "wep",
-        "Namespace": "tigera-compliance",
-        "Name": "compliance-reporter.hourly-accounts-networkaccess-16223760swnnr",
-        "NameAggr": "compliance-reporter.hourly-accounts-networkaccess-16223760swnnr",
-        "Port": 0,
-        "Proto": ""
+        "Namespace": "tigera-fluentd",
+        "Name": "fluentd-node-4cmmh",
+        "NameAggr": "fluentd-node-4cmmh",
+        "PortNum": 0,
+        "Protocol": ""
       }
     ]
   },
   {
     "ID": {
       "type": "kubernetes",
-      "namespace": "tigera-manager",
-      "name": "tigera-manager-7d8f8c4d64-652m2.1683f5ca34adca15"
+      "namespace": "tigera-fluentd",
+      "name": "fluentd-node-bqk9p.168b6a6457eb8a18"
     },
     "Details": {
-      "description": "Liveness probe failed: Get \"https://192.168.230.163:9443/\": dial tcp 192.168.230.163:9443: connect: connection refused",
-      "time": "2021-05-30T21:35:59Z"
+      "description": "Readiness probe failed: ",
+      "time": "2021-06-24T18:02:04Z"
     },
     "Endpoints": [
       {
         "Type": "wep",
-        "Namespace": "tigera-manager",
-        "Name": "tigera-manager-7d8f8c4d64-652m2",
-        "NameAggr": "tigera-manager-7d8f8c4d64-652m2",
-        "Port": 0,
-        "Proto": ""
+        "Namespace": "tigera-fluentd",
+        "Name": "fluentd-node-bqk9p",
+        "NameAggr": "fluentd-node-bqk9p",
+        "PortNum": 0,
+        "Protocol": ""
+      }
+    ]
+  },
+  {
+    "ID": {
+      "type": "kubernetes",
+      "namespace": "tigera-fluentd",
+      "name": "fluentd-node-k6wd2.168b6a62d8b5ef45"
+    },
+    "Details": {
+      "description": "Readiness probe failed: ",
+      "time": "2021-06-24T18:03:03Z"
+    },
+    "Endpoints": [
+      {
+        "Type": "wep",
+        "Namespace": "tigera-fluentd",
+        "Name": "fluentd-node-k6wd2",
+        "NameAggr": "fluentd-node-k6wd2",
+        "PortNum": 0,
+        "Protocol": ""
+      }
+    ]
+  },
+  {
+    "ID": {
+      "type": "kubernetes",
+      "namespace": "tigera-fluentd",
+      "name": "fluentd-node-pq6cq.168b6a60eb8e1d17"
+    },
+    "Details": {
+      "description": "Readiness probe failed: ",
+      "time": "2021-06-24T18:06:10Z"
+    },
+    "Endpoints": [
+      {
+        "Type": "wep",
+        "Namespace": "tigera-fluentd",
+        "Name": "fluentd-node-pq6cq",
+        "NameAggr": "fluentd-node-pq6cq",
+        "PortNum": 0,
+        "Protocol": ""
+      }
+    ]
+  },
+  {
+    "ID": {
+      "type": "kubernetes",
+      "namespace": "tigera-fluentd",
+      "name": "fluentd-node-tt85d.168b6a5ca1895c9e"
+    },
+    "Details": {
+      "description": "Readiness probe failed: ",
+      "time": "2021-06-24T18:03:36Z"
+    },
+    "Endpoints": [
+      {
+        "Type": "wep",
+        "Namespace": "tigera-fluentd",
+        "Name": "fluentd-node-tt85d",
+        "NameAggr": "fluentd-node-tt85d",
+        "PortNum": 0,
+        "Protocol": ""
       }
     ]
   }

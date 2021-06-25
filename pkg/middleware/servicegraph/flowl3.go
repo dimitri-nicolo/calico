@@ -45,9 +45,10 @@ const (
 	FlowDestNameAggrIdx
 	FlowDestServiceNamespaceIdx
 	FlowDestServiceNameIdx
-	FlowDestServicePortIdx
+	FlowDestServicePortNameIdx
+	FlowDestServicePortNumIdx
 	FlowProtoIdx
-	FlowDestPortIdx
+	FlowDestPortNumIdx
 	FlowSourceTypeIdx
 	FlowSourceNamespaceIdx
 	FlowSourceNameAggrIdx
@@ -65,9 +66,10 @@ var (
 		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
 		{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
 		{Name: "dest_service_name", Field: "dest_service_name"},
-		{Name: "dest_service_port", Field: "dest_service_port"},
+		{Name: "dest_service_port_name", Field: "dest_service_port_name"},
+		{Name: "dest_service_port_num", Field: "dest_service_port_num"},
 		{Name: "proto", Field: "proto"},
-		{Name: "dest_port", Field: "dest_port"},
+		{Name: "dest_port_num", Field: "dest_port_num"},
 		{Name: "source_type", Field: "source_type"},
 		{Name: "source_namespace", Field: "source_namespace"},
 		{Name: "source_name_aggr", Field: "source_name_aggr"},
@@ -144,12 +146,12 @@ type FlowEndpoint struct {
 	Namespace string
 	Name      string
 	NameAggr  string
-	Port      int
-	Proto     string
+	PortNum   int
+	Protocol  string
 }
 
 func (e FlowEndpoint) String() string {
-	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Proto, e.Port)
+	return fmt.Sprintf("FlowEndpoint(%s/%s/%s/%s:%s:%d)", e.Type, e.Namespace, e.Name, e.NameAggr, e.Protocol, e.PortNum)
 }
 
 type L3Flow struct {
@@ -166,7 +168,7 @@ func (f L3Flow) String() string {
 type FlowEdge struct {
 	Source      FlowEndpoint
 	Dest        FlowEndpoint
-	ServicePort *ServicePort
+	ServicePort *v1.ServicePort
 }
 
 func (e FlowEdge) String() string {
@@ -174,16 +176,6 @@ func (e FlowEdge) String() string {
 		return fmt.Sprintf("%s -> %s", e.Source, e.Dest)
 	}
 	return fmt.Sprintf("%s -> %s -> %s", e.Source, e.ServicePort, e.Dest)
-}
-
-type ServicePort struct {
-	v1.NamespacedName
-	Port  string
-	Proto string
-}
-
-func (s ServicePort) String() string {
-	return fmt.Sprintf("ServicePort(%s/%s:%s %s)", s.Namespace, s.Name, s.Port, s.Proto)
 }
 
 // Internal value used for tracking.
@@ -247,20 +239,21 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			NameAggr:  singleDashToBlank(key[FlowSourceNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[FlowSourceNamespaceIdx].String()),
 		}
-		svc := ServicePort{
+		svc := v1.ServicePort{
 			NamespacedName: v1.NamespacedName{
 				Name:      singleDashToBlank(key[FlowDestServiceNameIdx].String()),
 				Namespace: singleDashToBlank(key[FlowDestServiceNamespaceIdx].String()),
 			},
-			Port:  singleDashToBlank(key[FlowDestServicePortIdx].String()),
-			Proto: proto,
+			PortName: singleDashToBlank(key[FlowDestServicePortNameIdx].String()),
+			Port:     int(key[FlowDestServicePortNumIdx].Float64()),
+			Protocol: proto,
 		}
 		dest := FlowEndpoint{
 			Type:      mapRawTypeToGraphNodeType(key[FlowDestTypeIdx].String(), true),
 			NameAggr:  singleDashToBlank(key[FlowDestNameAggrIdx].String()),
 			Namespace: singleDashToBlank(key[FlowDestNamespaceIdx].String()),
-			Port:      int(key[FlowDestPortIdx].Float64()),
-			Proto:     proto,
+			PortNum:   int(key[FlowDestPortNumIdx].Float64()),
+			Protocol:  proto,
 		}
 		gcs := v1.GraphConnectionStats{
 			TotalPerSampleInterval: int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
@@ -417,7 +410,7 @@ type ports struct {
 func (p *ports) add(port int) {
 	for i := range p.ranges {
 		if p.ranges[i].MinPort >= port && p.ranges[i].MaxPort <= port {
-			// Already have this Port range. Nothing to do.
+			// Already have this port range. Nothing to do.
 			return
 		}
 		if p.ranges[i].MinPort == port+1 {
@@ -448,7 +441,7 @@ func (p *ports) add(port int) {
 			return
 		}
 	}
-	// Extend the slice with this Port.
+	// Extend the slice with this port.
 	p.ranges = append(p.ranges, v1.PortRange{MinPort: port, MaxPort: port})
 }
 
@@ -466,7 +459,7 @@ type destinationGroupData struct {
 }
 
 func (d destinationGroupData) add(
-	reporter, action string, source FlowEndpoint, svc ServicePort, destination FlowEndpoint, stats flowStats,
+	reporter, action string, source FlowEndpoint, svc v1.ServicePort, destination FlowEndpoint, stats flowStats,
 ) {
 	if svc.Name != "" {
 		d.allServiceDestinations[destination] = true
@@ -506,7 +499,7 @@ func newSourceData() *sourceData {
 }
 
 func (s *sourceData) add(
-	reporter, action string, svc ServicePort, destination FlowEndpoint, stats flowStats, isServiceEndpoint bool,
+	reporter, action string, svc v1.ServicePort, destination FlowEndpoint, stats flowStats, isServiceEndpoint bool,
 ) {
 	rc := s.serviceDestinations[destination]
 	if rc == nil && isServiceEndpoint {
@@ -522,39 +515,39 @@ func (s *sourceData) add(
 		return
 	}
 
-	// Aggregate the Port and Proto information.
+	// Aggregate the port and Protocol information.
 	log.Debug("  endpoint is not part of a service - aggregate port and proto info")
 
-	// We do not have a flowReconciliationData which means we must be aggregating out the Port and Proto for this
+	// We do not have a flowReconciliationData which means we must be aggregating out the Port and Protocol for this
 	// (non-service related) flow.
 	if rc = s.other; rc == nil {
 		// There is no existing service destination and this flow does not contain a service. Since services are
-		// enumerated first then this Proto Port combination is not part of a service and we should consolidate
-		// the Proto and ports.
+		// enumerated first then this Port and Protocol combination is not part of a service and we should consolidate
+		// the Protocol and ports.
 		log.Debug("  create new aggregated reconciliation data")
 		rc = newFlowReconciliationData()
 		s.other = rc
 	}
 
-	p, ok := s.protoPorts[svc.Proto]
+	p, ok := s.protoPorts[svc.Protocol]
 	if !ok {
-		if destination.Port != 0 {
+		if destination.PortNum != 0 {
 			p = &ports{}
 		}
-		s.protoPorts[svc.Proto] = p
+		s.protoPorts[svc.Protocol] = p
 	}
 	if p != nil {
-		p.add(destination.Port)
+		p.add(destination.PortNum)
 	}
 
 	// Combine the data to the aggregated data set.
-	rc.add(reporter, action, ServicePort{}, stats)
+	rc.add(reporter, action, v1.ServicePort{}, stats)
 }
 
 func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []L3Flow {
 	var fs []L3Flow
 
-	// Combine the reconciled flows for each endpoint/Proto that is part of one or more services.
+	// Combine the reconciled flows for each endpoint/Protocol that is part of one or more services.
 	for dest, frd := range s.serviceDestinations {
 		fs = append(fs, frd.getFlows(source, dest)...)
 	}
@@ -615,10 +608,10 @@ func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []L3Flo
 
 func newFlowReconciliationData() *flowReconciliationData {
 	return &flowReconciliationData{
-		sourceReportedDenied:  make(map[ServicePort]flowStats),
-		sourceReportedAllowed: make(map[ServicePort]flowStats),
-		destReportedDenied:    make(map[ServicePort]flowStats),
-		destReportedAllowed:   make(map[ServicePort]flowStats),
+		sourceReportedDenied:  make(map[v1.ServicePort]flowStats),
+		sourceReportedAllowed: make(map[v1.ServicePort]flowStats),
+		destReportedDenied:    make(map[v1.ServicePort]flowStats),
+		destReportedAllowed:   make(map[v1.ServicePort]flowStats),
 	}
 }
 
@@ -647,14 +640,14 @@ func (f flowStats) add(f2 flowStats) flowStats {
 // total packets stats and the destination data for the proportional values of which flows were allowed and denied at
 // dest. This is obviously an approximation, but the best we can do without additional data to correlate.
 type flowReconciliationData struct {
-	sourceReportedDenied  map[ServicePort]flowStats
-	sourceReportedAllowed map[ServicePort]flowStats
-	destReportedAllowed   map[ServicePort]flowStats
-	destReportedDenied    map[ServicePort]flowStats
+	sourceReportedDenied  map[v1.ServicePort]flowStats
+	sourceReportedAllowed map[v1.ServicePort]flowStats
+	destReportedAllowed   map[v1.ServicePort]flowStats
+	destReportedDenied    map[v1.ServicePort]flowStats
 }
 
 func (d *flowReconciliationData) add(
-	reporter, action string, svc ServicePort, f flowStats,
+	reporter, action string, svc v1.ServicePort, f flowStats,
 ) {
 	if reporter == "src" {
 		if action == "allow" {
@@ -680,9 +673,9 @@ func (d *flowReconciliationData) add(
 func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 	var f []L3Flow
 
-	addFlow := func(svc ServicePort, stats v1.GraphL3Stats, processes *v1.GraphProcesses) {
+	addFlow := func(svc v1.ServicePort, stats v1.GraphL3Stats, processes *v1.GraphProcesses) {
 		log.Debugf("  Including flow for service: %s", svc)
-		var spp *ServicePort
+		var spp *v1.ServicePort
 		if svc.Name != "" {
 			spp = &svc
 		}
@@ -698,7 +691,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 		})
 	}
 
-	allServices := func(allowed, denied map[ServicePort]flowStats) set.Set {
+	allServices := func(allowed, denied map[v1.ServicePort]flowStats) set.Set {
 		services := set.New()
 		for s := range allowed {
 			services.Add(s)
@@ -709,9 +702,9 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 		return services
 	}
 
-	addSingleReportedFlows := func(allowed, denied map[ServicePort]flowStats, rep reporter) {
+	addSingleReportedFlows := func(allowed, denied map[v1.ServicePort]flowStats, rep reporter) {
 		allServices(allowed, denied).Iter(func(item interface{}) error {
-			svc := item.(ServicePort)
+			svc := item.(v1.ServicePort)
 			stats := v1.GraphL3Stats{
 				Connections: allowed[svc].connStats.Add(denied[svc].connStats),
 				Allowed:     allowed[svc].packetStats,
@@ -762,13 +755,13 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 	// divvied up to be allowed or denied at dest.
 	log.Debug("  L3Flow reported at source and dest")
 	allServices(d.sourceReportedAllowed, d.sourceReportedDenied).Iter(func(item interface{}) error {
-		svc := item.(ServicePort)
+		svc := item.(v1.ServicePort)
 
 		// Get the stats for allowed and denied at dest.  Combine the stats for direct A->B and A->SVC->B. We don't expect
 		// the latter, but just in case...
-		totalAllowedAtDest := d.destReportedAllowed[ServicePort{Proto: svc.Proto}].packetStats.
+		totalAllowedAtDest := d.destReportedAllowed[v1.ServicePort{Protocol: svc.Protocol}].packetStats.
 			Add(d.destReportedAllowed[svc].packetStats)
-		totalDeniedAtDest := d.destReportedDenied[ServicePort{Proto: svc.Proto}].packetStats.
+		totalDeniedAtDest := d.destReportedDenied[v1.ServicePort{Protocol: svc.Protocol}].packetStats.
 			Add(d.destReportedDenied[svc].packetStats)
 
 		var allowed, deniedAtDest *v1.GraphPacketStats
@@ -787,9 +780,9 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 		var processes *v1.GraphProcesses
 		sourceProcesses := d.sourceReportedAllowed[svc].processes.
 			Combine(d.sourceReportedDenied[svc].processes)
-		destProcesses := d.destReportedAllowed[ServicePort{Proto: svc.Proto}].processes.
+		destProcesses := d.destReportedAllowed[v1.ServicePort{Protocol: svc.Protocol}].processes.
 			Combine(d.destReportedAllowed[svc].processes).
-			Combine(d.destReportedDenied[ServicePort{Proto: svc.Proto}].processes).
+			Combine(d.destReportedDenied[v1.ServicePort{Protocol: svc.Protocol}].processes).
 			Combine(d.destReportedDenied[svc].processes)
 		if len(destProcesses) > 0 && len(sourceProcesses) > 0 {
 			processes = &v1.GraphProcesses{

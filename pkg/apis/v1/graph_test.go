@@ -1035,27 +1035,27 @@ var _ = Describe("Graph API tests", func() {
 		}
 	})
 
-	It("handles GraphNode.Services", func() {
+	It("handles GraphNode.ServicePorts", func() {
 		node := GraphNode{
 			ID:   "a",
 			Type: GraphNodeTypeHost,
 		}
-		node.IncludeService(NamespacedName{
+		node.IncludeServicePort(ServicePort{NamespacedName: NamespacedName{
 			Namespace: "b",
 			Name:      "c",
-		})
-		node.IncludeService(NamespacedName{
+		}})
+		node.IncludeServicePort(ServicePort{NamespacedName: NamespacedName{
 			Namespace: "a",
 			Name:      "b",
-		})
-		node.IncludeService(NamespacedName{
+		}})
+		node.IncludeServicePort(ServicePort{NamespacedName: NamespacedName{
 			Namespace: "a",
 			Name:      "b",
-		})
-		node.IncludeService(NamespacedName{
+		}})
+		node.IncludeServicePort(ServicePort{NamespacedName: NamespacedName{
 			Namespace: "a",
 			Name:      "c",
-		})
+		}})
 
 		js, err := json.Marshal(node)
 		Expect(err).NotTo(HaveOccurred())
@@ -1063,7 +1063,7 @@ var _ = Describe("Graph API tests", func() {
 			"id": "a",
 			"type": "host",
 			"selectors": {},
-			"services": [{"namespace":"a", "name":"b"}, {"namespace":"a", "name":"c"}, {"namespace":"b", "name":"c"}]
+			"service_ports": [{"namespace":"a", "name":"b"}, {"namespace":"a", "name":"c"}, {"namespace":"b", "name":"c"}]
 		}`))
 	})
 

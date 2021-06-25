@@ -70,7 +70,7 @@ func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
 		gs = gs.Or(s.GetServiceGroupNodeSelectors(sg))
 	}
 	for _, ep := range s.view.Layers.LayerToEndpoints[layer] {
-		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
 	}
 	return gs
 }
@@ -83,7 +83,7 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 	return SelectorPairs{
 		Source: v1.GraphSelectors{
 			L3Flows: v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-			L7Flows: v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
+			L7Flows: v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
 			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
 		},
 		Dest: v1.GraphSelectors{
@@ -127,19 +127,26 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 }
 
 // GetServicePortNodeSelectors returns the selectors for a service port node.
-func (s *SelectorHelper) GetServicePortNodeSelectors(sp ServicePort) SelectorPairs {
+func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) SelectorPairs {
 	svc := s.GetServiceNodeSelectors(sp.NamespacedName)
 
-	if sp.Proto != "tcp" {
+	if sp.Protocol != "tcp" {
 		// L7 flows are TCP only.
 		svc.Source.L7Flows = v1.NewGraphSelector(v1.OpNoMatch)
 		svc.Dest.L7Flows = v1.NewGraphSelector(v1.OpNoMatch)
+	} else {
+		svc.Dest.L7Flows = v1.NewGraphSelector(v1.OpAnd,
+			svc.Dest.L7Flows,
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_port_name", sp.PortName),
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_port_num", sp.Port),
+		)
 	}
 
 	svc.Dest.L3Flows = v1.NewGraphSelector(v1.OpAnd,
 		svc.Dest.L3Flows,
-		v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
-		v1.NewGraphSelector(v1.OpEqual, "proto", sp.Proto),
+		v1.NewGraphSelector(v1.OpEqual, "dest_service_port_name", sp.PortName),
+		v1.NewGraphSelector(v1.OpEqual, "dest_service_port_num", sp.Port),
+		v1.NewGraphSelector(v1.OpEqual, "proto", sp.Protocol),
 	)
 
 	// Also include the actual service endpoints in the destination selectors. Construct the ORed set of endpoints.
@@ -155,7 +162,7 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp ServicePort) SelectorPai
 		}
 	}
 	for ep := range allEps {
-		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
+		epsp = epsp.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
 	}
 
 	// Only include the endpoint dest selectors, not the source.
@@ -187,7 +194,7 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 		gs = gs.Or(s.GetServiceNodeSelectors(svc))
 	}
 	for ep := range allEps {
-		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Proto, ep.Port, NoDirection))
+		gs = gs.Or(s.GetEndpointNodeSelectors(ep.Type, ep.Namespace, ep.Name, ep.NameAggr, ep.Protocol, ep.PortNum, NoDirection))
 	}
 	return gs
 }
@@ -222,8 +229,8 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		// known then only include for TCP.
 		if isAgg && (proto == "" || proto == "tcp") {
 			l7Source = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "src_name_aggr", nameAggr),
+				v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", nameAggr),
 			)
 			l7Dest = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
@@ -313,7 +320,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 	}
 	if port != 0 {
 		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_port", port),
+			v1.NewGraphSelector(v1.OpEqual, "dest_port_num", port),
 			l3Dest,
 		)
 	}

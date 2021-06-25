@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -247,7 +248,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Simple request with selector, 5 min interval, no time series",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo5Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo5Mins},
 				Selector:          "dest_namespace = 'abc'",
 				IncludeTimeSeries: false,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage(`{"abc": "def"}`)},
@@ -277,7 +278,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Simple request with selector, 5 min interval, request time series - but range too small, so non-time series selected",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo5Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo5Mins},
 				Selector:          "dest_namespace = 'abc'",
 				IncludeTimeSeries: true,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage(`{"abc": "def"}`)},
@@ -307,7 +308,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Simple request with selector, 45 min interval, request time series",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
 				Selector:          "dest_namespace = 'abc'",
 				IncludeTimeSeries: true,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage(`{"abc": "def"}`)},
@@ -377,7 +378,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Elastic responds with bad request",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
 				Selector:          "dest_namespace = 'abc'",
 				IncludeTimeSeries: true,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage("[]")},
@@ -408,7 +409,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Forbidden response from authorization review",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
 				Selector:          "dest_namespace = 'abc'",
 				IncludeTimeSeries: true,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage("[]")},
@@ -431,7 +432,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Empty response from authorization review",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
 				Selector:          "dest_namespace = 'abc'",
 				IncludeTimeSeries: true,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage("[]")},
@@ -451,7 +452,7 @@ var _ = Describe("Aggregation tests", func() {
 		Entry("Invalid field name in selector",
 			v1.AggregationRequest{
 				Cluster:           "",
-				TimeRange:         lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
+				TimeRange:         &lmaapi.TimeRange{From: timeFrom, To: timeTo60Mins},
 				Selector:          "dest_namex = 'abc'",
 				IncludeTimeSeries: true,
 				Aggregations:      map[string]json.RawMessage{"agg1": json.RawMessage("[]")},
@@ -466,6 +467,42 @@ var _ = Describe("Aggregation tests", func() {
 			http.StatusBadRequest,
 			"",
 			"Invalid selector (dest_namex = 'abc') in request: invalid key: dest_namex",
+		),
+	)
+
+	DescribeTable("invalid request parameters",
+		func(reqest string, code int, resp string) {
+			// Create a service graph.
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			sg := NewAggregationHandlerWithBackend(lmaindex.FlowLogs(), &MockBackend{
+				AuthorizationReviewRespErr: errors.New("should not hit this"),
+				RunQueryRespErr:            errors.New("should not hit this"),
+			})
+
+			// Marshal the request and create an HTTP request
+			body := ioutil.NopCloser(strings.NewReader(reqest))
+			req, err := http.NewRequest("POST", "/aggregation", body)
+			Expect(err).NotTo(HaveOccurred())
+			req = req.WithContext(ctx)
+
+			// Pass it through the handler
+			writer := httptest.NewRecorder()
+			sg.ServeHTTP(writer, req)
+			Expect(writer.Code).To(Equal(code))
+			Expect(strings.TrimSpace(writer.Body.String())).To(Equal(resp), writer.Body.String())
+		},
+
+		Entry("Missing time range",
+			`{"aggregations": {"test": {}}}`,
+			http.StatusBadRequest,
+			"Request body contains invalid data: error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )",
+		),
+
+		Entry("Missing time range fields",
+			`{"time_range": {}, "aggregations": {"test": {}}}`,
+			http.StatusBadRequest,
+			"Request body contains an invalid value for the time range: missing `from` field",
 		),
 	)
 })

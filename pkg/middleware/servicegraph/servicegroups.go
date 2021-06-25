@@ -28,7 +28,7 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 	switch ep.Type {
 	case v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
 		// All pods within a replica set are part of the same service group, so just use name_aggr for the key and
-		// exclude the Port.
+		// exclude the port.
 		return &FlowEndpoint{
 			Type:      v1.GraphNodeTypeReplicaSet,
 			Namespace: ep.Namespace,
@@ -43,8 +43,8 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 			Namespace: ep.Namespace,
 			Name:      ep.Name,
 			NameAggr:  ep.NameAggr,
-			Port:      ep.Port,
-			Proto:     ep.Proto,
+			PortNum:   ep.PortNum,
+			Protocol:  ep.Protocol,
 		}
 	}
 	return nil
@@ -53,7 +53,7 @@ func GetServiceGroupFlowEndpointKey(ep FlowEndpoint) *FlowEndpoint {
 // ServiceGroups interface is used to populate and query the service group relationship cache.
 type ServiceGroups interface {
 	// Methods used to populate the service groups
-	AddMapping(svc ServicePort, ep FlowEndpoint)
+	AddMapping(svc v1.ServicePort, ep FlowEndpoint)
 	FinishMappings()
 
 	// Accessor methods used to lookup service groups.
@@ -74,7 +74,7 @@ type ServiceGroup struct {
 	// be set to "*" to indicate it has been aggregated from the set of underlying services.
 	Namespace    string
 	Name         string
-	ServicePorts map[ServicePort]map[FlowEndpoint]struct{}
+	ServicePorts map[v1.ServicePort]map[FlowEndpoint]struct{}
 }
 
 func (s ServiceGroup) String() string {
@@ -189,19 +189,19 @@ func (sd *serviceGroups) FinishMappings() {
 
 		// Update the service group to not include the full name if the port/proto is fixed across all endpoints in the
 		// replica set for a given service port (and there is more than one endpoint)
-		aggrs := make(map[FlowEndpoint]map[ServicePort][]FlowEndpoint)
+		aggrs := make(map[FlowEndpoint]map[v1.ServicePort][]FlowEndpoint)
 		for sp, eps := range sg.ServicePorts {
 			for ep := range eps {
 				ae := FlowEndpoint{
 					Type:      ConvertEndpointTypeToAggrEndpointType(ep.Type),
 					Namespace: ep.Namespace,
 					NameAggr:  ep.NameAggr,
-					Proto:     ep.Proto,
-					Port:      ep.Port,
+					Protocol:  ep.Protocol,
+					PortNum:   ep.PortNum,
 				}
 				m := aggrs[ae]
 				if m == nil {
-					m = make(map[ServicePort][]FlowEndpoint)
+					m = make(map[v1.ServicePort][]FlowEndpoint)
 					aggrs[ae] = m
 				}
 				m[sp] = append(m[sp], ep)
@@ -231,7 +231,7 @@ func (sd *serviceGroups) FinishMappings() {
 
 // AddMapping adds a service port <-> endpoint mapping to the cache.  When all mappings have been added, the caller
 // should call FinishMappings.
-func (s *serviceGroups) AddMapping(svc ServicePort, ep FlowEndpoint) {
+func (s *serviceGroups) AddMapping(svc v1.ServicePort, ep FlowEndpoint) {
 	// If there is an existing service group either by service or endpoint then apply updates to that service
 	// group, otherwise create a new service group.
 	var sg, sge *ServiceGroup
@@ -266,7 +266,7 @@ func (s *serviceGroups) AddMapping(svc ServicePort, ep FlowEndpoint) {
 		// No existing entry by endpoint or service, so create a new service group.
 		log.Debugf("Creating new ServiceGroup containing %s and %s", svc, ep)
 		sg = &ServiceGroup{
-			ServicePorts: make(map[ServicePort]map[FlowEndpoint]struct{}),
+			ServicePorts: make(map[v1.ServicePort]map[FlowEndpoint]struct{}),
 		}
 		s.serviceGroups.Add(sg)
 	}

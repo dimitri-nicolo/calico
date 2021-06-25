@@ -230,7 +230,7 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 		dstEp.graphNode.IncludeAggregatedProtoPorts(flow.AggregatedProtoPorts)
 	}
 	if flow.Edge.ServicePort != nil {
-		dstGp.node.graphNode.IncludeService(flow.Edge.ServicePort.NamespacedName)
+		dstGp.node.graphNode.IncludeServicePort(*flow.Edge.ServicePort)
 	}
 
 	// If any of the source and dest nodes (including parents) are the same, add the stats to those nodes. Note the
@@ -272,6 +272,12 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 			s.edgesMap[id] = sourceEdge
 		}
 
+		// Add the service port to the edge. This is somewhat superfluous since the edge is connected to the port, but
+		// nicer for symmetry with the non-expanded case.
+		if flow.Edge.ServicePort != nil {
+			sourceEdge.IncludeServicePort(*flow.Edge.ServicePort)
+		}
+
 		id = v1.GraphEdgeID{
 			SourceNodeID: servicePortDst.graphNode.ID,
 			DestNodeID:   dstEp.graphNode.ID,
@@ -286,6 +292,22 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 				Selectors: servicePortDst.selectors.Source.And(dstEp.selectors.Dest),
 			}
 			s.edgesMap[id] = destEdge
+		}
+
+		// Add the aggregated endpoint ports and the non-aggregated endpoint ports to both edges.
+		sourceEdge.IncludeEndpointProtoPorts(flow.AggregatedProtoPorts)
+		destEdge.IncludeEndpointProtoPorts(flow.AggregatedProtoPorts)
+		if flow.Edge.Dest.PortNum != 0 {
+			aggr := v1.AggregatedProtoPorts{
+				ProtoPorts: []v1.AggregatedPorts{{
+					Protocol: flow.Edge.Dest.Protocol,
+					PortRanges: []v1.PortRange{{
+						MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
+					}},
+				}},
+			}
+			sourceEdge.IncludeEndpointProtoPorts(&aggr)
+			destEdge.IncludeEndpointProtoPorts(&aggr)
 		}
 
 		// Track the edges associated with a service node - we need to do this to fix up the service selectors since
@@ -304,14 +326,35 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 			DestNodeID:   dstEp.graphNode.ID,
 		}
 		log.Debugf("Tracking: %s", id)
-		if edge, ok := s.edgesMap[id]; ok {
+		var edge *v1.GraphEdge
+		var ok bool
+		if edge, ok = s.edgesMap[id]; ok {
 			edge.IncludeStats(flow.Stats)
 		} else {
-			s.edgesMap[id] = &v1.GraphEdge{
+			edge = &v1.GraphEdge{
 				ID:        id,
 				Stats:     flow.Stats,
 				Selectors: srcEp.selectors.Source.And(dstEp.selectors.Dest),
 			}
+			s.edgesMap[id] = edge
+		}
+
+		// Add the service port to the edge.
+		if flow.Edge.ServicePort != nil {
+			edge.IncludeServicePort(*flow.Edge.ServicePort)
+		}
+
+		edge.IncludeEndpointProtoPorts(flow.AggregatedProtoPorts)
+		if flow.Edge.Dest.PortNum != 0 {
+			aggr := v1.AggregatedProtoPorts{
+				ProtoPorts: []v1.AggregatedPorts{{
+					Protocol: flow.Edge.Dest.Protocol,
+					PortRanges: []v1.PortRange{{
+						MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
+					}},
+				}},
+			}
+			edge.IncludeEndpointProtoPorts(&aggr)
 		}
 	}
 
@@ -329,7 +372,7 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 // This method updates the groupsMap and nodesMap, and returns the IDs of the group, the endpoint (to which the
 // edge is connected) and the service port (which will be an additional hop).
 func (s *serviceGraphConstructionData) trackNodes(
-	endpoint FlowEndpoint, svc *ServicePort, dir Direction,
+	endpoint FlowEndpoint, svc *v1.ServicePort, dir Direction,
 ) (group *trackedGroup, endpointPortNode, servicePortNode *trackedNode) {
 	// Track the expanded container parents and the current parent ID.
 	var expandedParents []*trackedNode
@@ -571,7 +614,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 						Type:      v1.GraphNodeTypeServicePort,
 						ID:        servicePortId,
 						ParentID:  serviceId,
-						Name:      svc.Port,
+						Name:      svc.PortName,
+						Port:      svc.Port,
+						Protocol:  svc.Protocol,
 						Selectors: sel.ToNodeSelectors(),
 					},
 					parent:    service,
@@ -641,8 +686,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 					endpoint.Namespace,
 					endpoint.Name,
 					endpoint.NameAggr,
-					endpoint.Proto,
-					endpoint.Port,
+					endpoint.Protocol,
+					endpoint.PortNum,
 					idi.Direction,
 				)
 				aggrEndpointPort = &trackedNode{
@@ -650,8 +695,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 						Type:      v1.GraphNodeTypePort,
 						ID:        aggrEndpointPortId,
 						ParentID:  aggrEndpointId,
-						Port:      endpoint.Port,
-						Protocol:  endpoint.Proto,
+						Port:      endpoint.PortNum,
+						Protocol:  endpoint.Protocol,
 						Selectors: sel.ToNodeSelectors(),
 					},
 					parent:    aggrEndpoint,
@@ -703,8 +748,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 				endpoint.Namespace,
 				endpoint.Name,
 				endpoint.NameAggr,
-				endpoint.Proto,
-				endpoint.Port,
+				endpoint.Protocol,
+				endpoint.PortNum,
 				idi.Direction,
 			)
 			nonAggrEndpointPort = &trackedNode{
@@ -712,8 +757,8 @@ func (s *serviceGraphConstructionData) trackNodes(
 					Type:      v1.GraphNodeTypePort,
 					ID:        nonAggrEndpointPortId,
 					ParentID:  nonAggrEndpointId,
-					Port:      endpoint.Port,
-					Protocol:  endpoint.Proto,
+					Port:      endpoint.PortNum,
+					Protocol:  endpoint.Protocol,
 					Selectors: sel.ToNodeSelectors(),
 				},
 				parent:    nonAggrEndpoint,

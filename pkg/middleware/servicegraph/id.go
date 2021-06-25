@@ -38,7 +38,7 @@ type IDInfo struct {
 
 	// The following is extracted from an ID, or used to construct an ID.
 	Endpoint     FlowEndpoint
-	Service      ServicePort
+	Service      v1.ServicePort
 	ServiceGroup *ServiceGroup
 	Layer        string
 	Direction    Direction
@@ -142,31 +142,31 @@ func (idf *IDInfo) GetEndpointID() v1.GraphNodeID {
 	return ""
 }
 
-// GetEndpointPortID returns the ID of the endpoint Port. This contains the parent endpoint ID embedded in it, or the
+// GetEndpointPortID returns the ID of the endpoint port. This contains the parent endpoint ID embedded in it, or the
 // aggregated endpoint ID if only the aggregated endpoint data is available. This returns an empty string if the
 // node aggregated out endpoint information.
 func (idf *IDInfo) GetEndpointPortID() v1.GraphNodeID {
-	if idf.Endpoint.Port == 0 {
+	if idf.Endpoint.PortNum == 0 {
 		return ""
 	}
 	epID := idf.GetEndpointID()
 	if epID == "" {
 		return idf.GetAggrEndpointPortID()
 	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Proto, idf.Endpoint.Port, epID))
+	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Protocol, idf.Endpoint.PortNum, epID))
 }
 
-// GetAggrEndpointPortID returns the ID of the endpoint Port. This contains the parent aggregataed endpoint ID embedded
+// GetAggrEndpointPortID returns the ID of the endpoint port. This contains the parent aggregataed endpoint ID embedded
 // in it. This returns an empty string if the node aggregated out endpoint information.
 func (idf *IDInfo) GetAggrEndpointPortID() v1.GraphNodeID {
-	if idf.Endpoint.Port == 0 {
+	if idf.Endpoint.PortNum == 0 {
 		return ""
 	}
 	epID := idf.GetAggrEndpointID()
 	if epID == "" {
 		return ""
 	}
-	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Proto, idf.Endpoint.Port, epID))
+	return v1.GraphNodeID(fmt.Sprintf("%s/%s/%d;%s", v1.GraphNodeTypePort, idf.Endpoint.Protocol, idf.Endpoint.PortNum, epID))
 }
 
 // GetServiceID returns the destination service ID of the service contained in this node.
@@ -185,11 +185,11 @@ func (idf *IDInfo) GetServiceGroupID() v1.GraphNodeID {
 	return idf.ServiceGroup.ID
 }
 
-// GetServicePortID returns the ID of the service Port. This contains the parent service ID embedded in it. This returns
-// an empty string if the service Port is not present.
+// GetServicePortID returns the ID of the service port. This contains the parent service ID embedded in it. This returns
+// an empty string if the service port is not present.
 func (idf *IDInfo) GetServicePortID() v1.GraphNodeID {
 	if id := idf.GetServiceID(); id != "" {
-		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s;%s", v1.GraphNodeTypeServicePort, idf.Service.Proto, idf.Service.Port, id))
+		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s/%d;%s", v1.GraphNodeTypeServicePort, idf.Service.Protocol, idf.Service.PortName, idf.Service.Port, id))
 	}
 	return ""
 }
@@ -242,7 +242,8 @@ const (
 	idpPortNum
 	idpServiceNamespace
 	idpServiceName
-	idpServicePort
+	idpServicePortName
+	idpServicePortNum
 	idpServiceProtocol
 	idpDirection
 )
@@ -262,7 +263,7 @@ var (
 		v1.GraphNodeTypeWorkload:     {{idpType, idpNamespace, idpName, idpNameAggr}},
 		v1.GraphNodeTypePort:         {{idpType, idpProtocol, idpPortNum}},
 		v1.GraphNodeTypeService:      {{idpType, idpServiceNamespace, idpServiceName}},
-		v1.GraphNodeTypeServicePort:  {{idpType, idpServiceProtocol, idpServicePort}},
+		v1.GraphNodeTypeServicePort:  {{idpType, idpServiceProtocol, idpServicePortName, idpServicePortNum}},
 		graphNodeTypeDirection:       {{idpType, idpDirection}},
 	}
 
@@ -340,9 +341,9 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 			}
 			foundMapping = true
 			for idx, field := range mappings {
-				// Check the segment syntax. Only the service Port is allowed to be empty.
+				// Check the segment syntax. Only the service port is allowed to be empty.
 				switch field {
-				case idpServicePort:
+				case idpServicePortName:
 					if !IDValueAllowedEmptyRegex.MatchString(parts[idx]) {
 						return nil, fmt.Errorf("unexpected format of node ID %s: unexpected empty segment", id)
 					}
@@ -364,21 +365,27 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 				case idpLayer:
 					idf.Layer = parts[idx]
 				case idpProtocol:
-					idf.Endpoint.Proto = parts[idx]
+					idf.Endpoint.Protocol = parts[idx]
 				case idpServiceProtocol:
-					idf.Service.Proto = parts[idx]
+					idf.Service.Protocol = parts[idx]
 				case idpPortNum:
 					val, err := strconv.Atoi(parts[idx])
 					if err != nil {
 						return nil, fmt.Errorf("unexpected format of node ID %s: port is not a number", id)
 					}
-					idf.Endpoint.Port = val
+					idf.Endpoint.PortNum = val
 				case idpServiceNamespace:
 					idf.Service.Namespace = parts[idx]
 				case idpServiceName:
 					idf.Service.Name = parts[idx]
-				case idpServicePort:
-					idf.Service.Port = parts[idx]
+				case idpServicePortName:
+					idf.Service.PortName = parts[idx]
+				case idpServicePortNum:
+					val, err := strconv.Atoi(parts[idx])
+					if err != nil {
+						return nil, fmt.Errorf("unexpected format of node ID %s: port is not a number", id)
+					}
+					idf.Service.Port = val
 				case idpDirection:
 					idf.Direction = Direction(parts[idx])
 				default:
@@ -399,7 +406,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 			if sg != nil {
 				idf.ServiceGroup = sg
 			}
-			idf.Service = ServicePort{}
+			idf.Service = v1.ServicePort{}
 		}
 
 		if !foundMapping {

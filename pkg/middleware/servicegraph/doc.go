@@ -14,9 +14,8 @@ package servicegraph
 //
 // - Layer
 // - Namespace
-// - ReplicaSet
-// - FlowEndpoint
-// - Process
+// - AggregatedEndpoint
+// - Endpoint
 // - Port
 //
 // Not all of these are always applicable. If not applicable the parent/child hierarchy will skip over the aggregation

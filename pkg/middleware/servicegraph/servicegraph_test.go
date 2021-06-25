@@ -18,6 +18,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
@@ -82,8 +84,10 @@ var _ = Describe("Service graph data tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			timeTo, err := time.Parse(time.RFC3339, timeStrTo)
 			Expect(err).NotTo(HaveOccurred())
-			sgr.TimeRange.From = timeFrom
-			sgr.TimeRange.To = timeTo
+			sgr.TimeRange = &lmav1.TimeRange{
+				From: timeFrom,
+				To:   timeTo,
+			}
 
 			// Marshal the request and create an HTTP request
 			sgrb, err := json.Marshal(sgr)
@@ -123,7 +127,7 @@ var _ = Describe("Service graph data tests", func() {
 			// file in the event of an error.  It makes dev cycles easier.
 			actualData = actual
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".json"
 
 			// Parse the expected response.
 			var expected map[string]interface{}
@@ -563,6 +567,10 @@ var _ = Describe("Service graph data tests", func() {
 					"to": "now-15m"
 				}
 			}`, http.StatusBadRequest, "Request body contains an invalid time range: from (now) is after to (now-15m)",
+		),
+		Entry("missing time range",
+			`{
+			}`, http.StatusBadRequest, "Request body contains invalid data: error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )",
 		),
 		Entry("reversed absolute time range",
 			`{
