@@ -115,6 +115,7 @@ func DefaultL7AggregationKind() L7AggregationKind {
 type l7LogAggregator struct {
 	kind                 L7AggregationKind
 	l7Store              map[L7Meta]L7Spec
+	l7OverflowStore      map[L7Meta]L7Spec
 	l7Mutex              sync.Mutex
 	aggregationStartTime time.Time
 	perNodeLimit         int
@@ -126,6 +127,7 @@ func NewL7LogAggregator() L7LogAggregator {
 	return &l7LogAggregator{
 		kind:                 DefaultL7AggregationKind(),
 		l7Store:              make(map[L7Meta]L7Spec),
+		l7OverflowStore:      make(map[L7Meta]L7Spec),
 		aggregationStartTime: time.Now(),
 	}
 }
@@ -155,16 +157,19 @@ func (la *l7LogAggregator) FeedUpdate(update L7Update) error {
 		existing := la.l7Store[meta]
 		existing.Merge(spec)
 		la.l7Store[meta] = existing
+	} else if _, ok := la.l7OverflowStore[meta]; ok {
+		existing := la.l7OverflowStore[meta]
+		existing.Merge(spec)
+		la.l7OverflowStore[meta] = existing
 	} else if (la.perNodeLimit == 0) || (len(la.l7Store) < la.perNodeLimit) {
-		// TODO: Add another store for dealing with overflow logs
-		// (logs with only counts that represent rate limiting in
-		// the L7 collector.
 		// Since we expect there to be too many L7 logs, trim out
 		// overflow logs since we do not want to use up our log limit
 		// to record them since they have less data. Overflow logs will
 		// not have a type.
 		if meta.Type != "" {
 			la.l7Store[meta] = spec
+		} else if len(la.l7OverflowStore) < la.perNodeLimit {
+			la.l7OverflowStore[meta] = spec
 		}
 	} else {
 		la.numUnLoggedUpdates++
@@ -189,6 +194,26 @@ func (la *l7LogAggregator) Get() []*L7Log {
 			aggregationEndTime,
 		))
 	}
+
+	// If logs with real data (not overflow) do not reach the per node
+	// limit, add any overflow logs until the per node limit is reached.
+	if len(l7Logs) < la.perNodeLimit {
+		remainder := la.perNodeLimit - len(l7Logs)
+		i := 0
+		for meta, spec := range la.l7OverflowStore {
+			if i >= remainder {
+				la.numUnLoggedUpdates = la.numUnLoggedUpdates + len(la.l7OverflowStore) - i
+				break
+			}
+			l7Data := L7Data{meta, spec}
+			l7Logs = append(l7Logs, l7Data.ToL7Log(
+				la.aggregationStartTime,
+				aggregationEndTime,
+			))
+			i++
+		}
+	}
+
 	if la.numUnLoggedUpdates > 0 {
 		log.Warningf(
 			"%v L7 logs were not logged, because of perNodeLimit being set to %v",
@@ -208,6 +233,7 @@ func (la *l7LogAggregator) Get() []*L7Log {
 	}
 
 	la.l7Store = make(map[L7Meta]L7Spec)
+	la.l7OverflowStore = make(map[L7Meta]L7Spec)
 	la.aggregationStartTime = aggregationEndTime
 	return l7Logs
 }
