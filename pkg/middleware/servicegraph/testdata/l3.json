@@ -2,10 +2,1072 @@
   {
     "Edge": {
       "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 124,
+        "packet_out": 62,
+        "bytes_in": 21638,
+        "bytes_out": 63139
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      }
+    },
+    "Processes": {
+      "dest": [
+        {
+          "name": "calico-node",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-prometheus",
+        "Name": "",
+        "NameAggr": "prometheus-calico-node-prometheus-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 60,
+        "packet_out": 120,
+        "bytes_in": 60773,
+        "bytes_out": 20940
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 30356,
+        "max_min_rtt": 223,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 18562,
+        "mean_min_mss": 223,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "prometheus",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 10250,
+              "max_port": 10250
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 48,
+        "packet_out": 52,
+        "bytes_in": 4435,
+        "bytes_out": 5028
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "kube-apiserver",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ],
+      "dest": [
+        {
+          "name": "kubelet",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-manager",
+        "Name": "",
+        "NameAggr": "tigera-manager-6945cc846-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 6443,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "default",
+        "name": "kubernetes",
+        "protocol": "tcp",
+        "port_name": "https",
+        "port": 443
+      }
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 0,
+        "packet_out": 3,
+        "bytes_in": 0,
+        "bytes_out": 180
+      },
+      "connections": {
+        "total_per_sample_interval": 3,
+        "started": 3,
+        "completed": 3
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 2369,
+        "max_min_rtt": 150,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 2020.5,
+        "mean_min_mss": 137.5,
+        "mean_mss": 1388,
+        "count": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "es-proxy",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "voltron",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
         "Type": "net",
         "Namespace": "",
         "Name": "",
-        "NameAggr": "pvt",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1,
+        "packet_out": 0,
+        "bytes_in": 40,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1,
+        "packet_out": 0,
+        "bytes_in": 40,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 130,
+        "packet_out": 65,
+        "bytes_in": 22685,
+        "bytes_out": 47372
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      }
+    },
+    "Processes": {
+      "dest": [
+        {
+          "name": "calico-node",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-prometheus",
+        "Name": "",
+        "NameAggr": "prometheus-calico-node-prometheus-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 61,
+        "packet_out": 122,
+        "bytes_in": 44472,
+        "bytes_out": 21289
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 21112,
+        "max_min_rtt": 206,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 13276,
+        "mean_min_mss": 206,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "prometheus",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1,
+        "packet_out": 0,
+        "bytes_in": 40,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 2,
+        "packet_out": 0,
+        "bytes_in": 84,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 2,
+        "started": 2,
+        "completed": 2
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 124,
+        "packet_out": 62,
+        "bytes_in": 21638,
+        "bytes_out": 56872
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      }
+    },
+    "Processes": {
+      "dest": [
+        {
+          "name": "calico-node",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-prometheus",
+        "Name": "",
+        "NameAggr": "prometheus-calico-node-prometheus-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 65,
+        "packet_out": 122,
+        "bytes_in": 56138,
+        "bytes_out": 21289
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 60996,
+        "max_min_rtt": 184,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 22358,
+        "mean_min_mss": 184,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "prometheus",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "icmp"
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 3,
+        "packet_out": 3,
+        "bytes_in": 252,
+        "bytes_out": 252
+      },
+      "connections": {
+        "total_per_sample_interval": 3,
+        "started": 3,
+        "completed": 3
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-prometheus",
+        "Name": "",
+        "NameAggr": "prometheus-calico-node-prometheus-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 60,
+        "packet_out": 120,
+        "bytes_in": 59599,
+        "bytes_out": 20940
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 40012,
+        "max_min_rtt": 35,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 18740,
+        "mean_min_mss": 35,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "prometheus",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1,
+        "packet_out": 0,
+        "bytes_in": 40,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 2,
+        "packet_out": 0,
+        "bytes_in": 80,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 2,
+        "started": 2,
+        "completed": 2
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 124,
+        "packet_out": 62,
+        "bytes_in": 21638,
+        "bytes_out": 57036
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      }
+    },
+    "Processes": {
+      "dest": [
+        {
+          "name": "calico-node",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-prometheus",
+        "Name": "",
+        "NameAggr": "prometheus-calico-node-prometheus-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 9081,
+              "max_port": 9081
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 61,
+        "packet_out": 122,
+        "bytes_in": 56107,
+        "bytes_out": 21289
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 52152,
+        "max_min_rtt": 324,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 22080,
+        "mean_min_mss": 324,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "prometheus",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
         "PortNum": 0,
         "Protocol": ""
       },
@@ -34,15 +1096,73 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 72,
-        "packet_out": 60,
-        "bytes_in": 10727,
-        "bytes_out": 5194
+        "packet_in": 9,
+        "packet_out": 7,
+        "bytes_in": 913,
+        "bytes_out": 610
       },
       "connections": {
-        "total_per_sample_interval": 8,
-        "started": 8,
-        "completed": 7
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "kubelet",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 9,
+        "packet_out": 7,
+        "bytes_in": 913,
+        "bytes_out": 610
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
       }
     },
     "Processes": {
@@ -92,15 +1212,15 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 1316,
-        "packet_out": 1127,
-        "bytes_in": 404388,
-        "bytes_out": 87004
+        "packet_in": 966,
+        "packet_out": 829,
+        "bytes_in": 296838,
+        "bytes_out": 63934
       },
       "connections": {
-        "total_per_sample_interval": 188,
-        "started": 188,
-        "completed": 188
+        "total_per_sample_interval": 138,
+        "started": 138,
+        "completed": 138
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -108,12 +1228,92 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1400,
-        "max_smooth_rtt": 9632,
-        "max_min_rtt": 1204,
+        "max_smooth_rtt": 6848,
+        "max_min_rtt": 856,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 3445.5,
-        "mean_min_mss": 376,
-        "mean_mss": 1400
+        "mean_smooth_rtt": 2482,
+        "mean_min_mss": 230.5,
+        "mean_mss": 1400,
+        "count": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "wrk:worker_0",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "wrk:worker_1",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "paymentservice-5746b87f6c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 18,
+        "packet_out": 15,
+        "bytes_in": 2277,
+        "bytes_out": 1617
+      },
+      "connections": {
+        "total_per_sample_interval": 3,
+        "started": 3,
+        "completed": 3
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1400,
+        "max_smooth_rtt": 5591,
+        "max_min_rtt": 418,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 4435,
+        "mean_min_mss": 202,
+        "mean_mss": 1400,
+        "count": 2
       }
     },
     "Processes": {
@@ -170,15 +1370,15 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 4900,
-        "packet_out": 4206,
-        "bytes_in": 1505700,
-        "bytes_out": 324340
+        "packet_in": 5019,
+        "packet_out": 4351,
+        "bytes_in": 1542267,
+        "bytes_out": 334611
       },
       "connections": {
-        "total_per_sample_interval": 700,
-        "started": 700,
-        "completed": 700
+        "total_per_sample_interval": 717,
+        "started": 717,
+        "completed": 717
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -186,12 +1386,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1400,
-        "max_smooth_rtt": 13720,
-        "max_min_rtt": 1715,
+        "max_smooth_rtt": 9984,
+        "max_min_rtt": 1248,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2296.5,
-        "mean_min_mss": 197,
-        "mean_mss": 1400
+        "mean_smooth_rtt": 3200.5,
+        "mean_min_mss": 298,
+        "mean_mss": 1400,
+        "count": 2
       }
     },
     "Processes": {
@@ -216,10 +1417,184 @@
   {
     "Edge": {
       "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
         "Type": "net",
         "Namespace": "",
         "Name": "",
-        "NameAggr": "pvt",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 9,
+        "packet_out": 7,
+        "bytes_in": 913,
+        "bytes_out": 610
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "kubelet",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 9,
+        "packet_out": 7,
+        "bytes_in": 913,
+        "bytes_out": 610
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "kubelet",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 80,
+              "max_port": 80
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 9,
+        "packet_out": 7,
+        "bytes_in": 913,
+        "bytes_out": 610
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "kubelet",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
         "PortNum": 0,
         "Protocol": ""
       },
@@ -248,26 +1623,19 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 4198,
-        "packet_out": 1542,
-        "bytes_in": 15692792,
-        "bytes_out": 124678
+        "packet_in": 66,
+        "packet_out": 77,
+        "bytes_in": 13252,
+        "bytes_out": 5477
       },
       "connections": {
-        "total_per_sample_interval": 34,
-        "started": 24,
-        "completed": 24
+        "total_per_sample_interval": 5,
+        "started": 3,
+        "completed": 3
       }
     },
     "Processes": {
       "source": [
-        {
-          "name": "*",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 2,
-          "max_num_ids_per_flow": 2
-        },
         {
           "name": "google_guest_ag",
           "min_num_names_per_flow": 1,
@@ -320,13 +1688,13 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 25,
-        "packet_out": 19,
-        "bytes_in": 2010,
-        "bytes_out": 6463
+        "packet_in": 78,
+        "packet_out": 75,
+        "bytes_in": 8697,
+        "bytes_out": 28630
       },
       "connections": {
-        "total_per_sample_interval": 1,
+        "total_per_sample_interval": 2,
         "started": 0,
         "completed": 0
       },
@@ -336,83 +1704,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 14888,
-        "max_min_rtt": 130,
+        "max_smooth_rtt": 21873,
+        "max_min_rtt": 236,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 10832,
-        "mean_min_mss": 130,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "wrk:worker_1",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "currencyservice-86d778fd89-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pub",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 443,
-              "max_port": 443
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 113,
-        "packet_out": 114,
-        "bytes_in": 18612,
-        "bytes_out": 593612
-      },
-      "connections": {
-        "total_per_sample_interval": 2,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 8,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 20129,
-        "max_min_rtt": 149,
-        "mean_send_congestion_window": 15,
-        "mean_smooth_rtt": 10979,
-        "mean_min_mss": 131,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 16081,
+        "mean_min_mss": 179,
+        "mean_mss": 1388,
+        "count": 1
       }
     },
     "Processes": {
@@ -462,10 +1760,10 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 52,
-        "packet_out": 47,
-        "bytes_in": 3808,
-        "bytes_out": 94943
+        "packet_in": 45,
+        "packet_out": 44,
+        "bytes_in": 3444,
+        "bytes_out": 86763
       },
       "connections": {
         "total_per_sample_interval": 1,
@@ -478,12 +1776,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 14989,
-        "max_min_rtt": 168,
+        "max_smooth_rtt": 15081,
+        "max_min_rtt": 151,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 11519,
-        "mean_min_mss": 166,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 12416,
+        "mean_min_mss": 147,
+        "mean_mss": 1388,
+        "count": 1
       }
     },
     "Processes": {
@@ -533,15 +1832,15 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 105,
-        "packet_out": 74,
-        "bytes_in": 21450,
-        "bytes_out": 118572
+        "packet_in": 106,
+        "packet_out": 80,
+        "bytes_in": 25659,
+        "bytes_out": 108576
       },
       "connections": {
-        "total_per_sample_interval": 3,
-        "started": 0,
-        "completed": 0
+        "total_per_sample_interval": 4,
+        "started": 1,
+        "completed": 1
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -549,12 +1848,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 35807,
-        "max_min_rtt": 1361,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 10857.5,
-        "mean_min_mss": 491,
-        "mean_mss": 1388
+        "max_smooth_rtt": 18587,
+        "max_min_rtt": 1236,
+        "mean_send_congestion_window": 10.5,
+        "mean_smooth_rtt": 9203,
+        "mean_min_mss": 220,
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": {
@@ -611,14 +1911,14 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 111,
-        "packet_out": 103,
-        "bytes_in": 18972,
-        "bytes_out": 383352
+        "packet_in": 126,
+        "packet_out": 104,
+        "bytes_in": 19175,
+        "bytes_out": 396994
       },
       "connections": {
         "total_per_sample_interval": 3,
-        "started": 1,
+        "started": 0,
         "completed": 0
       },
       "tcp": {
@@ -627,18 +1927,660 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 7756,
-        "max_min_rtt": 232,
+        "max_smooth_rtt": 9540,
+        "max_min_rtt": 340,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 4326,
-        "mean_min_mss": 175,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 6729,
+        "mean_min_mss": 176,
+        "mean_mss": 1388,
+        "count": 1
       }
     },
     "Processes": {
       "source": [
         {
           "name": "wrk:worker_0",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "shippingservice-54fbf57657-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 773,
+        "packet_out": 826,
+        "bytes_in": 72332,
+        "bytes_out": 223744
+      },
+      "connections": {
+        "total_per_sample_interval": 4,
+        "started": 1,
+        "completed": 1
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 24305,
+        "max_min_rtt": 233,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 15534,
+        "mean_min_mss": 173.5,
+        "mean_mss": 1388,
+        "count": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "wrk:worker_0",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "wrk:worker_1",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 59,
+        "packet_out": 66,
+        "bytes_in": 9626,
+        "bytes_out": 4414
+      },
+      "connections": {
+        "total_per_sample_interval": 4,
+        "started": 2,
+        "completed": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "google_guest_ag",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "google_osconfig",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-1",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 59,
+        "packet_out": 66,
+        "bytes_in": 9613,
+        "bytes_out": 4414
+      },
+      "connections": {
+        "total_per_sample_interval": 4,
+        "started": 2,
+        "completed": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "google_guest_ag",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "google_osconfig",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 57,
+        "packet_out": 65,
+        "bytes_in": 9509,
+        "bytes_out": 4362
+      },
+      "connections": {
+        "total_per_sample_interval": 4,
+        "started": 2,
+        "completed": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "google_guest_ag",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "google_osconfig",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 241,
+        "packet_out": 260,
+        "bytes_in": 23856,
+        "bytes_out": 133333
+      },
+      "connections": {
+        "total_per_sample_interval": 3,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 20943,
+        "max_min_rtt": 256,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 13035,
+        "mean_min_mss": 188,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "wrk:worker_1",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "currencyservice-86d778fd89-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 204,
+        "packet_out": 153,
+        "bytes_in": 33080,
+        "bytes_out": 583256
+      },
+      "connections": {
+        "total_per_sample_interval": 4,
+        "started": 1,
+        "completed": 1
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 11586,
+        "max_min_rtt": 257,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 5644,
+        "mean_min_mss": 195,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "wrk:worker_0",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 68,
+        "packet_out": 80,
+        "bytes_in": 13354,
+        "bytes_out": 5633
+      },
+      "connections": {
+        "total_per_sample_interval": 5,
+        "started": 3,
+        "completed": 3
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "google_guest_ag",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "google_osconfig",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1863,
+        "packet_out": 2039,
+        "bytes_in": 145089,
+        "bytes_out": 6090234
+      },
+      "connections": {
+        "total_per_sample_interval": 4,
+        "started": 1,
+        "completed": 1
+      },
+      "tcp": {
+        "sum_total_retransmissions": 14,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 17950,
+        "max_min_rtt": 232,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 7212.5,
+        "mean_min_mss": 138.5,
+        "mean_mss": 1388,
+        "count": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "wrk:worker_0",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "wrk:worker_1",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 443,
+              "max_port": 443
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1035,
+        "packet_out": 1191,
+        "bytes_in": 88817,
+        "bytes_out": 1698079
+      },
+      "connections": {
+        "total_per_sample_interval": 3,
+        "started": 0,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 11898,
+        "max_min_rtt": 169,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 7166,
+        "mean_min_mss": 144.5,
+        "mean_mss": 1388,
+        "count": 2
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "wrk:worker_0",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        },
+        {
+          "name": "wrk:worker_1",
           "min_num_names_per_flow": 1,
           "max_num_names_per_flow": 1,
           "min_num_ids_per_flow": 1,
@@ -682,15 +2624,15 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 141,
-        "packet_out": 141,
-        "bytes_in": 16873,
-        "bytes_out": 11051
+        "packet_in": 137,
+        "packet_out": 137,
+        "bytes_in": 15895,
+        "bytes_out": 10637
       },
       "connections": {
-        "total_per_sample_interval": 51,
-        "started": 38,
-        "completed": 41
+        "total_per_sample_interval": 45,
+        "started": 33,
+        "completed": 37
       }
     },
     "Processes": {
@@ -708,10 +2650,10 @@
   {
     "Edge": {
       "Source": {
-        "Type": "net",
+        "Type": "host",
         "Namespace": "",
         "Name": "",
-        "NameAggr": "pvt",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
         "PortNum": 0,
         "Protocol": ""
       },
@@ -740,15 +2682,131 @@
     },
     "Stats": {
       "allowed": {
-        "packet_in": 4,
-        "packet_out": 4,
-        "bytes_in": 304,
-        "bytes_out": 304
+        "packet_in": 1,
+        "packet_out": 1,
+        "bytes_in": 76,
+        "bytes_out": 76
       },
       "connections": {
-        "total_per_sample_interval": 4,
-        "started": 4,
-        "completed": 4
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "chronyd",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "udp",
+          "port_ranges": [
+            {
+              "min_port": 123,
+              "max_port": 123
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1,
+        "packet_out": 1,
+        "bytes_in": 76,
+        "bytes_out": 76
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "chronyd",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "net",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "pub",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "udp",
+          "port_ranges": [
+            {
+              "min_port": 123,
+              "max_port": 123
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 1,
+        "packet_out": 1,
+        "bytes_in": 76,
+        "bytes_out": 76
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 0
       }
     },
     "Processes": {
@@ -767,339 +2825,40 @@
     "Edge": {
       "Source": {
         "Type": "rep",
-        "Namespace": "tigera-eck-operator",
+        "Namespace": "storefront",
         "Name": "",
-        "NameAggr": "elastic-operator-*",
+        "NameAggr": "paymentservice-5746b87f6c-*",
         "PortNum": 0,
         "Protocol": ""
       },
       "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 6443,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "default",
-        "name": "kubernetes",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 443
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 0,
-        "packet_out": 0,
-        "bytes_in": 0,
-        "bytes_out": 0
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "elastic-operato",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
         "Type": "rep",
-        "Namespace": "tigera-manager",
+        "Namespace": "kube-system",
         "Name": "",
-        "NameAggr": "tigera-manager-6945cc846-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 6443,
-        "Protocol": "tcp"
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
       },
       "ServicePort": {
-        "namespace": "default",
-        "name": "kubernetes",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 443
+        "namespace": "kube-system",
+        "name": "kube-dns",
+        "protocol": "udp",
+        "port_name": "dns",
+        "port": 53
       }
     },
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 0,
-        "packet_out": 2,
-        "bytes_in": 0,
-        "bytes_out": 120
+        "packet_in": 6,
+        "packet_out": 6,
+        "bytes_in": 1055,
+        "bytes_out": 525
       },
       "connections": {
-        "total_per_sample_interval": 2,
-        "started": 2,
-        "completed": 2
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 3996,
-        "max_min_rtt": 344,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 3705,
-        "mean_min_mss": 306,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "packetcapture-a",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        },
-        {
-          "name": "voltron",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-system",
-        "Name": "",
-        "NameAggr": "tigera-apiserver-b47498c85-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 6443,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "default",
-        "name": "kubernetes",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 443
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 0,
-        "packet_out": 0,
-        "bytes_in": 0,
-        "bytes_out": 0
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "apiserver",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "calico-system",
-        "Name": "",
-        "NameAggr": "calico-kube-controllers-789c669c89-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 6443,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "default",
-        "name": "kubernetes",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 443
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 0,
-        "packet_out": 0,
-        "bytes_in": 0,
-        "bytes_out": 0
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "kube-controller",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-compliance",
-        "Name": "",
-        "NameAggr": "compliance-benchmarker-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 6443,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "default",
-        "name": "kubernetes",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 443
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 168,
-        "packet_out": 139,
-        "bytes_in": 24782,
-        "bytes_out": 10171
-      },
-      "connections": {
-        "total_per_sample_interval": 5,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 0,
-        "min_mss": 0,
-        "max_smooth_rtt": 60948,
-        "max_min_rtt": 10,
-        "mean_send_congestion_window": 2,
-        "mean_smooth_rtt": 8034.6,
-        "mean_min_mss": 2,
-        "mean_mss": 277.6
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "benchmarker",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pub",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 80,
-              "max_port": 80
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 1,
-        "packet_out": 0,
-        "bytes_in": 40,
-        "bytes_out": 0
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 1,
-        "completed": 1
+        "total_per_sample_interval": 6,
+        "started": 6,
+        "completed": 6
       }
     },
     "Processes": null
@@ -1107,423 +2866,44 @@
   {
     "Edge": {
       "Source": {
-        "Type": "net",
-        "Namespace": "",
+        "Type": "rep",
+        "Namespace": "storefront",
         "Name": "",
-        "NameAggr": "pub",
+        "NameAggr": "shippingservice-54fbf57657-*",
         "PortNum": 0,
         "Protocol": ""
       },
       "Dest": {
-        "Type": "net",
-        "Namespace": "",
+        "Type": "rep",
+        "Namespace": "kube-system",
         "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
       },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 443,
-              "max_port": 443
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 5,
-        "packet_out": 0,
-        "bytes_in": 200,
-        "bytes_out": 0
-      },
-      "connections": {
-        "total_per_sample_interval": 5,
-        "started": 5,
-        "completed": 5
+      "ServicePort": {
+        "namespace": "kube-system",
+        "name": "kube-dns",
+        "protocol": "udp",
+        "port_name": "dns",
+        "port": 53
       }
     },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pub",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 3389,
-              "max_port": 3389
-            }
-          ]
-        }
-      ]
-    },
+    "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
         "packet_in": 12,
-        "packet_out": 0,
-        "bytes_in": 608,
-        "bytes_out": 0
+        "packet_out": 12,
+        "bytes_in": 2122,
+        "bytes_out": 1050
       },
       "connections": {
-        "total_per_sample_interval": 5,
-        "started": 5,
-        "completed": 5
+        "total_per_sample_interval": 12,
+        "started": 12,
+        "completed": 12
       }
     },
     "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 9081,
-              "max_port": 9081
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 508,
-        "packet_out": 254,
-        "bytes_in": 88646,
-        "bytes_out": 325266
-      },
-      "connections": {
-        "total_per_sample_interval": 4,
-        "started": 0,
-        "completed": 0
-      }
-    },
-    "Processes": {
-      "dest": [
-        {
-          "name": "calico-node",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-prometheus",
-        "Name": "",
-        "NameAggr": "prometheus-calico-node-prometheus-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 9081,
-              "max_port": 9081
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 310,
-        "packet_out": 620,
-        "bytes_in": 395771,
-        "bytes_out": 108190
-      },
-      "connections": {
-        "total_per_sample_interval": 5,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 53567,
-        "max_min_rtt": 257,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 20528,
-        "mean_min_mss": 106,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "prometheus",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 9900,
-              "max_port": 9900
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 514,
-        "packet_out": 257,
-        "bytes_in": 89693,
-        "bytes_out": 153503
-      },
-      "connections": {
-        "total_per_sample_interval": 4,
-        "started": 0,
-        "completed": 0
-      }
-    },
-    "Processes": {
-      "dest": [
-        {
-          "name": "calico-node",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-prometheus",
-        "Name": "",
-        "NameAggr": "prometheus-calico-node-prometheus-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 9900,
-              "max_port": 9900
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 315,
-        "packet_out": 622,
-        "bytes_in": 185937,
-        "bytes_out": 108539
-      },
-      "connections": {
-        "total_per_sample_interval": 5,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 49583,
-        "max_min_rtt": 295,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 9473,
-        "mean_min_mss": 119,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "prometheus",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 10250,
-              "max_port": 10250
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 30,
-        "packet_out": 30,
-        "bytes_in": 1560,
-        "bytes_out": 1560
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "kube-apiserver",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "kubelet",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
   },
   {
     "Edge": {
@@ -1554,57 +2934,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 372,
-        "packet_out": 375,
-        "bytes_in": 76570,
-        "bytes_out": 43375
+        "packet_in": 377,
+        "packet_out": 377,
+        "bytes_in": 77581,
+        "bytes_out": 43591
       },
       "connections": {
-        "total_per_sample_interval": 412,
-        "started": 370,
+        "total_per_sample_interval": 411,
+        "started": 375,
         "completed": 370
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-fluentd",
-        "Name": "",
-        "NameAggr": "fluentd-node-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "kube-system",
-        "Name": "",
-        "NameAggr": "coredns-74ff55c5b-*",
-        "PortNum": 53,
-        "Protocol": "udp"
-      },
-      "ServicePort": {
-        "namespace": "kube-system",
-        "name": "kube-dns",
-        "protocol": "udp",
-        "port_name": "dns",
-        "port": 53
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 183,
-        "packet_out": 183,
-        "bytes_in": 36783,
-        "bytes_out": 20801
-      },
-      "connections": {
-        "total_per_sample_interval": 69,
-        "started": 61,
-        "completed": 64
       }
     },
     "Processes": null
@@ -1638,36 +2976,98 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 6,
-        "packet_out": 6,
-        "bytes_in": 1223,
-        "bytes_out": 682
+        "packet_in": 22,
+        "packet_out": 22,
+        "bytes_in": 4358,
+        "bytes_out": 2404
       },
       "connections": {
-        "total_per_sample_interval": 6,
-        "started": 6,
-        "completed": 6
+        "total_per_sample_interval": 22,
+        "started": 22,
+        "completed": 16
       }
     },
-    "Processes": {
-      "source": [
-        {
-          "name": "es-proxy",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-infra-0",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "kube-system",
+        "Name": "",
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 17,
+        "packet_out": 17,
+        "bytes_in": 1946,
+        "bytes_out": 3493
+      },
+      "connections": {
+        "total_per_sample_interval": 19,
+        "started": 17,
+        "completed": 14
+      }
+    },
+    "Processes": null
   },
   {
     "Edge": {
       "Source": {
         "Type": "rep",
-        "Namespace": "tigera-prometheus",
+        "Namespace": "storefront",
         "Name": "",
-        "NameAggr": "alertmanager-calico-node-alertmanager-*",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "kube-system",
+        "Name": "",
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 0,
+        "packet_out": 0,
+        "bytes_in": 0,
+        "bytes_out": 0
+      },
+      "connections": {
+        "total_per_sample_interval": 7,
+        "started": 0,
+        "completed": 7
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
         "PortNum": 0,
         "Protocol": ""
       },
@@ -1690,51 +3090,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 1152,
-        "packet_out": 1166,
-        "bytes_in": 285696,
-        "bytes_out": 176870
+        "packet_in": 456,
+        "packet_out": 456,
+        "bytes_in": 75549,
+        "bytes_out": 40790
       },
       "connections": {
-        "total_per_sample_interval": 1259,
-        "started": 1149,
-        "completed": 1151
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "net",
-        "Namespace": "",
-        "Name": "",
-        "NameAggr": "pvt",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "kube-system",
-        "Name": "",
-        "NameAggr": "coredns-74ff55c5b-*",
-        "PortNum": 53,
-        "Protocol": "udp"
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 18,
-        "packet_out": 18,
-        "bytes_in": 2052,
-        "bytes_out": 3675
-      },
-      "connections": {
-        "total_per_sample_interval": 18,
-        "started": 18,
-        "completed": 16
+        "total_per_sample_interval": 548,
+        "started": 454,
+        "completed": 526
       }
     },
     "Processes": null
@@ -1768,99 +3132,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 2256,
-        "packet_out": 2256,
-        "bytes_in": 386528,
-        "bytes_out": 195144
+        "packet_in": 2052,
+        "packet_out": 2052,
+        "bytes_in": 351576,
+        "bytes_out": 177498
       },
       "connections": {
-        "total_per_sample_interval": 1119,
-        "started": 1119,
-        "completed": 933
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "kube-system",
-        "Name": "",
-        "NameAggr": "coredns-74ff55c5b-*",
-        "PortNum": 53,
-        "Protocol": "udp"
-      },
-      "ServicePort": {
-        "namespace": "kube-system",
-        "name": "kube-dns",
-        "protocol": "udp",
-        "port_name": "dns",
-        "port": 53
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 202,
-        "packet_out": 202,
-        "bytes_in": 18180,
-        "bytes_out": 14140
-      },
-      "connections": {
-        "total_per_sample_interval": 204,
-        "started": 200,
-        "completed": 179
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "checkoutservice-b55dd855c-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "kube-system",
-        "Name": "",
-        "NameAggr": "coredns-74ff55c5b-*",
-        "PortNum": 53,
-        "Protocol": "udp"
-      },
-      "ServicePort": {
-        "namespace": "kube-system",
-        "name": "kube-dns",
-        "protocol": "udp",
-        "port_name": "dns",
-        "port": 53
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 668,
-        "packet_out": 668,
-        "bytes_in": 110628,
-        "bytes_out": 59724
-      },
-      "connections": {
-        "total_per_sample_interval": 686,
-        "started": 667,
-        "completed": 648
+        "total_per_sample_interval": 1018,
+        "started": 1018,
+        "completed": 866
       }
     },
     "Processes": null
@@ -1894,15 +3174,141 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 8400,
-        "packet_out": 8400,
-        "bytes_in": 1439200,
-        "bytes_out": 726600
+        "packet_in": 8604,
+        "packet_out": 8942,
+        "bytes_in": 1474152,
+        "bytes_out": 773465
       },
       "connections": {
-        "total_per_sample_interval": 4790,
-        "started": 4026,
-        "completed": 3954
+        "total_per_sample_interval": 4106,
+        "started": 4106,
+        "completed": 4106
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-fluentd",
+        "Name": "",
+        "NameAggr": "fluentd-node-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "kube-system",
+        "Name": "",
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
+      },
+      "ServicePort": {
+        "namespace": "kube-system",
+        "name": "kube-dns",
+        "protocol": "udp",
+        "port_name": "dns",
+        "port": 53
+      }
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 231,
+        "packet_out": 231,
+        "bytes_in": 46431,
+        "bytes_out": 26257
+      },
+      "connections": {
+        "total_per_sample_interval": 85,
+        "started": 77,
+        "completed": 77
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "tigera-prometheus",
+        "Name": "",
+        "NameAggr": "alertmanager-calico-node-alertmanager-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "kube-system",
+        "Name": "",
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
+      },
+      "ServicePort": {
+        "namespace": "kube-system",
+        "name": "kube-dns",
+        "protocol": "udp",
+        "port_name": "dns",
+        "port": 53
+      }
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 1108,
+        "packet_out": 1108,
+        "bytes_in": 274764,
+        "bytes_out": 168020
+      },
+      "connections": {
+        "total_per_sample_interval": 1206,
+        "started": 1108,
+        "completed": 1098
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "currencyservice-86d778fd89-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "kube-system",
+        "Name": "",
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
+      },
+      "ServicePort": {
+        "namespace": "kube-system",
+        "name": "kube-dns",
+        "protocol": "udp",
+        "port_name": "dns",
+        "port": 53
+      }
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 6,
+        "packet_out": 6,
+        "bytes_in": 1055,
+        "bytes_out": 525
+      },
+      "connections": {
+        "total_per_sample_interval": 6,
+        "started": 6,
+        "completed": 6
       }
     },
     "Processes": null
@@ -1919,32 +3325,74 @@
       },
       "Dest": {
         "Type": "rep",
-        "Namespace": "storefront",
+        "Namespace": "kube-system",
         "Name": "",
-        "NameAggr": "adservice-775cc65c85-*",
-        "PortNum": 9555,
-        "Protocol": "tcp"
+        "NameAggr": "coredns-74ff55c5b-*",
+        "PortNum": 53,
+        "Protocol": "udp"
       },
       "ServicePort": {
-        "namespace": "storefront",
-        "name": "adservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 9555
+        "namespace": "kube-system",
+        "name": "kube-dns",
+        "protocol": "udp",
+        "port_name": "dns",
+        "port": 53
       }
     },
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 998,
-        "packet_out": 1958,
-        "bytes_in": 164798,
-        "bytes_out": 159624
+        "packet_in": 196,
+        "packet_out": 196,
+        "bytes_in": 18682,
+        "bytes_out": 13930
       },
       "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
+        "total_per_sample_interval": 203,
+        "started": 195,
+        "completed": 185
+      }
+    },
+    "Processes": null
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "cartservice-5468974d8-*",
+        "PortNum": 7070,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "cartservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 7070
+      }
+    },
+    "AggregatedProtoPorts": null,
+    "Stats": {
+      "allowed": {
+        "packet_in": 345,
+        "packet_out": 435,
+        "bytes_in": 27244,
+        "bytes_out": 38043
+      },
+      "connections": {
+        "total_per_sample_interval": 45,
+        "started": 45,
+        "completed": 45
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -1952,177 +3400,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 14409,
-        "max_min_rtt": 305,
+        "max_smooth_rtt": 3275,
+        "max_min_rtt": 257,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 9756,
+        "mean_smooth_rtt": 2521,
         "mean_min_mss": 175,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "checkoutservice-b55dd855c-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "cartservice-5468974d8-*",
-        "PortNum": 7070,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "cartservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 7070
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 497,
-        "packet_out": 629,
-        "bytes_in": 38928,
-        "bytes_out": 55338
-      },
-      "connections": {
-        "total_per_sample_interval": 66,
-        "started": 66,
-        "completed": 66
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 4328,
-        "max_min_rtt": 301,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2799.5,
-        "mean_min_mss": 180.5,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "cartservice-5468974d8-*",
-        "PortNum": 7070,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "cartservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 7070
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 1566,
-        "packet_out": 2887,
-        "bytes_in": 148191,
-        "bytes_out": 254797
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 35994,
-        "max_min_rtt": 112,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 12934,
-        "mean_min_mss": 40,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "checkoutservice-b55dd855c-*",
-        "PortNum": 5050,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "checkoutservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 5050
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 138,
-        "packet_out": 140,
-        "bytes_in": 17580,
-        "bytes_out": 16313
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 44655,
-        "max_min_rtt": 181,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 16203,
-        "mean_min_mss": 170,
-        "mean_mss": 1388
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": null
@@ -2156,15 +3440,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 779,
-        "packet_out": 986,
-        "bytes_in": 66642,
-        "bytes_out": 76854
+        "packet_in": 620,
+        "packet_out": 788,
+        "bytes_in": 53397,
+        "bytes_out": 61852
       },
       "connections": {
-        "total_per_sample_interval": 103,
-        "started": 103,
-        "completed": 103
+        "total_per_sample_interval": 84,
+        "started": 84,
+        "completed": 84
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -2172,67 +3456,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 2709,
-        "max_min_rtt": 225,
+        "max_smooth_rtt": 4243,
+        "max_min_rtt": 279,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 1947.5,
-        "mean_min_mss": 154.5,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "currencyservice-86d778fd89-*",
-        "PortNum": 7000,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "currencyservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 7000
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 5139,
-        "packet_out": 8163,
-        "bytes_in": 564712,
-        "bytes_out": 705145
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 16082,
-        "max_min_rtt": 141,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 8914,
-        "mean_min_mss": 136,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 2416.5,
+        "mean_min_mss": 183.5,
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": null
@@ -2266,15 +3496,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 252,
-        "packet_out": 318,
-        "bytes_in": 21006,
-        "bytes_out": 34719
+        "packet_in": 165,
+        "packet_out": 209,
+        "bytes_in": 13825,
+        "bytes_out": 23320
       },
       "connections": {
-        "total_per_sample_interval": 33,
-        "started": 33,
-        "completed": 33
+        "total_per_sample_interval": 22,
+        "started": 22,
+        "completed": 22
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -2282,67 +3512,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 3107,
-        "max_min_rtt": 300,
+        "max_smooth_rtt": 3531,
+        "max_min_rtt": 259,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2324.5,
-        "mean_min_mss": 180,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "loadgenerator-795cbf498c-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 8080,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "frontend",
-        "protocol": "tcp",
-        "port_name": "http",
-        "port": 80
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 2239,
-        "packet_out": 2358,
-        "bytes_in": 7059886,
-        "bytes_out": 331987
-      },
-      "connections": {
-        "total_per_sample_interval": 10,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 256602,
-        "max_min_rtt": 308,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 158450,
-        "mean_min_mss": 185.5,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 2379.5,
+        "mean_min_mss": 190,
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": null
@@ -2376,15 +3552,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 247,
-        "packet_out": 312,
-        "bytes_in": 22049,
-        "bytes_out": 27960
+        "packet_in": 178,
+        "packet_out": 224,
+        "bytes_in": 15705,
+        "bytes_out": 19826
       },
       "connections": {
-        "total_per_sample_interval": 33,
-        "started": 33,
-        "completed": 33
+        "total_per_sample_interval": 23,
+        "started": 23,
+        "completed": 23
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -2392,12 +3568,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 3977,
-        "max_min_rtt": 258,
+        "max_smooth_rtt": 3341,
+        "max_min_rtt": 275,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2812.5,
-        "mean_min_mss": 193,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 2672,
+        "mean_min_mss": 185,
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": null
@@ -2431,15 +3608,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 388,
-        "packet_out": 476,
-        "bytes_in": 39709,
-        "bytes_out": 39659
+        "packet_in": 319,
+        "packet_out": 382,
+        "bytes_in": 32604,
+        "bytes_out": 31549
       },
       "connections": {
-        "total_per_sample_interval": 33,
-        "started": 33,
-        "completed": 33
+        "total_per_sample_interval": 23,
+        "started": 23,
+        "completed": 23
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -2447,232 +3624,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 4716,
-        "max_min_rtt": 209,
+        "max_smooth_rtt": 13044,
+        "max_min_rtt": 254,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2451,
-        "mean_min_mss": 163,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
-        "PortNum": 3550,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "productcatalogservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 3550
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 8018,
-        "packet_out": 12375,
-        "bytes_in": 1371510,
-        "bytes_out": 1069050
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 10082,
-        "max_min_rtt": 139,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 5582,
-        "mean_min_mss": 132,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "recommendationservice-5b8966b965-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
-        "PortNum": 3550,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "productcatalogservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 3550
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 637,
-        "packet_out": 1209,
-        "bytes_in": 909287,
-        "bytes_out": 128434
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 15764,
-        "max_min_rtt": 354,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 11730,
-        "mean_min_mss": 293,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "recommendationservice-5b8966b965-*",
-        "PortNum": 8080,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "recommendationservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 8080
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 1244,
-        "packet_out": 2327,
-        "bytes_in": 142864,
-        "bytes_out": 211464
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 44642,
-        "max_min_rtt": 206,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 23162,
-        "mean_min_mss": 165,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "cartservice-5468974d8-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "redis-cart-6949646c44-*",
-        "PortNum": 6379,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "redis-cart",
-        "protocol": "tcp",
-        "port_name": "redis",
-        "port": 6379
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 1003,
-        "packet_out": 1984,
-        "bytes_in": 81789,
-        "bytes_out": 171568
-      },
-      "connections": {
-        "total_per_sample_interval": 2,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 5048,
-        "max_min_rtt": 202,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2909,
-        "mean_min_mss": 77,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 3198,
+        "mean_min_mss": 180,
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": null
@@ -2706,15 +3664,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 516,
-        "packet_out": 648,
-        "bytes_in": 40886,
-        "bytes_out": 60973
+        "packet_in": 348,
+        "packet_out": 440,
+        "bytes_in": 27828,
+        "bytes_out": 42277
       },
       "connections": {
-        "total_per_sample_interval": 66,
-        "started": 66,
-        "completed": 66
+        "total_per_sample_interval": 46,
+        "started": 46,
+        "completed": 46
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -2722,797 +3680,16 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 3198,
-        "max_min_rtt": 264,
+        "max_smooth_rtt": 7451,
+        "max_min_rtt": 319,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 2019.5,
-        "mean_min_mss": 162,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "frontend-7bbcdbbcbf-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "storefront",
-        "Name": "",
-        "NameAggr": "shippingservice-54fbf57657-*",
-        "PortNum": 50051,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "storefront",
-        "name": "shippingservice",
-        "protocol": "tcp",
-        "port_name": "grpc",
-        "port": 50051
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 366,
-        "packet_out": 732,
-        "bytes_in": 35285,
-        "bytes_out": 61278
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 12804,
-        "max_min_rtt": 195,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 8619,
+        "mean_smooth_rtt": 2699.5,
         "mean_min_mss": 189,
-        "mean_mss": 1388
+        "mean_mss": 1388,
+        "count": 2
       }
     },
     "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-prometheus",
-        "Name": "",
-        "NameAggr": "prometheus-calico-node-prometheus-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-elasticsearch-metrics-768c587f7d-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "ServicePort": null
-    },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 9081,
-              "max_port": 9081
-            }
-          ]
-        }
-      ]
-    },
-    "Stats": {
-      "allowed": {
-        "packet_in": 248,
-        "packet_out": 247,
-        "bytes_in": 1069451,
-        "bytes_out": 28158
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 821,
-        "max_min_rtt": 28,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 645,
-        "mean_min_mss": 27,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "prometheus",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch_e",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-compliance",
-        "Name": "",
-        "NameAggr": "compliance-benchmarker-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 126,
-        "packet_out": 151,
-        "bytes_in": 9677,
-        "bytes_out": 15327
-      },
-      "connections": {
-        "total_per_sample_interval": 6,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 2,
-        "min_mss": 1388,
-        "max_smooth_rtt": 18716,
-        "max_min_rtt": 429,
-        "mean_send_congestion_window": 7,
-        "mean_smooth_rtt": 8725.166666666666,
-        "mean_min_mss": 193.5,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "benchmarker",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-compliance",
-        "Name": "",
-        "NameAggr": "compliance-controller-668f94fc49-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 21,
-        "packet_out": 26,
-        "bytes_in": 1717,
-        "bytes_out": 2847
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 20038,
-        "max_min_rtt": 260,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 16656,
-        "mean_min_mss": 260,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "controller",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-compliance",
-        "Name": "",
-        "NameAggr": "compliance-server-86f55b85c4-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 2890,
-        "packet_out": 3616,
-        "bytes_in": 241030,
-        "bytes_out": 402202
-      },
-      "connections": {
-        "total_per_sample_interval": 142,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 77650,
-        "max_min_rtt": 471,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 9988,
-        "mean_min_mss": 219,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "server",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-intrusion-detection",
-        "Name": "",
-        "NameAggr": "intrusion-detection-controller-c7968f9d7-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 185,
-        "packet_out": 362,
-        "bytes_in": 38453,
-        "bytes_out": 67044
-      },
-      "connections": {
-        "total_per_sample_interval": 2,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 8324,
-        "max_min_rtt": 224,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 6521,
-        "mean_min_mss": 184,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "controller",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-manager",
-        "Name": "",
-        "NameAggr": "tigera-manager-6945cc846-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 33,
-        "packet_out": 39,
-        "bytes_in": 5007,
-        "bytes_out": 4299
-      },
-      "connections": {
-        "total_per_sample_interval": 3,
-        "started": 1,
-        "completed": 2
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 2487,
-        "max_min_rtt": 20,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 1093,
-        "mean_min_mss": 20,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": null
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-kibana",
-        "Name": "",
-        "NameAggr": "tigera-secure-kb-589d66f6f7-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 1069,
-        "packet_out": 1417,
-        "bytes_in": 216717,
-        "bytes_out": 982129
-      },
-      "connections": {
-        "total_per_sample_interval": 53,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 3,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 10,
-        "min_mss": 1388,
-        "max_smooth_rtt": 205641,
-        "max_min_rtt": 578,
-        "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 24010,
-        "mean_min_mss": 227,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "node",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "calico-system",
-        "Name": "",
-        "NameAggr": "calico-kube-controllers-789c669c89-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 46,
-        "packet_out": 46,
-        "bytes_in": 7242,
-        "bytes_out": 2920
-      },
-      "connections": {
-        "total_per_sample_interval": 2,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 4,
-        "min_mss": 1388,
-        "max_smooth_rtt": 101881,
-        "max_min_rtt": 268,
-        "mean_send_congestion_window": 4,
-        "mean_smooth_rtt": 53454,
-        "mean_min_mss": 215,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "kube-controller",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-compliance",
-        "Name": "",
-        "NameAggr": "compliance-snapshotter-6dbb7b595c-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 44,
-        "packet_out": 47,
-        "bytes_in": 2913,
-        "bytes_out": 3939
-      },
-      "connections": {
-        "total_per_sample_interval": 2,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 4,
-        "min_mss": 1388,
-        "max_smooth_rtt": 54004,
-        "max_min_rtt": 184,
-        "mean_send_congestion_window": 4,
-        "mean_smooth_rtt": 14570,
-        "mean_min_mss": 179,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "snapshotter",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
-  },
-  {
-    "Edge": {
-      "Source": {
-        "Type": "rep",
-        "Namespace": "tigera-eck-operator",
-        "Name": "",
-        "NameAggr": "elastic-operator-*",
-        "PortNum": 0,
-        "Protocol": ""
-      },
-      "Dest": {
-        "Type": "rep",
-        "Namespace": "tigera-elasticsearch",
-        "Name": "",
-        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
-        "PortNum": 9200,
-        "Protocol": "tcp"
-      },
-      "ServicePort": {
-        "namespace": "tigera-elasticsearch",
-        "name": "tigera-secure-es-http",
-        "protocol": "tcp",
-        "port_name": "https",
-        "port": 9200
-      }
-    },
-    "AggregatedProtoPorts": null,
-    "Stats": {
-      "allowed": {
-        "packet_in": 32,
-        "packet_out": 64,
-        "bytes_in": 18176,
-        "bytes_out": 12768
-      },
-      "connections": {
-        "total_per_sample_interval": 1,
-        "started": 0,
-        "completed": 0
-      },
-      "tcp": {
-        "sum_total_retransmissions": 0,
-        "sum_lost_packets": 0,
-        "sum_unrecovered_to": 0,
-        "min_send_congestion_window": 4,
-        "min_mss": 1388,
-        "max_smooth_rtt": 10715,
-        "max_min_rtt": 177,
-        "mean_send_congestion_window": 4,
-        "mean_smooth_rtt": 9736,
-        "mean_min_mss": 177,
-        "mean_mss": 1388
-      }
-    },
-    "Processes": {
-      "source": [
-        {
-          "name": "elastic-operato",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "elasticsearch[t",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
   },
   {
     "Edge": {
@@ -3543,15 +3720,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 2746,
-        "packet_out": 3189,
-        "bytes_in": 10424191,
-        "bytes_out": 317504
+        "packet_in": 2703,
+        "packet_out": 3114,
+        "bytes_in": 11700256,
+        "bytes_out": 311674
       },
       "connections": {
-        "total_per_sample_interval": 186,
-        "started": 184,
-        "completed": 184
+        "total_per_sample_interval": 184,
+        "started": 182,
+        "completed": 182
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -3559,12 +3736,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 89756,
-        "max_min_rtt": 370,
+        "max_smooth_rtt": 108121,
+        "max_min_rtt": 341,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 11829,
-        "mean_min_mss": 174,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 14225,
+        "mean_min_mss": 160,
+        "mean_mss": 1388,
+        "count": 1
       }
     },
     "Processes": {
@@ -3617,15 +3795,15 @@
     "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 1057,
-        "packet_out": 1177,
-        "bytes_in": 1114264,
-        "bytes_out": 3726861
+        "packet_in": 1164,
+        "packet_out": 1314,
+        "bytes_in": 1216977,
+        "bytes_out": 3963072
       },
       "connections": {
-        "total_per_sample_interval": 63,
-        "started": 63,
-        "completed": 63
+        "total_per_sample_interval": 77,
+        "started": 77,
+        "completed": 77
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -3633,12 +3811,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 5835,
-        "max_min_rtt": 536,
-        "mean_send_congestion_window": 17.384615384615383,
-        "mean_smooth_rtt": 2697.3846153846152,
-        "mean_min_mss": 223,
-        "mean_mss": 1388
+        "max_smooth_rtt": 3540,
+        "max_min_rtt": 333,
+        "mean_send_congestion_window": 18.46153846153846,
+        "mean_smooth_rtt": 2319.5384615384614,
+        "mean_min_mss": 189.23076923076923,
+        "mean_mss": 1388,
+        "count": 13
       }
     },
     "Processes": {
@@ -3694,46 +3873,40 @@
     "Edge": {
       "Source": {
         "Type": "rep",
-        "Namespace": "tigera-prometheus",
+        "Namespace": "tigera-manager",
         "Name": "",
-        "NameAggr": "prometheus-calico-node-prometheus-*",
+        "NameAggr": "tigera-manager-6945cc846-*",
         "PortNum": 0,
         "Protocol": ""
       },
       "Dest": {
         "Type": "rep",
-        "Namespace": "tigera-fluentd",
+        "Namespace": "tigera-elasticsearch",
         "Name": "",
-        "NameAggr": "fluentd-node-*",
-        "PortNum": 0,
-        "Protocol": ""
+        "NameAggr": "tigera-secure-es-7f5dee596fef130f-*",
+        "PortNum": 9200,
+        "Protocol": "tcp"
       },
-      "ServicePort": null
+      "ServicePort": {
+        "namespace": "tigera-elasticsearch",
+        "name": "tigera-secure-es-http",
+        "protocol": "tcp",
+        "port_name": "https",
+        "port": 9200
+      }
     },
-    "AggregatedProtoPorts": {
-      "proto_ports": [
-        {
-          "protocol": "tcp",
-          "port_ranges": [
-            {
-              "min_port": 9081,
-              "max_port": 9081
-            }
-          ]
-        }
-      ]
-    },
+    "AggregatedProtoPorts": null,
     "Stats": {
       "allowed": {
-        "packet_in": 1530,
-        "packet_out": 1834,
-        "bytes_in": 7964001,
-        "bytes_out": 172558
+        "packet_in": 348,
+        "packet_out": 363,
+        "bytes_in": 2677673,
+        "bytes_out": 53790
       },
       "connections": {
-        "total_per_sample_interval": 5,
-        "started": 0,
-        "completed": 0
+        "total_per_sample_interval": 9,
+        "started": 7,
+        "completed": 7
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -3741,34 +3914,16 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 99039,
-        "max_min_rtt": 382,
+        "max_smooth_rtt": 10398,
+        "max_min_rtt": 66,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 11329.333333333334,
-        "mean_min_mss": 142.16666666666666,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 1746,
+        "mean_min_mss": 16,
+        "mean_mss": 1388,
+        "count": 2
       }
     },
-    "Processes": {
-      "source": [
-        {
-          "name": "prometheus",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ],
-      "dest": [
-        {
-          "name": "server.rb:286",
-          "min_num_names_per_flow": 1,
-          "max_num_names_per_flow": 1,
-          "min_num_ids_per_flow": 1,
-          "max_num_ids_per_flow": 1
-        }
-      ]
-    }
+    "Processes": null
   },
   {
     "Edge": {
@@ -3800,29 +3955,20 @@
               "max_port": 9094
             }
           ]
-        },
-        {
-          "protocol": "udp",
-          "port_ranges": [
-            {
-              "min_port": 9094,
-              "max_port": 9094
-            }
-          ]
         }
       ]
     },
     "Stats": {
       "allowed": {
-        "packet_in": 997,
-        "packet_out": 998,
-        "bytes_in": 63734,
-        "bytes_out": 63857
+        "packet_in": 75,
+        "packet_out": 76,
+        "bytes_in": 8200,
+        "bytes_out": 8255
       },
       "connections": {
-        "total_per_sample_interval": 21,
-        "started": 18,
-        "completed": 18
+        "total_per_sample_interval": 15,
+        "started": 15,
+        "completed": 15
       },
       "tcp": {
         "sum_total_retransmissions": 0,
@@ -3830,12 +3976,13 @@
         "sum_unrecovered_to": 0,
         "min_send_congestion_window": 10,
         "min_mss": 1388,
-        "max_smooth_rtt": 12922,
-        "max_min_rtt": 462,
+        "max_smooth_rtt": 4848,
+        "max_min_rtt": 606,
         "mean_send_congestion_window": 10,
-        "mean_smooth_rtt": 3337,
-        "mean_min_mss": 315.6666666666667,
-        "mean_mss": 1388
+        "mean_smooth_rtt": 3188,
+        "mean_min_mss": 333.6666666666667,
+        "mean_mss": 1388,
+        "count": 6
       }
     },
     "Processes": {
@@ -3862,10 +4009,10 @@
   {
     "Edge": {
       "Source": {
-        "Type": "net",
+        "Type": "host",
         "Namespace": "",
         "Name": "",
-        "NameAggr": "pvt",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
         "PortNum": 0,
         "Protocol": ""
       },
@@ -3912,6 +4059,87 @@
       "dest": [
         {
           "name": "apiserver",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ]
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-ms",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "tigera-system",
+        "Name": "",
+        "NameAggr": "tigera-apiserver-b47498c85-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "ServicePort": null
+    },
+    "AggregatedProtoPorts": {
+      "proto_ports": [
+        {
+          "protocol": "tcp",
+          "port_ranges": [
+            {
+              "min_port": 8080,
+              "max_port": 8080
+            }
+          ]
+        }
+      ]
+    },
+    "Stats": {
+      "allowed": {
+        "packet_in": 20,
+        "packet_out": 22,
+        "bytes_in": 3762,
+        "bytes_out": 2282
+      },
+      "connections": {
+        "total_per_sample_interval": 1,
+        "started": 1,
+        "completed": 0
+      },
+      "tcp": {
+        "sum_total_retransmissions": 0,
+        "sum_lost_packets": 0,
+        "sum_unrecovered_to": 0,
+        "min_send_congestion_window": 10,
+        "min_mss": 1388,
+        "max_smooth_rtt": 1951,
+        "max_min_rtt": 218,
+        "mean_send_congestion_window": 10,
+        "mean_smooth_rtt": 1885,
+        "mean_min_mss": 182,
+        "mean_mss": 1388,
+        "count": 1
+      }
+    },
+    "Processes": {
+      "source": [
+        {
+          "name": "kube-apiserver",
+          "min_num_names_per_flow": 1,
+          "max_num_names_per_flow": 1,
+          "min_num_ids_per_flow": 1,
+          "max_num_ids_per_flow": 1
+        }
+      ],
+      "dest": [
+        {
+          "name": "cnx-queryserver",
           "min_num_names_per_flow": 1,
           "max_num_names_per_flow": 1,
           "min_num_ids_per_flow": 1,

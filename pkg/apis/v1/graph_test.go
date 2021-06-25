@@ -849,7 +849,8 @@ var _ = Describe("Graph API tests", func() {
                 "mean_send_congestion_window": 617.5,
                 "mean_smooth_rtt": 627.5,
                 "mean_min_mss": 630.5,
-                "mean_mss": 640
+                "mean_mss": 640,
+                "count": 4
               }
             },
             "l7": {
@@ -902,6 +903,30 @@ var _ = Describe("Graph API tests", func() {
                 "count": 3
               }
             },
+            "dns": {
+              "mean_request_latency": 208.53846153846155,
+              "max_request_latency": 293,
+              "min_request_latency": 5,
+              "latency_count": 13,
+              "response_codes": [
+                {
+                  "code": "NOERROR",
+                  "count": 6,
+                  "mean_request_latency": 10,
+                  "max_request_latency": 14,
+                  "min_request_latency": 5,
+                  "latency_count": 4
+                },
+                {
+                  "code": "NXDOMAIN",
+                  "count": 11,
+                  "mean_request_latency": 246,
+                  "max_request_latency": 293,
+                  "min_request_latency": 18,
+                  "latency_count": 11
+                }
+              ]
+            },
             "processes": {
               "source": [
                 {
@@ -933,27 +958,6 @@ var _ = Describe("Graph API tests", func() {
                   "max_num_names_per_flow": 947,
                   "min_num_ids_per_flow": 953,
                   "max_num_ids_per_flow": 967
-                }
-              ]
-            },
-            "dns": {
-              "mean_request_latency": 208.53846153846155,
-              "max_request_latency": 293,
-              "min_request_latency": 5,
-              "response_codes": [
-                {
-                  "code": "NOERROR",
-                  "count": 6,
-                  "mean_request_latency": 10,
-                  "max_request_latency": 14,
-                  "min_request_latency": 5
-                },
-                {
-                  "code": "NXDOMAIN",
-                  "count": 11,
-                  "mean_request_latency": 246,
-                  "max_request_latency": 293,
-                  "min_request_latency": 18
                 }
               ]
             }

@@ -45,3 +45,20 @@ func MaxIntGtZero(a, b int) int {
 	}
 	return rc
 }
+
+func MinFloat64GtZero(a, b float64) float64 {
+	var rc float64
+	if a == 0 {
+		rc = b
+	} else if b == 0 {
+		rc = a
+	} else if a < b {
+		rc = a
+	} else {
+		rc = b
+	}
+	if rc < 0 {
+		return 0
+	}
+	return rc
+}

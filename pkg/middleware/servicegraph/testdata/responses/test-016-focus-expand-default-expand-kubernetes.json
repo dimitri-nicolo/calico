@@ -15,142 +15,11 @@
         ]
       },
       "id": {
-        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
-        "source_node_id": "namespace/tigera-compliance"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\" AND source_namespace = \"tigera-compliance\""
-      },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 24782,
-              "bytes_out": 10171,
-              "packet_in": 168,
-              "packet_out": 139
-            },
-            "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 5
-            },
-            "tcp": {
-              "max_min_rtt": 10,
-              "max_smooth_rtt": 60948,
-              "mean_min_mss": 2,
-              "mean_mss": 277.6,
-              "mean_send_congestion_window": 2,
-              "mean_smooth_rtt": 8034.6,
-              "min_mss": 0,
-              "min_send_congestion_window": 0,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "benchmarker"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 6443,
-                "min_port": 6443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
-        "source_node_id": "namespace/tigera-system"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\" AND source_namespace = \"tigera-system\""
-      },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "packet_in": 0,
-              "packet_out": 0
-            },
-            "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 1
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "apiserver"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 6443,
-                "min_port": 6443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
+        "dest_node_id": "svc/default/kubernetes",
         "source_node_id": "namespace/tigera-manager"
       },
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\" AND source_namespace = \"tigera-manager\""
+        "l3_flows": "dest_type = \"hep\" AND source_namespace = \"tigera-manager\""
       },
       "service_ports": [
         {
@@ -166,22 +35,23 @@
           "l3": {
             "allowed": {
               "bytes_in": 0,
-              "bytes_out": 120,
+              "bytes_out": 180,
               "packet_in": 0,
-              "packet_out": 2
+              "packet_out": 3
             },
             "connections": {
-              "completed": 2,
-              "started": 2,
-              "total_per_sample_interval": 2
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 3
             },
             "tcp": {
-              "max_min_rtt": 344,
-              "max_smooth_rtt": 3996,
-              "mean_min_mss": 306,
+              "count": 2,
+              "max_min_rtt": 150,
+              "max_smooth_rtt": 2369,
+              "mean_min_mss": 137.5,
               "mean_mss": 1388,
               "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 3705,
+              "mean_smooth_rtt": 2020.5,
               "min_mss": 1388,
               "min_send_congestion_window": 10,
               "sum_lost_packets": 0,
@@ -196,7 +66,7 @@
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "packetcapture-a"
+                "name": "es-proxy"
               },
               {
                 "max_num_ids_per_flow": 1,
@@ -225,239 +95,39 @@
         ]
       },
       "id": {
-        "dest_node_id": "port/tcp/6443;net/pvt;svcgp;svc/default/kubernetes",
-        "source_node_id": "svcport/tcp/https/443;svc/default/kubernetes"
+        "dest_node_id": "hosts/*;svcgp;svc/default/kubernetes",
+        "source_node_id": "svc/default/kubernetes"
       },
       "selectors": {
-        "l3_flows": "(source_namespace = \"calico-system\" OR source_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-manager\" OR source_namespace = \"tigera-system\") AND dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\""
+        "l3_flows": "dest_type = \"hep\" AND source_namespace = \"tigera-manager\""
       },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 24782,
-              "bytes_out": 10291,
-              "packet_in": 168,
-              "packet_out": 141
-            },
-            "connections": {
-              "completed": 2,
-              "started": 2,
-              "total_per_sample_interval": 10
-            },
-            "tcp": {
-              "max_min_rtt": 10,
-              "max_smooth_rtt": 60948,
-              "mean_min_mss": 2,
-              "mean_mss": 277.6,
-              "mean_send_congestion_window": 2,
-              "mean_smooth_rtt": 8034.6,
-              "min_mss": 0,
-              "min_send_congestion_window": 0,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "apiserver"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "benchmarker"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "elastic-operato"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kube-controller"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "packetcapture-a"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "voltron"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 6443,
-                "min_port": 6443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
-        "source_node_id": "namespace/tigera-eck-operator"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\" AND source_namespace = \"tigera-eck-operator\""
-      },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 24782,
-              "bytes_out": 10291,
-              "packet_in": 168,
-              "packet_out": 141
-            },
-            "connections": {
-              "completed": 2,
-              "started": 2,
-              "total_per_sample_interval": 10
-            },
-            "tcp": {
-              "max_min_rtt": 10,
-              "max_smooth_rtt": 60948,
-              "mean_min_mss": 2,
-              "mean_mss": 277.6,
-              "mean_send_congestion_window": 2,
-              "mean_smooth_rtt": 8034.6,
-              "min_mss": 0,
-              "min_send_congestion_window": 0,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "apiserver"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "benchmarker"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "elastic-operato"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kube-controller"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "packetcapture-a"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "voltron"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 6443,
-                "min_port": 6443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
-        "source_node_id": "namespace/calico-system"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\" AND source_namespace = \"calico-system\""
-      },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
       "stats": [
         {
           "l3": {
             "allowed": {
               "bytes_in": 0,
-              "bytes_out": 0,
+              "bytes_out": 180,
               "packet_in": 0,
-              "packet_out": 0
+              "packet_out": 3
             },
             "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 1
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 3
+            },
+            "tcp": {
+              "count": 2,
+              "max_min_rtt": 150,
+              "max_smooth_rtt": 2369,
+              "mean_min_mss": 137.5,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2020.5,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
             }
           },
           "processes": {
@@ -467,7 +137,14 @@
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "kube-controller"
+                "name": "es-proxy"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "voltron"
               }
             ]
           }
@@ -476,85 +153,6 @@
     }
   ],
   "nodes": [
-    {
-      "id": "svcport/tcp/https/443;svc/default/kubernetes",
-      "name": "https",
-      "parent_id": "svc/default/kubernetes",
-      "port": 443,
-      "protocol": "tcp",
-      "selectors": {
-        "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND dest_service_port_name = \"https\" AND dest_service_port_num = 443 AND proto = \"tcp\"",
-        "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND dest_service_port_name = \"https\" AND dest_service_port_num = 443) OR (dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\")"
-      },
-      "type": "svcport"
-    },
-    {
-      "id": "port/tcp/6443;net/pvt;svcgp;svc/default/kubernetes",
-      "parent_id": "net/pvt;svcgp;svc/default/kubernetes",
-      "port": 6443,
-      "protocol": "tcp",
-      "selectors": {
-        "l3_flows": "(dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_port_num = 6443 AND dest_type = \"net\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_name_aggr = \"pvt\" AND source_namespace = \"-\" AND source_type = \"net\")"
-      },
-      "type": "port"
-    },
-    {
-      "expandable": true,
-      "expanded": true,
-      "id": "namespace/default",
-      "name": "default",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
-        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
-        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\""
-      },
-      "type": "namespace"
-    },
-    {
-      "expandable": true,
-      "follow_ingress": true,
-      "id": "namespace/tigera-system",
-      "name": "tigera-system",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
-        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
-        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\""
-      },
-      "service_ports": [
-        {
-          "name": "tigera-api",
-          "namespace": "tigera-system",
-          "port": 443,
-          "port_name": "apiserver",
-          "protocol": "tcp"
-        }
-      ],
-      "type": "namespace"
-    },
-    {
-      "expandable": true,
-      "follow_egress": true,
-      "id": "namespace/calico-system",
-      "name": "calico-system",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"calico-system\" OR client_namespace = \"calico-system\"",
-        "l3_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR source_namespace = \"calico-system\"",
-        "l7_flows": "dest_namespace = \"calico-system\" OR dest_service_namespace = \"calico-system\" OR source_namespace = \"calico-system\""
-      },
-      "type": "namespace"
-    },
-    {
-      "expandable": true,
-      "follow_egress": true,
-      "id": "namespace/tigera-compliance",
-      "name": "tigera-compliance",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-compliance\" OR client_namespace = \"tigera-compliance\"",
-        "l3_flows": "dest_namespace = \"tigera-compliance\" OR dest_service_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-compliance\"",
-        "l7_flows": "dest_namespace = \"tigera-compliance\" OR dest_service_namespace = \"tigera-compliance\" OR source_namespace = \"tigera-compliance\""
-      },
-      "type": "namespace"
-    },
     {
       "expandable": true,
       "expanded": true,
@@ -566,15 +164,6 @@
         "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\"",
         "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\")"
       },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
       "type": "svcgp"
     },
     {
@@ -586,26 +175,36 @@
         "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\"",
         "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\")"
       },
+      "service_ports": [
+        {
+          "name": "kubernetes",
+          "namespace": "default",
+          "port": 443,
+          "port_name": "https",
+          "protocol": "tcp"
+        }
+      ],
       "type": "svc"
     },
     {
-      "id": "net/pvt;svcgp;svc/default/kubernetes",
-      "name": "pvt",
+      "expandable": true,
+      "id": "hosts/*;svcgp;svc/default/kubernetes",
+      "name": "*",
       "parent_id": "svcgp;svc/default/kubernetes",
       "selectors": {
-        "l3_flows": "(dest_name_aggr = \"pvt\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pvt\" AND source_namespace = \"-\" AND source_type = \"net\")"
+        "l3_flows": "dest_type = \"hep\" OR source_type = \"hep\""
       },
-      "type": "net"
+      "type": "hosts"
     },
     {
       "expandable": true,
-      "follow_egress": true,
-      "id": "namespace/tigera-eck-operator",
-      "name": "tigera-eck-operator",
+      "expanded": true,
+      "id": "namespace/default",
+      "name": "default",
       "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-eck-operator\" OR client_namespace = \"tigera-eck-operator\"",
-        "l3_flows": "dest_namespace = \"tigera-eck-operator\" OR dest_service_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-eck-operator\"",
-        "l7_flows": "dest_namespace = \"tigera-eck-operator\" OR dest_service_namespace = \"tigera-eck-operator\" OR source_namespace = \"tigera-eck-operator\""
+        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
+        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\""
       },
       "type": "namespace"
     },
@@ -622,23 +221,44 @@
       "stats": [
         {
           "dns": {
-            "max_request_latency": 858000,
-            "mean_request_latency": 631000,
-            "min_request_latency": 333000,
+            "latency_count": 16,
+            "max_request_latency": 919000,
+            "mean_request_latency": 645750,
+            "min_request_latency": 550000,
             "response_codes": [
               {
                 "code": "NOERROR",
-                "count": 2,
-                "max_request_latency": 535000,
-                "mean_request_latency": 434000,
-                "min_request_latency": 333000
+                "count": 6,
+                "latency_count": 6,
+                "max_request_latency": 919000,
+                "mean_request_latency": 581000,
+                "min_request_latency": 550000
               },
               {
                 "code": "NXDOMAIN",
-                "count": 4,
-                "max_request_latency": 858000,
-                "mean_request_latency": 729500,
-                "min_request_latency": 637000
+                "count": 10,
+                "latency_count": 10,
+                "max_request_latency": 881000,
+                "mean_request_latency": 684600,
+                "min_request_latency": 552000
+              }
+            ]
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "es-proxy"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "voltron"
               }
             ]
           }
