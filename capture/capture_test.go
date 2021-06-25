@@ -182,14 +182,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertStatusUpdates(update, expectedFiles, namespace, name)
 	}, 10)
 
-	/* TODO: https://tigera.atlassian.net/browse/SAAS-1540
 	It("Rotates pcap files using size", func(done Done) {
 		defer close(done)
 		var wg sync.WaitGroup
 		var err error
 		var numberOfPackets = 3
 		var maxSize = capture.GlobalHeaderLen + (dummyPacketDataSize() + capture.PacketInfoLen)
-		var updates = make(chan interface{})
+		var updates = make(chan interface{}, 100)
 		defer close(updates)
 
 		// Initialise a new capture
@@ -240,7 +239,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertStatusUpdates(update[0], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name)
 		assertStatusUpdates(update[1], []outputFile{currentOrderTwoFileSizeOnePacket, rotatedFileOrderOneSizeOnePacket}, namespace, name)
 		assertStatusUpdates(update[2], expectedFiles, namespace, name)
-	}, 10)*/
+	}, 10)
 
 	It("Rotates pcap files using time", func(done Done) {
 		defer close(done)
