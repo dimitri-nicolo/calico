@@ -8,10 +8,11 @@ import (
 	"regexp"
 	"strings"
 
+	esauth "github.com/tigera/es-proxy/pkg/auth"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/httputils"
-	authzv1 "k8s.io/api/authorization/v1"
 )
 
 // Request properties to indicate the cluster used for proxying and RBAC.
@@ -70,7 +71,7 @@ func RequestToResource(h http.Handler) http.Handler {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		newReq := req.WithContext(auth.NewContextWithReviewResource(req.Context(), createLMAResourceAttributes(cluster, resourceName)))
+		newReq := req.WithContext(auth.NewContextWithReviewResource(req.Context(), esauth.CreateLMAResourceAttributes(cluster, resourceName)))
 		newReq.URL.Path = urlPath
 		newReq.URL.RawPath = urlPath
 		h.ServeHTTP(w, newReq)
@@ -97,20 +98,9 @@ func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
 		}
 
 		newReq := r.WithContext(auth.NewContextWithReviewResource(
-			r.Context(), createLMAResourceAttributes(clusterName, resource)))
+			r.Context(), esauth.CreateLMAResourceAttributes(clusterName, resource)))
 		h.ServeHTTP(w, newReq)
 	})
-}
-
-// createLMAResourceAttributes an authzv1.ResourceAttributes for the lma.tiger.io api group, setting the Resource to the
-// given cluster and the Name to the given resourceName.
-func createLMAResourceAttributes(cluster, resourceName string) *authzv1.ResourceAttributes {
-	return &authzv1.ResourceAttributes{
-		Verb:     "get",
-		Group:    "lma.tigera.io",
-		Resource: cluster,
-		Name:     resourceName,
-	}
 }
 
 // parseURLPath is compatible with the new flow log api, as well as the soon deprecated legacy api. If the request

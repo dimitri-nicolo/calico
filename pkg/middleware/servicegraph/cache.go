@@ -155,7 +155,8 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 		NameHelper:    nameHelper,
 	}
 
-	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning.
+	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning. Note that L3 logs
+	// are accessible by the user since this is checked in the chained handler early in the request processing.
 	for _, rf := range cacheData.l3 {
 		if !rbacFilter.IncludeFlow(rf.Edge) {
 			continue
@@ -181,43 +182,49 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	fd.ServiceGroups.FinishMappings()
 
 	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
-	for _, rf := range cacheData.l7 {
-		if !rbacFilter.IncludeFlow(rf.Edge) {
-			continue
+	if rbacFilter.IncludeL7Logs() {
+		for _, rf := range cacheData.l7 {
+			if !rbacFilter.IncludeFlow(rf.Edge) {
+				continue
+			}
+
+			// Update the names in the flow (if required).
+			rf = nameHelper.ConvertL7Flow(rf)
+
+			stats := rf.Stats
+			fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
+				Edge: rf.Edge,
+				Stats: []v1.GraphStats{{
+					L7: &stats,
+				}},
+			})
 		}
-
-		// Update the names in the flow (if required).
-		rf = nameHelper.ConvertL7Flow(rf)
-
-		stats := rf.Stats
-		fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
-			Edge: rf.Edge,
-			Stats: []v1.GraphStats{{
-				L7: &stats,
-			}},
-		})
 	}
 
 	// Filter the DNS logs based on RBAC. All other graph content is removed through graph pruning.
-	for _, dl := range cacheData.dns {
-		if !rbacFilter.IncludeEndpoint(dl.Endpoint) {
-			continue
-		}
+	if rbacFilter.IncludeDNSLogs() {
+		for _, dl := range cacheData.dns {
+			if !rbacFilter.IncludeEndpoint(dl.Endpoint) {
+				continue
+			}
 
-		stats := dl.Stats
-		fd.FilteredDNSClientLogs = append(fd.FilteredDNSClientLogs, TimeSeriesDNS{
-			Endpoint: dl.Endpoint,
-			Stats: []v1.GraphStats{{
-				DNS: &stats,
-			}},
-		})
+			stats := dl.Stats
+			fd.FilteredDNSClientLogs = append(fd.FilteredDNSClientLogs, TimeSeriesDNS{
+				Endpoint: dl.Endpoint,
+				Stats: []v1.GraphStats{{
+					DNS: &stats,
+				}},
+			})
+		}
 	}
 
 	// Filter the events.
-	for _, ev := range cacheData.events {
-		// Update the names in the events (if required).
-		ev = nameHelper.ConvertEvent(ev)
-		fd.Events = append(fd.Events, ev)
+	if rbacFilter.IncludeAlerts() {
+		for _, ev := range cacheData.events {
+			// Update the names in the events (if required).
+			ev = nameHelper.ConvertEvent(ev)
+			fd.Events = append(fd.Events, ev)
+		}
 	}
 
 	return fd, nil

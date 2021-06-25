@@ -4,15 +4,19 @@ package servicegraph
 import (
 	"context"
 	"net/http"
+	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/tigera/lma/pkg/httputils"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/k8s"
+	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	esauth "github.com/tigera/es-proxy/pkg/auth"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/k8s"
 )
 
 // This file implements an RBAC flow filter. It parses the AuthorizedResourceVerbs returned by a authorization
@@ -20,28 +24,96 @@ import (
 // flow to be included.
 
 type RBACFilter interface {
+	// --- Whether we can access the various elastic logs. Flows are not included here because we have already validated
+	//     access to flow logs (in server.go handler chaining).
+
+	// IncludeL7Logs returns true if the user is permitted to view L7 logs.
+	IncludeL7Logs() bool
+
+	// IncludeDNSLogs returns true if the user is permitted to view DNS logs.
+	IncludeDNSLogs() bool
+
+	// IncludeAlerts returns true if the user is permitted to view alerts.
+	IncludeAlerts() bool
+
+	// --- Whether we can access the specific details of the elastic logs.
+
+	// IncludeFlow returns true if the user is permitted a specific flow
 	IncludeFlow(f FlowEdge) bool
+
+	// IncludeEndpoint returns true if the user is permitted to list a specific endpoint.
 	IncludeEndpoint(f FlowEndpoint) bool
+
+	// IncludeHostEndpoints returns true if the user is permitted to list host endpoints.
 	IncludeHostEndpoints() bool
+
+	// IncludeGlobalNetworkSets returns true if the user is permitted to list global network sets.
 	IncludeGlobalNetworkSets() bool
+
+	// IncludeNetworkSets returns true if the user is permitted to list network sets in the specified namespace.
 	IncludeNetworkSets(namespace string) bool
+
+	// IncludePods returns true if the user is permitted to list pods in the specific namespace.
 	IncludePods(namespace string) bool
 }
 
 // NewRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
 func NewRBACFilter(
-	ctx context.Context, csFactory k8s.ClientSetFactory, req *http.Request, cluster string,
+	ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, req *http.Request, cluster string,
 ) (RBACFilter, error) {
-	verbs, err := auth.PerformUserAuthorizationReviewForElasticLogs(ctx, csFactory, req, cluster)
-	if err != nil {
-		return nil, err
-	}
-	return NewRBACFilterFromAuth(verbs), nil
-}
 
-// NewRBACFilterFromAuth creates a new RBAC filter from a set of AuthorizedResourceVerbs.
-func NewRBACFilterFromAuth(verbs []v3.AuthorizedResourceVerbs) RBACFilter {
+	var verbs []v3.AuthorizedResourceVerbs
+	var l7Permitted, dnsPermitted, alertsPermitted bool
+	var verbsErr, l7Err, dnsErr, alertsErr error
+	wg := sync.WaitGroup{}
+
+	usr, ok := request.UserFrom(ctx)
+	if !ok {
+		// There should be user info on the request context. If not this is is server error since an earlier handler
+		// should have authenticated.
+		log.Debug("No user information on request")
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusInternalServerError,
+			Msg:    "No user request on request",
+		}
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, csFactory, req, cluster)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		l7Permitted, l7Err = authz.Authorize(usr, esauth.CreateLMAResourceAttributes(cluster, "l7"), nil)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		dnsPermitted, dnsErr = authz.Authorize(usr, esauth.CreateLMAResourceAttributes(cluster, "dns"), nil)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		alertsPermitted, alertsErr = authz.Authorize(usr, esauth.CreateLMAResourceAttributes(cluster, "events"), nil)
+	}()
+	wg.Wait()
+
+	if verbsErr != nil {
+		return nil, verbsErr
+	} else if l7Err != nil {
+		return nil, l7Err
+	} else if dnsErr != nil {
+		return nil, dnsErr
+	} else if alertsErr != nil {
+		return nil, alertsErr
+	}
+
 	f := &rbacFilter{
+		includeL7Logs:            l7Permitted,
+		includeDNSLogs:           dnsPermitted,
+		includeAlerts:            alertsPermitted,
 		listPodNamespaces:        make(map[string]bool),
 		listNetworkSetNamespaces: make(map[string]bool),
 	}
@@ -75,17 +147,32 @@ func NewRBACFilterFromAuth(verbs []v3.AuthorizedResourceVerbs) RBACFilter {
 		}
 	}
 
-	return f
+	return f, nil
 }
 
 // rbacFilter implements the RBACFilter interface.
 type rbacFilter struct {
+	includeL7Logs            bool
+	includeDNSLogs           bool
+	includeAlerts            bool
 	listAllPods              bool
 	listAllHostEndpoints     bool
 	listAllGlobalNetworkSets bool
 	listAllNetworkSets       bool
 	listPodNamespaces        map[string]bool
 	listNetworkSetNamespaces map[string]bool
+}
+
+func (f *rbacFilter) IncludeL7Logs() bool {
+	return f.includeL7Logs
+}
+
+func (f *rbacFilter) IncludeDNSLogs() bool {
+	return f.includeDNSLogs
+}
+
+func (f *rbacFilter) IncludeAlerts() bool {
+	return f.includeAlerts
 }
 
 func (f *rbacFilter) IncludeFlow(e FlowEdge) bool {
@@ -138,6 +225,10 @@ func (f *rbacFilter) IncludePods(namespace string) bool {
 // ---- Mock filters for testing ----
 type RBACFilterIncludeAll struct{}
 
+func (m RBACFilterIncludeAll) IncludeFlowLogs() bool                    { return true }
+func (m RBACFilterIncludeAll) IncludeL7Logs() bool                      { return true }
+func (m RBACFilterIncludeAll) IncludeDNSLogs() bool                     { return true }
+func (m RBACFilterIncludeAll) IncludeAlerts() bool                      { return true }
 func (m RBACFilterIncludeAll) IncludeFlow(f FlowEdge) bool              { return true }
 func (m RBACFilterIncludeAll) IncludeEndpoint(f FlowEndpoint) bool      { return true }
 func (m RBACFilterIncludeAll) IncludeHostEndpoints() bool               { return true }
@@ -147,6 +238,10 @@ func (m RBACFilterIncludeAll) IncludePods(namespace string) bool        { return
 
 type RBACFilterIncludeNone struct{}
 
+func (m RBACFilterIncludeNone) IncludeFlowLogs() bool                    { return false }
+func (m RBACFilterIncludeNone) IncludeL7Logs() bool                      { return false }
+func (m RBACFilterIncludeNone) IncludeDNSLogs() bool                     { return false }
+func (m RBACFilterIncludeNone) IncludeAlerts() bool                      { return false }
 func (m RBACFilterIncludeNone) IncludeFlow(f FlowEdge) bool              { return false }
 func (m RBACFilterIncludeNone) IncludeEndpoint(f FlowEndpoint) bool      { return false }
 func (m RBACFilterIncludeNone) IncludeHostEndpoints() bool               { return false }

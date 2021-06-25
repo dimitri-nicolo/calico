@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"regexp"
 
+	esauth "github.com/tigera/es-proxy/pkg/auth"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/lma/pkg/auth"
 )
@@ -25,7 +27,7 @@ func KibanaIndexPattern(h http.Handler) http.Handler {
 			return
 		}
 
-		h.ServeHTTP(w, req.WithContext(auth.NewContextWithReviewResource(req.Context(), createLMAResourceAttributes("cluster", name))))
+		h.ServeHTTP(w, req.WithContext(auth.NewContextWithReviewResource(req.Context(), esauth.CreateLMAResourceAttributes("cluster", name))))
 	})
 }
 

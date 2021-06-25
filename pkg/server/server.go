@@ -46,11 +46,10 @@ const (
 	replicasNotRequired = 0
 	voltronServiceURL   = "https://localhost:9443"
 
-	dnsLogsResourceName      = "dns"
-	eventsResourceName       = "events"
-	flowLogsResourceName     = "flows"
-	l7ResourceName           = "l7"
-	serviceGraphResourceName = "servicegraph"
+	dnsLogsResourceName  = "dns"
+	eventsResourceName   = "events"
+	flowLogsResourceName = "flows"
+	l7ResourceName       = "l7"
 )
 
 func Start(cfg *Config) error {
@@ -148,12 +147,17 @@ func Start(cfg *Config) error {
 	}, cfg.ElasticKibanaEndpoint, cfg.ElasticVersion)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
+
+	// Service graph has additional RBAC control built in since it accesses multiple different tables. However, the
+	// minimum requirements for accessing SG is access to the flow logs. Perform that check here so it is done at the
+	// earliest opportunity.
 	sm.Handle("/serviceGraph",
-		middleware.ClusterRequestToResource(serviceGraphResourceName,
+		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authenticator,
 				middleware.AuthorizeRequest(authz,
 					servicegraph.NewServiceGraphHandler(
 						context.Background(),
+						authz,
 						esClient,
 						k8sClientSetFactory,
 						&servicegraph.Config{
