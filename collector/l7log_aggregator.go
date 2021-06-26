@@ -171,6 +171,8 @@ func (la *l7LogAggregator) FeedUpdate(update L7Update) error {
 			la.l7Store[meta] = spec
 		} else if len(la.l7OverflowStore) < la.perNodeLimit {
 			la.l7OverflowStore[meta] = spec
+		} else {
+			la.numUnLoggedUpdates++
 		}
 	} else {
 		la.numUnLoggedUpdates++
@@ -198,7 +200,7 @@ func (la *l7LogAggregator) Get() []*L7Log {
 
 	// If logs with real data (not overflow) do not reach the per node
 	// limit, add any overflow logs until the per node limit is reached.
-	if len(l7Logs) < la.perNodeLimit {
+	if len(l7Logs) <= la.perNodeLimit {
 		remainder := la.perNodeLimit - len(l7Logs)
 		i := 0
 		for meta, spec := range la.l7OverflowStore {
