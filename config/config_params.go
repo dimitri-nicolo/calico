@@ -374,7 +374,7 @@ type Config struct {
 	L7LogsFileAggregationHTTPMethod      string        `config:"string;IncludeL7HTTPMethod"`
 	L7LogsFileAggregationServiceInfo     string        `config:"string;IncludeL7ServiceInfo"`
 	L7LogsFileAggregationDestinationInfo string        `config:"string;IncludeL7DestinationInfo"`
-	L7LogsFileAggregationSourceInfo      string        `config:"string;IncludeL7SourceInfo"`
+	L7LogsFileAggregationSourceInfo      string        `config:"string;IncludeL7SourceInfoNoPort"`
 	L7LogsFileAggregationResponseCode    string        `config:"string;IncludeL7ResponseCode"`
 	L7LogsFileAggregationTrimURL         string        `config:"string;IncludeL7FullURL"`
 	L7LogsFileAggregationNumURLPath      int           `config:"int;5"`
