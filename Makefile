@@ -7,7 +7,7 @@ SEMAPHORE_PROJECT_ID=$(SEMAPHORE_CONFD_PRIVATE_PROJECT_ID)
 GIT_USE_SSH = true
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_NODE_PROJECT_ID)
+SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
 
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
