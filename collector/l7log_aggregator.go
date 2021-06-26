@@ -143,6 +143,7 @@ func (la *l7LogAggregator) PerNodeLimit(l int) L7LogAggregator {
 }
 
 func (la *l7LogAggregator) FeedUpdate(update L7Update) error {
+	isOverflow := update.Type == ""
 	meta, spec, err := NewL7MetaSpecFromUpdate(update, la.kind)
 	if err != nil {
 		return err
@@ -166,7 +167,7 @@ func (la *l7LogAggregator) FeedUpdate(update L7Update) error {
 		// overflow logs since we do not want to use up our log limit
 		// to record them since they have less data. Overflow logs will
 		// not have a type.
-		if meta.Type != "" {
+		if !isOverflow {
 			la.l7Store[meta] = spec
 		} else if len(la.l7OverflowStore) < la.perNodeLimit {
 			la.l7OverflowStore[meta] = spec
