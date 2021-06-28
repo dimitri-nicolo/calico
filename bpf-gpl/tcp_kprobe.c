@@ -29,13 +29,18 @@
 __attribute__((section("kprobe/tcp_cleanup_rbuf")))
 int kprobe__tcp_cleanup_rbuf(struct pt_regs *ctx)
 {
-	return kprobe_stats_body(ctx, IPPROTO_TCP, 0);
+	return kprobe_stats_body(ctx, IPPROTO_TCP, 0, false);
 }
 
 __attribute__((section("kprobe/tcp_sendmsg")))
 int kprobe__tcp_sendmsg(struct pt_regs *ctx)
 {
-	return kprobe_stats_body(ctx, IPPROTO_TCP, 1);
+	return kprobe_stats_body(ctx, IPPROTO_TCP, 1, false);
+}
+
+__attribute__((section("kprobe/tcp_connect")))
+int kprobe__tcp_connect(struct pt_regs *ctx) {
+	return kprobe_stats_body(ctx, IPPROTO_TCP, 1, true);
 }
 
 char ____license[] __attribute__((section("license"), used)) = "GPL";

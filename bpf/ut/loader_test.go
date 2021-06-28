@@ -168,10 +168,12 @@ func TestBPFLoaderWithTcpKprobe(t *testing.T) {
 	insnMap, license, err := loader.Programs()
 	Expect(err).NotTo(HaveOccurred())
 
-	Expect(len(insnMap)).To(Equal(2))
+	Expect(len(insnMap)).To(Equal(3))
 	_, ok := insnMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
 	_, ok = insnMap["kprobe/tcp_cleanup_rbuf"]
+	Expect(ok).To(Equal(true))
+	_, ok = insnMap["kprobe/tcp_connect"]
 	Expect(ok).To(Equal(true))
 	loadProgram(license, insnMap)
 }

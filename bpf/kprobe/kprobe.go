@@ -31,7 +31,7 @@ const (
 	kprobeEventsFileName = "/sys/kernel/debug/tracing/kprobe_events"
 )
 
-var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf"}
+var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf", "tcp_connect"}
 var udpFns = []string{"udp_sendmsg", "udp_recvmsg", "udpv6_sendmsg", "udpv6_recvmsg"}
 
 type kprobeFDs struct {

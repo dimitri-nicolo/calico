@@ -84,7 +84,6 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	 * This being the socket data, value of 0 indicates a socket in listening
 	 * state. Further data cannot be correlated in felix.
 	 */
-
 	if (!key.sport || !key.dport || ip_addr_is_zero(key.saddr) || ip_addr_is_zero(key.daddr)) {
 		return 0;
 	}
@@ -130,7 +129,7 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	return 0;
 }
 
-static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u16 proto, __u16 tx)
+static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u16 proto, __u16 tx, bool is_connect)
 {
 	int bytes = 0;
 	struct sock_common *sk_cmn = NULL;
@@ -139,7 +138,9 @@ static int CALI_BPF_INLINE kprobe_stats_body(struct pt_regs *ctx, __u16 proto, _
 	/* In case tcp_cleanup_rbuf, second argument is the number of bytes copied
 	 * to user space
 	 */
-	if (proto == IPPROTO_TCP && !tx) {
+	if (is_connect) {
+		bytes = 0;
+	} else if (proto == IPPROTO_TCP && !tx) {
 		bytes = (int)PT_REGS_PARM2(ctx);
 	} else {
 		bytes = (int)PT_REGS_PARM3(ctx);

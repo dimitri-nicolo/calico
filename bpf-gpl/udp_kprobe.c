@@ -29,25 +29,25 @@
 __attribute__((section("kprobe/udp_recvmsg")))
 int kprobe__udp_recvmsg(struct pt_regs *ctx)
 {
-	return kprobe_stats_body(ctx, IPPROTO_UDP, 0);
+	return kprobe_stats_body(ctx, IPPROTO_UDP, 0, false);
 }
 
 __attribute__((section("kprobe/udp_sendmsg")))
 int kprobe__udp_sendmsg(struct pt_regs *ctx)
 {
-	return kprobe_stats_body(ctx, IPPROTO_UDP, 1);
+	return kprobe_stats_body(ctx, IPPROTO_UDP, 1, false);
 }
 
 __attribute__((section("kprobe/udpv6_recvmsg")))
 int kprobe__udpv6_recvmsg(struct pt_regs *ctx)
 {
-        return kprobe_stats_body(ctx, IPPROTO_UDP, 0);
+        return kprobe_stats_body(ctx, IPPROTO_UDP, 0, false);
 }
 
 __attribute__((section("kprobe/udpv6_sendmsg")))
 int kprobe__udpv6_sendmsg(struct pt_regs *ctx)
 {
-        return kprobe_stats_body(ctx, IPPROTO_UDP, 1);
+        return kprobe_stats_body(ctx, IPPROTO_UDP, 1, false);
 }
 
 char ____license[] __attribute__((section("license"), used)) = "GPL";
