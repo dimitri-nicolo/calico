@@ -51,12 +51,6 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
    helm upgrade calico-enterprise tigera-operator-{% include chart_version_name %}.tgz
    ```
 
-1. If you are using the default Prometheus configuration (provided in the [custom-resources.yaml]({{ "/manifests/custom-resources.yaml" | absolute_url }})
-   file applied on installation) then use the following command to upgrade the Prometheus components:
-   ```bash
-   kubectl apply -f {{ "/manifests/upgrade/prometheus.yaml" | absolute_url }}
-   ```
-
 1. If your cluster has OIDC login configured, follow these steps:
 
    a.  Save a copy of your Manager for reference.

@@ -54,12 +54,6 @@ mkdir manifests
 
 1. {% include content/openshift-prometheus-operator.md %}
 
-1. If you are using the default Prometheus configuration (provided in the [custom-resources.yaml]({{ "/manifests/custom-resources.yaml" | absolute_url }})
-   file applied on installation) then use the following command to upgrade the Prometheus components:
-   ```bash
-   oc apply -f {{ "/manifests/upgrade/prometheus.yaml" | absolute_url }}
-   ```
-
 1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
    CR to your cluster.
    ```bash
