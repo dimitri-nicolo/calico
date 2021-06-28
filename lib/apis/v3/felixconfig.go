@@ -224,6 +224,9 @@ type FelixConfigurationSpec struct {
 	// PrometheusProcessMetricsEnabled disables process metrics collection, which the Prometheus client does by default, when
 	// set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]
 	PrometheusProcessMetricsEnabled *bool `json:"prometheusProcessMetricsEnabled,omitempty"`
+	// PrometheusWireGuardMetricsEnabled disables wireguard metrics collection, which the Prometheus client does by default, when
+	// set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]
+	PrometheusWireGuardMetricsEnabled *bool `json:"prometheusWireGuardMetricsEnabled,omitempty"`
 	// TLS credentials for this port.
 	PrometheusMetricsCertFile string `json:"prometheusMetricsCertFile,omitempty"`
 	PrometheusMetricsKeyFile  string `json:"prometheusMetricsKeyFile,omitempty"`
