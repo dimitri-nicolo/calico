@@ -3,6 +3,9 @@ GO_BUILD_VER    ?= v0.53
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
+ORGANIZATION=tigera
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INGRESS_COLLECTOR_PROJECT_ID)
+
 INGRESS_COLLECTOR_IMAGE ?=tigera/ingress-collector
 BUILD_IMAGES            ?=$(INGRESS_COLLECTOR_IMAGE)
 DEV_REGISTRIES          ?=gcr.io/unique-caldron-775/cnx
