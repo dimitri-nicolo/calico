@@ -5236,6 +5236,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"prometheusWireGuardMetricsEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrometheusWireGuardMetricsEnabled disables wireguard metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"prometheusMetricsCertFile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "TLS credentials for this port.",
