@@ -49,7 +49,7 @@ var (
 		Verbs: []string{"list"},
 	}, {
 		APIGroup:  "",
-		Resources: []string{"pods", "nodes"},
+		Resources: []string{"pods", "nodes", "events"},
 		Verbs:     []string{"list"},
 	}, {
 		APIGroup:  "networking.k8s.io",
