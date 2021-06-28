@@ -667,7 +667,7 @@ configRetry:
 		})
 		gaugeHost.Set(1)
 		prometheus.MustRegister(gaugeHost)
-		go servePrometheusMetrics(configParams)
+		go dp.ServePrometheusMetrics(configParams)
 	}
 
 	// Register signal handlers to dump memory/CPU profiles.

@@ -22,8 +22,9 @@ import (
 	"os/exec"
 	"runtime/debug"
 	"sync"
+	"time"
 
-	"github.com/projectcalico/felix/capture"
+	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -34,6 +35,7 @@ import (
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/tc"
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	extdataplane "github.com/projectcalico/felix/dataplane/external"
@@ -48,6 +50,7 @@ import (
 	"github.com/projectcalico/felix/wireguard"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/security"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -500,4 +503,42 @@ func SupportsBPF() error {
 
 func SupportsBPFKprobe() error {
 	return bpf.SupportsBPFKprobe()
+}
+
+func ServePrometheusMetrics(configParams *config.Config) {
+	for {
+		log.WithFields(log.Fields{
+			"host": configParams.PrometheusMetricsHost,
+			"port": configParams.PrometheusMetricsPort,
+		}).Info("Starting prometheus metrics endpoint")
+		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled && configParams.PrometheusWireGuardMetricsEnabled {
+			log.Info("Including Golang, Process and WireGuard metrics")
+		} else {
+			if !configParams.PrometheusGoMetricsEnabled {
+				log.Info("Discarding Golang metrics")
+				prometheus.Unregister(prometheus.NewGoCollector())
+			}
+			if !configParams.PrometheusProcessMetricsEnabled {
+				log.Info("Discarding process metrics")
+				prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+			}
+			if !configParams.PrometheusWireGuardMetricsEnabled {
+				log.Info("Discarding WireGuard metrics")
+				prometheus.Unregister(wireguard.MustNewWireguardMetrics())
+			}
+		}
+
+		err := security.ServePrometheusMetrics(
+			prometheus.DefaultGatherer,
+			"",
+			configParams.PrometheusMetricsPort,
+			configParams.PrometheusMetricsCertFile,
+			configParams.PrometheusMetricsKeyFile,
+			configParams.PrometheusMetricsCAFile,
+		)
+
+		log.WithError(err).Error(
+			"Prometheus metrics endpoint failed, trying to restart it...")
+		time.Sleep(1 * time.Second)
+	}
 }

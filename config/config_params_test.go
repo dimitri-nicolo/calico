@@ -371,6 +371,7 @@ var _ = DescribeTable("Config parsing",
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
 	Entry("PrometheusGoMetricsEnabled", "PrometheusGoMetricsEnabled", "false", false),
 	Entry("PrometheusProcessMetricsEnabled", "PrometheusProcessMetricsEnabled", "false", false),
+	Entry("PrometheusWireGuardMetricsEnabled", "PrometheusWireGuardMetricsEnabled", "false", false),
 
 	Entry("FailsafeInboundHostPorts old syntax", "FailsafeInboundHostPorts", "1,2,3,4",
 		[]config.ProtoPort{

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -119,6 +119,33 @@ func (d *MockNetlinkDataplane) DeviceByName(name string) (*wgtypes.Device, error
 	}
 
 	return device, nil
+}
+
+func (d *MockNetlinkDataplane) Devices() ([]*wgtypes.Device, error) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	defer GinkgoRecover()
+
+	Expect(d.WireguardOpen).To(BeTrue())
+	if d.shouldFail(FailNextWireguardDeviceByName) {
+		return nil, SimulatedError
+	}
+
+	links := []*wgtypes.Device{}
+
+	for name, link := range d.NameToLink {
+		device := &wgtypes.Device{
+			Name:         name,
+			Type:         wgtypes.LinuxKernel,
+			PrivateKey:   link.WireguardPrivateKey,
+			PublicKey:    link.WireguardPublicKey,
+			ListenPort:   link.WireguardListenPort,
+			FirewallMark: link.WireguardFirewallMark,
+		}
+		links = append(links, device)
+	}
+
+	return links, nil
 }
 
 func (d *MockNetlinkDataplane) ConfigureDevice(name string, cfg wgtypes.Config) error {

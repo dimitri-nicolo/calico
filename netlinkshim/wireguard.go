@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 type Wireguard interface {
 	Close() error
 	DeviceByName(name string) (*wgtypes.Device, error)
+	Devices() ([]*wgtypes.Device, error)
 	ConfigureDevice(name string, cfg wgtypes.Config) error
 }
 
@@ -38,6 +39,10 @@ func NewRealWireguard() (Wireguard, error) {
 
 func (c *realWireguardClient) Close() error {
 	return c.client.Close()
+}
+
+func (c *realWireguardClient) Devices() ([]*wgtypes.Device, error) {
+	return c.client.Devices()
 }
 
 func (c *realWireguardClient) DeviceByName(name string) (*wgtypes.Device, error) {
