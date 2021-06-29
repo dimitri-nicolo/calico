@@ -85,7 +85,8 @@
   },
   {
     "ID": {
-      "type": "kubernetes",
+      "type": "alert",
+      "id": "fakeid",
       "namespace": "tigera-fluentd",
       "name": "fluentd-node-tt85d.168bbcfc40012fe3"
     },

@@ -6,6 +6,473 @@
           {
             "port_ranges": [
               {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub;dir/ingress",
+        "source_node_id": "namespace/storefront"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 2261531,
+              "bytes_out": 9749771,
+              "packet_in": 10474,
+              "packet_out": 9967
+            },
+            "connections": {
+              "completed": 862,
+              "started": 862,
+              "total_per_sample_interval": 886
+            },
+            "tcp": {
+              "count": 19,
+              "max_min_rtt": 1248,
+              "max_smooth_rtt": 24305,
+              "mean_min_mss": 194.68421052631578,
+              "mean_mss": 1391.7894736842106,
+              "mean_send_congestion_window": 10.052631578947368,
+              "mean_smooth_rtt": 8019.526315789473,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 14,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_0"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub;dir/ingress",
+        "source_node_id": "namespace/kube-system"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 15895,
+              "bytes_out": 10637,
+              "packet_in": 137,
+              "packet_out": 137
+            },
+            "connections": {
+              "completed": 37,
+              "started": 33,
+              "total_per_sample_interval": 45
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "coredns"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "hosts/*;dir/egress"
+      },
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 1946,
+              "bytes_out": 3493,
+              "packet_in": 17,
+              "packet_out": 17
+            },
+            "connections": {
+              "completed": 14,
+              "started": 17,
+              "total_per_sample_interval": 19
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 5443,
+                "min_port": 5443
+              },
+              {
+                "max_port": 8080,
+                "min_port": 8080
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/tigera-system",
+        "source_node_id": "hosts/*;dir/egress"
+      },
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\""
+      },
+      "service_ports": [
+        {
+          "name": "tigera-api",
+          "namespace": "tigera-system",
+          "port": 443,
+          "port_name": "apiserver",
+          "protocol": "tcp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 3762,
+              "bytes_out": 2342,
+              "packet_in": 20,
+              "packet_out": 23
+            },
+            "connections": {
+              "completed": 1,
+              "started": 2,
+              "total_per_sample_interval": 2
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 218,
+              "max_smooth_rtt": 1951,
+              "mean_min_mss": 182,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1885,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "apiserver"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "cnx-queryserver"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kube-apiserver"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              },
+              {
+                "max_port": 10250,
+                "min_port": 10250
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "hosts/*;dir/ingress",
+        "source_node_id": "hosts/*;dir/egress"
+      },
+      "selectors": {
+        "l3_flows": "dest_type = \"hep\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 92034,
+              "bytes_out": 229447,
+              "packet_in": 550,
+              "packet_out": 303
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 5
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kube-apiserver"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9200,
+                "min_port": 9200
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/tigera-elasticsearch",
+        "source_node_id": "namespace/tigera-manager"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-manager\"",
+        "l3_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\"",
+        "l7_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\""
+      },
+      "service_ports": [
+        {
+          "name": "tigera-secure-es-http",
+          "namespace": "tigera-elasticsearch",
+          "port": 9200,
+          "port_name": "https",
+          "protocol": "tcp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 2677673,
+              "bytes_out": 53790,
+              "packet_in": 348,
+              "packet_out": 363
+            },
+            "connections": {
+              "completed": 7,
+              "started": 7,
+              "total_per_sample_interval": 9
+            },
+            "tcp": {
+              "count": 2,
+              "max_min_rtt": 66,
+              "max_smooth_rtt": 10398,
+              "mean_min_mss": 16,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1746,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 8080,
+                "min_port": 8080
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/storefront",
+        "source_node_id": "hosts/*;dir/egress"
+      },
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 60,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 0,
+              "bytes_out": 120,
+              "count": 60,
+              "max_duration": 5000000,
+              "mean_duration": 816666.6666666666,
+              "min_duration": 0
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
                 "max_port": 9081,
                 "min_port": 9081
               }
@@ -60,195 +527,6 @@
                 "name": "prometheus"
               }
             ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/storefront"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 1924191,
-              "bytes_out": 1007783,
-              "packet_in": 11332,
-              "packet_out": 11670
-            },
-            "connections": {
-              "completed": 5714,
-              "started": 5797,
-              "total_per_sample_interval": 5906
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/tigera-manager"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-manager\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 4358,
-              "bytes_out": 2404,
-              "packet_in": 22,
-              "packet_out": 22
-            },
-            "connections": {
-              "completed": 16,
-              "started": 22,
-              "total_per_sample_interval": 22
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
-        "source_node_id": "hosts/*;dir/egress"
-      },
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 1946,
-              "bytes_out": 3493,
-              "packet_in": 17,
-              "packet_out": 17
-            },
-            "connections": {
-              "completed": 14,
-              "started": 17,
-              "total_per_sample_interval": 19
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/tigera-prometheus"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-prometheus\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-prometheus\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-prometheus\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 274764,
-              "bytes_out": 168020,
-              "packet_in": 1108,
-              "packet_out": 1108
-            },
-            "connections": {
-              "completed": 1098,
-              "started": 1108,
-              "total_per_sample_interval": 1206
-            }
           }
         }
       ]
@@ -425,131 +703,6 @@
           {
             "port_ranges": [
               {
-                "max_port": 80,
-                "min_port": 80
-              },
-              {
-                "max_port": 443,
-                "min_port": 443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "net/pub;dir/ingress",
-        "source_node_id": "namespace/storefront"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 2261531,
-              "bytes_out": 9749771,
-              "packet_in": 10474,
-              "packet_out": 9967
-            },
-            "connections": {
-              "completed": 862,
-              "started": 862,
-              "total_per_sample_interval": 886
-            },
-            "tcp": {
-              "count": 19,
-              "max_min_rtt": 1248,
-              "max_smooth_rtt": 24305,
-              "mean_min_mss": 194.68421052631578,
-              "mean_mss": 1391.7894736842106,
-              "mean_send_congestion_window": 10.052631578947368,
-              "mean_smooth_rtt": 8019.526315789473,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 14,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "wrk:worker_0"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "wrk:worker_1"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "net/pub;dir/ingress",
-        "source_node_id": "namespace/kube-system"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 15895,
-              "bytes_out": 10637,
-              "packet_in": 137,
-              "packet_out": 137
-            },
-            "connections": {
-              "completed": 37,
-              "started": 33,
-              "total_per_sample_interval": 45
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "coredns"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
                 "max_port": 53,
                 "min_port": 53
               }
@@ -589,172 +742,6 @@
               "completed": 77,
               "started": 77,
               "total_per_sample_interval": 85
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/tigera-elasticsearch"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-elasticsearch\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 77581,
-              "bytes_out": 43591,
-              "packet_in": 377,
-              "packet_out": 377
-            },
-            "connections": {
-              "completed": 370,
-              "started": 375,
-              "total_per_sample_interval": 411
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9081,
-                "min_port": 9081
-              },
-              {
-                "max_port": 10250,
-                "min_port": 10250
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "hosts/*;dir/ingress",
-        "source_node_id": "hosts/*;dir/egress"
-      },
-      "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_type = \"hep\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 92034,
-              "bytes_out": 229447,
-              "packet_in": 550,
-              "packet_out": 303
-            },
-            "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 5
-            }
-          },
-          "processes": {
-            "dest": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "calico-node"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kubelet"
-              }
-            ],
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kube-apiserver"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "icmp"
-          },
-          {
-            "port_ranges": [
-              {
-                "max_port": 80,
-                "min_port": 80
-              },
-              {
-                "max_port": 443,
-                "min_port": 443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "hosts/*;dir/ingress",
-        "source_node_id": "net/pub;dir/egress"
-      },
-      "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 576,
-              "bytes_out": 252,
-              "packet_in": 11,
-              "packet_out": 3
-            },
-            "connections": {
-              "completed": 11,
-              "started": 11,
-              "total_per_sample_interval": 11
             }
           }
         }
@@ -876,10 +863,17 @@
       "endpoint_proto_ports": {
         "proto_ports": [
           {
+            "protocol": "icmp"
+          },
+          {
             "port_ranges": [
               {
-                "max_port": 9200,
-                "min_port": 9200
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
               }
             ],
             "protocol": "tcp"
@@ -887,50 +881,25 @@
         ]
       },
       "id": {
-        "dest_node_id": "namespace/tigera-elasticsearch",
-        "source_node_id": "namespace/tigera-manager"
+        "dest_node_id": "hosts/*;dir/ingress",
+        "source_node_id": "net/pub;dir/egress"
       },
       "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-manager\"",
-        "l3_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\"",
-        "l7_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\""
+        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
       },
-      "service_ports": [
-        {
-          "name": "tigera-secure-es-http",
-          "namespace": "tigera-elasticsearch",
-          "port": 9200,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
       "stats": [
         {
           "l3": {
             "allowed": {
-              "bytes_in": 2677673,
-              "bytes_out": 53790,
-              "packet_in": 348,
-              "packet_out": 363
+              "bytes_in": 576,
+              "bytes_out": 252,
+              "packet_in": 11,
+              "packet_out": 3
             },
             "connections": {
-              "completed": 7,
-              "started": 7,
-              "total_per_sample_interval": 9
-            },
-            "tcp": {
-              "count": 2,
-              "max_min_rtt": 66,
-              "max_smooth_rtt": 10398,
-              "mean_min_mss": 16,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 1746,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
+              "completed": 11,
+              "started": 11,
+              "total_per_sample_interval": 11
             }
           }
         }
@@ -942,9 +911,319 @@
           {
             "port_ranges": [
               {
-                "max_port": 5443,
-                "min_port": 5443
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/storefront"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 1924191,
+              "bytes_out": 1007783,
+              "packet_in": 11332,
+              "packet_out": 11670
+            },
+            "connections": {
+              "completed": 5714,
+              "started": 5797,
+              "total_per_sample_interval": 5906
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/tigera-elasticsearch"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-elasticsearch\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 77581,
+              "bytes_out": 43591,
+              "packet_in": 377,
+              "packet_out": 377
+            },
+            "connections": {
+              "completed": 370,
+              "started": 375,
+              "total_per_sample_interval": 411
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/tigera-manager"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-manager\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 4358,
+              "bytes_out": 2404,
+              "packet_in": 22,
+              "packet_out": 22
+            },
+            "connections": {
+              "completed": 16,
+              "started": 22,
+              "total_per_sample_interval": 22
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-prometheus\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-prometheus\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-prometheus\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 274764,
+              "bytes_out": 168020,
+              "packet_in": 1108,
+              "packet_out": 1108
+            },
+            "connections": {
+              "completed": 1098,
+              "started": 1108,
+              "total_per_sample_interval": 1206
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "expandable": true,
+      "id": "namespace/kube-system",
+      "name": "kube-system",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
+        "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\""
+      },
+      "stats": [
+        {
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "coredns"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "expandable": true,
+      "id": "namespace/tigera-elasticsearch",
+      "name": "tigera-elasticsearch",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\"",
+        "l3_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\"",
+        "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\""
+      },
+      "stats": [
+        {
+          "dns": {
+            "latency_count": 378,
+            "max_request_latency": 11819000,
+            "mean_request_latency": 465235.8333333333,
+            "min_request_latency": 363332,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 126,
+                "latency_count": 126,
+                "max_request_latency": 1528000,
+                "mean_request_latency": 369777.5,
+                "min_request_latency": 363332
               },
+              {
+                "code": "NXDOMAIN",
+                "count": 252,
+                "latency_count": 252,
+                "max_request_latency": 11819000,
+                "mean_request_latency": 512965,
+                "min_request_latency": 384795
+              }
+            ]
+          },
+          "l3": {
+            "allowed": {
+              "bytes_in": 11700256,
+              "bytes_out": 311674,
+              "packet_in": 2703,
+              "packet_out": 3114
+            },
+            "connections": {
+              "completed": 182,
+              "started": 182,
+              "total_per_sample_interval": 184
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 341,
+              "max_smooth_rtt": 108121,
+              "mean_min_mss": 160,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 14225,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "elasticsearch[t"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "elasticsearch_e"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
               {
                 "max_port": 8080,
                 "min_port": 8080
@@ -954,51 +1233,16 @@
           }
         ]
       },
-      "id": {
-        "dest_node_id": "namespace/tigera-system",
-        "source_node_id": "hosts/*;dir/egress"
-      },
+      "expandable": true,
+      "id": "namespace/tigera-system",
+      "name": "tigera-system",
       "selectors": {
-        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_type = \"hep\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
+        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
+        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\""
       },
-      "service_ports": [
-        {
-          "name": "tigera-api",
-          "namespace": "tigera-system",
-          "port": 443,
-          "port_name": "apiserver",
-          "protocol": "tcp"
-        }
-      ],
       "stats": [
         {
-          "l3": {
-            "allowed": {
-              "bytes_in": 3762,
-              "bytes_out": 2342,
-              "packet_in": 20,
-              "packet_out": 23
-            },
-            "connections": {
-              "completed": 1,
-              "started": 2,
-              "total_per_sample_interval": 2
-            },
-            "tcp": {
-              "count": 1,
-              "max_min_rtt": 218,
-              "max_smooth_rtt": 1951,
-              "mean_min_mss": 182,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 1885,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
           "processes": {
             "dest": [
               {
@@ -1015,98 +1259,12 @@
                 "min_num_names_per_flow": 1,
                 "name": "cnx-queryserver"
               }
-            ],
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kube-apiserver"
-              }
             ]
           }
         }
-      ]
+      ],
+      "type": "namespace"
     },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 8080,
-                "min_port": 8080
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/storefront",
-        "source_node_id": "hosts/*;dir/egress"
-      },
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
-      },
-      "stats": [
-        {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 60,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 0,
-              "bytes_out": 120,
-              "count": 60,
-              "max_duration": 5000000,
-              "mean_duration": 816666.6666666666,
-              "min_duration": 0
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            }
-          }
-        }
-      ]
-    }
-  ],
-  "nodes": [
     {
       "expandable": true,
       "id": "hosts/*;dir/egress",
@@ -1163,10 +1321,25 @@
       "aggregated_proto_ports": {
         "proto_ports": [
           {
+            "protocol": "icmp"
+          },
+          {
             "port_ranges": [
               {
-                "max_port": 9094,
-                "min_port": 9094
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              },
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              },
+              {
+                "max_port": 10250,
+                "min_port": 10250
               }
             ],
             "protocol": "tcp"
@@ -1174,66 +1347,13 @@
         ]
       },
       "expandable": true,
-      "id": "namespace/tigera-prometheus",
-      "name": "tigera-prometheus",
+      "id": "hosts/*;dir/ingress",
+      "name": "*",
       "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\"",
-        "l3_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\"",
-        "l7_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\""
+        "l3_flows": "dest_type = \"hep\""
       },
       "stats": [
         {
-          "dns": {
-            "latency_count": 1133,
-            "max_request_latency": 6934000,
-            "mean_request_latency": 535675.6160635481,
-            "min_request_latency": 310946,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 378,
-                "latency_count": 378,
-                "max_request_latency": 4351000,
-                "mean_request_latency": 518204.09523809527,
-                "min_request_latency": 352046
-              },
-              {
-                "code": "NXDOMAIN",
-                "count": 756,
-                "latency_count": 755,
-                "max_request_latency": 6934000,
-                "mean_request_latency": 544422.9470198676,
-                "min_request_latency": 310946
-              }
-            ]
-          },
-          "l3": {
-            "allowed": {
-              "bytes_in": 8200,
-              "bytes_out": 8255,
-              "packet_in": 75,
-              "packet_out": 76
-            },
-            "connections": {
-              "completed": 15,
-              "started": 15,
-              "total_per_sample_interval": 15
-            },
-            "tcp": {
-              "count": 6,
-              "max_min_rtt": 606,
-              "max_smooth_rtt": 4848,
-              "mean_min_mss": 333.6666666666667,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 3188,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
           "processes": {
             "dest": [
               {
@@ -1241,40 +1361,20 @@
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "alertmanager"
-              }
-            ],
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "alertmanager"
+                "name": "calico-node"
               },
               {
                 "max_num_ids_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "prometheus"
+                "name": "kubelet"
               }
             ]
           }
         }
       ],
-      "type": "namespace"
-    },
-    {
-      "expandable": true,
-      "id": "namespace/default",
-      "name": "default",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
-        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
-        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\""
-      },
-      "type": "namespace"
+      "type": "hosts"
     },
     {
       "aggregated_proto_ports": {
@@ -1311,6 +1411,14 @@
       "name": "pub",
       "selectors": {
         "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\""
+      },
+      "type": "net"
+    },
+    {
+      "id": "net/pub;dir/egress",
+      "name": "pub",
+      "selectors": {
+        "l3_flows": "source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
       },
       "type": "net"
     },
@@ -1449,249 +1557,14 @@
       "type": "namespace"
     },
     {
-      "expandable": true,
-      "id": "namespace/kube-system",
-      "name": "kube-system",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
-        "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
-        "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\""
-      },
-      "stats": [
-        {
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "coredns"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "namespace"
-    },
-    {
-      "aggregated_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "icmp"
-          },
-          {
-            "port_ranges": [
-              {
-                "max_port": 80,
-                "min_port": 80
-              },
-              {
-                "max_port": 443,
-                "min_port": 443
-              },
-              {
-                "max_port": 9081,
-                "min_port": 9081
-              },
-              {
-                "max_port": 10250,
-                "min_port": 10250
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "expandable": true,
-      "id": "hosts/*;dir/ingress",
-      "name": "*",
-      "selectors": {
-        "l3_flows": "dest_type = \"hep\""
-      },
-      "stats": [
-        {
-          "processes": {
-            "dest": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "calico-node"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kubelet"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "hosts"
-    },
-    {
-      "expandable": true,
-      "id": "namespace/tigera-manager",
-      "name": "tigera-manager",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
-        "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
-        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\""
-      },
-      "stats": [
-        {
-          "dns": {
-            "latency_count": 16,
-            "max_request_latency": 919000,
-            "mean_request_latency": 645750,
-            "min_request_latency": 550000,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 6,
-                "latency_count": 6,
-                "max_request_latency": 919000,
-                "mean_request_latency": 581000,
-                "min_request_latency": 550000
-              },
-              {
-                "code": "NXDOMAIN",
-                "count": 10,
-                "latency_count": 10,
-                "max_request_latency": 881000,
-                "mean_request_latency": 684600,
-                "min_request_latency": 552000
-              }
-            ]
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "es-proxy"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "voltron"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "namespace"
-    },
-    {
-      "id": "net/pub;dir/egress",
-      "name": "pub",
-      "selectors": {
-        "l3_flows": "source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
-      },
-      "type": "net"
-    },
-    {
-      "expandable": true,
-      "id": "namespace/tigera-elasticsearch",
-      "name": "tigera-elasticsearch",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\"",
-        "l3_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\"",
-        "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\""
-      },
-      "stats": [
-        {
-          "dns": {
-            "latency_count": 378,
-            "max_request_latency": 11819000,
-            "mean_request_latency": 465235.8333333333,
-            "min_request_latency": 363332,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 126,
-                "latency_count": 126,
-                "max_request_latency": 1528000,
-                "mean_request_latency": 369777.5,
-                "min_request_latency": 363332
-              },
-              {
-                "code": "NXDOMAIN",
-                "count": 252,
-                "latency_count": 252,
-                "max_request_latency": 11819000,
-                "mean_request_latency": 512965,
-                "min_request_latency": 384795
-              }
-            ]
-          },
-          "l3": {
-            "allowed": {
-              "bytes_in": 11700256,
-              "bytes_out": 311674,
-              "packet_in": 2703,
-              "packet_out": 3114
-            },
-            "connections": {
-              "completed": 182,
-              "started": 182,
-              "total_per_sample_interval": 184
-            },
-            "tcp": {
-              "count": 1,
-              "max_min_rtt": 341,
-              "max_smooth_rtt": 108121,
-              "mean_min_mss": 160,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 14225,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "dest": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "elasticsearch[t"
-              }
-            ],
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "elasticsearch_e"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "namespace"
-    },
-    {
       "events": [
         {
           "description": "Readiness probe failed: ",
           "id": {
+            "id": "fakeid",
             "name": "fluentd-node-tt85d.168bbcfc40012fe3",
             "namespace": "tigera-fluentd",
-            "type": "kubernetes"
+            "type": "alert"
           },
           "time": "2021-06-25T20:51:06Z"
         },
@@ -1736,6 +1609,7 @@
       "id": "namespace/tigera-fluentd",
       "name": "tigera-fluentd",
       "selectors": {
+        "alerts": "_id = \"fakeid\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-fluentd\" OR client_namespace = \"tigera-fluentd\"",
         "l3_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "l7_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\""
@@ -1815,8 +1689,8 @@
           {
             "port_ranges": [
               {
-                "max_port": 8080,
-                "min_port": 8080
+                "max_port": 9094,
+                "min_port": 9094
               }
             ],
             "protocol": "tcp"
@@ -1824,15 +1698,66 @@
         ]
       },
       "expandable": true,
-      "id": "namespace/tigera-system",
-      "name": "tigera-system",
+      "id": "namespace/tigera-prometheus",
+      "name": "tigera-prometheus",
       "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
-        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
-        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\"",
+        "l3_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\"",
+        "l7_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\""
       },
       "stats": [
         {
+          "dns": {
+            "latency_count": 1133,
+            "max_request_latency": 6934000,
+            "mean_request_latency": 535675.6160635481,
+            "min_request_latency": 310946,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 378,
+                "latency_count": 378,
+                "max_request_latency": 4351000,
+                "mean_request_latency": 518204.09523809527,
+                "min_request_latency": 352046
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 756,
+                "latency_count": 755,
+                "max_request_latency": 6934000,
+                "mean_request_latency": 544422.9470198676,
+                "min_request_latency": 310946
+              }
+            ]
+          },
+          "l3": {
+            "allowed": {
+              "bytes_in": 8200,
+              "bytes_out": 8255,
+              "packet_in": 75,
+              "packet_out": 76
+            },
+            "connections": {
+              "completed": 15,
+              "started": 15,
+              "total_per_sample_interval": 15
+            },
+            "tcp": {
+              "count": 6,
+              "max_min_rtt": 606,
+              "max_smooth_rtt": 4848,
+              "mean_min_mss": 333.6666666666667,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 3188,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
           "processes": {
             "dest": [
               {
@@ -1840,19 +1765,96 @@
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "apiserver"
+                "name": "alertmanager"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "alertmanager"
               },
               {
                 "max_num_ids_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "cnx-queryserver"
+                "name": "prometheus"
               }
             ]
           }
         }
       ],
+      "type": "namespace"
+    },
+    {
+      "expandable": true,
+      "id": "namespace/tigera-manager",
+      "name": "tigera-manager",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
+        "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
+        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\""
+      },
+      "stats": [
+        {
+          "dns": {
+            "latency_count": 16,
+            "max_request_latency": 919000,
+            "mean_request_latency": 645750,
+            "min_request_latency": 550000,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 6,
+                "latency_count": 6,
+                "max_request_latency": 919000,
+                "mean_request_latency": 581000,
+                "min_request_latency": 550000
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 10,
+                "latency_count": 10,
+                "max_request_latency": 881000,
+                "mean_request_latency": 684600,
+                "min_request_latency": 552000
+              }
+            ]
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "es-proxy"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "voltron"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "expandable": true,
+      "id": "namespace/default",
+      "name": "default",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
+        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\""
+      },
       "type": "namespace"
     }
   ],

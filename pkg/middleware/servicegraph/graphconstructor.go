@@ -912,6 +912,8 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView map[v1.GraphNod
 		return
 	}
 
+	eventNodes := make(map[*trackedNode]struct{})
+
 	for _, event := range s.sgd.Events {
 		log.Debugf("Checking event %#v", event)
 		for _, ep := range event.Endpoints {
@@ -928,13 +930,28 @@ func (s *serviceGraphConstructionData) overlayEvents(nodesInView map[v1.GraphNod
 				})
 				if node = s.getMostGranularNodeInView(nodesInView, fep, sg); node != nil {
 					node.graphNode.IncludeEvent(event.ID, event.Details)
+					eventNodes[node] = struct{}{}
 				}
 			default:
 				sg := s.sgd.ServiceGroups.GetByEndpoint(ep)
 				if node = s.getMostGranularNodeInView(nodesInView, ep, sg); node != nil {
 					node.graphNode.IncludeEvent(event.ID, event.Details)
+					eventNodes[node] = struct{}{}
 				}
 			}
+		}
+	}
+
+	// Loop through the node with events and update the event selectors for the node.
+	for n := range eventNodes {
+		var ids []string
+		for event := range n.graphNode.Events {
+			if event.ID != "" {
+				ids = append(ids, event.ID)
+			}
+		}
+		if len(ids) > 0 {
+			n.graphNode.Selectors.Alerts = v1.NewGraphSelector(v1.OpIn, "_id", ids)
 		}
 	}
 }
