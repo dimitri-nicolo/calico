@@ -655,11 +655,13 @@ spec:
               l7LogsFileAggregationSourceInfo:
                 description: 'L7LogsFileAggregationExcludeSourceInfo is used to choose
                   the type of aggregation for the source metadata on L7 log entries.
-                  [Default: IncludeL7SourceInfo - include source metadata]. Accepted
-                  values are IncludeL7SourceInfo and ExcludeL7SourceInfo. IncludeL7SourceInfo
-                  - Include source metadata in the logs. ExcludeL7SourceInfo - Aggregate
-                  over all other fields ignoring the source aggregated name, namespace,
-                  and type.'
+                  [Default: IncludeL7SourceInfoNoPort - include all source metadata
+                  except for the source port]. Accepted values are IncludeL7SourceInfo,
+                  IncludeL7SourceInfoNoPort, and ExcludeL7SourceInfo. IncludeL7SourceInfo
+                  - Include source metadata in the logs. IncludeL7SourceInfoNoPort
+                  - Include source metadata in the logs excluding the source port.
+                  ExcludeL7SourceInfo - Aggregate over all other fields ignoring the
+                  source aggregated name, namespace, and type.'
                 type: string
               l7LogsFileAggregationTrimURL:
                 description: 'L7LogsFileAggregationTrimURL is used to choose the type
@@ -825,6 +827,12 @@ spec:
                 type: string
               prometheusReporterPort:
                 type: integer
+              prometheusWireGuardMetricsEnabled:
+                description: 'PrometheusWireGuardMetricsEnabled disables wireguard
+                  metrics collection, which the Prometheus client does by default,
+                  when set to false. This reduces the number of metrics reported,
+                  reducing Prometheus load. [Default: true]'
+                type: boolean
               removeExternalRoutes:
                 description: Whether or not to remove device routes that have not
                   been programmed by Felix. Disabling this will allow external applications
@@ -882,10 +890,13 @@ spec:
               syslogReporterNetwork:
                 type: string
               tproxyMode:
-                description: 'Sets the transparent proxy mode. [Default: Disabled]'
+                description: 'TPROXYMode sets whether traffic is directed through
+                  a transparent proxy for further processing or not and how is the
+                  proxying done. [Default: Disabled]'
                 type: string
               tproxyPort:
-                description: 'Local port that the proxied traffic is sent to. [Default: 16001]'
+                description: 'TPROXYPort sets to which port proxied traffic should
+                  be redirected. [Default: 16001]'
                 type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
