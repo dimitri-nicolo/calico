@@ -75,15 +75,18 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 		meta.DestPortNum = 0
 	}
 
-	if ak.Source == L7SourceInfoNone {
+	if ak.ResponseCode == L7ResponseCodeNone {
+		meta.ResponseCode = flowLogFieldNotIncluded
+	}
+
+	switch ak.Source {
+	case L7SourceInfoNone:
 		meta.SrcNameAggr = flowLogFieldNotIncluded
 		meta.SrcNamespace = flowLogFieldNotIncluded
 		meta.SrcType = flowLogFieldNotIncluded
 		meta.SourcePortNum = 0
-	}
-
-	if ak.ResponseCode == L7ResponseCodeNone {
-		meta.ResponseCode = flowLogFieldNotIncluded
+	case L7SourceInfoNoPort:
+		meta.SourcePortNum = 0
 	}
 
 	switch ak.TrimURL {

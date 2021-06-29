@@ -44,6 +44,7 @@ const (
 
 const (
 	L7SourceInfo L7SourceAggregationKind = iota
+	L7SourceInfoNoPort
 	L7SourceInfoNone
 )
 
@@ -60,22 +61,23 @@ const (
 )
 
 var l7AggregationKindTypeMap map[string]int = map[string]int{
-	"ExcludeL7HTTPHeaderInfo":  int(L7HTTPHeaderInfoNone),
-	"IncludeL7HTTPHeaderInfo":  int(L7HTTPHeaderInfo),
-	"ExcludeL7HTTPMethod":      int(L7HTTPMethodNone),
-	"IncludeL7HTTPMethod":      int(L7HTTPMethod),
-	"ExcludeL7ServiceInfo":     int(L7ServiceInfoNone),
-	"IncludeL7ServiceInfo":     int(L7ServiceInfo),
-	"ExcludeL7DestinationInfo": int(L7DestinationInfoNone),
-	"IncludeL7DestinationInfo": int(L7DestinationInfo),
-	"ExcludeL7SourceInfo":      int(L7SourceInfoNone),
-	"IncludeL7SourceInfo":      int(L7SourceInfo),
-	"ExcludeL7URL":             int(L7URLNone),
-	"TrimURLQuery":             int(L7URLWithoutQuery),
-	"TrimURLQueryAndPath":      int(L7BaseURL),
-	"IncludeL7FullURL":         int(L7FullURL),
-	"ExcludeL7ResponseCode":    int(L7ResponseCodeNone),
-	"IncludeL7ResponseCode":    int(L7ResponseCode),
+	"ExcludeL7HTTPHeaderInfo":   int(L7HTTPHeaderInfoNone),
+	"IncludeL7HTTPHeaderInfo":   int(L7HTTPHeaderInfo),
+	"ExcludeL7HTTPMethod":       int(L7HTTPMethodNone),
+	"IncludeL7HTTPMethod":       int(L7HTTPMethod),
+	"ExcludeL7ServiceInfo":      int(L7ServiceInfoNone),
+	"IncludeL7ServiceInfo":      int(L7ServiceInfo),
+	"ExcludeL7DestinationInfo":  int(L7DestinationInfoNone),
+	"IncludeL7DestinationInfo":  int(L7DestinationInfo),
+	"ExcludeL7SourceInfo":       int(L7SourceInfoNone),
+	"IncludeL7SourceInfoNoPort": int(L7SourceInfoNoPort),
+	"IncludeL7SourceInfo":       int(L7SourceInfo),
+	"ExcludeL7URL":              int(L7URLNone),
+	"TrimURLQuery":              int(L7URLWithoutQuery),
+	"TrimURLQueryAndPath":       int(L7BaseURL),
+	"IncludeL7FullURL":          int(L7FullURL),
+	"ExcludeL7ResponseCode":     int(L7ResponseCodeNone),
+	"IncludeL7ResponseCode":     int(L7ResponseCode),
 }
 
 // L7AggregationKind is a collection of all the different types of aggregation
@@ -100,7 +102,7 @@ func DefaultL7AggregationKind() L7AggregationKind {
 		HTTPMethod:      L7HTTPMethod,
 		Service:         L7ServiceInfo,
 		Destination:     L7DestinationInfo,
-		Source:          L7SourceInfo,
+		Source:          L7SourceInfoNoPort,
 		TrimURL:         L7FullURL,
 		ResponseCode:    L7ResponseCode,
 		NumURLPathParts: 5,
