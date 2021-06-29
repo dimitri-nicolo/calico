@@ -2,7 +2,7 @@ module github.com/tigera/license-agent
 
 go 1.13
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210628142241-49d0211f9a0a
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210629032502-7d563c3ac9b3
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -11,5 +11,5 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/licensing v1.0.1-0.20210626005331-d476458ecaa6
+	github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818
 )
