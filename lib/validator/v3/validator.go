@@ -145,7 +145,7 @@ var (
 	L7HTTPMethodAggregationRegex     = regexp.MustCompile("^(IncludeL7HTTPMethod|ExcludeL7HTTPMethod)$")
 	L7ServiceAggregationRegex        = regexp.MustCompile("^(IncludeL7ServiceInfo|ExcludeL7ServiceInfo)$")
 	L7DestinationAggregationRegex    = regexp.MustCompile("^(IncludeL7DestinationInfo|ExcludeL7DestinationInfo)$")
-	L7SourceAggregationRegex         = regexp.MustCompile("^(IncludeL7SourceInfo|ExcludeL7SourceInfo)$")
+	L7SourceAggregationRegex         = regexp.MustCompile("^(IncludeL7SourceInfo|IncludeL7SourceInfoNoPort|ExcludeL7SourceInfo)$")
 	L7ResponseCodeAggregationRegex   = regexp.MustCompile("^(IncludeL7ResponseCode|ExcludeL7ResponseCode)$")
 	L7URLAggregationRegex            = regexp.MustCompile("^(IncludeL7FullURL|TrimURLQuery|TrimURLQueryAndPath|ExcludeL7URL)$")
 
