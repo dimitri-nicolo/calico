@@ -850,6 +850,7 @@ func init() {
 		Entry("should reject an invalid L7LogsFileAggregationDestinationInfo value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationDestinationInfo: &invalidL7}, false),
 
 		Entry("should accept an valid L7LogsFileAggregationSourceInfo value 'IncludeL7SourceInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &includeL7SourceInfo}, true),
+		Entry("should accept an valid L7LogsFileAggregationSourceInfo value 'IncludeL7SourceInfoNoPort'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &includeL7SourceInfo}, true),
 		Entry("should accept an valid L7LogsFileAggregationSourceInfo value 'ExcludeL7SourceInfo'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &excludeL7SourceInfo}, true),
 		Entry("should reject an invalid L7LogsFileAggregationSourceInfo value 'ExcludeL7'", api.FelixConfigurationSpec{L7LogsFileAggregationSourceInfo: &invalidL7}, false),
 

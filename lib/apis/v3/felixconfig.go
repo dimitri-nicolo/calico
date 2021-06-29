@@ -554,9 +554,10 @@ type FelixConfigurationSpec struct {
 	// ExcludeL7DestinationInfo - Aggregate over all other fields ignoring the destination aggregated name, namespace, and type.
 	L7LogsFileAggregationDestinationInfo *string `json:"l7LogsFileAggregationDestinationInfo,omitempty" validate:"omitempty,l7DestinationAggregation"`
 	// L7LogsFileAggregationExcludeSourceInfo is used to choose the type of aggregation for the source metadata on L7 log entries.
-	// [Default: IncludeL7SourceInfo - include source metadata].
-	// Accepted values are IncludeL7SourceInfo and ExcludeL7SourceInfo.
+	// [Default: IncludeL7SourceInfoNoPort - include all source metadata except for the source port].
+	// Accepted values are IncludeL7SourceInfo, IncludeL7SourceInfoNoPort, and ExcludeL7SourceInfo.
 	// IncludeL7SourceInfo - Include source metadata in the logs.
+	// IncludeL7SourceInfoNoPort - Include source metadata in the logs excluding the source port.
 	// ExcludeL7SourceInfo - Aggregate over all other fields ignoring the source aggregated name, namespace, and type.
 	L7LogsFileAggregationSourceInfo *string `json:"l7LogsFileAggregationSourceInfo,omitempty" validate:"omitempty,l7SourceAggregation"`
 	// L7LogsFileAggregationResponseCode is used to choose the type of aggregation for the response code on L7 log entries.
