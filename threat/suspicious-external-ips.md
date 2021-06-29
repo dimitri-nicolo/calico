@@ -1,7 +1,7 @@
 ---
 title: Trace and block suspicious external IP addresses
 description: Use flow logs to trace external IP addresses that access clusters.
-canonical_url: /threat/ingress
+canonical_url: /threat/suspicious-external-ips
 ---
 
 ## Big Picture
