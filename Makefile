@@ -34,7 +34,7 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 ##############################################################################
 # Define some constants
 ##############################################################################
-HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
+HONEYPOD_CONTROLLER_IMAGE ?=tigera/honeypod-controller
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
 ARCHES                    ?=amd64
 DEV_REGISTRIES            ?=gcr.io/unique-caldron-775/cnx
