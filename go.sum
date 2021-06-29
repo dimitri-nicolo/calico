@@ -864,8 +864,8 @@ github.com/tebeka/strftime v0.1.5 h1:1NQKN1NiQgkqd/2moD6ySP/5CoZQsKa1d3ZhJ44Jpmg
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/cni-plugin-private v1.11.1-0.20210628192140-19d8ea8a3b11 h1:4tXBBjsRqyOTdSAQGtIV/0RUTuRcRe+Nq5WL/UI/bQQ=
-github.com/tigera/cni-plugin-private v1.11.1-0.20210628192140-19d8ea8a3b11/go.mod h1:YtiqfllwV/3royojnu+5xVGwy0vsNQNwC7lYOWV5Kf0=
+github.com/tigera/cni-plugin-private v1.11.1-0.20210629005000-f760e91d6f9e h1:RC+23pfJ78QhWIHtZDauq9uqLTZ3RettMT/CW+msav0=
+github.com/tigera/cni-plugin-private v1.11.1-0.20210629005000-f760e91d6f9e/go.mod h1:alFnNEwYj668YDyUEjENanBOvGAkwr9MHK6k1UWB/+E=
 github.com/tigera/confd-private v1.0.1-0.20210628193124-87feb7bdc154 h1:Rxqzy09GvleRy7QTkDiB1tTDO0jTQnrPeAwxmeBg758=
 github.com/tigera/confd-private v1.0.1-0.20210628193124-87feb7bdc154/go.mod h1:jD4+5Gz19mTz2kRz5wL154+vIV5O/1E9NjPFoTuERDo=
 github.com/tigera/felix-private v0.0.0-20210628214654-c8ef6abee3f3 h1:jkMRjOlhVezrdd/pLPHAV99wdPo0zd50rEZ0wJSCGeM=
