@@ -384,6 +384,10 @@ spec:
                   type: string
                 syslogReporterNetwork:
                   type: string
+                tproxyMode:
+                  type: string
+                tproxyPort:
+                  type: integer
                 usageReportingEnabled:
                   type: boolean
                 usageReportingInitialDelay:
