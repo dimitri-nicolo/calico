@@ -11,6 +11,7 @@ import (
 
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 
+	"github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
@@ -30,12 +31,14 @@ const (
 
 func NewServiceGraphHandler(
 	ctx context.Context,
+	authz auth.RBACAuthorizer,
 	elasticClient lmaelastic.Client,
 	clientSetFactory k8s.ClientSetFactory,
 	cfg *Config,
 ) http.Handler {
 	return NewServiceGraphHandlerWithBackend(ctx, &realServiceGraphBackend{
 		ctx:              ctx,
+		authz:            authz,
 		elastic:          elasticClient,
 		clientSetFactory: clientSetFactory,
 	}, cfg)

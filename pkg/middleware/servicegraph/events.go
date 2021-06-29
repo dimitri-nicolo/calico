@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
@@ -29,7 +27,7 @@ const (
 )
 
 var (
-	replicaRegex = regexp.MustCompile("-[a-z0-9]{5}^")
+	replicaRegex = regexp.MustCompile("-[a-z0-9]{5}$")
 )
 
 // The extracted event information. This is simply an ID with a set of graph endpoints that it may correspond to. There
@@ -100,6 +98,7 @@ func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.Clien
 		}()
 	}
 
+	/* Reinstate when we have k8s events too
 	var tigeraEvents, kubernetesEvents []Event
 	var tigeraErr, kubernetesErr error
 
@@ -127,6 +126,9 @@ func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.Clien
 	}
 
 	return append(tigeraEvents, kubernetesEvents...), nil
+	*/
+
+	return getTigeraEvents(ctx, es, cluster, tr)
 }
 
 func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]Event, error) {
@@ -191,6 +193,7 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, 
 	return results, nil
 }
 
+/* TODO(rlb): Reinstate when we decide how to return k8s events to the user.
 func getKubernetesEvents(ctx context.Context, cs k8s.ClientSet, tr lmav1.TimeRange) ([]Event, error) {
 	var results []Event
 
@@ -264,6 +267,7 @@ func parseKubernetesEvent(rawEvent corev1.Event, tr lmav1.TimeRange) *Event {
 	}
 	return event
 }
+*/
 
 // parseTigeraEvent parses the raw JSON event and converts it to an Event.  Returns nil if the format was not recognized or
 // if the event could not be attributed a graph node.

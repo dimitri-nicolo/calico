@@ -54,6 +54,8 @@ var (
 		{Name: "source_name_aggr", Field: "source_name_aggr"},
 		{Name: "response_code", Field: "response_code"},
 	}
+
+	zeroGraphL7PacketStats = v1.GraphL7PacketStats{}
 )
 
 const (
@@ -171,15 +173,6 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			Protocol:  l7Proto,
 		}
 
-		if !foundFlow {
-			// For the first entry we need to store off the first flow details.
-			lastSource, lastDest, lastSvc = source, dest, svc
-			foundFlow = true
-		} else if lastSource != source || lastSvc != svc || lastDest != dest {
-			addFlow(lastSource, lastDest, lastSvc, l7Stats)
-			lastSource, lastDest, lastSvc, l7Stats = source, dest, svc, v1.GraphL7Stats{}
-		}
-
 		l7PacketStats := v1.GraphL7PacketStats{
 			GraphByteStats: v1.GraphByteStats{
 				BytesIn:  int64(bucket.AggregatedSums[flowL7AggSumBytesIn]),
@@ -188,7 +181,21 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 			MeanDuration: bucket.AggregatedMean[flowL7AggMeanDuration],
 			MinDuration:  bucket.AggregatedMin[flowL7AggMinDuration],
 			MaxDuration:  bucket.AggregatedMax[flowL7AggMaxDuration],
-			Count:        int64(bucket.AggregatedSums[flowL7AggSumCount]),
+		}
+		if l7PacketStats == zeroGraphL7PacketStats {
+			log.Debugf("Skipping empty L7 flow: %s -> %s -> %s (code %s)", source, svc, dest, code)
+			continue
+		}
+		// Now set the count (we couldn't do that before because we wanted to check the zero value).
+		l7PacketStats.Count = int64(bucket.AggregatedSums[flowL7AggSumCount])
+
+		if !foundFlow {
+			// For the first entry we need to store off the first flow details.
+			lastSource, lastDest, lastSvc = source, dest, svc
+			foundFlow = true
+		} else if lastSource != source || lastSvc != svc || lastDest != dest {
+			addFlow(lastSource, lastDest, lastSvc, l7Stats)
+			lastSource, lastDest, lastSvc, l7Stats = source, dest, svc, v1.GraphL7Stats{}
 		}
 
 		if log.IsLevelEnabled(log.DebugLevel) {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/k8s"
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
@@ -31,6 +32,7 @@ type ServiceGraphBackend interface {
 
 type realServiceGraphBackend struct {
 	ctx              context.Context
+	authz            auth.RBACAuthorizer
 	elastic          lmaelastic.Client
 	clientSetFactory k8s.ClientSetFactory
 }
@@ -64,7 +66,7 @@ func (r *realServiceGraphBackend) GetEvents(cluster string, tr lmav1.TimeRange) 
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
-	return NewRBACFilter(ctx, r.clientSetFactory, rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
+	return NewRBACFilter(ctx, r.authz, r.clientSetFactory, rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
 }
 
 func (r *realServiceGraphBackend) NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error) {
