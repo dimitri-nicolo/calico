@@ -3,6 +3,7 @@ module github.com/tigera/honeypod-controller
 go 1.15
 
 replace (
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210628143539-22cb7d60acd3 // indirect
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210628214654-c8ef6abee3f3
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210628142241-49d0211f9a0a
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210628165251-dbcece13b19e
@@ -17,6 +18,8 @@ replace (
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.21.0-rc.0
 	k8s.io/code-generator => k8s.io/code-generator v0.21.0-rc.0
 	k8s.io/component-base => k8s.io/component-base v0.21.0-rc.0
+	k8s.io/component-helpers => k8s.io/component-helpers v0.21.0-rc.0
+	k8s.io/controller-manager => k8s.io/controller-manager v0.21.0-rc.0
 	k8s.io/cri-api => k8s.io/cri-api v0.21.0-rc.0
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.21.0-rc.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.21.0-rc.0
@@ -27,6 +30,7 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.21.0-rc.0
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.21.0-rc.0
 	k8s.io/metrics => k8s.io/metrics v0.21.0-rc.0
+	k8s.io/mount-utils => k8s.io/mount-utils v0.21.0-rc.0
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.0-rc.0
 )
 
@@ -36,6 +40,6 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tigera/licensing v1.0.1-0.20210626005331-d476458ecaa6
-	github.com/tigera/lma v0.0.0-20210402000821-c3d08cbee09b
+	github.com/tigera/lma v0.0.0-20210628193124-4843cb51be3a
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )

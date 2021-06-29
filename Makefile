@@ -5,6 +5,7 @@ GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
 TYPHA_REPO               = github.com/tigera/typha-private
+APISERVER_REPO           = github.com/tigera/apiserver
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID)
@@ -170,7 +171,8 @@ update-lma-pin:
 update-licensing-pin:
 	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin update-licensing-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin \
+			 update-licensing-pin replace-apiserver-pin
 ###############################################################################
 
 ###############################################################################
