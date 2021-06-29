@@ -16,170 +16,6 @@
       },
       "id": {
         "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/tigera-manager"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-manager\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 4358,
-              "bytes_out": 2404,
-              "packet_in": 22,
-              "packet_out": 22
-            },
-            "connections": {
-              "completed": 16,
-              "started": 22,
-              "total_per_sample_interval": 22
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9200,
-                "min_port": 9200
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/tigera-elasticsearch",
-        "source_node_id": "namespace/tigera-manager"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-manager\"",
-        "l3_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\"",
-        "l7_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\""
-      },
-      "service_ports": [
-        {
-          "name": "tigera-secure-es-http",
-          "namespace": "tigera-elasticsearch",
-          "port": 9200,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 2677673,
-              "bytes_out": 53790,
-              "packet_in": 348,
-              "packet_out": 363
-            },
-            "connections": {
-              "completed": 7,
-              "started": 7,
-              "total_per_sample_interval": 9
-            },
-            "tcp": {
-              "count": 2,
-              "max_min_rtt": 66,
-              "max_smooth_rtt": 10398,
-              "mean_min_mss": 16,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 1746,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/tigera-elasticsearch"
-      },
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-elasticsearch\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 77581,
-              "bytes_out": 43591,
-              "packet_in": 377,
-              "packet_out": 377
-            },
-            "connections": {
-              "completed": 370,
-              "started": 375,
-              "total_per_sample_interval": 411
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "namespace/kube-system",
         "source_node_id": "namespace/tigera-fluentd"
       },
       "selectors": {
@@ -210,56 +46,6 @@
               "started": 77,
               "total_per_sample_interval": 85
             }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 53,
-                "min_port": 53
-              }
-            ],
-            "protocol": "udp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "net/pub;dir/ingress",
-        "source_node_id": "namespace/kube-system"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 15895,
-              "bytes_out": 10637,
-              "packet_in": 137,
-              "packet_out": 137
-            },
-            "connections": {
-              "completed": 37,
-              "started": 33,
-              "total_per_sample_interval": 45
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "coredns"
-              }
-            ]
           }
         }
       ]
@@ -375,6 +161,220 @@
           }
         }
       ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/tigera-manager"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-manager\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-manager\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 4358,
+              "bytes_out": 2404,
+              "packet_in": 22,
+              "packet_out": 22
+            },
+            "connections": {
+              "completed": 16,
+              "started": 22,
+              "total_per_sample_interval": 22
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9200,
+                "min_port": 9200
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/tigera-elasticsearch",
+        "source_node_id": "namespace/tigera-manager"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" AND client_namespace = \"tigera-manager\"",
+        "l3_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\"",
+        "l7_flows": "(dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\") AND source_namespace = \"tigera-manager\""
+      },
+      "service_ports": [
+        {
+          "name": "tigera-secure-es-http",
+          "namespace": "tigera-elasticsearch",
+          "port": 9200,
+          "port_name": "https",
+          "protocol": "tcp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 2677673,
+              "bytes_out": 53790,
+              "packet_in": 348,
+              "packet_out": 363
+            },
+            "connections": {
+              "completed": 7,
+              "started": 7,
+              "total_per_sample_interval": 9
+            },
+            "tcp": {
+              "count": 2,
+              "max_min_rtt": 66,
+              "max_smooth_rtt": 10398,
+              "mean_min_mss": 16,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1746,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub;dir/ingress",
+        "source_node_id": "namespace/kube-system"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 15895,
+              "bytes_out": 10637,
+              "packet_in": 137,
+              "packet_out": 137
+            },
+            "connections": {
+              "completed": 37,
+              "started": 33,
+              "total_per_sample_interval": 45
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "coredns"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/tigera-elasticsearch"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-elasticsearch\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-elasticsearch\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 77581,
+              "bytes_out": 43591,
+              "packet_in": 377,
+              "packet_out": 377
+            },
+            "connections": {
+              "completed": 370,
+              "started": 375,
+              "total_per_sample_interval": 411
+            }
+          }
+        }
+      ]
     }
   ],
   "nodes": [
@@ -469,9 +469,10 @@
         {
           "description": "Readiness probe failed: ",
           "id": {
+            "id": "fakeid",
             "name": "fluentd-node-tt85d.168bbcfc40012fe3",
             "namespace": "tigera-fluentd",
-            "type": "kubernetes"
+            "type": "alert"
           },
           "time": "2021-06-25T20:51:06Z"
         },
@@ -516,6 +517,7 @@
       "id": "namespace/tigera-fluentd",
       "name": "tigera-fluentd",
       "selectors": {
+        "alerts": "_id = \"fakeid\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-fluentd\" OR client_namespace = \"tigera-fluentd\"",
         "l3_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "l7_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\""
