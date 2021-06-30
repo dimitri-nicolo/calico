@@ -44,37 +44,70 @@ type IDInfo struct {
 	Direction    Direction
 }
 
-// GetNormalizedID can be called on a parsed ID to return the same ID as originally parsed, but normalized for the
-// specific invocation. This allows us to tweak the original ID to use an updated service group or perhaps to handle
-// version migration.
-func GetNormalizedID(id v1.GraphNodeID, sgs ServiceGroups) (v1.GraphNodeID, error) {
+// GetNormalizedIDs can be called on an ID passed in on the API to return the set of IDs normalized for the current
+// invocation.  In particular this takes care of the following:
+// -  Different sets of services making up the service group (which impacts the naming)
+// -  Splitting out a non-directional ID into separate directional IDs if split_ingress_egress is true, or
+//    contraction into non-directional if split_ingress_egress is false.
+func GetNormalizedIDs(id v1.GraphNodeID, sgs ServiceGroups, splitIngressEgress bool) ([]v1.GraphNodeID, error) {
 	idi, err := ParseGraphNodeID(id, sgs)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	switch idi.ParsedIDType {
-	case v1.GraphNodeTypeLayer:
-		return idi.GetLayerID(), nil
-	case v1.GraphNodeTypeNamespace:
-		return idi.GetNamespaceID(), nil
-	case v1.GraphNodeTypeServiceGroup:
-		return idi.GetServiceGroupID(), nil
-	case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
-		return idi.GetAggrEndpointID(), nil
-	case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
-		return idi.GetEndpointID(), nil
-	case v1.GraphNodeTypePort:
-		if id := idi.GetEndpointPortID(); id != "" {
-			return id, nil
+	getId := func(idi *IDInfo) v1.GraphNodeID {
+		switch idi.ParsedIDType {
+		case v1.GraphNodeTypeLayer:
+			return idi.GetLayerID()
+		case v1.GraphNodeTypeNamespace:
+			return idi.GetNamespaceID()
+		case v1.GraphNodeTypeServiceGroup:
+			return idi.GetServiceGroupID()
+		case v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeHosts, v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
+			return idi.GetAggrEndpointID()
+		case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload:
+			return idi.GetEndpointID()
+		case v1.GraphNodeTypePort:
+			if id := idi.GetEndpointPortID(); id != "" {
+				return id
+			}
+			return idi.GetAggrEndpointPortID()
+		case v1.GraphNodeTypeServicePort:
+			return idi.GetServicePortID()
+		case v1.GraphNodeTypeService:
+			return idi.GetServiceID()
 		}
-		return idi.GetAggrEndpointPortID(), nil
-	case v1.GraphNodeTypeServicePort:
-		return idi.GetServicePortID(), nil
-	case v1.GraphNodeTypeService:
-		return idi.GetServiceID(), nil
+		return ""
 	}
-	return "", nil
+
+	var ids []v1.GraphNodeID
+	if !splitIngressEgress {
+		// We are not splitting ingress and egress, so make sure direction is not included in the normalized IDs.
+		idi.Direction = NoDirection
+		if id := getId(idi); id != "" {
+			 ids = append(ids, id)
+		}
+	} else if idi.Direction != NoDirection {
+		// We are splitting ingress and egress, but the ID already has a direction, so return with the specified
+		// direction.
+		if id := getId(idi); id != "" {
+			ids = append(ids, id)
+		}
+	} else {
+		// Get the ingress and egress IDs. Only add once if they are the same (i.e. non-directional).
+		idi.Direction = DirectionIngress
+		ingressId := getId(idi)
+		idi.Direction = DirectionEgress
+		egressId := getId(idi)
+
+		if ingressId != "" {
+			ids = append(ids, ingressId)
+		}
+		if egressId != "" && egressId != ingressId {
+			ids = append(ids, egressId)
+		}
+ 	}
+	return ids, nil
 }
 
 // GetAggrEndpointID returns the aggregated endpoint ID used both internally by the script and externally by the
@@ -277,6 +310,7 @@ var (
 		v1.GraphNodeTypeNetwork:      {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
 		v1.GraphNodeTypeNetworkSet:   {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
 		v1.GraphNodeTypeHost:         {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
+		v1.GraphNodeTypeHosts:        {v1.GraphNodeTypeServiceGroup, graphNodeTypeDirection},
 		v1.GraphNodeTypeServicePort:  {v1.GraphNodeTypeService},
 		v1.GraphNodeTypeServiceGroup: {v1.GraphNodeTypeService},
 		v1.GraphNodeTypeService:      {v1.GraphNodeTypeService},

@@ -19,6 +19,66 @@ var _ = Describe("Elasticsearch script interface tests", func() {
 	}
 	var dummyServiceGroups = mockServiceGroups{sg: dummySg}
 
+	DescribeTable("Test ID normalization",
+		func(id string, splitIngressEgress bool, expNormalizedFirst, expNormalizedSecond string) {
+			nid, err := GetNormalizedIDs(v1.GraphNodeID(id), dummyServiceGroups, splitIngressEgress)
+			Expect(err).NotTo(HaveOccurred())
+
+			if expNormalizedFirst == "" {
+				Expect(nid).To(HaveLen(0))
+			} else if expNormalizedSecond == "" {
+				Expect(nid).To(HaveLen(1))
+			}
+
+			if expNormalizedFirst != "" {
+				Expect(nid[0]).To(BeEquivalentTo(expNormalizedFirst))
+			}
+			if expNormalizedSecond != "" {
+				Expect(nid[1]).To(BeEquivalentTo(expNormalizedSecond))
+			}
+		},
+		Entry("Layer; not split",
+			"layer/my-layer", false,
+			"layer/my-layer", "",
+		),
+		Entry("Layer; split",
+			"layer/my-layer", true,
+			"layer/my-layer", "",
+		),
+		Entry("Hosts; not split",
+			"hosts/*", false,
+			"hosts/*", "",
+		),
+		Entry("Hosts; split",
+			"hosts/*", true,
+			"hosts/*;dir/ingress", "hosts/*;dir/egress",
+		),
+		Entry("Hosts with direction; not split",
+			"hosts/*;dir/egress", false,
+			"hosts/*", "",
+		),
+		Entry("Hosts with direction; split",
+			"hosts/*;dir/egress", true,
+			"hosts/*;dir/egress", "",
+		),
+		Entry("Host; not split",
+			"host/host1/*", false,
+			"host/host1/*", "",
+		),
+		Entry("Host; split",
+			"host/host1/*", true,
+			"host/host1/*;dir/ingress", "host/host1/*;dir/egress",
+		),
+		Entry("Host with direction; not split",
+			"host/host1/*;dir/egress", false,
+			"host/host1/*", "",
+		),
+		Entry("Host with direction; split",
+			"host/host1/*;dir/ingress", true,
+			"host/host1/*;dir/ingress", "",
+		),
+	)
+
 	DescribeTable("Test possible data sets returned by elasticsearch",
 		func(idi IDInfo,
 			layer, namespace,
