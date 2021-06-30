@@ -21,6 +21,13 @@ type RESTClient struct {
 	*restfake.RESTClient
 }
 
+func init() {
+	// Register the scheme once.
+	if err := v1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
+		panic(err)
+	}
+}
+
 // This creates a very simple fake elasticsearch.RESTClient, where it always responds with the given elasticsearch object,
 // no matter what the request is. You can change the elasticsearch object it responds with (and in turn the hash) using
 // the SetElasticsearch function.
@@ -29,9 +36,6 @@ type RESTClient struct {
 // elasticsearch resource, thus there was no need to do anything but return an single elasticsearch response for every
 // call through this rest client
 func NewFakeRESTClient(esResponse *v1.Elasticsearch) (*RESTClient, error) {
-	if err := v1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
-		return nil, err
-	}
 	cli := &RESTClient{
 		esResponse: esResponse,
 		RESTClient: &restfake.RESTClient{

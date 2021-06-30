@@ -23,13 +23,16 @@ type restClient struct {
 	*rest.RESTClient
 }
 
+func init() {
+	// Register the scheme once.
+	if err := esv1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
+		panic(err)
+	}
+}
+
 // NewRESTClient creates a new instance of the RESTClient from the given rest.Config
 func NewRESTClient(config *rest.Config) (RESTClient, error) {
 	cp := rest.CopyConfig(config)
-	if err := esv1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
-		return nil, err
-	}
-
 	cp.APIPath = "/apis"
 	cp.GroupVersion = &schema.GroupVersion{Group: "elasticsearch.k8s.elastic.co", Version: "v1"}
 
