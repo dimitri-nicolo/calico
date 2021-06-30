@@ -38,7 +38,7 @@ First make sure you have a compatible AKS cluster, see [Create a compatible AKS 
 1. Download the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```bash
-   curl -O -L {{ "/manifests/custom-resources.yaml" | absolute_url }}
+   curl -O -L {{ "/manifests/aks/custom-resources.yaml" | absolute_url }}
    ```
 
    Remove the `Manager` custom resource from the manifest file.
