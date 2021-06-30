@@ -886,8 +886,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apiserver v0.0.0-20210629180831-df99494d0446 h1:r+nS5adNyOuHCWGAaGh5RPsqY1s4yCjlwx8qDBM7YPc=
 github.com/tigera/apiserver v0.0.0-20210629180831-df99494d0446/go.mod h1:ZsuSYKraX8vFs0LTqZ1M5Zw7an2ZBUoylqBtxHtNWdc=
-github.com/tigera/compliance v0.0.0-20210629235126-13a95ae7da2c h1:Guk0hhFlwdZtJhzvoccUHRwj5px8mbXR9tCQl3eP07E=
-github.com/tigera/compliance v0.0.0-20210629235126-13a95ae7da2c/go.mod h1:EqNOGkEzZ7zCfmMn8Fo1cssqKA4Ye6DkmrxwxQpRYX4=
+github.com/tigera/compliance v0.0.0-20210630165158-d070889203f7 h1:GdtvtOJvrfXf+jj1pvX0qDf/JrqEzMiy0Ic37ntArwM=
+github.com/tigera/compliance v0.0.0-20210630165158-d070889203f7/go.mod h1:xq5vxZHosbG+Fkjp2PN8Tg0/OVcqjlfNOIXelldl15U=
 github.com/tigera/felix-private v0.0.0-20210629234109-2a992edf1a17 h1:PxXhBuiowPD8yP6/LU/adnWI8+mcanIma2oW6aNDWF0=
 github.com/tigera/felix-private v0.0.0-20210629234109-2a992edf1a17/go.mod h1:MaRK9CQsU5IVEbSoJrCYAm6wgr7s9V1HuMC/H8OauUw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210629234117-3cab573a0b73 h1:ty1RPYO8K6dBpj2UeEhNf2N7k4VqQ0qrvQ32ql5JpBc=
@@ -897,8 +897,8 @@ github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818/go.mod h1://56D
 github.com/tigera/lma v0.0.0-20210629181649-122eb42efc7e h1:uw6gmM3VLVo2+qJZSbWrXeKbCMZ7xFKcMHWjrG7B93g=
 github.com/tigera/lma v0.0.0-20210629181649-122eb42efc7e/go.mod h1:qb1ngG+yPmALnYSzQCN0zPF/W+VBBYI/BBdul0HxyIs=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210629040704-a63446fec16f h1:B7YFObi26xtMuJPV2PkEYSiLIvJycotjluJAxNnDKjU=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210629040704-a63446fec16f/go.mod h1:eetk7FDVXVLJdcHn877W9CTUary6qmSeWc4dVH8IBnY=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210629235529-fba1daaa34ba h1:uLCO90TJpJrX1Qte1T+bkOZYTY0dnBp/hpaIHP5q5vo=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210629235529-fba1daaa34ba/go.mod h1:UcyqDy3TNhONUrbcpBnhrdtZmvft0c2wBu0Nts/mt1Q=
 github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
