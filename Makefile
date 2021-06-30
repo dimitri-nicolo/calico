@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.53
+GO_BUILD_VER?=v0.54
 
 GIT_USE_SSH = true
 
@@ -14,6 +14,7 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+LIBBPF_PATH=bin/bpf/bpf-gpl/include/libbpf/src
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
@@ -182,6 +183,10 @@ clean:
 	rm -rf config/
 	rm -rf vendor
 	rm Makefile.common*
+	rm -rf bin/bpf/bpf-gpl/*.d
+	rm -rf bin/bpf/bpf-apache/*.d
+	make -C bin/bpf/bpf-gpl clean
+	make -C bin/bpf/bpf-apache clean
 	# Delete images that we built in this repo
 	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -203,7 +208,7 @@ update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-ty
 # build target is called from commit-pin-updates and it is essential that the
 # MAKECMDGOALS remains as "commit-pin-updates" for various go flags to be set
 # appropriately.
-build: $(NODE_CONTAINER_BINARY)
+build: remote-deps $(NODE_CONTAINER_BINARY)
 
 .PHONY: remote-deps
 remote-deps: mod-download
@@ -234,17 +239,19 @@ remote-deps: mod-download
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), amd64)
 CGO_ENABLED=1
+CGO_LDFLAGS="-L$(LIBBPF_PATH) -lbpf -lelf -lz"
 else
 CGO_ENABLED=0
 endif
 
-DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
+DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
 $(NODE_CONTAINER_BINARY): $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
 
 $(WINDOWS_BINARY):
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
 		GOOS=windows CC=x86_64-w64-mingw32-gcc \
 		go build --buildmode=exe -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go'
 
