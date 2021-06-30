@@ -67,26 +67,16 @@ func (r *StatusREST) Update(ctx context.Context, name string, objInfo rest.Updat
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, error) {
+func NewREST(scheme *runtime.Scheme, opts server.Options, statusOpts server.Options) (*REST, *StatusREST, error) {
 	strategy := NewStrategy(scheme)
 
-	prefix := "/" + opts.ResourcePrefix()
+	globalThreatFeedPrefix := "/" + opts.ResourcePrefix()
+	globalThreatFeedStatusPrefix := "/" + statusOpts.ResourcePrefix()
 	// We adapt the store's keyFunc so that we can use it with the StorageDecorator
 	// without making any assumptions about where objects are stored in etcd
-	keyFunc := func(obj runtime.Object) (string, error) {
-		accessor, err := meta.Accessor(obj)
-		if err != nil {
-			return "", err
-		}
-		return registry.NoNamespaceKeyFunc(
-			genericapirequest.NewContext(),
-			prefix,
-			accessor.GetName(),
-		)
-	}
-	storageInterface, dFunc, err := opts.GetStorage(
-		prefix,
-		keyFunc,
+	globalThreatFeedStorageInterface, globalThreatFeedDestroyFunc, err := opts.GetStorage(
+		globalThreatFeedPrefix,
+		configureKeyFunc(globalThreatFeedPrefix),
 		strategy,
 		func() runtime.Object { return &calico.GlobalThreatFeed{} },
 		func() runtime.Object { return &calico.GlobalThreatFeedList{} },
@@ -113,12 +103,41 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, e
 		DeleteStrategy:          strategy,
 		EnableGarbageCollection: true,
 
-		Storage:     storageInterface,
-		DestroyFunc: dFunc,
+		Storage:     globalThreatFeedStorageInterface,
+		DestroyFunc: globalThreatFeedDestroyFunc,
 	}
 
+	globalThreatFeedStatusStorageInterface, globalThreatFeedStatusDestroyFunc, err := statusOpts.GetStorage(
+		globalThreatFeedPrefix,
+		configureKeyFunc(globalThreatFeedStatusPrefix),
+		strategy,
+		func() runtime.Object { return &calico.GlobalThreatFeed{} },
+		func() runtime.Object { return &calico.GlobalThreatFeedList{} },
+		GetAttrs,
+		nil,
+		nil,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 	statusStore := *store
+	statusStore.Storage = globalThreatFeedStatusStorageInterface
+	statusStore.DestroyFunc = globalThreatFeedStatusDestroyFunc
 	statusStore.UpdateStrategy = NewStatusStrategy(strategy)
 
 	return &REST{store}, &StatusREST{&statusStore}, nil
+}
+
+func configureKeyFunc(resourcePrefix string) func(obj runtime.Object) (string, error) {
+	return func(obj runtime.Object) (string, error) {
+		accessor, err := meta.Accessor(obj)
+		if err != nil {
+			return "", err
+		}
+		return registry.NoNamespaceKeyFunc(
+			genericapirequest.NewContext(),
+			resourcePrefix,
+			accessor.GetName(),
+		)
+	}
 }

@@ -1424,23 +1424,23 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	// NOTE: The update status test currently doesn't work because the GlobalThreatFeed's crd.projectcalico.org status
 	// is set as a subresource and the apiserver doesn't handle subresource yet. Uncomment this when this is dealt with.
 
-	//globalThreatFeedUpdate = globalThreatFeedServer.DeepCopy()
-	//globalThreatFeedUpdate.Status.LastSuccessfulSync = v1.Time{Time: time.Now()}
-	//globalThreatFeedUpdate.Labels = map[string]string{"foo": "bar"}
-	//globalThreatFeedUpdate.Spec.Content = ""
-	//globalThreatFeedServer, err = globalThreatFeedClient.UpdateStatus(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
-	//if err != nil {
-	//	return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
-	//}
-	//if globalThreatFeedServer.Status.LastSuccessfulSync.Time.Equal(time.Time{}) {
-	//	return fmt.Errorf("didn't update status. %v != %v", globalThreatFeedUpdate.Status, globalThreatFeedServer.Status)
-	//}
-	//if _, ok := globalThreatFeedServer.Labels["foo"]; ok {
-	//	return fmt.Errorf("updatestatus updated labels")
-	//}
-	//if globalThreatFeedServer.Spec.Content == "" {
-	//	return fmt.Errorf("updatestatus updated spec")
-	//}
+	globalThreatFeedUpdate = globalThreatFeedServer.DeepCopy()
+	globalThreatFeedUpdate.Status.LastSuccessfulSync = &v1.Time{Time: time.Now()}
+	globalThreatFeedUpdate.Labels = map[string]string{"foo": "bar"}
+	globalThreatFeedUpdate.Spec.Content = ""
+	globalThreatFeedServer, err = globalThreatFeedClient.UpdateStatus(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
+	}
+	if globalThreatFeedServer.Status.LastSuccessfulSync == nil {
+		return fmt.Errorf("didn't update status. %v != %v", globalThreatFeedUpdate.Status, globalThreatFeedServer.Status)
+	}
+	if _, ok := globalThreatFeedServer.Labels["foo"]; ok {
+		return fmt.Errorf("updatestatus updated labels")
+	}
+	if globalThreatFeedServer.Spec.Content == "" {
+		return fmt.Errorf("updatestatus updated spec")
+	}
 
 	err = globalThreatFeedClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {

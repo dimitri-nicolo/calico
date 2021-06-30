@@ -37,6 +37,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewGlobalAlertTemplateStorage(opts)
 	case "projectcalico.org/globalthreatfeeds":
 		return NewGlobalThreatFeedStorage(opts)
+	case "projectcalico.org/globalthreatfeeds/status":
+		return NewGlobalThreatFeedStatusStorage(opts)
 	case "projectcalico.org/hostendpoints":
 		return NewHostEndpointStorage(opts)
 	case "projectcalico.org/globalreports":

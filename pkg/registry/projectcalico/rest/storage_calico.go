@@ -328,18 +328,37 @@ func (p RESTStorageProvider) NewV3Storage(
 	if err != nil {
 		return nil, err
 	}
+
+	gThreatFeedStatusRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalthreatfeeds/status"))
+	if err != nil {
+		return nil, err
+	}
+
+	sharedGlobalThreatFeedEtcdOpts := etcd.Options{
+		RESTOptions:   gThreatFeedRESTOptions,
+		Capacity:      1000,
+		ObjectType:    calicogthreatfeed.EmptyObject(),
+		ScopeStrategy: calicogthreatfeed.NewStrategy(scheme),
+		NewListFunc:   calicogthreatfeed.NewList,
+		GetAttrsFunc:  calicogthreatfeed.GetAttrs,
+		Trigger:       nil,
+	}
+
 	gThreatFeedOpts := server.NewOptions(
-		etcd.Options{
-			RESTOptions:   gThreatFeedRESTOptions,
-			Capacity:      1000,
-			ObjectType:    calicogthreatfeed.EmptyObject(),
-			ScopeStrategy: calicogthreatfeed.NewStrategy(scheme),
-			NewListFunc:   calicogthreatfeed.NewList,
-			GetAttrsFunc:  calicogthreatfeed.GetAttrs,
-			Trigger:       nil,
-		},
+		sharedGlobalThreatFeedEtcdOpts,
 		calicostorage.Options{
 			RESTOptions:  gThreatFeedRESTOptions,
+			LicenseCache: licenseCache,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
+	gThreatFeedStatusOpts := server.NewOptions(
+		sharedGlobalThreatFeedEtcdOpts,
+		calicostorage.Options{
+			RESTOptions:  gThreatFeedStatusRESTOptions,
 			LicenseCache: licenseCache,
 		},
 		p.StorageType,
@@ -674,7 +693,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalalerts/status"] = globalAlertsStatusStorage
 	storage["globalalerttemplates"] = rESTInPeace(calicogalerttemplate.NewREST(scheme, *gAlertTemplateOpts))
 
-	globalThreatFeedsStorage, globalThreatFeedsStatusStorage, err := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+	globalThreatFeedsStorage, globalThreatFeedsStatusStorage, err := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts, *gThreatFeedStatusOpts)
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
 		panic(err)
