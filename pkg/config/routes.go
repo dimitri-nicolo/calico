@@ -46,40 +46,18 @@ var (
 		// https://www.elastic.co/guide/en/kibana/current/saved-objects-api-create.html
 		// -------------------------------------------------------------------------------------------------
 		proxy.Route{
-			Name:        "kb-create-new-saved-obj-bulk",
-			Path:        "/tigera-kibana/api/saved_objects/_bulk_create",
-			HTTPMethods: []string{"POST"},
-			RequireAuth: true,
+			Name:          "kb-create-new-saved-obj-bulk",
+			Path:          "/tigera-kibana/api/saved_objects/_bulk_create",
+			HTTPMethods:   []string{"POST"},
+			RequireAuth:   true,
+			AllowSwapSkip: true,
 		},
 		proxy.Route{
-			Name:        "kb-create-new-saved-obj-config",
-			Path:        "/tigera-kibana/api/saved_objects/config/7.6.2",
-			HTTPMethods: []string{"POST"},
-			RequireAuth: true,
-		},
-		// -------------------------------------------------------------------------------------------------
-		// Routes for front-end assets (no auth required).
-		// -------------------------------------------------------------------------------------------------
-		proxy.Route{
-			Name:         "kb-ui-bundles",
-			Path:         "/tigera-kibana/{subpath:[a-z0-9]+}/bundles/",
-			HTTPMethods:  []string{"GET"},
-			IsPathPrefix: true,
-			RequireAuth:  false,
-		},
-		proxy.Route{
-			Name:         "kb-ui-bootstrap-js",
-			Path:         "/tigera-kibana/bootstrap.js",
-			HTTPMethods:  []string{"GET"},
-			IsPathPrefix: false,
-			RequireAuth:  false,
-		},
-		proxy.Route{
-			Name:         "kb-ui",
-			Path:         "/tigera-kibana/ui/",
-			HTTPMethods:  []string{"GET"},
-			IsPathPrefix: false,
-			RequireAuth:  false,
+			Name:          "kb-create-new-saved-obj-config",
+			Path:          "/tigera-kibana/api/saved_objects/config/7.6.2",
+			HTTPMethods:   []string{"POST"},
+			RequireAuth:   true,
+			AllowSwapSkip: true,
 		},
 		// -------------------------------------------------------------------------------------------------
 	}

@@ -28,11 +28,15 @@ type Config struct {
 
 	K8sConfigPath string `split_words:"true"`
 
+	// ES Gateway requires Elastic credentials for an ES user with real permissions in order
+	// to call both the Elasticsearch and Kibana APIs. Since it needs access, before any other
+	// component, the credentials should be for the ES admin user.
+	ElasticUsername string `default:"" split_words:"true"`
+	ElasticPassword string `default:"" split_words:"true"`
+
 	ElasticEndpoint      string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
 	ElasticCatchAllRoute string `default:"/" split_words:"true"`
 	ElasticCABundlePath  string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
-	ElasticUsername      string `default:"" split_words:"true"`
-	ElasticPassword      string `default:"" split_words:"true"`
 
 	KibanaEndpoint      string `default:"https://tigera-secure-internal-kb-http.tigera-kibana.svc:5601" split_words:"true"`
 	KibanaCatchAllRoute string `default:"/tigera-kibana/" split_words:"true"` // Note: The ending "/" is important for prefix matching.

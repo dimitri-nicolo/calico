@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )
@@ -71,7 +70,7 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 		user := r.Context().Value(middlewares.ESUserKey)
 		// User could be nil if this is a path that does not require authentication.
 		if user != nil {
-			user, ok := r.Context().Value(middlewares.ESUserKey).(*elastic.User)
+			user, ok := r.Context().Value(middlewares.ESUserKey).(*middlewares.User)
 			// This should never happen (logical bug somewhere else in the code). But we'll
 			// leave this check here to help catch it.
 			if !ok {

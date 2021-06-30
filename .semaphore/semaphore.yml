@@ -1,8 +1,11 @@
 version: v1.0
 name: ES Gateway
 
+# Set a long time limit to combat situations where we are waiting in the queue for a runner to become available 
+# and time out before we reach the front of the queue.
+# Each block below has its own time limit to ensure the pipeline itself doesn't take a long time when running.
 execution_time_limit:
-  minutes: 30
+  hours: 12
 
 agent:
   machine:
@@ -30,6 +33,8 @@ global_job_config:
 blocks:
   - name: 'CI'
     dependencies: []
+    execution_time_limit:
+      minutes: 20
     task:
       jobs:
         - name: Run CI
@@ -38,6 +43,8 @@ blocks:
 
   - name: 'Push Images (non-PR builds only)'
     dependencies: ["CI"]
+    execution_time_limit:
+      minutes: 20
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"

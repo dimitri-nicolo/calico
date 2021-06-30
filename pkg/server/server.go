@@ -15,7 +15,7 @@ import (
 	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 	"github.com/tigera/es-gateway/pkg/handlers/gateway"
 	"github.com/tigera/es-gateway/pkg/handlers/health"
-	"github.com/tigera/es-gateway/pkg/middlewares"
+	mid "github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )
 
@@ -34,14 +34,20 @@ type Server struct {
 	addr         string          // Address for server to listen on
 	internalCert tls.Certificate // Certificate chain used for all external requests
 
+	esTarget     *proxy.Target // Proxy target for Elasticsearch API
+	kibanaTarget *proxy.Target // Proxy target for Kibana API
+
 	esClient  elastic.Client    // Elasticsearch client for making API calls required by ES Gateway
 	kbClient  kibana.Client     // Kibana client for making API calls required by ES Gateway
 	k8sClient kubernetes.Client // K8s client for retrieving K8s resources related to ES users
+
+	adminESUsername string // Used to store the username for a real ES admin user
+	adminESPassword string // Used to store the password for a real ES admin user
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
 // related routes and HTTP handlers.
-func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) {
+func New(opts ...Option) (*Server, error) {
 	var err error
 	srv := &Server{}
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
@@ -63,16 +69,19 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
-	handlers := middlewares.HandlerMap{
-		middlewares.HandlerTypeAuth: middlewares.NewAuthMiddleware(srv.esClient),
-	}
+	middlewares := mid.GetHandlerMap(
+		srv.esClient,
+		srv.k8sClient,
+		srv.adminESUsername,
+		srv.adminESPassword,
+	)
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
 	healthHandler := health.GetHealthHandler(srv.esClient, srv.kbClient, srv.k8sClient)
 	router.HandleFunc("/health", healthHandler).Name("health")
 
 	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
-	kibanaHandler, err := gateway.GetProxyHandler(kibanaTarget)
+	kibanaHandler, err := gateway.GetProxyHandler(srv.kibanaTarget)
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +89,9 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	// requests with a path that begins with the given path prefix.
 	err = addRoutes(
 		router,
-		kibanaTarget.Routes,
-		kibanaTarget.CatchAllRoute,
-		handlers,
+		srv.kibanaTarget.Routes,
+		srv.kibanaTarget.CatchAllRoute,
+		middlewares,
 		http.HandlerFunc(kibanaHandler),
 	)
 	if err != nil {
@@ -91,15 +100,15 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 
 	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
 	// these routes do not have a universally common path prefix.
-	esHandler, err := gateway.GetProxyHandler(esTarget)
+	esHandler, err := gateway.GetProxyHandler(srv.esTarget)
 	if err != nil {
 		return nil, err
 	}
 	err = addRoutes(
 		router,
-		esTarget.Routes,
-		esTarget.CatchAllRoute,
-		handlers,
+		srv.esTarget.Routes,
+		srv.esTarget.CatchAllRoute,
+		middlewares,
 		http.HandlerFunc(esHandler),
 	)
 	if err != nil {
@@ -107,7 +116,7 @@ func New(esTarget, kibanaTarget *proxy.Target, opts ...Option) (*Server, error) 
 	}
 
 	// Add common middlewares to the router.
-	router.Use(middlewares.LogRequests)
+	router.Use(middlewares[mid.TypeLog])
 
 	// -----------------------------------------------------------------------------------------------------
 	// Return configured ES Gateway server.
@@ -128,58 +137,80 @@ func (s *Server) ListenAndServeHTTPS() error {
 }
 
 // addRoutes sets up the given Routes for the provided mux.Router.
-func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Route, h middlewares.HandlerMap, f http.Handler) error {
+func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Route, h mid.HandlerMap, f http.Handler) error {
 	// Set up provided list of Routes
 	for _, route := range routes {
 		muxRoute := router.NewRoute()
-		finalHandler := f
-
-		// Create a wrapping handler that will log the route name when executed.
-		wrapper := getHandlerWrapper(route.Name)
 
 		// If this Route has HTTP methods to filter on, then add those.
 		if len(route.HTTPMethods) > 0 {
 			muxRoute.Methods(route.HTTPMethods...)
 		}
 
-		if route.RequireAuth {
-			finalHandler = h[middlewares.HandlerTypeAuth](finalHandler)
-		}
-
+		handlerChain := buildMiddlewareChain(&route, h, f)
 		if route.IsPathPrefix {
-			muxRoute.PathPrefix(route.Path).Handler(wrapper(finalHandler)).Name(route.Name)
+			muxRoute.PathPrefix(route.Path).Handler(handlerChain).Name(route.Name)
 		} else {
-			muxRoute.Path(route.Path).Handler(wrapper(finalHandler)).Name(route.Name)
+			muxRoute.Path(route.Path).Handler(handlerChain).Name(route.Name)
 		}
 	}
 
 	// Set up provided catch-all Route
 	if catchAllRoute != nil {
-		finalHandler := f
-
 		if !catchAllRoute.IsPathPrefix {
 			return errors.Errorf("catch-all route must be marked as a path prefix")
 		}
 
-		if catchAllRoute.RequireAuth {
-			finalHandler = h[middlewares.HandlerTypeAuth](finalHandler)
-		}
-
-		// Create a wrapping handler that will log the route name when executed.
-		wrapper := getHandlerWrapper(catchAllRoute.Name)
-		router.PathPrefix(catchAllRoute.Path).Handler(wrapper(finalHandler)).Name(catchAllRoute.Name)
+		handlerChain := buildMiddlewareChain(catchAllRoute, h, f)
+		router.PathPrefix(catchAllRoute.Path).Handler(handlerChain).Name(catchAllRoute.Name)
 	}
 
 	return nil
 }
 
-// getHandlerWrapper returns a function that wraps a http.Handler in order to log the Mux route that was
+// getLogRouteMatchHandler returns a function that wraps a http.Handler in order to log the Mux route that was
 // matched. This is useful for troubleshooting and debugging.
-func getHandlerWrapper(routeName string) func(h http.Handler) http.Handler {
+func getLogRouteMatchHandler(routeName string) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Debugf("Request %s as been matched with route \"%s\"", r.RequestURI, routeName)
 			h.ServeHTTP(w, r)
 		})
 	}
+}
+
+// buildMiddlewareChain takes a proxy.Route and builds a chain of middleware handlers including the final
+// HTTP handler f to be executed for the given route r. Which middlewares are included depends on r's
+// configuration flags.
+// When applying the chain, the last handler is applied to f first (since the chain is built outwards).
+// This will ensure that the handlers are executed in the correct order for a request (ending with f).
+// So if chain = {m1, m2, m3}, then we apply them on f, like this m1(m2(m3(f))). And the order of execution
+// will be m1, m2, m3, f.
+func buildMiddlewareChain(r *proxy.Route, h mid.HandlerMap, f http.Handler) http.Handler {
+	chain := []mux.MiddlewareFunc{}
+
+	// Add a wrapping handler that will log the route name when executed.
+	wrapper := getLogRouteMatchHandler(r.Name)
+	chain = append(chain, wrapper)
+
+	// Add auth middleware to the chain for this Route, if the flag is enabled.
+	if r.RequireAuth {
+		chain = append(chain, h[mid.TypeAuth])
+
+		// Alongside auth, add credential swapping middlware to the Handler chain for this
+		// Route, depending on whether thie Route allows skipping the swap.
+		if r.AllowSwapSkip {
+			chain = append(chain, h[mid.TypeSwapAllowSkip])
+		} else {
+			chain = append(chain, h[mid.TypeSwap])
+		}
+	}
+
+	// Now apply the chain of middleware handlers on the given route handler f, starting with the last one.
+	finalHandler := f
+	for i := range chain {
+		finalHandler = chain[len(chain)-1-i](finalHandler)
+	}
+
+	return finalHandler
 }

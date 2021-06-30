@@ -7,6 +7,7 @@ import (
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/clients/kibana"
 	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
+	"github.com/tigera/es-gateway/pkg/proxy"
 )
 
 // Option is a common format for New() options
@@ -17,6 +18,22 @@ type Option func(*Server) error
 func WithAddr(addr string) Option {
 	return func(s *Server) error {
 		s.addr = addr
+		return nil
+	}
+}
+
+// WithESTarget sets the ES target for the server.
+func WithESTarget(t *proxy.Target) Option {
+	return func(s *Server) error {
+		s.esTarget = t
+		return nil
+	}
+}
+
+// WithKibanaTarget sets the Kibana target for the server.
+func WithKibanaTarget(t *proxy.Target) Option {
+	return func(s *Server) error {
+		s.kibanaTarget = t
 		return nil
 	}
 }
@@ -74,6 +91,17 @@ func WithKibanaClient(client kibana.Client) Option {
 func WithK8sClient(client kubernetes.Client) Option {
 	return func(s *Server) error {
 		s.k8sClient = client
+		return nil
+	}
+}
+
+// WithAdminUser sets the username and password of the real ES admin user for the server
+// (needed during ES credential swapping to handle special scenarios where valid requests need
+// to use the Elastic admin user).
+func WithAdminUser(u, p string) Option {
+	return func(s *Server) error {
+		s.adminESUsername = u
+		s.adminESPassword = p
 		return nil
 	}
 }

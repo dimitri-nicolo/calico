@@ -67,7 +67,7 @@ func init() {
 			Path:         cfg.KibanaCatchAllRoute,
 			IsPathPrefix: true,       // ... always be a prefix route.
 			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
-			RequireAuth:  true,
+			RequireAuth:  false,
 		}
 	}
 
@@ -142,13 +142,16 @@ func main() {
 
 	opts := []server.Option{
 		server.WithAddr(addr),
+		server.WithESTarget(esTarget),
+		server.WithKibanaTarget(kibanaTarget),
 		server.WithInternalTLSFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithESClient(esClient),
 		server.WithKibanaClient(kbClient),
 		server.WithK8sClient(k8sClient),
+		server.WithAdminUser(cfg.ElasticUsername, cfg.ElasticPassword),
 	}
 
-	srv, err := server.New(esTarget, kibanaTarget, opts...)
+	srv, err := server.New(opts...)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create ES Gateway server.")
 	}
