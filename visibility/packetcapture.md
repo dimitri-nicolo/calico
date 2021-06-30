@@ -170,9 +170,15 @@ Capture files will be stored on the host mounted volume used for calico nodes. T
 In order to locate the capture files generated, query the status of the [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture)
 
 ```shell
-kubectl get packetcaptures -ntigera-compliance test -o yaml
+export NS=<REPLACE_WITH_CAPTURE_NAMESPACE>
+export NAME=<REPLACE_WITH_CAPTURE_NAME>
 ```
 
+```shell
+kubectl get packetcaptures -n $NS $NAME -o yaml
+```
+
+Sample of received output:
 ```
 apiVersion: projectcalico.org/v3
 kind: PacketCapture
