@@ -444,6 +444,25 @@ var _ = Describe("Service graph data tests", func() {
 				// Should be same results as if no request params.
 			}, http.StatusOK, "001-no-req-parms", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
+		Entry("Expanded hosts with direction specified, but ingress/egress not split",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					Focus:    []v1.GraphNodeID{"hosts/*;dir/ingress"},
+					Expanded: []v1.GraphNodeID{"hosts/*;dir/ingress"},
+				},
+				// Should be same results as if no request params.
+			}, http.StatusOK, "024-expanded-hosts-with-dir-no-split", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
+		Entry("Expanded hosts with direction specified, and ingress/egress split",
+			v1.ServiceGraphRequest{
+				SelectedView: v1.GraphView{
+					SplitIngressEgress: true,
+					Focus:              []v1.GraphNodeID{"hosts/*;dir/ingress"},
+					Expanded:           []v1.GraphNodeID{"hosts/*;dir/ingress"},
+				},
+				// Should be same results as if no request params.
+			}, http.StatusOK, "025-expanded-hosts-with-dir-split", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+		),
 	)
 
 	DescribeTable("badly formatted requests",

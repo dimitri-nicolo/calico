@@ -1,0 +1,2292 @@
+{
+  "edges": [
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-infra-0/*",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 60773,
+              "bytes_out": 20940,
+              "packet_in": 60,
+              "packet_out": 120
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 223,
+              "max_smooth_rtt": 30356,
+              "mean_min_mss": 223,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 18562,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-1/*",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 59599,
+              "bytes_out": 20940,
+              "packet_in": 60,
+              "packet_out": 120
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 35,
+              "max_smooth_rtt": 40012,
+              "mean_min_mss": 35,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 18740,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*",
+        "source_node_id": "net/pub"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 120,
+              "bytes_out": 0,
+              "packet_in": 3,
+              "packet_out": 0
+            },
+            "connections": {
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"tigera-prometheus\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-prometheus\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"tigera-prometheus\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 274764,
+              "bytes_out": 168020,
+              "packet_in": 1108,
+              "packet_out": 1108
+            },
+            "connections": {
+              "completed": 1098,
+              "started": 1108,
+              "total_per_sample_interval": 1206
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-infra-0/*",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 21638,
+              "bytes_out": 63139,
+              "packet_in": 124,
+              "packet_out": 62
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 21638,
+              "bytes_out": 56872,
+              "packet_in": 124,
+              "packet_out": 62
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 5443,
+                "min_port": 5443
+              },
+              {
+                "max_port": 8080,
+                "min_port": 8080
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/tigera-system",
+        "source_node_id": "host/rob-bz-lc19-kadm-ms/*"
+      },
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\") AND source_name_aggr = \"rob-bz-lc19-kadm-ms\" AND source_type = \"hep\""
+      },
+      "service_ports": [
+        {
+          "name": "tigera-api",
+          "namespace": "tigera-system",
+          "port": 443,
+          "port_name": "apiserver",
+          "protocol": "tcp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 3762,
+              "bytes_out": 2342,
+              "packet_in": 20,
+              "packet_out": 23
+            },
+            "connections": {
+              "completed": 1,
+              "started": 2,
+              "total_per_sample_interval": 2
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 218,
+              "max_smooth_rtt": 1951,
+              "mean_min_mss": 182,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1885,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "apiserver"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "cnx-queryserver"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kube-apiserver"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 56138,
+              "bytes_out": 21289,
+              "packet_in": 65,
+              "packet_out": 122
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 184,
+              "max_smooth_rtt": 60996,
+              "mean_min_mss": 184,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 22358,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 8080,
+                "min_port": 8080
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/storefront",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-2/*"
+      },
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 60,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 0,
+              "bytes_out": 120,
+              "count": 60,
+              "max_duration": 5000000,
+              "mean_duration": 816666.6666666666,
+              "min_duration": 0
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 21638,
+              "bytes_out": 57036,
+              "packet_in": 124,
+              "packet_out": 62
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 10526,
+              "bytes_out": 5024,
+              "packet_in": 68,
+              "packet_out": 73
+            },
+            "connections": {
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 5
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          },
+          {
+            "port_ranges": [
+              {
+                "max_port": 123,
+                "min_port": 123
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-0/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 14241,
+              "bytes_out": 6163,
+              "packet_in": 76,
+              "packet_out": 85
+            },
+            "connections": {
+              "completed": 5,
+              "started": 5,
+              "total_per_sample_interval": 7
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "chronyd"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 56107,
+              "bytes_out": 21289,
+              "packet_in": 61,
+              "packet_out": 122
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 324,
+              "max_smooth_rtt": 52152,
+              "mean_min_mss": 324,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 22080,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/storefront"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 1924191,
+              "bytes_out": 1007783,
+              "packet_in": 11332,
+              "packet_out": 11670
+            },
+            "connections": {
+              "completed": 5714,
+              "started": 5797,
+              "total_per_sample_interval": 5906
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 10250,
+                "min_port": 10250
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-infra-0/*",
+        "source_node_id": "host/rob-bz-lc19-kadm-ms/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-ms\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 4435,
+              "bytes_out": 5028,
+              "packet_in": 48,
+              "packet_out": 52
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kube-apiserver"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*",
+        "source_node_id": "net/pub"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 124,
+              "bytes_out": 0,
+              "packet_in": 3,
+              "packet_out": 0
+            },
+            "connections": {
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "icmp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-1/*",
+        "source_node_id": "net/pub"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 252,
+              "bytes_out": 252,
+              "packet_in": 3,
+              "packet_out": 3
+            },
+            "connections": {
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "namespace/storefront"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"storefront\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 2261531,
+              "bytes_out": 9749771,
+              "packet_in": 10474,
+              "packet_out": 9967
+            },
+            "connections": {
+              "completed": 862,
+              "started": 862,
+              "total_per_sample_interval": 886
+            },
+            "tcp": {
+              "count": 19,
+              "max_min_rtt": 1248,
+              "max_smooth_rtt": 24305,
+              "mean_min_mss": 194.68421052631578,
+              "mean_mss": 1391.7894736842106,
+              "mean_send_congestion_window": 10.052631578947368,
+              "mean_smooth_rtt": 8019.526315789473,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 14,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_0"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          },
+          {
+            "port_ranges": [
+              {
+                "max_port": 123,
+                "min_port": 123
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "host/rob-bz-lc19-kadm-infra-0/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 10615,
+              "bytes_out": 5100,
+              "packet_in": 69,
+              "packet_out": 74
+            },
+            "connections": {
+              "completed": 3,
+              "started": 4,
+              "total_per_sample_interval": 6
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "chronyd"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          },
+          {
+            "port_ranges": [
+              {
+                "max_port": 123,
+                "min_port": 123
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "host/rob-bz-lc19-kadm-ms/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"rob-bz-lc19-kadm-ms\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 14343,
+              "bytes_out": 6319,
+              "packet_in": 78,
+              "packet_out": 88
+            },
+            "connections": {
+              "completed": 5,
+              "started": 5,
+              "total_per_sample_interval": 7
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "chronyd"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "host/rob-bz-lc19-kadm-infra-0/*"
+      },
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 1946,
+              "bytes_out": 3493,
+              "packet_in": 17,
+              "packet_out": 17
+            },
+            "connections": {
+              "completed": 14,
+              "started": 17,
+              "total_per_sample_interval": 19
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-ms/*",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-ms\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 22685,
+              "bytes_out": 47372,
+              "packet_in": 130,
+              "packet_out": 65
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-ms/*",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-ms\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 44472,
+              "bytes_out": 21289,
+              "packet_in": 61,
+              "packet_out": 122
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 206,
+              "max_smooth_rtt": 21112,
+              "mean_min_mss": 206,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 13276,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "host/rob-bz-lc19-kadm-node-2/*"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 10422,
+              "bytes_out": 4972,
+              "packet_in": 66,
+              "packet_out": 72
+            },
+            "connections": {
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 5
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-ms/*",
+        "source_node_id": "net/pub"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-ms\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 80,
+              "bytes_out": 0,
+              "packet_in": 2,
+              "packet_out": 0
+            },
+            "connections": {
+              "completed": 2,
+              "started": 2,
+              "total_per_sample_interval": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "net/pub",
+        "source_node_id": "namespace/kube-system"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 15895,
+              "bytes_out": 10637,
+              "packet_in": 137,
+              "packet_out": 137
+            },
+            "connections": {
+              "completed": 37,
+              "started": 33,
+              "total_per_sample_interval": 45
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "coredns"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "expandable": true,
+      "expanded": true,
+      "id": "hosts/*",
+      "name": "*",
+      "selectors": {
+        "l3_flows": "dest_type = \"hep\" OR source_type = \"hep\""
+      },
+      "type": "hosts"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "icmp"
+          },
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": "host/rob-bz-lc19-kadm-node-1/*",
+      "name": "rob-bz-lc19-kadm-node-1",
+      "parent_id": "hosts/*",
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\") OR (source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\")"
+      },
+      "stats": [
+        {
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              },
+              {
+                "max_port": 10250,
+                "min_port": 10250
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": "host/rob-bz-lc19-kadm-infra-0/*",
+      "name": "rob-bz-lc19-kadm-infra-0",
+      "parent_id": "hosts/*",
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\") OR (source_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND source_type = \"hep\")"
+      },
+      "stats": [
+        {
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "chronyd"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              },
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": "host/rob-bz-lc19-kadm-node-0/*",
+      "name": "rob-bz-lc19-kadm-node-0",
+      "parent_id": "hosts/*",
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\") OR (source_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND source_type = \"hep\")"
+      },
+      "stats": [
+        {
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "chronyd"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9094,
+                "min_port": 9094
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "expandable": true,
+      "id": "namespace/tigera-prometheus",
+      "name": "tigera-prometheus",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\"",
+        "l3_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\"",
+        "l7_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "dns": {
+            "latency_count": 1133,
+            "max_request_latency": 6934000,
+            "mean_request_latency": 535675.6160635481,
+            "min_request_latency": 310946,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 378,
+                "latency_count": 378,
+                "max_request_latency": 4351000,
+                "mean_request_latency": 518204.09523809527,
+                "min_request_latency": 352046
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 756,
+                "latency_count": 755,
+                "max_request_latency": 6934000,
+                "mean_request_latency": 544422.9470198676,
+                "min_request_latency": 310946
+              }
+            ]
+          },
+          "l3": {
+            "allowed": {
+              "bytes_in": 8200,
+              "bytes_out": 8255,
+              "packet_in": 75,
+              "packet_out": 76
+            },
+            "connections": {
+              "completed": 15,
+              "started": 15,
+              "total_per_sample_interval": 15
+            },
+            "tcp": {
+              "count": 6,
+              "max_min_rtt": 606,
+              "max_smooth_rtt": 4848,
+              "mean_min_mss": 333.6666666666667,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 3188,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "alertmanager"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "alertmanager"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "expandable": true,
+      "id": "namespace/storefront",
+      "name": "storefront",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
+        "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\""
+      },
+      "stats": [
+        {
+          "dns": {
+            "latency_count": 8421,
+            "max_request_latency": 9745000,
+            "mean_request_latency": 476851.4419902624,
+            "min_request_latency": 324000,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 2098,
+                "latency_count": 1925,
+                "max_request_latency": 8986000,
+                "mean_request_latency": 513239.109090909,
+                "min_request_latency": 345421
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 7300,
+                "latency_count": 6496,
+                "max_request_latency": 9745000,
+                "mean_request_latency": 466068.4587438424,
+                "min_request_latency": 324000
+              }
+            ]
+          },
+          "l3": {
+            "allowed": {
+              "bytes_in": 170603,
+              "bytes_out": 216867,
+              "packet_in": 1975,
+              "packet_out": 2478
+            },
+            "connections": {
+              "completed": 243,
+              "started": 243,
+              "total_per_sample_interval": 243
+            },
+            "tcp": {
+              "count": 12,
+              "max_min_rtt": 319,
+              "max_smooth_rtt": 13044,
+              "mean_min_mss": 183.75,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2647.75,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 9962,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 220821,
+              "bytes_out": 8585185,
+              "count": 9812,
+              "max_duration": 588000000,
+              "mean_duration": 4706090.092516428,
+              "min_duration": 0
+            },
+            "response_code_3xx": {
+              "bytes_in": 3853,
+              "bytes_out": 0,
+              "count": 150,
+              "max_duration": 78000000,
+              "mean_duration": 4550776.55,
+              "min_duration": 333333
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_0"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_1"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              },
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": "host/rob-bz-lc19-kadm-ms/*",
+      "name": "rob-bz-lc19-kadm-ms",
+      "parent_id": "hosts/*",
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-ms\" AND dest_type = \"hep\") OR (source_name_aggr = \"rob-bz-lc19-kadm-ms\" AND source_type = \"hep\")"
+      },
+      "stats": [
+        {
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "chronyd"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kube-apiserver"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              },
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": "host/rob-bz-lc19-kadm-node-2/*",
+      "name": "rob-bz-lc19-kadm-node-2",
+      "parent_id": "hosts/*",
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\") OR (source_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND source_type = \"hep\")"
+      },
+      "stats": [
+        {
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ],
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_guest_ag"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "google_osconfig"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
+          },
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              },
+              {
+                "max_port": 123,
+                "min_port": 123
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": "net/pub",
+      "name": "pub",
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\") OR (source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\")"
+      },
+      "type": "net"
+    },
+    {
+      "expandable": true,
+      "follow_ingress": true,
+      "id": "namespace/kube-system",
+      "name": "kube-system",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
+        "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\""
+      },
+      "stats": [
+        {
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "coredns"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 8080,
+                "min_port": 8080
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "expandable": true,
+      "id": "namespace/tigera-system",
+      "name": "tigera-system",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
+        "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
+        "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\""
+      },
+      "stats": [
+        {
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "apiserver"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "cnx-queryserver"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    }
+  ],
+  "time_intervals": [
+    {
+      "from": "2021-05-30T21:23:10Z",
+      "to": "2021-05-30T21:38:10Z"
+    }
+  ]
+}
