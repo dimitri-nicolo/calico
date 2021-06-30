@@ -1,13 +1,13 @@
 ---
 title: Overview 
-description: Summary of the out-of-box features for Calico Enterprise Elasticsearch logs.
+description: Summary of the out-of-box features for Calico Enterprise logs.
 canonical_url: /visibility/elastic/overview
 show_toc: false
 ---
 
 ### Big picture
 
-Use {{site.prodname}} Elasticsearch log data for visibility and troubleshooting Kubernetes clusters.
+Use {{site.prodname}} log data for visibility and troubleshooting Kubernetes clusters.
 
 ### Value
 
@@ -30,8 +30,8 @@ Elasticsearch logs provide the visibility and troubleshooting backend for {{site
 
 | Log type | Description                                                  | Log source                                       | RBAC         | Index                         |
 | -------- | ------------------------------------------------------------ | ------------------------------------------------ | ------------ | ----------------------------- |
-| Flow     | Network flows for workloads: source and destination namespaces, pods, labels, and policies | {{site.prodname}} cnx-node (Felix)               | `flows`      | `tigera_secure_ee_flows`      |
-| Audit    | Audit logs for {{site.prodname}} resources                   | {{site.prodname}} apiserver                      | `audit_ee`   | `tigera_secure_ee_audit_ee`   |
+| flow     | Network flows for workloads: source and destination namespaces, pods, labels, and policies | {{site.prodname}} cnx-node (Felix)               | `flows`      | `tigera_secure_ee_flows`      |
+| audit    | Audit logs for {{site.prodname}} resources                   | {{site.prodname}} apiserver                      | `audit_ee`   | `tigera_secure_ee_audit_ee`   |
 |          | Audit logs for Kubernetes resources                          | Kubernetes apiserver                             | `audit_kube` | `tigera_secure_ee_audit_kube` |
 |          |                                                              | Both audit logs above                            | `audit*`     | `tigera_secure_ee_audit*`     |
 | bgp      | {{site.prodname}} networking BGP peering and route propagation | {{site.prodname}} cnx-node (BIRD)                | `ee_bgp`     | `tigera_secure_ee_bgp.*`      |

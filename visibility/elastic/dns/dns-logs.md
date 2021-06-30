@@ -1,7 +1,7 @@
 ---
-title: DNS logs
+title: Configure DNS logs
 description: Key/value pairs of DNS activity logs and how to construct queries.
-canonical_url: /visibility/elastic/dns
+canonical_url: /visibility/elastic/dns/dns-logs
 ---
 
 {{site.prodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.baseurl}}/security/domain-based-policy#trusted-dns-servers). The following table

@@ -8,14 +8,18 @@ section:
   path: /visibility/alerts
 - title: Packet capture
   path: /visibility/packetcapture  
-- title: Elasticsearch logs
+- title: Calico Enterprise logs
   path: /visibility/elastic/
   section:
   - title: Overview
     path: /visibility/elastic/overview
+  - title: Configure data retention
+    path: /visibility/elastic/retention  
+  - title: Archive logs
+    path: /visibility/elastic/archive-storage  
   - title: Configure RBAC for Elasticsearch logs and events
     path: /visibility/elastic/rbac-elasticsearch
-  - title: Configure flow logs
+  - title: Flow logs
     path: /visibility/elastic/flow/
     section: 
     - title: Flow log data types
@@ -29,17 +33,16 @@ section:
     - title: Enable TCP socket stats
       path: /visibility/elastic/flow/tcpstats
   - title: Audit logs
-    path: /visibility/elastic/ee-audit
+    path: /visibility/elastic/ee-audit 
   - title: DNS logs
-    path: /visibility/elastic/dns
-  - title: Filter DNS logs
-    path: /visibility/elastic/filtering-dns  
+    path: /visibility/elastic/dns/
+    section:
+    - title: Configure DNS logs
+      path: /visibility/elastic/dns/dns-logs   
+    - title: Filter DNS logs
+      path: /visibility/elastic/dns/filtering-dns  
   - title: BGP logs
     path: /visibility/elastic/bgp
-  - title: Configure data retention
-    path: /visibility/elastic/retention
-  - title: Archive logs
-    path: /visibility/elastic/archive-storage
   - title: L7 logs
     path: /visibility/elastic/l7/
     section:
@@ -47,7 +50,7 @@ section:
       path: /visibility/elastic/l7/configure
     - title: L7 log data types
       path: /visibility/elastic/l7/datatypes
-- title: Troubleshoot Elasticsearch
-  path: /visibility/troubleshoot
+  - title: Troubleshoot logs
+    path: /visibility/troubleshoot     
 - title: iptables logs
-  path: /visibility/iptables
+  path: /visibility/iptables 

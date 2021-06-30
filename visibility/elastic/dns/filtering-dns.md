@@ -1,7 +1,7 @@
 ---
 title: Filter DNS logs
 description: Suppress DNS logs of low significance using filters. 
-canonical_url: /visibility/elastic/filtering-dns
+canonical_url: /visibility/elastic/dns/filtering-dns
 ---
 
 {{site.prodname}} supports filtering out DNS logs based on user provided

@@ -1,5 +1,5 @@
 ---
-title: Troubleshooting Elasticsearch
+title: Troubleshoot logs
 description: Learn how to troubleshoot common issues with Elasticsearch.
 canonical_url: '/visibility/troubleshoot'
 ---

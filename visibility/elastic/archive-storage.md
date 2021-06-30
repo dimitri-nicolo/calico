@@ -1,12 +1,12 @@
 ---
-title: Archive logs to storage
-description: Archive logs to S3, Syslog, or Splunk for maintaining compliance data.
+title: Archive logs 
+description: Archive logs to Syslog, Splunk, or Amazon S3 for maintaining compliance data.
 canonical_url: /visibility/elastic/archive-storage
 ---
 
 ### Big picture
 
-Archive logs to Amazon S3, Syslog, or Splunk to meet data storage requirements for compliance.
+Archive {{site.prodname}} logs to SIEMs like Syslog, Splunk, or Amazon S3 to meet compliance storage requirements.
 
 ### Value
 
