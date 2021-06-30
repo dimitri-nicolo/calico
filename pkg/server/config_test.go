@@ -16,7 +16,7 @@ var _ = Describe("Config test", func() {
 		config, err := server.NewConfigFromEnv()
 
 		Expect(err).To(BeNil())
-		Expect(config.ListenAddr).To(Equal("127.0.0.1:9090"))
+		Expect(config.ListenAddr).To(Equal(":9090"))
 		Expect(config.PrometheusEndpoint).To(Equal("http://localhost:9090"))
 		Expect(config.PrometheusUrl.Scheme).To(Equal("http"))
 		Expect(config.PrometheusUrl.Host).To(Equal("localhost:9090"))

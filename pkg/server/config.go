@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	// this service will be hosted on this addresss
-	ListenAddr string `envconfig:"LISTEN_ADDR" default:"127.0.0.1:9090"`
+	ListenAddr string `envconfig:"LISTEN_ADDR" default:":9090"`
 
 	PrometheusEndpoint string   `envconfig:"PROMETHEUS_ENDPOINT_URL" default:"http://localhost:9090"`
 	PrometheusUrl      *url.URL `envconfig:"-"`

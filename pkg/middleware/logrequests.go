@@ -15,6 +15,10 @@ import (
 // various utility handlers in the standard library net/http package.
 func LogRequestHeaders(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/health" {
+			return
+		}
+
 		log.WithFields(log.Fields{
 			"method":     req.Method,
 			"path":       req.RequestURI,

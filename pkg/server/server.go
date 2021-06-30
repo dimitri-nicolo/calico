@@ -9,7 +9,8 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	handler "github.com/tigera/prometheus-service/pkg/handler/proxy"
+	health "github.com/tigera/prometheus-service/pkg/handler/health"
+	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
 	"github.com/tigera/prometheus-service/pkg/middleware"
 )
 
@@ -23,7 +24,9 @@ func Start(config *Config) {
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
 
-	sm.Handle("/", handler.Proxy(reverseProxy))
+	sm.Handle("/health", health.HealthCheck())
+
+	sm.Handle("/", proxy.Proxy(reverseProxy))
 
 	server = &http.Server{
 		Addr:    config.ListenAddr,
