@@ -37,9 +37,9 @@ require (
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210630181056-3f8345eeac09
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210629234109-2a992edf1a17
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210629234117-3cab573a0b73
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210629235529-fba1daaa34ba
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210630203813-dfc7a0d14686
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210630191500-0042ab1a00c7
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210630193026-53381505141a
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
