@@ -85,7 +85,7 @@ func GetNormalizedIDs(id v1.GraphNodeID, sgs ServiceGroups, splitIngressEgress b
 		// We are not splitting ingress and egress, so make sure direction is not included in the normalized IDs.
 		idi.Direction = NoDirection
 		if id := getId(idi); id != "" {
-			 ids = append(ids, id)
+			ids = append(ids, id)
 		}
 	} else if idi.Direction != NoDirection {
 		// We are splitting ingress and egress, but the ID already has a direction, so return with the specified
@@ -106,7 +106,7 @@ func GetNormalizedIDs(id v1.GraphNodeID, sgs ServiceGroups, splitIngressEgress b
 		if egressId != "" && egressId != ingressId {
 			ids = append(ids, egressId)
 		}
- 	}
+	}
 	return ids, nil
 }
 

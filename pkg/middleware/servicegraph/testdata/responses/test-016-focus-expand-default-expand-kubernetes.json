@@ -15,21 +15,12 @@
         ]
       },
       "id": {
-        "dest_node_id": "svc/default/kubernetes",
-        "source_node_id": "namespace/tigera-manager"
+        "dest_node_id": "hosts/*;svcgp;svc/default/kubernetes",
+        "source_node_id": "svc/default/kubernetes"
       },
       "selectors": {
         "l3_flows": "dest_type = \"hep\" AND source_namespace = \"tigera-manager\""
       },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
       "stats": [
         {
           "l3": {
@@ -95,12 +86,21 @@
         ]
       },
       "id": {
-        "dest_node_id": "hosts/*;svcgp;svc/default/kubernetes",
-        "source_node_id": "svc/default/kubernetes"
+        "dest_node_id": "svc/default/kubernetes",
+        "source_node_id": "namespace/tigera-manager"
       },
       "selectors": {
         "l3_flows": "dest_type = \"hep\" AND source_namespace = \"tigera-manager\""
       },
+      "service_ports": [
+        {
+          "name": "kubernetes",
+          "namespace": "default",
+          "port": 443,
+          "port_name": "https",
+          "protocol": "tcp"
+        }
+      ],
       "stats": [
         {
           "l3": {
@@ -204,7 +204,7 @@
       "selectors": {
         "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
         "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
-        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\""
+        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\""
       },
       "type": "namespace"
     },
@@ -216,7 +216,7 @@
       "selectors": {
         "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
         "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
-        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\""
+        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\""
       },
       "stats": [
         {

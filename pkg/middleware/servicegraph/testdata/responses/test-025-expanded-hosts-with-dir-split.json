@@ -15,134 +15,6 @@
         ]
       },
       "id": {
-        "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*;dir/ingress",
-        "source_node_id": "namespace/tigera-prometheus"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 56107,
-              "bytes_out": 21289,
-              "packet_in": 61,
-              "packet_out": 122
-            },
-            "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 1
-            },
-            "tcp": {
-              "count": 1,
-              "max_min_rtt": 324,
-              "max_smooth_rtt": 52152,
-              "mean_min_mss": 324,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 22080,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "prometheus"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9081,
-                "min_port": 9081
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "host/rob-bz-lc19-kadm-node-1/*;dir/ingress",
-        "source_node_id": "namespace/tigera-prometheus"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 59599,
-              "bytes_out": 20940,
-              "packet_in": 60,
-              "packet_out": 120
-            },
-            "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 1
-            },
-            "tcp": {
-              "count": 1,
-              "max_min_rtt": 35,
-              "max_smooth_rtt": 40012,
-              "mean_min_mss": 35,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 18740,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "prometheus"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9081,
-                "min_port": 9081
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
         "dest_node_id": "host/rob-bz-lc19-kadm-ms/*;dir/ingress",
         "source_node_id": "namespace/tigera-prometheus"
       },
@@ -198,12 +70,8 @@
           {
             "port_ranges": [
               {
-                "max_port": 80,
-                "min_port": 80
-              },
-              {
-                "max_port": 443,
-                "min_port": 443
+                "max_port": 9081,
+                "min_port": 9081
               }
             ],
             "protocol": "tcp"
@@ -212,25 +80,50 @@
       },
       "id": {
         "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*;dir/ingress",
-        "source_node_id": "net/pub;dir/egress"
+        "source_node_id": "namespace/tigera-prometheus"
       },
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
       },
       "stats": [
         {
           "l3": {
             "allowed": {
-              "bytes_in": 120,
-              "bytes_out": 0,
-              "packet_in": 3,
-              "packet_out": 0
+              "bytes_in": 56107,
+              "bytes_out": 21289,
+              "packet_in": 61,
+              "packet_out": 122
             },
             "connections": {
-              "completed": 3,
-              "started": 3,
-              "total_per_sample_interval": 3
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 324,
+              "max_smooth_rtt": 52152,
+              "mean_min_mss": 324,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 22080,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
             }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
           }
         }
       ]
@@ -348,6 +241,184 @@
           {
             "port_ranges": [
               {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*;dir/ingress",
+        "source_node_id": "hosts/*;dir/egress"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_type = \"hep\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 21638,
+              "bytes_out": 56872,
+              "packet_in": 124,
+              "packet_out": 62
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-1/*;dir/ingress",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 59599,
+              "bytes_out": 20940,
+              "packet_in": 60,
+              "packet_out": 120
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 35,
+              "max_smooth_rtt": 40012,
+              "mean_min_mss": 35,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 18740,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*;dir/ingress",
+        "source_node_id": "namespace/tigera-prometheus"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 56138,
+              "bytes_out": 21289,
+              "packet_in": 65,
+              "packet_out": 122
+            },
+            "connections": {
+              "completed": 0,
+              "started": 0,
+              "total_per_sample_interval": 1
+            },
+            "tcp": {
+              "count": 1,
+              "max_min_rtt": 184,
+              "max_smooth_rtt": 60996,
+              "mean_min_mss": 184,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 22358,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "prometheus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
                 "max_port": 80,
                 "min_port": 80
               },
@@ -361,17 +432,17 @@
         ]
       },
       "id": {
-        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*;dir/ingress",
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*;dir/ingress",
         "source_node_id": "net/pub;dir/egress"
       },
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
       },
       "stats": [
         {
           "l3": {
             "allowed": {
-              "bytes_in": 124,
+              "bytes_in": 120,
               "bytes_out": 0,
               "packet_in": 3,
               "packet_out": 0
@@ -431,6 +502,39 @@
                 "name": "calico-node"
               }
             ]
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "icmp"
+          }
+        ]
+      },
+      "id": {
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-1/*;dir/ingress",
+        "source_node_id": "net/pub;dir/egress"
+      },
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 252,
+              "bytes_out": 252,
+              "packet_in": 3,
+              "packet_out": 3
+            },
+            "connections": {
+              "completed": 3,
+              "started": 3,
+              "total_per_sample_interval": 3
+            }
           }
         }
       ]
@@ -559,25 +663,35 @@
       "endpoint_proto_ports": {
         "proto_ports": [
           {
-            "protocol": "icmp"
+            "port_ranges": [
+              {
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
+              }
+            ],
+            "protocol": "tcp"
           }
         ]
       },
       "id": {
-        "dest_node_id": "host/rob-bz-lc19-kadm-node-1/*;dir/ingress",
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*;dir/ingress",
         "source_node_id": "net/pub;dir/egress"
       },
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
       },
       "stats": [
         {
           "l3": {
             "allowed": {
-              "bytes_in": 252,
-              "bytes_out": 252,
+              "bytes_in": 124,
+              "bytes_out": 0,
               "packet_in": 3,
-              "packet_out": 3
+              "packet_out": 0
             },
             "connections": {
               "completed": 3,
@@ -587,10 +701,73 @@
           }
         }
       ]
+    }
+  ],
+  "nodes": [
+    {
+      "expandable": true,
+      "expanded": true,
+      "id": "hosts/*;dir/ingress",
+      "name": "*",
+      "selectors": {
+        "l3_flows": "dest_type = \"hep\""
+      },
+      "type": "hosts"
     },
     {
-      "endpoint_proto_ports": {
+      "aggregated_proto_ports": {
         "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9081,
+                "min_port": 9081
+              },
+              {
+                "max_port": 10250,
+                "min_port": 10250
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "id": "host/rob-bz-lc19-kadm-infra-0/*;dir/ingress",
+      "name": "rob-bz-lc19-kadm-infra-0",
+      "parent_id": "hosts/*;dir/ingress",
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\""
+      },
+      "stats": [
+        {
+          "processes": {
+            "dest": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "calico-node"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "kubelet"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "icmp"
+          },
           {
             "port_ranges": [
               {
@@ -602,26 +779,88 @@
           }
         ]
       },
-      "id": {
-        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*;dir/ingress",
-        "source_node_id": "hosts/*;dir/egress"
-      },
+      "id": "host/rob-bz-lc19-kadm-node-1/*;dir/ingress",
+      "name": "rob-bz-lc19-kadm-node-1",
+      "parent_id": "hosts/*;dir/ingress",
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_type = \"hep\""
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\""
+      },
+      "type": "host"
+    },
+    {
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 9094,
+                "min_port": 9094
+              }
+            ],
+            "protocol": "tcp"
+          }
+        ]
+      },
+      "expandable": true,
+      "follow_egress": true,
+      "id": "namespace/tigera-prometheus",
+      "name": "tigera-prometheus",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\"",
+        "l3_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\"",
+        "l7_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR src_namespace = \"tigera-prometheus\""
       },
       "stats": [
         {
+          "dns": {
+            "latency_count": 1133,
+            "max_request_latency": 6934000,
+            "mean_request_latency": 535675.6160635481,
+            "min_request_latency": 310946,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 378,
+                "latency_count": 378,
+                "max_request_latency": 4351000,
+                "mean_request_latency": 518204.09523809527,
+                "min_request_latency": 352046
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 756,
+                "latency_count": 755,
+                "max_request_latency": 6934000,
+                "mean_request_latency": 544422.9470198676,
+                "min_request_latency": 310946
+              }
+            ]
+          },
           "l3": {
             "allowed": {
-              "bytes_in": 21638,
-              "bytes_out": 56872,
-              "packet_in": 124,
-              "packet_out": 62
+              "bytes_in": 8200,
+              "bytes_out": 8255,
+              "packet_in": 75,
+              "packet_out": 76
             },
             "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 1
+              "completed": 15,
+              "started": 15,
+              "total_per_sample_interval": 15
+            },
+            "tcp": {
+              "count": 6,
+              "max_min_rtt": 606,
+              "max_smooth_rtt": 4848,
+              "mean_min_mss": 333.6666666666667,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 3188,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
             }
           },
           "processes": {
@@ -631,65 +870,17 @@
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
                 "min_num_names_per_flow": 1,
-                "name": "calico-node"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9081,
-                "min_port": 9081
+                "name": "alertmanager"
               }
             ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*;dir/ingress",
-        "source_node_id": "namespace/tigera-prometheus"
-      },
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_namespace = \"tigera-prometheus\""
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 56138,
-              "bytes_out": 21289,
-              "packet_in": 65,
-              "packet_out": 122
-            },
-            "connections": {
-              "completed": 0,
-              "started": 0,
-              "total_per_sample_interval": 1
-            },
-            "tcp": {
-              "count": 1,
-              "max_min_rtt": 184,
-              "max_smooth_rtt": 60996,
-              "mean_min_mss": 184,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 22358,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
             "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "alertmanager"
+              },
               {
                 "max_num_ids_per_flow": 1,
                 "max_num_names_per_flow": 1,
@@ -700,10 +891,17 @@
             ]
           }
         }
-      ]
-    }
-  ],
-  "nodes": [
+      ],
+      "type": "namespace"
+    },
+    {
+      "id": "net/pub;dir/egress",
+      "name": "pub",
+      "selectors": {
+        "l3_flows": "source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+      },
+      "type": "net"
+    },
     {
       "aggregated_proto_ports": {
         "proto_ports": [
@@ -792,31 +990,6 @@
           }
         }
       ],
-      "type": "host"
-    },
-    {
-      "aggregated_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "icmp"
-          },
-          {
-            "port_ranges": [
-              {
-                "max_port": 9081,
-                "min_port": 9081
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": "host/rob-bz-lc19-kadm-node-1/*;dir/ingress",
-      "name": "rob-bz-lc19-kadm-node-1",
-      "parent_id": "hosts/*;dir/ingress",
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND dest_type = \"hep\""
-      },
       "type": "host"
     },
     {
@@ -916,179 +1089,6 @@
         }
       ],
       "type": "hosts"
-    },
-    {
-      "aggregated_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9094,
-                "min_port": 9094
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "expandable": true,
-      "follow_egress": true,
-      "id": "namespace/tigera-prometheus",
-      "name": "tigera-prometheus",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\"",
-        "l3_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\"",
-        "l7_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\""
-      },
-      "stats": [
-        {
-          "dns": {
-            "latency_count": 1133,
-            "max_request_latency": 6934000,
-            "mean_request_latency": 535675.6160635481,
-            "min_request_latency": 310946,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 378,
-                "latency_count": 378,
-                "max_request_latency": 4351000,
-                "mean_request_latency": 518204.09523809527,
-                "min_request_latency": 352046
-              },
-              {
-                "code": "NXDOMAIN",
-                "count": 756,
-                "latency_count": 755,
-                "max_request_latency": 6934000,
-                "mean_request_latency": 544422.9470198676,
-                "min_request_latency": 310946
-              }
-            ]
-          },
-          "l3": {
-            "allowed": {
-              "bytes_in": 8200,
-              "bytes_out": 8255,
-              "packet_in": 75,
-              "packet_out": 76
-            },
-            "connections": {
-              "completed": 15,
-              "started": 15,
-              "total_per_sample_interval": 15
-            },
-            "tcp": {
-              "count": 6,
-              "max_min_rtt": 606,
-              "max_smooth_rtt": 4848,
-              "mean_min_mss": 333.6666666666667,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 3188,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
-          "processes": {
-            "dest": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "alertmanager"
-              }
-            ],
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "alertmanager"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "prometheus"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "namespace"
-    },
-    {
-      "expandable": true,
-      "expanded": true,
-      "id": "hosts/*;dir/ingress",
-      "name": "*",
-      "selectors": {
-        "l3_flows": "dest_type = \"hep\""
-      },
-      "type": "hosts"
-    },
-    {
-      "aggregated_proto_ports": {
-        "proto_ports": [
-          {
-            "port_ranges": [
-              {
-                "max_port": 9081,
-                "min_port": 9081
-              },
-              {
-                "max_port": 10250,
-                "min_port": 10250
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": "host/rob-bz-lc19-kadm-infra-0/*;dir/ingress",
-      "name": "rob-bz-lc19-kadm-infra-0",
-      "parent_id": "hosts/*;dir/ingress",
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\""
-      },
-      "stats": [
-        {
-          "processes": {
-            "dest": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "calico-node"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "kubelet"
-              }
-            ]
-          }
-        }
-      ],
-      "type": "host"
-    },
-    {
-      "id": "net/pub;dir/egress",
-      "name": "pub",
-      "selectors": {
-        "l3_flows": "source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
-      },
-      "type": "net"
     }
   ],
   "time_intervals": [
