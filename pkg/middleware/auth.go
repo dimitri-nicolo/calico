@@ -35,7 +35,7 @@ func (auth *Auth) Authenticate(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, stat, err := authentication.AuthenticateRequest(auth.authN, req)
 		if err != nil {
-			log.WithError(err).Errorf("Kubernetes auth failure %s %s %v", req.Header.Get("Authorization"), req.Header.Get("authorization"), req)
+			log.WithError(err).Errorf("failed to authenticate user")
 			http.Error(w, err.Error(), stat)
 			return
 		}
