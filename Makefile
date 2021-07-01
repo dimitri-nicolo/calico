@@ -234,7 +234,8 @@ remote-deps: mod-download
 		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/'
 
 libbpf.a: remote-deps
-	make -j 16 -C ./bin/bpf/bpf-gpl/include/libbpf/src/ BUILD_STATIC_ONLY=1
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+		make -j 16 -C ./bin/bpf/bpf-gpl/include/libbpf/src/ BUILD_STATIC_ONLY=1'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), amd64)
