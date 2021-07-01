@@ -183,10 +183,7 @@ clean:
 	rm -rf config/
 	rm -rf vendor
 	rm Makefile.common*
-	rm -rf bin/bpf/bpf-gpl/*.d
-	rm -rf bin/bpf/bpf-apache/*.d
-	make -C bin/bpf/bpf-gpl clean
-	make -C bin/bpf/bpf-apache clean
+	make -C bin/bpf/bpf-gpl/include/libbpf/src clean
 	# Delete images that we built in this repo
 	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -208,7 +205,7 @@ update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-ty
 # build target is called from commit-pin-updates and it is essential that the
 # MAKECMDGOALS remains as "commit-pin-updates" for various go flags to be set
 # appropriately.
-build: remote-deps $(NODE_CONTAINER_BINARY)
+build: $(NODE_CONTAINER_BINARY)
 
 .PHONY: remote-deps
 remote-deps: mod-download
@@ -236,18 +233,23 @@ remote-deps: mod-download
 		cp bin/bpf/bpf-apache/bin/* filesystem/usr/lib/calico/bpf/; \
 		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/'
 
+libbpf.a:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+		make -j 16 -C ./bin/bpf/bpf-gpl/include/libbpf/src/ BUILD_STATIC_ONLY=1'
+
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), amd64)
 CGO_ENABLED=1
 CGO_LDFLAGS="-L$(LIBBPF_PATH) -lbpf -lelf -lz"
 else
 CGO_ENABLED=0
+CGO_LDFLAGS=""
 endif
 
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
-$(NODE_CONTAINER_BINARY): $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
+$(NODE_CONTAINER_BINARY): libbpf.a $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
 
 $(WINDOWS_BINARY):
