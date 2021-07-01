@@ -235,6 +235,7 @@ remote-deps: mod-download
 
 libbpf.a:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
 		make -j 16 -C ./bin/bpf/bpf-gpl/include/libbpf/src/ BUILD_STATIC_ONLY=1'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
