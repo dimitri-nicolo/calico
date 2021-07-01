@@ -139,6 +139,28 @@ In order to allow user jane to access the capture files generated for a specific
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-authentication-clusterrole-jane
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["authenticationreviews"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-authentication-clusterrolebinding-jane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-authentication-clusterrole-jane
+subjects:
+- kind: ServiceAccount
+  name: jane
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   namespace: sample
