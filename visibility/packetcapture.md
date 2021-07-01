@@ -239,6 +239,16 @@ Alternatively, you can access the capture files locally using [calicoctl]({{site
 calicoctl captured-packets copy sample-capture -namespace sample --destination /tmp
 ```
 
+You can access the capture files locally from the Fluentd pods using similar commands like the ones below:
+
+```shell
+kubectl get pods -ntigera-fluentd --no-headers --field-selector spec.nodeName="<REPLACE_WITH_NODE_NAME>"
+```
+
+```shell
+kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sample-capture/ .
+```
+
 Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
 The active packet capture file will be identified using the following schema: {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
 
@@ -248,4 +258,10 @@ Packet capture files will not be deleted after a capture has stopped.
 
 ```shell
 calicoctl captured-packets clean sample-capture -namespace sample
+```
+
+Alternatively, the following command can be used to clean up capture files:
+
+```shell
+kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME> -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"
 ```
