@@ -83,7 +83,7 @@ func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPai
 	return SelectorPairs{
 		Source: v1.GraphSelectors{
 			L3Flows: v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-			L7Flows: v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
+			L7Flows: v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
 			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
 		},
 		Dest: v1.GraphSelectors{
@@ -181,13 +181,13 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 		selectors.Dest.L7Flows = v1.NewGraphSelector(v1.OpAnd,
 			selectors.Dest.L7Flows,
 			v1.NewGraphSelector(v1.OpEqual, "dest_service_port_name", sp.PortName),
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_port_num", sp.Port),
+			v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
 		)
 	}
 
 	selectors.Dest.L3Flows = v1.NewGraphSelector(v1.OpAnd,
 		selectors.Dest.L3Flows,
-		v1.NewGraphSelector(v1.OpEqual, "dest_service_port_name", sp.PortName),
+		v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.PortName),
 		v1.NewGraphSelector(v1.OpEqual, "dest_service_port_num", sp.Port),
 		v1.NewGraphSelector(v1.OpEqual, "proto", sp.Protocol),
 	)
@@ -272,8 +272,8 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		// known then only include for TCP.
 		if isAgg && (proto == "" || proto == "tcp") {
 			l7Source = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", nameAggr),
+				v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
+				v1.NewGraphSelector(v1.OpEqual, "src_name_aggr", nameAggr),
 			)
 			l7Dest = v1.NewGraphSelector(v1.OpAnd,
 				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
@@ -363,7 +363,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 	}
 	if port != 0 {
 		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_port_num", port),
+			v1.NewGraphSelector(v1.OpEqual, "dest_port", port),
 			l3Dest,
 		)
 	}

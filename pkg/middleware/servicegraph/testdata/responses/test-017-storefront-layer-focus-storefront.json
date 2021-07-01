@@ -4,10 +4,17 @@
       "endpoint_proto_ports": {
         "proto_ports": [
           {
+            "protocol": "icmp"
+          },
+          {
             "port_ranges": [
               {
-                "max_port": 8080,
-                "min_port": 8080
+                "max_port": 80,
+                "min_port": 80
+              },
+              {
+                "max_port": 443,
+                "min_port": 443
               }
             ],
             "protocol": "tcp"
@@ -15,62 +22,25 @@
         ]
       },
       "id": {
-        "dest_node_id": "namespace/storefront",
-        "source_node_id": "hosts/*"
+        "dest_node_id": "hosts/*",
+        "source_node_id": "net/pub"
       },
       "selectors": {
-        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
+        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
       },
       "stats": [
         {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 60,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
+          "l3": {
+            "allowed": {
+              "bytes_in": 576,
+              "bytes_out": 252,
+              "packet_in": 11,
+              "packet_out": 3
             },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 0,
-              "bytes_out": 120,
-              "count": 60,
-              "max_duration": 5000000,
-              "mean_duration": 816666.6666666666,
-              "min_duration": 0
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "count": 0,
-              "max_duration": 0,
-              "mean_duration": 0,
-              "min_duration": 0
+            "connections": {
+              "completed": 11,
+              "started": 11,
+              "total_per_sample_interval": 11
             }
           }
         }
@@ -175,6 +145,56 @@
         ]
       },
       "id": {
+        "dest_node_id": "namespace/kube-system",
+        "source_node_id": "namespace/storefront"
+      },
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "name": "kube-dns",
+          "namespace": "kube-system",
+          "port": 53,
+          "port_name": "dns",
+          "protocol": "udp"
+        }
+      ],
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "bytes_in": 1924191,
+              "bytes_out": 1007783,
+              "packet_in": 11332,
+              "packet_out": 11670
+            },
+            "connections": {
+              "completed": 5714,
+              "started": 5797,
+              "total_per_sample_interval": 5906
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "port_ranges": [
+              {
+                "max_port": 53,
+                "min_port": 53
+              }
+            ],
+            "protocol": "udp"
+          }
+        ]
+      },
+      "id": {
         "dest_node_id": "net/pub",
         "source_node_id": "namespace/kube-system"
       },
@@ -226,81 +246,24 @@
       },
       "id": {
         "dest_node_id": "namespace/kube-system",
-        "source_node_id": "namespace/storefront"
+        "source_node_id": "hosts/*"
       },
       "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_namespace = \"storefront\"",
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "name": "kube-dns",
-          "namespace": "kube-system",
-          "port": 53,
-          "port_name": "dns",
-          "protocol": "udp"
-        }
-      ],
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "bytes_in": 1924191,
-              "bytes_out": 1007783,
-              "packet_in": 11332,
-              "packet_out": 11670
-            },
-            "connections": {
-              "completed": 5714,
-              "started": 5797,
-              "total_per_sample_interval": 5906
-            }
-          }
-        }
-      ]
-    },
-    {
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "icmp"
-          },
-          {
-            "port_ranges": [
-              {
-                "max_port": 80,
-                "min_port": 80
-              },
-              {
-                "max_port": 443,
-                "min_port": 443
-              }
-            ],
-            "protocol": "tcp"
-          }
-        ]
-      },
-      "id": {
-        "dest_node_id": "hosts/*",
-        "source_node_id": "net/pub"
-      },
-      "selectors": {
-        "l3_flows": "dest_type = \"hep\" AND source_name_aggr = \"pub\" AND source_namespace = \"-\" AND source_type = \"net\""
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
       },
       "stats": [
         {
           "l3": {
             "allowed": {
-              "bytes_in": 576,
-              "bytes_out": 252,
-              "packet_in": 11,
-              "packet_out": 3
+              "bytes_in": 1946,
+              "bytes_out": 3493,
+              "packet_in": 17,
+              "packet_out": 17
             },
             "connections": {
-              "completed": 11,
-              "started": 11,
-              "total_per_sample_interval": 11
+              "completed": 14,
+              "started": 17,
+              "total_per_sample_interval": 19
             }
           }
         }
@@ -387,109 +350,28 @@
           {
             "port_ranges": [
               {
-                "max_port": 53,
-                "min_port": 53
+                "max_port": 8080,
+                "min_port": 8080
               }
             ],
-            "protocol": "udp"
+            "protocol": "tcp"
           }
         ]
       },
       "id": {
-        "dest_node_id": "namespace/kube-system",
+        "dest_node_id": "namespace/storefront",
         "source_node_id": "hosts/*"
       },
       "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_type = \"hep\""
+        "l3_flows": "(dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\") AND source_type = \"hep\""
       },
       "stats": [
         {
-          "l3": {
-            "allowed": {
-              "bytes_in": 1946,
-              "bytes_out": 3493,
-              "packet_in": 17,
-              "packet_out": 17
-            },
-            "connections": {
-              "completed": 14,
-              "started": 17,
-              "total_per_sample_interval": 19
-            }
-          }
-        }
-      ]
-    }
-  ],
-  "nodes": [
-    {
-      "expandable": true,
-      "id": "namespace/storefront",
-      "name": "storefront",
-      "parent_id": "layer/storefront-layer",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
-        "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
-        "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\""
-      },
-      "stats": [
-        {
-          "dns": {
-            "latency_count": 8421,
-            "max_request_latency": 9745000,
-            "mean_request_latency": 476851.4419902624,
-            "min_request_latency": 324000,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 2098,
-                "latency_count": 1925,
-                "max_request_latency": 8986000,
-                "mean_request_latency": 513239.109090909,
-                "min_request_latency": 345421
-              },
-              {
-                "code": "NXDOMAIN",
-                "count": 7300,
-                "latency_count": 6496,
-                "max_request_latency": 9745000,
-                "mean_request_latency": 466068.4587438424,
-                "min_request_latency": 324000
-              }
-            ]
-          },
-          "l3": {
-            "allowed": {
-              "bytes_in": 170603,
-              "bytes_out": 216867,
-              "packet_in": 1975,
-              "packet_out": 2478
-            },
-            "connections": {
-              "completed": 243,
-              "started": 243,
-              "total_per_sample_interval": 243
-            },
-            "tcp": {
-              "count": 12,
-              "max_min_rtt": 319,
-              "max_smooth_rtt": 13044,
-              "mean_min_mss": 183.75,
-              "mean_mss": 1388,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 2647.75,
-              "min_mss": 1388,
-              "min_send_congestion_window": 10,
-              "sum_lost_packets": 0,
-              "sum_total_retransmissions": 0,
-              "sum_unrecovered_to": 0
-            }
-          },
           "l7": {
             "no_response": {
               "bytes_in": 0,
               "bytes_out": 0,
-              "count": 9962,
+              "count": 60,
               "max_duration": 0,
               "mean_duration": 0,
               "min_duration": 0
@@ -503,20 +385,20 @@
               "min_duration": 0
             },
             "response_code_2xx": {
-              "bytes_in": 220821,
-              "bytes_out": 8585185,
-              "count": 9812,
-              "max_duration": 588000000,
-              "mean_duration": 4706090.092516428,
+              "bytes_in": 0,
+              "bytes_out": 120,
+              "count": 60,
+              "max_duration": 5000000,
+              "mean_duration": 816666.6666666666,
               "min_duration": 0
             },
             "response_code_3xx": {
-              "bytes_in": 3853,
+              "bytes_in": 0,
               "bytes_out": 0,
-              "count": 150,
-              "max_duration": 78000000,
-              "mean_duration": 4550776.55,
-              "min_duration": 333333
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
             },
             "response_code_4xx": {
               "bytes_in": 0,
@@ -534,69 +416,12 @@
               "mean_duration": 0,
               "min_duration": 0
             }
-          },
-          "processes": {
-            "source": [
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "wrk:worker_0"
-              },
-              {
-                "max_num_ids_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "min_num_names_per_flow": 1,
-                "name": "wrk:worker_1"
-              }
-            ]
           }
         }
-      ],
-      "type": "namespace"
-    },
-    {
-      "expandable": true,
-      "expanded": true,
-      "id": "layer/storefront-layer",
-      "name": "storefront-layer",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
-        "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
-        "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\""
-      },
-      "stats": [
-        {
-          "dns": {
-            "latency_count": 8421,
-            "max_request_latency": 9745000,
-            "mean_request_latency": 476851.4419902624,
-            "min_request_latency": 324000,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 2098,
-                "latency_count": 1925,
-                "max_request_latency": 8986000,
-                "mean_request_latency": 513239.109090909,
-                "min_request_latency": 345421
-              },
-              {
-                "code": "NXDOMAIN",
-                "count": 7300,
-                "latency_count": 6496,
-                "max_request_latency": 9745000,
-                "mean_request_latency": 466068.4587438424,
-                "min_request_latency": 324000
-              }
-            ]
-          }
-        }
-      ],
-      "type": "layer"
-    },
+      ]
+    }
+  ],
+  "nodes": [
     {
       "aggregated_proto_ports": {
         "proto_ports": [
@@ -754,7 +579,7 @@
       "selectors": {
         "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
-        "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\""
+        "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\""
       },
       "stats": [
         {
@@ -772,6 +597,181 @@
         }
       ],
       "type": "namespace"
+    },
+    {
+      "expandable": true,
+      "id": "namespace/storefront",
+      "name": "storefront",
+      "parent_id": "layer/storefront-layer",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
+        "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\""
+      },
+      "stats": [
+        {
+          "dns": {
+            "latency_count": 8421,
+            "max_request_latency": 9745000,
+            "mean_request_latency": 476851.4419902624,
+            "min_request_latency": 324000,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 2098,
+                "latency_count": 1925,
+                "max_request_latency": 8986000,
+                "mean_request_latency": 513239.109090909,
+                "min_request_latency": 345421
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 7300,
+                "latency_count": 6496,
+                "max_request_latency": 9745000,
+                "mean_request_latency": 466068.4587438424,
+                "min_request_latency": 324000
+              }
+            ]
+          },
+          "l3": {
+            "allowed": {
+              "bytes_in": 170603,
+              "bytes_out": 216867,
+              "packet_in": 1975,
+              "packet_out": 2478
+            },
+            "connections": {
+              "completed": 243,
+              "started": 243,
+              "total_per_sample_interval": 243
+            },
+            "tcp": {
+              "count": 12,
+              "max_min_rtt": 319,
+              "max_smooth_rtt": 13044,
+              "mean_min_mss": 183.75,
+              "mean_mss": 1388,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2647.75,
+              "min_mss": 1388,
+              "min_send_congestion_window": 10,
+              "sum_lost_packets": 0,
+              "sum_total_retransmissions": 0,
+              "sum_unrecovered_to": 0
+            }
+          },
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 9962,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 220821,
+              "bytes_out": 8585185,
+              "count": 9812,
+              "max_duration": 588000000,
+              "mean_duration": 4706090.092516428,
+              "min_duration": 0
+            },
+            "response_code_3xx": {
+              "bytes_in": 3853,
+              "bytes_out": 0,
+              "count": 150,
+              "max_duration": 78000000,
+              "mean_duration": 4550776.55,
+              "min_duration": 333333
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "count": 0,
+              "max_duration": 0,
+              "mean_duration": 0,
+              "min_duration": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_0"
+              },
+              {
+                "max_num_ids_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "min_num_names_per_flow": 1,
+                "name": "wrk:worker_1"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "namespace"
+    },
+    {
+      "expandable": true,
+      "expanded": true,
+      "id": "layer/storefront-layer",
+      "name": "storefront-layer",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
+        "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\""
+      },
+      "stats": [
+        {
+          "dns": {
+            "latency_count": 8421,
+            "max_request_latency": 9745000,
+            "mean_request_latency": 476851.4419902624,
+            "min_request_latency": 324000,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 2098,
+                "latency_count": 1925,
+                "max_request_latency": 8986000,
+                "mean_request_latency": 513239.109090909,
+                "min_request_latency": 345421
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 7300,
+                "latency_count": 6496,
+                "max_request_latency": 9745000,
+                "mean_request_latency": 466068.4587438424,
+                "min_request_latency": 324000
+              }
+            ]
+          }
+        }
+      ],
+      "type": "layer"
     }
   ],
   "time_intervals": [

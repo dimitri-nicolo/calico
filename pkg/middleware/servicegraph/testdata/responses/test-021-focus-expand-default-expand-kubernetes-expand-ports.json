@@ -15,12 +15,21 @@
         ]
       },
       "id": {
-        "dest_node_id": "port/tcp/6443;hosts/*;svcgp;svc/default/kubernetes",
-        "source_node_id": "svcport/tcp/https/443;svc/default/kubernetes"
+        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
+        "source_node_id": "namespace/tigera-manager"
       },
       "selectors": {
-        "l3_flows": "dest_port_num = 6443 AND dest_type = \"hep\" AND proto = \"tcp\" AND source_namespace = \"tigera-manager\""
+        "l3_flows": "dest_port = 6443 AND dest_type = \"hep\" AND proto = \"tcp\" AND source_namespace = \"tigera-manager\""
       },
+      "service_ports": [
+        {
+          "name": "kubernetes",
+          "namespace": "default",
+          "port": 443,
+          "port_name": "https",
+          "protocol": "tcp"
+        }
+      ],
       "stats": [
         {
           "l3": {
@@ -86,21 +95,12 @@
         ]
       },
       "id": {
-        "dest_node_id": "svcport/tcp/https/443;svc/default/kubernetes",
-        "source_node_id": "namespace/tigera-manager"
+        "dest_node_id": "port/tcp/6443;hosts/*;svcgp;svc/default/kubernetes",
+        "source_node_id": "svcport/tcp/https/443;svc/default/kubernetes"
       },
       "selectors": {
-        "l3_flows": "dest_port_num = 6443 AND dest_type = \"hep\" AND proto = \"tcp\" AND source_namespace = \"tigera-manager\""
+        "l3_flows": "dest_port = 6443 AND dest_type = \"hep\" AND proto = \"tcp\" AND source_namespace = \"tigera-manager\""
       },
-      "service_ports": [
-        {
-          "name": "kubernetes",
-          "namespace": "default",
-          "port": 443,
-          "port_name": "https",
-          "protocol": "tcp"
-        }
-      ],
       "stats": [
         {
           "l3": {
@@ -154,28 +154,6 @@
   ],
   "nodes": [
     {
-      "id": "port/tcp/6443;hosts/*;svcgp;svc/default/kubernetes",
-      "parent_id": "hosts/*;svcgp;svc/default/kubernetes",
-      "port": 6443,
-      "protocol": "tcp",
-      "selectors": {
-        "l3_flows": "(dest_port_num = 6443 AND dest_type = \"hep\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_type = \"hep\")"
-      },
-      "type": "port"
-    },
-    {
-      "expandable": true,
-      "expanded": true,
-      "id": "namespace/default",
-      "name": "default",
-      "selectors": {
-        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
-        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
-        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\""
-      },
-      "type": "namespace"
-    },
-    {
       "expandable": true,
       "follow_egress": true,
       "id": "namespace/tigera-manager",
@@ -183,7 +161,7 @@
       "selectors": {
         "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
         "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
-        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\""
+        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\""
       },
       "stats": [
         {
@@ -264,8 +242,8 @@
       "port": 443,
       "protocol": "tcp",
       "selectors": {
-        "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND dest_service_port_name = \"https\" AND dest_service_port_num = 443 AND proto = \"tcp\"",
-        "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND dest_service_port_name = \"https\" AND dest_service_port_num = 443) OR (dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\")"
+        "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND dest_service_port = \"https\" AND dest_service_port_num = 443 AND proto = \"tcp\"",
+        "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND dest_service_port = 443 AND dest_service_port_name = \"https\") OR (dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\")"
       },
       "type": "svcport"
     },
@@ -278,6 +256,28 @@
         "l3_flows": "dest_type = \"hep\" OR source_type = \"hep\""
       },
       "type": "hosts"
+    },
+    {
+      "id": "port/tcp/6443;hosts/*;svcgp;svc/default/kubernetes",
+      "parent_id": "hosts/*;svcgp;svc/default/kubernetes",
+      "port": 6443,
+      "protocol": "tcp",
+      "selectors": {
+        "l3_flows": "(dest_port = 6443 AND dest_type = \"hep\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_type = \"hep\")"
+      },
+      "type": "port"
+    },
+    {
+      "expandable": true,
+      "expanded": true,
+      "id": "namespace/default",
+      "name": "default",
+      "selectors": {
+        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
+        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\""
+      },
+      "type": "namespace"
     }
   ],
   "time_intervals": [

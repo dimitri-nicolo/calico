@@ -26,7 +26,7 @@ const (
 	l7DestNameAggrIdx
 	l7DestServiceNamespaceIdx
 	l7DestServiceNameIdx
-	l7DestServicePortNameIdx
+	//l7DestServicePortNameIdx
 	l7DestServicePortNumIdx
 	l7DestPortNumIdx
 	l7SourceTypeIdx
@@ -46,12 +46,12 @@ var (
 		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
 		{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
 		{Name: "dest_service_name", Field: "dest_service_name"},
-		{Name: "dest_service_port_name", Field: "dest_service_port_name"},
-		{Name: "dest_service_port_num", Field: "dest_service_port_num"},
+		//{Name: "dest_service_port_name", Field: "dest_service_port_name"},
+		{Name: "dest_service_port_num", Field: "dest_service_port"},
 		{Name: "dest_port_num", Field: "dest_port_num"},
-		{Name: "source_type", Field: "source_type"},
-		{Name: "source_namespace", Field: "source_namespace"},
-		{Name: "source_name_aggr", Field: "source_name_aggr"},
+		{Name: "source_type", Field: "src_type"},
+		{Name: "source_namespace", Field: "src_namespace"},
+		{Name: "source_name_aggr", Field: "src_name_aggr"},
 		{Name: "response_code", Field: "response_code"},
 	}
 
@@ -162,8 +162,8 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 				Namespace: singleDashToBlank(key[l7DestServiceNamespaceIdx].String()),
 			},
 			Protocol: l7Proto,
-			PortName: singleDashToBlank(key[l7DestServicePortNameIdx].String()),
-			Port:     int(key[l7DestServicePortNumIdx].Float64()),
+			//PortName: singleDashToBlank(key[l7DestServicePortNameIdx].String()),
+			Port: int(key[l7DestServicePortNumIdx].Float64()),
 		}
 		dest := FlowEndpoint{
 			Type:      mapRawTypeToGraphNodeType(key[l7DestTypeIdx].String(), true),

@@ -127,7 +127,7 @@ var _ = Describe("Service graph data tests", func() {
 			// file in the event of an error.  It makes dev cycles easier.
 			actualData = actual
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".json"
 
 			// Parse the expected response.
 			var expected map[string]interface{}
