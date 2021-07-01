@@ -200,10 +200,14 @@ func (f *rbacFilter) IncludeEndpoint(e FlowEndpoint) bool {
 		return f.IncludeNetworkSets(e.Namespace)
 	case v1.GraphNodeTypeHost:
 		return f.IncludeHostEndpoints()
+	case v1.GraphNodeTypeUnknown:
+		// The L7 summary logs will not contain an endpoint type.
+		return false
 	default:
-		log.Panicf("Unexpected endpoint type in parsed flows: %s", e.Type)
+		// Anything else
+		log.Debugf("Unexpected endpoint type in parsed flows: %s", e.Type)
+		return false
 	}
-	return false
 }
 
 func (f *rbacFilter) IncludeHostEndpoints() bool {
