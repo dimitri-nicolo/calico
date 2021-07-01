@@ -8744,7 +8744,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"l7LogsFileAggregationSourceInfo": {
 						SchemaProps: spec.SchemaProps{
-							Description: "L7LogsFileAggregationExcludeSourceInfo is used to choose the type of aggregation for the source metadata on L7 log entries. [Default: IncludeL7SourceInfo - include source metadata]. Accepted values are IncludeL7SourceInfo and ExcludeL7SourceInfo. IncludeL7SourceInfo - Include source metadata in the logs. ExcludeL7SourceInfo - Aggregate over all other fields ignoring the source aggregated name, namespace, and type.",
+							Description: "L7LogsFileAggregationExcludeSourceInfo is used to choose the type of aggregation for the source metadata on L7 log entries. [Default: IncludeL7SourceInfoNoPort - include all source metadata except for the source port]. Accepted values are IncludeL7SourceInfo, IncludeL7SourceInfoNoPort, and ExcludeL7SourceInfo. IncludeL7SourceInfo - Include source metadata in the logs. IncludeL7SourceInfoNoPort - Include source metadata in the logs excluding the source port. ExcludeL7SourceInfo - Aggregate over all other fields ignoring the source aggregated name, namespace, and type.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
