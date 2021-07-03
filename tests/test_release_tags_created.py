@@ -49,6 +49,7 @@ MAPPED_COMPONENTS = {
     'honeypod-controller': 'honeypod-controller',
     'anomaly_detection_jobs': 'anomaly_detection_jobs',
     'elasticsearch-metrics': 'elasticsearch-metrics',
+    'packetcapture-api': 'packetcapture-api',
 }
 
 SKIP_COMPONENTS = [
@@ -58,6 +59,14 @@ SKIP_COMPONENTS = [
 
     # key-cert-provisioner image isn't part of the release process.
     'key-cert-provisioner',
+
+    # third party images
+    'elasticsearch-operator',
+    'prometheus',
+    'prometheus-operator',
+    'prometheus-config-reloader',
+    'configmap-reload',
+    'alertmanager',
 ]
 
 with open('%s/../_data/versions.yml' % PATH) as f:
@@ -68,12 +77,12 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 
 def test_all_tigera_images_are_mapped():
 
-  mapped_images = MAPPED_COMPONENTS
+    mapped_images = MAPPED_COMPONENTS
 
-  version_compoments = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/') and k not in SKIP_COMPONENTS}
+    version_components = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/') and k not in SKIP_COMPONENTS}
 
-  assert len(mapped_images.keys()) == len(version_compoments.keys())
-  assert set(mapped_images.keys()) == set(version_compoments.keys())
+    assert len(mapped_images.keys()) == len(version_components.keys())
+    assert set(mapped_images.keys()) == set(version_components.keys())
 
 @parameterized(MAPPED_COMPONENTS.items())
 def test_component_repo_has_release_branch(name, repo_name):
