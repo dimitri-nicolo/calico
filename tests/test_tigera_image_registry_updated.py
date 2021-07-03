@@ -10,6 +10,20 @@ RELEASE_STREAM = tests.RELEASE_STREAM
 DOCS_URL = tests.DOCS_URL
 REGISTRY = tests.REGISTRY
 
+# List of images served in Tigera registry and not using release version:
+IMAGES_WITH_DIFFERENT_VERSION = {
+    # firstparty but different version (operator is handled in different path)
+    'key-cert-provisioner': 'key-cert-provisioner',
+
+    # third party
+    'eck-operator': 'elasticsearch-operator',
+    'alertmanager': 'alertmanager',
+    'prometheus': 'prometheus',
+    'prometheus-operator': 'prometheus-operator',
+    'prometheus-config-reloader': 'prometheus-config-reloader',
+    'configmap-reload': 'configmap-reload',
+}
+
 # create list of images for this release
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
@@ -30,12 +44,11 @@ def test_tigera_image_registry_updated():
         ver_image = image.replace('%s/tigera/' % REGISTRY, '').split(':')
         expected_ver = RELEASE_VERSION
         if ver_image[0] == 'operator':
-          expected_ver = release.get('tigera-operator').get('version')
-        if ver_image[0] == 'kibana':
-          expected_ver = release['components'].get('kibana').get('version')
-        if ver_image[0] == 'key-cert-provisioner':
-          expected_ver = release['components'].get('key-cert-provisioner').get('version')
-        print '[INFO] checking registry image %s references %s' % (ver_image[0], expected_ver)
+            expected_ver = release.get('tigera-operator').get('version')
+        if ver_image[0] in IMAGES_WITH_DIFFERENT_VERSION:
+            component_name = IMAGES_WITH_DIFFERENT_VERSION[ver_image[0]]
+            expected_ver = release['components'].get(component_name).get('version')
+        print '[INFO] checking registry image {0} references {1}'.format(ver_image[0], expected_ver)
         assert ver_image[1] == expected_ver
 
 def test_non_tigera_image_registry_updated():
