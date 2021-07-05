@@ -387,7 +387,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, domainNameSet db.Domai
 	var fromTimestamp time.Time
 	currentDomainNameSetHash := feed.Annotations[db.DomainNameSetHashKey]
 	// If the domainNameSet has changed we need to query from the beginning of time, otherwise query from the last successful time
-	if strings.Compare(newDomainNameSetHash, currentDomainNameSetHash) == 0 {
+	if feed.Status.LastSuccessfulSearch != nil && strings.Compare(newDomainNameSetHash, currentDomainNameSetHash) == 0 {
 		fromTimestamp = feed.Status.LastSuccessfulSearch.Time
 	}
 
