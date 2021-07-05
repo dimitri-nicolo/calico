@@ -14,7 +14,7 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-LIBBPF_PATH=bin/bpf/bpf-gpl/include/libbpf/src
+LIBBPF_PATH=bin/third-party/libbpf/src
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
@@ -234,12 +234,12 @@ remote-deps: mod-download
 		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/'
 
 libbpf.a: mod-download
-	rm -rf bin/bpf
-	mkdir -p bin/bpf
+	rm -rf bin/third-party
+	mkdir -p bin/third-party
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
-		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
-		chmod -R +w bin/bpf; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl/include/libbpf bin/third-party; \
+		chmod -R +w bin/third-party; \
 		make -j 16 -C $(LIBBPF_PATH) BUILD_STATIC_ONLY=1'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
