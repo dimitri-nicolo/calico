@@ -183,7 +183,7 @@ clean:
 	rm -rf config/
 	rm -rf vendor
 	rm Makefile.common*
-	make -C bin/bpf/bpf-gpl/include/libbpf/src clean
+	make -C $(LIBBPF_PATH) clean
 	# Delete images that we built in this repo
 	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -233,8 +233,13 @@ remote-deps: mod-download
 		cp bin/bpf/bpf-apache/bin/* filesystem/usr/lib/calico/bpf/; \
 		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/'
 
-libbpf.a: remote-deps
+libbpf.a:
+	rm -rf bin/bpf
+	mkdir -p bin/bpf
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+		$(GIT_CONFIG_SSH) \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
+		chmod -R +w bin/bpf; \
 		make -j 16 -C ./bin/bpf/bpf-gpl/include/libbpf/src/ BUILD_STATIC_ONLY=1'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
