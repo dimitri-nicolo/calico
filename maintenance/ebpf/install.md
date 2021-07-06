@@ -1,7 +1,7 @@
 ---
 title: Install in eBPF mode
 description: Install Calico Enterprise in eBPF mode.
-canonical_url: '/maintenance/performance/ebpf/install'
+canonical_url: '/maintenance/ebpf/install'
 ---
 
 ### Big picture
@@ -60,7 +60,7 @@ and in particular, pushing the networking capabilities of the latest Linux kerne
     issue has already been accepted upstream but at the time of writing it is not publicly available.
   
   - RKE: eBPF mode cannot be enabled at install time because RKE doesn't provide
-    a stable address for the API server.  However, by following [these instructions](../../maintenance/performance/ebpf/enabling-ebpf),
+    a stable address for the API server.  However, by following [these instructions](../../maintenance/ebpf/enabling-ebpf),
     it can be enabled as a post-install step.
   
   - Docker Enterprise: eBPF mode is incompatible with Docker Enterprise at this time. The Tigera team is investigating the issue.
@@ -449,7 +449,7 @@ Then, should you want to start `kube-proxy` again, you can simply remove the nod
 
 **Recommended**
 
-- [Learn more about eBPF](../../maintenance/performance/ebpf/about-ebpf)
+- [Learn more about eBPF](../../maintenance/ebpf/about-ebpf)
 
 **Recommended - Security**
 

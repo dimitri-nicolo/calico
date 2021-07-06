@@ -99,22 +99,21 @@ section:
       path: /maintenance/monitor/metrics/metrics
     - title: Elasticsearch and Fluentd metrics
       path: /maintenance/monitor/metrics/elasticsearch-and-fluentd-metrics
-- title: Performance and scaling
-  path: /maintenance/performance/
-  section:
-  - title: eBPF
-    path: /maintenance/performance/ebpf/
-    section: 
-    - title: About eBPF
-      path: /maintenance/performance/ebpf/about-ebpf
-    - title: Install eBPF on a new cluster
-      path: /maintenance/performance/ebpf/install
-    - title: Enable eBPF on an existing cluster
-      path: /maintenance/performance/ebpf/enabling-ebpf
-    - title: Create an EKS cluster for eBPF mode
-      path: /maintenance/performance/ebpf/ebpf-and-eks
-  - title: Reduce node impacts on datastore
-    path: /reference/typha/overview
+- title: eBPF
+  path: /maintenance/ebpf/
+  section: 
+  - title: About eBPF
+    path: /maintenance/ebpf/about-ebpf
+  - title: Install eBPF on a new cluster
+    path: /maintenance/ebpf/install
+  - title: Enable eBPF on an existing cluster
+    path: /maintenance/ebpf/enabling-ebpf
+  - title: Create an EKS cluster for eBPF mode
+    path: /maintenance/ebpf/ebpf-and-eks
+  - title: Troubleshoot eBPF dataplane
+    path: /maintenance/ebpf/troubleshoot-ebpf  
+- title: Reduce node impacts on datastore
+  path: /reference/typha/overview
 - title: Remove nodes from a cluster
   path: /maintenance/decommissioning-a-node    
 - title: Troubleshooting
@@ -124,5 +123,3 @@ section:
     path: /maintenance/troubleshoot/troubleshooting
   - title: Component logs
     path: /maintenance/troubleshoot/component-logs
-  - title: eBPF Dataplane
-    path: /maintenance/troubleshoot/troubleshoot-ebpf

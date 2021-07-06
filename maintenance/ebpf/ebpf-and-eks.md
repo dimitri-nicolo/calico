@@ -1,6 +1,7 @@
 ---
 title: Create an EKS cluster for eBPF mode
 description: Create an EKS cluster with a newer kernel, suitable for eBPF mode.
+canonical_url: '/maintenance/ebpf/ebpf-and-eks'
 ---
 
 ### Big picture
