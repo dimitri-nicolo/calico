@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 
@@ -101,7 +102,7 @@ var _ = Describe("Reconcile", func() {
 		var managedK8sCli *k8sfake.Clientset
 		var managementK8sCli *k8sfake.Clientset
 		var esK8sCli *relasticsearchfake.RESTClient
-		var esCertSecret, kbCertSecret *corev1.Secret
+		var esCertSecret, gatewayCertSecret *corev1.Secret
 		var managementESConfigMap *corev1.ConfigMap
 
 		BeforeEach(func() {
@@ -116,9 +117,9 @@ var _ = Describe("Reconcile", func() {
 				},
 			}
 
-			kbCertSecret = &corev1.Secret{
+			gatewayCertSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      resource.KibanaCertSecret,
+					Name:      resource.ESGatewayCertSecret,
 					Namespace: resource.OperatorNamespace,
 				},
 				Data: map[string][]byte{
@@ -140,7 +141,7 @@ var _ = Describe("Reconcile", func() {
 			}
 
 			managedK8sCli = k8sfake.NewSimpleClientset()
-			managementK8sCli = k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap)
+			managementK8sCli = k8sfake.NewSimpleClientset(esCertSecret, gatewayCertSecret, managementESConfigMap)
 
 			var err error
 			esK8sCli, err = relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
@@ -172,7 +173,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
 		})
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +189,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli,  esCertSecret, gatewayCertSecret, managementESConfigMap)
 
 			ctx := context.Background()
 
@@ -221,7 +222,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli,  esCertSecret, gatewayCertSecret, managementESConfigMap)
 
 			ctx := context.Background()
 
@@ -252,7 +253,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
 
 			ctx := context.Background()
 
@@ -272,34 +273,48 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func assertManagedConfiguration(k8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedKBCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
+func assertManagedConfiguration(managedk8sCli, managementk8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedgatewayCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
 	ctx := context.Background()
 
-	userSecrets, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
+	publicUserSecrets, err := managedk8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
 	Expect(err).ShouldNot(HaveOccurred())
 
 	//Test user secrets are created
-	userMap := esusers.ElasticsearchUsers("managed-1", false)
-	for _, userSecret := range userSecrets.Items {
+	privateUserMap, publicUserMap := esusers.ElasticsearchUsers("managed-1", false)
+	for _, userSecret := range publicUserSecrets.Items {
 		userName := userSecret.Labels[elasticsearchconfiguration.ElasticsearchUserNameLabel]
-		user, exists := userMap[esusers.ElasticsearchUserName(userName)]
+		user, exists := publicUserMap[esusers.ElasticsearchUserName(userName)]
 
 		Expect(exists).Should(BeTrue())
 		Expect(user.Username).Should(Equal(string(userSecret.Data["username"])))
 
-		delete(userMap, esusers.ElasticsearchUserName(userName))
+		delete(publicUserMap, esusers.ElasticsearchUserName(userName))
 	}
-	Expect(userMap).Should(BeEmpty())
 
-	esCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	Expect(len(publicUserMap)).Should(BeNumerically("==", 0))
+
+	privateUserSecrets, err := managementk8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	for _, userSecret := range privateUserSecrets.Items {
+		userName := userSecret.Labels[elasticsearchconfiguration.ElasticsearchUserNameLabel]
+		user, exists := privateUserMap[esusers.ElasticsearchUserName(userName)]
+
+		Expect(exists).Should(BeTrue())
+		if strings.HasSuffix(userSecret.Name, esusers.ElasticsearchSecureUserSuffix) {
+			Expect(user.Username).Should(Equal(string(userSecret.Data["username"])))
+		}
+	}
+
+	esCertSecret, err := managedk8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchCertSecret, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(esCertSecret.Data).Should(Equal(expectedESCertSecret.Data))
 
-	kbCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.KibanaCertSecret, metav1.GetOptions{})
+	gatewayCertSecret, err := managedk8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ESGatewayCertSecret, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
-	Expect(kbCertSecret.Data).Should(Equal(expectedKBCertSecret.Data))
+	Expect(gatewayCertSecret.Data).Should(Equal(expectedgatewayCertSecret.Data))
 
-	managedESConfigMap, err := k8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	managedESConfigMap, err := managedk8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(managedESConfigMap.Data).Should(Equal(map[string]string{
 		"clusterName": "managed-1",

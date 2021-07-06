@@ -25,6 +25,7 @@ require (
 	github.com/tigera/api v0.0.0-20210323171118-94397aa7c4fd
 	github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0

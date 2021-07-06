@@ -7,9 +7,11 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
@@ -20,6 +22,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
+
+// This value is used in calculateUserChangeHash() to force ES users to be considered 'stale' and re-created in case there
+// is version skew between the Managed and Management clusters. The value can be bumped anytime we change something about
+// the way ES credentials work and need to re-create them.
+const EsUserCredentialsSchemaVersion = "1"
 
 type reconciler struct {
 	clusterName string
@@ -51,7 +58,7 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	}
 
 	if c.esHash != currentESHash {
-		// Only reconcile the roles Elasticsearch has been changes in a way that may have wiped out the roles, or if
+		// Only reconcile the roles if Elasticsearch has been changed in a way that may have wiped out the roles, or if
 		// this is the first time Reconcile has run
 		if err := c.reconcileRoles(); err != nil {
 			return err
@@ -85,7 +92,7 @@ func (c *reconciler) reconcileRoles() error {
 		return err
 	}
 
-	roles := users.GetAuthorizationRoles(c.clusterName)
+	roles := esusers.GetAuthorizationRoles(c.clusterName)
 	return esCLI.CreateRoles(roles...)
 }
 
@@ -105,34 +112,43 @@ func (c *reconciler) reconcileConfigMap() error {
 	return nil
 }
 
-// reconcileCASecrets copies the tigera-secure-es-http-certs-public and tigera-secure-kb-http-certs-public secrets from
-// the management cluster to the managed cluster
+// reconcileCASecrets copies tigera-secure-es-gateway-http-certs-public from the management cluster to the managed cluster.
 func (c *reconciler) reconcileCASecrets() error {
-	for _, secretName := range []string{resource.ElasticsearchCertSecret, resource.KibanaCertSecret} {
-		secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
-			return err
-		}
+	secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})
+	if err != nil {
+		return err
 	}
 
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+		return err
+	}
+	// To support older Managed clusters we need to also create the tigera-secure-es-http-certs-public secret containing the same cert
+	// so that components configured to mount the old secret can still reach Elasticsearch in the Management cluster.
+	secret.ObjectMeta.Name = resource.ElasticsearchCertSecret
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+		return err
+	}
 	return nil
 }
 
 // reconcileUsers makes sure that all the necessary users exist for a managed cluster in elasticsearch and that the managed
 // cluster has access to those users via secrets
 func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
-	staleOrMissingUsers, err := c.missingOrStaleUsers()
+	staleOrMissingPrivateUsers, staleOrMissingPublicUsers, err := c.missingOrStaleUsers()
 	if err != nil {
 		return err
 	}
 
-	for username, user := range staleOrMissingUsers {
+	for username, user := range staleOrMissingPrivateUsers {
 		reqLogger.Infof("creating user %s", username)
-		if err := c.createUser(username, user); err != nil {
+		if err := c.createUser(username, user, true); err != nil {
+			return err
+		}
+	}
+
+	for username, user := range staleOrMissingPublicUsers {
+		reqLogger.Infof("creating user %s", username)
+		if err := c.createUser(username, user, false); err != nil {
 			return err
 		}
 	}
@@ -140,71 +156,115 @@ func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 	return nil
 }
 
-// createUser creates the given elasticsearch user in elasticsearch and creates a secret in the managed cluster containing
-// that users credentials
-func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User) error {
-	esCLI, err := c.getOrInitializeESClient()
-	if err != nil {
-		return err
-	}
-
+// createUser creates the given Elasticsearch user in Elasticsearch if passed a private user and creates a secret containing that users credentials.
+// Secrets containing private user credentials (real Elasticsearch credentials) can only be created in the Elasticsearch namespace
+// in the Management cluster. Secrets containing public user credentials are created in the Operator namespace in either the Managed or
+// Management cluster, as well as in the Elasticsearch namespace in the Management cluster. These public users are not actual Elasticsearch users.
+// They are used by ES Gateway to authenticate components attempting to communicate with Elasticsearch and to then swap in credentials for real Elasticsearch users.
+func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User, elasticsearchUser bool) error {
 	userPassword, err := randomPassword(16)
 	if err != nil {
 		return err
 	}
 	esUser.Password = userPassword
-	if err := esCLI.CreateUser(esUser); err != nil {
-		return err
-	}
 
 	changeHash, err := c.calculateUserChangeHash(esUser)
 	if err != nil {
 		return err
 	}
 
-	return resource.WriteSecretToK8s(c.managedK8sCLI, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-elasticsearch-access", username),
-			Namespace: resource.OperatorNamespace,
-			Labels: map[string]string{
-				UserChangeHashLabel:        changeHash,
-				ElasticsearchUserNameLabel: string(username),
-			},
-		},
-		Data: map[string][]byte{
-			"username": []byte(esUser.Username),
-			"password": []byte(esUser.Password),
-		},
-	})
-}
-
-// missingOrStaleUsers returns a map of all the users that are missing from the cluster or have mismatched elasticsearch
-// hashes (indicating that elasticsearch changed in a way that requires user credential recreation)
-func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
-	esUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
-	secretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
-	if err != nil {
-		return nil, err
+	name := fmt.Sprintf("%s-elasticsearch-access", string(username))
+	data := map[string][]byte{
+		"username": []byte(esUser.Username),
+		"password": []byte(esUser.Password),
 	}
 
-	for _, secret := range secretsList.Items {
+	if elasticsearchUser {
+		// Only private users are created in Elasticsearch.
+		esCLI, err := c.getOrInitializeESClient()
+		if err != nil {
+			return err
+		}
+		if err := esCLI.CreateUser(esUser); err != nil {
+			return err
+		}
+
+		if c.management {
+			name = fmt.Sprintf("%s-elasticsearch-access-gateway", string(username))
+		} else {
+			name = fmt.Sprintf("%s-%s-elasticsearch-access-gateway", string(username), c.clusterName)
+		}
+		// Create the user secret  in the Management cluster Elasticsearch namespace.
+		return writeUserSecret(name, resource.TigeraElasticsearchNamespace, changeHash, c.managementK8sCLI, username, data)
+	}
+	// First create the secret in the Operator namespace in the appropriate cluster. If this is a Management cluster,
+	// c.managedK8sCLI actually contains a client for the Management cluster.
+	if err := writeUserSecret(name, resource.OperatorNamespace, changeHash, c.managedK8sCLI, username, data); err != nil {
+		return err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(esUser.Password), bcrypt.MinCost)
+	if err != nil {
+		return err
+	}
+	data["password"] = hash
+	if c.management {
+		name = fmt.Sprintf("%s-gateway-verification-credentials", string(username))
+	} else {
+		name = fmt.Sprintf("%s-%s-gateway-verification-credentials", string(username), c.clusterName)
+	}
+	// Next create the user secret with the username and password hashed in the Management cluster Elasticsearch namespace.
+	return writeUserSecret(name, resource.TigeraElasticsearchNamespace, changeHash, c.managementK8sCLI, username, data)
+}
+
+// missingOrStaleUsers returns 2 maps, the first containing private users and the second containing public users that are
+// missing from the cluster or have mismatched elasticsearch hashes (indicating that elasticsearch changed in a way that requires user credential recreation).
+func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]elasticsearch.User, map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
+	privateEsUsers, publicEsUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
+
+	publicSecretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	privateSecretsList, err := c.managementK8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, secret := range publicSecretsList.Items {
 		username := esusers.ElasticsearchUserName(secret.Labels[ElasticsearchUserNameLabel])
-		if user, exists := esUsers[username]; exists {
+		if user, exists := publicEsUsers[username]; exists {
 			userHash, err := c.calculateUserChangeHash(user)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if secret.Labels[UserChangeHashLabel] == userHash {
-				delete(esUsers, username)
+				delete(publicEsUsers, username)
 			}
 		}
 	}
 
-	return esUsers, nil
+	for _, secret := range privateSecretsList.Items {
+		if strings.HasSuffix(secret.Name, "gateway-verification-credentials") {
+			break
+		}
+		username := esusers.ElasticsearchUserName(secret.Labels[ElasticsearchUserNameLabel])
+		if user, exists := privateEsUsers[username]; exists {
+			userHash, err := c.calculateUserChangeHash(user	)
+			if err != nil {
+				return nil, nil, err
+			}
+			if secret.Labels[UserChangeHashLabel] == userHash {
+				delete(privateEsUsers, username)
+			}
+		}
+	}
+
+	return privateEsUsers, publicEsUsers, nil
 }
 
 func (c *reconciler) calculateUserChangeHash(user elasticsearch.User) (string, error) {
-	return resource.CreateHashFromObject([]interface{}{c.esHash, c.ownerReference, user.Roles})
+	return resource.CreateHashFromObject([]interface{}{c.esHash, c.ownerReference, user.Roles, EsUserCredentialsSchemaVersion})
 }
 
 func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {
@@ -238,4 +298,18 @@ func CleanUpESUserSecrets(clientset kubernetes.Interface) error {
 		metav1.ListOptions{
 			LabelSelector: ElasticsearchUserNameLabel,
 		})
+}
+
+func writeUserSecret(name, namespace, changeHash string, client kubernetes.Interface, username esusers.ElasticsearchUserName, data map[string][]byte) error {
+	return resource.WriteSecretToK8s(client, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				UserChangeHashLabel:        changeHash,
+				ElasticsearchUserNameLabel: string(username),
+			},
+		},
+		Data: data,
+	})
 }

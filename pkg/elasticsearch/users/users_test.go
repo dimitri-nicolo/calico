@@ -13,12 +13,13 @@ import (
 var _ = Describe("ElasticseachUsers", func() {
 	Context("management flag set to false", func() {
 		It("the expected users and roles are available", func() {
-			testElasticsearchUsers(users.ElasticsearchUsers("managed-cluster", false),
+			privateUsers, publicUsers := users.ElasticsearchUsers("managed-cluster", false)
+			testElasticsearchUsers(privateUsers, publicUsers,
 				map[users.ElasticsearchUserName]elasticsearch.User{
 					"tigera-fluentd": {
-						Username: "tigera-fluentd-managed-cluster",
+						Username: "tigera-fluentd-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-fluentd-managed-cluster",
+							Name: "tigera-fluentd-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -29,9 +30,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-eks-log-forwarder": {
-						Username: "tigera-eks-log-forwarder-managed-cluster",
+						Username: "tigera-eks-log-forwarder-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-eks-log-forwarder-managed-cluster",
+							Name: "tigera-eks-log-forwarder-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -42,9 +43,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-benchmarker": {
-						Username: "tigera-ee-compliance-benchmarker-managed-cluster",
+						Username: "tigera-ee-compliance-benchmarker-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-benchmarker-managed-cluster",
+							Name: "tigera-ee-compliance-benchmarker-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -55,9 +56,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-controller": {
-						Username: "tigera-ee-compliance-controller-managed-cluster",
+						Username: "tigera-ee-compliance-controller-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-controller-managed-cluster",
+							Name: "tigera-ee-compliance-controller-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -68,9 +69,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-reporter": {
-						Username: "tigera-ee-compliance-reporter-managed-cluster",
+						Username: "tigera-ee-compliance-reporter-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-reporter-managed-cluster",
+							Name: "tigera-ee-compliance-reporter-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{
@@ -99,9 +100,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-snapshotter": {
-						Username: "tigera-ee-compliance-snapshotter-managed-cluster",
+						Username: "tigera-ee-compliance-snapshotter-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-snapshotter-managed-cluster",
+							Name: "tigera-ee-compliance-snapshotter-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -112,10 +113,10 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-intrusion-detection": {
-						Username: "tigera-ee-intrusion-detection-managed-cluster",
+						Username: "tigera-ee-intrusion-detection-managed-cluster-secure",
 						Roles: []elasticsearch.Role{
 							{
-								Name: "tigera-ee-intrusion-detection-managed-cluster",
+								Name: "tigera-ee-intrusion-detection-managed-cluster-secure",
 								Definition: &elasticsearch.RoleDefinition{
 									Cluster: []string{"monitor", "manage_index_templates"},
 									Indices: []elasticsearch.RoleIndex{
@@ -141,9 +142,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						},
 					},
 					"tigera-ee-ad-job": {
-						Username: "tigera-ee-ad-job-managed-cluster",
+						Username: "tigera-ee-ad-job-managed-cluster-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-ad-job-managed-cluster",
+							Name: "tigera-ee-ad-job-managed-cluster-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{
@@ -168,17 +169,44 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 				},
+				map[users.ElasticsearchUserName]elasticsearch.User{
+					"tigera-fluentd": {
+						Username: "tigera-fluentd-managed-cluster",
+					},
+					"tigera-eks-log-forwarder": {
+						Username: "tigera-eks-log-forwarder-managed-cluster",
+					},
+					"tigera-ee-compliance-benchmarker": {
+						Username: "tigera-ee-compliance-benchmarker-managed-cluster",
+					},
+					"tigera-ee-compliance-controller": {
+						Username: "tigera-ee-compliance-controller-managed-cluster",
+					},
+					"tigera-ee-compliance-reporter": {
+						Username: "tigera-ee-compliance-reporter-managed-cluster",
+					},
+					"tigera-ee-compliance-snapshotter": {
+						Username: "tigera-ee-compliance-snapshotter-managed-cluster",
+					},
+					"tigera-ee-intrusion-detection": {
+						Username: "tigera-ee-intrusion-detection-managed-cluster",
+					},
+					"tigera-ee-ad-job": {
+						Username: "tigera-ee-ad-job-managed-cluster",
+					},
+				},
 			)
 		})
 	})
 	Context("management flag set to true", func() {
 		It("the expected users and roles are available", func() {
-			testElasticsearchUsers(users.ElasticsearchUsers("cluster", true),
+			privateUsers, publicUsers := users.ElasticsearchUsers("cluster", true)
+			testElasticsearchUsers(privateUsers, publicUsers,
 				map[users.ElasticsearchUserName]elasticsearch.User{
 					"tigera-fluentd": {
-						Username: "tigera-fluentd",
+						Username: "tigera-fluentd-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-fluentd",
+							Name: "tigera-fluentd-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -189,9 +217,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-eks-log-forwarder": {
-						Username: "tigera-eks-log-forwarder",
+						Username: "tigera-eks-log-forwarder-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-eks-log-forwarder",
+							Name: "tigera-eks-log-forwarder-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -202,9 +230,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-benchmarker": {
-						Username: "tigera-ee-compliance-benchmarker",
+						Username: "tigera-ee-compliance-benchmarker-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-benchmarker",
+							Name: "tigera-ee-compliance-benchmarker-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -215,9 +243,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-controller": {
-						Username: "tigera-ee-compliance-controller",
+						Username: "tigera-ee-compliance-controller-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-controller",
+							Name: "tigera-ee-compliance-controller-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -228,9 +256,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-reporter": {
-						Username: "tigera-ee-compliance-reporter",
+						Username: "tigera-ee-compliance-reporter-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-reporter",
+							Name: "tigera-ee-compliance-reporter-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{
@@ -259,9 +287,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-snapshotter": {
-						Username: "tigera-ee-compliance-snapshotter",
+						Username: "tigera-ee-compliance-snapshotter-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-snapshotter",
+							Name: "tigera-ee-compliance-snapshotter-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -272,10 +300,10 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-intrusion-detection": {
-						Username: "tigera-ee-intrusion-detection",
+						Username: "tigera-ee-intrusion-detection-secure",
 						Roles: []elasticsearch.Role{
 							{
-								Name: "tigera-ee-intrusion-detection",
+								Name: "tigera-ee-intrusion-detection-secure",
 								Definition: &elasticsearch.RoleDefinition{
 									Cluster: []string{"monitor", "manage_index_templates"},
 									Indices: []elasticsearch.RoleIndex{
@@ -313,9 +341,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						},
 					},
 					"tigera-ee-installer": {
-						Username: "tigera-ee-installer",
+						Username: "tigera-ee-installer-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-installer",
+							Name: "tigera-ee-installer-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"manage_watcher", "manage"},
 								Indices: []elasticsearch.RoleIndex{
@@ -333,9 +361,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-ad-job": {
-						Username: "tigera-ee-ad-job",
+						Username: "tigera-ee-ad-job-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-ad-job",
+							Name: "tigera-ee-ad-job-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{
@@ -360,9 +388,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-compliance-server": {
-						Username: "tigera-ee-compliance-server",
+						Username: "tigera-ee-compliance-server-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-compliance-server",
+							Name: "tigera-ee-compliance-server-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -373,9 +401,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-manager": {
-						Username: "tigera-ee-manager",
+						Username: "tigera-ee-manager-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-manager",
+							Name: "tigera-ee-manager-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -386,9 +414,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-curator": {
-						Username: "tigera-ee-curator",
+						Username: "tigera-ee-curator-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-curator",
+							Name: "tigera-ee-curator-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -400,9 +428,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-operator": {
-						Username: "tigera-ee-operator",
+						Username: "tigera-ee-operator-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-operator",
+							Name: "tigera-ee-operator-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm", "read_ilm"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -413,9 +441,9 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 					"tigera-ee-elasticsearch-metrics": {
-						Username: "tigera-ee-elasticsearch-metrics",
+						Username: "tigera-ee-elasticsearch-metrics-secure",
 						Roles: []elasticsearch.Role{{
-							Name: "tigera-ee-elasticsearch-metrics",
+							Name: "tigera-ee-elasticsearch-metrics-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor"},
 								Indices: []elasticsearch.RoleIndex{{
@@ -426,15 +454,75 @@ var _ = Describe("ElasticseachUsers", func() {
 						}},
 					},
 				},
+				map[users.ElasticsearchUserName]elasticsearch.User{
+					"tigera-fluentd": {
+						Username: "tigera-fluentd",
+					},
+					"tigera-eks-log-forwarder": {
+						Username: "tigera-eks-log-forwarder",
+					},
+					"tigera-ee-compliance-benchmarker": {
+						Username: "tigera-ee-compliance-benchmarker",
+					},
+					"tigera-ee-compliance-controller": {
+						Username: "tigera-ee-compliance-controller",
+					},
+					"tigera-ee-compliance-reporter": {
+						Username: "tigera-ee-compliance-reporter",
+					},
+					"tigera-ee-compliance-snapshotter": {
+						Username: "tigera-ee-compliance-snapshotter",
+					},
+					"tigera-ee-intrusion-detection": {
+						Username: "tigera-ee-intrusion-detection",
+					},
+					"tigera-ee-installer": {
+						Username: "tigera-ee-installer",
+					},
+					"tigera-ee-ad-job": {
+						Username: "tigera-ee-ad-job",
+					},
+					"tigera-ee-compliance-server": {
+						Username: "tigera-ee-compliance-server",
+					},
+					"tigera-ee-manager": {
+						Username: "tigera-ee-manager",
+					},
+					"tigera-ee-curator": {
+						Username: "tigera-ee-curator",
+					},
+					"tigera-ee-operator": {
+						Username: "tigera-ee-operator",
+					},
+					"tigera-ee-elasticsearch-metrics": {
+						Username: "tigera-ee-elasticsearch-metrics",
+					},
+				},
 			)
 		})
 	})
 })
 
-func testElasticsearchUsers(esUsers, expectedESUsers map[users.ElasticsearchUserName]elasticsearch.User) {
-	Expect(len(esUsers)).Should(Equal(len(expectedESUsers)))
-	for expectedName, expectedUser := range expectedESUsers {
-		esUser, exists := esUsers[expectedName]
+func testElasticsearchUsers(privateUsers, publicUsers, expectedprivateUsers, expectedpublicUsers map[users.ElasticsearchUserName]elasticsearch.User) {
+	Expect(len(privateUsers)).Should(Equal(len(expectedprivateUsers)))
+	Expect(len(publicUsers)).Should(Equal(len(expectedpublicUsers)))
+	for expectedName, expectedUser := range expectedprivateUsers {
+		esUser, exists := privateUsers[expectedName]
+		Expect(exists).Should(BeTrue())
+		Expect(esUser.Username).Should(Equal(expectedUser.Username))
+
+		Expect(len(esUser.Roles)).Should(Equal(len(expectedUser.Roles)))
+
+		for _, expectedRole := range expectedUser.Roles {
+			for _, role := range esUser.Roles {
+				if expectedRole.Name == role.Name {
+					Expect(expectedRole.Definition).Should(Equal(role.Definition))
+				}
+			}
+		}
+	}
+	for expectedName, expectedUser := range publicUsers {
+		esUser, exists := publicUsers[expectedName]
 		Expect(exists).Should(BeTrue())
 		Expect(esUser.Username).Should(Equal(expectedUser.Username))
 
