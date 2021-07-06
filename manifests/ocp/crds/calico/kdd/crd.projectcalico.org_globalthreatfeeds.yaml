@@ -133,10 +133,6 @@ spec:
                 lastSuccessfulSync:
                   format: date-time
                   type: string
-              required:
-                - errorConditions
-                - lastSuccessfulSearch
-                - lastSuccessfulSync
               type: object
           type: object
       served: true
