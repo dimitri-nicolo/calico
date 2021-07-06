@@ -209,6 +209,11 @@ func (c client) PacketCaptures() PacketCaptureInterface {
 	return packetCaptures{client: c}
 }
 
+// DeepPacketInspections returns an interface for managing DPI resources.
+func (c client) DeepPacketInspections() DeepPacketInspectionInterface {
+	return deepPacketInspections{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }

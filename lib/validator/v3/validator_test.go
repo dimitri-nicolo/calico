@@ -3268,6 +3268,60 @@ func init() {
 		Entry("should accept a packet capture spec with all() selector", api.PacketCaptureSpec{
 			Selector: "all()",
 		}, true),
+		// DeepPacketInspection validation
+		Entry("should reject a deep packet inspection resource with an invalid selector", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-capture",
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "malformed$&/?!",
+			},
+		}, false),
+		Entry("should reject a deep packet inspection resource with an invalid name", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-malformed-name$/&",
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "",
+			},
+		}, false),
+		Entry("should reject a deep packet inspection resource with reserved labels", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-capture",
+				Labels: map[string]string{
+					"projectcalico.org/namespace": "default",
+				},
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "",
+			},
+		}, false),
+		Entry("should accept a deep packet inspection resource with labels", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-capture",
+				Labels: map[string]string{
+					"key": "value",
+				},
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "",
+			},
+		}, true),
+		Entry("should reject a deep packet inspection resource spec with a malformed selector", api.DeepPacketInspectionSpec{
+			Selector: "malformed&",
+		}, false),
+		Entry("should accept a deep packet inspection resource spec with logical boolean selector", api.DeepPacketInspectionSpec{
+			Selector: "app == \"client\" && capture == \"true\"",
+		}, true),
+		Entry("should accept a deep packet inspection resource spec with empty selector", api.DeepPacketInspectionSpec{
+			Selector: "",
+		}, true),
+		Entry("should accept a deep packet inspection resource spec with equality selector", api.DeepPacketInspectionSpec{
+			Selector: "capture == \"true\"",
+		}, true),
+		Entry("should accept a deep packet inspection resource spec with all() selector", api.DeepPacketInspectionSpec{
+			Selector: "all()",
+		}, true),
 	)
 
 	Describe("particular error string checking", func() {

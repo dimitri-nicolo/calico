@@ -207,6 +207,11 @@ func init() {
 		"packetcaptures",
 		reflect.TypeOf(apiv3.PacketCapture{}),
 	)
+	registerResourceInfo(
+		apiv3.KindDeepPacketInspection,
+		"deeppacketinspections",
+		reflect.TypeOf(apiv3.DeepPacketInspection{}),
+	)
 }
 
 type ResourceKey struct {
