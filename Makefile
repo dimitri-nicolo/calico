@@ -183,7 +183,7 @@ clean:
 	rm -rf config/
 	rm -rf vendor
 	rm Makefile.common*
-	make -C $(LIBBPF_PATH) clean
+	rm -rf bin
 	# Delete images that we built in this repo
 	docker rmi $(NODE_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -233,7 +233,8 @@ remote-deps: mod-download
 		cp bin/bpf/bpf-apache/bin/* filesystem/usr/lib/calico/bpf/; \
 		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/'
 
-libbpf.a: mod-download
+$(LIBBPF_PATH)/libbpf.a: go.mod
+	$(MAKE) mod-download
 	rm -rf bin/third-party
 	mkdir -p bin/third-party
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
@@ -254,7 +255,7 @@ endif
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
-$(NODE_CONTAINER_BINARY): libbpf.a $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
+$(NODE_CONTAINER_BINARY): $(LIBBPF_PATH)/libbpf.a $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
 
 $(WINDOWS_BINARY):
