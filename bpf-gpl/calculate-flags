@@ -82,7 +82,7 @@ elif [[ "${filename}" =~ .*connect.* ]]; then
   ((flags |= CALI_CGROUP))
   args+=("-DCALI_DEBUG_ALLOW_ALL" "-D__BPFTOOL_LOADER__" "-DCALI_LOG_PFX=CALI")
 elif [[ "${filename}" =~ .*kprobe.* ]]; then
-  args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALI")
+  args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALI" "-D__LIBBPF_LOADER__" "-g")
 elif [[ "${filename}" =~ .*stats.* ]]; then
   args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALI")
 elif [[ "${filename}" =~ .*wep.* ]]; then

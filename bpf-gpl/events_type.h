@@ -15,39 +15,12 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#ifndef __CALI_PERF_TYPES_H__
-#define __CALI_PERF_TYPES_H__
+#ifndef __CALI_EVENTS_TYPE_H__
+#define __CALI_EVENTS_TYPE_H__
 
-#include "bpf.h"
+#define EVENT_PROTO_STATS	1
+#define EVENT_DNS		2
+#define EVENT_POLICY_VERDICT	3
+#define EVENT_TCP_STATS	4
 
-#ifndef __LIBBPF_LOADER__
-struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
-	.type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
-	.key_size = 4,
-	.value_size = 4,
-	.max_entries = 512,
-	CALI_MAP_TC_EXT_PIN(MAP_PIN_GLOBAL)
-};
-#else
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-	__uint(max_entries, 512);
-	__type(key, __u32);
-	__type(value, __u32);
-} cali_perf_evnt SEC(".maps");
-#endif
-
-/* We need the header to be 64bit of size so that any 64bit fields in the
- * message structures that embed this header are also aligned.
- */
-struct perf_event_header {
-	__u32 type;
-	__u32 len;
-};
-
-struct perf_event_timestamp_header {
-	struct perf_event_header h;
-	__u64 timestamp_ns;
-};
-
-#endif /* __CALI_PERF_TYPES_H__ */
+#endif /* __CALI_EVENTS_TYPE_H__ */

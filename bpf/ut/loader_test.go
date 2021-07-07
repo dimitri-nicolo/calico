@@ -26,9 +26,6 @@ import (
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/elf"
-	"github.com/projectcalico/felix/bpf/events"
-	"github.com/projectcalico/felix/bpf/kprobe"
-	"github.com/projectcalico/felix/bpf/perf"
 )
 
 func TestBpfProgramLoaderWithMultipleSections(t *testing.T) {
@@ -147,35 +144,6 @@ func TestBpfLoaderFailureCases(t *testing.T) {
 	_, _, err = loader.Programs()
 	Expect(err).To(HaveOccurred())
 	os.Remove("loader_corrupt_elf.o")
-}
-
-func TestBPFLoaderWithTcpKprobe(t *testing.T) {
-	RegisterTestingT(t)
-
-	fileName := "../../bpf-gpl/bin/tcp_debug_kprobe.o"
-	mc := &bpf.MapContext{}
-	perfMap := perf.Map(mc, "perf_evnt", events.MaxCPUs)
-	err := perfMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-	kpStatMap := kprobe.MapKpStats(mc)
-	err = kpStatMap.EnsureExists()
-	Expect(err).NotTo(HaveOccurred())
-
-	loader, err := elf.NewLoaderFromFile(fileName, perfMap, kpStatMap)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(loader).NotTo(BeNil())
-
-	insnMap, license, err := loader.Programs()
-	Expect(err).NotTo(HaveOccurred())
-
-	Expect(len(insnMap)).To(Equal(3))
-	_, ok := insnMap["kprobe/tcp_sendmsg"]
-	Expect(ok).To(Equal(true))
-	_, ok = insnMap["kprobe/tcp_cleanup_rbuf"]
-	Expect(ok).To(Equal(true))
-	_, ok = insnMap["kprobe/tcp_connect"]
-	Expect(ok).To(Equal(true))
-	loadProgram(license, insnMap)
 }
 
 func loadProgram(license string, insnMap map[string]*elf.ProgramInfo) {

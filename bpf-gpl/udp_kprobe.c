@@ -17,35 +17,35 @@
 
 #include <linux/in.h>
 
-#include "bpf.h"
-#include "log.h"
 #include "sock.h"
-#include "events.h"
+#include "events_kprobe.h"
 #include "kprobe.h"
+#include <bpf_helpers.h>
+#include <bpf_tracing.h>
 
 /* The kernel functions udp_sendmsg and udp_recvmsg are serialized.
  * Hence we should not be running into any race condition.
  */
-__attribute__((section("kprobe/udp_recvmsg")))
-int kprobe__udp_recvmsg(struct pt_regs *ctx)
+SEC("kprobe/udp_recvmsg")
+int BPF_KPROBE(udp_recvmsg)
 {
 	return kprobe_stats_body(ctx, IPPROTO_UDP, 0, false);
 }
 
-__attribute__((section("kprobe/udp_sendmsg")))
-int kprobe__udp_sendmsg(struct pt_regs *ctx)
+SEC("kprobe/udp_sendmsg")
+int BPF_KPROBE(udp_sendmsg)
 {
 	return kprobe_stats_body(ctx, IPPROTO_UDP, 1, false);
 }
 
-__attribute__((section("kprobe/udpv6_recvmsg")))
-int kprobe__udpv6_recvmsg(struct pt_regs *ctx)
+SEC("kprobe/udpv6_recvmsg")
+int BPF_KPROBE(udpv6_recvmsg)
 {
         return kprobe_stats_body(ctx, IPPROTO_UDP, 0, false);
 }
 
-__attribute__((section("kprobe/udpv6_sendmsg")))
-int kprobe__udpv6_sendmsg(struct pt_regs *ctx)
+SEC("kprobe/udpv6_sendmsg")
+int BPF_KPROBE(udpv6_sendmsg)
 {
         return kprobe_stats_body(ctx, IPPROTO_UDP, 1, false);
 }

@@ -15,16 +15,12 @@ package kprobe
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path"
-	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/elf"
 	"github.com/projectcalico/felix/bpf/events"
+	"github.com/projectcalico/felix/bpf/libbpf"
 )
 
 const (
@@ -43,7 +39,8 @@ type bpfKprobe struct {
 	logLevel   string
 	kpStatsMap bpf.Map
 	evnt       events.Events
-	fdMap      map[string]kprobeFDs
+	objMap     map[string]*libbpf.Obj
+	linkMap    map[string]*libbpf.Link
 }
 
 func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
@@ -57,22 +54,23 @@ func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
 		logLevel:   logLevel,
 		evnt:       evnt,
 		kpStatsMap: kpStatsMap,
-		fdMap:      make(map[string]kprobeFDs),
+		objMap:     make(map[string]*libbpf.Obj),
+		linkMap:    make(map[string]*libbpf.Link),
 	}
 }
 
-func progFileName(protocol, logLevel string) string {
+func progFileName(typ, logLevel string) string {
 	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
 	}
-	return fmt.Sprintf("%s_%s_kprobe.o", protocol, logLevel)
+	return fmt.Sprintf("%s_%s_kprobe.o", typ, logLevel)
 }
 
 func (k *bpfKprobe) AttachTCPv4() error {
 	err := k.installKprobe("tcp", tcpFns)
 	if err != nil {
-		return fmt.Errorf("error installing tcp v4 kprobes")
+		return fmt.Errorf("error installing tcp v4 kprobes %w", err)
 	}
 	return nil
 }
@@ -85,106 +83,56 @@ func (k *bpfKprobe) AttachUDPv4() error {
 	return nil
 }
 
-func (k *bpfKprobe) installKprobe(protocol string, fns []string) error {
-	filename := path.Join(bpf.ObjectDir, progFileName(protocol, k.logLevel))
-	loader, err := elf.NewLoaderFromFile(filename, k.evnt.Map(), k.kpStatsMap)
-	if err != nil {
-		fmt.Errorf("error reading elf file")
-	}
-	insnMap, license, err := loader.Programs()
+func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
+	filename := path.Join(bpf.ObjectDir, progFileName(typ, k.logLevel))
+	obj, err := libbpf.OpenObject(filename)
 	if err != nil {
 		return fmt.Errorf("error loading kprobe program %s :%w", filename, err)
 	}
+	k.objMap[typ] = obj
 	for _, fn := range fns {
-		sectionName := "kprobe/" + fn
-		programInfo, ok := insnMap[sectionName]
-		if ok != true {
-			return fmt.Errorf("kprobe section %s not found", fn)
-		}
-		progFd, err := bpf.LoadBPFProgramFromInsns(programInfo.Insns, license, programInfo.Type)
-		if err != nil {
-			return err
-		}
-		err = k.attachKprobe(progFd, fn)
+		link, err := obj.AttachKprobe(fn, fn)
 		if err != nil {
 			return fmt.Errorf("error attaching kprobe to fn %s :%w", fn, err)
 		}
+		k.linkMap[fn] = link
 	}
 	return nil
 }
 
-func (k *bpfKprobe) attachKprobe(progFd bpf.ProgFD, fn string) error {
-	var fd kprobeFDs
-	kprobeIdFile := fmt.Sprintf("/sys/kernel/debug/tracing/events/kprobes/p%s/id", fn)
-	kbytes, err := ioutil.ReadFile(kprobeIdFile)
+func (k *bpfKprobe) disableKprobe(link *libbpf.Link) error {
+	err := link.Close()
 	if err != nil {
-		pathErr, ok := err.(*os.PathError)
-		if ok && pathErr.Err == syscall.ENOENT {
-			f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0666)
-			if err != nil {
-				return fmt.Errorf("error opening kprobe events file :%w", err)
-			}
-			defer f.Close()
-			cmd := fmt.Sprintf("p:p%s %s", fn, fn)
-			if _, err = f.WriteString(cmd); err != nil {
-				return fmt.Errorf("error writing to kprobe events file :%w", err)
-			}
-			kbytes, err = ioutil.ReadFile(kprobeIdFile)
-			if err != nil {
-				return fmt.Errorf("error reading kprobe event id : %w", err)
-			}
-		} else {
-			return err
-		}
-	}
-	kprobeId, err := strconv.Atoi(strings.TrimSpace(string(kbytes)))
-	if err != nil {
-		return fmt.Errorf("not a proper kprobe id :%w", err)
-	}
-	tfd, err := bpf.PerfEventOpenTracepoint(kprobeId, int(progFd))
-	if err != nil {
-		return fmt.Errorf("failed to attach kprobe to %s", fn)
-	}
-	fd.progFD = progFd
-	fd.tracePointFD = tfd
-	k.fdMap[fn] = fd
-	return nil
-}
-
-func (k *bpfKprobe) disableKprobe(fn string) error {
-	err := bpf.PerfEventDisableTracepoint(k.fdMap[fn].tracePointFD)
-	if err != nil {
-		return fmt.Errorf("Error disabling perf event")
-	}
-	syscall.Close(int(k.fdMap[fn].progFD))
-	f, err := os.OpenFile(kprobeEventsFileName, os.O_APPEND|os.O_WRONLY, 0)
-	if err != nil {
-		return fmt.Errorf("cannot open kprobe_events: %v", err)
-	}
-	defer f.Close()
-	cmd := fmt.Sprintf("-:p%s\n", fn)
-	if _, err = f.WriteString(cmd); err != nil {
-		return fmt.Errorf("cannot write %q to kprobe_events: %v", cmd, err)
+		return fmt.Errorf("cannot destroy link: %v", err)
 	}
 	return nil
-}
 
+}
 func (k *bpfKprobe) DetachTCPv4() error {
 	for _, fn := range tcpFns {
-		err := k.disableKprobe(fn)
+		err := k.disableKprobe(k.linkMap[fn])
 		if err != nil {
 			return err
 		}
+		delete(k.linkMap, fn)
 	}
+	k.Close("tcp")
 	return nil
 }
 
 func (k *bpfKprobe) DetachUDPv4() error {
 	for _, fn := range udpFns {
-		err := k.disableKprobe(fn)
+		err := k.disableKprobe(k.linkMap[fn])
 		if err != nil {
 			return err
 		}
 	}
+	k.Close("udp")
 	return nil
+}
+
+func (k *bpfKprobe) Close(typ string) {
+	obj := k.objMap[typ]
+	obj.Close()
+	delete(k.objMap, typ)
 }

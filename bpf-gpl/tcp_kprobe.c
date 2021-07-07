@@ -17,29 +17,29 @@
 
 #include <linux/in.h>
 
-#include "bpf.h"
-#include "log.h"
 #include "sock.h"
-#include "events.h"
+#include "events_kprobe.h"
 #include "kprobe.h"
+#include <bpf_helpers.h>
+#include <bpf_tracing.h>
 
 /* The kernel functions tcp_sendmsg and tcp_cleanup_rbuf are serialized.
  * Hence we should not be running into any race condition.
  */
-__attribute__((section("kprobe/tcp_cleanup_rbuf")))
-int kprobe__tcp_cleanup_rbuf(struct pt_regs *ctx)
+SEC("kprobe/tcp_cleanup_rbuf")
+int BPF_KPROBE(tcp_cleanup_rbuf)
 {
 	return kprobe_stats_body(ctx, IPPROTO_TCP, 0, false);
 }
 
-__attribute__((section("kprobe/tcp_sendmsg")))
-int kprobe__tcp_sendmsg(struct pt_regs *ctx)
+SEC("kprobe/tcp_sendmsg")
+int BPF_KPROBE(tcp_sendmsg)
 {
 	return kprobe_stats_body(ctx, IPPROTO_TCP, 1, false);
 }
 
-__attribute__((section("kprobe/tcp_connect")))
-int kprobe__tcp_connect(struct pt_regs *ctx) {
+SEC("kprobe/tcp_connect")
+int BPF_KPROBE(tcp_connect) {
 	return kprobe_stats_body(ctx, IPPROTO_TCP, 1, true);
 }
 
