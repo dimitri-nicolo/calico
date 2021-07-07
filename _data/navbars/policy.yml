@@ -22,6 +22,33 @@ section:
     path: /security/generate-policy-recommendation
   - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx
+- title: Calico Enterprise network policy for beginners
+  path: /security/beginners
+  section:
+  - title: Enable default deny
+    path: /security/kubernetes-default-deny
+  - title: Get started with Calico Enterprise network policy
+    path: /security/calico-network-policy  
+  - title: Policy rules
+    path: /security/policy-rules
+    section:
+    - title: Basic rules
+      path: /security/policy-rules-overview
+    - title: Namespace rules
+      path: /security/namespace-policy
+    - title: Service accounts rules
+      path: /security/service-accounts
+    - title: External IPs or networks rules
+      path: /security/external-ips-policy
+    - title: ICMP/ping rules
+      path: /security/icmp-ping
+  - title: Policy for services
+    path: /security/services
+    section:
+    - title: Apply policy to Kubernetes node ports
+      path: /security/kubernetes-node-ports
+    - title: Apply policy to services exposed externally as cluster IPs
+      path: /security/services-cluster-ips  
 - title: DNS policy
   path: /security/domain-based-policy
 - title: Policy for firewalls
@@ -74,41 +101,22 @@ section:
     path: /security/high-connection-workloads
   - title: Defend against DoS attacks
     path: /security/defend-dos-attack
-- title: Policy for beginners
+- title: Kubernetes for beginners
   path: /security/get-started
   section:
-  - title: Get started with Calico network policy
-    path: /security/calico-network-policy
-  - title: Kubernetes policy
-    path: /security/kubernetes-policy
-    section:
-    - title: Get started with Kubernetes network policy
-      path: /security/kubernetes-network-policy
-    - title: Kubernetes policy, demo
-      path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
-    - title: Kubernetes policy, basic tutorial
-      path: /security/tutorials/kubernetes-policy-basic
-    - title: Kubernetes policy, advanced tutorial
-      path: /security/tutorials/kubernetes-policy-advanced
-  - title: Enable default deny
-    path: /security/kubernetes-default-deny
-  - title: Policy rules
-    path: /security/policy-rules
-    section:
-    - title: Basic rules
-      path: /security/policy-rules-overview
-    - title: Namespace rules
-      path: /security/namespace-policy
-    - title: Service accounts rules
-      path: /security/service-accounts
-    - title: External IPs or networks rules
-      path: /security/external-ips-policy
-    - title: ICMP/ping rules
-      path: /security/icmp-ping
-  - title: Policy for services
-    path: /security/services
-    section:
-    - title: Apply policy to Kubernetes node ports
-      path: /security/kubernetes-node-ports
-    - title: Apply policy to services exposed externally as cluster IPs
-      path: /security/services-cluster-ips
+  - title: What is network policy?
+    path: /security/training/about-network-policy
+  - title: Get started with Kubernetes network policy
+    path: /security/kubernetes-network-policy
+  - title: Kubernetes policy, demo
+    path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
+  - title: Kubernetes policy, basic tutorial
+    path: /security/tutorials/kubernetes-policy-basic
+  - title: Kubernetes policy, advanced tutorial
+    path: /security/tutorials/kubernetes-policy-advanced  
+  - title: Kubernetes services
+    path: /security/training/about-kubernetes-services
+  - title: Kubernetes ingress
+    path: /security/training/about-kubernetes-ingress
+  - title: Kubernetes egress
+    path: /security/training/about-kubernetes-egress

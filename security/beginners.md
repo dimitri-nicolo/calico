@@ -1,7 +1,7 @@
 ---
-title: Configure Calico Enterprise networking
-description: Configure Calico networking options. 
-canonical_url: '/networking/configuring'
+title: Calico Enterprise network policy for beginners
+description: Learn how to create your first Calico Enterprise network policy. 
+canonical_url: /security/beginners
 show_read_time: false
 show_toc: false
 ---
