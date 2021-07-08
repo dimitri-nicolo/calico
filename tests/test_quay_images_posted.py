@@ -11,6 +11,13 @@ QUAY_REGISTRY = tests.QUAY_REGISTRY
 QUAY_API_URL = tests.QUAY_API_URL
 QUAY_API_TOKEN = tests.QUAY_API_TOKEN
 
+COMPONENTS_WITH_TESLA_IMAGES=[
+    'cnx-manager',
+    'kibana',
+]
+
+_TESLA_TAG_PREFIX = 'tesla'
+
 # create list of images for this release
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
@@ -27,10 +34,18 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 def test_release_tag_present(name, component):
     assert QUAY_API_TOKEN != 'fake-token', '[ERROR] need a real QUAY_API_TOKEN env value'
 
+    def check_image(name, image_name, expected_ver):
+        print '[INFO] checking quay image posted for {0} with {1} tag'.format(name, expected_ver)
+        req_url = '{base_url}/repository/{image_name}/tag/{tag}/images'.format(
+            base_url=QUAY_API_URL, image_name=image_name, tag=expected_ver)
+        res = requests.get(req_url, headers=headers)
+        assert res.status_code == 200
+
     image_name = component.get('image')
     expected_ver = component.get('version')
-    print '[INFO] checking quay image posted for {0} with {1} tag'.format(name, expected_ver)
-    req_url = '{base_url}/repository/{image_name}/tag/{tag}/images'.format(
-        base_url=QUAY_API_URL, image_name=image_name, tag=expected_ver)
-    res = requests.get(req_url, headers=headers)
-    assert res.status_code == 200
+    check_image(name, image_name, expected_ver)
+
+    if name in COMPONENTS_WITH_TESLA_IMAGES:
+        expected_ver = component.get('version')
+        check_image(name, image_name,
+                    '{prefix}-{tag}'.format(prefix=_TESLA_TAG_PREFIX, tag=expected_ver))
