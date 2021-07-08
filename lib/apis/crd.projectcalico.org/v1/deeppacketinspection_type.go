@@ -11,6 +11,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// +kubebuilder:subresource:status
 // +k8s:openapi-gen=true
 type DeepPacketInspection struct {
 	metav1.TypeMeta   `json:",inline"`
