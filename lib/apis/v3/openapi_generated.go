@@ -117,7 +117,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig":                     schema_libcalico_go_lib_apis_v3_ControllersConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.DPIActive":                             schema_libcalico_go_lib_apis_v3_DPIActive(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.DPIErrorCondition":                     schema_libcalico_go_lib_apis_v3_DPIErrorCondition(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.DPILastUpdated":                        schema_libcalico_go_lib_apis_v3_DPILastUpdated(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.DPINode":                               schema_libcalico_go_lib_apis_v3_DPINode(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.DeepPacketInspection":                  schema_libcalico_go_lib_apis_v3_DeepPacketInspection(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.DeepPacketInspectionList":              schema_libcalico_go_lib_apis_v3_DeepPacketInspectionList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.DeepPacketInspectionSpec":              schema_libcalico_go_lib_apis_v3_DeepPacketInspectionSpec(ref),
@@ -4144,23 +4144,24 @@ func schema_libcalico_go_lib_apis_v3_DPIActive(ref common.ReferenceCallback) com
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"node": {
+					"success": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Node identifies with a physical node from the cluster via its hostname.",
-							Type:        []string{"string"},
+							Description: "Success indicates if deep packet inspection is running on all workloads matching the selector.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
-					"success": {
+					"lastUpdated": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Success indicates if DPI is running on all workload endpoint matching the selector.",
-							Type:        []string{"boolean"},
-							Format:      "",
+							Description: "Timestamp of when the active status was last updated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -4170,27 +4171,28 @@ func schema_libcalico_go_lib_apis_v3_DPIErrorCondition(ref common.ReferenceCallb
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"node": {
+					"message": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Node identifies with a physical node from the cluster via its hostname.",
+							Description: "Message from deep packet inspection error.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"message": {
+					"lastUpdated": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Message from DPI error.",
-							Type:        []string{"string"},
-							Format:      "",
+							Description: "Timestamp of when this error message was added.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
-func schema_libcalico_go_lib_apis_v3_DPILastUpdated(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_libcalico_go_lib_apis_v3_DPINode(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
@@ -4203,17 +4205,30 @@ func schema_libcalico_go_lib_apis_v3_DPILastUpdated(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
-					"timestamp": {
+					"active": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Timestamp when DPI was last started or stopped on an endpoint.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.DPIActive"),
+						},
+					},
+					"errorConditions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.DPIErrorCondition"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.DPIActive", "github.com/projectcalico/libcalico-go/lib/apis/v3.DPIErrorCondition"},
 	}
 }
 
@@ -4339,43 +4354,17 @@ func schema_libcalico_go_lib_apis_v3_DeepPacketInspectionStatus(ref common.Refer
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "DeepPacketInspectionStatus contains status of DPI in each node.",
+				Description: "DeepPacketInspectionStatus contains status of deep packet inspection in each node.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"errorConditions": {
+					"nodes": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.DPIErrorCondition"),
-									},
-								},
-							},
-						},
-					},
-					"active": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.DPIActive"),
-									},
-								},
-							},
-						},
-					},
-					"lastUpdated": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.DPILastUpdated"),
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.DPINode"),
 									},
 								},
 							},
@@ -4385,7 +4374,7 @@ func schema_libcalico_go_lib_apis_v3_DeepPacketInspectionStatus(ref common.Refer
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.DPIActive", "github.com/projectcalico/libcalico-go/lib/apis/v3.DPIErrorCondition", "github.com/projectcalico/libcalico-go/lib/apis/v3.DPILastUpdated"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.DPINode"},
 	}
 }
 

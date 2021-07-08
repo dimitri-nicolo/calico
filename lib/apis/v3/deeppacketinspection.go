@@ -56,32 +56,31 @@ type DeepPacketInspectionSpec struct {
 	Selector string `json:"selector,omitempty" validate:"selector"`
 }
 
-// DeepPacketInspectionStatus contains status of DPI in each node.
+// DeepPacketInspectionStatus contains status of deep packet inspection in each node.
 type DeepPacketInspectionStatus struct {
-	ErrorConditions []DPIErrorCondition `json:"errorConditions,omitempty"`
-	Active          []DPIActive         `json:"active,omitempty"`
-	LastUpdated     []DPILastUpdated    `json:"lastUpdated,omitempty"`
+	Nodes []DPINode `json:"nodes,omitempty"`
 }
 
-type DPIErrorCondition struct {
+type DPINode struct {
 	// Node identifies with a physical node from the cluster via its hostname.
-	Node string `json:"node,omitempty"`
-	// Message from DPI error.
-	Message string `json:"message,omitempty"`
+	Node   string    `json:"node,omitempty"`
+	Active DPIActive `json:"active,omitempty"`
+	// +kubebuilder:validation:MaxItems:=10
+	ErrorConditions []DPIErrorCondition `json:"errorConditions,omitempty"`
 }
 
 type DPIActive struct {
-	// Node identifies with a physical node from the cluster via its hostname.
-	Node string `json:"node,omitempty"`
-	// Success indicates if DPI is running on all workload endpoint matching the selector.
+	// Success indicates if deep packet inspection is running on all workloads matching the selector.
 	Success bool `json:"success,omitempty"`
+	// Timestamp of when the active status was last updated.
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 }
 
-type DPILastUpdated struct {
-	// Node identifies with a physical node from the cluster via its hostname.
-	Node string `json:"node,omitempty"`
-	// Timestamp when DPI was last started or stopped on an endpoint.
-	Timestamp *metav1.Time `json:"timestamp,omitempty"`
+type DPIErrorCondition struct {
+	// Message from deep packet inspection error.
+	Message string `json:"message,omitempty"`
+	// Timestamp of when this error message was added.
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

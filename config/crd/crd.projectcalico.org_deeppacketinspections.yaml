@@ -58,45 +58,41 @@ spec:
                 type: string
             type: object
           status:
-            description: DeepPacketInspectionStatus contains status of DPI in each
-              node.
+            description: DeepPacketInspectionStatus contains status of deep packet
+              inspection in each node.
             properties:
-              active:
+              nodes:
                 items:
                   properties:
+                    active:
+                      properties:
+                        lastUpdated:
+                          description: Timestamp of when the active status was last
+                            updated.
+                          format: date-time
+                          type: string
+                        success:
+                          description: Success indicates if deep packet inspection
+                            is running on all workloads matching the selector.
+                          type: boolean
+                      type: object
+                    errorConditions:
+                      items:
+                        properties:
+                          lastUpdated:
+                            description: Timestamp of when this error message was
+                              added.
+                            format: date-time
+                            type: string
+                          message:
+                            description: Message from deep packet inspection error.
+                            type: string
+                        type: object
+                      maxItems: 10
+                      type: array
                     node:
                       description: Node identifies with a physical node from the cluster
                         via its hostname.
-                      type: string
-                    success:
-                      description: Success indicates if DPI is running on all workload
-                        endpoint matching the selector.
-                      type: boolean
-                  type: object
-                type: array
-              errorConditions:
-                items:
-                  properties:
-                    message:
-                      description: Message from DPI error.
-                      type: string
-                    node:
-                      description: Node identifies with a physical node from the cluster
-                        via its hostname.
-                      type: string
-                  type: object
-                type: array
-              lastUpdated:
-                items:
-                  properties:
-                    node:
-                      description: Node identifies with a physical node from the cluster
-                        via its hostname.
-                      type: string
-                    timestamp:
-                      description: Timestamp when DPI was last started or stopped
-                        on an endpoint.
-                      format: date-time
                       type: string
                   type: object
                 type: array
