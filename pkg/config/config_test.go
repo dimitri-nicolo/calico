@@ -49,6 +49,7 @@ var _ = Describe("Config", func() {
 		os.Unsetenv("COMPACTION_PERIOD")
 		os.Unsetenv("SYNC_NODE_LABELS")
 		os.Unsetenv("AUTO_HOST_ENDPOINTS")
+		os.Unsetenv("KUBE_CONTROLLERS_CONFIG_NAME")
 	}
 
 	// setEnv() function that sets environment variables
@@ -67,6 +68,7 @@ var _ = Describe("Config", func() {
 		os.Setenv("COMPACTION_PERIOD", "33m")
 		os.Setenv("SYNC_NODE_LABELS", "false")
 		os.Setenv("AUTO_HOST_ENDPOINTS", "enabled")
+		os.Setenv("KUBE_CONTROLLERS_CONFIG_NAME", "default")
 	}
 
 	// setWrongEnv() function sets environment variables
@@ -108,7 +110,7 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
-				m = &mockKCC{get: config.DefaultKCC.DeepCopy()}
+				m = &mockKCC{get: config.KubeControllersConfig.DeepCopy()}
 				ctrl = config.NewRunConfigController(ctx, *cfg, m)
 			})
 
@@ -277,7 +279,7 @@ var _ = Describe("Config", func() {
 
 			It("should create a default KubeControllersConfig", func(done Done) {
 				<-ctrl.ConfigChan()
-				Expect(m.create.Spec).To(Equal(config.DefaultKCC.Spec))
+				Expect(m.create.Spec).To(Equal(config.KubeControllersConfig.Spec))
 				close(done)
 			}, 600)
 
@@ -480,7 +482,7 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
-				m = &mockKCC{get: config.DefaultKCC.DeepCopy()}
+				m = &mockKCC{get: config.KubeControllersConfig.DeepCopy()}
 				ctrl = config.NewRunConfigController(ctx, *cfg, m)
 			})
 
