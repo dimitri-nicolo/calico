@@ -395,6 +395,8 @@ type FelixConfigurationSpec struct {
 	FlowLogsCollectProcessInfo *bool `json:"flowLogsCollectProcessInfo,omitempty" validate:"omitempty"`
 	// FlowLogsCollectTcpStats enables flow logs reporting TCP socket stats
 	FlowLogsCollectTcpStats *bool `json:"flowLogsCollectTcpStats,omitempty" validate:"omitempty"`
+	// FlowLogsCollectProcessPath enables flow logs reporting process path with args
+	FlowLogsCollectProcessPath *bool `json:"flowLogsCollectProcessPath,omitempty" validate:"omitempty"`
 
 	// FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.
 	FlowLogsFileEnabled *bool `json:"flowLogsFileEnabled,omitempty"`

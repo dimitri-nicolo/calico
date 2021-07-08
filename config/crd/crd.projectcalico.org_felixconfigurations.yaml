@@ -364,6 +364,10 @@ spec:
                 description: 'FlowLogsCollectProcessInfo, if enabled Felix will load
                   the kprobe BPF programs to collect process info. [Default: false]'
                 type: boolean
+              flowLogsCollectProcessPath:
+                description: FlowLogsCollectProcessPath enables flow logs reporting
+                  process path with args
+                type: boolean
               flowLogsCollectTcpStats:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP
                   socket stats
