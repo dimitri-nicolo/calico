@@ -84,6 +84,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&AuthorizationReviewList{},
 		&PacketCaptureList{},
 		&PacketCapture{},
+		&DeepPacketInspectionList{},
+		&DeepPacketInspection{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

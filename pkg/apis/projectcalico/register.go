@@ -88,6 +88,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&AuthorizationReviewList{},
 		&PacketCaptureList{},
 		&PacketCapture{},
+		&DeepPacketInspectionList{},
+		&DeepPacketInspection{},
 	)
 	return nil
 }

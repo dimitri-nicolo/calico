@@ -65,6 +65,10 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewClusterInformationStorage(opts)
 	case "projectcalico.org/packetcaptures":
 		return NewPacketCaptureStorage(opts)
+	case "projectcalico.org/deeppacketinspections":
+		return NewDeepPacketInspectionStorage(opts)
+	case "projectcalico.org/deeppacketinspections/status":
+		return NewDeepPacketInspectionStatusStorage(opts)
 	default:
 		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return registry.DryRunnableStorage{}, nil

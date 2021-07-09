@@ -608,3 +608,25 @@ type PacketCapture struct {
 	Spec   calico.PacketCaptureSpec
 	Status calico.PacketCaptureStatus
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DeepPacketInspectionList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []DeepPacketInspection
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+
+type DeepPacketInspection struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec   calico.DeepPacketInspectionSpec
+	Status calico.DeepPacketInspectionStatus
+}

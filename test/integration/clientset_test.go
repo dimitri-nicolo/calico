@@ -3109,3 +3109,110 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 	wg.Wait()
 	return nil
 }
+
+// TestDeepPacketInspectionClient exercises the DeepPacketInspection client.
+func TestDeepPacketInspectionClient(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		const name = "test-deeppacketinspection"
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.DeepPacketInspection{}
+			}, true)
+			defer shutdownServer()
+			if err := testDeepPacketInspectionClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("test-deep-packet-inspections", rootTestFunc()) {
+		t.Errorf("test-deep-packet-inspections failed")
+	}
+}
+
+func testDeepPacketInspectionClient(client calicoclient.Interface, name string) error {
+	ctx := context.Background()
+	err := createEnterprise(client, ctx)
+	if err == nil {
+		return fmt.Errorf("Could not create a license")
+	}
+
+	ns := "default"
+	deepPacketInspectionClient := client.ProjectcalicoV3().DeepPacketInspections(ns)
+	deepPacketInspection := &v3.DeepPacketInspection{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	// start from scratch
+	deepPacketInspections, err := deepPacketInspectionClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing deepPacketInspections (%s)", err)
+	}
+	if deepPacketInspections.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(deepPacketInspections.Items) > 0 {
+		return fmt.Errorf("deepPacketInspection should not exist on start, had %v deepPacketInspection", len(deepPacketInspections.Items))
+	}
+
+	deepPacketInspectionServer, err := deepPacketInspectionClient.Create(ctx, deepPacketInspection, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the deepPacketInspection '%v' (%v)", deepPacketInspection, err)
+	}
+
+	updatedDeepPacketInspection := deepPacketInspectionServer.DeepCopy()
+	updatedDeepPacketInspection.Labels = map[string]string{"foo": "bar"}
+	updatedDeepPacketInspection.Spec = calico.DeepPacketInspectionSpec{Selector: "k8s-app == 'sample-app'"}
+	deepPacketInspectionServer, err = deepPacketInspectionClient.Update(ctx, updatedDeepPacketInspection, metav1.UpdateOptions{})
+	if nil != err {
+		return fmt.Errorf("error in updating the deepPacketInspection '%v' (%v)", deepPacketInspection, err)
+	}
+	if !reflect.DeepEqual(deepPacketInspectionServer.Labels, updatedDeepPacketInspection.Labels) {
+		return fmt.Errorf("didn't update label %#v", deepPacketInspectionServer.Labels)
+
+	}
+	if !reflect.DeepEqual(deepPacketInspectionServer.Spec, updatedDeepPacketInspection.Spec) {
+		return fmt.Errorf("didn't update spec %#v", deepPacketInspectionServer.Spec)
+
+	}
+
+	// Should be listing the deepPacketInspection.
+	deepPacketInspections, err = deepPacketInspectionClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing deepPacketInspections (%s)", err)
+	}
+	if 1 != len(deepPacketInspections.Items) {
+		return fmt.Errorf("should have exactly one deepPacketInspection, had %v deepPacketInspections", len(deepPacketInspections.Items))
+	}
+
+	deepPacketInspectionServer, err = deepPacketInspectionClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting deepPacketInspection %s (%s)", name, err)
+	}
+	if name != deepPacketInspectionServer.Name &&
+		deepPacketInspection.ResourceVersion == deepPacketInspectionServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same deepPacketInspection back from the server \n%+v\n%+v", deepPacketInspection, deepPacketInspectionServer)
+	}
+
+	// Watch Test:
+	opts := v1.ListOptions{Watch: true}
+	wIface, err := deepPacketInspectionClient.Watch(ctx, opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	err = deepPacketInspectionClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("deepPacketInspection should be deleted (%s)", err)
+	}
+
+	wg.Wait()
+	return nil
+}

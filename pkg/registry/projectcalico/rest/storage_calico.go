@@ -29,6 +29,7 @@ import (
 	calicobgpconfiguration "github.com/projectcalico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgppeer "github.com/projectcalico/apiserver/pkg/registry/projectcalico/bgppeer"
 	calicoclusterinformation "github.com/projectcalico/apiserver/pkg/registry/projectcalico/clusterinformation"
+	calicodeeppacketinspection "github.com/projectcalico/apiserver/pkg/registry/projectcalico/deeppacketinspection"
 	calicofelixconfig "github.com/projectcalico/apiserver/pkg/registry/projectcalico/felixconfig"
 	calicogalert "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalalert"
 	calicogalerttemplate "github.com/projectcalico/apiserver/pkg/registry/projectcalico/globalalerttemplate"
@@ -666,6 +667,48 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{},
 	)
 
+	deepPacketInspectionRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("deeppacketinspections"))
+	if err != nil {
+		return nil, err
+	}
+
+	deepPacketInspectionStatusRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("deeppacketinspections/status"))
+	if err != nil {
+		return nil, err
+	}
+
+	deepPacketInspectionEtcdOpts := etcd.Options{
+		RESTOptions:   deepPacketInspectionRESTOptions,
+		Capacity:      1000,
+		ObjectType:    calicodeeppacketinspection.EmptyObject(),
+		ScopeStrategy: calicodeeppacketinspection.NewStrategy(scheme),
+		NewListFunc:   calicodeeppacketinspection.NewList,
+		GetAttrsFunc:  calicodeeppacketinspection.GetAttrs,
+		Trigger:       nil,
+	}
+
+	deepPacketInspectionOpts := server.NewOptions(
+		deepPacketInspectionEtcdOpts,
+		calicostorage.Options{
+			RESTOptions:  deepPacketInspectionRESTOptions,
+			LicenseCache: licenseCache,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
+	deepPacketInspectionStatusOpts := server.NewOptions(
+		deepPacketInspectionEtcdOpts,
+		calicostorage.Options{
+			RESTOptions:  deepPacketInspectionStatusRESTOptions,
+			LicenseCache: licenseCache,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -746,6 +789,14 @@ func (p RESTStorageProvider) NewV3Storage(
 	}
 	storage["packetcaptures"] = packetCaptureStorage
 	storage["packetcaptures/status"] = packetCaptureStatusStorage
+
+	deepPacketInspectionStorage, deepPacketInspectionStatusStorage, err := calicodeeppacketinspection.NewREST(scheme, *deepPacketInspectionOpts, *deepPacketInspectionStatusOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	storage["deeppacketinspections"] = deepPacketInspectionStorage
+	storage["deeppacketinspections/status"] = deepPacketInspectionStatusStorage
 
 	return storage, nil
 }

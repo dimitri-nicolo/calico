@@ -47,6 +47,10 @@ func (c *FakeProjectcalico) ClusterInformations() internalversion.ClusterInforma
 	return &FakeClusterInformations{c}
 }
 
+func (c *FakeProjectcalico) DeepPacketInspections(namespace string) internalversion.DeepPacketInspectionInterface {
+	return &FakeDeepPacketInspections{c, namespace}
+}
+
 func (c *FakeProjectcalico) FelixConfigurations() internalversion.FelixConfigurationInterface {
 	return &FakeFelixConfigurations{c}
 }

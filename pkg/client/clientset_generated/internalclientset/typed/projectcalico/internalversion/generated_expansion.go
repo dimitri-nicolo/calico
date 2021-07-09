@@ -26,6 +26,8 @@ type BGPPeerExpansion interface{}
 
 type ClusterInformationExpansion interface{}
 
+type DeepPacketInspectionExpansion interface{}
+
 type FelixConfigurationExpansion interface{}
 
 type GlobalAlertExpansion interface{}

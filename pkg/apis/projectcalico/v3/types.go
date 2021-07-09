@@ -602,3 +602,26 @@ type PacketCapture struct {
 	Spec   calico.PacketCaptureSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	Status calico.PacketCaptureStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// DeepPacketInspectionList is a list of PacketCapture objects.
+type DeepPacketInspectionList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []DeepPacketInspection `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+
+type DeepPacketInspection struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec   calico.DeepPacketInspectionSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Status calico.DeepPacketInspectionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}

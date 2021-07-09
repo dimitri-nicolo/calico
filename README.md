@@ -336,6 +336,25 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 	)
 
   ```
+  If your resource has a status subresource, also register RESTapi calls for your status subresource:
+  ```
+    ...
+    gThreatFeedStatusRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalthreatfeeds/status"))
+    if err != nil {
+        return nil, err
+    }
+  
+    gThreatFeedStatusOpts := server.NewOptions(
+        sharedGlobalThreatFeedEtcdOpts,
+        calicostorage.Options{
+            RESTOptions:  gThreatFeedStatusRESTOptions,
+            LicenseCache: licenseCache,
+        },
+        p.StorageType,
+        authorizer,
+        []string{},
+    )
+  ```
 
   Update the storage map (also in `pkg/registry/projectcalico/rest/storage_calico.go`)
   for your resource key with the associated REST api type, for example:
@@ -359,6 +378,10 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 * Create a factory function to create a resource storage implementation. Use
   `pkg/storage/calico/licenseKey_storage.go` as a model for your work - this is
   basically a copy/paste and then update the resource type declarations.
+  
+  If your resource has a status subresource, also use 
+  `pkg/storage/calico/globalThreatFeedStatus_storage.go` as model to create 
+  subresource storage implementation.
 
 * Define how the API is going to be used by defining its behaviour is `hasRestrictionsFn()`
 If an API is restricted by a license, you need to see if the feature is defined in the [licensing library](https://github.com/tigera/licensing/blob/master/client/features/features.go). A sample of implementing restrictions can be found at `pkg/storage/calico/globalReport_storage.go`
@@ -379,6 +402,9 @@ hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) b
 
     case "projectcalico.org/licensekeys":
 		  return NewLicenseKeyStorage(opts)
+    // If there is status subresource
+    case "projectcalico.org/globalthreatfeeds/status":
+        return NewGlobalThreatFeedStatusStorage(opts)
   }
   ```
 
