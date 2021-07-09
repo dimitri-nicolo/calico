@@ -115,6 +115,8 @@ func init() {
 				&apiv3.ManagedClusterList{},
 				&apiv3.PacketCapture{},
 				&apiv3.PacketCaptureList{},
+				&apiv3.DeepPacketInspection{},
+				&apiv3.DeepPacketInspectionList{},
 			)
 			metav1.AddToGroupVersion(scheme, ver)
 			return nil
@@ -334,6 +336,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindPacketCapture,
 		resources.NewPacketCaptureClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindDeepPacketInspection,
+		resources.NewDeepPacketInspectionClient(cs, crdClientV1),
 	)
 
 	if !ca.K8sUsePodCIDR {
@@ -610,6 +618,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindGlobalReportType,
 		apiv3.KindManagedCluster,
 		apiv3.KindPacketCapture,
+		apiv3.KindDeepPacketInspection,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {

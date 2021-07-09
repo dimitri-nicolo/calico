@@ -37,6 +37,7 @@ The client has a number of methods that return interfaces for managing:
 	-  Global Report resources
 	-  Managed Cluster resources
 	-  Packet Capture resources
+	-  Deep Packet Inspection resources
 
 See [resource definitions](http://docs.projectcalico.org/latest/reference/calicoctl/resources/) for details about the set of management commands for each
 resource type.
