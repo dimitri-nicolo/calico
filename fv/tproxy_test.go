@@ -41,7 +41,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 		tunnel = "ipip"
 	}
 
-	return infrastructure.DatastoreDescribe("tproxy tests tunnel="+tunnel,
+	return infrastructure.DatastoreDescribe("tproxy tests tunnel="+tunnel+" TPROXYMode="+TPROXYMode,
 		[]apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 			const numNodes = 2
