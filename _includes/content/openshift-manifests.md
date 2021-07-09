@@ -24,6 +24,7 @@ curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_bgpconfigurations.
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_bgppeers.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_bgppeers.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_blockaffinities.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_blockaffinities.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_clusterinformations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_clusterinformations.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_deeppacketinspections.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_deeppacketinspections.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_felixconfigurations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_felixconfigurations.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalalerts.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalalerts.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalalerttemplates.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalalerttemplates.yaml 
