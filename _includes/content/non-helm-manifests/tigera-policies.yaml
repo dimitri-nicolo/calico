@@ -578,6 +578,8 @@ spec:
       destination:
         ports: [5554]
       protocol: TCP
+      # The operator needs access to Elasticsearch and Kibana (through ES Gateway), however, since the operator is on the
+      # hostnetwork it's hard to create specific network policies for it.
       # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
   egress:
   {%- if include.containerOrchestrationPlatform == "openshift" %}
