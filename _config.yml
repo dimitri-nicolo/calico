@@ -165,6 +165,7 @@ defaults:
         key-cert-provisioner: tigera/key-cert-provisioner
         elasticsearch-metrics: tigera/elasticsearch-metrics
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
+        es-gateway: tigera/es-gateway
         # The Prometheus + eck-operator images below are third-party images 
         # that have been ported to quay.io/tigera as per customer request
         configMapReload: tigera/configmap-reload
