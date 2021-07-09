@@ -368,6 +368,10 @@ spec:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP
                   socket stats
                 type: boolean
+              flowLogsCollectProcessPath:
+                description: FlowLogsCollectProcessPath enables flow logs reporting process path
+                  and args
+                type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
                   dynamically changing aggregation levels. Default is true.
