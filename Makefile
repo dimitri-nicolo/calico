@@ -26,7 +26,7 @@ EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico
 	-v $(CURDIR)/../felix:/go/src/github.com/projectcalico/felix:rw \
 	-v $(CURDIR)/../typha:/go/src/github.com/projectcalico/typha:rw \
 	-v $(CURDIR)/../confd:/go/src/github.com/projectcalico/confd:rw \
-	-v $(CURDIR)/../confd:/go/src/github.com/projectcalico/cni-plugin:rw
+	-v $(CURDIR)/../cni-plugin:/go/src/github.com/projectcalico/cni-plugin:rw
 
 $(LOCAL_BUILD_DEP):
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go \
