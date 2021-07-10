@@ -347,3 +347,7 @@ func PortRangessToMultiport(ports []*proto.PortRange) string {
 func (m MatchCriteria) OwnerGroup(grp string) MatchCriteria {
 	return append(m, "-m owner --gid-owner "+grp)
 }
+
+func (m MatchCriteria) SourceDestSet(name string) MatchCriteria {
+	return append(m, fmt.Sprintf("-m set --match-set %s src,dst", name))
+}

@@ -1218,6 +1218,25 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
 			}},
 		})
+
+		chains = append(chains, &Chain{
+			Name: ChainMangleOutputTProxy,
+			Rules: []Rule{
+				{
+					// Proxied connections for regular services do not have
+					// local source nor destination. This is how we can easily
+					// identify the upstream part and mark it.
+					Comment: []string{"Mark any non-local connection as local for return"},
+					Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+				},
+				{
+					// Proxied connections that are pod-to-self need to be masqueraded
+					Comment: []string{"MASQ proxied pod-service-self"},
+					Match:   Match().SourceDestSet(nameForIPSet("tproxy-pod-self")),
+					Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
+				},
+			},
+		})
 	}
 
 	chains = append(chains,
@@ -1318,14 +1337,10 @@ func (r *DefaultRuleRenderer) StaticMangleOutputChain(ipVersion uint8) *Chain {
 	rules := []Rule{}
 
 	if r.TPROXYModeEnabled() {
-		mark := r.IptablesMarkProxy
 		rules = append(rules, Rule{
-			// Proxied connections for regular services do not have
-			// local source nor destination. This is how we can easily
-			// identify the upstream part and mark it.
-			Comment: []string{"Mark any non-local connection as local for return"},
+			Comment: []string{"Process non-local connections as proxied"},
 			Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
-			Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			Action:  JumpAction{Target: ChainMangleOutputTProxy},
 		})
 	}
 

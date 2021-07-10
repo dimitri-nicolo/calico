@@ -35,6 +35,9 @@ var _ = describeTProxyTest(false, "EnabledAllServices")
 func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 	const l7LoggingAnnotation = "projectcalico.org/l7-logging"
 	const TPROXYServicesIPSetV4 = "cali40tproxy-services"
+	const TPROXYPodToSelf = "cali40tproxy-pod-self"
+
+	var expectedFelix0IP ExpectationOption
 
 	tunnel := "none"
 	if ipip {
@@ -118,6 +121,12 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
 
 				felixes, calicoClient = infrastructure.StartNNodeTopology(numNodes, options, infra)
+
+				if !ipip {
+					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].IP)
+				} else {
+					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].ExpectedIPIPTunnelAddr)
+				}
 
 				proxies = []*tproxy.TProxy{}
 				for _, felix := range felixes {
@@ -222,6 +231,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					for _, felix := range felixes {
 						felix.Exec("iptables-save", "-c")
 						felix.Exec("ipset", "list", TPROXYServicesIPSetV4)
+						felix.Exec("ipset", "list", TPROXYPodToSelf)
 						felix.Exec("ip", "route")
 					}
 				}
@@ -253,8 +263,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					pod = w[0][0].IP + ":8055"
 					svc = clusterIP + ":8090"
 
-					// Mimic the kube-proxy service iptable clusterIP rule.
 					for _, f := range felixes {
+						// Mimic the kube-proxy service iptable clusterIP rule.
 						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
 							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
 							"-W", "100000", // How often to probe the lock in microsecs.
@@ -263,6 +273,12 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"-m", "tcp", "--dport", "8090",
 							"-j", "DNAT", "--to-destination",
 							pod)
+						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
+							"-j", "MASQUERADE", "--random-fully")
 					}
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
@@ -277,12 +293,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					By("asserting that ipaddress, port exists in ipset ")
 					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
 
+					cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 					cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()
 
 					// Connection should be proxied on the pod's local node
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
@@ -315,6 +333,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						By("asserting that ipaddress, port exists in ipset ")
 						assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
 
+						cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 						cc.Expect(None, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(None, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -322,10 +341,12 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 						// Connection should be proxied on the pod's local node
 
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
 						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
@@ -356,6 +377,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						By("asserting that ipaddress, port exists in ipset ")
 						assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
 
+						cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
 						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 						cc.Expect(None, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
@@ -363,13 +385,101 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 						// Connection should be proxied on the pod's local node
 
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
 
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
+					})
+				})
+
+				Context("With ingress traffic denied from w[0]0] to self", func() {
+					It("should have connectivity from all but self", func() {
+						By("Denying traffic from w[1][1]", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-1-1"
+							pol.Spec.Ingress = []api.Rule{
+								{
+									Action: "Deny",
+									Source: api.EntityRule{
+										Selector: "(name=='" + w[0][0].Name + "')",
+									},
+								},
+							}
+							pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+						By("asserting that ipaddress, port exists in ipset ")
+						assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
+
+						cc.Expect(None, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.CheckConnectivity()
+
+						// Connection should be proxied on the pod's local node
+
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					})
+				})
+
+				Context("With egress traffic denied from w[0]0] to self", func() {
+					It("should have connectivity from all but self", func() {
+						By("Denying traffic from w[1][1]", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-1-1"
+							pol.Spec.Egress = []api.Rule{
+								{
+									Action: "Deny",
+									Source: api.EntityRule{
+										Selector: "(name=='" + w[0][0].Name + "')",
+									},
+								},
+							}
+							pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+						By("asserting that ipaddress, port exists in ipset ")
+						assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
+
+						cc.Expect(None, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.Expect(Some, w[0][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+						cc.CheckConnectivity()
+
+						// Connection should be proxied on the pod's local node
+
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 					})
 				})
 			})

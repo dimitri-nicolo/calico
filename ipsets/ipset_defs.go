@@ -77,6 +77,7 @@ const (
 	IPSetTypeHashIPPort IPSetType = "hash:ip,port"
 	IPSetTypeHashNet    IPSetType = "hash:net"
 	IPSetTypeBitmapPort IPSetType = "bitmap:port"
+	IPSetTypeHashNetNet IPSetType = "hash:net,net"
 )
 
 func (t IPSetType) SetType() string {
@@ -115,6 +116,19 @@ func (t IPSetType) IsMemberIPV6(member string) bool {
 		return strings.Contains(member, ":")
 	case IPSetTypeHashIPPort:
 		return strings.Contains(strings.Split(member, ",")[0], ":")
+	case IPSetTypeHashNetNet:
+		cidrs := strings.Split(member, ",")
+		if len(cidrs) != 2 {
+			log.WithField("member", member).Panic("Is not type IPSetTypeHashNetNet")
+		}
+		cidr1 := strings.Contains(cidrs[0], ":")
+		cidr2 := strings.Contains(cidrs[1], ":")
+
+		if cidr1 != cidr2 {
+			log.WithField("member", member).Panic("Each cidr has different version")
+		}
+
+		return cidr1
 	}
 	log.WithField("type", string(t)).Panic("Unknown IPSetType")
 	return false
@@ -186,6 +200,12 @@ func (t IPSetType) CanonicaliseMember(member string) ipSetMember {
 		if err == nil && port >= 0 && port <= 0xffff {
 			return Port(port)
 		}
+	case IPSetTypeHashNetNet:
+		cidrs := strings.Split(member, ",")
+		return netNet{
+			cidr1: ip.MustParseCIDROrIP(cidrs[0]),
+			cidr2: ip.MustParseCIDROrIP(cidrs[1]),
+		}
 	}
 	log.WithField("type", string(t)).Panic("Unknown IPSetType")
 	return nil
@@ -195,9 +215,17 @@ type ipSetMember interface {
 	String() string
 }
 
+type netNet struct {
+	cidr1, cidr2 ip.CIDR
+}
+
+func (nn netNet) String() string {
+	return nn.cidr1.String() + "," + nn.cidr2.String()
+}
+
 func (t IPSetType) IsValid() bool {
 	switch t {
-	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeHashIPPort:
+	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeHashIPPort, IPSetTypeHashNetNet:
 		return true
 	}
 	return false

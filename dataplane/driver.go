@@ -160,7 +160,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			}
 		}
 
-		var markProxy uint32
+		var markProxy, k8sMasqMark uint32
+
+		k8sMasqMark = 1 << configParams.KubeMasqueradeBit
 
 		if configParams.TPROXYModeEnabled() {
 			log.Infof("TPROXYMode %s, allocating a mark bit", configParams.TPROXYMode)
@@ -355,9 +357,10 @@ func StartDataplaneDriver(configParams *config.Config,
 				BPFEnabled:                         configParams.BPFEnabled,
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
-				TPROXYMode:        configParams.TPROXYMode,
-				TPROXYPort:        configParams.TPROXYPort,
-				IptablesMarkProxy: markProxy,
+				TPROXYMode:         configParams.TPROXYMode,
+				TPROXYPort:         configParams.TPROXYPort,
+				IptablesMarkProxy:  markProxy,
+				KubeMasqueradeMark: k8sMasqMark,
 			},
 
 			Wireguard: wireguard.Config{

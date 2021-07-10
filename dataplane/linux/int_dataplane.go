@@ -777,6 +777,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	tproxyMgr := newTProxyManager(config,
 		tproxyRTIndex4, tproxyRTIndex6,
 		dp.loopSummarizer,
+		tproxyWithIptablesEqualIPsChecker(newIptablesEqualIPsChecker(config, ipSetsV4, ipSetsV6)),
 	)
 	dp.RegisterManager(tproxyMgr)
 
