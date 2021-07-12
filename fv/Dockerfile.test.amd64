@@ -33,5 +33,5 @@ RUN apt-get update && apt-get install -y \
 
 ARG FV_BINARY=calico-felix-amd64
 
-ADD test-connection test-workload pktgen  /
+ADD test-connection test-workload test-dns pktgen  /
 ADD $FV_BINARY /code/calico-felix
