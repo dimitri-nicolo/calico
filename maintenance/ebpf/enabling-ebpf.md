@@ -58,7 +58,7 @@ eBPF (or "extended Berkeley Packet Filter"), is a technology that allows safe mi
 
   - EKS using the default Ubuntu or Amazon Linux images.  At the time of writing, these do not have a recent enough kernel.
 
-  - Docker Enterprise: eBPF mode is incompatible with Docker Enterprise at this time. The Tigera team is investigating the issue.
+  - Mirantis Kubernetes Engine (MKE): eBPF mode is incompatible with MKE at this time. The Tigera team is investigating the issue.
 
 - Clusters with some eBPF nodes and some standard dataplane and/or Windows nodes.
 - IPv6.
@@ -155,7 +155,7 @@ The best way to do that varies by Kubernetes distribution:
   In this example, you would use `60F939227672BC3D5A1B3EC9744B2B21.gr7.us-west-2.eks.amazonaws.com` for
   `KUBERNETES_SERVICE_HOST` and `443` for `KUBERNETES_SERVICE_PORT` when creating the config map.
   
-* Docker Enterprise and Rancher neither allow `kube-proxy` to be disabled nor provide a stable address for the 
+* MKE and Rancher neither allow `kube-proxy` to be disabled nor provide a stable address for the 
   API server that is suitable for the next step.  The best option on these platforms is to 
   
   * Let {{site.prodname}} connect to the API server as through `kube-proxy` (by skipping the step below to create the

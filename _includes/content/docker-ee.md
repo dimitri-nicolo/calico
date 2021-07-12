@@ -1,1 +1,1 @@
-Docker Enterprise 3.1 with Mirantis Kubernetes Engine 3.3.5
+Mirantis Kubernetes Engine 3.3.5

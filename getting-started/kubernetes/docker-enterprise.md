@@ -1,21 +1,21 @@
 ---
-title: Install Calico Enterprise on Docker Enterprise
-description: Install Calico Enterprise using Docker EE for self-managed on-premises deployments.
+title: Mirantis Kubernetes Engine (MKE)
+description: Install Calico Enterprise using MKE for self-managed on-premises deployments.
 canonical_url: /getting-started/kubernetes/docker-enterprise
 ---
 
 ### Big picture
 
-Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
+Install {{site.prodname}} in a Mirantis Kubernetes Engine (MKE) cluster (formerly Docker Enterprise).
 
 ### Before you begin
 
-**Docker requirements**
+**MKE requirements**
 
 - {% include content/docker-ee.md %} install with:
 
    - A minimum of three nodes for non-production deployments
-   - CNI flag set to unmanaged, `--unmanaged-cni` so UCP does not install the default Calico networking plugin
+   - CNI flag set to unmanaged, `--unmanaged-cni` so UCP does not install the default {{site.prodname}} networking plugin
 
    For help, see {% include open-new-window.html text='Docker Enterprise' url='https://docs.docker.com/ee/' %} and {% include open-new-window.html text='Docker EE Best Practices and Design Considerations' url='https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html' %}
 
@@ -23,7 +23,7 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 **{{site.prodname}} requirements**
 
-- Your Docker Enterprise cluster meets the [{{site.prodname}} system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements)
+- Your MKE cluster meets the [{{site.prodname}} system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements)
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
@@ -76,7 +76,7 @@ The geeky details of what you get:
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
-1. Install any extra [Calico resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+1. Install any extra [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
@@ -126,7 +126,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 **Recommended - Networking**
 
-- The default networking uses IP in IP with BPG routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+- The default networking uses IP-in-IP with BPG routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 
 **Recommended - Security**
 

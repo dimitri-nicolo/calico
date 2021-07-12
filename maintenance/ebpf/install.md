@@ -63,7 +63,7 @@ and in particular, pushing the networking capabilities of the latest Linux kerne
     a stable address for the API server.  However, by following [these instructions](../../maintenance/ebpf/enabling-ebpf),
     it can be enabled as a post-install step.
   
-  - Docker Enterprise: eBPF mode is incompatible with Docker Enterprise at this time. The Tigera team is investigating the issue.
+  - Mirantis Kubernetes Engine (MKE): eBPF mode is incompatible with MKE at this time. The Tigera team is investigating the issue.
 
 - Clusters with some eBPF nodes and some standard dataplane and/or Windows nodes.
 - IPv6.

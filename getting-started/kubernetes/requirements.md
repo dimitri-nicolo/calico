@@ -30,9 +30,9 @@ We test {{site.prodname}} {{page.version}} against the following managed Kuberne
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
 
-#### Supported Docker Enterprise versions
+#### Supported Mirantis Kubernetes Engine (RKE) versions
 
-We test {{site.prodname}} {{page.version}} against the following Docker Enterprise versions.
+We test {{site.prodname}} {{page.version}} against the following RKE versions.
 
 {% include content/docker-ee.md %}
 
