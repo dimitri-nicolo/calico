@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -386,6 +386,10 @@ func (b *mockDatastore) GlobalReportTypes() clientv3.GlobalReportTypeInterface {
 }
 
 func (b *mockDatastore) GlobalReports() clientv3.GlobalReportInterface {
+	panic("not implemented")
+}
+
+func (b *mockDatastore) DeepPacketInspections() clientv3.DeepPacketInspectionInterface {
 	panic("not implemented")
 }
 
