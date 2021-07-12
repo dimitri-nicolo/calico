@@ -1073,6 +1073,10 @@ func (c shimClient) GlobalReports() client.GlobalReportInterface {
 	panic("not implemented")
 }
 
+func (c shimClient) DeepPacketInspections() client.DeepPacketInspectionInterface {
+	panic("not implemented")
+}
+
 func (c shimClient) LicenseKey() client.LicenseKeyInterface {
 	panic("not implemented")
 }
