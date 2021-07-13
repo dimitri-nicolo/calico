@@ -19,4 +19,4 @@
 
 **How do I get information about my license? Monitor the expiration date?**  
    - [Prometheus!]({{site.baseurl}}/maintenance/monitor/metrics/license-agent). Monitor days till expiration, nodes available, and nodes used.
-   - Use `kubectl` to get license key information ({{site.baseurl}}/reference/resources/licensekey#viewing-information-about-your-license-key)
+   - Use `kubectl` to get [license key information]({{site.baseurl}}/reference/resources/licensekey#viewing-information-about-your-license-key)
