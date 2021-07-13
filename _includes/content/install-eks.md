@@ -171,7 +171,7 @@ Before you get started, make sure you have downloaded and configured the {% incl
 1. Download the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```bash
-   curl -O -L {{ "/manifests/custom-resources-calico-cni.yaml" | absolute_url }}
+   curl -O -L {{ "/manifests/eks/custom-resources-calico-cni.yaml" | absolute_url }}
    ```
 
    Remove the `Manager` custom resource from the manifest file.
