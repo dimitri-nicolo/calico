@@ -459,8 +459,11 @@ func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Res
 // deleted.
 func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model.ResourceKey, err error) bool {
 	a.lock.Lock()
-	defer a.lock.Unlock()
-	a.finishRemote(key)
+	defer func() {
+		a.finishRemote(key)
+		a.lock.Unlock()
+	}()
+
 	select {
 	case <-ctx.Done():
 		log.Infof("Remote cluster deleted, no need to send connection failed event: %s", key)
