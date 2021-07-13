@@ -347,7 +347,7 @@ else
 FV_BINARY=calico-felix-amd64
 endif
 
-image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/tproxy bin/$(FV_BINARY) image-wgtool
+image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY) image-wgtool
 	docker build -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin;
 ifeq ($(ARCH),amd64)
 	docker tag $(FELIX_IMAGE)-test:latest-$(ARCH) $(FELIX_IMAGE)-test:latest
@@ -445,7 +445,7 @@ fv/infrastructure/crds: go.mod go.sum $(LOCAL_BUILD_DEP)
 # or It{} description string. For example, to only run dns_test.go, type:
 # 	GINKGO_FOCUS="DNS Policy" make fv
 #
-fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-workload bin/test-connection bin/calico-bpf fv/fv.test
+fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-workload bin/test-connection bin/test-dns bin/calico-bpf fv/fv.test
 	rm -f fv/data-races.log fv/latency.log
 	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
@@ -587,6 +587,12 @@ bin/test-connection: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/util
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
+
+bin/test-dns: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-dns/*.go
+	@echo Building test-dns...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-dns"'
 
 st:
 	@echo "No STs available"
