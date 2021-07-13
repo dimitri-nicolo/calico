@@ -76,7 +76,7 @@ section:
     path: /maintenance/logstorage/adjust-log-storage-size
   - title: Advanced node scheduling
     path: /maintenance/logstorage/advanced-node-scheduling
-- title: License management
+- title: License expiration and renewal
   path: /maintenance/license-options
 - title: Monitoring 
   path: /maintenance/monitor/
