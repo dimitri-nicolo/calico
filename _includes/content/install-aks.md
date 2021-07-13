@@ -111,7 +111,7 @@ When all components show a status of `Available`, proceed to the next section.'
 
 To secure {{site.prodname}} component communications, install the following set of network policies.
 ```
-kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
+kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 {% endif %}
 
