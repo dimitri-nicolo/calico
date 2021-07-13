@@ -199,6 +199,7 @@ const (
 	SyncerTypeFelix              SyncerType = "felix"
 	SyncerTypeBGP                SyncerType = "bgp"
 	SyncerTypeTunnelIPAllocation SyncerType = "tunnel-ip-allocation"
+	SyncerTypeDPI                SyncerType = "dpi"
 )
 
 type MsgClientHello struct {

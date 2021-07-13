@@ -135,7 +135,7 @@ var _ = Describe("Daemon", func() {
 
 			It("should create the server components", func() {
 				d.CreateServer()
-				Expect(d.SyncerPipelines).To(HaveLen(3))
+				Expect(d.SyncerPipelines).To(HaveLen(4))
 				for _, p := range d.SyncerPipelines {
 					Expect(p.SyncerToValidator).ToNot(BeNil())
 					Expect(p.Syncer).ToNot(BeNil())
@@ -148,6 +148,7 @@ var _ = Describe("Daemon", func() {
 				Expect(datastore.bgpSyncerCalled).To(BeTrue())
 				Expect(datastore.felixSyncerCalled).To(BeTrue())
 				Expect(datastore.allocateTunnelIpSyncerCalled).To(BeTrue())
+				Expect(datastore.dpiSyncerCalled).To(BeTrue())
 			})
 
 			It("should start a working server", func() {
@@ -240,6 +241,7 @@ type mockDatastore struct {
 	allocateTunnelIpSyncerCalled bool
 	bgpSyncerCalled              bool
 	felixSyncerCalled            bool
+	dpiSyncerCalled              bool
 	initCalled                   int
 	failInit                     bool
 }
@@ -266,6 +268,13 @@ func (b *mockDatastore) BGPSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Sy
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	b.bgpSyncerCalled = true
+	return &dummySyncer{}
+}
+
+func (b *mockDatastore) DPISyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.dpiSyncerCalled = true
 	return &dummySyncer{}
 }
 
