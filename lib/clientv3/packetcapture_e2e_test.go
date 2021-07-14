@@ -6,6 +6,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
+
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/onsi/ginkgo"
@@ -29,9 +31,32 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 	name2 := "capture-2"
 	namespace1 := "namespace-1"
 	namespace2 := "namespace-2"
+	protocol := numorstring.ProtocolFromString("TCP")
 
-	spec1 := apiv3.PacketCaptureSpec{}
-	spec2 := apiv3.PacketCaptureSpec{}
+	spec1 := apiv3.PacketCaptureSpec{
+		Selector: "all()",
+		Filters: []apiv3.PacketCaptureRule{
+			{
+				Ports: []numorstring.Port{
+					numorstring.SinglePort(80),
+				},
+				Protocol: &protocol,
+			},
+		},
+	}
+	spec2 := apiv3.PacketCaptureSpec{
+		Selector: "all()",
+		Filters: []apiv3.PacketCaptureRule{
+			{
+				Ports: []numorstring.Port{
+					numorstring.SinglePort(80),
+				},
+			},
+			{
+				Protocol: &protocol,
+			},
+		},
+	}
 
 	DescribeTable("PacketCapture e2e CRUD tests",
 		func(name1, name2 string, spec1, spec2 apiv3.PacketCaptureSpec) {
