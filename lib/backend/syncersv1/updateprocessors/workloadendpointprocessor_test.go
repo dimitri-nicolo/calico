@@ -22,12 +22,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/api/pkg/lib/numorstring"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 var _ = Describe("Test the WorkloadEndpoint update processor", func() {
@@ -47,12 +48,12 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 	iface2 := "iface2"
 
 	v3WorkloadEndpointKey1 := model.ResourceKey{
-		Kind:      apiv3.KindWorkloadEndpoint,
+		Kind:      libapiv3.KindWorkloadEndpoint,
 		Name:      name1,
 		Namespace: ns1,
 	}
 	v3WorkloadEndpointKey2 := model.ResourceKey{
-		Kind:      apiv3.KindWorkloadEndpoint,
+		Kind:      libapiv3.KindWorkloadEndpoint,
 		Name:      name2,
 		Namespace: ns2,
 	}
@@ -77,7 +78,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -116,7 +117,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		}))
 
 		By("adding another WorkloadEndpoint with a full configuration")
-		res = apiv3.NewWorkloadEndpoint()
+		res = libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns2
 		res.Labels = map[string]string{
 			"testLabel":                      "label",
@@ -135,7 +136,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		_, ipn, err = cnet.ParseCIDROrIP("10.100.10.1")
 		Expect(err).NotTo(HaveOccurred())
 		expectedIPv4Net = *(ipn.Network())
-		res.Spec.IPNATs = []apiv3.IPNAT{
+		res.Spec.IPNATs = []libapiv3.IPNAT{
 			{
 				InternalIP: "10.100.1.1",
 				ExternalIP: "10.1.10.1",
@@ -367,7 +368,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("trying to convert with the wrong key type.")
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Name = name1
 		res.Namespace = ns1
 
@@ -397,9 +398,9 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		}))
 
 		By("trying to convert without enough information to create a v1 key.")
-		eres := apiv3.NewWorkloadEndpoint()
+		eres := libapiv3.NewWorkloadEndpoint()
 		v3WorkloadEndpointKey1 := model.ResourceKey{
-			Kind: apiv3.KindWorkloadEndpoint,
+			Kind: libapiv3.KindWorkloadEndpoint,
 			Name: name1,
 		}
 
@@ -415,7 +416,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with no IPNetworks")
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -444,7 +445,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 
 		nsLabel := conversion.NamespaceLabelPrefix + "ns1"
 		saLabel := conversion.ServiceAccountLabelPrefix + "sa1"
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -489,7 +490,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 	It("should add a label representing the serviceaccount name", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,

@@ -17,8 +17,11 @@ package clientv3
 import (
 	"context"
 	"errors"
+	"time"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
@@ -43,6 +46,12 @@ func (r kubeControllersConfiguration) fillDefaults(res *apiv3.KubeControllersCon
 	if res.Spec.PrometheusMetricsPort == nil {
 		var defaultPort = 9094
 		res.Spec.PrometheusMetricsPort = &defaultPort
+	}
+
+	if res.Spec.Controllers.Node != nil {
+		if res.Spec.Controllers.Node.LeakGracePeriod == nil {
+			res.Spec.Controllers.Node.LeakGracePeriod = &metav1.Duration{Duration: 15 * time.Minute}
+		}
 	}
 }
 

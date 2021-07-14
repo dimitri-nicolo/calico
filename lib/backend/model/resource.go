@@ -24,7 +24,9 @@ import (
 
 	kapiv1 "k8s.io/api/core/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/namespace"
 )
 
@@ -137,9 +139,9 @@ func init() {
 		reflect.TypeOf(apiv3.Tier{}),
 	)
 	registerResourceInfo(
-		apiv3.KindNode,
+		libapiv3.KindNode,
 		"nodes",
-		reflect.TypeOf(apiv3.Node{}),
+		reflect.TypeOf(libapiv3.Node{}),
 	)
 	registerResourceInfo(
 		apiv3.KindProfile,
@@ -147,9 +149,9 @@ func init() {
 		reflect.TypeOf(apiv3.Profile{}),
 	)
 	registerResourceInfo(
-		apiv3.KindWorkloadEndpoint,
+		libapiv3.KindWorkloadEndpoint,
 		"workloadendpoints",
-		reflect.TypeOf(apiv3.WorkloadEndpoint{}),
+		reflect.TypeOf(libapiv3.WorkloadEndpoint{}),
 	)
 	registerResourceInfo(
 		apiv3.KindKubeControllersConfiguration,
