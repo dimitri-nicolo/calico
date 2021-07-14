@@ -4,7 +4,8 @@ GIT_USE_SSH = true
 ORGANIZATION = tigera
 
 PROMETHEUS_SERVICE_IMAGE ?=tigera/prometheus-service
-BUILD_IMAGES ?=$(PROMETHEUS_SERVICE_IMAGE)
+BUILD_IMAGES             ?=$(PROMETHEUS_SERVICE_IMAGE)
+DEV_REGISTRIES           ?=gcr.io/unique-caldron-775/cnx
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -139,6 +140,18 @@ ci: clean image-all static-checks ut fv
 ## Deploys images to registry
 cd: image-all cd-common
 
+###############################################################################
+# Update pins
+###############################################################################
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 ###############################################################################
 # Utils
