@@ -8425,6 +8425,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							},
 						},
 					},
+					"kubeMasqueradeBit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeMasqueradeBit should be set to the same value as --iptables-masquerade-bit of kube-proxy when TPROXY is used. The default is the same as kube-proxy default thus only needs a change if kube-proxy is using a non-standard setting. Must be within the range of 0-31.  [Default: 14]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"kubeNodePortRanges": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
