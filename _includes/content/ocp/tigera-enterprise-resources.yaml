@@ -1,0 +1,40 @@
+{% include content/ocp/01-cr-manager.yaml %}
+
+{% include content/ocp/01-cr-compliance.yaml %}
+
+{% include content/ocp/01-cr-intrusiondetection.yaml %}
+
+{% include content/ocp/01-cr-logstorage.yaml %}
+
+{% include content/ocp/01-cr-logcollector.yaml %}
+
+{% include content/ocp/01-cr-monitor.yaml %}
+
+{% helm tigera-operator --execute templates/prometheus/00-namespace-tigera-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/prometheus/04-clusterrolebinding-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/prometheus/04-clusterrole-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/prometheus/04-serviceaccount-prometheus.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/misc/99-alertmanager-secret.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/misc/99-alertmanager-service.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}
+{% helm tigera-operator --execute templates/misc/99-prometheus-service.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}

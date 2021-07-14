@@ -61,9 +61,9 @@ curl {{ "/manifests/ocp/02-pull-secret.yaml" | absolute_url }} -o manifests/02-p
 {%- unless page.openshift_manifests_ignore_installation_cr %}
 curl {{ "/manifests/ocp/01-cr-installation.yaml" | absolute_url }} -o manifests/01-cr-installation.yaml
 {%- endunless %}
-{%- unless page.openshift_manifests_ignore_apiserver_cr %}
+{%- if page.openshift_manifests_include_apiserver_cr %}
 curl {{ "/manifests/ocp/01-cr-apiserver.yaml" | absolute_url }} -o manifests/01-cr-apiserver.yaml
-{%- endunless %}
+{%- endif %}
 ```
 {% unless page.openshift_manifests_ignore_installation_cr %}
 > **Note**: Read more about customizing the file `manifests/01-cr-installation.yaml` in the [Installation API Reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)

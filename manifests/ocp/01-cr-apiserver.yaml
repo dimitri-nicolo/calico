@@ -1,5 +1,5 @@
-# This section installs and configures the Calico Enterprise API server.
-apiVersion: operator.tigera.io/v1
-kind: APIServer
-metadata:
-  name: tigera-secure
+---
+layout: null
+---
+
+{% include content/ocp/01-cr-apiserver.yaml %}

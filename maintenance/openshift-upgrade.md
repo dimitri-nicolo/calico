@@ -4,7 +4,6 @@ description: Upgrading from an earlier release of Calico Enterprise on OpenShift
 canonical_url: /maintenance/openshift-upgrade
 show_toc: false
 openshift_manifests_ignore_pullsecret: true
-openshift_manifests_ignore_apiserver_cr: true
 openshift_manifests_ignore_installation_cr: true
 ---
 
