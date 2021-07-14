@@ -1767,6 +1767,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			copy(*out, *in)
 		}
 	}
+	if in.KubeMasqueradeBit != nil {
+		in, out := &in.KubeMasqueradeBit, &out.KubeMasqueradeBit
+		*out = new(int)
+		**out = **in
+	}
 	if in.KubeNodePortRanges != nil {
 		in, out := &in.KubeNodePortRanges, &out.KubeNodePortRanges
 		*out = new([]numorstring.Port)
