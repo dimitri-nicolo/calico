@@ -480,6 +480,8 @@ type Config struct {
 	TPROXYMode string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
 	TPROXYPort int    `config:"int;16001"`
 
+	KubeMasqueradeBit int `config:"int;14"`
+
 	// State tracking.
 
 	// internalOverrides contains our highest priority config source, generated from internal constraints
