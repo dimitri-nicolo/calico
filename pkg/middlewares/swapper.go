@@ -21,10 +21,9 @@ const (
 	SecretDataFieldPassword = "password"
 )
 
-// swapElasticCredHandler returns an HTTP handler which acts as a middleware to swap the ES credentials attached to
-// a request. If allowRealUser is set to true, then allow a request to pass through without attempting to swap credentials
-// if the request has credentials attached belonging to an ES user that has permissions already (i.e. a "real" user).
-func swapElasticCredHandler(c kubernetes.Client, adminUsername, adminPassword string, allowRealUser bool, next http.Handler) http.Handler {
+// swapElasticCredHandler returns an HTTP handler which acts as a middleware to swap the credentials attached to
+// a request (from gateway credentials to Elasticsearch credentials).
+func swapElasticCredHandler(c kubernetes.Client, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Attempting ES credentials swap for request with URI %s", r.RequestURI)
 
@@ -55,9 +54,9 @@ func swapElasticCredHandler(c kubernetes.Client, adminUsername, adminPassword st
 }
 
 // NewSwapElasticCredMiddlware returns an initialized version of elasticAuthHandler.
-func NewSwapElasticCredMiddlware(c kubernetes.Client, username, password string, allowRealUser bool) func(http.Handler) http.Handler {
+func NewSwapElasticCredMiddlware(c kubernetes.Client) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		return swapElasticCredHandler(c, username, password, allowRealUser, h)
+		return swapElasticCredHandler(c, h)
 	}
 }
 

@@ -19,12 +19,6 @@ type Route struct {
 	IsPathPrefix bool
 	// RequireAuth indicates whether this Route requires authentication.
 	RequireAuth bool
-	// AllowSwapSkip indicates whether this Route will allow a request to pass through without attempting to
-	// swap credentials if the request has credentials attached belonging to an ES user that has permissions
-	// already (i.e. a "real" user).
-	// Note that credential swapping is automatically added for this Route (either with or without skipping),
-	// if RequireAuth is enabled.
-	AllowSwapSkip bool
 	// HTTPMethods specifies which HTTP method the Route should match with. If empty, then Route
 	// will match with any HTTP method.
 	HTTPMethods []string

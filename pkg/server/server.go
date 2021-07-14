@@ -198,12 +198,8 @@ func buildMiddlewareChain(r *proxy.Route, h mid.HandlerMap, f http.Handler) http
 		chain = append(chain, h[mid.TypeAuth])
 
 		// Alongside auth, add credential swapping middlware to the Handler chain for this
-		// Route, depending on whether thie Route allows skipping the swap.
-		if r.AllowSwapSkip {
-			chain = append(chain, h[mid.TypeSwapAllowSkip])
-		} else {
-			chain = append(chain, h[mid.TypeSwap])
-		}
+		// Route
+		chain = append(chain, h[mid.TypeSwap])
 	}
 
 	// Now apply the chain of middleware handlers on the given route handler f, starting with the last one.
