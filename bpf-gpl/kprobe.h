@@ -42,6 +42,10 @@ CALI_MAP(cali_kpstats, 2,
 		struct calico_kprobe_stats_key, struct calico_kprobe_stats_value,
 		511000, 0, MAP_PIN_GLOBAL)
 
+static int CALI_BPF_INLINE ip_addr_is_localhost(__u8 *addr) {
+	return (addr[12] == 0x7f);
+}
+
 static int CALI_BPF_INLINE ip_addr_is_zero(__u8 *addr) {
 	__u64 *a64 = (__u64*)addr;
 
@@ -80,11 +84,14 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	bpf_probe_read(&key.sport, 2, &sk_cmn->skc_num);
 	bpf_probe_read(&key.dport, 2, &sk_cmn->skc_dport);
 
-	/* Do not send data when any of src ip,src port, dst ip, dst port is 0.
-	 * This being the socket data, value of 0 indicates a socket in listening
-	 * state. Further data cannot be correlated in felix.
+	/* Do not send data when any of src ip,src port, dst ip, dst port is 0 or
+	 * dstIP is a localhost. This being the socket data, value of 0 indicates
+	 * a socket in listening state. Further data cannot be correlated in felix.
+	 * In case of localhost, we do not log any flows to the localhost. Skipping
+	 * this will bring down the number of events sent to felix.
 	 */
-	if (!key.sport || !key.dport || ip_addr_is_zero(key.saddr) || ip_addr_is_zero(key.daddr)) {
+	if (!key.sport || !key.dport || ip_addr_is_zero(key.saddr) || ip_addr_is_zero(key.daddr) ||
+			ip_addr_is_localhost(key.daddr)) {
 		return 0;
 	}
 
