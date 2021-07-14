@@ -365,8 +365,12 @@ spec:
                   the kprobe BPF programs to collect process info. [Default: false]'
                 type: boolean
               flowLogsCollectProcessPath:
-                description: FlowLogsCollectProcessPath enables flow logs reporting
-                  process path with args
+                description: FlowLogsCollectProcessPath if enabled, felix will load
+                  the kprobe BPF program to collect process path, arguments for those
+                  processes that do some network activity. This will also set hostPID
+                  to true. Those processes which were spawned before the kprobe was
+                  installed, process path, arguments will be read from /proc/pid/cmdline.
+                  Process path will replace process name in the flowlogs.
                 type: boolean
               flowLogsCollectTcpStats:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP

@@ -396,8 +396,8 @@ type FelixConfigurationSpec struct {
 	// FlowLogsCollectTcpStats enables flow logs reporting TCP socket stats
 	FlowLogsCollectTcpStats *bool `json:"flowLogsCollectTcpStats,omitempty" validate:"omitempty"`
 	// FlowLogsCollectProcessPath if enabled, felix will load the kprobe BPF program to collect process path, arguments for those processes
-	// that do some network activity. This will also set hostPID to true. Those processes which were spawned before the kprobe was installed, 
-	// process path, arguments will be read from /proc/pid/cmdline. Process path will replace process name in the flowlogs. 
+	// that do some network activity. This will also set hostPID to true. Those processes which were spawned before the kprobe was installed,
+	// process path, arguments will be read from /proc/pid/cmdline. Process path will replace process name in the flowlogs.
 	FlowLogsCollectProcessPath *bool `json:"flowLogsCollectProcessPath,omitempty" validate:"omitempty"`
 
 	// FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.
