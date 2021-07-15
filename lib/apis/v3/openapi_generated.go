@@ -215,6 +215,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCapture":                         schema_libcalico_go_lib_apis_v3_PacketCapture(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureFile":                     schema_libcalico_go_lib_apis_v3_PacketCaptureFile(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureList":                     schema_libcalico_go_lib_apis_v3_PacketCaptureList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureRule":                     schema_libcalico_go_lib_apis_v3_PacketCaptureRule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec":                     schema_libcalico_go_lib_apis_v3_PacketCaptureSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureStatus":                   schema_libcalico_go_lib_apis_v3_PacketCaptureStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig":                schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref),
@@ -10005,6 +10006,41 @@ func schema_libcalico_go_lib_apis_v3_PacketCaptureList(ref common.ReferenceCallb
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_PacketCaptureRule(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "A PacketCaptureRule encapsulates a set of match criteria for traffic captured from an interface.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"protocol": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Protocol is an optional field that defines a filter for all traffic for a specific IP protocol.\n\nMust be one of these string values: \"TCP\", \"UDP\", \"ICMP\", \"ICMPv6\", \"SCTP\", \"UDPLite\" or an integer in the range 1-255.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						},
+					},
+					"ports": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ports is an optional field that defines a filter for all traffic that has a source or destination port that matches one of these ranges/values. This value is a list of integers or strings that represent ranges of ports.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/numorstring.Port", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_PacketCaptureSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10019,9 +10055,25 @@ func schema_libcalico_go_lib_apis_v3_PacketCaptureSpec(ref common.ReferenceCallb
 							Format:      "",
 						},
 					},
+					"filters": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The ordered set of filters applied to traffic captured from an interface.  Each rule contains a set of packet match criteria.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureRule"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureRule"},
 	}
 }
 
