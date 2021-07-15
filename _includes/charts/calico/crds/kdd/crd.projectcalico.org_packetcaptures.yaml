@@ -35,10 +35,9 @@ spec:
           spec:
             description: PacketCaptureSpec contains the values of the packet capture.
             properties:
-              selector:
-                description: The ordered set of filters to be applied for traffic
-                  captures from an interface.  Each rule contains a set of packet
-                  match criteria.
+              filters:
+                description: The ordered set of filters applied to traffic captured
+                  from an interface.  Each rule contains a set of packet match criteria.
                 items:
                   description: A PacketCaptureRule encapsulates a set of match criteria
                     for traffic captured from an interface.
@@ -67,6 +66,26 @@ spec:
                       x-kubernetes-int-or-string: true
                   type: object
                 type: array
+              selector:
+                description: "The selector is an expression used to pick out the endpoints
+                  that the policy should be applied to.  The selector will only match
+                  endpoints in the same namespace as the PacketCapture resource. \n
+                  Selector expressions follow this syntax: \n \tlabel == \"string_literal\"
+                  \ ->  comparison, e.g. my_label == \"foo bar\" \tlabel != \"string_literal\"
+                  \  ->  not equal; also matches if label is not present \tlabel in
+                  { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is
+                  one of \"a\", \"b\", \"c\" \tlabel not in { \"a\", \"b\", \"c\",
+                  ... }  ->  true if the value of label X is not one of \"a\", \"b\",
+                  \"c\" \thas(label_name)  -> True if that label is present \t! expr
+                  -> negation of expr \texpr && expr  -> Short-circuit and \texpr
+                  || expr  -> Short-circuit or \t( expr ) -> parens for grouping \tall()
+                  or the empty selector -> matches all endpoints. \n Label names are
+                  allowed to contain alphanumerics, -, _ and /. String literals are
+                  more permissive but they do not support escape characters. \n Examples
+                  (with made-up labels): \n \ttype == \"webserver\" && deployment
+                  == \"prod\" \ttype in {\"frontend\", \"backend\"} \tdeployment !=
+                  \"dev\" \t! has(label_name)"
+                type: string
             type: object
           status:
             description: PacketCaptureStatus describes the files that have been captured,

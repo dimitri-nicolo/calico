@@ -28,6 +28,10 @@ metadata:
   namespace: sample-namespace
 spec:
   selector: k8s-app == "sample-app"
+  filters:
+    - protocol: TCP
+    - ports:
+      - 80
 ```
 
 ### Packet capture definition
@@ -44,12 +48,22 @@ spec:
 
 | Field    | Description                                                                                         | Accepted Values | Schema                | Default |
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
-| selector | Selects the endpoints to which this packet capture applies.                                          |                 | [selector](#selector) |         |
+| selector | Selects the endpoints to which this packet capture applies.                                         |                 | [selector](#selector) |         |
+| filters  | The ordered set of filters applied to traffic captured from an interface.                           |                 | [filters](#filters)   |         |
 
 
 #### Selector
 
 {% include content/selectors.md %}
+
+#### Filters
+
+| Field    | Description                              | Accepted Values                                             | Schema              | Default |
+|----------|------------------------------------------|-------------------------------------------------------------|---------------------|---------|
+| protocol | Positive protocol match.                 | `TCP`, `UDP`, `ICMP`, `ICMPv6`, `SCTP`, `UDPLite`, `1`-`255`| string \| integer   |         |
+| ports    | Positive match on the specified ports    |                                                             | list of ports       |         |
+
+{% include content/ports.md %}
 
 #### Status
 
