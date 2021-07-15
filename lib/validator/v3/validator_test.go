@@ -3268,6 +3268,79 @@ func init() {
 		Entry("should accept a packet capture spec with all() selector", api.PacketCaptureSpec{
 			Selector: "all()",
 		}, true),
+		// DeepPacketInspection validation
+		Entry("should reject a deep packet inspection resource with an invalid selector", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-dpi",
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "malformed$&/?!",
+			},
+		}, false),
+		Entry("should reject a deep packet inspection resource with an invalid name", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-malformed-name$/&",
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "",
+			},
+		}, false),
+		Entry("should reject a deep packet inspection resource with reserved labels", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-dpi",
+				Labels: map[string]string{
+					"projectcalico.org/namespace": "default",
+				},
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "",
+			},
+		}, false),
+		Entry("should accept a deep packet inspection resource with labels", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-dpi",
+				Labels: map[string]string{
+					"key": "value",
+				},
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "",
+			},
+		}, true),
+		Entry("should reject a deep packet inspection resource spec with a malformed selector", api.DeepPacketInspectionSpec{
+			Selector: "malformed&",
+		}, false),
+		Entry("should accept a deep packet inspection resource spec with logical boolean selector", api.DeepPacketInspectionSpec{
+			Selector: "app == \"client\" && capture == \"true\"",
+		}, true),
+		Entry("should accept a deep packet inspection resource spec with empty selector", api.DeepPacketInspectionSpec{
+			Selector: "",
+		}, true),
+		Entry("should accept a deep packet inspection resource spec with equality selector", api.DeepPacketInspectionSpec{
+			Selector: "capture == \"true\"",
+		}, true),
+		Entry("should accept a deep packet inspection resource spec with all() selector", api.DeepPacketInspectionSpec{
+			Selector: "all()",
+		}, true),
+		Entry("should reject a deep packet inspection resource status with more than 10 errors", api.DeepPacketInspection{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-dpi",
+			},
+			Spec: api.DeepPacketInspectionSpec{
+				Selector: "malformed$&/?!",
+			},
+			Status: api.DeepPacketInspectionStatus{Nodes: []api.DPINode{
+				{
+					Node:   "node-0",
+					Active: api.DPIActive{},
+					ErrorConditions: []api.DPIErrorCondition{
+						{Message: "error-1"}, {Message: "error-2"}, {Message: "error-3"}, {Message: "error-4"}, {Message: "error-5"}, {Message: "error-6"},
+						{Message: "error-7"}, {Message: "error-8"}, {Message: "error-9"}, {Message: "error-10"}, {Message: "error-11"},
+					},
+				},
+			},
+			},
+		}, false),
 	)
 
 	Describe("particular error string checking", func() {

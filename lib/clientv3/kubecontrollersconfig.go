@@ -55,8 +55,8 @@ func (r kubeControllersConfiguration) Create(ctx context.Context, res *apiv3.Kub
 		return nil, err
 	}
 
-	if res.ObjectMeta.GetName() != "default" {
-		return nil, errors.New("Cannot create a Kube Controllers Configuration resource with a name other than \"default\"")
+	if res.ObjectMeta.GetName() != "default" && res.ObjectMeta.GetName() != "elasticsearch" {
+		return nil, errors.New("Cannot create a Kube Controllers Configuration resource with a name other than \"default\" and \"elasticsearch\"")
 	}
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindKubeControllersConfiguration, res)
 	if out != nil {

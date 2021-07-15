@@ -26,7 +26,15 @@ const (
 
 func IsNamespaced(kind string) bool {
 	switch kind {
-	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindStagedNetworkPolicy, apiv3.KindStagedKubernetesNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints, apiv3.KindNetworkSet, apiv3.KindPacketCapture:
+	case apiv3.KindWorkloadEndpoint,
+		apiv3.KindNetworkPolicy,
+		apiv3.KindStagedNetworkPolicy,
+		apiv3.KindStagedKubernetesNetworkPolicy,
+		apiv3.KindK8sService,
+		apiv3.KindK8sEndpoints,
+		apiv3.KindNetworkSet,
+		apiv3.KindPacketCapture,
+		apiv3.KindDeepPacketInspection:
 		return true
 	case KindKubernetesNetworkPolicy:
 		// KindKubernetesNetworkPolicy is a special-case resource. We don't expose it over the
