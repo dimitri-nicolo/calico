@@ -966,6 +966,10 @@ spec:
                 description: 'WireguardEnabled controls whether Wireguard is enabled.
                   [Default: false]'
                 type: boolean
+              wireguardHostEncryptionEnabled:
+                description: 'WireguardHostEncryptionEnabled controls whether Wireguard
+                  host-to-host encryption is enabled. [Default: false]'
+                type: boolean
               wireguardInterfaceName:
                 description: 'WireguardInterfaceName specifies the name to use for
                   the Wireguard interface. [Default: wg.calico]'

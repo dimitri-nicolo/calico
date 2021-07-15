@@ -2209,6 +2209,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.WireguardHostEncryptionEnabled != nil {
+		in, out := &in.WireguardHostEncryptionEnabled, &out.WireguardHostEncryptionEnabled
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CaptureDir != nil {
 		in, out := &in.CaptureDir, &out.CaptureDir
 		*out = new(string)

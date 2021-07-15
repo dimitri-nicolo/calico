@@ -630,6 +630,8 @@ type FelixConfigurationSpec struct {
 	WireguardInterfaceName string `json:"wireguardInterfaceName,omitempty" validate:"omitempty,interface"`
 	// WireguardMTU controls the MTU on the Wireguard interface. See Configuring MTU [Default: 1420]
 	WireguardMTU *int `json:"wireguardMTU,omitempty"`
+	// WireguardHostEncryptionEnabled controls whether Wireguard host-to-host encryption is enabled. [Default: false]
+	WireguardHostEncryptionEnabled *bool `json:"wireguardHostEncryptionEnabled,omitempty"`
 
 	// +kubebuilder:validation:MinLength=1
 	// CaptureDir controls directory to store file capture. [Default: /var/log/calico/pcap]
