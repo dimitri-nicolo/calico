@@ -169,6 +169,7 @@ See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/
 | Configuration parameter | Environment variable       | Description  | Schema |
 | ------------------------|----------------------------| ------------ | ------ |
 | `KubeNodePortRanges`    | `FELIX_KUBENODEPORTRANGES` | A list of port ranges that Felix should treat as Kubernetes node ports.  Only when `kube-proxy` is configured to use IPVS mode:  Felix assumes that traffic arriving at the host of one of these ports will ultimately be forwarded instead of being terminated by a host process.  [Default: `30000:32767`] <a id="ipvs-portranges"></a>  | Comma-delimited list of `<min>:<max>` port ranges or single ports. |
+| `KubeMasqueradeBit`     | `FELIX_KUBEMASQUERADEBIT`  | KubeMasqueradeBit should be set to the same value as --iptables-masquerade-bit of kube-proxy when TPROXY is used. The default is the same as kube-proxy default thus only needs a change if kube-proxy is using a non-standard setting. Must be within the range of 0-31. OpenShift sets the bit to 0 by default. [Default: 14] | integer  |
 
 
 > **Note**: <a id="ipvs-bits"></a> When using {{site.prodname}} with Kubernetes' `kube-proxy` in IPVS mode, {{site.prodname}} uses additional iptables mark bits to store an ID for each local {{site.prodname}} endpoint.
