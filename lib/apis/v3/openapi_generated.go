@@ -5649,7 +5649,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"flowLogsCollectProcessPath": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsCollectProcessPath if enabled, felix will load the kprobe BPF program to collect process path, arguments for those processes that do some network activity. This will also set hostPID to true. Those processes which were spawned before the kprobe was installed, process path, arguments will be read from /proc/pid/cmdline. Process path will replace process name in the flowlogs.",
+							Description: "FlowLogsCollectProcessPath is dependent on FlowLogsCollectProcessInfo. If enabled,felix will collect process path and arguments, report to flowLogs. `process_name` in flowLogs will have the process path and `process_args` will have the arguments. Process information will be reported for processes making the connection as well as those receiving the connections. Process information will not be reported for those connections which uses raw sockets.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
