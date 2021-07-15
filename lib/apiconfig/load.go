@@ -24,7 +24,8 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 )
 

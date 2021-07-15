@@ -17,8 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
@@ -320,9 +322,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					UpdateType: api.UpdateTypeKVNew,
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-						Value: &apiv3.Node{
-							Spec: apiv3.NodeSpec{
-								OrchRefs: []apiv3.OrchRef{
+						Value: &libapiv3.Node{
+							Spec: libapiv3.NodeSpec{
+								OrchRefs: []libapiv3.OrchRef{
 									{
 										NodeName:     "127.0.0.1",
 										Orchestrator: "k8s",
@@ -423,9 +425,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					UpdateType: api.UpdateTypeKVNew,
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-						Value: &apiv3.Node{
-							Spec: apiv3.NodeSpec{
-								OrchRefs: []apiv3.OrchRef{
+						Value: &libapiv3.Node{
+							Spec: libapiv3.NodeSpec{
+								OrchRefs: []libapiv3.OrchRef{
 									{
 										NodeName:     "127.0.0.1",
 										Orchestrator: "k8s",
@@ -541,7 +543,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 			}
 
 			By("Creating a remote WorkloadEndpoint")
-			wep := apiv3.NewWorkloadEndpoint()
+			wep := libapiv3.NewWorkloadEndpoint()
 			wep.Namespace = "ns1"
 			wep.Spec.Node = "node1"
 			wep.Spec.Orchestrator = "k8s"
@@ -559,7 +561,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 			up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 			kvps, err := up.Process(&model.KVPair{
 				Key: model.ResourceKey{
-					Kind:      apiv3.KindWorkloadEndpoint,
+					Kind:      libapiv3.KindWorkloadEndpoint,
 					Name:      "node1-k8s-pod--1-eth0",
 					Namespace: "ns1",
 				},
@@ -725,9 +727,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 						UpdateType: api.UpdateTypeKVNew,
 						KVPair: model.KVPair{
 							Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-							Value: &apiv3.Node{
-								Spec: apiv3.NodeSpec{
-									OrchRefs: []apiv3.OrchRef{
+							Value: &libapiv3.Node{
+								Spec: libapiv3.NodeSpec{
+									OrchRefs: []libapiv3.OrchRef{
 										{
 											NodeName:     "127.0.0.1",
 											Orchestrator: "k8s",
@@ -801,9 +803,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 					UpdateType: api.UpdateTypeKVNew,
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-						Value: &apiv3.Node{
-							Spec: apiv3.NodeSpec{
-								OrchRefs: []apiv3.OrchRef{
+						Value: &libapiv3.Node{
+							Spec: libapiv3.NodeSpec{
+								OrchRefs: []libapiv3.OrchRef{
 									{
 										NodeName:     "127.0.0.1",
 										Orchestrator: "k8s",
@@ -956,9 +958,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 					UpdateType: api.UpdateTypeKVNew,
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-						Value: &apiv3.Node{
-							Spec: apiv3.NodeSpec{
-								OrchRefs: []apiv3.OrchRef{
+						Value: &libapiv3.Node{
+							Spec: libapiv3.NodeSpec{
+								OrchRefs: []libapiv3.OrchRef{
 									{
 										NodeName:     "127.0.0.1",
 										Orchestrator: "k8s",
@@ -1043,238 +1045,256 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 })
 
 var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config tests", testutils.DatastoreEtcdV3, func(etcdConfig apiconfig.CalicoAPIConfig) {
-	testutils.E2eDatastoreDescribe("", testutils.DatastoreK8sInline, func(k8sInline apiconfig.CalicoAPIConfig) {
-		testutils.E2eDatastoreDescribe("", testutils.DatastoreK8s, func(k8sConfig apiconfig.CalicoAPIConfig) {
-			rccName := "remote-cluster"
-			rccSecretName := "remote-cluster-config"
+	testutils.E2eDatastoreDescribe("", testutils.DatastoreK8s, func(k8sConfig apiconfig.CalicoAPIConfig) {
+		rccName := "remote-cluster"
+		rccSecretName := "remote-cluster-config"
 
-			var ctx context.Context
-			var err error
-			var localClient clientv3.Interface
-			var localBackend api.Client
-			var remoteBackend api.Client
-			var syncer api.Syncer
-			var syncTester *testutils.SyncerTester
-			var filteredSyncerTester api.SyncerCallbacks
-			var remoteClient clientv3.Interface
-			var k8sClientset *kubernetes.Clientset
-			var remoteConfig apiconfig.CalicoAPIConfig
-			var localConfig apiconfig.CalicoAPIConfig
-			var expectedEvents []api.Update
+		var ctx context.Context
+		var err error
+		var localClient clientv3.Interface
+		var localBackend api.Client
+		var remoteBackend api.Client
+		var syncer api.Syncer
+		var syncTester *testutils.SyncerTester
+		var filteredSyncerTester api.SyncerCallbacks
+		var remoteClient clientv3.Interface
+		var k8sClientset *kubernetes.Clientset
+		var remoteConfig apiconfig.CalicoAPIConfig
+		var localConfig apiconfig.CalicoAPIConfig
+		var expectedEvents []api.Update
 
-			BeforeEach(func() {
-				k8sClient, err := clientv3.New(k8sConfig)
-				Expect(err).NotTo(HaveOccurred())
-				_, _ = k8sClient.HostEndpoints().Delete(context.Background(), "hep1", options.DeleteOptions{})
-				etcdClient, err := clientv3.New(etcdConfig)
-				Expect(err).NotTo(HaveOccurred())
-				_, _ = etcdClient.HostEndpoints().Delete(context.Background(), "hep1", options.DeleteOptions{})
-			})
-			AfterEach(func() {
-				By("doing aftereach")
-				if syncer != nil {
-					syncer.Stop()
-					syncer = nil
-				}
-				if localBackend != nil {
-					localBackend.Clean()
-					localBackend.Close()
-					localBackend = nil
-				}
-				if remoteBackend != nil {
-					remoteBackend.Clean()
-					remoteBackend.Close()
-					remoteBackend = nil
-				}
-				if k8sClientset != nil {
-					_ = k8sClientset.CoreV1().Secrets("namespace-1").Delete(ctx, rccSecretName, metav1.DeleteOptions{})
-				}
-				if remoteClient != nil {
-					_, _ = remoteClient.HostEndpoints().Delete(ctx, "hep1", options.DeleteOptions{})
-				}
-				By("done with aftereach")
-			})
-
-			setup := func(local, remote apiconfig.CalicoAPIConfig) {
-				localConfig = local
-				remoteConfig = remote
-				ctx = context.Background()
-				log.SetLevel(log.DebugLevel)
-				// Create the v3 clients for the local and remote clusters.
-				localClient, err = clientv3.New(localConfig)
-				Expect(err).NotTo(HaveOccurred())
-				remoteClient, err = clientv3.New(remoteConfig)
-				Expect(err).NotTo(HaveOccurred())
-
-				// Create the local backend client to clean the datastore and obtain a syncer interface.
-				localBackend, err = backend.NewClient(localConfig)
-				Expect(err).NotTo(HaveOccurred())
+		BeforeEach(func() {
+			k8sClient, err := clientv3.New(k8sConfig)
+			Expect(err).NotTo(HaveOccurred())
+			_, _ = k8sClient.HostEndpoints().Delete(context.Background(), "hep1", options.DeleteOptions{})
+			etcdClient, err := clientv3.New(etcdConfig)
+			Expect(err).NotTo(HaveOccurred())
+			_, _ = etcdClient.HostEndpoints().Delete(context.Background(), "hep1", options.DeleteOptions{})
+		})
+		AfterEach(func() {
+			By("doing aftereach")
+			if syncer != nil {
+				syncer.Stop()
+				syncer = nil
+			}
+			if localBackend != nil {
 				localBackend.Clean()
-
-				// Create the remote backend client to clean the datastore.
-				remoteBackend, err = backend.NewClient(remoteConfig)
-				Expect(err).NotTo(HaveOccurred())
+				localBackend.Close()
+				localBackend = nil
+			}
+			if remoteBackend != nil {
 				remoteBackend.Clean()
+				remoteBackend.Close()
+				remoteBackend = nil
+			}
+			if k8sClientset != nil {
+				_ = k8sClientset.CoreV1().Secrets("namespace-1").Delete(ctx, rccSecretName, metav1.DeleteOptions{})
+			}
+			if remoteClient != nil {
+				_, _ = remoteClient.HostEndpoints().Delete(ctx, "hep1", options.DeleteOptions{})
+			}
+			By("done with aftereach")
+		})
 
-				k8sBackend, err := backend.NewClient(k8sConfig)
-				Expect(err).NotTo(HaveOccurred())
-				k8sClientset = k8sBackend.(*k8s.KubeClient).ClientSet
-				expectedEvents = []api.Update{}
+		setup := func(local, remote apiconfig.CalicoAPIConfig) {
+			localConfig = local
+			remoteConfig = remote
+			ctx = context.Background()
+			log.SetLevel(log.DebugLevel)
+			// Create the v3 clients for the local and remote clusters.
+			localClient, err = clientv3.New(localConfig)
+			Expect(err).NotTo(HaveOccurred())
+			remoteClient, err = clientv3.New(remoteConfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create the local backend client to clean the datastore and obtain a syncer interface.
+			localBackend, err = backend.NewClient(localConfig)
+			Expect(err).NotTo(HaveOccurred())
+			localBackend.Clean()
+
+			// Create the remote backend client to clean the datastore.
+			remoteBackend, err = backend.NewClient(remoteConfig)
+			Expect(err).NotTo(HaveOccurred())
+			remoteBackend.Clean()
+
+			k8sBackend, err := backend.NewClient(k8sConfig)
+			Expect(err).NotTo(HaveOccurred())
+			k8sClientset = k8sBackend.(*k8s.KubeClient).ClientSet
+			expectedEvents = []api.Update{}
+		}
+
+		sanitizer := func(callersUpdate *api.Update) *api.Update {
+			u := *callersUpdate
+			u.Revision = ""
+			u.TTL = 0
+
+			switch key := u.KVPair.Key.(type) {
+			case model.RemoteClusterStatusKey:
+				log.Infof("RemoteClusterStatusKey = %v, type = %v", key, u.UpdateType)
+				return &u
+			case model.HostEndpointKey:
+				log.Infof("HostEndpointKey = %v", key)
+				return &u
+			default:
+				log.Infof("default = %v", key)
 			}
 
-			sanitizer := func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
+			return nil
+		}
 
-				switch key := u.KVPair.Key.(type) {
-				case model.RemoteClusterStatusKey:
-					log.Infof("RemoteClusterStatusKey = %v, type = %v", key, u.UpdateType)
-					return &u
-				case model.HostEndpointKey:
-					log.Infof("HostEndpointKey = %v", key)
-					return &u
-				default:
-					log.Infof("default = %v", key)
-				}
-
-				return nil
-			}
-
-			rccInitialEvents := []api.Update{
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterConnecting,
-						},
+		rccInitialEvents := []api.Update{
+			{
+				KVPair: model.KVPair{
+					Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+					Value: &model.RemoteClusterStatus{
+						Status: model.RemoteClusterConnecting,
 					},
-					UpdateType: api.UpdateTypeKVNew,
 				},
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterResyncInProgress,
-						},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			{
+				KVPair: model.KVPair{
+					Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+					Value: &model.RemoteClusterStatus{
+						Status: model.RemoteClusterResyncInProgress,
 					},
-					UpdateType: api.UpdateTypeKVUpdated,
 				},
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterInSync,
-						},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+			{
+				KVPair: model.KVPair{
+					Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+					Value: &model.RemoteClusterStatus{
+						Status: model.RemoteClusterInSync,
 					},
-					UpdateType: api.UpdateTypeKVUpdated,
 				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}
+
+		type createFunc func()
+		type modifyFunc func()
+
+		// createRCCDirect creates an RCC with the configuration in the RCC from the remoteConfig
+		createRCCDirect := func() {
+			By("Creating direct RemoteClusterConfiguration")
+			rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
+			rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
+			rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
+			rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
+			rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
+			rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
+			rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
+			rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
+			rcc.Spec.Kubeconfig = remoteConfig.Spec.Kubeconfig
+			rcc.Spec.K8sAPIEndpoint = remoteConfig.Spec.K8sAPIEndpoint
+			rcc.Spec.K8sKeyFile = remoteConfig.Spec.K8sKeyFile
+			rcc.Spec.K8sCertFile = remoteConfig.Spec.K8sCertFile
+			rcc.Spec.K8sCAFile = remoteConfig.Spec.K8sCAFile
+			rcc.Spec.K8sAPIToken = remoteConfig.Spec.K8sAPIToken
+			rcc.Spec.K8sInsecureSkipTLSVerify = remoteConfig.Spec.K8sInsecureSkipTLSVerify
+			rcc.Spec.KubeconfigInline = remoteConfig.Spec.KubeconfigInline
+			_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+		}
+
+		// modifyRCCDirect updates the already created RCC with a change, not creating a valid config
+		// but that should be fine for using it to test what happens when a valid RCC is updated
+		modifyRCCDirect := func() {
+			By("Modifying direct RemoteClusterConfiguration")
+			rcc, err := localClient.RemoteClusterConfigurations().Get(ctx, rccName, options.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			if remoteConfig.Spec.DatastoreType == apiconfig.Kubernetes {
+				rcc.Spec.Kubeconfig = "notreal"
+			} else {
+				rcc.Spec.EtcdUsername = "fakeusername"
 			}
+			_, err = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
 
-			type createFunc func()
-			type modifyFunc func()
-
-			// createRCCDirect creates an RCC with the configuration in the RCC from the remoteConfig
-			createRCCDirect := func() {
-				By("Creating direct RemoteClusterConfiguration")
-				rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
-				rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
-				rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
-				rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
-				rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
-				rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
-				rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
-				rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
-				rcc.Spec.Kubeconfig = remoteConfig.Spec.Kubeconfig
-				rcc.Spec.K8sAPIEndpoint = remoteConfig.Spec.K8sAPIEndpoint
-				rcc.Spec.K8sKeyFile = remoteConfig.Spec.K8sKeyFile
-				rcc.Spec.K8sCertFile = remoteConfig.Spec.K8sCertFile
-				rcc.Spec.K8sCAFile = remoteConfig.Spec.K8sCAFile
-				rcc.Spec.K8sAPIToken = remoteConfig.Spec.K8sAPIToken
-				rcc.Spec.K8sInsecureSkipTLSVerify = remoteConfig.Spec.K8sInsecureSkipTLSVerify
-				rcc.Spec.KubeconfigInline = remoteConfig.Spec.KubeconfigInline
-				_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-			}
-
-			// modifyRCCDirect updates the already created RCC with a change, not creating a valid config
-			// but that should be fine for using it to test what happens when a valid RCC is updated
-			modifyRCCDirect := func() {
-				By("Modifying direct RemoteClusterConfiguration")
-				rcc, err := localClient.RemoteClusterConfigurations().Get(ctx, rccName, options.GetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				if remoteConfig.Spec.DatastoreType == apiconfig.Kubernetes {
-					rcc.Spec.Kubeconfig = "notreal"
-				} else {
-					rcc.Spec.EtcdUsername = "fakeusername"
-				}
-				_, err = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			// createRCCSecret creates a secret and an RCC that references the secret, both based on the remoteConfig
-			createRCCSecret := func() {
-				By("Creating secret for the RemoteClusterConfiguration")
-				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(ctx,
-					&kapiv1.Secret{
-						ObjectMeta: metav1.ObjectMeta{Name: rccSecretName, Namespace: "namespace-1"},
-						StringData: map[string]string{
-							"datastoreType": string(remoteConfig.Spec.DatastoreType),
-							"kubeconfig":    remoteConfig.Spec.KubeconfigInline,
-							"etcdEndpoints": remoteConfig.Spec.EtcdEndpoints,
-							"etcdUsername":  remoteConfig.Spec.EtcdUsername,
-							"etcdPassword":  remoteConfig.Spec.EtcdPassword,
-							"etcdKey":       remoteConfig.Spec.EtcdKey,
-							"etcdCert":      remoteConfig.Spec.EtcdCert,
-							"etcdCACert":    remoteConfig.Spec.EtcdCACert,
-						},
+		// createRCCSecret creates a secret and an RCC that references the secret, both based on the remoteConfig
+		createRCCSecret := func() {
+			By("Creating secret for the RemoteClusterConfiguration")
+			_, err = k8sClientset.CoreV1().Secrets("namespace-1").Create(ctx,
+				&kapiv1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: rccSecretName, Namespace: "namespace-1"},
+					StringData: map[string]string{
+						"datastoreType": string(remoteConfig.Spec.DatastoreType),
+						"kubeconfig":    remoteConfig.Spec.KubeconfigInline,
+						"etcdEndpoints": remoteConfig.Spec.EtcdEndpoints,
+						"etcdUsername":  remoteConfig.Spec.EtcdUsername,
+						"etcdPassword":  remoteConfig.Spec.EtcdPassword,
+						"etcdKey":       remoteConfig.Spec.EtcdKey,
+						"etcdCert":      remoteConfig.Spec.EtcdCert,
+						"etcdCACert":    remoteConfig.Spec.EtcdCACert,
 					},
-					metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				},
+				metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
 
-				By("Configuring the RemoteClusterConfiguration referencing secret")
-				rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
-				rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
-					Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
-					Namespace: "namespace-1",
-					Name:      rccSecretName,
-				}
-				_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
+			By("Configuring the RemoteClusterConfiguration referencing secret")
+			rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: rccName}}
+			rcc.Spec.ClusterAccessSecret = &kapiv1.ObjectReference{
+				Kind:      reflect.TypeOf(kapiv1.Secret{}).String(),
+				Namespace: "namespace-1",
+				Name:      rccSecretName,
 			}
+			_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+		}
 
-			// modifyRCCSecret modifies an already created Secret that is referenced by an RCC
-			modifyRCCSecret := func() {
-				By("Modifying RCC Secret RemoteClusterConfiguration")
-				s, err := k8sClientset.CoreV1().Secrets("namespace-1").Get(ctx, rccSecretName, metav1.GetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				if remoteConfig.Spec.DatastoreType == apiconfig.Kubernetes {
-					s.StringData = map[string]string{"kubeconfig": "notreal"}
-				} else {
-					s.StringData = map[string]string{"etcdPassword": "fakeusername"}
-				}
-				_, err = k8sClientset.CoreV1().Secrets("namespace-1").Update(ctx, s, metav1.UpdateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+		// modifyRCCSecret modifies an already created Secret that is referenced by an RCC
+		modifyRCCSecret := func() {
+			By("Modifying RCC Secret RemoteClusterConfiguration")
+			s, err := k8sClientset.CoreV1().Secrets("namespace-1").Get(ctx, rccSecretName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			if remoteConfig.Spec.DatastoreType == apiconfig.Kubernetes {
+				s.StringData = map[string]string{"kubeconfig": "notreal"}
+			} else {
+				s.StringData = map[string]string{"etcdPassword": "fakeusername"}
 			}
+			_, err = k8sClientset.CoreV1().Secrets("namespace-1").Update(ctx, s, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
 
-			// addHep creates a hep on the remoteClient and adds the expected events to expectedEvents
-			// for later checking
-			addHep := func() {
-				// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
-				// cluster status updates as the connection succeeds.
-				By("Creating a HEP")
-				_, err = remoteClient.HostEndpoints().Create(ctx, &apiv3.HostEndpoint{
-					ObjectMeta: metav1.ObjectMeta{Name: "hep1"},
-					Spec: apiv3.HostEndpointSpec{
-						Node:          "node-hep",
-						InterfaceName: "eth1",
+		// addHep creates a hep on the remoteClient and adds the expected events to expectedEvents
+		// for later checking
+		addHep := func() {
+			// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
+			// cluster status updates as the connection succeeds.
+			By("Creating a HEP")
+			_, err = remoteClient.HostEndpoints().Create(ctx, &apiv3.HostEndpoint{
+				ObjectMeta: metav1.ObjectMeta{Name: "hep1"},
+				Spec: apiv3.HostEndpointSpec{
+					Node:          "node-hep",
+					InterfaceName: "eth1",
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			expectedEvents = append(expectedEvents, api.Update{
+				KVPair: model.KVPair{
+					Key: model.HostEndpointKey{
+						Hostname:   "remote-cluster/node-hep",
+						EndpointID: "hep1",
 					},
-				}, options.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
+					Value: &model.HostEndpoint{
+						Name:              "eth1",
+						ExpectedIPv4Addrs: nil,
+						ExpectedIPv6Addrs: nil,
+						Labels:            nil,
+						ProfileIDs:        nil,
+						Ports:             []model.EndpointPort{},
+					},
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			})
+			// We only get the local event if the local config is also Kubernetes
+			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
 				expectedEvents = append(expectedEvents, api.Update{
 					KVPair: model.KVPair{
 						Key: model.HostEndpointKey{
-							Hostname:   "remote-cluster/node-hep",
+							Hostname:   "node-hep",
 							EndpointID: "hep1",
 						},
 						Value: &model.HostEndpoint{
@@ -1288,185 +1308,169 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 					},
 					UpdateType: api.UpdateTypeKVNew,
 				})
-				// We only get the local event if the local config is also Kubernetes
-				if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.HostEndpointKey{
-								Hostname:   "node-hep",
-								EndpointID: "hep1",
-							},
-							Value: &model.HostEndpoint{
-								Name:              "eth1",
-								ExpectedIPv4Addrs: nil,
-								ExpectedIPv6Addrs: nil,
-								Labels:            nil,
-								ProfileIDs:        nil,
-								Ports:             []model.EndpointPort{},
-							},
-						},
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
 			}
+		}
 
-			type TestCfg struct {
-				name      string
-				localCfg  apiconfig.CalicoAPIConfig
-				remoteCfg apiconfig.CalicoAPIConfig
-				create    createFunc
-				modify    modifyFunc
-			}
+		type TestCfg struct {
+			name      string
+			localCfg  apiconfig.CalicoAPIConfig
+			remoteCfg apiconfig.CalicoAPIConfig
+			create    createFunc
+			modify    modifyFunc
+		}
 
-			for _, tc := range []TestCfg{
-				{
-					name:      "local K8s with remote etcd direct config",
-					localCfg:  k8sConfig,
-					remoteCfg: etcdConfig,
-					create:    createRCCDirect,
-					modify:    modifyRCCDirect,
-				},
-				{
-					name:      "local K8s with remote etcd secret config",
-					localCfg:  k8sConfig,
-					remoteCfg: etcdConfig,
-					create:    createRCCSecret,
-					modify:    modifyRCCSecret,
-				},
-				{
-					name:      "local K8s with remote k8s direct config",
-					localCfg:  k8sConfig,
-					remoteCfg: k8sConfig,
-					create:    createRCCDirect,
-					modify:    modifyRCCDirect,
-				},
-				// remoteCfg: k8sConfig,
-				// create: createRCCSecret
-				// This combination is not possible because there is no
-				// way to provide k8s config in a secret that is not inline.
-				{
-					name:      "local K8s with remote k8s inline direct config",
-					localCfg:  k8sConfig,
-					remoteCfg: k8sInline,
-					create:    createRCCDirect,
-					modify:    modifyRCCDirect,
-				},
-				{
-					name:      "local K8s with remote k8s inline secret config",
-					localCfg:  k8sConfig,
-					remoteCfg: k8sInline,
-					create:    createRCCSecret,
-					modify:    modifyRCCSecret,
-				},
-				{
-					name:      "local etcd with remote k8s inline secret config",
-					localCfg:  etcdConfig,
-					remoteCfg: k8sInline,
-					create:    createRCCSecret,
-					modify:    modifyRCCSecret,
-				},
-			} {
-				Describe("Events are received with "+tc.name, func() {
-					It("should get restart message when valid config is changed", func() {
-						setup(tc.localCfg, tc.remoteCfg)
-						tc.create()
+		for _, tc := range []TestCfg{
+			{
+				name:      "local K8s with remote etcd direct config",
+				localCfg:  k8sConfig,
+				remoteCfg: etcdConfig,
+				create:    createRCCDirect,
+				modify:    modifyRCCDirect,
+			},
+			{
+				name:      "local K8s with remote etcd secret config",
+				localCfg:  k8sConfig,
+				remoteCfg: etcdConfig,
+				create:    createRCCSecret,
+				modify:    modifyRCCSecret,
+			},
+			{
+				name:      "local K8s with remote k8s direct config",
+				localCfg:  k8sConfig,
+				remoteCfg: k8sConfig,
+				create:    createRCCDirect,
+				modify:    modifyRCCDirect,
+			},
 
-						expectedEvents = append(expectedEvents, rccInitialEvents...)
-						addHep()
+			/* TODO: Add OSS test cases.
+				   https://tigera.slack.com/archives/CC08CBB43/p1626427401360200
+			// remoteCfg: k8sConfig,
+			// create: createRCCSecret
+			// This combination is not possible because there is no
+			// way to provide k8s config in a secret that is not inline.
+			{
+				name:      "local K8s with remote k8s inline direct config",
+				localCfg:  k8sConfig,
+				remoteCfg: k8sInline,
+				create:    createRCCDirect,
+				modify:    modifyRCCDirect,
+			},
+			{
+				name:      "local K8s with remote k8s inline secret config",
+				localCfg:  k8sConfig,
+				remoteCfg: k8sInline,
+				create:    createRCCSecret,
+				modify:    modifyRCCSecret,
+			},
+			{
+				name:      "local etcd with remote k8s inline secret config",
+				localCfg:  etcdConfig,
+				remoteCfg: k8sInline,
+				create:    createRCCSecret,
+				modify:    modifyRCCSecret,
+			},
+			 */
+		} {
+			Describe("Events are received with "+tc.name, func() {
+				It("should get restart message when valid config is changed", func() {
+					setup(tc.localCfg, tc.remoteCfg)
+					tc.create()
 
-						By("Creating and starting a syncer")
-						syncTester = testutils.NewSyncerTester()
-						filteredSyncerTester = NewValidationFilter(syncTester)
+					expectedEvents = append(expectedEvents, rccInitialEvents...)
+					addHep()
 
-						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
-						defer os.Unsetenv("KUBERNETES_MASTER")
-						syncer.Start()
+					By("Creating and starting a syncer")
+					syncTester = testutils.NewSyncerTester()
+					filteredSyncerTester = NewValidationFilter(syncTester)
 
-						By("Checking status is updated to sync'd at start of day")
-						syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-						syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-						syncTester.ExpectStatusUpdate(api.InSync)
+					os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
+					syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
+					defer os.Unsetenv("KUBERNETES_MASTER")
+					syncer.Start()
 
-						By("Checking we received the expected events")
-						// Sanitize the actual events received to remove revision info and compare against those expected.
-						syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
+					By("Checking status is updated to sync'd at start of day")
+					syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+					syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+					syncTester.ExpectStatusUpdate(api.InSync)
 
-						By("Modifying the RCC/Secret config")
-						tc.modify()
-						By("Checking we received a restart required event")
-						expectedEvents = []api.Update{
-							{
-								KVPair: model.KVPair{
-									Key: model.RemoteClusterStatusKey{Name: rccName},
-									Value: &model.RemoteClusterStatus{
-										Status: model.RemoteClusterConfigChangeRestartRequired,
-									},
+					By("Checking we received the expected events")
+					// Sanitize the actual events received to remove revision info and compare against those expected.
+					syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
+
+					By("Modifying the RCC/Secret config")
+					tc.modify()
+					By("Checking we received a restart required event")
+					expectedEvents = []api.Update{
+						{
+							KVPair: model.KVPair{
+								Key: model.RemoteClusterStatusKey{Name: rccName},
+								Value: &model.RemoteClusterStatus{
+									Status: model.RemoteClusterConfigChangeRestartRequired,
 								},
-								UpdateType: api.UpdateTypeKVUpdated,
 							},
-						}
+							UpdateType: api.UpdateTypeKVUpdated,
+						},
+					}
 
-						// Sanitize the actual events received to remove revision info and compare against those expected.
-						syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
-						By("done with It")
-					})
-					It("Should receive events for resources created before starting syncer", func() {
-						//runtime.Breakpoint()
-						setup(tc.localCfg, tc.remoteCfg)
-						tc.create()
-
-						expectedEvents = append(expectedEvents, rccInitialEvents...)
-						addHep()
-
-						By("Creating and starting a syncer")
-						syncTester = testutils.NewSyncerTester()
-						filteredSyncerTester = NewValidationFilter(syncTester)
-
-						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
-						defer os.Unsetenv("KUBERNETES_MASTER")
-						syncer.Start()
-
-						By("Checking status is updated to sync'd at start of day")
-						syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-						syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-						syncTester.ExpectStatusUpdate(api.InSync)
-
-						By("Checking we received the expected events")
-						// Sanitize the actual events received to remove revision info and compare against those expected.
-						syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
-						By("done with It")
-					})
-					It("Should receive events for resources created after starting syncer", func() {
-						setup(tc.localCfg, tc.remoteCfg)
-						tc.create()
-
-						By("Creating and starting a syncer")
-						syncTester = testutils.NewSyncerTester()
-						filteredSyncerTester = NewValidationFilter(syncTester)
-
-						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
-						defer os.Unsetenv("KUBERNETES_MASTER")
-						syncer.Start()
-
-						By("Checking status is updated to sync'd at start of day")
-						syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-						syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-						syncTester.ExpectStatusUpdate(api.InSync)
-
-						By("Checking we received the expected events")
-						// Sanitize the actual events received to remove revision info and compare against those expected.
-						syncTester.ExpectUpdatesSanitized(rccInitialEvents, false, sanitizer)
-
-						expectedEvents = []api.Update{}
-						addHep()
-						syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
-						By("done with It")
-					})
+					// Sanitize the actual events received to remove revision info and compare against those expected.
+					syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
+					By("done with It")
 				})
-			}
-		})
+				It("Should receive events for resources created before starting syncer", func() {
+					//runtime.Breakpoint()
+					setup(tc.localCfg, tc.remoteCfg)
+					tc.create()
+
+					expectedEvents = append(expectedEvents, rccInitialEvents...)
+					addHep()
+
+					By("Creating and starting a syncer")
+					syncTester = testutils.NewSyncerTester()
+					filteredSyncerTester = NewValidationFilter(syncTester)
+
+					os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
+					syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
+					defer os.Unsetenv("KUBERNETES_MASTER")
+					syncer.Start()
+
+					By("Checking status is updated to sync'd at start of day")
+					syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+					syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+					syncTester.ExpectStatusUpdate(api.InSync)
+
+					By("Checking we received the expected events")
+					// Sanitize the actual events received to remove revision info and compare against those expected.
+					syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
+					By("done with It")
+				})
+				It("Should receive events for resources created after starting syncer", func() {
+					setup(tc.localCfg, tc.remoteCfg)
+					tc.create()
+
+					By("Creating and starting a syncer")
+					syncTester = testutils.NewSyncerTester()
+					filteredSyncerTester = NewValidationFilter(syncTester)
+
+					os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
+					syncer = felixsyncer.New(localBackend, localConfig.Spec, filteredSyncerTester, false, true)
+					defer os.Unsetenv("KUBERNETES_MASTER")
+					syncer.Start()
+
+					By("Checking status is updated to sync'd at start of day")
+					syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+					syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+					syncTester.ExpectStatusUpdate(api.InSync)
+
+					By("Checking we received the expected events")
+					// Sanitize the actual events received to remove revision info and compare against those expected.
+					syncTester.ExpectUpdatesSanitized(rccInitialEvents, false, sanitizer)
+
+					expectedEvents = []api.Update{}
+					addHep()
+					syncTester.ExpectUpdatesSanitized(expectedEvents, false, sanitizer)
+					By("done with It")
+				})
+			})
+		}
 	})
 })

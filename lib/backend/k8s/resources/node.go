@@ -29,8 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -278,7 +279,7 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node, usePodCIDR bool) (*model.KVPair, erro
 	calicoNode.Spec.IPv4VXLANTunnelAddr = annotations[nodeBgpIpv4VXLANTunnelAddrAnnotation]
 	calicoNode.Spec.VXLANTunnelMACAddr = annotations[nodeBgpVXLANTunnelMACAddrAnnotation]
 
-	calicoNode.Spec.OrchRefs = []apiv3.OrchRef{
+	calicoNode.Spec.OrchRefs = []libapiv3.OrchRef{
 		{
 			Orchestrator: k8sOrchestratorName,
 			NodeName:     k8sNode.Name,
@@ -288,7 +289,7 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node, usePodCIDR bool) (*model.KVPair, erro
 	// ProviderID is of the form <cloud>://<instance ID>
 	pidParts := strings.SplitN(k8sNode.Spec.ProviderID, providerIDSep, 2)
 	if len(pidParts) == 2 {
-		calicoNode.Spec.OrchRefs = append(calicoNode.Spec.OrchRefs, apiv3.OrchRef{
+		calicoNode.Spec.OrchRefs = append(calicoNode.Spec.OrchRefs, libapiv3.OrchRef{
 			Orchestrator: pidParts[0],
 			NodeName:     pidParts[1],
 		})

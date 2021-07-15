@@ -27,6 +27,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Import all auth providers.
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -94,14 +95,14 @@ func init() {
 				&apiv3.HostEndpointList{},
 				&apiv3.RemoteClusterConfiguration{},
 				&apiv3.RemoteClusterConfigurationList{},
-				&apiv3.BlockAffinity{},
-				&apiv3.BlockAffinityList{},
-				&apiv3.IPAMBlock{},
-				&apiv3.IPAMBlockList{},
-				&apiv3.IPAMHandle{},
-				&apiv3.IPAMHandleList{},
-				&apiv3.IPAMConfig{},
-				&apiv3.IPAMConfigList{},
+				&libapiv3.BlockAffinity{},
+				&libapiv3.BlockAffinityList{},
+				&libapiv3.IPAMBlock{},
+				&libapiv3.IPAMBlockList{},
+				&libapiv3.IPAMHandle{},
+				&libapiv3.IPAMHandleList{},
+				&libapiv3.IPAMConfig{},
+				&libapiv3.IPAMConfigList{},
 				&apiv3.GlobalAlert{},
 				&apiv3.GlobalAlertList{},
 				&apiv3.GlobalAlertTemplate{},

@@ -37,8 +37,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -3197,7 +3198,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testuti
 		}
 
 		// Create a client using the config.
-		client, err := NewKubeClient(&cfg.Spec)
+		client, err := k8s.NewKubeClient(&cfg.Spec)
 		Expect(err).NotTo(HaveOccurred())
 		c = client.(*k8s.KubeClient)
 		ns = k8sapi.Namespace{

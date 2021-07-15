@@ -21,7 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo/extensions/table"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	apiv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"

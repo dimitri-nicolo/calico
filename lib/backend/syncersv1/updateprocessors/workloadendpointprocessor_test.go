@@ -23,7 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -220,7 +221,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -270,7 +271,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
@@ -323,7 +324,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
-		res := apiv3.NewWorkloadEndpoint()
+		res := libapiv3.NewWorkloadEndpoint()
 		res.Namespace = ns1
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,

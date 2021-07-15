@@ -19,7 +19,8 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )

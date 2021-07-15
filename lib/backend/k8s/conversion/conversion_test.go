@@ -22,8 +22,9 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
@@ -293,7 +294,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(wep.Revision).To(Equal("1234"))
 
 		// Check egress.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "wblack == 'white'",
 			Selector:          "wred == 'green'",
 		}))
@@ -1037,7 +1038,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the EgressSpec is nil.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(BeNil())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(BeNil())
 	})
 
 	DescribeTable("AWS security group annotation",
@@ -1063,7 +1064,7 @@ var _ = Describe("Test Pod conversion", func() {
 
 			// Finally, assert the expected result.
 			for _, label := range expectedLabels {
-				Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(
+				Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(
 					HaveKeyWithValue("sg.aws.tigera.io/"+label, ""))
 			}
 		},

@@ -23,8 +23,6 @@ package v1
 import (
 	spec "github.com/go-openapi/spec"
 	common "k8s.io/kube-openapi/pkg/common"
-
-	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
@@ -74,9 +72,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointList":     schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata": schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":     schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Port":                 numorstring.Port{}.OpenAPIDefinition(),
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol":             numorstring.Protocol{}.OpenAPIDefinition(),
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Uint8OrString":        numorstring.Uint8OrString{}.OpenAPIDefinition(),
 	}
 }
 
@@ -332,7 +327,7 @@ func schema_libcalico_go_lib_apis_v1_EndpointPort(ref common.ReferenceCallback) 
 					"protocol": {
 						SchemaProps: spec.SchemaProps{
 							Default: map[string]interface{}{},
-							Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							Ref:     ref("github.com/tigera/api/pkg/lib/numorstring.Protocol"),
 						},
 					},
 					"port": {
@@ -347,7 +342,7 @@ func schema_libcalico_go_lib_apis_v1_EndpointPort(ref common.ReferenceCallback) 
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+			"github.com/tigera/api/pkg/lib/numorstring.Protocol"},
 	}
 }
 
@@ -399,7 +394,7 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										Ref:     ref("github.com/tigera/api/pkg/lib/numorstring.Port"),
 									},
 								},
 							},
@@ -446,7 +441,7 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										Ref:     ref("github.com/tigera/api/pkg/lib/numorstring.Port"),
 									},
 								},
 							},
@@ -456,7 +451,7 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/net.IPNet", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
+			"github.com/projectcalico/libcalico-go/lib/net.IPNet", "github.com/tigera/api/pkg/lib/numorstring.Port"},
 	}
 }
 
@@ -1637,7 +1632,7 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 					"protocol": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Protocol is an optional field that restricts the rule to only apply to traffic of a specific IP protocol. Required if any of the EntityRules contain Ports (because ports only apply to certain protocols).\n\nMust be one of these string values: \"tcp\", \"udp\", \"icmp\", \"icmpv6\", \"sctp\", \"udplite\" or an integer in the range 1-255.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							Ref:         ref("github.com/tigera/api/pkg/lib/numorstring.Protocol"),
 						},
 					},
 					"icmp": {
@@ -1649,7 +1644,7 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 					"notProtocol": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NotProtocol is the negated version of the Protocol field.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							Ref:         ref("github.com/tigera/api/pkg/lib/numorstring.Protocol"),
 						},
 					},
 					"notICMP": {
@@ -1677,7 +1672,7 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields", "github.com/tigera/api/pkg/lib/numorstring.Protocol"},
 	}
 }
 

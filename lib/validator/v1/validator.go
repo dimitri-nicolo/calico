@@ -24,7 +24,8 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"

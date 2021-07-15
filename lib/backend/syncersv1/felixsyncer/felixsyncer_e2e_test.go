@@ -28,7 +28,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -44,7 +46,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 	v1v "github.com/projectcalico/libcalico-go/lib/validator/v1"
 	v3v "github.com/projectcalico/libcalico-go/lib/validator/v3"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Kubernetes will have a profile for each of the namespaces that is configured.
@@ -147,7 +148,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 	var filteredSyncerTester api.SyncerCallbacks
 	var err error
 	var datamodelCleanups []func()
-	var cs kubernetes.Interface
+	// TODO: Add OSS test cases.
+	// var cs kubernetes.Interface
 
 	addCleanup := func(cleanup func()) {
 		datamodelCleanups = append(datamodelCleanups, cleanup)
@@ -165,10 +167,13 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 		Expect(err).NotTo(HaveOccurred())
 		be.Clean()
 
+		/* TODO: Add OSS test cases.
+		   https://tigera.slack.com/archives/CC08CBB43/p1626427401360200
 		// build k8s clientset.
 		cfg, err := clientcmd.BuildConfigFromFlags("", "/kubeconfig.yaml")
 		Expect(err).NotTo(HaveOccurred())
 		cs = kubernetes.NewForConfigOrDie(cfg)
+		 */
 
 		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
 		// to assert state.
@@ -188,8 +193,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 		// We expect two kinds of `model.Resource` over the Felix syncer: Nodes and
 		// Profiles.  We don't care about anything more than the spec.
 		switch val := v.(type) {
-		case *apiv3.Node:
-			v = &apiv3.Node{Spec: val.Spec}
+		case *libapiv3.Node:
+			v = &libapiv3.Node{Spec: val.Spec}
 		case *apiv3.Profile:
 			v = &apiv3.Profile{Spec: val.Spec}
 		}

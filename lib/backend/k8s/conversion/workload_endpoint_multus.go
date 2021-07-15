@@ -26,7 +26,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/names"
 
@@ -307,7 +309,7 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 		return nil, err
 	}
 
-	wep := defaultKVP.Value.(*apiv3.WorkloadEndpoint)
+	wep := defaultKVP.Value.(*libapiv3.WorkloadEndpoint)
 
 	wepids := names.WorkloadEndpointIdentifiers{
 		Node:         pod.Spec.NodeName,
@@ -359,7 +361,7 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 		Key: model.ResourceKey{
 			Name:      wep.Name,
 			Namespace: pod.Namespace,
-			Kind:      apiv3.KindWorkloadEndpoint,
+			Kind:      libapiv3.KindWorkloadEndpoint,
 		},
 		Value:    wep,
 		Revision: pod.ResourceVersion,

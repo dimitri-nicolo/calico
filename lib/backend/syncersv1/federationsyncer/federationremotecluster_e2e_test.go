@@ -15,8 +15,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
@@ -313,7 +314,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 	})
 })
 var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", testutils.DatastoreEtcdV3, func(etcdConfig apiconfig.CalicoAPIConfig) {
-	testutils.E2eDatastoreDescribe("Successfuly connect to cluster with secret config", testutils.DatastoreK8sInline, func(k8sConfig apiconfig.CalicoAPIConfig) {
+	testutils.E2eDatastoreDescribe("Successfuly connect to cluster with secret config", testutils.DatastoreK8s, func(k8sConfig apiconfig.CalicoAPIConfig) {
 
 		log.SetLevel(log.DebugLevel)
 

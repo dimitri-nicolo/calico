@@ -18,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -202,7 +203,7 @@ type felixRemoteClusterProcessor struct{}
 func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.ResourceType {
 	return []watchersyncer.ResourceType{
 		{
-			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindWorkloadEndpoint},
+			ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindWorkloadEndpoint},
 			UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 		},
 		{

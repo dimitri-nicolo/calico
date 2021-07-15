@@ -25,6 +25,7 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/namespace"

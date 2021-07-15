@@ -12,15 +12,11 @@ require (
 	github.com/go-openapi/spec v0.19.5
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.0.0-20170327191703-71201497bace // indirect
-	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/gopacket v1.1.17
 	github.com/google/uuid v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 // indirect
-	github.com/imdario/mergo v0.3.6 // indirect
-	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.0
 	github.com/kelseyhightower/envconfig v0.0.0-20180517194557-dd1402a4d99d
 	github.com/leodido/go-urn v0.0.0-20181204092800-a67a23e1c1af // indirect
@@ -33,6 +29,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tchap/go-patricia/v2 v2.3.1
+	github.com/tigera/api v0.0.0-20210714180252-70c5133a3886
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
@@ -50,8 +47,9 @@ require (
 	k8s.io/apimachinery v0.21.0
 	k8s.io/apiserver v0.21.0
 	k8s.io/client-go v0.21.0
-	k8s.io/code-generator v0.21.0-rc.0
+	k8s.io/code-generator v0.21.2
 	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+	sigs.k8s.io/kind v0.11.1
 )
 
 replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico

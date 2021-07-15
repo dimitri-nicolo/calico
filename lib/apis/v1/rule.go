@@ -15,7 +15,8 @@
 package v1
 
 import (
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/net"
 )
 

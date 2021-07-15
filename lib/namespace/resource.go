@@ -15,8 +15,9 @@
 package namespace
 
 import (
-	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 
 func IsNamespaced(kind string) bool {
 	switch kind {
-	case apiv3.KindWorkloadEndpoint,
+	case libapiv3.KindWorkloadEndpoint,
 		apiv3.KindNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
@@ -35,8 +36,7 @@ func IsNamespaced(kind string) bool {
 		apiv3.KindK8sEndpoints,
 		apiv3.KindNetworkSet,
 		apiv3.KindPacketCapture,
-		apiv3.KindDeepPacketInspection,
-		libapiv3.KindWorkloadEndpoint:
+		apiv3.KindDeepPacketInspection:
 		return true
 	case KindKubernetesNetworkPolicy:
 		// KindKubernetesNetworkPolicy is a special-case resource. We don't expose it over the

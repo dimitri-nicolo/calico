@@ -28,7 +28,6 @@ import (
 
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
-	wireguard "golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	validator "gopkg.in/go-playground/validator.v9"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +37,10 @@ import (
 
 	wireguard "golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"

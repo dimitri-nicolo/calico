@@ -23,13 +23,14 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 )
@@ -96,11 +97,11 @@ func (r workloadEndpoints) CreateNonDefault(ctx context.Context, res *libapiv3.W
 	// time of writing this it seems like the best alternative.
 	switch be := r.client.backend.(type) {
 	case *k8s.KubeClient:
-		rClient := be.GetResourceClientFromResourceKind(apiv3.KindWorkloadEndpoint)
+		rClient := be.GetResourceClientFromResourceKind(libapiv3.KindWorkloadEndpoint)
 		if rClient == nil {
 			log.Debug("Attempt to 'Create' using kubernetes backend is not supported.")
 			return nil, cerrors.ErrorOperationNotSupported{
-				Identifier: resourceToKVPair(opts, apiv3.KindWorkloadEndpoint, res),
+				Identifier: resourceToKVPair(opts, libapiv3.KindWorkloadEndpoint, res),
 				Operation:  "Create",
 			}
 		}
@@ -159,11 +160,11 @@ func (r workloadEndpoints) UpdateNonDefault(ctx context.Context, res *libapiv3.W
 	// time of writing this it seems like the best alternative.
 	switch be := r.client.backend.(type) {
 	case *k8s.KubeClient:
-		rClient := be.GetResourceClientFromResourceKind(apiv3.KindWorkloadEndpoint)
+		rClient := be.GetResourceClientFromResourceKind(libapiv3.KindWorkloadEndpoint)
 		if rClient == nil {
 			log.Debug("Attempt to 'Update' using kubernetes backend is not supported.")
 			return nil, cerrors.ErrorOperationNotSupported{
-				Identifier: resourceToKVPair(opts, apiv3.KindWorkloadEndpoint, res),
+				Identifier: resourceToKVPair(opts, libapiv3.KindWorkloadEndpoint, res),
 				Operation:  "Update",
 			}
 		}

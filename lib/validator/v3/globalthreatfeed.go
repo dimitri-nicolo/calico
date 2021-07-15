@@ -12,7 +12,7 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func validateGlobalThreatFeedSpec(structLevel validator.StructLevel) {
