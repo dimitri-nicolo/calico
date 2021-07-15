@@ -9218,6 +9218,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"wireguardHostEncryptionEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardHostEncryptionEnabled controls whether Wireguard host-to-host encryption is enabled. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"captureDir": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CaptureDir controls directory to store file capture. [Default: /var/log/calico/pcap]",
