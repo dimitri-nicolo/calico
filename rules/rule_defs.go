@@ -61,6 +61,7 @@ const (
 	ChainManglePreroutingTProxyEstabl = ChainNamePrefix + "pre-tproxy-establ"
 	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
 	ChainMangleOutput                 = ChainNamePrefix + "OUTPUT"
+	ChainMangleOutputTProxy           = ChainNamePrefix + "out-mangle-tproxy"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -355,6 +356,7 @@ type Config struct {
 
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
+	KubeMasqueradeMark     uint32
 
 	OpenStackMetadataIP          net.IP
 	OpenStackMetadataPort        uint16

@@ -165,6 +165,8 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			// Ignore this IP set.
 			m.ignoredSetIds.Add(msg.Id)
 			return
+		case proto.IPSetUpdate_NET_NET:
+			setType = ipsets.IPSetTypeHashNetNet
 		default:
 			log.WithField("type", msg.Type).Panic("Unknown IP set type")
 		}

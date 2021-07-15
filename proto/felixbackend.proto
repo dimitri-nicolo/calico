@@ -203,6 +203,7 @@ message IPSetUpdate {
     NET = 2;          // Each member is a CIDR in dotted-decimal or IPv6 format.
     DOMAIN = 3;       // Each member is a domain name.
     EGRESS_IP = 4;    // Each member is an egress IP.
+    NET_NET = 5;      // Each member is two CIDRs.
   }
   IPSetType type = 3;
 }
