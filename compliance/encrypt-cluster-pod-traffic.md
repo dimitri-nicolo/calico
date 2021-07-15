@@ -45,6 +45,8 @@ The following platforms using only IPv4:
 
 #### Install WireGuard
 
+WireGuard is included in Linux 5.6+ kernels, and has been backported to earlier Linux kernels in some Linux distributions.
+
 Install WireGuard on cluster nodes using {% include open-new-window.html text='instructions for your operating system' url='https://www.wireguard.com/install/' %}. Note that you may need to reboot your nodes after installing WireGuard to make the kernel modules available on your system.
 
    Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
@@ -59,6 +61,10 @@ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noa
 sudo curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
 sudo yum install wireguard-dkms wireguard-tools -y
    ```
+%>
+<label:Kubernetes-AKS>
+<%
+AKS cluster nodes have a kernel with WireGuard installed already, so there's no installation required.
 %>
 <label:OpenShift>
 <%
