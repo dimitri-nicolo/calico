@@ -36,25 +36,37 @@ spec:
             description: PacketCaptureSpec contains the values of the packet capture.
             properties:
               selector:
-                description: "The selector is an expression used to pick out the endpoints
-                  that the policy should be applied to.  The selector will only match
-                  endpoints in the same namespace as the PacketCapture resource. \n
-                  Selector expressions follow this syntax: \n \tlabel == \"string_literal\"
-                  \ ->  comparison, e.g. my_label == \"foo bar\" \tlabel != \"string_literal\"
-                  \  ->  not equal; also matches if label is not present \tlabel in
-                  { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is
-                  one of \"a\", \"b\", \"c\" \tlabel not in { \"a\", \"b\", \"c\",
-                  ... }  ->  true if the value of label X is not one of \"a\", \"b\",
-                  \"c\" \thas(label_name)  -> True if that label is present \t! expr
-                  -> negation of expr \texpr && expr  -> Short-circuit and \texpr
-                  || expr  -> Short-circuit or \t( expr ) -> parens for grouping \tall()
-                  or the empty selector -> matches all endpoints. \n Label names are
-                  allowed to contain alphanumerics, -, _ and /. String literals are
-                  more permissive but they do not support escape characters. \n Examples
-                  (with made-up labels): \n \ttype == \"webserver\" && deployment
-                  == \"prod\" \ttype in {\"frontend\", \"backend\"} \tdeployment !=
-                  \"dev\" \t! has(label_name)"
-                type: string
+                description: The ordered set of filters to be applied for traffic
+                  captures from an interface.  Each rule contains a set of packet
+                  match criteria.
+                items:
+                  description: A PacketCaptureRule encapsulates a set of match criteria
+                    for traffic captured from an interface.
+                  properties:
+                    ports:
+                      description: Ports is an optional field that defines a filter
+                        for all traffic that has a source or destination port that
+                        matches one of these ranges/values. This value is a list of
+                        integers or strings that represent ranges of ports.
+                      items:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^.*
+                        x-kubernetes-int-or-string: true
+                      type: array
+                    protocol:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: "Protocol is an optional field that defines a filter
+                        for all traffic for a specific IP protocol. \n Must be one
+                        of these string values: \"TCP\", \"UDP\", \"ICMP\", \"ICMPv6\",
+                        \"SCTP\", \"UDPLite\" or an integer in the range 1-255."
+                      pattern: ^.*
+                      x-kubernetes-int-or-string: true
+                  type: object
+                type: array
             type: object
           status:
             description: PacketCaptureStatus describes the files that have been captured,
