@@ -14,7 +14,7 @@ ports: [8080, "1234:5678", "named-port"]
 
 ##### Named ports
 
-Using a named port in an `EntityRule`, instead of a numeric port, gives a layer of indirection, 
+Using a named port in an `EntityRule` or `PacketCapture`, instead of a numeric port, gives a layer of indirection, 
 allowing for the named port to map to different numeric values for each endpoint.  
 
 For example, suppose you have multiple HTTP servers running as workloads; some exposing their HTTP 
