@@ -64,7 +64,7 @@ sudo yum install wireguard-dkms wireguard-tools -y
 %>
 <label:Kubernetes-AKS>
 <%
-AKS cluster nodes have a kernel with WireGuard installed already, so there's no installation required.
+AKS cluster nodes currently run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
 %>
 <label:OpenShift>
 <%
