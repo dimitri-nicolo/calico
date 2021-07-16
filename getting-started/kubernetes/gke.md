@@ -25,7 +25,7 @@ The geeky details of what you get:
 **Verify cluster settings**
 
 Verify the cluster has these Networking settings:
-- Intranode visability is disabled
+- Intranode visability is enabled
 - Network policy is disabled
 - Dataplane V2 is disabled
 - Istio is disabled  
