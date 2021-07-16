@@ -5,8 +5,13 @@
 package intdataplane
 
 import (
+	"fmt"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/logutils"
@@ -20,6 +25,7 @@ import (
 type tproxyManager struct {
 	enabled, enabled6 bool
 	mark              uint32
+	k8sProvider       config.Provider
 	rt4, rt6          *routetable.RouteTable
 	rr4, rr6          *routerule.RouteRules
 
@@ -51,9 +57,10 @@ func newTProxyManager(
 	enabled := dpConfig.RulesConfig.TPROXYModeEnabled()
 
 	tpm := &tproxyManager{
-		enabled:  enabled,
-		enabled6: ipv6Enabled,
-		mark:     mark,
+		enabled:     enabled,
+		enabled6:    ipv6Enabled,
+		mark:        mark,
+		k8sProvider: dpConfig.KubernetesProvider,
 	}
 
 	for _, opt := range opts {
@@ -172,13 +179,48 @@ func (m *tproxyManager) OnUpdate(protoBufMsg interface{}) {
 		return
 	}
 
-	if m.iptablesEqualIPsChecker != nil {
-		// We get EP updates only for the endpoints local to the node.
-		switch msg := protoBufMsg.(type) {
-		case *proto.WorkloadEndpointUpdate:
+	switch msg := protoBufMsg.(type) {
+	case *proto.WorkloadEndpointUpdate:
+		if m.iptablesEqualIPsChecker != nil {
+			// We get EP updates only for the endpoints local to the node.
 			m.iptablesEqualIPsChecker.OnWorkloadEndpointUpdate(msg)
-		case *proto.WorkloadEndpointRemove:
+		}
+	case *proto.WorkloadEndpointRemove:
+		if m.iptablesEqualIPsChecker != nil {
+			// We get EP updates only for the endpoints local to the node.
 			m.iptablesEqualIPsChecker.OnWorkloadEndpointRemove(msg)
+		}
+	case *ifaceUpdate:
+		if m.k8sProvider == config.ProviderGKE && msg.State == ifacemonitor.StateUp {
+			// We need to set loose RPF check in GKE because of the complicated routing as
+			// we run in the intra-node visibility mode. This mode make all packets from
+			// pods to leave the node (usually via eth0) and thus when we deliver to the
+			// proxy, RPF expect the packets to be from eth0 rather than from a pod's
+			// (gke*) interface.  There is no easy way around to tell the RPF check that
+			// gke* is correct.
+			podIface := strings.HasPrefix(msg.Name, "gke")
+			if podIface {
+				err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", msg.Name), "2")
+				if err != nil {
+					log.WithError(err).Warnf("Failed to set loose RPF check on %s", msg.Name)
+				} else {
+					log.Debugf("RPF check made loose on %s", msg.Name)
+				}
+			}
+
+			// Why we need accept_local is a bit of a mistery, empirically it needs to be
+			// set both on pod ifaces as well as on the main iface to work. It is likely a
+			// combination of delivering via a local route and igress and egress iface not
+			// matching. There are at least 2 checks in the kernel, neither specifically
+			// tests for a local IP. See fib_validate_source() and __fib_validate_source().
+			if podIface || strings.HasPrefix(msg.Name, "eth") {
+				err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/accept_local", msg.Name), "1")
+				if err != nil {
+					log.WithError(err).Warnf("Failed to set accept local %s", msg.Name)
+				} else {
+					log.Debugf("Accept local enabled on %s", msg.Name)
+				}
+			}
 		}
 	}
 }
