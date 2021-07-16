@@ -2,7 +2,16 @@ FROM docker.elastic.co/elasticsearch/elasticsearch:7.10.1
 
 RUN yum -y update && yum -y upgrade && yum clean all
 
+# add storage plugin
+RUN cd /bin/ && elasticsearch-plugin install --batch repository-gcs
+
+# save truststore
+RUN cp -R /etc/pki/ /holder
+
 COPY cleanup.sh /
 RUN /cleanup.sh
+
+# restore truststore
+RUN cp -R /holder/* /etc/pki && rm -rf /holder
 
 COPY /bin/readiness-probe /
