@@ -174,8 +174,8 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 
 	// The tier filter examines tier and policy updates, potentially filtering out tiers and policies
 	// associated with unlicensed tiers. When tiersEnabled is true, all policies and tiers are allowed.
-	// When tiersEnabled is false, only licensed tiers are allowed, i.e. "default", "sg-remote",
-	// "sg-local", and "metadata".
+	// When tiersEnabled is false, only licensed tiers are allowed, i.e. "allow-tigera", "default",
+	// "sg-remote", "sg-local", and "metadata".
 	tierDispatcher := dispatcher.NewDispatcher()
 	(*tierDispatcherReg)(tierDispatcher).RegisterWith(allUpdDispatcher)
 	tierFilter := &tierFilter{tiersEnabled}
@@ -634,6 +634,7 @@ func (f *tierFilter) OnUpdate(update api.Update) (filterOut bool) {
 
 	// Tier names which are always considered "licensed", even when the license feature is disabled
 	const (
+		allowTigeraTier = "allow-tigera"
 		metaBlockerTier = "metadata"
 		remoteTier      = "sg-remote"
 		localTier       = "sg-local"
@@ -648,7 +649,7 @@ func (f *tierFilter) OnUpdate(update api.Update) (filterOut bool) {
 	default: // ignore any (unintentional) non-policy/tier updates
 		return
 	}
-	if tierName == metaBlockerTier || tierName == remoteTier || tierName == localTier || tierName == defaultTier {
+	if tierName == allowTigeraTier || tierName == metaBlockerTier || tierName == remoteTier || tierName == localTier || tierName == defaultTier {
 		return
 	} else {
 		filterOut = true
