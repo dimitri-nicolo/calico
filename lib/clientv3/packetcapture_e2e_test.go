@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 
 	log "github.com/sirupsen/logrus"
 
