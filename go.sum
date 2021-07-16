@@ -771,7 +771,7 @@ github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54 h1:J
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54/go.mod h1:UgC0aTQ2KMDxlX3lU/stndk7DMUBJqzN40yFiILHgxc=
 github.com/projectcalico/logrus v1.0.4-calico h1:bHJ2KLGTFzoWpRISe13CO7HVxxrKunDjyUz/wFiBY8c=
 github.com/projectcalico/logrus v1.0.4-calico/go.mod h1:DfgrchabbtEO9wjOz5lVae+XRvjFKKWEA9GTMme6A8g=
-github.com/projectcalico/pod2daemon v0.0.0-20210618180306-4763e2755cba/go.mod h1:96lk2GRh7Z5QdPGRmZMC6DRxEOToaAlS+emdl4WiMPM=
+github.com/projectcalico/pod2daemon v0.0.0-20210715003609-86f5318f4023/go.mod h1:96lk2GRh7Z5QdPGRmZMC6DRxEOToaAlS+emdl4WiMPM=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.2/go.mod h1:OsXs2jCmiKlQ1lTBmv21f2mNfw4xf/QclQDMrYNZzcM=
 github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829/go.mod h1:p2iRAGwDERtqlqzRXnrOVns+ignqQo//hLXqYxZYVNs=
@@ -895,8 +895,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/api v0.0.0-20210714180252-70c5133a3886 h1:wRgKk8+g5db4odkR1MY5msxezXNJMBjD8bg4zGnH8BE=
 github.com/tigera/api v0.0.0-20210714180252-70c5133a3886/go.mod h1:AKyG8BeBcQJKgRXfNP1Gkp85x0bGW92SJz8rA1LJGms=
-github.com/tigera/felix-private v0.0.0-20210715231107-86fef99097f5 h1:XETVMw4NgsJ4EHNLeWADwwaWEX/+fLzoJNK+YmvHjcU=
-github.com/tigera/felix-private v0.0.0-20210715231107-86fef99097f5/go.mod h1:9VEHidUwq/4i2caMzoyemxiXSJ+eT0yzrVcnf3l5y/Y=
+github.com/tigera/felix-private v0.0.0-20210715232134-ae1cf3becc6c h1:rFmiLuWu8d9zEy4ezwWsIf3NUkfZGCITgeG8oR5CDPc=
+github.com/tigera/felix-private v0.0.0-20210715232134-ae1cf3becc6c/go.mod h1:L7UCNOATr9mQNFr0ogy0gDozuQqiLXPOY7du6HkXLPQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210715192804-4e8fb609e430 h1:PWUu7Fr0ODQUyHO4Ou0ROXc71uf0iHmwzyUpXCRgUdM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210715192804-4e8fb609e430/go.mod h1:Y7V1TdsckJJkwMUH9A+hbJ1b74a/qsyNMJt+nQK2jvo=
 github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818 h1:t0jj17E199rkPU/wE+Qqk599yF18lkf5TDoMeoysSuI=
