@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -46,7 +46,7 @@ func newCaptureManager(captures capture.ActiveCaptures, wlInterfacePrefixes []st
 }
 
 func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
-	log.WithField("msg", protoBufMsg).Info("Received message")
+	log.WithField("msg", protoBufMsg).Debug("Received message")
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		// store workload endpoint id to an workload endpoint
