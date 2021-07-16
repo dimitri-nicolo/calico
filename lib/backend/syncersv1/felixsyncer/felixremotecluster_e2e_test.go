@@ -1369,7 +1369,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 				create:    createRCCSecret,
 				modify:    modifyRCCSecret,
 			},
-			 */
+			*/
 		} {
 			Describe("Events are received with "+tc.name, func() {
 				It("should get restart message when valid config is changed", func() {

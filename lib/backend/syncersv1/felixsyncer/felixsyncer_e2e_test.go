@@ -21,9 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -173,7 +170,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 		cfg, err := clientcmd.BuildConfigFromFlags("", "/kubeconfig.yaml")
 		Expect(err).NotTo(HaveOccurred())
 		cs = kubernetes.NewForConfigOrDie(cfg)
-		 */
+		*/
 
 		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
 		// to assert state.
