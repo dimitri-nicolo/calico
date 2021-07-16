@@ -27,6 +27,8 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -138,9 +140,9 @@ var _ = testutils.E2eDatastoreDescribe("DPI syncer tests", testutils.DatastoreK8
 				metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			wepObj := &apiv3.WorkloadEndpoint{
+			wepObj := &libapiv3.WorkloadEndpoint{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "node1-k8s-pod1-eth0"},
-				Spec: apiv3.WorkloadEndpointSpec{
+				Spec: libapiv3.WorkloadEndpointSpec{
 					Orchestrator:  "k8s",
 					Node:          "node1",
 					ContainerID:   "container1",
