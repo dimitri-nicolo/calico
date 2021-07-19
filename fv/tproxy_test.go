@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	. "github.com/projectcalico/felix/fv/connectivity"
+	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/tproxy"
 	"github.com/projectcalico/felix/fv/utils"
@@ -26,6 +27,7 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 var _ = describeTProxyTest(false, "Enabled")
@@ -33,11 +35,14 @@ var _ = describeTProxyTest(true, "Enabled")
 var _ = describeTProxyTest(false, "EnabledAllServices")
 
 func describeTProxyTest(ipip bool, TPROXYMode string) bool {
-	const l7LoggingAnnotation = "projectcalico.org/l7-logging"
-	const TPROXYServicesIPSetV4 = "cali40tproxy-services"
-	const TPROXYPodToSelf = "cali40tproxy-pod-self"
+	const (
+		l7LoggingAnnotation   = "projectcalico.org/l7-logging"
+		TPROXYServicesIPSetV4 = "cali40tproxy-services"
+		TPROXYNodeportsSet    = "cali40tproxy-nodeports"
+		TPROXYPodToSelf       = "cali40tproxy-pod-self"
+	)
 
-	var expectedFelix0IP ExpectationOption
+	var expectedFelix0IP, expectedFelix1IP ExpectationOption
 
 	tunnel := "none"
 	if ipip {
@@ -94,6 +99,21 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				}, "90s", "5s").Should(BeTrue())
 			}
 
+			assertPortInIPSet := func(ipSetID string, port string, felixes []*infrastructure.Felix, exists bool) {
+				results := make(map[*infrastructure.Felix]struct{}, len(felixes))
+				Eventually(func() bool {
+					for _, felix := range felixes {
+						out, err := felix.ExecOutput("ipset", "list", ipSetID)
+						log.Infof("felix ipset list output %s", out)
+						Expect(err).NotTo(HaveOccurred())
+						if strings.Contains(out, port) == exists {
+							results[felix] = struct{}{}
+						}
+					}
+					return len(results) == len(felixes)
+				}, "90s", "5s").Should(BeTrue())
+			}
+
 			BeforeEach(func() {
 				options = infrastructure.DefaultTopologyOptions()
 
@@ -124,8 +144,10 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				if !ipip {
 					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].IP)
+					expectedFelix1IP = ExpectWithSrcIPs(felixes[1].IP)
 				} else {
 					expectedFelix0IP = ExpectWithSrcIPs(felixes[0].ExpectedIPIPTunnelAddr)
+					expectedFelix1IP = ExpectWithSrcIPs(felixes[1].ExpectedIPIPTunnelAddr)
 				}
 
 				proxies = []*tproxy.TProxy{}
@@ -231,6 +253,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					for _, felix := range felixes {
 						felix.Exec("iptables-save", "-c")
 						felix.Exec("ipset", "list", TPROXYServicesIPSetV4)
+						felix.Exec("ipset", "list", TPROXYNodeportsSet)
 						felix.Exec("ipset", "list", TPROXYPodToSelf)
 						felix.Exec("ip", "route")
 					}
@@ -480,6 +503,287 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					})
+				})
+			})
+
+			Context("NodePorts", func() {
+				var pod, svc string
+
+				nodeport := uint16(30333)
+
+				var opts []ExpectationOption
+
+				tcpProto := numorstring.ProtocolFromString("tcp")
+
+				JustBeforeEach(func() {
+					pod = w[0][0].IP + ":8055"
+					pod = w[0][0].IP + ":8055"
+					svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
+
+					// Mimic the kube-proxy service iptable nodeport rule.
+					for _, f := range felixes {
+						f.Exec("iptables", "-t", "nat",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-A", "PREROUTING",
+							"-p", "tcp",
+							"-m", "addrtype", "--dst-type", "LOCAL",
+							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+							"-j", "MARK", "--set-xmark", "0x4000/0x4000")
+						f.Exec("iptables", "-t", "nat",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-A", "PREROUTING",
+							"-p", "tcp",
+							"-m", "addrtype", "--dst-type", "LOCAL",
+							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+							"-j", "DNAT", "--to-destination", pod)
+						f.Exec("iptables", "-t", "nat",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-A", "POSTROUTING",
+							"-m", "mark", "--mark", "0x4000/0x4000",
+							"-j", "MASQUERADE")
+					}
+
+					// for this context create service before each test
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
+					if TPROXYMode == "Enabled" {
+						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+					}
+					createService(v1Svc, clientset)
+
+					assertPortInIPSet(TPROXYNodeportsSet, "30333", felixes, true)
+
+					pol := api.NewGlobalNetworkPolicy()
+					pol.Namespace = "fv"
+					pol.Name = "policy-allow-8055-from-any"
+					pol.Spec.Ingress = []api.Rule{
+						{
+							Action:   "Allow",
+							Protocol: &tcpProto,
+							Destination: api.EntityRule{
+								Ports: []numorstring.Port{numorstring.SinglePort(8055)},
+							},
+						},
+					}
+					pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+					hundred := float64(100)
+					pol.Spec.Order = &hundred
+
+					pol = createPolicy(pol)
+
+					opts = []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix0IP}
+				})
+
+				It("should have connectivity from all workloads via NodePort on node 0", func() {
+					cc.Expect(Some, w[0][0], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(Some, w[0][1], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(Some, w[1][1], TargetIP(felixes[0].IP), opts...)
+					cc.CheckConnectivity()
+
+					// Connection should be proxied at the nodeport's node
+					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					// Due to NAT outgoing
+					Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					// Connection should not be proxied on the client pod's node
+					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+				})
+
+				It("should have connectivity from all workloads via NodePort on node 1", func() {
+					svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+					opts = []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix1IP}
+
+					cc.Expect(Some, w[0][0], TargetIP(felixes[1].IP), opts...)
+					cc.Expect(Some, w[0][1], TargetIP(felixes[1].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(felixes[1].IP), opts...)
+					cc.Expect(Some, w[1][1], TargetIP(felixes[1].IP), opts...)
+					cc.CheckConnectivity()
+
+					// Connection should be proxied at the nodeport's node
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					// Due to NAT outgoing
+					Expect(proxies[1].ProxiedCount(felixes[0].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					// Connection should not be proxied on the client pod's node
+					Expect(proxies[0].AcceptedCount(w[0][0].IP, pod, svc)).To(Equal(0))
+					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+				})
+
+				// The ingress policy tests are not realistinc policies for NodePorts.
+				// These test should only demonstrate, that the upstream connections go
+				// through an ingress policy in OUTPUT chain and codify the behavior. That
+				// is the same as if there was no proxy at all.
+				//
+				// There are no egress policy tests because that path is the same as for
+				// regular services.
+
+				Context("With ingress traffic denied from pod IPs to nodeport", func() {
+					It("local pods should have no connectivity to w[0][0]", func() {
+						By("Denying traffic from pods to nodeport", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-1-1"
+							pol.Spec.Ingress = []api.Rule{
+								{
+									Action:   "Deny",
+									Protocol: &tcpProto,
+									Source: api.EntityRule{
+										Nets: []string{"10.65.0.0/16"},
+									},
+									Destination: api.EntityRule{
+										Ports: []numorstring.Port{numorstring.SinglePort(8055)},
+									},
+								},
+							}
+							pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+
+						cc.Expect(None, w[0][0], TargetIP(felixes[0].IP), opts...)
+						cc.Expect(None, w[0][1], TargetIP(felixes[0].IP), opts...)
+						cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
+						cc.Expect(Some, w[1][1], TargetIP(felixes[0].IP), opts...)
+						cc.CheckConnectivity()
+
+						// Connection should be proxied at the nodeport's node
+						Expect(proxies[0].AcceptedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(Equal(0))
+						Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+						// Due to NAT outgoing
+						Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+						// Connection should not be proxied on the client pod's node
+						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(Equal(0))
+						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					})
+				})
+
+				Context("With ingress traffic denied from felixes[1].IP to nodeport", func() {
+					It("pods should have no connectivity to w[0][0]", func() {
+						svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+						opts = []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix1IP}
+
+						felix1IP := felixes[1].IP
+						if ipip {
+							felix1IP = felixes[1].ExpectedIPIPTunnelAddr
+						}
+
+						By("Denying traffic from felixes[0].IP to nodeport", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-1-1"
+							pol.Spec.Ingress = []api.Rule{
+								{
+									Action:   "Deny",
+									Protocol: &tcpProto,
+									Source: api.EntityRule{
+										Nets: []string{felix1IP + "/32"},
+									},
+									Destination: api.EntityRule{
+										Ports: []numorstring.Port{numorstring.SinglePort(8055)},
+									},
+								},
+							}
+							pol.Spec.Selector = "name=='" + w[0][0].Name + "'"
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+
+						cc.Expect(None, w[0][0], TargetIP(felixes[1].IP), opts...)
+						cc.Expect(None, w[0][1], TargetIP(felixes[1].IP), opts...)
+						cc.Expect(None, w[1][0], TargetIP(felixes[1].IP), opts...)
+						cc.Expect(None, w[1][1], TargetIP(felixes[1].IP), opts...)
+						cc.CheckConnectivity()
+
+						// Connection should be proxied at the nodeport's node
+						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						// Due to NAT outgoing
+						Expect(proxies[1].AcceptedCount(felixes[0].IP, pod, svc)).To(BeNumerically(">", 0))
+
+						// Connection should not be proxied on the client pod's node
+						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+					})
+				})
+
+				Context("With external client", func() {
+					var externalClient *containers.Container
+
+					BeforeEach(func() {
+						externalClient = containers.Run("external-client",
+							containers.RunOpts{AutoRemove: true},
+							"--privileged", // So that we can add routes inside the container.
+							utils.Config.BusyboxImage,
+							"/bin/sh", "-c", "sleep 1000")
+						externalClient.EnsureBinary("test-connection")
+					})
+
+					AfterEach(func() {
+						externalClient.Stop()
+					})
+
+					It("should have connectivity via node 0", func() {
+						cc.Expect(Some, externalClient, TargetIP(felixes[0].IP),
+							ExpectWithSrcIPs(felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
+						cc.CheckConnectivity()
+
+						Expect(proxies[0].ProxiedCount(externalClient.IP, pod, svc)).To(BeNumerically(">", 0))
+					})
+
+					It("should have connectivity via node 1", func() {
+						svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+						cc.Expect(Some, externalClient, TargetIP(felixes[1].IP),
+							expectedFelix1IP, ExpectWithPorts(nodeport))
+						cc.CheckConnectivity()
+						Expect(proxies[1].ProxiedCount(externalClient.IP, pod, svc)).To(BeNumerically(">", 0))
+						Expect(proxies[0].AcceptedCount(externalClient.IP, pod, svc)).To(Equal(0))
+						Expect(proxies[0].AcceptedCount(felixes[1].IP, pod, svc)).To(Equal(0))
+					})
+
+					It("should not have connectivity when denied by preDNAT policy", func() {
+						By("Denying traffic from ext client to nodeport using preDNAT policy", func() {
+							pol := api.NewGlobalNetworkPolicy()
+							pol.Namespace = "fv"
+							pol.Name = "policy-deny-prednat"
+							pol.Spec.Ingress = []api.Rule{
+								{
+									Action:   "Deny",
+									Protocol: &tcpProto,
+									Source: api.EntityRule{
+										Nets: []string{externalClient.IP + "/32"},
+									},
+									Destination: api.EntityRule{
+										Ports: []numorstring.Port{numorstring.SinglePort(nodeport)},
+									},
+								},
+							}
+							pol.Spec.Selector = "has(host-endpoint)"
+							pol.Spec.PreDNAT = true
+							pol.Spec.ApplyOnForward = true
+							one := float64(1)
+							pol.Spec.Order = &one
+
+							pol = createPolicy(pol)
+						})
+						cc.Expect(Some, externalClient, TargetIP(felixes[0].IP),
+							ExpectWithSrcIPs(felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
+						cc.Expect(Some, externalClient, TargetIP(felixes[1].IP),
+							ExpectWithSrcIPs(felixes[1].IP), ExpectWithPorts(nodeport), expectedFelix1IP)
+						cc.CheckConnectivity()
 					})
 				})
 			})

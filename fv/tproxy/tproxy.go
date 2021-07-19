@@ -60,7 +60,8 @@ func New(f *infrastructure.Felix, port uint16) *TProxy {
 }
 
 func (t *TProxy) Start() {
-	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy", strconv.Itoa(int(t.port)))
+	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy",
+		strconv.Itoa(int(t.port)), strconv.Itoa(int(t.port+1)))
 
 	var err error
 	t.out, err = t.cmd.StdoutPipe()

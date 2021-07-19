@@ -167,14 +167,22 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			return
 		case proto.IPSetUpdate_NET_NET:
 			setType = ipsets.IPSetTypeHashNetNet
+		case proto.IPSetUpdate_PORTS:
+			setType = ipsets.IPSetTypeBitmapPort
 		default:
 			log.WithField("type", msg.Type).Panic("Unknown IP set type")
 		}
+
 		metadata := ipsets.IPSetMetadata{
 			Type:    setType,
 			SetID:   msg.Id,
 			MaxSize: m.maxSize,
 		}
+		if setType == ipsets.IPSetTypeBitmapPort {
+			metadata.MaxSize = 0
+			metadata.RangeMax = 0xffff
+		}
+
 		if msg.Type == proto.IPSetUpdate_DOMAIN {
 			// Work needed to resolve domain names to expiring IPs.  These domain names may be mixed case.
 			m.handleDomainIPSetUpdate(msg, &metadata)

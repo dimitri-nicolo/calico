@@ -15,6 +15,7 @@
 package calc
 
 import (
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -634,6 +635,9 @@ func memberToProto(member labelindex.IPSetMember) string {
 	case labelindex.ProtocolNone:
 		if member.Domain != "" {
 			return member.Domain
+		}
+		if member.CIDR == nil {
+			return strconv.Itoa(int(member.PortNumber))
 		}
 		return member.CIDR.String()
 	case labelindex.ProtocolTCP:

@@ -40,7 +40,9 @@ import (
 
 // empty is the base state, with nothing in the datastore or dataplane.
 // Note: Incase of Tproxy mode, the ipset exists even when no updates are present, this is a one off case
-var empty = NewState().withName("<empty>").withIPSet(tproxyIpSetSelector, []string{})
+var empty = NewState().withName("<empty>").
+	withIPSet(tproxyIpSetSelector, []string{}).
+	withIPSet(tproxyIpSetNodeports, []string{})
 
 // initialisedStore builds on empty, adding in the ready flag and global config.
 var initialisedStore = empty.withKVUpdates(
@@ -2006,16 +2008,23 @@ var nodesWithMoreIPsDeleted = vxlanWithBlock.withKVUpdates(
 
 var l7EnabledState = empty.withKVUpdates(
 	KVPair{Key: GlobalConfigKey{Name: "TPROXYMode"}, Value: "Enabled"},
-).withIPSet(tproxyIpSetSelector, []string{}).withName("l7EnabledState")
+).
+	withIPSet(tproxyIpSetSelector, []string{}).
+	withIPSet(tproxyIpSetNodeports, []string{}).
+	withName("l7EnabledState")
 
 var withOutL7Annotation = l7EnabledState.withKVUpdates(
 	svcWithOutL7Annotation,
-).withIPSet(tproxyIpSetSelector, []string{}).withName("withOutL7Annotation")
+).withIPSet(tproxyIpSetSelector, []string{}).
+	withIPSet(tproxyIpSetNodeports, []string{}).
+	withName("withOutL7Annotation")
 
 var clusterIPWithL7Annotation = withOutL7Annotation.withKVUpdates(
 	svcWithL7Annotation,
 ).withIPSet(tproxyIpSetSelector, []string{
 	"10.0.0.0,tcp:123",
+}).withIPSet(tproxyIpSetNodeports, []string{
+	"234",
 }).withName("clusterIPWithL7Annotation")
 
 var externalIPWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
@@ -2024,6 +2033,8 @@ var externalIPWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
 	"10.0.0.0,tcp:123",
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
+}).withIPSet(tproxyIpSetNodeports, []string{
+	"234",
 }).withName("externalIPWithL7Annotation")
 
 var deleteClusterIPL7Annotation = externalIPWithL7Annotation.withKVUpdates(
@@ -2031,11 +2042,14 @@ var deleteClusterIPL7Annotation = externalIPWithL7Annotation.withKVUpdates(
 ).withIPSet(tproxyIpSetSelector, []string{
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
+}).withIPSet(tproxyIpSetNodeports, []string{
+	"234",
 }).withName("deleteClusterIPL7Annotation")
 
 var deleteExternalIPL7Annotation = deleteClusterIPL7Annotation.withKVUpdates(
 	deleteExternalSvcWithL7Annotation,
 ).withIPSet(tproxyIpSetSelector, []string{}).
+	withIPSet(tproxyIpSetNodeports, []string{}).
 	withName("deleteExternalIPL7Annotation")
 
 type StateList []State
