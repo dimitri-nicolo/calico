@@ -100,7 +100,7 @@ var _ = Describe("Windows flow logs test", func() {
 					"wep demo porter porter", porter,
 					metrics.NoService, 1, 1,
 					[]metrics.ExpectedPolicy{
-						{"dst", "allow", []string{"0|default|demo/knp.default.allow-client|allow"}},
+						{"dst", "allow", []string{"0|default|demo/knp.default.allow-client|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 1: %v", err))
@@ -110,7 +110,7 @@ var _ = Describe("Windows flow logs test", func() {
 					"wep demo nginx nginx", nginx,
 					"demo nginx - 80", 1, 1,
 					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|default|demo/knp.default.allow-nginx|allow"}},
+						{"src", "allow", []string{"0|default|demo/knp.default.allow-nginx|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
@@ -121,7 +121,7 @@ var _ = Describe("Windows flow logs test", func() {
 					"wep demo - porter", "",
 					metrics.NoService, 1, 1,
 					[]metrics.ExpectedPolicy{
-						{"dst", "allow", []string{"0|default|demo/knp.default.allow-client|allow"}},
+						{"dst", "allow", []string{"0|default|demo/knp.default.allow-client|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 1: %v", err))
@@ -131,7 +131,7 @@ var _ = Describe("Windows flow logs test", func() {
 					"wep demo - nginx", "",
 					"demo nginx - 80", 1, 1,
 					[]metrics.ExpectedPolicy{
-						{"src", "allow", []string{"0|default|demo/knp.default.allow-nginx|allow"}},
+						{"src", "allow", []string{"0|default|demo/knp.default.allow-nginx|allow|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
@@ -144,7 +144,7 @@ var _ = Describe("Windows flow logs test", func() {
 					"wep demo porter porter", porter,
 					metrics.NoService, 1, 1,
 					[]metrics.ExpectedPolicy{
-						{"dst", "deny", []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny"}},
+						{"dst", "deny", []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))
@@ -155,7 +155,7 @@ var _ = Describe("Windows flow logs test", func() {
 					"wep demo porter porter", porter,
 					metrics.NoService, 1, 1,
 					[]metrics.ExpectedPolicy{
-						{"dst", "deny", []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny"}},
+						{"dst", "deny", []string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|0"}},
 					})
 				if err != nil {
 					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))

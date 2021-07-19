@@ -75,11 +75,11 @@ func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 	// Extract EndpointMetadata info
 	srcMeta, err := getFlowLogEndpointMetadata(mu.srcEp, mu.tuple.src)
 	if err != nil {
-		return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
+		return FlowMeta{}, fmt.Errorf("could not extract metadata for source %v", mu.srcEp)
 	}
 	dstMeta, err := getFlowLogEndpointMetadata(mu.dstEp, mu.tuple.dst)
 	if err != nil {
-		return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
+		return FlowMeta{}, fmt.Errorf("could not extract metadata for destination %v", mu.dstEp)
 	}
 
 	f.SrcMeta = srcMeta
@@ -94,7 +94,7 @@ func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
-		return f, fmt.Errorf("Invalid metric update")
+		return f, fmt.Errorf("invalid metric update")
 	}
 
 	action, direction := getFlowLogActionAndReporterFromRuleID(lastRuleID)
@@ -338,7 +338,7 @@ func NewFlowPolicies(mu MetricUpdate) FlowPolicies {
 		if rid == nil {
 			continue
 		}
-		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
+		fp[fmt.Sprintf("%d|%s|%s", idx, rid.GetFlowLogPolicyName(), rid.IndexStr)] = emptyValue
 	}
 	return fp
 }
@@ -351,7 +351,7 @@ func (fp FlowPolicies) aggregateFlowPolicies(mu MetricUpdate) {
 		if rid == nil {
 			continue
 		}
-		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
+		fp[fmt.Sprintf("%d|%s|%s", idx, rid.GetFlowLogPolicyName(), rid.IndexStr)] = emptyValue
 	}
 }
 
