@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,9 +22,11 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	kapiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -243,33 +245,33 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the type information is correct.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
 
 		// Assert key fields.
 		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podA-eth0"))
 		Expect(wep.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
+		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
 
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podA"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Node).To(Equal("nodeA"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Endpoint).To(Equal("eth0"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Orchestrator).To(Equal("k8s"))
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(1))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks[0]).To(Equal("192.168.0.1/32"))
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(1))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podA"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Node).To(Equal("nodeA"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Endpoint).To(Equal("eth0"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Orchestrator).To(Equal("k8s"))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(1))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks[0]).To(Equal("192.168.0.1/32"))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(1))
 		expectedLabels := map[string]string{
 			"labelA":                         "valueA",
 			"labelB":                         "valueB",
 			"projectcalico.org/namespace":    "default",
 			"projectcalico.org/orchestrator": "k8s",
 		}
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
 
 		nsProtoTCP := numorstring.ProtocolFromString("tcp")
 		nsProtoUDP := numorstring.ProtocolFromString("udp")
 		nsProtoSCTP := numorstring.ProtocolFromString("sctp")
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Ports).To(ConsistOf(
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Ports).To(ConsistOf(
 			// No proto defaults to TCP (as defined in k8s API spec)
 			apiv3.EndpointPort{Name: "no-proto", Port: 1234, Protocol: nsProtoTCP},
 			// Explicit TCP proto is OK too.
@@ -286,13 +288,13 @@ var _ = Describe("Test Pod conversion", func() {
 		// Assert the interface name is fixed.  The calculation of this name should be consistent
 		// between releases otherwise there will be issues upgrading a node with networked Pods.
 		// If this fails, fix the code not this expect!
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali7f94ce7c295"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali7f94ce7c295"))
 
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
 
 		// Check egress.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "wblack == 'white'",
 			Selector:          "wred == 'green'",
 		}))
@@ -363,9 +365,9 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Check both IPs were converted.
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(2))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks[0]).To(Equal("192.168.0.1/32"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks[1]).To(Equal("fd5f:8067::1/128"))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(2))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks[0]).To(Equal("192.168.0.1/32"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks[1]).To(Equal("fd5f:8067::1/128"))
 	})
 
 	It("should look in the calico annotation for the IP", func() {
@@ -392,7 +394,7 @@ var _ = Describe("Test Pod conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.HasIPAddress(&pod)).To(BeTrue())
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32"))
 	})
 
 	It("should look in the dual stack calico annotation for the IPs", func() {
@@ -420,7 +422,7 @@ var _ = Describe("Test Pod conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.HasIPAddress(&pod)).To(BeTrue())
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32", "fd5f:8067::1/128"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32", "fd5f:8067::1/128"))
 	})
 
 	It("should handle IP annotations with /32 and /128", func() {
@@ -450,7 +452,7 @@ var _ = Describe("Test Pod conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.HasIPAddress(&pod)).To(BeTrue())
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32", "fd5f:8067::1/128"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32", "fd5f:8067::1/128"))
 	})
 
 	It("should look in the calico annotation for a floating IP", func() {
@@ -478,10 +480,10 @@ var _ = Describe("Test Pod conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.HasIPAddress(&pod)).To(BeTrue())
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32"))
 
 		// Assert that the endpoint contains the appropriate DNAT
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNATs).To(ConsistOf(apiv3.IPNAT{InternalIP: "192.168.0.1", ExternalIP: "1.1.1.1"}))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNATs).To(ConsistOf(libapiv3.IPNAT{InternalIP: "192.168.0.1", ExternalIP: "1.1.1.1"}))
 
 	})
 
@@ -511,12 +513,12 @@ var _ = Describe("Test Pod conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.HasIPAddress(&pod)).To(BeTrue())
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32", "fd5f:8067::1/128"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32", "fd5f:8067::1/128"))
 
 		// Assert that the endpoint contains the appropriate DNAT
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNATs).To(ConsistOf(
-			apiv3.IPNAT{InternalIP: "192.168.0.1", ExternalIP: "1.1.1.1"},
-			apiv3.IPNAT{InternalIP: "fd5f:8067::1", ExternalIP: "fd80:100:100::10"},
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNATs).To(ConsistOf(
+			libapiv3.IPNAT{InternalIP: "192.168.0.1", ExternalIP: "1.1.1.1"},
+			libapiv3.IPNAT{InternalIP: "fd5f:8067::1", ExternalIP: "fd80:100:100::10"},
 		))
 
 	})
@@ -606,7 +608,123 @@ var _ = Describe("Test Pod conversion", func() {
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.2/32"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.2/32"))
+	})
+
+	It("should treat running pod with empty podIP annotation and no deletion timestamp as Running", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"arbitrary":                   "annotation",
+					"cni.projectcalico.org/podIP": "",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName:   "nodeA",
+				Containers: []kapiv1.Container{},
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+				Phase: kapiv1.PodRunning,
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.HasIPAddress(&pod)).To(BeTrue())
+		Expect(IsFinished(&pod)).To(BeFalse())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32"))
+	})
+
+	It("should treat running pod with empty podIP with a deletion timestamp as finished", func() {
+		now := metav1.Now()
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "podA",
+				Namespace:         "default",
+				DeletionTimestamp: &now,
+				Annotations: map[string]string{
+					"arbitrary":                   "annotation",
+					"cni.projectcalico.org/podIP": "",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName:   "nodeA",
+				Containers: []kapiv1.Container{},
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+				Phase: kapiv1.PodRunning,
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.HasIPAddress(&pod)).To(BeTrue())
+		Expect(IsFinished(&pod)).To(BeTrue())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(BeEmpty())
+	})
+
+	It("should treat running pod with no podIP annoation with a deletion timestamp as running", func() {
+		now := metav1.Now()
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "podA",
+				Namespace:         "default",
+				DeletionTimestamp: &now,
+				Annotations: map[string]string{
+					"arbitrary": "annotation",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName:   "nodeA",
+				Containers: []kapiv1.Container{},
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+				Phase: kapiv1.PodRunning,
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.HasIPAddress(&pod)).To(BeTrue())
+		Expect(IsFinished(&pod)).To(BeFalse())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(ConsistOf("192.168.0.1/32"))
+	})
+
+	It("should treat finished pod with no podIP annoation with a deletion timestamp as finished", func() {
+		now := metav1.Now()
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "podA",
+				Namespace:         "default",
+				DeletionTimestamp: &now,
+				Annotations: map[string]string{
+					"arbitrary": "annotation",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName:   "nodeA",
+				Containers: []kapiv1.Container{},
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+				Phase: kapiv1.PodSucceeded,
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.HasIPAddress(&pod)).To(BeTrue())
+		Expect(IsFinished(&pod)).To(BeTrue())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(BeEmpty())
 	})
 
 	DescribeTable("PodToDefaultWorkloadEndpoint reject/accept phase tests",
@@ -632,9 +750,9 @@ var _ = Describe("Test Pod conversion", func() {
 			kvp, err := podToWorkloadEndpoint(c, &pod)
 			Expect(err).NotTo(HaveOccurred())
 			if expectedResult {
-				Expect(kvp.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(HaveLen(1))
+				Expect(kvp.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(HaveLen(1))
 			} else {
-				Expect(kvp.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks).To(HaveLen(0))
+				Expect(kvp.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks).To(HaveLen(0))
 			}
 		},
 		Entry("Pending", kapiv1.PodPending, true),
@@ -694,15 +812,15 @@ var _ = Describe("Test Pod conversion", func() {
 		// Assert key fields.
 		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podB-eth0"))
 		Expect(wep.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
+		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
 		// Assert value fields.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podB"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Node).To(Equal("nodeA"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Endpoint).To(Equal("eth0"))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Orchestrator).To(Equal("k8s"))
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(1))
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(1))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(map[string]string{
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podB"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Node).To(Equal("nodeA"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Endpoint).To(Equal("eth0"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Orchestrator).To(Equal("k8s"))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks)).To(Equal(1))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(1))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(map[string]string{
 			"projectcalico.org/namespace":    "default",
 			"projectcalico.org/orchestrator": "k8s",
 		}))
@@ -710,7 +828,7 @@ var _ = Describe("Test Pod conversion", func() {
 		// Assert the interface name is fixed.  The calculation of this name should be consistent
 		// between releases otherwise there will be issues upgrading a node with networked Pods.
 		// If this fails, fix the code not this expect!
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali92cf1f5e9f6"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali92cf1f5e9f6"))
 	})
 
 	It("should not parse a Pod with no NodeName", func() {
@@ -778,16 +896,16 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the type information is correct.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
 
 		// Assert key fields.
 		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podA-eth0"))
 		Expect(wep.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
+		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
 
 		// Check for only values that are ServiceAccount related.
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(2))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(2))
 		expectedLabels := map[string]string{
 			"labelA":                         "valueA",
 			"labelB":                         "valueB",
@@ -795,8 +913,8 @@ var _ = Describe("Test Pod conversion", func() {
 			"projectcalico.org/orchestrator": "k8s",
 			apiv3.LabelServiceAccount:        "sa-test",
 		}
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.ServiceAccountName).To(Equal("sa-test"))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.ServiceAccountName).To(Equal("sa-test"))
 
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
@@ -852,24 +970,24 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the type information is correct.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
 
 		// Assert key fields.
 		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podA-eth0"))
 		Expect(wep.Key.(model.ResourceKey).Namespace).To(Equal("default"))
-		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
+		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(libapiv3.KindWorkloadEndpoint))
 
 		// Check for only values that are ServiceAccount related.
-		Expect(len(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(2))
+		Expect(len(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.Profiles)).To(Equal(2))
 		expectedLabels := map[string]string{
 			"labelA":                         "valueA",
 			"labelB":                         "valueB",
 			"projectcalico.org/namespace":    "default",
 			"projectcalico.org/orchestrator": "k8s",
 		}
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.ServiceAccountName).To(Equal(longName))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(Equal(expectedLabels))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.ServiceAccountName).To(Equal(longName))
 
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
@@ -895,7 +1013,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the GenerateName information is correct.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).GenerateName).To(Equal(gname))
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).GenerateName).To(Equal(gname))
 	})
 
 	It("should convert without egress control when egress annotations are invalid", func() {
@@ -920,7 +1038,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the EgressSpec is nil.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(BeNil())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(BeNil())
 	})
 
 	DescribeTable("AWS security group annotation",
@@ -946,7 +1064,7 @@ var _ = Describe("Test Pod conversion", func() {
 
 			// Finally, assert the expected result.
 			for _, label := range expectedLabels {
-				Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(
+				Expect(wep.Value.(*libapiv3.WorkloadEndpoint).ObjectMeta.Labels).To(
 					HaveKeyWithValue("sg.aws.tigera.io/"+label, ""))
 			}
 		},

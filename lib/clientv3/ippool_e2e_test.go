@@ -26,8 +26,10 @@ import (
 
 	"context"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
@@ -988,16 +990,17 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests (etcd only)", testutils.Dat
 
 			// Create test node
 			host := "host-test"
-			_, err = c.Nodes().Create(ctx, &apiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: host}}, options.SetOptions{})
+			_, err = c.Nodes().Create(ctx, &libapiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: host}}, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Allocate an IP so that a block is allocated
-			assignedV4, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host})
+			v4ia, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(v4ia).ToNot(BeNil())
 			var assigned []cnet.IP
-			for _, ipnet := range assignedV4 {
+			for _, ipnet := range v4ia.IPs {
 				assigned = append(assigned, cnet.IP{ipnet.IP})
 			}
-			Expect(err).NotTo(HaveOccurred())
 			Expect(assigned).To(HaveLen(1))
 
 			// Delete the pool
@@ -1063,13 +1066,14 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests (etcd only)", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 
 			host := "host-test"
-			_, err = c.Nodes().Create(ctx, &apiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: host}}, options.SetOptions{})
+			_, err = c.Nodes().Create(ctx, &libapiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: host}}, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Allocate an IP so that a block is allocated
-			assigned, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host})
+			v4ia, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(assigned).To(HaveLen(1))
+			Expect(v4ia).ToNot(BeNil())
+			Expect(v4ia.IPs).To(HaveLen(1))
 
 			By("creating a pool with a different cidr and block size")
 			p2, err := c.IPPools().Create(ctx, &apiv3.IPPool{
@@ -1083,9 +1087,10 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests (etcd only)", testutils.Dat
 
 			// Allocate an IP so that a block is allocated
 			pool2 := []cnet.IPNet{cnet.MustParseCIDR(p2.Spec.CIDR)}
-			assigned, _, err = c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{IPv4Pools: pool2, Num4: 1, Hostname: host})
+			v4ia, _, err = c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{IPv4Pools: pool2, Num4: 1, Hostname: host})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(assigned).To(HaveLen(1))
+			Expect(v4ia).ToNot(BeNil())
+			Expect(v4ia.IPs).To(HaveLen(1))
 
 			By("modifying the second IP pool")
 			p2.Spec.NATOutgoing = true

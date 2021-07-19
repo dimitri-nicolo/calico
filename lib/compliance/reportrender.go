@@ -29,8 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/go-yaml-wrapper"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	authnv1 "k8s.io/api/authentication/v1"
 )

@@ -21,8 +21,11 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/encap"
@@ -31,7 +34,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
@@ -69,6 +71,12 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				expectedCacheSize += 1
+
+				if config.Spec.DatastoreType == apiconfig.Kubernetes {
+					// Should have two nodes from kind. However in etcd mode
+					// Nodes are created by calico/node, which we don't run here.
+					expectedCacheSize += 1
+				}
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectStatusUpdate(api.InSync)
@@ -77,6 +85,7 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			// For Kubernetes test one entry already in the cache for the node.
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/nodes/127.0.0.1")
+				syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/nodes/kind-control-plane")
 			}
 
 			By("Disabling node to node mesh and adding a default ASNumber")
@@ -101,13 +110,13 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/bgpconfigurations/default")
 
-			var node *apiv3.Node
+			var node *libapiv3.Node
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// For Kubernetes, update the existing node config to have some BGP configuration.
 				By("Configuring a node with BGP configuration")
 				node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())
-				node.Spec.BGP = &apiv3.NodeBGPSpec{
+				node.Spec.BGP = &libapiv3.NodeBGPSpec{
 					IPv4Address: "1.2.3.4/24",
 					IPv6Address: "aa:bb::cc/120",
 				}
@@ -119,10 +128,10 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				By("Creating a node with BGP configuration")
 				node, err = c.Nodes().Create(
 					ctx,
-					&apiv3.Node{
+					&libapiv3.Node{
 						ObjectMeta: metav1.ObjectMeta{Name: "127.0.0.1"},
-						Spec: apiv3.NodeSpec{
-							BGP: &apiv3.NodeBGPSpec{
+						Spec: libapiv3.NodeSpec{
+							BGP: &libapiv3.NodeBGPSpec{
 								IPv4Address: "1.2.3.4/24",
 								IPv6Address: "aa:bb::cc/120",
 							},
@@ -202,16 +211,17 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			var blockAffinityKeyV1 model.BlockAffinityKey
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Allocating an IP address and checking that we get an allocation block")
-				ipV4Nets1, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
+				v4ia1, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
 					Num4:     1,
 					Hostname: "127.0.0.1",
 				})
+				Expect(v4ia1).ToNot(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 
 				var ips1 []net.IP
-				for _, ipnet := range ipV4Nets1 {
+				for _, ipnet := range v4ia1.IPs {
 					ips1 = append(ips1, net.IP{ipnet.IP})
 				}
-				Expect(err).NotTo(HaveOccurred())
 
 				// Allocating an IP will create an affinity block that we should be notified of.  Not sure
 				// what CIDR will be chosen, so search the cached entries.
@@ -232,22 +242,23 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				// The syncer only monitors affine blocks for one host, so IP allocations for a different
 				// host should not result in updates.
 				hostname := "not-this-host"
-				node, err = c.Nodes().Create(ctx, &apiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: hostname}}, options.SetOptions{})
+				node, err = c.Nodes().Create(ctx, &libapiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: hostname}}, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				expectedCacheSize += 1
 				syncTester.ExpectCacheSize(expectedCacheSize)
 
-				ipV4Nets2, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
+				v4ia2, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
 					Num4:     1,
 					Hostname: hostname,
 				})
+				Expect(v4ia2).ToNot(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 
 				var ips2 []net.IP
-				for _, ipnet := range ipV4Nets2 {
+				for _, ipnet := range v4ia2.IPs {
 					ips2 = append(ips2, net.IP{ipnet.IP})
 				}
 
-				Expect(err).NotTo(HaveOccurred())
 				syncTester.ExpectCacheSize(expectedCacheSize)
 
 				By("Releasing the IP addresses and checking for no updates")

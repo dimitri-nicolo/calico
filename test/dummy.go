@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-Package numorstring implements a set of type definitions that in YAML or JSON
-format may be represented by either a number or a string.
-*/
+package test
 
-// +k8s:openapi-gen=true
-
-package numorstring
+// this is for packages that need to be included in go.mod but aren't actually imported in the code (i.e. used for
+// testing). If this isn't done, mod tidy will remove the dependency from go.mod.
+import (
+	_ "sigs.k8s.io/kind/pkg/apis/config/defaults"
+)
