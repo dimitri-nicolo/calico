@@ -285,12 +285,13 @@ func getOrCreateSnapshot(ctx context.Context, kcc clientv3.KubeControllersConfig
 	snapshot, err := kcc.Get(ctx, configName, options.GetOptions{})
 	// If the KubeControllersConfig with given name doesn't exist, we'll create it.
 	if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
-		toBeCreated, getConfigErr := configfactory.GetKubeControllersInitialConfig(configName)
+		initialConfig, getConfigErr := configfactory.GetKubeControllersInitialConfig(configName)
 		if getConfigErr != nil {
 			return nil, getConfigErr
 		}
-		snapshot = toBeCreated.DeepCopy()
-		_, createSnapshotErr := kcc.Create(ctx, snapshot, options.SetOptions{})
+		toBeCreated := initialConfig.DeepCopy()
+		var createSnapshotErr error
+		snapshot, createSnapshotErr = kcc.Create(ctx, toBeCreated, options.SetOptions{})
 		if createSnapshotErr != nil {
 			// Besides datastore connection errors, we might get a race with
 			// something else creating the resource but this can get handled
