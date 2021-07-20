@@ -72,6 +72,8 @@ type Config struct {
 	ElasticHost                       string `default:"" split_words:"true"`
 	ElasticPort                       string `default:"9200" split_words:"true"`
 	ElasticCA                         string `default:"" split_words:"true"`
+
+	KubeControllersConfigName string `default:"" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct
