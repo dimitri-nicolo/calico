@@ -37,7 +37,7 @@ import (
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/types"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
@@ -45,8 +45,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 func ensureNamespace(clientset *kubernetes.Clientset, name string) {
@@ -277,7 +278,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 				Pod:                name,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -440,7 +441,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
 					"projectcalico.org/serviceaccount": "default",
 				}))
-				Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+				Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 					Pod:                name,
 					InterfaceName:      interfaceName,
 					IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -1145,7 +1146,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// Allocate all the addresses in the IP pool.
 			handle := "test-handle"
-			v4s, _, err := calicoClient.IPAM().AutoAssign(
+			v4ia, _, err := calicoClient.IPAM().AutoAssign(
 				context.Background(),
 				ipam.AutoAssignArgs{
 					Num4:      256,
@@ -1154,7 +1155,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(v4s)).To(Equal(256))
+			Expect(v4ia).ToNot(BeNil())
+			Expect(len(v4ia.IPs)).To(Equal(256))
 
 			// Expect an error when invoking the CNI plugin.
 			_, _, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, testNS, "")
@@ -1201,7 +1203,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// Allocate all the addresses in the first IP pool.
 			handle := "test-handle"
-			v4s, _, err := calicoClient.IPAM().AutoAssign(
+			v4ia, _, err := calicoClient.IPAM().AutoAssign(
 				context.Background(),
 				ipam.AutoAssignArgs{
 					Num4:      256,
@@ -1210,7 +1212,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(v4s)).To(Equal(256))
+			Expect(v4ia).ToNot(BeNil())
+			Expect(len(v4ia.IPs)).To(Equal(256))
 
 			// Invoke the CNI plugin.
 			_, r, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, testNS, "")
@@ -1526,7 +1529,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			// Assert that the endpoint contains the appropriate DNAT
 			podIP := contAddresses[0].IP
 			Expect(endpoints.Items[0].Spec.IPNATs).Should(HaveLen(1))
-			Expect(endpoints.Items[0].Spec.IPNATs).Should(Equal([]api.IPNAT{api.IPNAT{InternalIP: podIP.String(), ExternalIP: "1.1.1.1"}}))
+			Expect(endpoints.Items[0].Spec.IPNATs).Should(Equal([]libapi.IPNAT{libapi.IPNAT{InternalIP: podIP.String(), ExternalIP: "1.1.1.1"}}))
 
 			// Delete the container.
 			_, err = testutils.DeleteContainer(string(confBytes), contNs.Path(), name, testutils.K8S_TEST_NS)
@@ -1658,7 +1661,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 				Pod:                name,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{assignIP.String() + "/32"},
@@ -1857,7 +1860,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 				Pod:                name,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{assignIP.String() + "/32"},
@@ -1992,7 +1995,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": "default",
 			}))
 
-			Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 				Pod:                name,
 				InterfaceName:      interfaceName,
 				ServiceAccountName: "default",
@@ -2002,7 +2005,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Node:               hostname,
 				Endpoint:           "eth0",
 				Workload:           "",
-				IPNATs: []api.IPNAT{
+				IPNATs: []libapi.IPNAT{
 					{
 						InternalIP: podIPv4.String(),
 						ExternalIP: "1.1.1.1",
@@ -2296,7 +2299,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var netconf string
 		var clientset *kubernetes.Clientset
 		var workloadName, containerID, name string
-		var endpointSpec api.WorkloadEndpointSpec
+		var endpointSpec libapi.WorkloadEndpointSpec
 		var contNs ns.NetNS
 		var result *current.Result
 
@@ -2784,7 +2787,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"projectcalico.org/serviceaccount": saName,
 				"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
 			}))
-			Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 				Pod:                name,
 				InterfaceName:      interfaceName,
 				IPNetworks:         []string{result.IPs[0].Address.String()},
@@ -2938,7 +2941,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(endpoints.Items[0].GenerateName).Should(Equal(generateName))
 
 			// Let's just check that the Spec is good too.
-			Expect(endpoints.Items[0].Spec).Should(Equal(api.WorkloadEndpointSpec{
+			Expect(endpoints.Items[0].Spec).Should(Equal(libapi.WorkloadEndpointSpec{
 				Pod:                name,
 				InterfaceName:      interfaceName,
 				ServiceAccountName: "default",

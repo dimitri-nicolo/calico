@@ -60,12 +60,12 @@ blocks:
       jobs:
         - name: Test Version
           execution_time_limit:
-            minutes: 120
+            minutes: 60
           commands:
             - make test-cni-versions
         - name: Test Install
           execution_time_limit:
-            minutes: 120
+            minutes: 60
           commands:
             - make test-install-cni
 
@@ -128,7 +128,7 @@ blocks:
       jobs:
         - name: FV Test matrix
           execution_time_limit:
-            minutes: 120
+            minutes: 60
           commands:
             - ./.semaphore/run-win-fv.sh
 
@@ -178,7 +178,7 @@ blocks:
       jobs:
         - name: FV Test matrix
           execution_time_limit:
-            minutes: 120
+            minutes: 60
           commands:
             - ./.semaphore/run-win-fv.sh
 
