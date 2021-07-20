@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	lclient "github.com/tigera/licensing/client"
 )
 
@@ -45,7 +45,7 @@ type licenseMonitor struct {
 	datastoreClient bapiClient
 
 	activeLicenseLock sync.Mutex
-	activeRawLicense  *v3.LicenseKey
+	activeRawLicense  *api.LicenseKey
 	activeLicense     *lclient.LicenseClaims
 
 	licenseTransitionTimer    timer
@@ -53,7 +53,7 @@ type licenseMonitor struct {
 	lastNotifiedLicenseStatus lclient.LicenseStatus
 
 	// Shims for mocking...
-	decodeLicense     func(lic v3.LicenseKey) (lclient.LicenseClaims, error)
+	decodeLicense     func(lic api.LicenseKey) (lclient.LicenseClaims, error)
 	now               func() time.Time
 	newTimer          func(duration time.Duration) timer
 	newJitteredTicker func(minDuration time.Duration, maxJitter time.Duration) *jitter.Ticker
@@ -214,7 +214,7 @@ func (l *licenseMonitor) maybeStartTransitionTimer() {
 func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 	log.Debug("Refreshing license from datastore")
 	lic, err := l.datastoreClient.Get(ctx, model.ResourceKey{
-		Kind:      v3.KindLicenseKey,
+		Kind:      api.KindLicenseKey,
 		Name:      "default",
 		Namespace: "",
 	}, "")
@@ -262,7 +262,7 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 		}
 	}
 
-	license := lic.Value.(*v3.LicenseKey)
+	license := lic.Value.(*api.LicenseKey)
 	log.Debug("License resource found")
 
 	if l.activeRawLicense != nil && reflect.DeepEqual(l.activeRawLicense.Spec, license.Spec) {

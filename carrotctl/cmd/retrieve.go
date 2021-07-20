@@ -9,7 +9,7 @@ import (
 	"github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/datastore"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

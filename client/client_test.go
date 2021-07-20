@@ -14,7 +14,7 @@ import (
 	"github.com/tigera/licensing/client/features"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

@@ -1,7 +1,7 @@
 package features
 
 import (
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
@@ -82,34 +82,18 @@ func IsValidPackageName(value string) bool {
 // OpenSourceAPIs maps calico open source APIs
 var OpenSourceAPIs = set{
 	api.NewBGPConfiguration().GetObjectKind().GroupVersionKind().String():                 true,
-	api.NewBGPConfigurationList().GetObjectKind().GroupVersionKind().String():             true,
 	api.NewBGPPeer().GetObjectKind().GroupVersionKind().String():                          true,
-	api.NewBGPPeerList().GetObjectKind().GroupVersionKind().String():                      true,
 	api.NewClusterInformation().GetObjectKind().GroupVersionKind().String():               true,
-	api.NewClusterInformationList().GetObjectKind().GroupVersionKind().String():           true,
 	api.NewFelixConfiguration().GetObjectKind().GroupVersionKind().String():               true,
-	api.NewFelixConfigurationList().GetObjectKind().GroupVersionKind().String():           true,
 	api.NewGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():              true,
-	api.NewGlobalNetworkPolicyList().GetObjectKind().GroupVersionKind().String():          true,
 	api.NewGlobalNetworkSet().GetObjectKind().GroupVersionKind().String():                 true,
-	api.NewGlobalNetworkSetList().GetObjectKind().GroupVersionKind().String():             true,
 	api.NewHostEndpoint().GetObjectKind().GroupVersionKind().String():                     true,
-	api.NewHostEndpointList().GetObjectKind().GroupVersionKind().String():                 true,
 	api.NewIPPool().GetObjectKind().GroupVersionKind().String():                           true,
-	api.NewIPPoolList().GetObjectKind().GroupVersionKind().String():                       true,
 	api.NewKubeControllersConfiguration().GetObjectKind().GroupVersionKind().String():     true,
-	api.NewKubeControllersConfigurationList().GetObjectKind().GroupVersionKind().String(): true,
 	api.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String():                    true,
-	api.NewNetworkPolicyList().GetObjectKind().GroupVersionKind().String():                true,
 	api.NewNetworkSet().GetObjectKind().GroupVersionKind().String():                       true,
-	api.NewNetworkSetList().GetObjectKind().GroupVersionKind().String():                   true,
-	api.NewNode().GetObjectKind().GroupVersionKind().String():                             true,
-	api.NewNodeList().GetObjectKind().GroupVersionKind().String():                         true,
 	api.NewProfile().GetObjectKind().GroupVersionKind().String():                          true,
-	api.NewProfileList().GetObjectKind().GroupVersionKind().String():                      true,
 	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():        true,
-	api.NewWorkloadEndpoint().GetObjectKind().GroupVersionKind().String():                 true,
-	api.NewWorkloadEndpointList().GetObjectKind().GroupVersionKind().String():             true,
 }
 
 // EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names
@@ -134,10 +118,6 @@ var EnterpriseAPIsToFeatureName = map[string]string{
 
 // ManagementAPIs maps calico enterprise APIs used for managing/accessing resources
 var ManagementAPIs = set{
-	api.NewAuthenticationReview().GetObjectKind().GroupVersionKind().String():     true,
-	api.NewAuthenticationReviewList().GetObjectKind().GroupVersionKind().String(): true,
-	api.NewAuthorizationReview().GetObjectKind().GroupVersionKind().String():      true,
-	api.NewAuthorizationReviewList().GetObjectKind().GroupVersionKind().String():  true,
 	api.NewLicenseKey().GetObjectKind().GroupVersionKind().String():               true,
 	api.NewLicenseKeyList().GetObjectKind().GroupVersionKind().String():           true,
 }
@@ -147,10 +127,6 @@ var CloudCommunityFeatures = set{ManagementPortal: true, PolicyRecommendation: t
 
 // CloudCommunityAPIs maps cloud community package APIs
 var CloudCommunityAPIs = merge(OpenSourceAPIs, set{
-	api.NewAuthenticationReview().GetObjectKind().GroupVersionKind().String():              true,
-	api.NewAuthenticationReviewList().GetObjectKind().GroupVersionKind().String():          true,
-	api.NewAuthorizationReview().GetObjectKind().GroupVersionKind().String():               true,
-	api.NewAuthorizationReviewList().GetObjectKind().GroupVersionKind().String():           true,
 	api.NewLicenseKey().GetObjectKind().GroupVersionKind().String():                        true,
 	api.NewLicenseKeyList().GetObjectKind().GroupVersionKind().String():                    true,
 	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():         true,
