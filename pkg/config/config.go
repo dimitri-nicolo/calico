@@ -73,7 +73,7 @@ type Config struct {
 	ElasticPort                       string `default:"9200" split_words:"true"`
 	ElasticCA                         string `default:"" split_words:"true"`
 
-	KubeControllersConfigName string `default:"" split_words:"true"`
+	KubeControllersConfigName string `split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct

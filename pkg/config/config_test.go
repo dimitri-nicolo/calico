@@ -110,7 +110,7 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
-				initialConfig, err := configfactory.GetKubeControllersInitialConfig(cfg.KubeControllersConfigName)
+				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				m = &mockKCC{get: initialConfig.DeepCopy()}
 				ctrl = config.NewRunConfigController(ctx, *cfg, m)
@@ -281,7 +281,7 @@ var _ = Describe("Config", func() {
 
 			It("should create a default KubeControllersConfig", func(done Done) {
 				<-ctrl.ConfigChan()
-				initialConfig, err := configfactory.GetKubeControllersInitialConfig(cfg.KubeControllersConfigName)
+				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(m.create.Spec).To(Equal(initialConfig.Spec))
 				close(done)
@@ -492,7 +492,7 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
-				initialConfig, err := configfactory.GetKubeControllersInitialConfig(cfg.KubeControllersConfigName)
+				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				m = &mockKCC{get: initialConfig.DeepCopy()}
 				ctrl = config.NewRunConfigController(ctx, *cfg, m)

@@ -285,7 +285,7 @@ func getOrCreateSnapshot(ctx context.Context, kcc clientv3.KubeControllersConfig
 	snapshot, err := kcc.Get(ctx, configName, options.GetOptions{})
 	// If the KubeControllersConfig with given name doesn't exist, we'll create it.
 	if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
-		initialConfig, getConfigErr := configfactory.GetKubeControllersInitialConfig(configName)
+		initialConfig, getConfigErr := configfactory.NewDefaultKubeControllersConfig(configName)
 		if getConfigErr != nil {
 			return nil, getConfigErr
 		}

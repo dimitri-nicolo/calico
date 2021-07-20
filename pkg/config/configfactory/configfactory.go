@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func GetKubeControllersInitialConfig(configName string) (*v3.KubeControllersConfiguration, error) {
+func NewDefaultKubeControllersConfig(configName string) (*v3.KubeControllersConfiguration, error) {
 	kubeControllersConfig := v3.NewKubeControllersConfiguration()
 	kubeControllersConfig.Name = configName
 	kubeControllersConfig.Spec = v3.KubeControllersConfigurationSpec{
