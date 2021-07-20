@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 )
 

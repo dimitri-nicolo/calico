@@ -12,7 +12,7 @@ import (
 	"github.com/tigera/licensing/client/features"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Tigera entitlements root CA cert.
@@ -181,7 +181,7 @@ func IsOpenSourceAPI(resourceGroupVersionKind string) bool {
 }
 
 // IsManagementAPI determines is a calico API is defined as an api used to managed/access
-// resources on a calicco install
+// resources on a calico install
 func IsManagementAPI(resourceGroupVersionKind string) bool {
 	return features.ManagementAPIs[resourceGroupVersionKind]
 }

@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/spf13/cobra"
 	"github.com/tigera/licensing/client"
 )

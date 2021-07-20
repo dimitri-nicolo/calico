@@ -12,7 +12,7 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )

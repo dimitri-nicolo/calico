@@ -6,7 +6,7 @@ package testutils
 import (
 	"fmt"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 	"gopkg.in/square/go-jose.v2/jwt"

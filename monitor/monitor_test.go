@@ -5,16 +5,16 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	lclient "github.com/tigera/licensing/client"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"context"
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"time"
-	"gopkg.in/square/go-jose.v2/jwt"
-	log "github.com/sirupsen/logrus"
-	"sync"
-	"sort"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
+	log "github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lclient "github.com/tigera/licensing/client"
+	"gopkg.in/square/go-jose.v2/jwt"
+	"sort"
+	"sync"
+	"time"
 )
 
 func TestBasicFunction(t *testing.T) {
