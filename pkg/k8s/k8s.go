@@ -943,12 +943,11 @@ func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, ann
 		wep = kvps[0].Value.(*libapi.WorkloadEndpoint)
 	}
 
-	kvp := kvps[0]
-	ports = kvp.Value.(*libapi.WorkloadEndpoint).Spec.Ports
-	labels = kvp.Value.(*libapi.WorkloadEndpoint).Labels
-	profiles = kvp.Value.(*libapi.WorkloadEndpoint).Spec.Profiles
-	generateName = kvp.Value.(*libapi.WorkloadEndpoint).GenerateName
-	serviceAccount = kvp.Value.(*libapi.WorkloadEndpoint).Spec.ServiceAccountName
+	ports = wep.Spec.Ports
+	labels = wep.Labels
+	profiles = wep.Spec.Profiles
+	generateName = wep.GenerateName
+	serviceAccount = wep.Spec.ServiceAccountName
 
 	return labels, pod.Annotations, ports, profiles, generateName, serviceAccount, nil
 }
