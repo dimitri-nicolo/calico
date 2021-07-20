@@ -400,11 +400,6 @@ type FelixConfigurationSpec struct {
 	FlowLogsCollectProcessInfo *bool `json:"flowLogsCollectProcessInfo,omitempty" validate:"omitempty"`
 	// FlowLogsCollectTcpStats enables flow logs reporting TCP socket stats
 	FlowLogsCollectTcpStats *bool `json:"flowLogsCollectTcpStats,omitempty" validate:"omitempty"`
-	// FlowLogsCollectProcessPath is dependent on FlowLogsCollectProcessInfo. If enabled,felix will collect process path and
-	// arguments, report to flowLogs. `process_name` in flowLogs will have the process path and `process_args` will have the arguments.
-	// Process information will be reported for processes making the connection as well as those receiving the connections. Process
-	// information will not be reported for those connections which uses raw sockets.
-	FlowLogsCollectProcessPath *bool `json:"flowLogsCollectProcessPath,omitempty" validate:"omitempty"`
 
 	// FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.
 	FlowLogsFileEnabled *bool `json:"flowLogsFileEnabled,omitempty"`
