@@ -520,3 +520,58 @@ $max-toc-height: calc(100vh - #{$sticky-top + $navbar-margin-bottom});
 .general-tab-header {
   margin-bottom: 1em;
 }
+
+.no-margin {
+  margin:0;
+}
+
+.no-padding {
+  padding:0;
+}
+
+.version-combo > button {
+  font-family: "Poppins", Poppins;
+  font-size: 16px;
+  font-weight: 600;
+  height: 36px;
+  color: #2a302f;
+  transition: .4s;
+  -webkit-font-smoothing: antialiased;
+  background-color: #f5f5f5;
+  border-right: none;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  @media (max-width: $screen-xs-max) {
+    border-right: 1px solid #ccc;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
+}
+
+.version-combo {
+  margin-top:20px;
+  max-width: 150px;
+  @media (max-width: $screen-xs-max) {
+    max-width: 100%;
+  }
+  min-width: 125px;
+}
+
+.version-combo > ul > li {
+  font-size: 16px;
+}
+
+.navbar-brand > img {
+  @media (max-width: $screen-xs-max) {
+    transform: translateX(-50%);
+    left: 50%;
+    position: absolute;
+  }
+}
+
+.search > .popover {
+    top: 55px !important;
+  @media (max-width: $screen-xs-max) {
+    top: 42px !important;
+  }
+}
