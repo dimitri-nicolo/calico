@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2021 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -15,6 +15,8 @@ package v3
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
@@ -57,7 +59,7 @@ func NewAuthenticationReview() *AuthenticationReview {
 	return &AuthenticationReview{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       KindAuthenticationReview,
-			APIVersion: GroupVersionCurrent,
+			APIVersion: apiv3.GroupVersionCurrent,
 		},
 	}
 }
@@ -68,7 +70,7 @@ func NewAuthenticationReviewList() *AuthenticationReviewList {
 	return &AuthenticationReviewList{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       KindAuthenticationReviewList,
-			APIVersion: GroupVersionCurrent,
+			APIVersion: apiv3.GroupVersionCurrent,
 		},
 	}
 }

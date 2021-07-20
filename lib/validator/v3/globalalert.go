@@ -10,7 +10,8 @@ import (
 
 	validator "gopkg.in/go-playground/validator.v9"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
 )
 

@@ -17,6 +17,8 @@ global_job_config:
 
 blocks:
   - name: Build
+    execution_time_limit:
+      minutes: 120
     dependencies: []
     task:
       jobs:
@@ -28,6 +30,8 @@ blocks:
             - make ci
 
   - name: Trigger pin updates
+    execution_time_limit:
+      minutes: 5
     dependencies: []
     skip:
       when: "(branch != 'master') and (branch !~ '^release-calient-v\d*\.\d*')"

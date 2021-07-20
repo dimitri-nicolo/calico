@@ -15,7 +15,9 @@
 package tunnelipsyncer
 
 import (
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
@@ -31,7 +33,7 @@ func New(client api.Client, callbacks api.SyncerCallbacks, node string) api.Sync
 			UpdateProcessor: updateprocessors.NewIPPoolUpdateProcessor(),
 		},
 		{
-			ListInterface: model.ResourceListOptions{Kind: apiv3.KindNode, Name: node},
+			ListInterface: model.ResourceListOptions{Kind: libapiv3.KindNode, Name: node},
 		},
 	}
 

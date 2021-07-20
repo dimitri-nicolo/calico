@@ -6,6 +6,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/onsi/ginkgo"
@@ -13,8 +15,9 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -29,9 +32,32 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 	name2 := "capture-2"
 	namespace1 := "namespace-1"
 	namespace2 := "namespace-2"
+	protocol := numorstring.ProtocolFromString("TCP")
 
-	spec1 := apiv3.PacketCaptureSpec{}
-	spec2 := apiv3.PacketCaptureSpec{}
+	spec1 := apiv3.PacketCaptureSpec{
+		Selector: "all()",
+		Filters: []apiv3.PacketCaptureRule{
+			{
+				Ports: []numorstring.Port{
+					numorstring.SinglePort(80),
+				},
+				Protocol: &protocol,
+			},
+		},
+	}
+	spec2 := apiv3.PacketCaptureSpec{
+		Selector: "all()",
+		Filters: []apiv3.PacketCaptureRule{
+			{
+				Ports: []numorstring.Port{
+					numorstring.SinglePort(80),
+				},
+			},
+			{
+				Protocol: &protocol,
+			},
+		},
+	}
 
 	DescribeTable("PacketCapture e2e CRUD tests",
 		func(name1, name2 string, spec1, spec2 apiv3.PacketCaptureSpec) {

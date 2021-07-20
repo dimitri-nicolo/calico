@@ -18,7 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	cresources "github.com/projectcalico/libcalico-go/lib/resources"
