@@ -40,5 +40,6 @@ func RunPolicyController(datastoreType apiconfig.DatastoreType, etcdIP, kconfigf
 		"-e", "RECONCILER_PERIOD=10s",
 		"-e", "DEBUG_USE_SHORT_POLL_INTERVALS=true",
 		"-v", fmt.Sprintf("%s:%s", kconfigfile, kconfigfile),
+		"-e", "KUBE_CONTROLLERS_CONFIG_NAME=default",
 		os.Getenv("CONTAINER_NAME"))
 }
