@@ -85,7 +85,7 @@ clean:
 ###############################################################################
 LIBCALICO_REPO=github.com/tigera/libcalico-go-private
 
-update-pins: replace-libcalico-pin
+update-pins: update-api-pin update-libcalico-pin
 
 ###############################################################################
 # Building the binary
