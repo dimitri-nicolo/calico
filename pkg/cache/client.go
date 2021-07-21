@@ -4,7 +4,6 @@ package cache
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -119,10 +118,6 @@ func (cc *clientCache) StartBackendSync(stop chan struct{}) error {
 		oldCluster, ok := newObj.(*v3.ManagedCluster)
 		if !ok {
 			log.Debugf("Interface conversion failed for %v", oldCluster)
-			return
-		}
-
-		if reflect.DeepEqual(newCluster, oldCluster) {
 			return
 		}
 

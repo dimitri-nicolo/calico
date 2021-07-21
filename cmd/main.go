@@ -51,16 +51,14 @@ func main() {
 		cfg.MultiClusterForwardingCA,
 		cfg.MultiClusterForwardingEndpoint)
 	var cache = cache2.NewClientCache(csFactory)
+
 	var stop = make(chan struct{})
 	defer close(stop)
 	go func() {
+		// Init the client cache with a default client
 		var err = cache.Init()
 		if err != nil {
 			log.WithError(err).Fatal("Cannot init client cache")
-		}
-		err = cache.StartBackendSync(stop)
-		if err != nil {
-			log.WithError(err).Fatal("Cannot start backend sync for client cache")
 		}
 	}()
 	var auth = middleware.NewAuth(mustGetAuthenticator(cfg), cache)

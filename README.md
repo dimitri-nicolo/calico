@@ -44,10 +44,15 @@ rules:
 
 PacketCapture API is a service that is deployed as container part of tigera-manager deployment. By default, it is
 installed by Tigera operator. This service will only be deployed only for Standalone and Management clusters, and requests
-will be routed to the appropriate managed clusters.
+will be routed to the appropriate managed clusters. The managed cluster will have the container deployed as part the
+tigera-guardian deployment.
 
 Voltron container has route defined for any requests that starts with `/packet-capture/` prefix. It will strip away that 
 prefix and forward it to the container where this service resides.
+
+For a multicluster setup, Voltron will proxy a call to the managed cluster that starts with `/packet-capture/` and header `X-CLUSTER-ID`. This
+request will be sent to Guardian, via the tunnel. Guardian will proxy this request to its container of the PacketCapture
+API, after it strips away the prefix.
 
 ## Building and testing
 
@@ -91,10 +96,16 @@ make ut
 | PACKETCAPTURE_API_MULTI_CLUSTER_FORWARDING_ENDPOINT | `https://localhost:9443`      |    CA endpoint for multicluster communication |
 
 
-This API makes use of tigera-manager service account and requires the following permissions:
+This API makes use of tigera-manager service account and requires the following permissions in the management and standalone cluster:
 - GET for api group `projectcalico.org` for resource `packetcaptures`
 - CREATE for api group `projectcalico.org` for resource `authenticationreviews`
-- LIST,WATCH,GET for api group `projectcalico.org` for resource `managedclusters`
+- LIST for core v1 group for resource `pods` in namespace tigera-fluentd
+- CREATE for core v1 group for subresource `pods/exec` in namespace tigera-fluentd
+- CREATE for api group `authorization.k8s.io` for resource `subjectaccessreviews`
+
+In a managed cluster, it makes use of tigera-guardian service account and requires the following permissions:
+- GET for api group `projectcalico.org` for resource `packetcaptures`
+- CREATE for api group `projectcalico.org` for resource `authenticationreviews`
 - LIST for core v1 group for resource `pods` in namespace tigera-fluentd
 - CREATE for core v1 group for subresource `pods/exec` in namespace tigera-fluentd
 - CREATE for api group `authorization.k8s.io` for resource `subjectaccessreviews`
