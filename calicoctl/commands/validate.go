@@ -23,9 +23,10 @@ import (
 	"github.com/tigera/licensing/client"
 	"gopkg.in/yaml.v2"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 func Validate(args []string) error {
