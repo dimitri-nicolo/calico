@@ -21,7 +21,7 @@ require (
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/api v0.0.0-20210706154750-8686d6f77130
+	github.com/tigera/api v0.0.0-20210720144753-0dd043a1a989
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -39,6 +39,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210715143844-c5878717b364
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210720171501-2d2eccfd4964
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

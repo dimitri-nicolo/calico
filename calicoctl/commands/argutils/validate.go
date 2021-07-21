@@ -20,7 +20,8 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
