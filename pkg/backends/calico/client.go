@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import (
 	"github.com/kelseyhightower/confd/pkg/resource/template"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/bgpsyncer"
@@ -43,11 +43,12 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	lerr "github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/typha/pkg/syncproto"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 const globalLogging = "/calico/bgp/v1/global/loglevel"
@@ -819,11 +820,11 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 		}
 
 		// It's a v3 resource - we care about some of these.
-		if v3key.Kind == apiv3.KindNode {
+		if v3key.Kind == libapiv3.KindNode {
 			// Convert to v1 key/value pairs.
 			log.Debugf("Node: %#v", u.Value)
 			if u.Value != nil {
-				log.Debugf("BGPSpec: %#v", u.Value.(*apiv3.Node).Spec.BGP)
+				log.Debugf("BGPSpec: %#v", u.Value.(*libapiv3.Node).Spec.BGP)
 			}
 			kvps, err := c.nodeV1Processor.Process(&u.KVPair)
 			if err != nil {
@@ -855,7 +856,7 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 				}
 			} else {
 				// This was a create or update - update node labels.
-				v3res, ok := u.Value.(*apiv3.Node)
+				v3res, ok := u.Value.(*libapiv3.Node)
 				if !ok {
 					log.Warning("Bad value for Node resource")
 					continue
