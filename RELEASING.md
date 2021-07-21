@@ -187,6 +187,8 @@ This makes sure that requests coming to `/archive/vX.Y` (without a slash) don't 
 (Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
 This makes sure that requests coming to `/vX.Y` (without a slash) don't fail with 404 when this branch is promoted to latest.
 
+1. In [netlify/sitemap-index.xml](netlify/sitemap-index.xml) append a new sitemap location to the sitemap index for the release version.
+
 1. If appropriate, update the list of tested versions for different platforms in the appropriate documents.
 
    - Kubernetes `getting-started/kubernetes/requirements.md`
