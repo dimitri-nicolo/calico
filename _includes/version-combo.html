@@ -4,17 +4,17 @@
   </button>
   <ul class="dropdown-menu" aria-labelledby="nav-version-dropdown" style="margin:0">
       {%- if site.archive %}
-      <li><a href="#">latest</a></li>
+      <li><a href="/">latest</a></li>
       <li role="separator" class="divider"></li>
-      <li><a href="#">nightly</a></li>
-      <li><a href="#">{{site.data.versions.first.title}}</a></li>
+      <li><a href="/master">nightly</a></li>
+      <li><a href="/{{page.version}}">{{site.data.versions.first.title}}</a></li>
       {%- for version in site.data.archives %}
           {%- if version.first %}
           {%- for v in version["legacy"] %}
-          <li><a href="#">Version {{ v | replace: "v", "" }}</a></li>
+          <li><a href="/{{ v }}">Version {{ v | replace: "v", "" }}</a></li>
           {%- endfor %}
           {%- else %}
-          <li><a href="#">Version {{ version | replace: "v", ""  }}</a></li>
+          <li><a href="/{{ version }}">Version {{ version | replace: "v", ""  }}</a></li>
           {%- endif %}
       {%- endfor %}
       {% endif %}
