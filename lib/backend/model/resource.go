@@ -166,17 +166,6 @@ func init() {
 		"remoteclusterconfigurations",
 		reflect.TypeOf(apiv3.RemoteClusterConfiguration{}),
 	)
-	// Resources internal to the backend.
-	registerResourceInfo(
-		apiv3.KindK8sService,
-		"k8s-service",
-		reflect.TypeOf(kapiv1.Service{}),
-	)
-	registerResourceInfo(
-		apiv3.KindK8sEndpoints,
-		"k8s-endpoints",
-		reflect.TypeOf(kapiv1.Endpoints{}),
-	)
 	registerResourceInfo(
 		apiv3.KindGlobalAlert,
 		"globalalerts",
@@ -216,6 +205,17 @@ func init() {
 		apiv3.KindDeepPacketInspection,
 		"deeppacketinspections",
 		reflect.TypeOf(apiv3.DeepPacketInspection{}),
+	)
+	// Resources that are translations of Kubernetes resources and effectively read-only representations.
+	registerResourceInfo(
+		apiv3.KindK8sService,
+		"k8s-service",
+		reflect.TypeOf(kapiv1.Service{}),
+	)
+	registerResourceInfo(
+		apiv3.KindK8sEndpoints,
+		"k8s-endpoints",
+		reflect.TypeOf(kapiv1.Endpoints{}),
 	)
 }
 

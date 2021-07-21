@@ -5,12 +5,14 @@ package model
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 )
 
 var (
-	typeRemoteClusterStatus = reflect.TypeOf(RemoteClusterStatus{})
+	matchRemoteClusterStatus = regexp.MustCompile("^/?calico/felix/v1/remotecluster/([^/]+)$")
+	typeRemoteClusterStatus  = reflect.TypeOf(RemoteClusterStatus{})
 )
 
 // The RemoteClusterStatus is an ephemeral type that is returned by the Felix syncer. It is used to indicate
@@ -80,6 +82,6 @@ func (r RemoteClusterStatusType) String() string {
 }
 
 type RemoteClusterStatus struct {
-	Status RemoteClusterStatusType
-	Error  string
+	Status RemoteClusterStatusType `json:"status,omitempty" validate:"omitempty"`
+	Error  string                  `json:"error,omitempty" validate:"omitempty"`
 }

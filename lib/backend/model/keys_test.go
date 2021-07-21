@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/net"
 )
@@ -326,10 +326,36 @@ var _ = DescribeTable(
 		&BlockAffinity{},
 	),
 	Entry(
+		"RemoteClusterStatus",
+		RemoteClusterStatusKey{
+			Name: "my-cluster",
+		},
+		`{"status": 1, "error": "hello"}`,
+		&RemoteClusterStatus{
+			Status: 1, Error: "hello",
+		},
+	),
+	Entry(
 		"BGPPeer",
 		ResourceKey{
 			Kind: apiv3.KindBGPPeer,
 			Name: "my-peer",
+		},
+		`{"spec":{"node": "node"}}`,
+		&apiv3.BGPPeer{
+			Spec: apiv3.BGPPeerSpec{
+				Node: "node",
+			},
+		},
+	),
+	Entry(
+		"Remote BGPPeer",
+		RemoteClusterResourceKey{
+			Cluster: "my-cluster",
+			ResourceKey: ResourceKey{
+				Kind: apiv3.KindBGPPeer,
+				Name: "my-peer",
+			},
 		},
 		`{"spec":{"node": "node"}}`,
 		&apiv3.BGPPeer{

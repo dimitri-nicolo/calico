@@ -264,6 +264,19 @@ func KeyFromDefaultPath(path string) Key {
 			Namespace: unescapeName(m[2]),
 			Name:      unescapeName(m[3]),
 		}
+	} else if m := matchRemoteClusterStatus.FindStringSubmatch(path); m != nil {
+		log.Debugf("Path is a remote cluster status: %v", path)
+		return RemoteClusterStatusKey{
+			Name: unescapeName(m[1]),
+		}
+	} else if m := matchRemoteClusterResource.FindStringSubmatch(path); m != nil {
+		log.Debugf("Path is a remote cluster resource: %v", path)
+		if resourceKey, ok := KeyFromDefaultPath(unescapeName(m[2])).(ResourceKey); ok {
+			return RemoteClusterResourceKey{
+				Cluster:     unescapeName(m[1]),
+				ResourceKey: resourceKey,
+			}
+		}
 	} else if m := matchPolicy.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a policy: %v", path)
 		return PolicyKey{
