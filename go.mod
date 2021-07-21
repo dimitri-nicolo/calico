@@ -13,14 +13,13 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2-0.20210521161459-221c1edde3fd
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
-	gopkg.in/ini.v1 v1.44.0 // indirect
+	github.com/tigera/api v0.0.0-20210716134604-dfc21f9ef7c1
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210715192804-4e8fb609e430
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210719175901-914bcdb9a699
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
