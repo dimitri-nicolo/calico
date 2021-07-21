@@ -86,7 +86,7 @@ LIBCALICO_REPO=github.com/tigera/libcalico-go-private
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins:  update-licensing-pin replace-libcalico-pin
+update-pins:  update-licensing-pin update-api-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary
