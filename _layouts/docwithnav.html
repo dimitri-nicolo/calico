@@ -190,6 +190,7 @@ The code is a little roundabout for a few reasons:
     <script>
       $(document).ready(function() {
         window.initializeSearch('{{page.version}}', '.search-powered-by', '.search-input-container', '.search-container', '.search-container__results', '.search-container__pagination');
+        $('.version-combo > ul.dropdown-menu').load('/releases #release-list > li');
       });
     </script>
   </body>
