@@ -190,7 +190,7 @@ type Config struct {
 	BPFKubeProxyEndpointSlicesEnabled  bool           `config:"bool;false"`
 	BPFExtToServiceConnmark            int            `config:"int;0"`
 	FlowLogsCollectProcessInfo         bool           `config:"bool;false"`
-	FlowLogsCollectTcpStats            bool           `config:"bool;false"`
+	FlowLogsCollectTcpStats            bool           `config:"bool;true"`
 
 	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
 	// are configured for cgroup v1, which prevents all but hte root cgroup v2 from working so this is only useful
