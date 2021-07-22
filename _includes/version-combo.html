@@ -1,5 +1,5 @@
 <button class="btn btn-default btn-block dropdown-toggle" type="button" id="nav-version-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    {{site.data.versions.first.title}}
+    {% if site.data.versions.first.title == "master" %}nightly{% else %}{{site.data.versions.first.title | slice: 0,4 | replace: "v", "Version "}}{% endif %}
     <span class="caret"></span>
 </button>
 <ul class="dropdown-menu" aria-labelledby="nav-version-dropdown" style="margin:0">
