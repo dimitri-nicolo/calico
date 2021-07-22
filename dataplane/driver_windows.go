@@ -16,15 +16,28 @@ package dataplane
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"os/exec"
+<<<<<<< HEAD
 	"sync"
+=======
+	"strconv"
+>>>>>>> origin/release-v3.20
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
+<<<<<<< HEAD
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
+=======
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+
+>>>>>>> origin/release-v3.20
 	"github.com/projectcalico/felix/config"
 	windataplane "github.com/projectcalico/felix/dataplane/windows"
 	"github.com/projectcalico/felix/dataplane/windows/hns"
@@ -76,6 +89,7 @@ func SupportsBPF() error {
 	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }
 
+<<<<<<< HEAD
 func SupportsBPFKprobe() error {
 	return fmt.Errorf("BPF Kprobe is not supported on Windows")
 }
@@ -107,8 +121,35 @@ func ServePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
 		)
+=======
+func ServePrometheusMetrics(configParams *config.Config) {
+	log.WithFields(log.Fields{
+		"host": configParams.PrometheusMetricsHost,
+		"port": configParams.PrometheusMetricsPort,
+	}).Info("Starting prometheus metrics endpoint")
+	if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
+		log.Info("Including Golang, and Process metrics")
+	} else {
+		if !configParams.PrometheusGoMetricsEnabled {
+			log.Info("Discarding Golang metrics")
+			prometheus.Unregister(prometheus.NewGoCollector())
+		}
+		if !configParams.PrometheusProcessMetricsEnabled {
+			log.Info("Discarding process metrics")
+			prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+		}
+	}
+	http.Handle("/metrics", promhttp.Handler())
+	addr := net.JoinHostPort(configParams.PrometheusMetricsHost, strconv.Itoa(configParams.PrometheusMetricsPort))
+	for {
+		err := http.ListenAndServe(addr, nil)
+>>>>>>> origin/release-v3.20
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
 	}
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/release-v3.20

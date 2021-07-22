@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/felix/versionparse"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
@@ -39,7 +39,7 @@ const (
 	applyPeriod  = 5 * time.Second
 )
 
-var _ = infrastructure.DatastoreDescribe("with initialized Felix", []apiconfig.DatastoreType{apiconfig.EtcdV3 /*, apiconfig.Kubernetes*/}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("XDP tests with initialized Felix", []apiconfig.DatastoreType{apiconfig.EtcdV3 /*, apiconfig.Kubernetes*/}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra        infrastructure.DatastoreInfra
 		felixes      []*infrastructure.Felix
@@ -290,6 +290,7 @@ var _ = infrastructure.DatastoreDescribe("with initialized Felix", []apiconfig.D
 				expectAllAllowed(ccTCP)
 				expectAllAllowed(ccUDP)
 			})
+			// NJ: this is odd; no blacklist testing here.
 		})
 
 		Context("blocking full IP", func() {
@@ -423,8 +424,11 @@ var _ = infrastructure.DatastoreDescribe("with initialized Felix", []apiconfig.D
 					err := utils.RunMayFail("docker", "exec", felixes[1].Name, "ip", "link", "set", "dev", "eth0", "xdp", "off")
 					Expect(err).NotTo(HaveOccurred())
 
-					utils.Run("docker", "exec", felixes[1].Name, "ip", "addr", "show", "eth0")
-					Expect(utils.LastRunOutput).NotTo(ContainSubstring("xdp"))
+					// Note: we can't reliably check the following here, because
+					// resync may have happened _immediately_ following the
+					// previous "xdp off" command.
+					// utils.Run("docker", "exec", felixes[1].Name, "ip", "addr", "show", "eth0")
+					// Expect(utils.LastRunOutput).NotTo(ContainSubstring("xdp"))
 
 					// wait for resync
 					time.Sleep(resyncPeriod)

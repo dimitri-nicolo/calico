@@ -1,7 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
-
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -40,15 +39,13 @@ import (
 	"math/rand"
 	"net/http"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 
 	"time"
 

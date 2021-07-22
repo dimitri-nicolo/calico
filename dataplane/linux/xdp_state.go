@@ -130,6 +130,37 @@ func (x *xdpState) PopulateCallbacks(cbs *common.Callbacks) {
 			cbs.RemoveMembersIPSetV4.Append(x.ipV4State.removeMembersIPSet),
 			cbs.ReplaceIPSetV4.Append(x.ipV4State.replaceIPSet),
 			cbs.RemoveIPSetV4.Append(x.ipV4State.removeIPSet),
+
+func (x *xdpState) OnUpdate(protoBufMsg interface{}) {
+	log.WithField("msg", protoBufMsg).Debug("Received message")
+	switch msg := protoBufMsg.(type) {
+	case *proto.IPSetDeltaUpdate:
+		log.WithField("ipSetId", msg.Id).Debug("IP set delta update")
+		x.ipV4State.addMembersIPSet(msg.Id, membersToSet(msg.AddedMembers))
+		x.ipV4State.removeMembersIPSet(msg.Id, membersToSet(msg.RemovedMembers))
+	case *proto.IPSetUpdate:
+		log.WithField("ipSetId", msg.Id).Debug("IP set update")
+		x.ipV4State.replaceIPSet(msg.Id, membersToSet(msg.Members))
+	case *proto.IPSetRemove:
+		log.WithField("ipSetId", msg.Id).Debug("IP set remove")
+		x.ipV4State.removeIPSet(msg.Id)
+	case *proto.ActivePolicyUpdate:
+		log.WithField("id", msg.Id).Debug("Updating policy chains")
+		x.ipV4State.updatePolicy(*msg.Id, msg.Policy)
+	case *proto.ActivePolicyRemove:
+		log.WithField("id", msg.Id).Debug("Removing policy chains")
+		x.ipV4State.removePolicy(*msg.Id)
+	}
+}
+
+func (x *xdpState) CompleteDeferredWork() error {
+	return nil
+}
+
+func (x *xdpState) PopulateCallbacks(cbs *callbacks) {
+	if x.ipV4State != nil {
+		cbIDs := []*CbID{
+>>>>>>> origin/release-v3.20
 			cbs.AddInterfaceV4.Append(x.ipV4State.addInterface),
 			cbs.RemoveInterfaceV4.Append(x.ipV4State.removeInterface),
 			cbs.UpdateInterfaceV4.Append(x.ipV4State.updateInterface),
@@ -1777,12 +1808,15 @@ func (a *xdpBPFActions) apply(memberCache *xdpMemberCache, ipsetIDsToMembers *ip
 		for _, mode := range allXDPModes {
 			if err := memberCache.bpfLib.RemoveXDP(iface, mode); err != nil {
 				removeErrs = append(removeErrs, err)
-			} else {
-				removeErrs = nil
-				break
 			}
+			// Note: keep trying to remove remaining possible modes, even if that one
+			// appeared to succeed.  With current kernel and iproute2, RemoveXDP reports
+			// success if there _wasn't_ any XDP program attached in the specified mode.
+			// So, if we stop after the first mode that reports success, we won't remove
+			// the XDP program in the mode that is actually in use!
 		}
-		if removeErrs != nil {
+		// Only report an error if _all_ of the mode-specific removals failed.
+		if len(removeErrs) == len(allXDPModes) {
 			opErr = fmt.Errorf("failed to remove XDP program from %s: %v", iface, removeErrs)
 			return set.StopIteration
 		}

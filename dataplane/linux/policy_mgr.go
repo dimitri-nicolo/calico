@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017, 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +58,6 @@ type policyManager struct {
 	filterTable  iptablesTable
 	ruleRenderer policyRenderer
 	ipVersion    uint8
-	callbacks    policyManagerCallbacks
 }
 
 type policyRenderer interface {
@@ -73,7 +72,6 @@ func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRend
 		filterTable:  filterTable,
 		ruleRenderer: ruleRenderer,
 		ipVersion:    ipVersion,
-		callbacks:    newPolicyManagerCallbacks(callbacks, ipVersion),
 	}
 }
 
@@ -88,7 +86,6 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 		m.rawTable.UpdateChains(chains)
 		m.mangleTable.UpdateChains(chains)
 		m.filterTable.UpdateChains(chains)
-		m.callbacks.InvokeUpdatePolicy(*msg.Id, msg.Policy)
 	case *proto.ActivePolicyRemove:
 		log.WithField("id", msg.Id).Debug("Removing policy chains")
 		inName := rules.PolicyChainName(rules.PolicyInboundPfx, msg.Id)
@@ -100,7 +97,6 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 		m.mangleTable.RemoveChainByName(outName)
 		m.rawTable.RemoveChainByName(inName)
 		m.rawTable.RemoveChainByName(outName)
-		m.callbacks.InvokeRemovePolicy(*msg.Id)
 	case *proto.ActiveProfileUpdate:
 		log.WithField("id", msg.Id).Debug("Updating profile chains")
 		inbound, outbound := m.ruleRenderer.ProfileToIptablesChains(msg.Id, msg.Profile, m.ipVersion)

@@ -17,9 +17,11 @@
 package fv_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,14 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/onsi/gomega/types"
+	log "github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/projectcalico/api/pkg/lib/numorstring"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
+	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -43,7 +44,6 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -70,6 +70,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []api
 		wls          [nodeCount]*workload.Workload // simulated host workloads
 		cc           *connectivity.Checker
 		routeEntries [nodeCount]string
+		dmesgCmd     *exec.Cmd
+		dmesgBuf     bytes.Buffer
+		dmesgKill    func()
 	)
 
 	BeforeEach(func() {
@@ -77,6 +80,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []api
 		if os.Getenv("FELIX_FV_WIREGUARD_AVAILABLE") != "true" {
 			Skip("Skipping Wireguard supported tests.")
 		}
+
+		// Enable Wireguard module debugging.
+		utils.Run("sudo", "sh", "-c", "echo module wireguard +p > /sys/kernel/debug/dynamic_debug/control")
+
+		// Start a process tailing the dmesg log.
+		ctx, cancel := context.WithCancel(context.Background())
+		dmesgCmd = exec.CommandContext(ctx, "sudo", "dmesg", "-wH")
+		dmesgCmd.Stdout = &dmesgBuf
+		dmesgCmd.Stderr = &dmesgBuf
+		err := dmesgCmd.Start()
+		Expect(err).NotTo(HaveOccurred())
+		dmesgKill = cancel
+		log.Info("Started dmesg log capture")
 
 		infra = getInfra()
 		topologyOptions := wireguardTopologyOptions("CalicoIPAM", true)
@@ -109,6 +125,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported", []api
 	})
 
 	AfterEach(func() {
+		if dmesgKill != nil {
+			log.Info("Stop dmesg log capture")
+			dmesgKill()
+			log.Infof("Captured dmesg log:\n%v", dmesgBuf.String())
+		}
+
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range felixes {
 				felix.Exec("ip", "addr")
@@ -1184,14 +1206,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3-node 
 
 		By("checking prometheus metrics render")
 		for _, felix := range felixes {
-			s, err := felix.ExecOutput("wget", "localhost:9091/metrics", "-O", "-")
+			s, err := felix.ExecCombinedOutput("wget", "localhost:9091/metrics", "-O", "-")
 			Expect(err).ToNot(HaveOccurred())
 			// quick and dirty comparison to see if metrics we want exist and with correct type
 			for _, expectedMetric := range []string{
 				"# TYPE wireguard_meta gauge",
 				"# TYPE wireguard_latest_handshake_seconds gauge",
-				"# TYPE wireguard_bytes_rcvd_total counter",
-				"# TYPE wireguard_bytes_sent_total counter",
+				"# TYPE wireguard_bytes_rcvd counter",
+				"# TYPE wireguard_bytes_sent counter",
 			} {
 				Expect(s).To(ContainSubstring(expectedMetric))
 			}

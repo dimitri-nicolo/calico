@@ -24,13 +24,10 @@ import (
 
 	"github.com/projectcalico/felix/fv/connectivity"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
 
+	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/collector"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 
 	"github.com/projectcalico/felix/fv/containers"
