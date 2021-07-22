@@ -1,6 +1,12 @@
 // Copyright (c) 2018 Tigera, Inc. All rights reserved.
 package model
 
+import "regexp"
+
+var (
+	matchRemoteClusterResource = regexp.MustCompile("^/?cluster/([^/]+)(/.+)$")
+)
+
 type RemoteClusterResourceKey struct {
 	ResourceKey
 
@@ -17,5 +23,5 @@ func (key RemoteClusterResourceKey) defaultDeletePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return key.Cluster + ":" + p, nil
+	return "/cluster/" + key.Cluster + p, nil
 }

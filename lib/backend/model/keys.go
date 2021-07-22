@@ -23,14 +23,10 @@ import (
 	"strings"
 	"time"
 
-	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/libcalico-go/lib/namespace"
 	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
@@ -245,6 +241,42 @@ func KeyFromDefaultPath(path string) Key {
 		return LicenseKeyKey{
 			Name: unescapeName(m[1]),
 		}
+	} else if m := matchGlobalResource.FindStringSubmatch(path); m != nil {
+		ri := resourceInfoByPlural[unescapeName(m[1])]
+		if namespace.IsNamespaced(ri.kind) {
+			log.Warnf("(BUG) Path is a global resource, but resource is namespaced: %v", path)
+			return nil
+		}
+		log.Debugf("Path is a global resource: %v", path)
+		return ResourceKey{
+			Kind: ri.kind,
+			Name: unescapeName(m[2]),
+		}
+	} else if m := matchNamespacedResource.FindStringSubmatch(path); m != nil {
+		ri := resourceInfoByPlural[unescapeName(m[1])]
+		if !namespace.IsNamespaced(ri.kind) {
+			log.Warnf("(BUG) Path is a namespaced resource, but resource is global: %v", path)
+			return nil
+		}
+		log.Debugf("Path is a namespaced resource: %v", path)
+		return ResourceKey{
+			Kind:      resourceInfoByPlural[unescapeName(m[1])].kind,
+			Namespace: unescapeName(m[2]),
+			Name:      unescapeName(m[3]),
+		}
+	} else if m := matchRemoteClusterStatus.FindStringSubmatch(path); m != nil {
+		log.Debugf("Path is a remote cluster status: %v", path)
+		return RemoteClusterStatusKey{
+			Name: unescapeName(m[1]),
+		}
+	} else if m := matchRemoteClusterResource.FindStringSubmatch(path); m != nil {
+		log.Debugf("Path is a remote cluster resource: %v", path)
+		if resourceKey, ok := KeyFromDefaultPath(unescapeName(m[2])).(ResourceKey); ok {
+			return RemoteClusterResourceKey{
+				Cluster:     unescapeName(m[1]),
+				ResourceKey: resourceKey,
+			}
+		}
 	} else if m := matchPolicy.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a policy: %v", path)
 		return PolicyKey{
@@ -301,28 +333,6 @@ func KeyFromDefaultPath(path string) Key {
 	} else if k := (BlockAffinityListOptions{}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else if k := (BlockListOptions{}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: libapiv3.KindNode}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindBGPPeer}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindBGPConfiguration}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindNetworkPolicy}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindIPPool}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindK8sService}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindK8sEndpoints}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindRemoteClusterConfiguration}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindPacketCapture}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: apiv3.KindProfile}).KeyFromDefaultPath(path); k != nil {
-		return k
-	} else if k := (ResourceListOptions{Kind: v3.KindDeepPacketInspection}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else if k := (HostEndpointStatusListOptions{}).KeyFromDefaultPath(path); k != nil {
 		return k
