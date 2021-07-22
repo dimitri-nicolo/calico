@@ -1222,9 +1222,10 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				{
 					Comment: []string{"Proxy selected nodeports"},
 					Match: Match().
+						Protocol("tcp").
 						DestAddrType(AddrTypeLocal).
 						// We use a single port ipset for both V4 and V6
-						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports")),
+						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports-tcp")),
 					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
 				},
 			},

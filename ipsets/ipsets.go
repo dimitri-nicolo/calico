@@ -260,11 +260,9 @@ func (s *IPSets) filterAndCanonicaliseMembers(ipSetType IPSetType, members []str
 	filtered := set.New()
 	wantIPV6 := s.IPVersionConfig.Family == IPFamilyV6
 	for _, member := range members {
-		if ipSetType != IPSetTypeBitmapPort { // ports do not have a family
-			isIPV6 := ipSetType.IsMemberIPV6(member)
-			if wantIPV6 != isIPV6 {
-				continue
-			}
+		isIPV6 := ipSetType.IsMemberIPV6(member)
+		if wantIPV6 != isIPV6 {
+			continue
 		}
 		filtered.Add(ipSetType.CanonicaliseMember(member))
 	}

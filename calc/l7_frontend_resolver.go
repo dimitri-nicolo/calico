@@ -24,7 +24,7 @@ import (
 
 const l7LoggingAnnotation = "projectcalico.org/l7-logging"
 const TPROXYServicesIPSet = "tproxy-services"
-const TPROXYNodePortsIPSet = "tproxy-nodeports"
+const TPROXYNodePortsTCPIPSet = "tproxy-nodeports-tcp"
 
 // L7FrontEndResolver maintains most up-to-date list of all L7 logging enabled frontends.
 //
@@ -52,7 +52,7 @@ func NewL7FrontEndResolver(callbacks ipSetUpdateCallbacks, conf *config.Config) 
 		activeNodePorts: make(map[portProtoKey][]proxy.ServicePortName),
 	}
 	tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-	tpr.callbacks.OnIPSetAdded(TPROXYNodePortsIPSet, proto.IPSetUpdate_PORTS)
+	tpr.callbacks.OnIPSetAdded(TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
 
 	return tpr
 }
@@ -214,15 +214,25 @@ func (tpr *L7FrontEndResolver) flushNodePorts(added map[portProtoKey][]proxy.Ser
 	removed map[portProtoKey]struct{}) {
 
 	for portProto := range removed {
-		member := getIpSetPortMemberFromPortProto(portProto)
-		tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsIPSet, member)
-		delete(tpr.activeNodePorts, portProto)
+		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
+			member := getIpSetPortMemberFromPortProto(portProto)
+			member.Family = 4
+			tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsTCPIPSet, member)
+			member.Family = 6
+			tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsTCPIPSet, member)
+			delete(tpr.activeNodePorts, portProto)
+		}
 	}
 
 	for portProto, value := range added {
-		member := getIpSetPortMemberFromPortProto(portProto)
-		tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsIPSet, member)
-		tpr.activeNodePorts[portProto] = value
+		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
+			member := getIpSetPortMemberFromPortProto(portProto)
+			member.Family = 4
+			tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsTCPIPSet, member)
+			member.Family = 6
+			tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsTCPIPSet, member)
+			tpr.activeNodePorts[portProto] = value
+		}
 	}
 
 }

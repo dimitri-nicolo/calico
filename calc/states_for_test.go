@@ -2024,7 +2024,7 @@ var clusterIPWithL7Annotation = withOutL7Annotation.withKVUpdates(
 ).withIPSet(tproxyIpSetSelector, []string{
 	"10.0.0.0,tcp:123",
 }).withIPSet(tproxyIpSetNodeports, []string{
-	"234",
+	"v4,234", "v6,234",
 }).withName("clusterIPWithL7Annotation")
 
 var externalIPWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
@@ -2034,7 +2034,7 @@ var externalIPWithL7Annotation = clusterIPWithL7Annotation.withKVUpdates(
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
 }).withIPSet(tproxyIpSetNodeports, []string{
-	"234",
+	"v4,234", "v6,234",
 }).withName("externalIPWithL7Annotation")
 
 var deleteClusterIPL7Annotation = externalIPWithL7Annotation.withKVUpdates(
@@ -2043,7 +2043,7 @@ var deleteClusterIPL7Annotation = externalIPWithL7Annotation.withKVUpdates(
 	"2001:569:7007:1a00:45ac:2caa:a3be:5e10,tcp:123",
 	"10.0.0.20,tcp:123",
 }).withIPSet(tproxyIpSetNodeports, []string{
-	"234",
+	"v4,234", "v6,234",
 }).withName("deleteClusterIPL7Annotation")
 
 var deleteExternalIPL7Annotation = deleteClusterIPL7Annotation.withKVUpdates(

@@ -58,7 +58,7 @@ var (
 	httpMatchMethod             = HTTPMatch{Methods: []string{"GET"}}
 	serviceAccountSelector      = "name == 'sa1'"
 	tproxyIpSetSelector         = "tproxy-services"
-	tproxyIpSetNodeports        = "tproxy-nodeports"
+	tproxyIpSetNodeports        = "tproxy-nodeports-tcp"
 )
 
 // Canned workload endpoints.

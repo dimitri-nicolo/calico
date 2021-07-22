@@ -57,7 +57,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
 			mockCallbacks.On("OnIPSetAdded", calc.TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
-			mockCallbacks.On("OnIPSetAdded", calc.TPROXYNodePortsIPSet, proto.IPSetUpdate_PORTS)
+			mockCallbacks.On("OnIPSetAdded", calc.TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
 
 			for _, addedMember := range addedMembers {
 				switch addedMember.setId {
@@ -70,10 +70,13 @@ var _ = Describe("L7FrontEndResolver", func() {
 						member.CIDR = ip.FromString(addedMember.ipAddr).AsCIDR()
 					}
 					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
-				case calc.TPROXYNodePortsIPSet:
+				case calc.TPROXYNodePortsTCPIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(addedMember.port),
 					}
+					member.Family = 4
+					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
+					member.Family = 6
 					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
 				}
 			}
@@ -89,10 +92,13 @@ var _ = Describe("L7FrontEndResolver", func() {
 						member.CIDR = ip.FromString(removedMember.ipAddr).AsCIDR()
 					}
 					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
-				case calc.TPROXYNodePortsIPSet:
+				case calc.TPROXYNodePortsTCPIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(removedMember.port),
 					}
+					member.Family = 4
+					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
+					member.Family = 6
 					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 				}
 			}
@@ -174,7 +180,11 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				// There are always 2 port updates, one for v4 and one for v6
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			[]output{},
@@ -221,7 +231,10 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			[]output{},
@@ -319,11 +332,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			[]output{{
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			&config.Config{},
@@ -374,7 +393,10 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			[]output{{
@@ -393,7 +415,10 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			&config.Config{},
@@ -447,7 +472,10 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			[]output{{
@@ -466,7 +494,10 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			&config.Config{},
@@ -498,7 +529,10 @@ var _ = Describe("L7FrontEndResolver", func() {
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId: calc.TPROXYNodePortsIPSet,
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}},
 			[]output{},

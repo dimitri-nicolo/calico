@@ -38,7 +38,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 	const (
 		l7LoggingAnnotation   = "projectcalico.org/l7-logging"
 		TPROXYServicesIPSetV4 = "cali40tproxy-services"
-		TPROXYNodeportsSet    = "cali40tproxy-nodeports"
+		TPROXYNodeportsSet    = "cali40tproxy-nodeports-tcp"
 		TPROXYPodToSelf       = "cali40tproxy-pod-self"
 	)
 
@@ -335,7 +335,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
 					It("should have connectivity only from w[1][0]", func() {
-						By("Denying traffic from w[1][1]", func() {
+						By("Denying traffic from w[1][1] and w[0][1]", func() {
 							pol := api.NewGlobalNetworkPolicy()
 							pol.Namespace = "fv"
 							pol.Name = "policy-deny-1-1"

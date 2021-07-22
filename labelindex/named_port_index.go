@@ -128,6 +128,7 @@ type IPSetMember struct {
 	Protocol   IPSetPortProtocol
 	PortNumber uint16
 	Domain     string
+	Family     int // Explicit IPv4 or IPv6 is we cannot tell otherwise - for instance for a port.
 }
 
 type ipSetData struct {
