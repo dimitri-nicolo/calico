@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,12 +42,20 @@ func (v *ValidationFilter) OnStatusUpdated(status api.SyncStatus) {
 }
 
 func (v *ValidationFilter) OnUpdates(updates []api.Update) {
-	filteredUpdates := make([]api.Update, len(updates))
-	for i, update := range updates {
+	filteredUpdates := make([]api.Update, 0, len(updates))
+	for _, update := range updates {
 		logCxt := logrus.WithFields(logrus.Fields{
 			"key":   update.Key,
 			"value": update.Value,
 		})
+
+		// When remote clusters are enabled we'll get RemoteClusterStatus types that we don't need to pass on to
+		// Felix.
+		if _, ok := update.Key.(model.RemoteClusterStatusKey); ok {
+			logCxt.Debug("Skipping RemoteClusterStatusKey")
+			continue
+		}
+
 		logCxt.Debug("Validating KV pair.")
 		validatorFunc := v1v.Validate
 		if _, isV3 := update.Key.(model.ResourceKey); isV3 {
@@ -94,7 +102,10 @@ func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 				}
 			}
 		}
-		filteredUpdates[i] = update
+		filteredUpdates = append(filteredUpdates, update)
 	}
-	v.sink.OnUpdates(filteredUpdates)
+
+	if len(filteredUpdates) > 0 {
+		v.sink.OnUpdates(filteredUpdates)
+	}
 }

@@ -93,4 +93,17 @@ var _ = Describe("ValidationFilter", func() {
 		Expect(s.countUpdates).To(Equal(1))
 		Expect(s.values[0]).NotTo(BeNil())
 	})
+
+	It("it should filter out RemoteClusterStatus types", func() {
+		v.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: "rccs1"},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterConnecting,
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		}})
+		Expect(s.countUpdates).To(Equal(0))
+	})
 })
