@@ -21,10 +21,9 @@ version.
 {%- endfor %}
 
 <div id="release-list" class="hidden" markdown="0">
-    <li><a href="/">latest</a></li>
+    <li><a href="/">{% if site.data.versions.first.title == "master" %}nightly{% else %}{{site.data.versions.first.title | slice: 0,4 | replace: "v", "Version "}}{% endif %}<span class="badge release-badge latest">latest</span></a></li>
     <li role="separator" class="divider"></li>
-    <li><a href="/master">nightly</a></li>
-    <li><a href="/{{page.version}}">{{site.data.versions.first.title}}</a></li>
+    <li><a href="/master">nightly<span class="badge release-badge nightly">master</span></a></li>
     {%- for version in site.data.archives %}
         {%- if version.first %}
         {%- for v in version["legacy"] %}

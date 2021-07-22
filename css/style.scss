@@ -575,3 +575,15 @@ $max-toc-height: calc(100vh - #{$sticky-top + $navbar-margin-bottom});
     top: 42px !important;
   }
 }
+
+.release-badge {
+  margin-left: 5px;
+}
+
+.latest {
+  background-color: #004078;
+}
+
+.nightly {
+  background-color: #f0ad4e;
+}
