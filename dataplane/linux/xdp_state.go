@@ -130,37 +130,6 @@ func (x *xdpState) PopulateCallbacks(cbs *common.Callbacks) {
 			cbs.RemoveMembersIPSetV4.Append(x.ipV4State.removeMembersIPSet),
 			cbs.ReplaceIPSetV4.Append(x.ipV4State.replaceIPSet),
 			cbs.RemoveIPSetV4.Append(x.ipV4State.removeIPSet),
-
-func (x *xdpState) OnUpdate(protoBufMsg interface{}) {
-	log.WithField("msg", protoBufMsg).Debug("Received message")
-	switch msg := protoBufMsg.(type) {
-	case *proto.IPSetDeltaUpdate:
-		log.WithField("ipSetId", msg.Id).Debug("IP set delta update")
-		x.ipV4State.addMembersIPSet(msg.Id, membersToSet(msg.AddedMembers))
-		x.ipV4State.removeMembersIPSet(msg.Id, membersToSet(msg.RemovedMembers))
-	case *proto.IPSetUpdate:
-		log.WithField("ipSetId", msg.Id).Debug("IP set update")
-		x.ipV4State.replaceIPSet(msg.Id, membersToSet(msg.Members))
-	case *proto.IPSetRemove:
-		log.WithField("ipSetId", msg.Id).Debug("IP set remove")
-		x.ipV4State.removeIPSet(msg.Id)
-	case *proto.ActivePolicyUpdate:
-		log.WithField("id", msg.Id).Debug("Updating policy chains")
-		x.ipV4State.updatePolicy(*msg.Id, msg.Policy)
-	case *proto.ActivePolicyRemove:
-		log.WithField("id", msg.Id).Debug("Removing policy chains")
-		x.ipV4State.removePolicy(*msg.Id)
-	}
-}
-
-func (x *xdpState) CompleteDeferredWork() error {
-	return nil
-}
-
-func (x *xdpState) PopulateCallbacks(cbs *callbacks) {
-	if x.ipV4State != nil {
-		cbIDs := []*CbID{
->>>>>>> origin/release-v3.20
 			cbs.AddInterfaceV4.Append(x.ipV4State.addInterface),
 			cbs.RemoveInterfaceV4.Append(x.ipV4State.removeInterface),
 			cbs.UpdateInterfaceV4.Append(x.ipV4State.updateInterface),
