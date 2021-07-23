@@ -589,7 +589,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	callbacks := common.NewCallback()
+	callbacks := common.NewCallbacks()
 	dp.callbacks = callbacks
 	if !config.BPFEnabled && config.XDPEnabled {
 		if err := bpf.SupportsXDP(); err != nil {

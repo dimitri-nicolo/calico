@@ -121,6 +121,15 @@ func NewXDPStateWithBPFLibrary(library bpf.BPFDataplane, allowGenericXDP bool) *
 	}
 }
 
+func membersToSet(members []string) set.Set /*string*/ {
+	membersSet := set.New()
+	for _, m := range members {
+		membersSet.Add(m)
+	}
+
+	return membersSet
+}
+
 func (x *xdpState) OnUpdate(protoBufMsg interface{}) {
 	log.WithField("msg", protoBufMsg).Debug("Received message")
 	switch msg := protoBufMsg.(type) {
@@ -149,7 +158,7 @@ func (x *xdpState) CompleteDeferredWork() error {
 
 func (x *xdpState) PopulateCallbacks(cbs *common.Callbacks) {
 	if x.ipV4State != nil {
-		cbIDs := []*CbID{
+		cbIDs := []*common.CbID{
 			cbs.AddInterfaceV4.Append(x.ipV4State.addInterface),
 			cbs.RemoveInterfaceV4.Append(x.ipV4State.removeInterface),
 			cbs.UpdateInterfaceV4.Append(x.ipV4State.updateInterface),

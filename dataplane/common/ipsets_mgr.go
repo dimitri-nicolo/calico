@@ -339,12 +339,3 @@ func (m *IPSetsManager) OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyn
 
 	return
 }
-
-func membersToSet(members []string) set.Set /*string*/ {
-	membersSet := set.New()
-	for _, m := range members {
-		membersSet.Add(m)
-	}
-
-	return membersSet
-}
