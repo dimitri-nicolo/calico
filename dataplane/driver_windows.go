@@ -16,8 +16,6 @@ package dataplane
 
 import (
 	"fmt"
-	"net"
-	"net/http"
 	"os/exec"
 	"sync"
 	"time"
