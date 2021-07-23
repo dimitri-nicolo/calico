@@ -20,6 +20,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/config"
 	. "github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
@@ -1231,38 +1232,59 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		})
 
-		tproxyRules = []Rule{
-			{
+		tproxyRules = nil
+
+		if r.KubernetesProvider == config.ProviderEKS {
+			tproxyRules = []Rule{{
+				Comment: []string{"Set the EKS nodeport mark that we bypass"},
+				Match: Match().
+					InInterface("eth0").
+					DestAddrTypeLimitIfaceIn(AddrTypeLocal),
+				Action: SetConnMarkAction{Mark: 0x80, Mask: 0x80},
+			}}
+		}
+
+		tproxyRules = append(tproxyRules,
+			Rule{
 				Comment: []string{"Divert the TCP connection to proxy"},
 				Match:   Match().Protocol("tcp").DestAddrType(AddrTypeLocal),
 				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
 			},
-			{
+			Rule{
 				Comment: []string{"Divert the TCP connection to proxy"},
 				Match:   Match().Protocol("udp").DestAddrType(AddrTypeLocal),
 				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
 			},
-		}
+		)
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 
-		chains = append(chains, &Chain{
-			Name: ChainMangleOutputTProxy,
-			Rules: []Rule{
-				{
-					// Proxied connections for regular services do not have
-					// local source nor destination. This is how we can easily
-					// identify the upstream part and mark it.
-					Comment: []string{"Mark any non-local connection as local for return"},
-					Action:  SetConnMarkAction{Mark: mark, Mask: mark},
-				},
-				{
-					// Proxied connections that are pod-to-self need to be masqueraded
-					Comment: []string{"MASQ proxied pod-service-self"},
-					Match:   Match().SourceDestSet(nameForIPSet("tproxy-pod-self")),
-					Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
-				},
+		rules := []Rule{
+			{
+				// Proxied connections for regular services do not have
+				// local source nor destination. This is how we can easily
+				// identify the upstream part and mark it.
+				Comment: []string{"Mark any non-local connection as local for return"},
+				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
 			},
+			{
+				// Proxied connections that are pod-to-self need to be masqueraded
+				Comment: []string{"MASQ proxied pod-service-self"},
+				Match:   Match().SourceDestSet(nameForIPSet("tproxy-pod-self")),
+				Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
+			},
+		}
+
+		if r.KubernetesProvider == config.ProviderEKS {
+			rules = append(rules, Rule{
+				Comment: []string{"Restore EKS nodeport routing mark"},
+				Action:  RestoreConnMarkAction{RestoreMask: 0x80},
+			})
+		}
+
+		chains = append(chains, &Chain{
+			Name:  ChainMangleOutputTProxy,
+			Rules: rules,
 		})
 	}
 
