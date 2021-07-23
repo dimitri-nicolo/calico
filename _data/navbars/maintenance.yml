@@ -28,8 +28,6 @@ section:
     path: /security/comms/manager-tls
   - title: TLS certificates for log storage
     path: /security/comms/log-storage-tls
-  - title: TLS certificates for Kibana
-    path: /security/comms/kibana-tls
   - title: TLS certificates for the API server
     path: /security/comms/apiserver-tls
   - title: TLS certificates for Typha and Node
