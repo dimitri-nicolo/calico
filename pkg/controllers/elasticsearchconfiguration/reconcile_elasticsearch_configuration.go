@@ -23,10 +23,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// This value is used in calculateUserChangeHash() to force ES users to be considered 'stale' and re-created in case there
-// is version skew between the Managed and Management clusters. The value can be bumped anytime we change something about
-// the way ES credentials work and need to re-create them.
-const EsUserCredentialsSchemaVersion = "1"
+const (
+	// This value is used in calculateUserChangeHash() to force ES users to be considered 'stale' and re-created in case there
+	// is version skew between the Managed and Management clusters. The value can be bumped anytime we change something about
+	// the way ES credentials work and need to re-create them.
+	EsUserCredentialsSchemaVersion = "1"
+
+	// Mark any secret containing credentials for ES gateway with this label key/value. This will allow ES gateway watch only the
+	// releveant secrets it needs.
+	ESGatewaySelectorLabel      = "esgateway.tigera.io/secrets"
+	ESGatewaySelectorLabelValue = "credentials"
+)
 
 type reconciler struct {
 	clusterName string
@@ -194,26 +201,48 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 		} else {
 			name = fmt.Sprintf("%s-%s-elasticsearch-access-gateway", string(username), c.clusterName)
 		}
-		// Create the user secret  in the Management cluster Elasticsearch namespace.
-		return writeUserSecret(name, resource.TigeraElasticsearchNamespace, changeHash, c.managementK8sCLI, username, data)
+
+		// Set required labels for the user secret.
+		labels := map[string]string{
+			UserChangeHashLabel:        changeHash,
+			ElasticsearchUserNameLabel: string(username),
+			ESGatewaySelectorLabel:     ESGatewaySelectorLabelValue,
+		}
+
+		// Create the user secret in the Management cluster Elasticsearch namespace.
+		return writeUserSecret(name, resource.TigeraElasticsearchNamespace, labels, c.managementK8sCLI, data)
 	}
+
+	// Set required labels for the user secret. We leave out the ES Gateway label initially here because the first write
+	// below is to the Operator namespace, which doesn't require this label.
+	labels := map[string]string{
+		UserChangeHashLabel:        changeHash,
+		ElasticsearchUserNameLabel: string(username),
+	}
+
 	// First create the secret in the Operator namespace in the appropriate cluster. If this is a Management cluster,
 	// c.managedK8sCLI actually contains a client for the Management cluster.
-	if err := writeUserSecret(name, resource.OperatorNamespace, changeHash, c.managedK8sCLI, username, data); err != nil {
+	if err := writeUserSecret(name, resource.OperatorNamespace, labels, c.managedK8sCLI, data); err != nil {
 		return err
 	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(esUser.Password), bcrypt.MinCost)
 	if err != nil {
 		return err
 	}
 	data["password"] = hash
+
 	if c.management {
 		name = fmt.Sprintf("%s-gateway-verification-credentials", string(username))
 	} else {
 		name = fmt.Sprintf("%s-%s-gateway-verification-credentials", string(username), c.clusterName)
 	}
+
+	// Now insert the additional label for ES Gateway (so that it knows to include this secret in its watch).
+	labels[ESGatewaySelectorLabel] = ESGatewaySelectorLabelValue
+
 	// Next create the user secret with the username and password hashed in the Management cluster Elasticsearch namespace.
-	return writeUserSecret(name, resource.TigeraElasticsearchNamespace, changeHash, c.managementK8sCLI, username, data)
+	return writeUserSecret(name, resource.TigeraElasticsearchNamespace, labels, c.managementK8sCLI, data)
 }
 
 // missingOrStaleUsers returns 2 maps, the first containing private users and the second containing public users that are
@@ -250,7 +279,7 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 		}
 		username := esusers.ElasticsearchUserName(secret.Labels[ElasticsearchUserNameLabel])
 		if user, exists := privateEsUsers[username]; exists {
-			userHash, err := c.calculateUserChangeHash(user	)
+			userHash, err := c.calculateUserChangeHash(user)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -300,15 +329,12 @@ func CleanUpESUserSecrets(clientset kubernetes.Interface) error {
 		})
 }
 
-func writeUserSecret(name, namespace, changeHash string, client kubernetes.Interface, username esusers.ElasticsearchUserName, data map[string][]byte) error {
+func writeUserSecret(name, namespace string, labels map[string]string, client kubernetes.Interface, data map[string][]byte) error {
 	return resource.WriteSecretToK8s(client, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: map[string]string{
-				UserChangeHashLabel:        changeHash,
-				ElasticsearchUserNameLabel: string(username),
-			},
+			Labels:    labels,
 		},
 		Data: data,
 	})
