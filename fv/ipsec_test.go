@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -22,9 +22,10 @@ import (
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const numPoliciesPerWep = 3
@@ -281,8 +282,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
-	var savedBGPSpec api.NodeBGPSpec
-	var node *api.Node
+	var savedBGPSpec libapi.NodeBGPSpec
+	var node *libapi.Node
 
 	restoreBGPSpec := func() {
 		felixPID := felixes[0].GetFelixPID()

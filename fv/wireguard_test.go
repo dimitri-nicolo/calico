@@ -34,9 +34,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -48,6 +49,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
