@@ -1,0 +1,26 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1 as ubi
+RUN microdnf update
+
+# Create Empty root filesystem on /rootfs, copy only required linux utils
+# and supporting files.This filesystem act as placeholder for
+# all files required in container.
+
+WORKDIR /rootfs
+
+RUN mkdir -p etc/ssl/certs && \
+    cp /etc/ssl/certs/* etc/ssl/certs
+
+ADD bin/deep-packet-inspection-amd64 /deep-packet-inspection
+
+FROM scratch
+
+COPY --from=ubi /rootfs /
+# Add your binary to the image
+COPY --chown=1001 --from=ubi /deep-packet-inspection /deep-packet-inspection
+
+WORKDIR /
+
+USER 1001
+
+# Now define the command-line call to start your application
+ENTRYPOINT ["/deep-packet-inspection"]
