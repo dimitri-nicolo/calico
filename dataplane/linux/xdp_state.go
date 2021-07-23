@@ -149,7 +149,7 @@ func (x *xdpState) CompleteDeferredWork() error {
 
 func (x *xdpState) PopulateCallbacks(cbs *common.Callbacks) {
 	if x.ipV4State != nil {
-		cbIDs := []*common.CbID{
+		cbIDs := []*CbID{
 			cbs.AddInterfaceV4.Append(x.ipV4State.addInterface),
 			cbs.RemoveInterfaceV4.Append(x.ipV4State.removeInterface),
 			cbs.UpdateInterfaceV4.Append(x.ipV4State.updateInterface),

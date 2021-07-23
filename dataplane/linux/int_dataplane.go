@@ -53,7 +53,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/config"
+	felixconfig "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -254,7 +254,7 @@ type Config struct {
 
 	RouteSource string
 
-	KubernetesProvider config.Provider
+	KubernetesProvider felixconfig.Provider
 
 	LookupsCache *calc.LookupsCache
 }
@@ -591,11 +591,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	callbacks := common.NewCallback()
 	dp.callbacks = callbacks
-	if config.XDPEnabled {
+	if !config.BPFEnabled && config.XDPEnabled {
 		if err := bpf.SupportsXDP(); err != nil {
 			log.WithError(err).Warn("Can't enable XDP acceleration.")
-			config.XDPEnabled = false
-		} else if !config.BPFEnabled {
+		} else {
 			st, err := NewXDPState(config.XDPAllowGeneric)
 			if err != nil {
 				log.WithError(err).Warn("Can't enable XDP acceleration.")
@@ -610,7 +609,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("XDP acceleration disabled.")
 	}
 
-	// TODO Support cleaning up non-BPF XDP state from a previous Felix run, when BPF mode has just been enabled.
+	// TODO Integrate XDP and BPF infra.
 	if !config.BPFEnabled && dp.xdpState == nil {
 		xdpState, err := NewXDPState(config.XDPAllowGeneric)
 		if err == nil {
@@ -851,10 +850,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		bpfEndpointManager = newBPFEndpointManager(
-			&config,
+			config.BPFLogLevel,
+			config.Hostname,
 			fibLookupEnabled,
+			config.RulesConfig.EndpointToHostAction,
+			config.BPFDataIfacePattern,
 			workloadIfaceRegex,
 			ipSetIDAllocator,
+			config.VXLANMTU,
+			uint16(config.VXLANPort),
+			config.BPFNodePortDSREnabled,
+			config.BPFExtToServiceConnmark,
 			ipSetsMap,
 			stateMap,
 			ruleRenderer,
@@ -1175,7 +1181,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
-			ctrd := collector.NewNetLinkConntrackReader(config.DefaultConntrackPollingInterval)
+			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval)
 			collectorConntrackInfoReader = ctrd
 		}
 
@@ -1311,7 +1317,7 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 		c.VXLANMTU = hostMTU - vxlanMTUOverhead
 	}
 	if c.Wireguard.MTU == 0 {
-		if c.KubernetesProvider == config.ProviderAKS && c.RouteSource == "WorkloadIPs" {
+		if c.KubernetesProvider == felixconfig.ProviderAKS && c.RouteSource == "WorkloadIPs" {
 			// The default MTU on Azure is 1500, but the underlying network stack will fragment packets at 1400 bytes,
 			// see https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-tcpip-performance-tuning#azure-and-vm-mtu
 			// for details.
