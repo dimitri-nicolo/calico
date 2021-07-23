@@ -28,7 +28,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/names"
 

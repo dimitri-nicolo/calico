@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"

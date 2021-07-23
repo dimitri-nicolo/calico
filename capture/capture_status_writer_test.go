@@ -15,8 +15,8 @@ import (
 
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/proto"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/projectcalico/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/projectcalico/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )

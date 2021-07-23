@@ -25,8 +25,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 

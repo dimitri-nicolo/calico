@@ -31,8 +31,8 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 
-	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"

@@ -21,8 +21,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"

@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	v3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/proto"

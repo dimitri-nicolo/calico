@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"

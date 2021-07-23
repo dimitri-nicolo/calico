@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ipsets"
 	. "github.com/projectcalico/felix/iptables"

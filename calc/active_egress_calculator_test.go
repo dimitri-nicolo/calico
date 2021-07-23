@@ -5,7 +5,7 @@ package calc
 import (
 	"fmt"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
