@@ -50,7 +50,7 @@ require (
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
+	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -61,7 +61,7 @@ require (
 	k8s.io/kubernetes v1.21.0-rc.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	modernc.org/memory v1.0.4
-	sigs.k8s.io/kind v0.9.0
+	sigs.k8s.io/kind v0.11.1
 )
 
 replace (

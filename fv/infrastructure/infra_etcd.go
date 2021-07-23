@@ -143,17 +143,13 @@ func (eds *EtcdDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 			IPv4IPIPTunnelAddr: felix.ExpectedIPIPTunnelAddr,
 		}
 	}
-<<<<<<< HEAD
 	if felix.ExpectedWireguardTunnelAddr != "" {
-		felixNode.Spec.Wireguard = &api.NodeWireguardSpec{
+		felixNode.Spec.Wireguard = &libapi.NodeWireguardSpec{
 			InterfaceIPv4Address: felix.ExpectedWireguardTunnelAddr,
 		}
 	}
 
-	nodeAddress := api.NodeAddress{Address: felix.IP, Type: api.InternalIP}
-=======
 	nodeAddress := libapi.NodeAddress{Address: felix.IP, Type: libapi.InternalIP}
->>>>>>> origin/release-v3.20
 	felixNode.Spec.Addresses = append(felixNode.Spec.Addresses, nodeAddress)
 	Eventually(func() error {
 		_, err := eds.GetCalicoClient().Nodes().Create(utils.Ctx, felixNode, utils.NoOptions)
