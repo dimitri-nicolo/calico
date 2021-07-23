@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -9,7 +9,7 @@ import (
 
 	"github.com/projectcalico/felix/calc"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -568,8 +568,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 			// update for a resource type that is not tracked
 			{
 				KVPair: model.KVPair{
-					Key:   model.ResourceKey{Kind: v3.KindNode},
-					Value: v3.Node{},
+					Key:   model.ResourceKey{Kind: libapiv3.KindNode},
+					Value: libapiv3.Node{},
 				},
 				UpdateType: api.UpdateTypeKVNew,
 			},

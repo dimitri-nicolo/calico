@@ -840,7 +840,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				mockProcSys.stat,
 				false,
 				hepListener,
-				common.NewCallback(),
+				common.NewCallbacks(),
 				nlHandle,
 				false,
 				"info",
