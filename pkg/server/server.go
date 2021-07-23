@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/es-gateway/pkg/cache"
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/clients/kibana"
 	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
@@ -43,6 +44,8 @@ type Server struct {
 
 	adminESUsername string // Used to store the username for a real ES admin user
 	adminESPassword string // Used to store the password for a real ES admin user
+
+	cache cache.SecretsCache // Used to store secrets related authN and credential swapping
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -66,12 +69,20 @@ func New(opts ...Option) (*Server, error) {
 	cfg.BuildNameToCertificate()
 
 	// -----------------------------------------------------------------------------------------------------
+	// Load all k8s secrets required for authN and credential swapping and keep it in sync.
+	// -----------------------------------------------------------------------------------------------------
+	srv.cache, err = cache.NewSecretCache(srv.ctx, srv.k8sClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// -----------------------------------------------------------------------------------------------------
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
 	middlewares := mid.GetHandlerMap(
 		srv.esClient,
-		srv.k8sClient,
+		srv.cache,
 		srv.adminESUsername,
 		srv.adminESPassword,
 	)

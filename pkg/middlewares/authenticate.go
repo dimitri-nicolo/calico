@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/es-gateway/pkg/cache"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/pkg/errors"
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 )
 
 type GatewayContextKey string
@@ -28,7 +28,7 @@ type User struct {
 // elasticAuthHandler returns an HTTP handler which acts as a middleware to authenticate a request against
 // Elasticsearch. If authentication is successful, then we set the user info into the request context for
 // later use.
-func elasticAuthHandler(c kubernetes.Client, next http.Handler) http.Handler {
+func elasticAuthHandler(c cache.SecretsCache, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Infof("Attempting ES authentication for request with URI %s", r.RequestURI)
 		var err error
@@ -73,7 +73,7 @@ func elasticAuthHandler(c kubernetes.Client, next http.Handler) http.Handler {
 }
 
 // NewAuthMiddleware returns an initialized version of elasticAuthHandler.
-func NewAuthMiddleware(c kubernetes.Client) func(http.Handler) http.Handler {
+func NewAuthMiddleware(c cache.SecretsCache) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return elasticAuthHandler(c, h)
 	}
@@ -97,8 +97,8 @@ func extractCredentials(value string) (string, string, error) {
 
 // getHashedESCredentials attempts to retrieve a hashed credentials value from the given secretName using the provided k8s
 // client for the given request.
-func getHashedESCredentials(c kubernetes.Client, r *http.Request, secretName string) (string, error) {
-	secret, err := c.GetSecret(r.Context(), secretName, ElasticsearchNamespace)
+func getHashedESCredentials(c cache.SecretsCache, r *http.Request, secretName string) (string, error) {
+	secret, err := c.GetSecret(secretName)
 	if err != nil {
 		return "", err
 	}

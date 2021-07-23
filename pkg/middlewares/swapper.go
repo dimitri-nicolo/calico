@@ -5,12 +5,10 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
+	"github.com/tigera/es-gateway/pkg/cache"
 )
 
 const (
-	// All ES credential K8s secrets should be located in the below namespace.
-	ElasticsearchNamespace = "tigera-elasticsearch"
 	// We expect any ES user attached to a request to have a matching "secure" ES user with actual ES permissions.
 	// We also expect that the ES credentials for the "secure" user can be found be looking for a secret named
 	// using the username + this suffix.
@@ -23,7 +21,7 @@ const (
 
 // swapElasticCredHandler returns an HTTP handler which acts as a middleware to swap the credentials attached to
 // a request (from gateway credentials to Elasticsearch credentials).
-func swapElasticCredHandler(c kubernetes.Client, next http.Handler) http.Handler {
+func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Attempting ES credentials swap for request with URI %s", r.RequestURI)
 
@@ -54,15 +52,15 @@ func swapElasticCredHandler(c kubernetes.Client, next http.Handler) http.Handler
 }
 
 // NewSwapElasticCredMiddlware returns an initialized version of elasticAuthHandler.
-func NewSwapElasticCredMiddlware(c kubernetes.Client) func(http.Handler) http.Handler {
+func NewSwapElasticCredMiddlware(c cache.SecretsCache) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return swapElasticCredHandler(c, h)
 	}
 }
 
 // getPlainESCredentials attempts to retrieve credentials from the given secretName using the provided k8s client for given request.
-func getPlainESCredentials(c kubernetes.Client, r *http.Request, secretName string) (string, string, error) {
-	secret, err := c.GetSecret(r.Context(), secretName, ElasticsearchNamespace)
+func getPlainESCredentials(c cache.SecretsCache, r *http.Request, secretName string) (string, string, error) {
+	secret, err := c.GetSecret(secretName)
 	if err != nil {
 		return "", "", err
 	}

@@ -2,8 +2,8 @@ package middlewares
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/tigera/es-gateway/pkg/cache"
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 )
 
 type Type string
@@ -16,10 +16,10 @@ const (
 
 type HandlerMap map[Type]mux.MiddlewareFunc
 
-func GetHandlerMap(es elastic.Client, k8s kubernetes.Client, realUsername, realPassword string) HandlerMap {
+func GetHandlerMap(es elastic.Client, cache cache.SecretsCache, realUsername, realPassword string) HandlerMap {
 	return HandlerMap{
 		TypeLog:  logRequestHandler,
-		TypeAuth: NewAuthMiddleware(k8s),
-		TypeSwap: NewSwapElasticCredMiddlware(k8s),
+		TypeAuth: NewAuthMiddleware(cache),
+		TypeSwap: NewSwapElasticCredMiddlware(cache),
 	}
 }
