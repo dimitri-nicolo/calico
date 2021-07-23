@@ -40,7 +40,7 @@ func newCallbacks() *callbacks {
 	}
 }
 
-func (c *Callbacks) Drop(id *CbID) {
+func (c *callbacks) Drop(id *CbID) {
 	if id.dropper != nil {
 		id.dropper()
 		id.dropper = nil

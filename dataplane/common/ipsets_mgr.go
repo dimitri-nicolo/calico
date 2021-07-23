@@ -37,54 +37,12 @@ type IPSetsDataplane interface {
 	ApplyDeletions()
 }
 
-type ipSetsManagerCallbacks struct {
-	addMembersIPSet    *AddMembersIPSetFuncs
-	removeMembersIPSet *RemoveMembersIPSetFuncs
-	replaceIPSet       *ReplaceIPSetFuncs
-	removeIPSet        *RemoveIPSetFuncs
-}
-
-func newIPSetsManagerCallbacks(callbacks *Callbacks, ipFamily ipsets.IPFamily) ipSetsManagerCallbacks {
-	if ipFamily == ipsets.IPFamilyV4 {
-		return ipSetsManagerCallbacks{
-			addMembersIPSet:    callbacks.AddMembersIPSetV4,
-			removeMembersIPSet: callbacks.RemoveMembersIPSetV4,
-			replaceIPSet:       callbacks.ReplaceIPSetV4,
-			removeIPSet:        callbacks.RemoveIPSetV4,
-		}
-	} else {
-		return ipSetsManagerCallbacks{
-			addMembersIPSet:    &AddMembersIPSetFuncs{},
-			removeMembersIPSet: &RemoveMembersIPSetFuncs{},
-			replaceIPSet:       &ReplaceIPSetFuncs{},
-			removeIPSet:        &RemoveIPSetFuncs{},
-		}
-	}
-}
-
-func (c *ipSetsManagerCallbacks) InvokeAddMembersIPSet(setID string, members set.Set) {
-	c.addMembersIPSet.Invoke(setID, members)
-}
-
-func (c *ipSetsManagerCallbacks) InvokeRemoveMembersIPSet(setID string, members set.Set) {
-	c.removeMembersIPSet.Invoke(setID, members)
-}
-
-func (c *ipSetsManagerCallbacks) InvokeReplaceIPSet(setID string, members set.Set) {
-	c.replaceIPSet.Invoke(setID, members)
-}
-
-func (c *ipSetsManagerCallbacks) InvokeRemoveIPSet(setID string) {
-	c.removeIPSet.Invoke(setID)
-}
-
 // Except for domain IP sets, IPSetsManager simply passes through IP set updates from the datastore
 // to the ipsets.IPSets dataplane layer.  For domain IP sets - which hereafter we'll just call
 // "domain sets" - IPSetsManager handles the resolution from domain names to expiring IPs.
 type IPSetsManager struct {
 	ipsetsDataplane IPSetsDataplane
 	maxSize         int
-	callbacks       ipSetsManagerCallbacks
 
 	// Provider of domain name to IP information.
 	domainInfoStore store
@@ -112,11 +70,10 @@ type DomainInfoChangeHandler interface {
 	OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyncNeeded bool)
 }
 
-func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store, callbacks *Callbacks) *IPSetsManager {
+func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
 	return &IPSetsManager{
 		ipsetsDataplane: ipsets_,
 		maxSize:         maxIPSetSize,
-		callbacks:       newIPSetsManagerCallbacks(callbacks, ipsets_.GetIPFamily()),
 		domainInfoStore: domainInfoStore,
 
 		domainSetProgramming: make(map[string]map[string]set.Set),
@@ -145,9 +102,7 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 		} else if !m.ignoredSetIds.Contains(msg.Id) {
 			// Pass deltas directly to the ipsets dataplane layer.
 			m.ipsetsDataplane.AddMembers(msg.Id, msg.AddedMembers)
-			m.callbacks.InvokeAddMembersIPSet(msg.Id, membersToSet(msg.AddedMembers))
 			m.ipsetsDataplane.RemoveMembers(msg.Id, msg.RemovedMembers)
-			m.callbacks.InvokeRemoveMembersIPSet(msg.Id, membersToSet(msg.RemovedMembers))
 		}
 	case *proto.IPSetUpdate:
 		log.WithField("ipSetId", msg.Id).Debug("IP set update")
@@ -181,7 +136,6 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 		} else {
 			// Pass directly onto the ipsets dataplane layer.
 			m.ipsetsDataplane.AddOrReplaceIPSet(metadata, msg.Members)
-			m.callbacks.InvokeReplaceIPSet(msg.Id, membersToSet(msg.Members))
 		}
 	case *proto.IPSetRemove:
 		log.WithField("ipSetId", msg.Id).Debug("IP set remove")
@@ -194,11 +148,6 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			return
 		}
 		m.ipsetsDataplane.RemoveIPSet(msg.Id)
-		if m.domainSetProgramming[msg.Id] == nil {
-			// Note: no XDP Callbacks for domain IP set removal because XDP is
-			// for ingress policy only and domain IP sets are egress only.
-			m.callbacks.InvokeRemoveIPSet(msg.Id)
-		}
 	}
 }
 
