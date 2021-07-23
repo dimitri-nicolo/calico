@@ -149,7 +149,7 @@ func newProvider(s string) (Provider, error) {
 	switch strings.ToLower(s) {
 	case strings.ToLower(ProviderNone.String()):
 		return ProviderNone, nil
-	case strings.ToLower(ProviderEKS.String()):
+	case strings.ToLower(ProviderEKS.String()), "ecs":
 		return ProviderEKS, nil
 	case strings.ToLower(ProviderGKE.String()):
 		return ProviderGKE, nil
