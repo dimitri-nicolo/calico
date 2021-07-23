@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
@@ -31,7 +30,6 @@ var _ = Describe("Policy manager", func() {
 		mangleTable  *mockTable
 		filterTable  *mockTable
 		ruleRenderer *mockPolRenderer
-		callbacks    *common.Callbacks
 	)
 
 	BeforeEach(func() {
@@ -39,8 +37,7 @@ var _ = Describe("Policy manager", func() {
 		mangleTable = newMockTable("mangle")
 		filterTable = newMockTable("filter")
 		ruleRenderer = newMockPolRenderer()
-		callbacks = common.NewCallback()
-		policyMgr = newPolicyManager(rawTable, mangleTable, filterTable, ruleRenderer, 4, callbacks)
+		policyMgr = newPolicyManager(rawTable, mangleTable, filterTable, ruleRenderer, 4)
 	})
 
 	It("shouldn't touch iptables", func() {

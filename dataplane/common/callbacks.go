@@ -16,17 +16,9 @@ package common
 
 import (
 	"github.com/projectcalico/felix/proto"
-
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-type Callbacks struct {
-	UpdatePolicyV4           *UpdatePolicyDataFuncs
-	RemovePolicyV4           *RemovePolicyDataFuncs
-	AddMembersIPSetV4        *AddMembersIPSetFuncs
-	RemoveMembersIPSetV4     *RemoveMembersIPSetFuncs
-	ReplaceIPSetV4           *ReplaceIPSetFuncs
-	RemoveIPSetV4            *RemoveIPSetFuncs
+type callbacks struct {
 	AddInterfaceV4           *AddInterfaceFuncs
 	RemoveInterfaceV4        *RemoveInterfaceFuncs
 	UpdateInterfaceV4        *UpdateInterfaceFuncs
@@ -36,14 +28,8 @@ type Callbacks struct {
 	RemoveWorkloadEndpointV4 *RemoveWorkloadEndpointFuncs
 }
 
-func NewCallback() *Callbacks {
-	return &Callbacks{
-		UpdatePolicyV4:           &UpdatePolicyDataFuncs{},
-		RemovePolicyV4:           &RemovePolicyDataFuncs{},
-		AddMembersIPSetV4:        &AddMembersIPSetFuncs{},
-		RemoveMembersIPSetV4:     &RemoveMembersIPSetFuncs{},
-		ReplaceIPSetV4:           &ReplaceIPSetFuncs{},
-		RemoveIPSetV4:            &RemoveIPSetFuncs{},
+func newCallbacks() *callbacks {
+	return &callbacks{
 		AddInterfaceV4:           &AddInterfaceFuncs{},
 		RemoveInterfaceV4:        &RemoveInterfaceFuncs{},
 		UpdateInterfaceV4:        &UpdateInterfaceFuncs{},
@@ -63,162 +49,6 @@ func (c *Callbacks) Drop(id *CbID) {
 
 type CbID struct {
 	dropper func()
-}
-
-type UpdatePolicyDataFunc func(policyID proto.PolicyID, policy *proto.Policy)
-
-type UpdatePolicyDataFuncs struct {
-	fs UpdatePolicyDataFunc
-}
-
-func (fs *UpdatePolicyDataFuncs) Invoke(policyID proto.PolicyID, policy *proto.Policy) {
-	if fs.fs != nil {
-		fs.fs(policyID, policy)
-	}
-}
-
-func (fs *UpdatePolicyDataFuncs) Append(f UpdatePolicyDataFunc) *CbID {
-	if f == nil {
-		return &CbID{
-			dropper: func() {},
-		}
-	}
-	fs.fs = f
-	return &CbID{
-		dropper: func() {
-			fs.fs = nil
-		},
-	}
-}
-
-type RemovePolicyDataFunc func(policyID proto.PolicyID)
-
-type RemovePolicyDataFuncs struct {
-	fs RemovePolicyDataFunc
-}
-
-func (fs *RemovePolicyDataFuncs) Invoke(policyID proto.PolicyID) {
-	if fs.fs != nil {
-		fs.fs(policyID)
-	}
-}
-
-func (fs *RemovePolicyDataFuncs) Append(f RemovePolicyDataFunc) *CbID {
-	if f == nil {
-		return &CbID{
-			dropper: func() {},
-		}
-	}
-	fs.fs = f
-	return &CbID{
-		dropper: func() {
-			fs.fs = nil
-		},
-	}
-}
-
-type AddMembersIPSetFunc func(setID string, members set.Set)
-
-type AddMembersIPSetFuncs struct {
-	fs AddMembersIPSetFunc
-}
-
-func (fs *AddMembersIPSetFuncs) Invoke(setID string, members set.Set) {
-	if fs.fs != nil {
-		fs.fs(setID, members)
-	}
-}
-
-func (fs *AddMembersIPSetFuncs) Append(f AddMembersIPSetFunc) *CbID {
-	if f == nil {
-		return &CbID{
-			dropper: func() {},
-		}
-	}
-	fs.fs = f
-	return &CbID{
-		dropper: func() {
-			fs.fs = nil
-		},
-	}
-}
-
-type RemoveMembersIPSetFunc func(setID string, members set.Set)
-
-type RemoveMembersIPSetFuncs struct {
-	fs RemoveMembersIPSetFunc
-}
-
-func (fs *RemoveMembersIPSetFuncs) Invoke(setID string, members set.Set) {
-	if fs.fs != nil {
-		fs.fs(setID, members)
-	}
-}
-
-func (fs *RemoveMembersIPSetFuncs) Append(f RemoveMembersIPSetFunc) *CbID {
-	if f == nil {
-		return &CbID{
-			dropper: func() {},
-		}
-	}
-	fs.fs = f
-	return &CbID{
-		dropper: func() {
-			fs.fs = nil
-		},
-	}
-}
-
-type ReplaceIPSetFunc func(setID string, members set.Set)
-
-type ReplaceIPSetFuncs struct {
-	fs ReplaceIPSetFunc
-}
-
-func (fs *ReplaceIPSetFuncs) Invoke(setID string, members set.Set) {
-	if fs.fs != nil {
-		fs.fs(setID, members)
-	}
-}
-
-func (fs *ReplaceIPSetFuncs) Append(f ReplaceIPSetFunc) *CbID {
-	if f == nil {
-		return &CbID{
-			dropper: func() {},
-		}
-	}
-	fs.fs = f
-	return &CbID{
-		dropper: func() {
-			fs.fs = nil
-		},
-	}
-}
-
-type RemoveIPSetFunc func(setID string)
-
-type RemoveIPSetFuncs struct {
-	fs RemoveIPSetFunc
-}
-
-func (fs *RemoveIPSetFuncs) Invoke(setID string) {
-	if fs.fs != nil {
-		fs.fs(setID)
-	}
-}
-
-func (fs *RemoveIPSetFuncs) Append(f RemoveIPSetFunc) *CbID {
-	if f == nil {
-		return &CbID{
-			dropper: func() {},
-		}
-	}
-	fs.fs = f
-	return &CbID{
-		dropper: func() {
-			fs.fs = nil
-		},
-	}
 }
 
 type AddInterfaceFunc func(ifaceName string, hostEPID proto.HostEndpointID)

@@ -53,7 +53,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
-	felixconfig "github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -254,7 +254,7 @@ type Config struct {
 
 	RouteSource string
 
-	KubernetesProvider felixconfig.Provider
+	KubernetesProvider config.Provider
 
 	LookupsCache *calc.LookupsCache
 }
@@ -591,10 +591,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	callbacks := common.NewCallback()
 	dp.callbacks = callbacks
-	if !config.BPFEnabled && config.XDPEnabled {
+	if config.XDPEnabled {
 		if err := bpf.SupportsXDP(); err != nil {
 			log.WithError(err).Warn("Can't enable XDP acceleration.")
-		} else {
+			config.XDPEnabled = false
+		} else if !config.BPFEnabled {
 			st, err := NewXDPState(config.XDPAllowGeneric)
 			if err != nil {
 				log.WithError(err).Warn("Can't enable XDP acceleration.")
@@ -609,7 +610,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("XDP acceleration disabled.")
 	}
 
-	// TODO Integrate XDP and BPF infra.
+	// TODO Support cleaning up non-BPF XDP state from a previous Felix run, when BPF mode has just been enabled.
 	if !config.BPFEnabled && dp.xdpState == nil {
 		xdpState, err := NewXDPState(config.XDPAllowGeneric)
 		if err == nil {
@@ -653,7 +654,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if !config.BPFEnabled {
 		// BPF mode disabled, create the iptables-only managers.
-		ipsetsManager := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks)
+		ipsetsManager := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
 		dp.RegisterManager(ipsetsManager)
 		dp.ipsetsSourceV4 = ipsetsManager
 		// TODO Connect host IP manager to BPF
@@ -801,7 +802,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
-		dp.RegisterManager(common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
+		dp.RegisterManager(common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
 		bpfRTMgr := newBPFRouteManager(config.Hostname, config.ExternalNodesCidrs, bpfMapContext, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
 
@@ -850,17 +851,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		bpfEndpointManager = newBPFEndpointManager(
-			config.BPFLogLevel,
-			config.Hostname,
+			&config,
 			fibLookupEnabled,
-			config.RulesConfig.EndpointToHostAction,
-			config.BPFDataIfacePattern,
 			workloadIfaceRegex,
 			ipSetIDAllocator,
-			config.VXLANMTU,
-			uint16(config.VXLANPort),
-			config.BPFNodePortDSREnabled,
-			config.BPFExtToServiceConnmark,
 			ipSetsMap,
 			stateMap,
 			ruleRenderer,
@@ -1085,7 +1079,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			unix.RT_TABLE_UNSPEC, dp.loopSummarizer)
 
 		if !config.BPFEnabled {
-			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
+			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
 			dp.RegisterManager(newHostIPManager(
 				config.RulesConfig.WorkloadIfacePrefixes,
 				rules.IPSetIDThisHostIPs,
@@ -1181,7 +1175,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
-			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval)
+			ctrd := collector.NewNetLinkConntrackReader(config.DefaultConntrackPollingInterval)
 			collectorConntrackInfoReader = ctrd
 		}
 
@@ -1317,7 +1311,7 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 		c.VXLANMTU = hostMTU - vxlanMTUOverhead
 	}
 	if c.Wireguard.MTU == 0 {
-		if c.KubernetesProvider == felixconfig.ProviderAKS && c.RouteSource == "WorkloadIPs" {
+		if c.KubernetesProvider == config.ProviderAKS && c.RouteSource == "WorkloadIPs" {
 			// The default MTU on Azure is 1500, but the underlying network stack will fragment packets at 1400 bytes,
 			// see https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-tcpip-performance-tuning#azure-and-vm-mtu
 			// for details.

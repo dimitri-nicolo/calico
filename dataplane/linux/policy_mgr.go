@@ -23,33 +23,6 @@ import (
 	"github.com/projectcalico/felix/rules"
 )
 
-type policyManagerCallbacks struct {
-	updatePolicy *common.UpdatePolicyDataFuncs
-	removePolicy *common.RemovePolicyDataFuncs
-}
-
-func newPolicyManagerCallbacks(callbacks *common.Callbacks, ipVersion uint8) policyManagerCallbacks {
-	if ipVersion == 4 {
-		return policyManagerCallbacks{
-			updatePolicy: callbacks.UpdatePolicyV4,
-			removePolicy: callbacks.RemovePolicyV4,
-		}
-	} else {
-		return policyManagerCallbacks{
-			updatePolicy: &common.UpdatePolicyDataFuncs{},
-			removePolicy: &common.RemovePolicyDataFuncs{},
-		}
-	}
-}
-
-func (c *policyManagerCallbacks) InvokeUpdatePolicy(policyID proto.PolicyID, policy *proto.Policy) {
-	c.updatePolicy.Invoke(policyID, policy)
-}
-
-func (c *policyManagerCallbacks) InvokeRemovePolicy(policyID proto.PolicyID) {
-	c.removePolicy.Invoke(policyID)
-}
-
 // policyManager simply renders policy/profile updates into iptables.Chain objects and sends
 // them to the dataplane layer.
 type policyManager struct {
@@ -65,7 +38,7 @@ type policyRenderer interface {
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain)
 }
 
-func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8, callbacks *common.Callbacks) *policyManager {
+func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8) *policyManager {
 	return &policyManager{
 		rawTable:     rawTable,
 		mangleTable:  mangleTable,
