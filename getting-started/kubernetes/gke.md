@@ -30,8 +30,8 @@ Verify the cluster has these Networking settings:
 - Dataplane V2 is disabled
 - Istio is disabled  
    The Istio setting on the GKE cluster prevents configuration of {{site.prodname}} application layer policy. To use Istio in your cluster, follow {% include open-new-window.html text='this GKE tutorial' url='https://cloud.google.com/kubernetes-engine/docs/tutorials/installing-istio' %} to install the open source version of Istio on GKE.
-- GKE master access to port 5443   
-   The GKE master must be able to access the {{site.prodname}} API server, which runs with host networking on port 5443.  For multi-zone clusters and clusters with the "master IP range" configured, you will need to add a GCP firewall rule to allow access to that port from the master.  For example, you could add a network tag to your nodes and then refer to that tag in a firewall rule, or allow based on your cluster's node CIDR.
+- GKE master access to TCP ports 5443 and 8080   
+   The GKE master must be able to access the {{site.prodname}} API server, which runs with host networking on TCP ports 5443 and 8080.  For multi-zone clusters and clusters with the "master IP range" configured, you will need to add a GCP firewall rule to allow access to that port from the master.  For example, you could add a network tag to your nodes and then refer to that tag in a firewall rule, or allow based on your cluster's node CIDR.
 
 **Verify IAM permissions**  
 
