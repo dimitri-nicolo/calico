@@ -81,6 +81,8 @@ blocks:
             - make fv
 
   - name: 'Push Images (non-PR builds only)'
+    execution_time_limit:
+      minutes: 15
     dependencies: ["Static Checks", "UT", "FV"]
     skip:
       # Only run on branches, not PRs.

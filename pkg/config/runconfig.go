@@ -29,10 +29,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Export for testing purposes
@@ -52,6 +52,7 @@ func init() {
 				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
 				SyncLabels:       v3.Enabled,
 				HostEndpoint:     nil,
+				LeakGracePeriod:  &v1.Duration{Duration: time.Minute * 15},
 			},
 			Policy: &v3.PolicyControllerConfig{
 				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
@@ -107,6 +108,10 @@ type NodeControllerConfig struct {
 	// Should the Node controller delete Calico nodes?  Generally, this is
 	// true for etcdv3 datastores.
 	DeleteNodes bool
+
+	// The grace period used by the controller to determine if an IP address is leaked.
+	// Set to 0 to disable IP address garbage collection.
+	LeakGracePeriod *v1.Duration
 }
 
 type ElasticsearchCfgControllerCfg struct {
@@ -352,6 +357,12 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		mergeSyncNodeLabels(envVars, &status, &rCfg, apiCfg, envCfg)
 
 		mergeAutoHostEndpoints(envVars, &status, &rCfg, apiCfg)
+
+		// There is no env var config for this, so always merge from the API config.
+		if apiCfg.Controllers.Node != nil {
+			rc.Node.LeakGracePeriod = apiCfg.Controllers.Node.LeakGracePeriod
+			status.RunningConfig.Controllers.Node.LeakGracePeriod = apiCfg.Controllers.Node.LeakGracePeriod
+		}
 
 		if envCfg.DatastoreType != "kubernetes" {
 			rc.Node.DeleteNodes = true
