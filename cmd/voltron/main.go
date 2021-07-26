@@ -13,11 +13,12 @@ import (
 	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/utils"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/server"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 func main() {
@@ -80,6 +81,7 @@ func main() {
 		tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{
 			`^/api/?`,
 			`^/apis/?`,
+			`^/packet-capture/?`,
 		})
 
 		if err != nil {
@@ -125,11 +127,11 @@ func main() {
 			AllowInsecureTLS: true,
 		},
 		{
-			Path:             "/packet-capture/",
-			Dest:             cfg.PacketCaptureEndpoint,
-			PathRegexp:       []byte("^/packet-capture/?"),
-			PathReplace:      []byte("/"),
-			AllowInsecureTLS: true,
+			Path:         "/packet-capture/",
+			Dest:         cfg.PacketCaptureEndpoint,
+			PathRegexp:   []byte("^/packet-capture/?"),
+			PathReplace:  []byte("/"),
+			CABundlePath: cfg.PacketCaptureCABundlePath,
 		},
 		{
 			Path:         cfg.KibanaBasePath,

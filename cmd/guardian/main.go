@@ -32,9 +32,11 @@ var (
 
 // Config is a configuration used for Guardian
 type config struct {
-	LogLevel   string `default:"INFO"`
-	CertPath   string `default:"/certs" split_words:"true" json:"-"`
-	VoltronURL string `required:"true" split_words:"true"`
+	LogLevel                  string `default:"INFO"`
+	CertPath                  string `default:"/certs" split_words:"true" json:"-"`
+	VoltronURL                string `required:"true" split_words:"true"`
+	PacketCaptureCABundlePath string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
+	PacketCaptureEndpoint     string `default:"https://tigera-packetcapture.tigera-packetcapture.svc.cluster.local" split_words:"true"`
 
 	KeepAliveEnable   bool `default:"true" split_words:"true"`
 	KeepAliveInterval int  `default:"100" split_words:"true"`
@@ -125,6 +127,15 @@ func main() {
 			Dest:         cfg.K8sEndpoint,
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		{
+			Path:             "/packet-capture/",
+			Dest:             cfg.PacketCaptureEndpoint,
+			AllowInsecureTLS: true,
+			PathRegexp:       []byte("^/packet-capture/?"),
+			PathReplace:      []byte("/"),
+			TokenPath:        "/var/run/secrets/kubernetes.io/serviceaccount/token",
+			CABundlePath:     cfg.PacketCaptureCABundlePath,
 		},
 	})
 	if err != nil {

@@ -49,13 +49,14 @@ type Config struct {
 	ComplianceInsecureTLS        bool   `default:"false" split_words:"true"`
 	EnableCompliance             bool   `default:"true" split_words:"true"`
 	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
-	PacketCaptureEndpoint        string `default:"http://127.0.0.1:8444" split_words:"true"`
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
 	EnableMultiClusterManagement bool   `default:"false" split_words:"true"`
 	KibanaEndpoint               string `default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601" split_words:"true"`
 	KibanaBasePath               string `default:"/tigera-kibana" split_words:"true"`
 	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
+	PacketCaptureCABundlePath    string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
+	PacketCaptureEndpoint        string `default:"https://tigera-packetcapture.tigera-packetcapture.svc.cluster.local" split_words:"true"`
 
 	// Dex settings
 	DexEnabled      bool   `default:"false" split_words:"true"`
