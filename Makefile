@@ -191,13 +191,14 @@ clean:
 ###############################################################################
 # Updating pins
 ###############################################################################
+API_REPO=github.com/tigera/api
 LIBCALICO_REPO=github.com/tigera/libcalico-go-private
 CONFD_REPO=github.com/tigera/confd-private
 FELIX_REPO=github.com/tigera/felix-private
 TYPHA_REPO=github.com/tigera/typha-private
 CNI_REPO=github.com/tigera/cni-plugin-private
 
-update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-typha-pin replace-cni-pin
+update-pins: update-api-pin replace-libcalico-pin update-confd-pin replace-felix-pin replace-typha-pin replace-cni-pin
 
 ###############################################################################
 # Building the binary
