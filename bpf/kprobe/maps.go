@@ -22,6 +22,8 @@ import (
 
 const statsKeySize = 44
 const statsValueSize = 16
+const execPathKeySize = 4
+const execPathValueSize = 460
 
 var KpStatsMapParameters = bpf.MapParameters{
 	Filename:   "/sys/fs/bpf/tc/globals/cali_kpstats",
@@ -33,6 +35,34 @@ var KpStatsMapParameters = bpf.MapParameters{
 	Version:    2,
 }
 
+var epathMapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_epath",
+	Type:       "lru_hash",
+	KeySize:    execPathKeySize,
+	ValueSize:  execPathValueSize,
+	MaxEntries: 64000,
+	Name:       "cali_epath",
+	Version:    2,
+}
+
+var execMapParameters = bpf.MapParameters{
+	Filename:   "/sys/fs/bpf/tc/globals/cali_exec",
+	Type:       "percpu_array",
+	KeySize:    execPathKeySize,
+	ValueSize:  execPathValueSize,
+	MaxEntries: 1,
+	Name:       "cali_exec",
+	Version:    2,
+}
+
 func MapKpStats(mc *bpf.MapContext) bpf.Map {
 	return mc.NewPinnedMap(KpStatsMapParameters)
+}
+
+func MapEpath(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(epathMapParameters)
+}
+
+func MapExec(mc *bpf.MapContext) bpf.Map {
+	return mc.NewPinnedMap(execMapParameters)
 }

@@ -388,6 +388,17 @@ configRetry:
 			}
 		}
 	}
+
+	if configParams.FlowLogsCollectProcessPath {
+		if !configParams.FlowLogsCollectProcessInfo {
+			log.Error("FlowLogsCollectProcessPath enabled but FlowLogsCollectProcessInfo is disabled. Disabling FlowLogsCollectProcessPath.")
+			_, err := configParams.OverrideParam("FlowLogsCollectProcessPath", "false")
+			if err != nil {
+				log.WithError(err).Panic("Bug: failed to override config parameter")
+			}
+		}
+	}
+
 	// We're now both live and ready.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 

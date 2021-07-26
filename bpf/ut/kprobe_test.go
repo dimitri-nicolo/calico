@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,8 +28,6 @@ import (
 
 func TestKprobe(t *testing.T) {
 	RegisterTestingT(t)
-	err := bpf.MountDebugfs()
-	Expect(err).NotTo(HaveOccurred())
 	mc := &bpf.MapContext{}
 	bpfEvnt, err := events.New(mc, events.SourcePerfEvents)
 	Expect(err).NotTo(HaveOccurred())
@@ -40,10 +38,14 @@ func TestKprobe(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	err = kp.AttachUDPv4()
 	Expect(err).NotTo(HaveOccurred())
+	err = kp.AttachSyscall()
+	Expect(err).NotTo(HaveOccurred())
 	err = bpfEvnt.Close()
 	Expect(err).NotTo(HaveOccurred())
 	err = kp.DetachTCPv4()
 	Expect(err).NotTo(HaveOccurred())
 	err = kp.DetachUDPv4()
+	Expect(err).NotTo(HaveOccurred())
+	err = kp.DetachSyscall()
 	Expect(err).NotTo(HaveOccurred())
 }

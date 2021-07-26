@@ -5,10 +5,11 @@ package calc_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
-	"github.com/projectcalico/felix/config"
 	"github.com/stretchr/testify/mock"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/felix/config"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/ip"
