@@ -297,6 +297,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				KubeNodePortRanges:     configParams.KubeNodePortRanges,
 				KubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
+				KubernetesProvider:     configParams.KubernetesProvider(),
 
 				OpenStackSpecialCasesEnabled: configParams.OpenstackActive(),
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),

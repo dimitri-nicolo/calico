@@ -358,6 +358,7 @@ type Config struct {
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
 	KubeMasqueradeMark     uint32
+	KubernetesProvider     config.Provider
 
 	OpenStackMetadataIP          net.IP
 	OpenStackMetadataPort        uint16
