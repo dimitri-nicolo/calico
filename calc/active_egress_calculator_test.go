@@ -1,13 +1,14 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
 import (
 	"fmt"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -407,9 +408,9 @@ var _ = Describe("ActiveEgressCalculator", func() {
 	It("ignores unexpected update", func() {
 		aec.OnUpdate(api.Update{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: v3.KindNode, Name: "a"},
-				Value: &v3.Node{
-					Spec: v3.NodeSpec{},
+				Key: model.ResourceKey{Kind: libapiv3.KindNode, Name: "a"},
+				Value: &libapiv3.Node{
+					Spec: libapiv3.NodeSpec{},
 				},
 			},
 			UpdateType: api.UpdateTypeKVUpdated,

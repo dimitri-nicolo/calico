@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017, 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,38 +17,10 @@ package intdataplane
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 )
-
-type policyManagerCallbacks struct {
-	updatePolicy *common.UpdatePolicyDataFuncs
-	removePolicy *common.RemovePolicyDataFuncs
-}
-
-func newPolicyManagerCallbacks(callbacks *common.Callbacks, ipVersion uint8) policyManagerCallbacks {
-	if ipVersion == 4 {
-		return policyManagerCallbacks{
-			updatePolicy: callbacks.UpdatePolicyV4,
-			removePolicy: callbacks.RemovePolicyV4,
-		}
-	} else {
-		return policyManagerCallbacks{
-			updatePolicy: &common.UpdatePolicyDataFuncs{},
-			removePolicy: &common.RemovePolicyDataFuncs{},
-		}
-	}
-}
-
-func (c *policyManagerCallbacks) InvokeUpdatePolicy(policyID proto.PolicyID, policy *proto.Policy) {
-	c.updatePolicy.Invoke(policyID, policy)
-}
-
-func (c *policyManagerCallbacks) InvokeRemovePolicy(policyID proto.PolicyID) {
-	c.removePolicy.Invoke(policyID)
-}
 
 // policyManager simply renders policy/profile updates into iptables.Chain objects and sends
 // them to the dataplane layer.
@@ -58,7 +30,6 @@ type policyManager struct {
 	filterTable  iptablesTable
 	ruleRenderer policyRenderer
 	ipVersion    uint8
-	callbacks    policyManagerCallbacks
 }
 
 type policyRenderer interface {
@@ -66,14 +37,13 @@ type policyRenderer interface {
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain)
 }
 
-func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8, callbacks *common.Callbacks) *policyManager {
+func newPolicyManager(rawTable, mangleTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8) *policyManager {
 	return &policyManager{
 		rawTable:     rawTable,
 		mangleTable:  mangleTable,
 		filterTable:  filterTable,
 		ruleRenderer: ruleRenderer,
 		ipVersion:    ipVersion,
-		callbacks:    newPolicyManagerCallbacks(callbacks, ipVersion),
 	}
 }
 
@@ -88,7 +58,6 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 		m.rawTable.UpdateChains(chains)
 		m.mangleTable.UpdateChains(chains)
 		m.filterTable.UpdateChains(chains)
-		m.callbacks.InvokeUpdatePolicy(*msg.Id, msg.Policy)
 	case *proto.ActivePolicyRemove:
 		log.WithField("id", msg.Id).Debug("Removing policy chains")
 		inName := rules.PolicyChainName(rules.PolicyInboundPfx, msg.Id)
@@ -100,7 +69,6 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 		m.mangleTable.RemoveChainByName(outName)
 		m.rawTable.RemoveChainByName(inName)
 		m.rawTable.RemoveChainByName(outName)
-		m.callbacks.InvokeRemovePolicy(*msg.Id)
 	case *proto.ActiveProfileUpdate:
 		log.WithField("id", msg.Id).Debug("Updating profile chains")
 		inbound, outbound := m.ruleRenderer.ProfileToIptablesChains(msg.Id, msg.Profile, m.ipVersion)

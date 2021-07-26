@@ -22,9 +22,9 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 // Pause time before felix will generate CNX metrics

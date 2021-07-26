@@ -20,7 +20,7 @@ import (
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	kapiv1 "k8s.io/api/core/v1"

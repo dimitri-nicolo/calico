@@ -30,8 +30,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/collector"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"

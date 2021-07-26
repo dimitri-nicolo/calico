@@ -19,11 +19,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/projectcalico/felix/netlinkshim"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-
-	"github.com/projectcalico/felix/netlinkshim"
 )
 
 const (

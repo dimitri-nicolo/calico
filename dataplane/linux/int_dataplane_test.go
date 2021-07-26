@@ -120,6 +120,7 @@ var _ = Describe("Constructor test", func() {
 			LookPathOverride: func(file string) (string, error) {
 				return file, nil
 			},
+
 			PacketCapture: capture.Config{
 				Directory: "/tmp",
 			},
