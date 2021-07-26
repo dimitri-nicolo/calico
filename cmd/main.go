@@ -66,14 +66,14 @@ func main() {
 	var fileRetrieval = capture.NewFileRetrieval(cache)
 	var download = handlers.NewDownload(cache, locator, fileRetrieval)
 
-	log.Infof("PacketCapture API listening for HTTP requests at %s", addr)
+	log.Infof("PacketCapture API listening for HTTPS requests at %s", addr)
 	// Define handlers
 	http.Handle("/version", http.HandlerFunc(version.Handler))
 	http.Handle("/health", http.HandlerFunc(handlers.Health))
 	http.Handle("/download/", middleware.Parse(auth.Authenticate(auth.Authorize(download.Download))))
 
 	// Start server
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Fatal(http.ListenAndServeTLS(addr, cfg.HTTPSCert, cfg.HTTPSKey, nil))
 }
 
 func mustGetAuthenticator(cfg *config.Config) authentication.Authenticator {

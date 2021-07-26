@@ -13,9 +13,11 @@ const (
 
 // Config is a configuration used for PacketCapture API
 type Config struct {
-	Port     int `default:"8444" split_words:"true"`
-	Host     string
-	LogLevel string `default:"INFO" split_words:"true"`
+	Port      int `default:"8444" split_words:"true"`
+	Host      string
+	HTTPSCert string `default:"/certs/https/tls.crt" split_words:"true"`
+	HTTPSKey  string `default:"/certs/https/tls.key" split_words:"true"`
+	LogLevel  string `default:"INFO" split_words:"true"`
 
 	// Dex settings for authentication.
 	DexEnabled        bool   `default:"false" split_words:"true"`
