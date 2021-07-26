@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -20,22 +20,28 @@ type myMockedCaptures struct {
 	mock.Mock
 }
 
-func (m *myMockedCaptures) Remove(key capture.Key) (error, string) {
+func (m *myMockedCaptures) Contains(key capture.Key) (bool, capture.Specification) {
 	args := m.Called(key)
-	return args.Error(0), args.String(1)
-
+	return args.Bool(0), args.Get(1).(capture.Specification)
 }
 
-func (m *myMockedCaptures) Add(key capture.Key, deviceName string) error {
-	args := m.Called(key, deviceName)
+func (m *myMockedCaptures) Remove(key capture.Key) capture.Specification {
+	args := m.Called(key)
+	return args.Get(0).(capture.Specification)
+}
+
+func (m *myMockedCaptures) Add(key capture.Key, spec capture.Specification) error {
+	args := m.Called(key, spec)
 	return args.Error(0)
 }
 
 var _ = Describe("PacketCapture Manager", func() {
 	type output struct {
-		key    capture.Key
-		device string
-		err    error
+		key                    capture.Key
+		specification          capture.Specification
+		err                    error
+		shouldCheckForContains bool
+		wasPreviouslyAdded     bool
 	}
 
 	DescribeTable("Buffers packet captures until interfaces are up",
@@ -44,13 +50,18 @@ var _ = Describe("PacketCapture Manager", func() {
 
 			// Mock Add to return the expectedAdditions output
 			// We expect Add to be called only with these values
+			var expectedContainsCalls = 0
 			for _, v := range expectedAdditions {
-				mockedCaptures.On("Add", v.key, v.device).Return(v.err)
+				if v.shouldCheckForContains {
+					expectedContainsCalls++
+					mockedCaptures.On("Contains", v.key).Return(v.wasPreviouslyAdded, v.specification).Once()
+				}
+				mockedCaptures.On("Add", v.key, v.specification).Return(v.err)
 			}
 			// Mock Removal to return the expectedRemovals output
 			// We expect Removal to be called only with these values
 			for _, v := range expectedRemovals {
-				mockedCaptures.On("Remove", v.key).Return(v.err, v.device)
+				mockedCaptures.On("Remove", v.key).Return(v.specification)
 			}
 
 			var captureMgr = newCaptureManager(&mockedCaptures, []string{"cali"})
@@ -66,6 +77,7 @@ var _ = Describe("PacketCapture Manager", func() {
 			}
 
 			mockedCaptures.AssertNumberOfCalls(GinkgoT(), "Add", len(expectedAdditions))
+			mockedCaptures.AssertNumberOfCalls(GinkgoT(), "Contains", expectedContainsCalls)
 			mockedCaptures.AssertNumberOfCalls(GinkgoT(), "Remove", len(expectedRemovals))
 			mockedCaptures.AssertExpectations(GinkgoT())
 		},
@@ -107,8 +119,10 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 		}, []output{}),
 		Entry("1 capture before interfaces and endpoints are up", [][]interface{}{
@@ -149,8 +163,10 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 		}, []output{}),
 		Entry("1 capture before endpoints and interfaces are up", [][]interface{}{
@@ -191,16 +207,18 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 			{
 				// Expect the second call to start to error out
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    fmt.Errorf("cannot start twice"),
+				specification: capture.Specification{DeviceName: "cali123"},
+				err:           fmt.Errorf("cannot start twice"),
 			},
 		}, []output{}),
 		Entry("multiple captures for different endpoints", [][]interface{}{
@@ -272,16 +290,20 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod-1",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 			{
 				// Expect packet capture to start
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-2", WorkloadEndpointId: "default/sample-pod-2",
 				},
-				device: "cali456",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali456"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 		}, []output{}),
 		Entry("overlapping captures for the same endpoint", [][]interface{}{
@@ -334,16 +356,19 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
 			},
 			{
 				// Expect packet capture to start
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-2", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 		}, []output{}),
 		Entry("start/stop for the same endpoint", [][]interface{}{
@@ -396,8 +421,10 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 		}, []output{
 			{
@@ -448,16 +475,18 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 			{
 				// Expect call to start to error out
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    fmt.Errorf("cannot start twice"),
+				specification: capture.Specification{DeviceName: "cali123"},
+				err:           fmt.Errorf("cannot start twice"),
 			},
 		}, []output{}),
 		Entry("interface down stops a capture", [][]interface{}{
@@ -505,8 +534,10 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 		}, []output{
 			{
@@ -514,8 +545,8 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification: capture.Specification{DeviceName: "cali123"},
+				err:           nil,
 			},
 		}),
 		Entry("start after an interface went down", [][]interface{}{
@@ -570,16 +601,18 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
 			},
 			{
 				// Expect packet capture to start
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification: capture.Specification{DeviceName: "cali123"},
+				err:           nil,
 			},
 		}, []output{
 			{
@@ -587,8 +620,8 @@ var _ = Describe("PacketCapture Manager", func() {
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
-				device: "cali123",
-				err:    nil,
+				specification: capture.Specification{DeviceName: "cali123"},
+				err:           nil,
 			},
 		}),
 		Entry("start/stop for the same endpoint in the same batch does not produce output", [][]interface{}{
@@ -658,5 +691,82 @@ var _ = Describe("PacketCapture Manager", func() {
 				},
 			},
 		}, []output{}, []output{}),
+		Entry("1 capture update after the capture started", [][]interface{}{
+			{
+				// capture update will be processed in a single batch
+				&proto.PacketCaptureUpdate{
+					Id: &proto.PacketCaptureID{
+						Name:      "packet-capture",
+						Namespace: "default",
+					},
+					Endpoint: &proto.WorkloadEndpointID{
+						WorkloadId: "default/sample-pod",
+					},
+				},
+			},
+			{
+				// interface update will be processed in a single batch
+				&ifaceUpdate{
+					Name:  "cali123",
+					State: ifacemonitor.StateUp,
+				},
+			},
+			{
+				// wep update will be processed in a single batch
+				&proto.WorkloadEndpointUpdate{
+					Id: &proto.WorkloadEndpointID{
+						WorkloadId: "default/sample-pod",
+					},
+					Endpoint: &proto.WorkloadEndpoint{
+						State: "up",
+						Name:  "cali123",
+					},
+				},
+			},
+			{
+				// capture update will be processed in a single batch
+				&proto.PacketCaptureUpdate{
+					Id: &proto.PacketCaptureID{
+						Name:      "packet-capture",
+						Namespace: "default",
+					},
+					Endpoint: &proto.WorkloadEndpointID{
+						WorkloadId: "default/sample-pod",
+					},
+					Specification: &proto.PacketCaptureSpecification{
+						BpfFilter: "anyfilter",
+					},
+				},
+			},
+		}, []output{
+			{
+				// Expect packet capture to start
+				key: capture.Key{
+					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
+				},
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
+			},
+			{
+				// Expect packet capture to be updated
+				key: capture.Key{
+					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
+				},
+				specification:          capture.Specification{DeviceName: "cali123", BPFFilter: "anyfilter"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     true,
+			},
+		}, []output{
+			{
+				// Expect packet capture to stop after receiving the update
+				key: capture.Key{
+					Namespace: "default", CaptureName: "packet-capture", WorkloadEndpointId: "default/sample-pod",
+				},
+				specification: capture.Specification{DeviceName: "cali123"},
+			},
+		}),
 	)
 })
