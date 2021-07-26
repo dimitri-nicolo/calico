@@ -7,7 +7,6 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
-	github.com/projectcalico/api v0.0.0-20210721183356-e23a6f19214b
 	github.com/projectcalico/cni-plugin v1.11.1-0.20210513162645-527a6aea2a07
 	github.com/projectcalico/felix v0.0.0-20210518114716-31a1f2adfdec
 	github.com/projectcalico/libcalico-go v1.7.2

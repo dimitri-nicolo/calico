@@ -17,9 +17,9 @@ package allocateip
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/net"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // makeNode creates an api.Node with some BGPSpec info populated.

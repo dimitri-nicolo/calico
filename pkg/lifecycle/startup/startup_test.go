@@ -35,8 +35,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -1048,26 +1048,26 @@ var _ = Describe("UT for GenerateIPv6ULAPrefix", func() {
 })
 
 var _ = Describe("UT for cloud orchestrator refs", func() {
-	var node api.Node
+	var node libapi.Node
 	var oldDetectors map[string]autodetection.CloudDetector
 
 	BeforeEach(func() {
 		oldDetectors = autodetection.CloudDetectors
-		node.Spec.OrchRefs = []api.OrchRef{{Orchestrator: "k8s", NodeName: "testnode"}}
+		node.Spec.OrchRefs = []libapi.OrchRef{{Orchestrator: "k8s", NodeName: "testnode"}}
 	})
 
 	Context("when cloud detector succeeds", func() {
 		BeforeEach(func() {
 			autodetection.CloudDetectors = map[string]autodetection.CloudDetector{
 				"test": testDetector{
-					ref: api.OrchRef{Orchestrator: "cloudo", NodeName: "cloudo-001"},
+					ref: libapi.OrchRef{Orchestrator: "cloudo", NodeName: "cloudo-001"},
 				},
 			}
 			configureCloudOrchRef(&node)
 		})
 
 		It("should add the OrchRef", func() {
-			Expect(node.Spec.OrchRefs).To(Equal([]api.OrchRef{
+			Expect(node.Spec.OrchRefs).To(Equal([]libapi.OrchRef{
 				{Orchestrator: "k8s", NodeName: "testnode"},
 				{Orchestrator: "cloudo", NodeName: "cloudo-001"},
 			}))
@@ -1085,7 +1085,7 @@ var _ = Describe("UT for cloud orchestrator refs", func() {
 		})
 
 		It("should leave OrchRef unchanged", func() {
-			Expect(node.Spec.OrchRefs).To(Equal([]api.OrchRef{
+			Expect(node.Spec.OrchRefs).To(Equal([]libapi.OrchRef{
 				{Orchestrator: "k8s", NodeName: "testnode"},
 			}))
 		})
@@ -1097,11 +1097,11 @@ var _ = Describe("UT for cloud orchestrator refs", func() {
 })
 
 type testDetector struct {
-	ref api.OrchRef
+	ref libapi.OrchRef
 	err error
 }
 
-func (td testDetector) GetOrchRef() (api.OrchRef, error) {
+func (td testDetector) GetOrchRef() (libapi.OrchRef, error) {
 	return td.ref, td.err
 }
 
@@ -1209,7 +1209,7 @@ var _ = Describe("UT for IP and IP6", func() {
 
 var _ = Describe("BGP layout tests", func() {
 
-	var node, nodeCopy *api.Node
+	var node, nodeCopy *libapi.Node
 
 	BeforeEach(func() {
 		node = makeNode("1.2.3.4/32", "fdf5::1.2.3.4/128")
@@ -1244,10 +1244,10 @@ var _ = Describe("BGP layout tests", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		noChange := func(node *api.Node) {}
+		noChange := func(node *libapi.Node) {}
 
 		DescribeTable("with EarlyNetworkConfiguration",
-			func(enc string, expectError bool, expectNodeChange func(*api.Node)) {
+			func(enc string, expectError bool, expectNodeChange func(*libapi.Node)) {
 				// Write EarlyNetworkConfiguration to file.
 				file, err := os.Create(encFileName)
 				Expect(err).NotTo(HaveOccurred())
@@ -1326,7 +1326,7 @@ spec:
         - peerIP: 172.31.22.100
       labels:
         rack: rb
-`, false, func(node *api.Node) {
+`, false, func(node *libapi.Node) {
 				if node.Labels == nil {
 					node.Labels = make(map[string]string)
 				}
@@ -1363,7 +1363,7 @@ spec:
         - peerIP: 172.31.22.100
       labels:
         rack: rb
-`, false, func(node *api.Node) {
+`, false, func(node *libapi.Node) {
 				if node.Labels == nil {
 					node.Labels = make(map[string]string)
 				}
