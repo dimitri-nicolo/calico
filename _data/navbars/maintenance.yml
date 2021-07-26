@@ -34,6 +34,8 @@ section:
     path: /security/comms/typha-node-tls
   - title: TLS certificates for compliance
     path: /security/comms/compliance-tls
+  - title: TLS certificates for PacketCapture APIs
+    path: /security/comms/packetcapture-tls
   - title: Certificate Management
     path: /security/comms/certificate-management
 - title: CLIs

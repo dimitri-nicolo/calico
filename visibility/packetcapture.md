@@ -55,13 +55,13 @@ Capturing live traffic will start by creating a [PacketCapture]({{site.baseurl}}
 
 Create a yaml file containing one or more packet captures and apply the packet capture to your cluster.
 
-```shell
+```bash
 kubectl apply -f <your_packet_capture_filename>
 ```
 
 In order to stop capturing traffic, delete the packet capture from your cluster.
 
-```shell
+```bash
 kubectl delete -f <your_packet_capture_filename>
 ```
 **Examples of selecting workloads**
@@ -99,7 +99,7 @@ Packet Captures files will be rotated either when reaching maximum size or when 
 
 For example, in order to extend the time rotation to one day, the command below can be used:
 
-```shell
+```bash
 kubectl patch felixconfiguration default -p '{"spec":{"captureRotationSeconds":"86400"}}'
 ```
 
@@ -176,8 +176,9 @@ metadata:
   name: tigera-capture-files-role-jane
   namespace: sample
 subjects:
-- kind: User
+- kind: ServiceAccount
   name: jane
+  namespace: default
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
@@ -191,12 +192,12 @@ Capture files will be stored on the host mounted volume used for calico nodes. T
 
 In order to locate the capture files generated, query the status of the [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture)
 
-```shell
+```bash
 export NS=<REPLACE_WITH_CAPTURE_NAMESPACE>
 export NAME=<REPLACE_WITH_CAPTURE_NAME>
 ```
 
-```shell
+```bash
 kubectl get packetcaptures -n $NS $NAME -o yaml
 ```
 
@@ -219,11 +220,20 @@ status:
 
 To access the capture files locally, you can use the following api that is available via tigera-manager service:
 
-```shell
-kubectl port-forward -ntigera-manager service/tigera-manager 9443:9443 &
+```bash
+kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
 NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> \
 curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
 -H "Authorizaton: Bearer $TOKEN"
+```
+
+Retrieving capture files from a managed cluster is performed by calling the same API:
+
+```bash
+kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
+NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> MANAGED_CLUSTER=<REPLACE_WITH_THE_NAME_OF_MANAGED_CLUSTER>\
+curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
+-H "Authorizaton: Bearer $TOKEN" -H "X-CLUSTER-ID: $MANAGED_CLUSTER"
 ```
 
 Next, get the token from the service account.
@@ -235,17 +245,17 @@ Using the running example of a service account named, `jane` in the default name
 
 Alternatively, you can access the capture files locally using [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI:
 
-```shell
+```bash
 calicoctl captured-packets copy sample-capture -namespace sample --destination /tmp
 ```
 
 You can access the capture files locally from the Fluentd pods using similar commands like the ones below:
 
-```shell
+```bash
 kubectl get pods -ntigera-fluentd --no-headers --field-selector spec.nodeName="<REPLACE_WITH_NODE_NAME>"
 ```
 
-```shell
+```bash
 kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sample-capture/ .
 ```
 
@@ -256,12 +266,12 @@ Packet capture files will not be deleted after a capture has stopped.
 
 [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI can be used to clean capture files:
 
-```shell
+```bash
 calicoctl captured-packets clean sample-capture -namespace sample
 ```
 
 Alternatively, the following command can be used to clean up capture files:
 
-```shell
+```bash
 kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME> -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"
 ```
