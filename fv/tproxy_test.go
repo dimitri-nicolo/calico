@@ -1,5 +1,5 @@
 // +build fvtests
-//Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -23,11 +23,11 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 var _ = describeTProxyTest(false, "Enabled")
@@ -794,7 +794,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				It("Should propagate annotated service update and deletions to tproxy ip set", func() {
 
 					By("setting up annotated service for the end points ")
-					//create service resource that has annotation at creation
+					// create service resource that has annotation at creation
 					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
 					v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					annotatedSvc := createService(v1Svc, clientset)
