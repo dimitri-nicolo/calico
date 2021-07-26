@@ -2008,16 +2008,11 @@ var nodesWithMoreIPsDeleted = vxlanWithBlock.withKVUpdates(
 
 var l7EnabledState = empty.withKVUpdates(
 	KVPair{Key: GlobalConfigKey{Name: "TPROXYMode"}, Value: "Enabled"},
-).
-	withIPSet(tproxyIpSetSelector, []string{}).
-	withIPSet(tproxyIpSetNodeports, []string{}).
-	withName("l7EnabledState")
+).withName("l7EnabledState")
 
 var withOutL7Annotation = l7EnabledState.withKVUpdates(
 	svcWithOutL7Annotation,
-).withIPSet(tproxyIpSetSelector, []string{}).
-	withIPSet(tproxyIpSetNodeports, []string{}).
-	withName("withOutL7Annotation")
+).withName("withOutL7Annotation")
 
 var clusterIPWithL7Annotation = withOutL7Annotation.withKVUpdates(
 	svcWithL7Annotation,

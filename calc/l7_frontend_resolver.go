@@ -205,7 +205,7 @@ func (tpr *L7FrontEndResolver) resolveNodePorts() (map[portProtoKey][]proxy.Serv
 			continue
 		}
 		added[portProto] = value
-		log.Debugf("Added Port/Protocol (%d/%d) Protocol not valid for tproxy", portProto.port, protocol)
+		log.Debugf("Added Port/Protocol (%d/%d).", portProto.port, protocol)
 	}
 	return added, removed
 }

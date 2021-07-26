@@ -46,6 +46,9 @@ type output struct {
 	ipAddr   string
 	port     int32
 	protocol labelindex.IPSetPortProtocol
+
+	// ipv6Port is set only for IPv6 ports, which are signalled by the Family field on the IPSetMember.
+	ipv6Port bool
 }
 
 var _ = Describe("L7FrontEndResolver", func() {
@@ -74,9 +77,11 @@ var _ = Describe("L7FrontEndResolver", func() {
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(addedMember.port),
 					}
-					member.Family = 4
-					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
-					member.Family = 6
+					if addedMember.ipv6Port {
+						member.Family = 6
+					} else {
+						member.Family = 4
+					}
 					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
 				}
 			}
@@ -96,9 +101,11 @@ var _ = Describe("L7FrontEndResolver", func() {
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(removedMember.port),
 					}
-					member.Family = 4
-					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
-					member.Family = 6
+					if removedMember.ipv6Port {
+						member.Family = 6
+					} else {
+						member.Family = 4
+					}
 					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 				}
 			}
@@ -184,8 +191,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{},
 			configEnabled,
@@ -234,8 +242,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{},
 			&config.Config{},
@@ -335,15 +344,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{{
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			&config.Config{},
 		),
@@ -396,8 +407,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{{
 				setId:    calc.TPROXYServicesIPSet,
@@ -418,8 +430,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			&config.Config{},
 		),
@@ -475,8 +488,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{{
 				setId:    calc.TPROXYServicesIPSet,
@@ -497,8 +511,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			&config.Config{},
 		),
@@ -532,8 +547,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 				setId: calc.TPROXYNodePortsTCPIPSet,
 				port:  456,
 			}, {
-				setId: calc.TPROXYNodePortsTCPIPSet,
-				port:  456,
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{},
 			&config.Config{},
