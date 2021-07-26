@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"k8s.io/utils/strings"
 

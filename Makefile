@@ -176,7 +176,7 @@ TYPHA_REPO=github.com/tigera/typha-private
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: update-licensing-pin update-pod2daemon-pin replace-libcalico-pin replace-typha-pin
+update-pins: update-api-pin update-licensing-pin update-pod2daemon-pin replace-libcalico-pin replace-typha-pin
 
 POD2DAEMON_BRANCH?=$(PIN_BRANCH)
 POD2DAEMON_REPO?=github.com/projectcalico/pod2daemon

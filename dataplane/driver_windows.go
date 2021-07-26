@@ -107,6 +107,7 @@ func ServePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
 		)
+
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
