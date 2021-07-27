@@ -29,23 +29,37 @@ type Client interface {
 }
 
 // NewClient returns a newly configured ES client.
-func NewClient(url, username, password, certPath string) (Client, error) {
+func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS bool) (Client, error) {
 	// Load CA cert
-	caCert, err := ioutil.ReadFile(certPath)
+	caCert, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
 
-	// Setup HTTPS client
-	tlsConfig := &tls.Config{
-		RootCAs: caCertPool,
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(caCert)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse root certificate")
 	}
-	tlsConfig.BuildNameToCertificate()
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
+
+	// Set up default HTTP transport config.
+	httpTransport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: caCertPool,
+		},
+	}
+
+	// Determine whether mTLS is enabled for Kibana.
+	if mTLS {
+		clientCert, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
+		if err != nil {
+			return nil, err
+		}
+		httpTransport.TLSClientConfig.Certificates = []tls.Certificate{clientCert}
+	}
+
 	httpClient := &http.Client{
-		Transport: transport,
+		Transport: httpTransport,
 		Timeout:   kibanaRequestTimeout,
 	}
 

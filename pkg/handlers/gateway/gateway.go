@@ -21,6 +21,18 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 	p := httputil.NewSingleHostReverseProxy(t.Dest)
 	p.FlushInterval = -1
 
+	// Augment the default director that is created by httputil.NewSingleHostReverseProxy
+	// because we need to explicitly set the Host header, which is not done by default.
+	defaultDirector := p.Director
+	p.Director = func(req *http.Request) {
+		// Run logic from the defaultDirector first to set things up for the request.
+		defaultDirector(req)
+
+		// Set the request Host explicitly, so it's not set to the default value.
+		// Request URL Host should be the correct value at this point.
+		req.Host = req.URL.Host
+	}
+
 	if t.Transport != nil {
 		p.Transport = t.Transport
 	} else if t.Dest.Scheme == "https" {
@@ -51,6 +63,14 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 			ca.AppendCertsFromPEM(file)
 			tlsCfg = &tls.Config{
 				RootCAs: ca,
+			}
+
+			if t.EnableMutualTLS {
+				clientCert, err := tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
+				if err != nil {
+					return nil, err
+				}
+				tlsCfg.Certificates = []tls.Certificate{clientCert}
 			}
 		}
 

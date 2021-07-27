@@ -47,6 +47,15 @@ type Target struct {
 	// Provides the CA cert to use for TLS verification.
 	CAPem string
 
+	// Provides the client cert to use for mTLS.
+	ClientCert string
+
+	// Provides the client key to use for mTLS.
+	ClientKey string
+
+	// Allows mTLS for this target.
+	EnableMutualTLS bool
+
 	// Transport to use for this target. If nil, a transport will be provided. This is useful for testing.
 	Transport http.RoundTripper
 
@@ -55,12 +64,13 @@ type Target struct {
 }
 
 // CreateTarget returns a Target instance based on the provided parameter values.
-func CreateTarget(catchAllRoute *Route, routes Routes, dest, caBundlePath string, allowInsecureTLS bool) (*Target, error) {
+func CreateTarget(catchAllRoute *Route, routes Routes, dest, caCertPath, clientCertPath, clientKeyPath string, enableMTLS, allowInsecureTLS bool) (*Target, error) {
 	var err error
 
 	target := &Target{
 		Routes:           routes,
 		AllowInsecureTLS: allowInsecureTLS,
+		EnableMutualTLS:  enableMTLS,
 	}
 
 	if len(routes) < 1 {
@@ -76,12 +86,17 @@ func CreateTarget(catchAllRoute *Route, routes Routes, dest, caBundlePath string
 		return nil, errors.Errorf("could not parse destination URL %q with associcated routes %+v: %s", dest, routes, err)
 	}
 
-	if target.Dest.Scheme == "https" && !allowInsecureTLS && caBundlePath == "" {
+	if target.Dest.Scheme == "https" && !allowInsecureTLS && caCertPath == "" {
 		return nil, errors.Errorf("target for '%s' must specify the CA bundle if AllowInsecureTLS is false when the scheme is https", dest)
 	}
 
-	if caBundlePath != "" {
-		target.CAPem = caBundlePath
+	if caCertPath != "" {
+		target.CAPem = caCertPath
+	}
+
+	if clientCertPath != "" && clientKeyPath != "" {
+		target.ClientCert = clientCertPath
+		target.ClientKey = clientKeyPath
 	}
 
 	return target, nil

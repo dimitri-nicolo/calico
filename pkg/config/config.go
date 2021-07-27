@@ -34,13 +34,19 @@ type Config struct {
 	ElasticUsername string `default:"" split_words:"true"`
 	ElasticPassword string `default:"" split_words:"true"`
 
-	ElasticEndpoint      string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
-	ElasticCatchAllRoute string `default:"/" split_words:"true"`
-	ElasticCABundlePath  string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
+	ElasticEndpoint        string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
+	ElasticCatchAllRoute   string `default:"/" split_words:"true"`
+	ElasticCABundlePath    string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
+	ElasticClientKeyPath   string `default:"/certs/elasticsearch/client.key" split_words:"true"`
+	ElasticClientCertPath  string `default:"/certs/elasticsearch/client.crt" split_words:"true"`
+	EnableElasticMutualTLS bool   `default:"false" split_words:"true"`
 
-	KibanaEndpoint      string `default:"https://tigera-secure-internal-kb-http.tigera-kibana.svc:5601" split_words:"true"`
-	KibanaCatchAllRoute string `default:"/tigera-kibana/" split_words:"true"` // Note: The ending "/" is important for prefix matching.
-	KibanaCABundlePath  string `default:"/certs/kibana/tls.crt" split_words:"true"`
+	KibanaEndpoint        string `default:"https://tigera-secure-internal-kb-http.tigera-kibana.svc:5601" split_words:"true"`
+	KibanaCatchAllRoute   string `default:"/tigera-kibana/" split_words:"true"` // Note: The ending "/" is important for prefix matching.
+	KibanaCABundlePath    string `default:"/certs/kibana/tls.crt" split_words:"true"`
+	KibanaClientKeyPath   string `default:"/certs/kibana/client.key" split_words:"true"`
+	KibanaClientCertPath  string `default:"/certs/kibana/client.crt" split_words:"true"`
+	EnableKibanaMutualTLS bool   `default:"false" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

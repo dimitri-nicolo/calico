@@ -23,31 +23,43 @@ type Client interface {
 }
 
 // NewClient returns a newly configured ES client.
-func NewClient(url, username, password, certPath string) (Client, error) {
-	// Attempt to load
-	cert, err := ioutil.ReadFile(certPath)
+func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS bool) (Client, error) {
+	// Attempt to load CA cert.
+	caCert, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
 		return nil, err
 	}
 
-	certPool := x509.NewCertPool()
-	ok := certPool.AppendCertsFromPEM(cert)
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(caCert)
 	if !ok {
 		return nil, fmt.Errorf("failed to parse root certificate")
 	}
 
-	// Configure the ES client
+	// Set up default HTTP transport config.
+	httpTransport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: caCertPool,
+		},
+	}
+
+	// Determine whether mTLS is enabled for Elasticsearch.
+	if mTLS {
+		clientCert, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
+		if err != nil {
+			return nil, err
+		}
+		httpTransport.TLSClientConfig.Certificates = []tls.Certificate{clientCert}
+	}
+
+	// Configure the ES client.
 	config := es7.Config{
 		Addresses: []string{
 			url,
 		},
-		Username: username,
-		Password: password,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: certPool,
-			},
-		},
+		Username:  username,
+		Password:  password,
+		Transport: httpTransport,
 	}
 
 	esClient, err := es7.NewClient(config)

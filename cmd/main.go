@@ -40,7 +40,7 @@ func init() {
 
 	cfg = &config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, cfg); err != nil {
-		log.WithError(err).Warn("failed to get system cert pool, creating a new one")
+		log.WithError(err).Warn("failed to initialize environment variables")
 		log.Fatal(err)
 	}
 
@@ -94,6 +94,9 @@ func main() {
 		config.KibanaRoutes,
 		cfg.KibanaEndpoint,
 		cfg.KibanaCABundlePath,
+		cfg.KibanaClientCertPath,
+		cfg.KibanaClientKeyPath,
+		cfg.EnableKibanaMutualTLS,
 		false,
 	)
 	if err != nil {
@@ -106,6 +109,9 @@ func main() {
 		config.ElasticsearchRoutes,
 		cfg.ElasticEndpoint,
 		cfg.ElasticCABundlePath,
+		cfg.ElasticClientCertPath,
+		cfg.ElasticClientKeyPath,
+		cfg.EnableElasticMutualTLS,
 		false,
 	)
 	if err != nil {
@@ -118,6 +124,9 @@ func main() {
 		cfg.ElasticUsername,
 		cfg.ElasticPassword,
 		cfg.ElasticCABundlePath,
+		cfg.ElasticClientCertPath,
+		cfg.ElasticClientKeyPath,
+		cfg.EnableElasticMutualTLS,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to configure ES client for ES Gateway.")
@@ -129,6 +138,9 @@ func main() {
 		cfg.ElasticUsername,
 		cfg.ElasticPassword,
 		cfg.KibanaCABundlePath,
+		cfg.KibanaClientCertPath,
+		cfg.KibanaClientKeyPath,
+		cfg.EnableKibanaMutualTLS,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to configure Kibana client for ES Gateway.")
