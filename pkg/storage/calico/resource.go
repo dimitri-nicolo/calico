@@ -23,8 +23,9 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/klog"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"

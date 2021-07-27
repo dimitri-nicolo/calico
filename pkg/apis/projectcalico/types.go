@@ -5,6 +5,8 @@ package projectcalico
 import (
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -559,7 +561,7 @@ type AuthenticationReview struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Status calico.AuthenticationReviewStatus
+	Status libapi.AuthenticationReviewStatus
 }
 
 // +genclient:nonNamespaced
@@ -582,8 +584,8 @@ type AuthorizationReview struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec   calico.AuthorizationReviewSpec
-	Status calico.AuthorizationReviewStatus
+	Spec   libapi.AuthorizationReviewSpec
+	Status libapi.AuthorizationReviewStatus
 }
 
 // +genclient:nonNamespaced

@@ -20,6 +20,7 @@ import (
 	licClient "github.com/tigera/licensing/client"
 
 	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"

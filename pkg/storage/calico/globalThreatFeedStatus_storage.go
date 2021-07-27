@@ -14,6 +14,7 @@ import (
 	"github.com/tigera/licensing/client/features"
 
 	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 

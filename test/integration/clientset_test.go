@@ -40,6 +40,8 @@ import (
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	licFeatures "github.com/tigera/licensing/client/features"
 
 	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
@@ -2819,7 +2821,7 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.AuthenticationReview{}
+				return &libapi.AuthenticationReview{}
 			}, true)
 			defer shutdownServer()
 			if err := testAuthenticationReviewsClient(client); err != nil {
@@ -2835,7 +2837,7 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 
 func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 
-	ar := v3.AuthenticationReview{}
+	ar := libapi.AuthenticationReview{}
 	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
 
 	if err != nil {
@@ -2866,7 +2868,7 @@ func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 		return errors.New("expected an authentication review")
 	}
 
-	status := obj.(*projectcalico.AuthenticationReview).Status
+	status := obj.(*libapi.AuthenticationReview).Status
 	if status.Name != name || status.Groups[0] != name || status.UID != uid || status.Extra[name][0] != name {
 		return errors.New("unexpected user info from authentication review")
 	}
@@ -2878,7 +2880,7 @@ func TestAuthorizationReviewsClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			pcs, client, shutdownServer := getFreshApiserverServerAndClient(t, func() runtime.Object {
-				return &projectcalico.AuthorizationReview{}
+				return &libapi.AuthorizationReview{}
 			})
 			defer shutdownServer()
 			if err := testAuthorizationReviewsClient(pcs, client); err != nil {
@@ -2893,7 +2895,7 @@ func TestAuthorizationReviewsClient(t *testing.T) {
 
 func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client calicoclient.Interface) error {
 	// Check we are able to create the authorization review.
-	ar := v3.AuthorizationReview{}
+	ar := libapi.AuthorizationReview{}
 	_, err := client.ProjectcalicoV3().AuthorizationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
 	if err != nil {
 		return err
@@ -2935,8 +2937,8 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 
 	// Get the users permissions.
 	req := &projectcalico.AuthorizationReview{
-		Spec: calico.AuthorizationReviewSpec{
-			ResourceAttributes: []calico.AuthorizationReviewResourceAttributes{
+		Spec: libapi.AuthorizationReviewSpec{
+			ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 				{
 					APIGroup:  "",
 					Resources: []string{"namespaces"},
@@ -2964,17 +2966,17 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 		return errors.New("expected an AuthorizationReview")
 	}
 
-	status := obj.(*projectcalico.AuthorizationReview).Status
+	status := obj.(*libapi.AuthorizationReview).Status
 
-	if err := checkAuthorizationReviewStatus(status, calico.AuthorizationReviewStatus{
-		AuthorizedResourceVerbs: []calico.AuthorizedResourceVerbs{{
+	if err := checkAuthorizationReviewStatus(status, libapi.AuthorizationReviewStatus{
+		AuthorizedResourceVerbs: []libapi.AuthorizedResourceVerbs{{
 			APIGroup: "",
 			Resource: "namespaces",
-			Verbs:    []calico.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+			Verbs:    []libapi.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
 		}, {
 			APIGroup: "",
 			Resource: "pods",
-			Verbs:    []calico.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+			Verbs:    []libapi.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
 		},
 		}}); err != nil {
 		return err
@@ -2983,7 +2985,7 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	return nil
 }
 
-func checkAuthorizationReviewStatus(actual, expected calico.AuthorizationReviewStatus) error {
+func checkAuthorizationReviewStatus(actual, expected libapi.AuthorizationReviewStatus) error {
 	if reflect.DeepEqual(actual, expected) {
 		return nil
 	}

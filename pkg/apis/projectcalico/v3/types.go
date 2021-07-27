@@ -6,6 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -553,7 +555,7 @@ type AuthenticationReview struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Status calico.AuthenticationReviewStatus `json:"status,omitempty" protobuf:"bytes,2,opt,name=status"`
+	Status libapi.AuthenticationReviewStatus `json:"status,omitempty" protobuf:"bytes,2,opt,name=status"`
 }
 
 // +genclient:nonNamespaced
@@ -576,8 +578,8 @@ type AuthorizationReview struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec   calico.AuthorizationReviewSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Status calico.AuthorizationReviewStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Spec   libapi.AuthorizationReviewSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Status libapi.AuthorizationReviewStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +genclient:nonNamespaced
