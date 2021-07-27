@@ -854,6 +854,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20210722032128-5643dd899009 h1:B
 github.com/tigera/libcalico-go-private v1.7.2-0.20210722032128-5643dd899009/go.mod h1:sion9/OqWGD8UYggqaZlx0EDHGWu9xuFQ8UInoE/FVw=
 github.com/tigera/licensing v1.0.1-0.20210726173647-5647b0a97123 h1:+7xjqPECVxRQJRVRt5+n1Be8EKu4G8CCWlOydpInyNo=
 github.com/tigera/licensing v1.0.1-0.20210726173647-5647b0a97123/go.mod h1:svyd+KM1kREG6kPQZ8gUYrwqiR4VJaxQG1wvtY1bt3g=
+github.com/tigera/licensing v1.0.1-0.20210727052330-3acce9adc848 h1:SDPl2M6s6Vi9IRiWUk/zOpSN+WJZnIPY0oNmCZ8zdQo=
+github.com/tigera/licensing v1.0.1-0.20210727052330-3acce9adc848/go.mod h1:svyd+KM1kREG6kPQZ8gUYrwqiR4VJaxQG1wvtY1bt3g=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210726154519-398fc305ff89 h1:2DCfJ1te19kJbo+U8VxeR2rsWcHGoeREJLjajKiIkVM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210726154519-398fc305ff89/go.mod h1:ceyXwschpFxyPo1c42yT0o0LaaSayp20946f7yDRhG8=
