@@ -649,12 +649,12 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 
 	m.dirtyIfaceNames.Iter(func(item interface{}) error {
 		ifaceName := item.(string)
-		log.Debugf("Update dataplane programming for WEP %v", ifaceName)
 
 		if !m.isWorkloadIface(ifaceName) {
 			return nil
 		}
 
+		log.Debugf("Update dataplane programming for WEP %v", ifaceName)
 		m.opReporter.RecordOperation("update-workload-iface")
 
 		if err := sem.Acquire(context.Background(), 1); err != nil {
