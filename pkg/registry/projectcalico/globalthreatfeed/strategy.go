@@ -30,7 +30,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 )

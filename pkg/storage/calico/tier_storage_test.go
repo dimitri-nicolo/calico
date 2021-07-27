@@ -21,7 +21,7 @@ import (
 	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 	calicov3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"

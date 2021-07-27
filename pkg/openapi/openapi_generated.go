@@ -26,7 +26,7 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	common "k8s.io/kube-openapi/pkg/common"
 
-	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
+	numorstring "github.com/tigera/api/pkg/lib/numorstring"
 )
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {

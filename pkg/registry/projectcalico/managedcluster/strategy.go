@@ -18,7 +18,7 @@ import (
 
 	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type apiServerStrategy struct {

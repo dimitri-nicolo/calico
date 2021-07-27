@@ -20,8 +20,8 @@ import (
 
 	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 func createSourceEntityRule() apiv3.EntityRule {

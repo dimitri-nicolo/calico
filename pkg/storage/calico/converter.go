@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/klog"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"

@@ -13,7 +13,7 @@ import (
 	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 
