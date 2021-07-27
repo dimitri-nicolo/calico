@@ -1,34 +1,20 @@
 ---
-title: Audit logs
-description: Enable Kubernetes audit logs sent to Elasticsearch. 
-canonical_url: /visibility/elastic/elastic/ee-audit
+title: Kubernetes audit logs
+description: Enable Kubernetes audit logs on changes to Kubernetes resources. 
+canonical_url: /visibility/elastic/kube-audit
 ---
 
 ### Big picture
 
-Enable Kubernetes audit logs to get historical data on Kubernetes resources in Manager UI.
-
-### Value
-
-Audit logs provide security teams and auditors historical data of all changes to resources over time. 
+Enable Kubernetes audit logs so security teams and auditors can see all the changes to Kubernetes resources over time. 
 
 ### Concepts
 
-### About audit logs
+#### About Kubernetes audit logs
 
-Audit logs for the following **resources** are enabled by default:
+**Kubernetes resources** are used in {{site.prodname}} compliance reports and other audit-related features, but they are not enabled by default. You must enable Kubernetes resources through the Kubernetes API server. If you miss this step, some compliance reports will not work, and audit trails will not provide a complete view to your security team. 
 
-- Global networkpolicies
-- Network policies
-- Staged global networkpolicies
-- Staged networkpolicies
-- Staged Kubernetes network policies
-- Global etwork sets
-- Network sets
-- Tiers
-- Host endpoints
-
-However, **Kubernetes resources** are also used in policy evaluation, and must be enabled through the Kubernetes the API server. To get a complete audit trail, we highly recommend that you enable audit logs for the following Kubernetes resources for each cluster. 
+You must enable the following Kubernetes resources for each cluster: 
 
 - Pod
 - Namespace
@@ -38,18 +24,7 @@ However, **Kubernetes resources** are also used in policy evaluation, and must b
 
 #### Audit logs in Manager UI
 
-Audit logs ({{site.prodname}} and Kubernetes) are displayed in the Timeline dashboard in Manager UI. You can filter logs, and export data in .json or .yaml formats.
-
-![audit-logs]({{site.baseurl}}/images/audit-logs.png)
-
-Audit logs are also visible in the Kibana dashboard, and useful when looking at policy differences. 
-
-![kibana-auditlogs]({{site.baseurl}}/images/kibana-auditlogs.png)
-
-Finally, audit logs are the core data for compliance reports. 
-
-![compliance-reports]({{site.baseurl}}/images/configuration-compliance.png)
-
+Like {{site.prodname}} audit logs, Kubernetes audit logs are displayed in Manager UI in the Timeline dashboard, Kibana dashboard (indexed by, `tigera_secure_ee_audit_kube`), and provide the core data for compliance reports. 
 
 ### Before you begin
 
@@ -61,8 +36,12 @@ Finally, audit logs are the core data for compliance reports.
 
 **Not supported**
 - OpenShift
+- AKS
+- GKE
 
 ### How to
+
+Enable Kubernetes audit logs in the Kubernetes API server:
 
 {% tabs %}
   <label: Kubernetes on-premises,active:true>
@@ -82,7 +61,7 @@ At a minimum, enable audit logs for these resources that are involved in network
 
 The following sample policy audits changes to Kubernetes Pod, Namespace, ServiceAccount, Endpoints and NetworkPolicy resources. To add other audit logs for resources beyond network policy, see the {% include open-new-window.html text='Kubernetes docs' url='https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy' %}, or review this function for inspiration (which generates the GKE audit policy). 
 
-```
+```yaml
 apiVersion: audit.k8s.io/v1beta1
 kind: Policy
 omitStages:
@@ -135,7 +114,7 @@ At a minimum, enable audit logs for these resources that are involved in network
 
 The following sample policy audits changes to Kubernetes Pod, Namespace, ServiceAccount, Endpoints and NetworkPolicy resources. To add other audit logs for resources beyond network policy, see the {% include open-new-window.html text='Kubernetes docs' url='https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy' %}, or review this function for inspiration (which generates the GKE audit policy). 
 
-```
+```yaml
 apiVersion: audit.k8s.io/v1beta1
 kind: Policy
 omitStages:
@@ -198,7 +177,7 @@ Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.
 
    **Example**
 
-   ```
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
@@ -220,7 +199,7 @@ In this step, you add AWS authentication information to enable {{site.prodname}}
 
 Add a Secret with the name, `tigera-eks-log-forwarder-secret` in the namespace, `tigera-operator`, and the AWS [Security Credentials](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html){:target="_blank"} in the data section.
 
-```
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -253,7 +232,7 @@ At a minimum, enable audit logs for these resources that are involved in network
 
 The following sample policy audits changes to Kubernetes Pod, Namespace, ServiceAccount, Endpoints and NetworkPolicy resources. To add other audit logs for resources beyond network policy, see the {% include open-new-window.html text='Kubernetes docs' url='https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy' %}, or review this function for inspiration (which generates the GKE audit policy). 
 
-```
+```yaml
 apiVersion: audit.k8s.io/v1beta1
 kind: Policy
 omitStages:

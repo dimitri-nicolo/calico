@@ -9,7 +9,7 @@ section:
 - title: Packet capture
   path: /visibility/packetcapture  
 - title: Calico Enterprise logs
-  path: /visibility/elastic/
+  path: /visibility/elastic
   section:
   - title: Overview
     path: /visibility/elastic/overview
@@ -33,7 +33,7 @@ section:
     - title: Enable TCP socket stats
       path: /visibility/elastic/flow/tcpstats
   - title: Audit logs
-    path: /visibility/elastic/ee-audit 
+    path: /visibility/elastic/audit-overview  
   - title: DNS logs
     path: /visibility/elastic/dns/
     section:
@@ -52,5 +52,7 @@ section:
       path: /visibility/elastic/l7/datatypes
   - title: Troubleshoot logs
     path: /visibility/troubleshoot     
+- title: Kubernetes audit logs
+  path: /visibility/elastic/kube-audit 
 - title: iptables logs
   path: /visibility/iptables 

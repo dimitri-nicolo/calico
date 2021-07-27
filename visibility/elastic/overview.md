@@ -2,7 +2,6 @@
 title: Overview 
 description: Summary of the out-of-box features for Calico Enterprise logs.
 canonical_url: /visibility/elastic/overview
-show_toc: false
 ---
 
 ### Big picture
