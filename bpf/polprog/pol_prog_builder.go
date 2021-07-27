@@ -325,6 +325,7 @@ func (p *Builder) writeProgramFooter(forXDP bool) {
 	p.b.Store32(R9, R1, stateOffPolResult)
 
 	if forXDP {
+		p.b.LabelNextInsn("exit")
 		p.b.MovImm64(R0, 1 /* XDP_DROP */)
 	} else {
 		// Execute the tail call (for dropping with a flow log).
