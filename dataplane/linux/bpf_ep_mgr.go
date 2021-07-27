@@ -35,7 +35,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
 
@@ -650,6 +649,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 
 	m.dirtyIfaceNames.Iter(func(item interface{}) error {
 		ifaceName := item.(string)
+		log.Debugf("Update dataplane programming for WEP %v", ifaceName)
 
 		if !m.isWorkloadIface(ifaceName) {
 			return nil
@@ -758,6 +758,7 @@ func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	// Otherwise, the interface appears to be present but we may or may not have an endpoint from the
 	// datastore.  If we don't have an endpoint then we'll attach a program to block traffic and we'll
 	// get the jump map ready to insert the policy if the endpoint shows up.
+	log.Debugf("WEP iface %v appears to be present", ifaceName)
 
 	// Attach the qdisc first; it is shared between the directions.
 	err := m.dp.ensureQdisc(ifaceName)
@@ -839,12 +840,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		ap.ForceReattach = true
 	}
 
-	l, err := netlink.LinkByName(ap.Iface)
-	if err != nil {
-		return err
-	}
-	ap.VethNS = uint16(l.Attrs().NetNsID)
-
+	ap.Log().Debug("Ensure program attached...")
 	jumpMapFD, err := m.dp.ensureProgramAttached(&ap)
 	if err != nil {
 		return err

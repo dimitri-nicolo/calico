@@ -35,6 +35,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
@@ -79,6 +80,14 @@ func (ap AttachPoint) Log() *log.Entry {
 // AttachProgram attaches a BPF program from a file to the TC attach point
 func (ap AttachPoint) AttachProgram() error {
 	logCxt := log.WithField("attachPoint", ap)
+
+	if ap.Type == EpTypeWorkload {
+		l, err := netlink.LinkByName(ap.Iface)
+		if err != nil {
+			return err
+		}
+		ap.VethNS = uint16(l.Attrs().NetNsID)
+	}
 
 	tempDir, err := ioutil.TempDir("", "calico-tc")
 	if err != nil {
