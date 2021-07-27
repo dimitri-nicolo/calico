@@ -193,6 +193,7 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+API_REPO=github.com/tigera/api
 LICENSING_REPO=github.com/tigera/licensing
 LICENSING_BRANCH=$(PIN_BRANCH)
 LOGRUS_REPO_ORIG=github.com/sirupsen/logrus
@@ -205,7 +206,7 @@ update-licensing-pin:
 replace-logrus-pin:
 	$(call update_replace_pin,$(LOGRUS_REPO_ORIG),$(LOGRUS_REPO),$(LOGRUS_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-licensing-pin replace-logrus-pin
+update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin update-licensing-pin replace-logrus-pin
 
 ###############################################################################
 # See .golangci.yml for golangci-lint config
