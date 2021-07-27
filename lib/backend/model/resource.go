@@ -26,8 +26,9 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	discovery "k8s.io/api/discovery/v1beta1"
+
+	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/namespace"
 )
