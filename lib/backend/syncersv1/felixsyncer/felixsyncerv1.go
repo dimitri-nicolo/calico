@@ -154,11 +154,14 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
 				ClientID:        calicoClientID, // This is backed by the calico client
 			})
+			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
+				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesEndpointSlice},
+			})
 		}
 
 		resourceTypes = append(resourceTypes, additionalTypes...)
 
-		// If using Calico IPAM, include IPAM resources the felix cares about.
+		// If using Calico IPAM, include IPAM resources that felix cares about.
 		if !cfg.K8sUsePodCIDR {
 			additionalTypes := []watchersyncer.ResourceType{{
 				ListInterface:   model.BlockListOptions{},
