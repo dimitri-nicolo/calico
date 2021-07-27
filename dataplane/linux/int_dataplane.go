@@ -592,10 +592,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	callbacks := common.NewCallbacks()
 	dp.callbacks = callbacks
-	if !config.BPFEnabled && config.XDPEnabled {
+	if config.XDPEnabled {
 		if err := bpf.SupportsXDP(); err != nil {
 			log.WithError(err).Warn("Can't enable XDP acceleration.")
-		} else {
+			config.XDPEnabled = false
+		} else if !config.BPFEnabled {
 			st, err := NewXDPState(config.XDPAllowGeneric)
 			if err != nil {
 				log.WithError(err).Warn("Can't enable XDP acceleration.")
@@ -610,7 +611,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("XDP acceleration disabled.")
 	}
 
-	// TODO Integrate XDP and BPF infra.
+	// TODO Support cleaning up non-BPF XDP state from a previous Felix run, when BPF mode has just been enabled.
 	if !config.BPFEnabled && dp.xdpState == nil {
 		xdpState, err := NewXDPState(config.XDPAllowGeneric)
 		if err == nil {
@@ -857,17 +858,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		bpfEndpointManager = newBPFEndpointManager(
-			config.BPFLogLevel,
-			config.Hostname,
+			&config,
 			fibLookupEnabled,
-			config.RulesConfig.EndpointToHostAction,
-			config.BPFDataIfacePattern,
 			workloadIfaceRegex,
 			ipSetIDAllocator,
-			config.VXLANMTU,
-			uint16(config.VXLANPort),
-			config.BPFNodePortDSREnabled,
-			config.BPFExtToServiceConnmark,
 			ipSetsMap,
 			stateMap,
 			ruleRenderer,

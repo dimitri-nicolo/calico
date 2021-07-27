@@ -67,6 +67,14 @@ var ErrDeviceNotFound = errors.New("device not found")
 var ErrInterrupted = errors.New("dump interrupted")
 var prefHandleRe = regexp.MustCompile(`pref ([^ ]+) .* handle ([^ ]+)`)
 
+func (ap AttachPoint) Log() *log.Entry {
+	return log.WithFields(log.Fields{
+		"iface": ap.Iface,
+		"type":  ap.Type,
+		"hook":  ap.Hook,
+	})
+}
+
 // AttachProgram attaches a BPF program from a file to the TC attach point
 func (ap AttachPoint) AttachProgram() error {
 	logCxt := log.WithField("attachPoint", ap)
@@ -157,6 +165,12 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 		"bpf", "da", "obj", tempBinary,
 		"sec", "calico_tcp_stats")
 	return err
+}
+
+func (ap AttachPoint) DetachProgram() error {
+	// We never detach TC programs, so this should not be called.
+	ap.Log().Panic("DetachProgram is not implemented for TC")
+	return nil
 }
 
 func ExecTC(args ...string) (out string, err error) {
@@ -370,6 +384,12 @@ func CleanUpJumpMaps() {
 			DevName string `json:"devname"`
 			ID      int    `json:"id"`
 		} `json:"tc"`
+		XDP []struct {
+			DevName string `json:"devname"`
+			IfIndex int    `json:"ifindex"`
+			Mode    string `json:"mode"`
+			ID      int    `json:"id"`
+		} `json:"xdp"`
 	}
 	err = json.Unmarshal(out, &attached)
 	if err != nil {
@@ -377,7 +397,11 @@ func CleanUpJumpMaps() {
 	}
 	attachedProgs := set.New()
 	for _, prog := range attached[0].TC {
-		log.WithField("prog", prog).Debug("Adding prog to attached set")
+		log.WithField("prog", prog).Debug("Adding TC prog to attached set")
+		attachedProgs.Add(prog.ID)
+	}
+	for _, prog := range attached[0].XDP {
+		log.WithField("prog", prog).Debug("Adding XDP prog to attached set")
 		attachedProgs.Add(prog.ID)
 	}
 
@@ -403,7 +427,7 @@ func CleanUpJumpMaps() {
 			continue
 		}
 		for _, id := range p.Maps {
-			log.WithField("mapID", id).WithField("prog", p).Debug("Map is still in use")
+			log.WithField("mapID", id).WithField("prog", p).Debugf("Map is still in use: %v", mapIDToPath[id])
 			delete(mapIDToPath, id)
 		}
 	}
@@ -498,4 +522,38 @@ func RemoveQdisc(ifaceName string) error {
 		return fmt.Errorf("failed to remove qdisc from interface '%s': %w", ifaceName, err)
 	}
 	return nil
+}
+
+func (ap *AttachPoint) ProgramID() (string, error) {
+	logCtx := log.WithField("iface", ap.Iface)
+	logCtx.Info("Finding TC program ID")
+	out, err := ExecTC("filter", "show", "dev", ap.Iface, string(ap.Hook))
+	if err != nil {
+		return "", fmt.Errorf("failed to find TC filter for interface %v: %w", ap.Iface, err)
+	}
+	logCtx.Infof("out:\n%v", out)
+
+	progName := ap.ProgramName()
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, progName) {
+			re := regexp.MustCompile(`id (\d+)`)
+			m := re.FindStringSubmatch(line)
+			if len(m) > 0 {
+				return m[1], nil
+			}
+			return "", fmt.Errorf("failed to process TC output: %v", line)
+		}
+	}
+
+	return "", errors.New("failed to find TC program")
+}
+
+// Return a key that uniquely identifies this attach point, amongst all of the possible attach
+// points associated with a single given interface.
+func (ap *AttachPoint) JumpMapFDMapKey() string {
+	return "tc-" + string(ap.Hook)
+}
+
+func (ap *AttachPoint) IfaceName() string {
+	return ap.Iface
 }

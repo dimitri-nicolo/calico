@@ -100,6 +100,8 @@ from%.ll: tc.c tc.d calculate-flags
 	$(COMPILE)
 test%.ll: tc.c tc.d calculate-flags
 	$(COMPILE)
+xdp%.ll: xdp.c xdp.d calculate-flags
+	$(COMPILE)
 
 LINK=$(LD) -march=bpf -filetype=obj -o $@ $<
 bin/to%.o: to%.ll | bin
@@ -107,6 +109,8 @@ bin/to%.o: to%.ll | bin
 bin/from%.o: from%.ll | bin
 	$(LINK)
 bin/test%.o: test%.ll | bin
+	$(LINK)
+bin/xdp%.o: xdp%.ll | bin
 	$(LINK)
 bin/connect_time_%v4.o: connect_time_%v4.ll | bin
 	$(LINK)
