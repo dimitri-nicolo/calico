@@ -22,6 +22,9 @@
 #include "tracing.h"
 
 #define SEND_DATA_INTERVAL 10000000000
+#define MAX_FILENAME_LENGTH 128
+#define MAX_ARG_LENGTH 64
+#define MAX_NUM_ARGS 5
 struct __attribute__((__packed__)) calico_kprobe_stats_key {
 	__u8  saddr[16];
 	__u8  daddr[16];
@@ -38,9 +41,26 @@ struct calico_kprobe_stats_value {
 };
 
 CALI_MAP(cali_kpstats, 2,
-		BPF_MAP_TYPE_LRU_HASH,
-		struct calico_kprobe_stats_key, struct calico_kprobe_stats_value,
-		511000, 0, MAP_PIN_GLOBAL)
+                BPF_MAP_TYPE_LRU_HASH,
+                struct calico_kprobe_stats_key, struct calico_kprobe_stats_value,
+                511000, 0, MAP_PIN_GLOBAL)
+
+struct __attribute__((__packed__)) calico_exec_value {
+	struct perf_event_header hdr;
+	__u32 pid;
+	char filename[MAX_FILENAME_LENGTH];
+	char args[MAX_NUM_ARGS][MAX_ARG_LENGTH];
+};
+
+CALI_MAP(cali_epath, 2,
+                BPF_MAP_TYPE_LRU_HASH,
+                __u32, struct calico_exec_value,
+                64000, 0, MAP_PIN_GLOBAL)
+
+CALI_MAP(cali_exec, 2,
+                BPF_MAP_TYPE_PERCPU_ARRAY,
+                __u32, struct calico_exec_value,
+                1, 0, MAP_PIN_GLOBAL)
 
 static int CALI_BPF_INLINE ip_addr_is_localhost(__u8 *addr) {
 	return (addr[12] == 0x7f);
@@ -64,6 +84,7 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	struct calico_kprobe_stats_value value = {};
 	struct calico_kprobe_stats_value *val = NULL;
 	struct calico_kprobe_stats_key key = {};
+	struct calico_exec_value *exec_value = NULL;
 
 	if (!sk_cmn) {
 		return 0;
@@ -108,6 +129,17 @@ static int CALI_BPF_INLINE kprobe_collect_stats(struct pt_regs *ctx,
 	val = cali_kpstats_lookup_elem(&key);
 	if (val == NULL) {
 		value.bytes = bytes;
+		/* Felix will see the process path event (including the PID) and
+		 * then the BPF stats event (also including the PID) and so
+		 * will be able to connect the two events together.
+		 */
+		exec_value = cali_epath_lookup_elem(&key.pid);
+		if (exec_value) {
+			int err = perf_commit_event(ctx, exec_value, sizeof(struct calico_exec_value));
+			if (err) {
+				CALI_DEBUG("error sending process path: %d\n", err);
+			}
+		}
 		ret = event_bpf_stats(ctx, key.pid, key.saddr, key.sport, key.daddr,
 					key.dport, value.bytes, proto, !tx);
 		if (ret == 0) {

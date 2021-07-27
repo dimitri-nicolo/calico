@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -388,6 +389,17 @@ configRetry:
 			}
 		}
 	}
+
+	if configParams.FlowLogsCollectProcessPath {
+		if !configParams.FlowLogsCollectProcessInfo {
+			log.Error("FlowLogsCollectProcessPath enabled but FlowLogsCollectProcessInfo is disabled. Disabling FlowLogsCollectProcessPath.")
+			_, err := configParams.OverrideParam("FlowLogsCollectProcessPath", "false")
+			if err != nil {
+				log.WithError(err).Panic("Bug: failed to override config parameter")
+			}
+		}
+	}
+
 	// We're now both live and ready.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 

@@ -34,6 +34,8 @@ const (
 	TypePolicyVerdict Type = 3
 	// TypeTcpStats reports L4 TCP socket information
 	TypeTcpStats Type = 4
+	// TypeProcessPath reports process exec path, arguments
+	TypeProcessPath Type = 5
 )
 
 func (t Type) String() string {

@@ -62,7 +62,7 @@ UT_C_FILES:=$(shell find ut -name '*.c')
 UT_OBJS:=$(UT_C_FILES:.c=.o) $(shell ./list-ut-objs)
 
 OBJS:=$(shell ./list-objs)
-C_FILES:=tc.c connect_balancer.c tcp_kprobe.c udp_kprobe.c tcp_stats.c
+C_FILES:=tc.c connect_balancer.c tcp_kprobe.c udp_kprobe.c tcp_stats.c syscall_kprobe.c
 
 all: $(OBJS)
 ut-objs: $(UT_OBJS)
@@ -77,6 +77,8 @@ tcp_%kprobe.ll: tcp_kprobe.c tcp_kprobe.d calculate-flags
 udp_%kprobe.ll: udp_kprobe.c udp_kprobe.d calculate-flags
 	$(COMPILE)
 tcp_%stats.ll: tcp_stats.c tcp_stats.d calculate-flags
+	$(COMPILE)
+syscall_%kprobe.ll: syscall_kprobe.c syscall_kprobe.d calculate-flags
 	$(COMPILE)
 
 UT_CFLAGS=\
@@ -115,6 +117,8 @@ bin/tcp_%kprobe.o: tcp_%kprobe.ll | bin
 bin/udp_%kprobe.o: udp_%kprobe.ll | bin
 	$(LINK)
 bin/tcp_%stats.o: tcp_%stats.ll | bin
+	$(LINK)
+bin/syscall_%kprobe.o: syscall_%kprobe.ll | bin
 	$(LINK)
 ut/%.o: ut/%.ll
 	$(LINK)

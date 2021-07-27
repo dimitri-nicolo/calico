@@ -18,6 +18,8 @@ import (
 	"path"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/events"
 	"github.com/projectcalico/felix/bpf/libbpf"
@@ -29,6 +31,7 @@ const (
 
 var tcpFns = []string{"tcp_sendmsg", "tcp_cleanup_rbuf", "tcp_connect"}
 var udpFns = []string{"udp_sendmsg", "udp_recvmsg", "udpv6_sendmsg", "udpv6_recvmsg"}
+var syscallFns = []string{"__x64_sys_execve"}
 
 type kprobeFDs struct {
 	progFD       bpf.ProgFD
@@ -47,6 +50,21 @@ func New(logLevel string, evnt events.Events, mc *bpf.MapContext) *bpfKprobe {
 	kpStatsMap := MapKpStats(mc)
 	err := kpStatsMap.EnsureExists()
 	if err != nil {
+		log.WithError(err).Errorf("kprobe: failed to create cali_kpstats map")
+		return nil
+	}
+
+	ePathMap := MapEpath(mc)
+	err = ePathMap.EnsureExists()
+	if err != nil {
+		log.WithError(err).Error("kprobe: failed to create cali_epath map")
+		return nil
+	}
+
+	execMap := MapExec(mc)
+	err = execMap.EnsureExists()
+	if err != nil {
+		log.WithError(err).Error("kprobe: failed to create cali_exec map")
 		return nil
 	}
 
@@ -79,6 +97,14 @@ func (k *bpfKprobe) AttachUDPv4() error {
 	err := k.installKprobe("udp", udpFns)
 	if err != nil {
 		return fmt.Errorf("error installing udp v4 kprobes")
+	}
+	return nil
+}
+
+func (k *bpfKprobe) AttachSyscall() error {
+	err := k.installKprobe("syscall", syscallFns)
+	if err != nil {
+		return fmt.Errorf("error install exec kprobes %w", err)
 	}
 	return nil
 }
@@ -128,6 +154,17 @@ func (k *bpfKprobe) DetachUDPv4() error {
 		}
 	}
 	k.Close("udp")
+	return nil
+}
+
+func (k *bpfKprobe) DetachSyscall() error {
+	for _, fn := range syscallFns {
+		err := k.disableKprobe(k.linkMap[fn])
+		if err != nil {
+			return err
+		}
+	}
+	k.Close("syscall")
 	return nil
 }
 

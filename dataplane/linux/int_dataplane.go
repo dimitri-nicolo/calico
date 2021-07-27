@@ -206,6 +206,7 @@ type Config struct {
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
 	FlowLogsCollectTcpStats            bool
+	FlowLogsCollectProcessPath         bool
 	FlowLogsFileIncludeService         bool
 	NfNetlinkBufSize                   int
 
@@ -681,11 +682,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var (
-		bpfEvnt             events.Events
-		bpfEventPoller      *bpfEventPoller
-		bpfEndpointManager  *bpfEndpointManager
-		eventProtoStatsSink *events.EventProtoStatsSink
-		eventTcpStatsSink   *events.EventTcpStatsSink
+		bpfEvnt              events.Events
+		bpfEventPoller       *bpfEventPoller
+		bpfEndpointManager   *bpfEndpointManager
+		eventProtoStatsSink  *events.EventProtoStatsSink
+		eventTcpStatsSink    *events.EventTcpStatsSink
+		eventProcessPathSink *events.EventProcessPathSink
 
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
@@ -698,6 +700,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Error("Failed to create perf event")
 			config.FlowLogsCollectProcessInfo = false
 			config.FlowLogsCollectTcpStats = false
+			config.FlowLogsCollectProcessPath = false
 		} else {
 			bpfEventPoller = newBpfEventPoller(bpfEvnt)
 
@@ -720,15 +723,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Info("BPF: Registered events sink for TypeDNSEvent")
 		}
 	}
-
 	if config.FlowLogsCollectProcessInfo {
 		installKprobes := func() error {
-			err := bpf.MountDebugfs()
-			if err != nil {
-				return fmt.Errorf("failed to mount debug fs: %v", err)
-			}
 			kp := kprobe.New(config.BPFLogLevel, bpfEvnt, bpfMapContext)
 			if kp != nil {
+				if config.FlowLogsCollectProcessPath {
+					err = kp.AttachSyscall()
+					if err != nil {
+						log.WithError(err).Error("error installing process path kprobes. skipping it")
+						config.FlowLogsCollectProcessPath = false
+					}
+				}
 				err = kp.AttachTCPv4()
 				if err != nil {
 					return fmt.Errorf("failed to install TCP v4 kprobes: %v", err)
@@ -750,6 +755,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
 			bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
+			eventProcessPathSink = events.NewEventProcessPathSink()
+			bpfEventPoller.Register(events.TypeProcessPath, eventProcessPathSink.HandleEvent)
 		}
 	}
 

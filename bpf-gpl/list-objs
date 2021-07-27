@@ -32,6 +32,7 @@ for log_level in debug info no_log; do
   echo "bin/tcp_${log_level}_kprobe.o"
   echo "bin/udp_${log_level}_kprobe.o"
   echo "bin/tcp_${log_level}_stats.o"
+  echo "bin/syscall_${log_level}_kprobe.o"
   for host_drop in "" "host_drop_"; do
     if [ "${host_drop}" = "host_drop_" ]; then
       # The workload-to-host drop setting only applies to the from-workload hook.

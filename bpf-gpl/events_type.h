@@ -18,9 +18,10 @@
 #ifndef __CALI_EVENTS_TYPE_H__
 #define __CALI_EVENTS_TYPE_H__
 
-#define EVENT_PROTO_STATS	1
-#define EVENT_DNS		2
-#define EVENT_POLICY_VERDICT	3
-#define EVENT_TCP_STATS	4
+#define EVENT_PROTO_STATS       1
+#define EVENT_DNS               2
+#define EVENT_POLICY_VERDICT    3
+#define EVENT_TCP_STATS         4
+#define EVENT_PROCESS_PATH      5
 
 #endif /* __CALI_EVENTS_TYPE_H__ */

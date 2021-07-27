@@ -197,20 +197,6 @@ func NewBPFLib(binDir string) (*BPFLib, error) {
 	}, nil
 }
 
-func MountDebugfs() error {
-	var err error
-
-	mnt, err := isMount(defaultDebugfsPath)
-	if err != nil {
-		return err
-	}
-
-	if !mnt {
-		return syscall.Mount(defaultDebugfsPath, defaultDebugfsPath, "debugfs", 0, "")
-	}
-	return nil
-}
-
 func MaybeMountBPFfs() (string, error) {
 	var err error
 	bpffsPath := defaultBPFfsPath
