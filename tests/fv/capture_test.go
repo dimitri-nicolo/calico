@@ -40,7 +40,7 @@ func TestCaptureArgs(t *testing.T) {
 
 	for _, entry := range tables {
 		log.Infof("Running calicoctl with %v", entry.args)
-		out, err := CalicoctlMayFail(entry.args...)
+		out, err := CalicoctlMayFail(true, entry.args...)
 		if entry.shouldFail {
 			Expect(err).To(HaveOccurred())
 		} else {
