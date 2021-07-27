@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/names"
 
@@ -149,7 +150,7 @@ func newProvider(s string) (Provider, error) {
 	switch strings.ToLower(s) {
 	case strings.ToLower(ProviderNone.String()):
 		return ProviderNone, nil
-	case strings.ToLower(ProviderEKS.String()):
+	case strings.ToLower(ProviderEKS.String()), "ecs":
 		return ProviderEKS, nil
 	case strings.ToLower(ProviderGKE.String()):
 		return ProviderGKE, nil

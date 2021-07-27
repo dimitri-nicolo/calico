@@ -20,6 +20,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/config"
 	. "github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
@@ -1201,7 +1202,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxy, Rules: tproxyRules})
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxySvc, Rules: tproxyRules})
 
 		nameForIPSet := func(ipsetID string) string {
 			if ipVersion == 4 {
@@ -1210,32 +1211,80 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
 			}
 		}
-		chains = append(chains, &Chain{
-			Name: ChainManglePreroutingTProxySelect,
-			Rules: []Rule{{
-				Comment: []string{"Proxy selected destinations"},
-				Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
-				Action:  JumpAction{Target: ChainManglePreroutingTProxy},
-			}},
-		})
 
 		chains = append(chains, &Chain{
-			Name: ChainMangleOutputTProxy,
+			Name: ChainManglePreroutingTProxySelect,
 			Rules: []Rule{
 				{
-					// Proxied connections for regular services do not have
-					// local source nor destination. This is how we can easily
-					// identify the upstream part and mark it.
-					Comment: []string{"Mark any non-local connection as local for return"},
-					Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+					Comment: []string{"Proxy selected services"},
+					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
 				},
 				{
-					// Proxied connections that are pod-to-self need to be masqueraded
-					Comment: []string{"MASQ proxied pod-service-self"},
-					Match:   Match().SourceDestSet(nameForIPSet("tproxy-pod-self")),
-					Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
+					Comment: []string{"Proxy selected nodeports"},
+					Match: Match().
+						Protocol("tcp").
+						DestAddrType(AddrTypeLocal).
+						// We use a single port ipset for both V4 and V6
+						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet("tproxy-nodeports-tcp")),
+					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
 				},
 			},
+		})
+
+		tproxyRules = nil
+
+		if r.KubernetesProvider == config.ProviderEKS {
+			tproxyRules = []Rule{{
+				Comment: []string{"Set the EKS nodeport mark that we bypass"},
+				Match: Match().
+					InInterface("eth0").
+					DestAddrTypeLimitIfaceIn(AddrTypeLocal),
+				Action: SetConnMarkAction{Mark: 0x80, Mask: 0x80},
+			}}
+		}
+
+		tproxyRules = append(tproxyRules,
+			Rule{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("tcp").DestAddrType(AddrTypeLocal),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+			},
+			Rule{
+				Comment: []string{"Divert the TCP connection to proxy"},
+				Match:   Match().Protocol("udp").DestAddrType(AddrTypeLocal),
+				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+			},
+		)
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
+
+		rules := []Rule{
+			{
+				// Proxied connections for regular services do not have
+				// local source nor destination. This is how we can easily
+				// identify the upstream part and mark it.
+				Comment: []string{"Mark any non-local connection as local for return"},
+				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			},
+			{
+				// Proxied connections that are pod-to-self need to be masqueraded
+				Comment: []string{"MASQ proxied pod-service-self"},
+				Match:   Match().SourceDestSet(nameForIPSet("tproxy-pod-self")),
+				Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
+			},
+		}
+
+		if r.KubernetesProvider == config.ProviderEKS {
+			rules = append(rules, Rule{
+				Comment: []string{"Restore EKS nodeport routing mark"},
+				Action:  RestoreConnMarkAction{RestoreMask: 0x80},
+			})
+		}
+
+		chains = append(chains, &Chain{
+			Name:  ChainMangleOutputTProxy,
+			Rules: rules,
 		})
 	}
 

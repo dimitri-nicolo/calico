@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -19,7 +19,7 @@ import (
 const usage = `tproxy: acts as a transparent proxy for Felix fv testing.
 
 Usage:
-  tproxy <port>`
+  tproxy <port-svc> <port-np> [--masq-mark=<masq-mark>]`
 
 func main() {
 	log.SetLevel(log.InfoLevel)
@@ -31,17 +31,28 @@ func main() {
 
 	log.WithField("args", args).Info("Parsed arguments")
 
-	port, err := strconv.Atoi(args["<port>"].(string))
+	masqMark := 0x4000
+	if args["--masq-mark"] != nil {
+		masqMark, err = strconv.Atoi(args["--masq-mark"].(string))
+		if err != nil {
+			log.WithError(err).Fatal("--masq-mark not a number")
+		}
+		if masqMark < 0 || masqMark > 31 {
+			log.Fatal("--masq-mark not between 0 and 31")
+		}
+	}
+
+	portSvc, err := strconv.Atoi(args["<port-svc>"].(string))
 	if err != nil {
 		log.WithError(err).Fatal("port not a number")
 	}
 
-	listener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: port})
+	listenerSvc, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: portSvc})
 	if err != nil {
-		log.WithError(err).Fatalf("Failed to listen on port %d", port)
+		log.WithError(err).Fatalf("Failed to listen on port %d", portSvc)
 	}
 
-	f, err := listener.File()
+	f, err := listenerSvc.File()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to get listener fd")
 	}
@@ -50,20 +61,64 @@ func main() {
 		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on listener")
 	}
 
-	log.Infof("Listening on port %d", port)
+	log.Infof("Listening on port %d", portSvc)
 
 	f.Close()
 
-	for {
-		log.Infof("Accepting on port %d", port)
-		down, err := listener.Accept()
-		if err != nil {
-			log.WithError(err).Errorf("Failed to accept connection")
-			continue
-		}
+	var wg sync.WaitGroup
 
-		go handleConnection(down)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			down, err := listenerSvc.Accept()
+			if err != nil {
+				log.WithError(err).Errorf("Failed to accept connection")
+				continue
+			}
+
+			go handleConnection(down, -1)
+		}
+	}()
+
+	portNp, err := strconv.Atoi(args["<port-np>"].(string))
+	if err != nil {
+		log.WithError(err).Fatal("port not a number")
 	}
+
+	listenerNp, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(0, 0, 0, 0), Port: portNp})
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to listen on port %d", portNp)
+	}
+
+	f, err = listenerNp.File()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to get listener fd")
+	}
+
+	if err = syscall.SetsockoptInt(int(f.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
+		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on listener")
+	}
+
+	log.Infof("Listening on port %d for node ports", portNp)
+
+	f.Close()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			down, err := listenerNp.Accept()
+			if err != nil {
+				log.WithError(err).Errorf("Failed to accept connection")
+				continue
+			}
+
+			go handleConnection(down, masqMark)
+		}
+	}()
+
+	wg.Wait() // infinitely
 }
 
 func getPreDNATDest(c net.Conn) net.Addr {
@@ -93,7 +148,7 @@ func getPreDNATDest(c net.Conn) net.Addr {
 	return &ret
 }
 
-func handleConnection(down net.Conn) {
+func handleConnection(down net.Conn, mark int) {
 	defer down.Close()
 
 	preDNATDest := getPreDNATDest(down)
@@ -116,6 +171,12 @@ func handleConnection(down net.Conn) {
 
 	if err = syscall.SetsockoptInt(s, syscall.SOL_IP, syscall.IP_TRANSPARENT, 1); err != nil {
 		log.WithError(err).Fatal("Failed to set IP_TRANSPARENT on socket")
+	}
+
+	if mark > 0 {
+		if err := syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_MARK, mark); err != nil {
+			log.WithError(err).Fatal("Failed to set mark on socket")
+		}
 	}
 
 	if err = syscall.Bind(s, &clientAddr); err != nil {

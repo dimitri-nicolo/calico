@@ -129,6 +129,8 @@ func (t IPSetType) IsMemberIPV6(member string) bool {
 		}
 
 		return cidr1
+	case IPSetTypeBitmapPort:
+		return strings.HasPrefix("v6,", member)
 	}
 	log.WithField("type", string(t)).Panic("Unknown IPSetType")
 	return false
@@ -196,6 +198,10 @@ func (t IPSetType) CanonicaliseMember(member string) ipSetMember {
 		// suffix.
 		return ip.MustParseCIDROrIP(member)
 	case IPSetTypeBitmapPort:
+		// Trim the family if it exists
+		if member[0] == 'v' {
+			member = member[3:]
+		}
 		port, err := strconv.Atoi(member)
 		if err == nil && port >= 0 && port <= 0xffff {
 			return Port(port)

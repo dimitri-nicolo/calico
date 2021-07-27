@@ -57,7 +57,8 @@ const (
 	ChainManglePostrouting            = ChainNamePrefix + "POSTROUTING"
 	ChainManglePreroutingEgress       = ChainNamePrefix + "pre-egress"
 	ChainManglePostroutingEgress      = ChainNamePrefix + "post-egress"
-	ChainManglePreroutingTProxy       = ChainNamePrefix + "pre-tproxy"
+	ChainManglePreroutingTProxySvc    = ChainNamePrefix + "pre-tproxy-svc"
+	ChainManglePreroutingTProxyNP     = ChainNamePrefix + "pre-tproxy-np"
 	ChainManglePreroutingTProxyEstabl = ChainNamePrefix + "pre-tproxy-establ"
 	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
 	ChainMangleOutput                 = ChainNamePrefix + "OUTPUT"
@@ -357,6 +358,7 @@ type Config struct {
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
 	KubeMasqueradeMark     uint32
+	KubernetesProvider     config.Provider
 
 	OpenStackMetadataIP          net.IP
 	OpenStackMetadataPort        uint16

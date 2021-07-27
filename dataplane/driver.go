@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -297,6 +298,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				KubeNodePortRanges:     configParams.KubeNodePortRanges,
 				KubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
+				KubernetesProvider:     configParams.KubernetesProvider(),
 
 				OpenStackSpecialCasesEnabled: configParams.OpenstackActive(),
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),

@@ -46,6 +46,9 @@ type output struct {
 	ipAddr   string
 	port     int32
 	protocol labelindex.IPSetPortProtocol
+
+	// ipv6Port is set only for IPv6 ports, which are signalled by the Family field on the IPSetMember.
+	ipv6Port bool
 }
 
 var _ = Describe("L7FrontEndResolver", func() {
@@ -57,27 +60,54 @@ var _ = Describe("L7FrontEndResolver", func() {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
 			mockCallbacks.On("OnIPSetAdded", calc.TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+			mockCallbacks.On("OnIPSetAdded", calc.TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
 
 			for _, addedMember := range addedMembers {
-				member := labelindex.IPSetMember{
-					PortNumber: uint16(addedMember.port),
-					Protocol:   addedMember.protocol,
+				switch addedMember.setId {
+				case calc.TPROXYServicesIPSet:
+					member := labelindex.IPSetMember{
+						PortNumber: uint16(addedMember.port),
+						Protocol:   addedMember.protocol,
+					}
+					if addedMember.ipAddr != "" {
+						member.CIDR = ip.FromString(addedMember.ipAddr).AsCIDR()
+					}
+					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
+				case calc.TPROXYNodePortsTCPIPSet:
+					member := labelindex.IPSetMember{
+						PortNumber: uint16(addedMember.port),
+					}
+					if addedMember.ipv6Port {
+						member.Family = 6
+					} else {
+						member.Family = 4
+					}
+					mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
 				}
-				if addedMember.ipAddr != "" {
-					member.CIDR = ip.FromString(addedMember.ipAddr).AsCIDR()
-				}
-				mockCallbacks.On("OnIPSetMemberAdded", addedMember.setId, member)
 			}
 
 			for _, removedMember := range removedMembers {
-				member := labelindex.IPSetMember{
-					PortNumber: uint16(removedMember.port),
-					Protocol:   removedMember.protocol,
+				switch removedMember.setId {
+				case calc.TPROXYServicesIPSet:
+					member := labelindex.IPSetMember{
+						PortNumber: uint16(removedMember.port),
+						Protocol:   removedMember.protocol,
+					}
+					if removedMember.ipAddr != "" {
+						member.CIDR = ip.FromString(removedMember.ipAddr).AsCIDR()
+					}
+					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
+				case calc.TPROXYNodePortsTCPIPSet:
+					member := labelindex.IPSetMember{
+						PortNumber: uint16(removedMember.port),
+					}
+					if removedMember.ipv6Port {
+						member.Family = 6
+					} else {
+						member.Family = 4
+					}
+					mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 				}
-				if removedMember.ipAddr != "" {
-					member.CIDR = ip.FromString(removedMember.ipAddr).AsCIDR()
-				}
-				mockCallbacks.On("OnIPSetMemberRemoved", removedMember.setId, member)
 			}
 
 			var resolver = calc.NewL7FrontEndResolver(mockCallbacks, conf)
@@ -90,7 +120,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 			mockCallbacks.AssertNumberOfCalls(GinkgoT(), "OnIPSetMemberRemoved", len(removedMembers))
 			mockCallbacks.AssertExpectations(GinkgoT())
 		},
-		Entry("Service update without L7 annotation should result in empty callbacks ",
+		Entry("Service update without L7 annotation should result in no updates",
 			[]api.Update{{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
@@ -117,7 +147,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 			[]output{},
 			&config.Config{},
 		),
-		Entry("Config with TPROXYMode EnabledDebug should result in callbacks ",
+		Entry("Config with TPROXYMode EnabledDebug should update without annotation",
 			[]api.Update{{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
@@ -132,6 +162,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 								{
 									Port:     int32(123),
 									Protocol: kapiv1.ProtocolTCP,
+									NodePort: 456,
 									Name:     "namedport",
 								},
 							},
@@ -155,11 +186,19 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				// There are always 2 port updates, one for v4 and one for v6
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{},
 			configEnabled,
 		),
-		Entry("Service with L7 annotation (Cluster Ip, Node Port) should result in two OnIPSetMemberAdded callbacks ",
+		Entry("Service with L7 annotation (Cluster Ip, Node Port)",
 			[]api.Update{{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
@@ -174,7 +213,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 0,
+									NodePort: 456,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -199,11 +238,18 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{},
 			&config.Config{},
 		),
-		Entry("Service with L7 annotation other than TCP protocol should result in empty callbacks ",
+		Entry("Service with L7 annotation other than TCP protocol should result in no updates",
 			[]api.Update{{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
@@ -232,6 +278,86 @@ var _ = Describe("L7FrontEndResolver", func() {
 			[]output{},
 			&config.Config{},
 		),
+		Entry("delete update for nodeport with L7 annotation should remove the nodeport only ",
+			[]api.Update{{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Value: &kapiv1.Service{
+						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
+						Spec: kapiv1.ServiceSpec{
+							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
+							Ports: []kapiv1.ServicePort{
+								{
+									Port:     123,
+									NodePort: 456,
+									Protocol: kapiv1.ProtocolTCP,
+									Name:     "namedport",
+								},
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}, {
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Value: &kapiv1.Service{
+						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
+						Spec: kapiv1.ServiceSpec{
+							ClusterIP: "10.0.0.0",
+							ExternalIPs: []string{
+								"10.0.0.10",
+								"10.0.0.20",
+							},
+							Ports: []kapiv1.ServicePort{
+								{
+									Port:     123,
+									Protocol: kapiv1.ProtocolTCP,
+									Name:     "namedport",
+								},
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			}},
+			[]output{{
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.0",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.10",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId:    calc.TPROXYServicesIPSet,
+				ipAddr:   "10.0.0.20",
+				port:     123,
+				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
+			}},
+			[]output{{
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
+			}},
+			&config.Config{},
+		),
 		Entry("delete update for service with L7 annotation should remove endpoints from ipset ",
 			[]api.Update{{
 				KVPair: model.KVPair{
@@ -247,7 +373,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 0,
+									NodePort: 456,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -277,6 +403,13 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{{
 				setId:    calc.TPROXYServicesIPSet,
@@ -293,6 +426,13 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			&config.Config{},
 		),
@@ -311,7 +451,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 0,
+									NodePort: 456,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -344,6 +484,13 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{{
 				setId:    calc.TPROXYServicesIPSet,
@@ -360,10 +507,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			&config.Config{},
 		),
-		Entry("Service with L7 annotation with IPV6 should result in two OnIPSetMemberAdded callbacks",
+		Entry("Service with L7 annotation with IPV6",
 			[]api.Update{{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
@@ -374,7 +528,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
-									NodePort: 0,
+									NodePort: 456,
 									Protocol: kapiv1.ProtocolTCP,
 									Name:     "namedport",
 								},
@@ -389,6 +543,13 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipAddr:   "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
+			}, {
+				setId: calc.TPROXYNodePortsTCPIPSet,
+				port:  456,
+			}, {
+				setId:    calc.TPROXYNodePortsTCPIPSet,
+				port:     456,
+				ipv6Port: true,
 			}},
 			[]output{},
 			&config.Config{},

@@ -635,6 +635,9 @@ func memberToProto(member labelindex.IPSetMember) string {
 		if member.Domain != "" {
 			return member.Domain
 		}
+		if member.CIDR == nil {
+			return fmt.Sprintf("v%d,%d", member.Family, member.PortNumber)
+		}
 		return member.CIDR.String()
 	case labelindex.ProtocolTCP:
 		return fmt.Sprintf("%s,tcp:%d", member.CIDR.Addr(), member.PortNumber)

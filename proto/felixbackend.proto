@@ -204,6 +204,7 @@ message IPSetUpdate {
     DOMAIN = 3;       // Each member is a domain name.
     EGRESS_IP = 4;    // Each member is an egress IP.
     NET_NET = 5;      // Each member is two CIDRs.
+    PORTS = 6;        // Each member is a port (bitmap of ports)
   }
   IPSetType type = 3;
 }

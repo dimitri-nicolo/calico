@@ -24,7 +24,7 @@ import (
 
 const l7LoggingAnnotation = "projectcalico.org/l7-logging"
 const TPROXYServicesIPSet = "tproxy-services"
-const TRPOXYNodePortsIPSet = "tproxy-nodeports"
+const TPROXYNodePortsTCPIPSet = "tproxy-nodeports-tcp"
 
 // L7FrontEndResolver maintains most up-to-date list of all L7 logging enabled frontends.
 //
@@ -52,6 +52,7 @@ func NewL7FrontEndResolver(callbacks ipSetUpdateCallbacks, conf *config.Config) 
 		activeNodePorts: make(map[portProtoKey][]proxy.ServicePortName),
 	}
 	tpr.callbacks.OnIPSetAdded(TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+	tpr.callbacks.OnIPSetAdded(TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
 
 	return tpr
 }
@@ -112,6 +113,11 @@ func (tpr *L7FrontEndResolver) flush() {
 		tpr.flushRegularService(addedSvs, removedSvs)
 	}
 
+	addedNPs, removedNPs := tpr.resolveNodePorts()
+
+	if len(addedNPs) > 0 || len(removedNPs) > 0 {
+		tpr.flushNodePorts(addedNPs, removedNPs)
+	}
 }
 
 func (tpr *L7FrontEndResolver) resolveRegularServices() (map[ipPortProtoKey][]proxy.ServicePortName,
@@ -199,6 +205,7 @@ func (tpr *L7FrontEndResolver) resolveNodePorts() (map[portProtoKey][]proxy.Serv
 			continue
 		}
 		added[portProto] = value
+		log.Debugf("Added Port/Protocol (%d/%d).", portProto.port, protocol)
 	}
 	return added, removed
 }
@@ -207,15 +214,25 @@ func (tpr *L7FrontEndResolver) flushNodePorts(added map[portProtoKey][]proxy.Ser
 	removed map[portProtoKey]struct{}) {
 
 	for portProto := range removed {
-		member := getIpSetMemberFromPortProto(portProto)
-		tpr.callbacks.OnIPSetMemberRemoved(TRPOXYNodePortsIPSet, member)
-		delete(tpr.activeNodePorts, portProto)
+		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
+			member := getIpSetPortMemberFromPortProto(portProto)
+			member.Family = 4
+			tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsTCPIPSet, member)
+			member.Family = 6
+			tpr.callbacks.OnIPSetMemberRemoved(TPROXYNodePortsTCPIPSet, member)
+			delete(tpr.activeNodePorts, portProto)
+		}
 	}
 
 	for portProto, value := range added {
-		member := getIpSetMemberFromPortProto(portProto)
-		tpr.callbacks.OnIPSetMemberAdded(TRPOXYNodePortsIPSet, member)
-		tpr.activeNodePorts[portProto] = value
+		if labelindex.IPSetPortProtocol(portProto.proto) == labelindex.ProtocolTCP {
+			member := getIpSetPortMemberFromPortProto(portProto)
+			member.Family = 4
+			tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsTCPIPSet, member)
+			member.Family = 6
+			tpr.callbacks.OnIPSetMemberAdded(TPROXYNodePortsTCPIPSet, member)
+			tpr.activeNodePorts[portProto] = value
+		}
 	}
 
 }
@@ -231,10 +248,9 @@ func getIpSetMemberFromIpPortProto(ipPortProto ipPortProtoKey) labelindex.IPSetM
 	return member
 }
 
-func getIpSetMemberFromPortProto(portProto portProtoKey) labelindex.IPSetMember {
+func getIpSetPortMemberFromPortProto(portProto portProtoKey) labelindex.IPSetMember {
 	member := labelindex.IPSetMember{
 		PortNumber: uint16(portProto.port),
-		Protocol:   labelindex.IPSetPortProtocol(portProto.proto),
 	}
 
 	return member

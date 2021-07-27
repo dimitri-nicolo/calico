@@ -19,15 +19,14 @@ package calc_test
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+	kapiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
-
-	"github.com/tigera/api/pkg/lib/numorstring"
-	kapiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Canned hostnames.
@@ -59,6 +58,7 @@ var (
 	httpMatchMethod             = HTTPMatch{Methods: []string{"GET"}}
 	serviceAccountSelector      = "name == 'sa1'"
 	tproxyIpSetSelector         = "tproxy-services"
+	tproxyIpSetNodeports        = "tproxy-nodeports-tcp"
 )
 
 // Canned workload endpoints.
