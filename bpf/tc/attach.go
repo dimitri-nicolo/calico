@@ -59,6 +59,7 @@ type AttachPoint struct {
 	EnableTCPStats       bool
 	IsEgressGateway      bool
 	IsEgressClient       bool
+	ForceReattach        bool
 }
 
 var tcLock sync.RWMutex
@@ -556,4 +557,8 @@ func (ap *AttachPoint) JumpMapFDMapKey() string {
 
 func (ap *AttachPoint) IfaceName() string {
 	return ap.Iface
+}
+
+func (ap *AttachPoint) MustReattach() bool {
+	return ap.ForceReattach
 }

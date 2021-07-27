@@ -258,3 +258,7 @@ func (ap *AttachPoint) ProgramID() (string, error) {
 	}
 	return "", fmt.Errorf("Couldn't find 'prog/xdp id <ID>' out=\n%v err=%w", string(out), ErrNoXDP)
 }
+
+func (ap *AttachPoint) MustReattach() bool {
+	return false
+}

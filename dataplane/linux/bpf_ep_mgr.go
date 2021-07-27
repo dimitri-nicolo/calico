@@ -89,6 +89,7 @@ type attachPoint interface {
 	DetachProgram() error
 	ProgramID() (string, error)
 	Log() *log.Entry
+	MustReattach() bool
 }
 
 type bpfDataplane interface {
@@ -830,11 +831,25 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 		ap.IsEgressGateway = endpoint.IsEgressGateway
 		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
 	}
+	if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
+		log.WithField("iface", ap.Iface).Infof(
+			"Will reapply BPF program because egress gateway state has changed (client %v gateway %v)",
+			ap.IsEgressClient, ap.IsEgressGateway,
+		)
+		ap.ForceReattach = true
+	}
+
+	l, err := netlink.LinkByName(ap.Iface)
+	if err != nil {
+		return err
+	}
+	ap.VethNS = uint16(l.Attrs().NetNsID)
 
 	jumpMapFD, err := m.dp.ensureProgramAttached(&ap)
 	if err != nil {
 		return err
 	}
+	m.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 
 	var profileIDs []string
 	var tiers []*proto.TierInfo
@@ -941,7 +956,7 @@ func (m *bpfEndpointManager) attachXDPProgram(ifaceName string, ep *proto.HostEn
 		ap.Log().Debugf("Building program for untracked policy hep=%v jumpMapFD=%v", ep.Name, jumpMapFD)
 		rules := polprog.Rules{
 			ForHostInterface: true,
-			HostNormalTiers:  m.extractTiers(ep.UntrackedTiers[0], PolDirnIngress, false),
+			HostNormalTiers:  m.extractTiers(ep.UntrackedTiers, PolDirnIngress, false),
 			ForXDP:           true,
 		}
 		ap.Log().Debugf("Rules: %v", rules)
@@ -1424,14 +1439,6 @@ func (m *bpfEndpointManager) ensureQdisc(iface string) error {
 // Ensure TC/XDP program is attached to the specified interface and return its jump map FD.
 func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.MapFD, error) {
 
-	if ap.Type == tc.EpTypeWorkload {
-		l, err := netlink.LinkByName(ap.Iface)
-		if err != nil {
-			return 0, err
-		}
-		ap.VethNS = uint16(l.Attrs().NetNsID)
-	}
-
 	jumpMapFD := m.getJumpMapFD(ap)
 	if jumpMapFD != 0 {
 		ap.Log().Debugf("Known jump map fd=%v", jumpMapFD)
@@ -1449,18 +1456,14 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.MapFD, e
 			m.setJumpMapFD(ap, 0)
 			jumpMapFD = 0 // Trigger program to be re-added below.
 		} else {
-			if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
+			if ap.MustReattach() {
 				// BPF program needs reattaching with different patch options, so
 				// close and discard the old FD.
-				log.WithField("iface", ap.Iface).Infof(
-					"Reapplying BPF program because egress gateway state has changed (client %v gateway %v)",
-					ap.IsEgressClient, ap.IsEgressGateway,
-				)
 				err := jumpMapFD.Close()
 				if err != nil {
 					log.WithError(err).Warn("Failed to close jump map FD. Ignoring.")
 				}
-				m.setJumpMapFD(ap.Iface, polDirection, 0)
+				m.setJumpMapFD(ap, 0)
 				jumpMapFD = 0 // Trigger program to be re-added below.
 			}
 		}
@@ -1484,7 +1487,6 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.MapFD, e
 			return 0, fmt.Errorf("failed to look up jump map: %w", err)
 		}
 		m.setJumpMapFD(ap, jumpMapFD)
-		m.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 	}
 
 	return jumpMapFD, nil
@@ -1576,7 +1578,7 @@ func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polp
 	if rules.ForXDP {
 		progType = unix.BPF_PROG_TYPE_XDP
 	}
-	progFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", progType)
+	progFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", uint32(progType))
 	if err != nil {
 		return fmt.Errorf("failed to load BPF policy program: %w", err)
 	}
