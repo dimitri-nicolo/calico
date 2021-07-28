@@ -6,7 +6,6 @@ import (
 	"context"
 	"sort"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 	"github.com/projectcalico/apiserver/pkg/rbac"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
@@ -50,7 +49,7 @@ func (r *REST) Watch(ctx context.Context, options *internalversion.ListOptions) 
 // Takes the userinfo that the authn delegate has put into the context and returns it.
 func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
 	in := obj.(*libapi.AuthorizationReview)
-	out := &calico.AuthorizationReview{
+	out := &libapi.AuthorizationReview{
 		TypeMeta:   in.TypeMeta,
 		ObjectMeta: in.ObjectMeta,
 		Spec:       in.Spec,

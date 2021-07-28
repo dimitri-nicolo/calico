@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package authentication
 
@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // A Fake Authenticator satisfies the Authenticator interface and can be used for unit tests. It will mock/fake
@@ -91,7 +91,7 @@ func (f *fakeAuthenticator) AddErrorAPIServerResponse(authorizationHeader string
 // Add a user to the fake tigera-apiserver. When the authenticator makes a call, it will get back an authentication
 // review with the provided username and groups as json.
 func (f *fakeAuthenticator) AddValidApiResponse(authorizationHeader, username string, groups []string) {
-	authenticationReview := libapi.NewAuthenticationReview()
+	authenticationReview := v3.NewAuthenticationReview()
 	authenticationReview.Status.Name = username
 	authenticationReview.Status.Groups = groups
 	buffer, _ := json.Marshal(authenticationReview)
