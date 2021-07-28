@@ -2821,7 +2821,7 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &libapi.AuthenticationReview{}
+				return &v3.AuthenticationReview{}
 			}, true)
 			defer shutdownServer()
 			if err := testAuthenticationReviewsClient(client); err != nil {
@@ -2837,7 +2837,7 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 
 func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 
-	ar := libapi.AuthenticationReview{}
+	ar := v3.AuthenticationReview{}
 	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
 
 	if err != nil {
@@ -2880,7 +2880,7 @@ func TestAuthorizationReviewsClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			pcs, client, shutdownServer := getFreshApiserverServerAndClient(t, func() runtime.Object {
-				return &libapi.AuthorizationReview{}
+				return &v3.AuthorizationReview{}
 			})
 			defer shutdownServer()
 			if err := testAuthorizationReviewsClient(pcs, client); err != nil {
@@ -2895,7 +2895,7 @@ func TestAuthorizationReviewsClient(t *testing.T) {
 
 func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client calicoclient.Interface) error {
 	// Check we are able to create the authorization review.
-	ar := libapi.AuthorizationReview{}
+	ar := v3.AuthorizationReview{}
 	_, err := client.ProjectcalicoV3().AuthorizationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
 	if err != nil {
 		return err

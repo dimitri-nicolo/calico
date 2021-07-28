@@ -225,7 +225,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean check-generated-files tigera/cnx-apiserver fv ut
+ci: clean check-generated-files tigera/cnx-apiserver ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
