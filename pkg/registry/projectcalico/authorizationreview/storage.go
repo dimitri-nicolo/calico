@@ -6,8 +6,8 @@ import (
 	"context"
 	"sort"
 
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 	"github.com/projectcalico/apiserver/pkg/rbac"
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type REST struct {
@@ -23,12 +25,12 @@ type REST struct {
 
 // EmptyObject returns an empty instance
 func (r *REST) New() runtime.Object {
-	return &libapi.AuthorizationReview{}
+	return &calico.AuthorizationReview{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &libapi.AuthorizationReviewList{}
+	return &calico.AuthorizationReviewList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
@@ -48,8 +50,8 @@ func (r *REST) Watch(ctx context.Context, options *internalversion.ListOptions) 
 
 // Takes the userinfo that the authn delegate has put into the context and returns it.
 func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
-	in := obj.(*libapi.AuthorizationReview)
-	out := &libapi.AuthorizationReview{
+	in := obj.(*calico.AuthorizationReview)
+	out := &calico.AuthorizationReview{
 		TypeMeta:   in.TypeMeta,
 		ObjectMeta: in.ObjectMeta,
 		Spec:       in.Spec,
@@ -109,7 +111,7 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 	for _, rt := range rts {
 		vms := results[rt]
 
-		res := libapi.AuthorizedResourceVerbs{
+		res := v3.AuthorizedResourceVerbs{
 			APIGroup: rt.APIGroup,
 			Resource: rt.Resource,
 		}
@@ -124,7 +126,7 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 		for _, v := range verbs {
 			// Grab the authorization matches for the verb and order them before adding to the status.
 			ms := vms[rbac.Verb(v)]
-			var rgs []libapi.AuthorizedResourceGroup
+			var rgs []v3.AuthorizedResourceGroup
 
 			sort.Slice(ms, func(i, j int) bool {
 				if ms[i].Namespace < ms[j].Namespace {
@@ -136,12 +138,12 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 			})
 
 			for _, m := range ms {
-				rgs = append(rgs, libapi.AuthorizedResourceGroup{
+				rgs = append(rgs, v3.AuthorizedResourceGroup{
 					Tier:      m.Tier,
 					Namespace: m.Namespace,
 				})
 			}
-			res.Verbs = append(res.Verbs, libapi.AuthorizedResourceVerb{
+			res.Verbs = append(res.Verbs, v3.AuthorizedResourceVerb{
 				Verb:           string(v),
 				ResourceGroups: rgs,
 			})
