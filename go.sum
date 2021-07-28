@@ -536,12 +536,16 @@ github.com/tigera/api v0.0.0-20210716134604-dfc21f9ef7c1 h1:LfjG4dNM02Cl7lxihoYr
 github.com/tigera/api v0.0.0-20210716134604-dfc21f9ef7c1/go.mod h1:AKyG8BeBcQJKgRXfNP1Gkp85x0bGW92SJz8rA1LJGms=
 github.com/tigera/api v0.0.0-20210720144753-0dd043a1a989 h1:3wGK+wgl0byBxbLMJ1ROiOkf+smE2fBhunUQPAeEk4E=
 github.com/tigera/api v0.0.0-20210720144753-0dd043a1a989/go.mod h1:AKyG8BeBcQJKgRXfNP1Gkp85x0bGW92SJz8rA1LJGms=
+github.com/tigera/api v0.0.0-20210728170712-c0b5ecad82dc h1:fkFJV2Re5nXTuOMXW3Sg+nQHDfmk+LSwuCug2NrV9O4=
+github.com/tigera/api v0.0.0-20210728170712-c0b5ecad82dc/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210719175901-914bcdb9a699 h1:jtuQ3x3R65CeSOHQrk1pyq4wfDPySBlgsXa7YlrkG5k=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210719175901-914bcdb9a699/go.mod h1:S47V4kp5HcRMwr+qOE7rxHjqV2Vc8DfM7E/nNtW0ur4=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210720171501-2d2eccfd4964 h1:7S0RIhVQN26pQKiddBXJggXN6KcqGiFg20lDt1dhemI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210720171501-2d2eccfd4964/go.mod h1:sion9/OqWGD8UYggqaZlx0EDHGWu9xuFQ8UInoE/FVw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210722032128-5643dd899009 h1:BANaJ0eJDc5wfbt0C9DSLLfReYsdOGK8nX8gXSQACAs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210722032128-5643dd899009/go.mod h1:sion9/OqWGD8UYggqaZlx0EDHGWu9xuFQ8UInoE/FVw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210728200245-008b12754117 h1:Qu/dYOJ9bW4U/Kb2XBW++EODpSKDcz1RywJVA94Y5yY=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210728200245-008b12754117/go.mod h1:OkJBtA+WJ2kfBQZhQZFENpyN8SIeCwGJmNKKi7rgsGM=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
@@ -974,6 +978,7 @@ k8s.io/client-go v0.21.0-rc.0/go.mod h1:zU5HY/bSOKH3YOqoge9nFvICgrpeSdJu8DQ4fkjK
 k8s.io/client-go v0.21.0 h1:n0zzzJsAQmJngpC0IhgFcApZyoGXPrDIAD601HD09ag=
 k8s.io/client-go v0.21.0/go.mod h1:nNBytTF9qPFDEhoqgEPaarobC8QPae13bElIVHzIglA=
 k8s.io/code-generator v0.18.3/go.mod h1:TgNEVx9hCyPGpdtCWA34olQYLkh3ok9ar7XfSsr8b6c=
+k8s.io/code-generator v0.21.0-rc.0/go.mod h1:hUlps5+9QaTrKx+jiM4rmq7YmH8wPOIko64uZCHDh6Q=
 k8s.io/code-generator v0.21.2/go.mod h1:8mXJDCB7HcRo1xiEQstcguZkbxZaqeUOrO9SsicWs3U=
 k8s.io/component-base v0.19.6/go.mod h1:8Btsf8J00/fVDa/YFmXjei7gVkcFrlKZXjSeP4SZNJg=
 k8s.io/component-base v0.21.0/go.mod h1:qvtjz6X0USWXbgmbfXR+Agik4RZ3jv2Bgr5QnZzdPYw=
