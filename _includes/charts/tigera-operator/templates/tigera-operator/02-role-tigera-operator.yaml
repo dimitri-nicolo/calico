@@ -122,11 +122,7 @@ rules:
       - servicemonitors
       - thanosrulers
     verbs:
-      - create
-      - delete
-      - get
       - list
-      - update
       - watch
   - apiGroups:
       - policy
