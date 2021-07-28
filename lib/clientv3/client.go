@@ -139,9 +139,19 @@ func (c client) BGPPeers() BGPPeerInterface {
 	return bgpPeers{client: c}
 }
 
-// BGPPeers returns an interface for managing tier resources.
+// Tiers returns an interface for managing tier resources.
 func (c client) Tiers() TierInterface {
 	return tiers{client: c}
+}
+
+// UISettings returns an interface for managing uisettings resources.
+func (c client) UISettings() UISettingsInterface {
+	return UISettings{client: c}
+}
+
+// UISettingsGroups returns an interface for managing uisettingsgroup resources.
+func (c client) UISettingsGroups() UISettingsGroupInterface {
+	return uisettingsgroups{client: c}
 }
 
 // IPAM returns an interface for managing IP address assignment and releasing.

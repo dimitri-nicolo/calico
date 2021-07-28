@@ -49,6 +49,10 @@ type Interface interface {
 	BGPPeers() BGPPeerInterface
 	// Tiers returns an interface for managing tier resources.
 	Tiers() TierInterface
+	// UISettingsGroups returns an interface for managing uisettingsgroup resources.
+	UISettingsGroups() UISettingsGroupInterface
+	// UISettings returns an interface for managing uisettings resources.
+	UISettings() UISettingsInterface
 	// IPAM returns an interface for managing IP address assignment and releasing.
 	IPAM() ipam.Interface
 	// BGPConfigurations returns an interface for managing the BGP configuration resources.
