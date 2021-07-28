@@ -92,6 +92,7 @@ var _ = Describe("Static", func() {
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 23},
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 1023},
 					},
+					DNSPolicyNfqueueID:          100,
 					IptablesMarkAccept:          0x10,
 					IptablesMarkPass:            0x20,
 					IptablesMarkScratch0:        0x40,
@@ -100,6 +101,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkEgress:          0x400,
 					IptablesMarkEndpoint:        0xff000,
 					IptablesMarkNonCaliEndpoint: 0x1000,
+					IptablesMarkDNSPolicy:       0x00001,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 					KubeNodePortRanges:          []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
 					DNSTrustedServers:           []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
@@ -661,6 +663,7 @@ var _ = Describe("Static", func() {
 					IPIPTunnelAddress:           net.ParseIP("10.0.0.1"),
 					IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 					IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+					DNSPolicyNfqueueID:          100,
 					IptablesMarkAccept:          0x10,
 					IptablesMarkPass:            0x20,
 					IptablesMarkScratch0:        0x40,
@@ -668,6 +671,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkEgress:          0x400,
 					IptablesMarkEndpoint:        epMark,
 					IptablesMarkNonCaliEndpoint: 0x1000,
+					IptablesMarkDNSPolicy:       0x00001,
 					IptablesMarkDrop:            0x200,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 				}
@@ -1056,6 +1060,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:       []string{"cali"},
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:          100,
 				IptablesMarkAccept:          0x10,
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,
@@ -1063,6 +1068,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x1000,
+				IptablesMarkDNSPolicy:       0x00001,
 				IptablesMarkDrop:            0x200,
 				KubeIPVSSupportEnabled:      true,
 				KubeNodePortRanges: []numorstring.Port{
@@ -1153,6 +1159,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:        []string{"tap"},
 				IPSetConfigV4:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:           100,
 				OpenStackSpecialCasesEnabled: true,
 				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
 				OpenStackMetadataPort:        1234,
@@ -1164,6 +1171,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkEgress:           0x400,
 				IptablesMarkEndpoint:         0xff000,
 				IptablesMarkNonCaliEndpoint:  0x1000,
+				IptablesMarkDNSPolicy:        0x00001,
 			}
 		})
 
@@ -1258,6 +1266,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:        []string{"tap"},
 				IPSetConfigV4:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:           100,
 				OpenStackSpecialCasesEnabled: true,
 				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
 				OpenStackMetadataPort:        1234,
@@ -1269,6 +1278,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkEgress:           0x400,
 				IptablesMarkEndpoint:         0xff000,
 				IptablesMarkNonCaliEndpoint:  0x1000,
+				IptablesMarkDNSPolicy:        0x00001,
 				IptablesFilterAllowAction:    "RETURN",
 			}
 		})
@@ -1331,6 +1341,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:       []string{"tap"},
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:          100,
 				EgressIPEnabled:             true,
 				IptablesMarkAccept:          0x10,
 				IptablesMarkPass:            0x20,
@@ -1340,6 +1351,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x1000,
+				IptablesMarkDNSPolicy:       0x00001,
 			}
 		})
 
@@ -1440,6 +1452,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:       []string{"cali"},
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:          100,
 				IptablesMarkAccept:          0x10,
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,
@@ -1448,6 +1461,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        epMark,
 				IptablesMarkNonCaliEndpoint: 0x1000,
+				IptablesMarkDNSPolicy:       0x00001,
 				IptablesFilterAllowAction:   "RETURN",
 				IptablesMangleAllowAction:   "RETURN",
 			}
@@ -1538,6 +1552,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:       []string{"cali"},
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:          100,
 				IptablesMarkAccept:          0x10,
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,
@@ -1545,6 +1560,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkDrop:            0x200,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x1000,
+				IptablesMarkDNSPolicy:       0x00001,
 				WireguardEnabled:            true,
 				WireguardInterfaceName:      "wireguard.cali",
 				WireguardIptablesMark:       0x100000,
@@ -1593,6 +1609,7 @@ var _ = Describe("Static", func() {
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
 			conf = Config{
+				DNSPolicyNfqueueID:          100,
 				WorkloadIfacePrefixes:       []string{"cali", "tap"},
 				ActionOnDrop:                "ACCEPT",
 				IptablesMarkAccept:          0x10,
@@ -1603,6 +1620,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x2000,
+				IptablesMarkDNSPolicy:       0x00001,
 			}
 		})
 
@@ -1746,6 +1764,7 @@ var _ = Describe("DropRules", func() {
 	Describe("with LOGandDROP override", func() {
 		BeforeEach(func() {
 			conf = Config{
+				DNSPolicyNfqueueID:          100,
 				WorkloadIfacePrefixes:       []string{"cali", "tap"},
 				ActionOnDrop:                "LOGandDROP",
 				IptablesMarkAccept:          0x10,
@@ -1756,11 +1775,12 @@ var _ = Describe("DropRules", func() {
 				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x1000,
+				IptablesMarkDNSPolicy:       0x00001,
 			}
 		})
 
 		It("should render a log and a drop", func() {
-			Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]Rule{
+			Expect(rr.DropRules(Match().Protocol("tcp"), false)).To(Equal([]Rule{
 				{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "calico-drop"}},
 				{Match: Match().Protocol("tcp"), Action: DropAction{}},
 			}))
@@ -1772,7 +1792,7 @@ var _ = Describe("DropRules", func() {
 			})
 
 			It("should render a log and a drop", func() {
-				Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]Rule{
+				Expect(rr.DropRules(Match().Protocol("tcp"), false)).To(Equal([]Rule{
 					{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "my-prefix"}},
 					{Match: Match().Protocol("tcp"), Action: DropAction{}},
 				}))

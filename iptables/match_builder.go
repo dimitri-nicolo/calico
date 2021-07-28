@@ -30,6 +30,14 @@ func Match() MatchCriteria {
 	return nil
 }
 
+// Combine creates a copy of m1 and appends the values of m2 to the copy, creating a new MatchCritera with the values
+// of m1 and m2.
+func Combine(m1, m2 MatchCriteria) MatchCriteria {
+	cp := make(MatchCriteria, len(m1))
+	copy(cp, m1)
+	return append(cp, m2...)
+}
+
 func (m MatchCriteria) Render() string {
 	return strings.Join([]string(m), " ")
 }

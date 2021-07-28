@@ -37,6 +37,7 @@ var _ = Describe("NAT", func() {
 			IPIPTunnelAddress:           nil,
 			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 			IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyNfqueueID:          100,
 			IptablesMarkEgress:          0x4,
 			IptablesMarkAccept:          0x8,
 			IptablesMarkPass:            0x10,
@@ -45,6 +46,7 @@ var _ = Describe("NAT", func() {
 			IptablesMarkDrop:            0x80,
 			IptablesMarkEndpoint:        0xff00,
 			IptablesMarkNonCaliEndpoint: 0x100,
+			IptablesMarkDNSPolicy:       0x00001,
 			EgressIPInterface:           "egress.calico",
 		}
 	})

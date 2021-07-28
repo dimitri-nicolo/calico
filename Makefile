@@ -50,12 +50,14 @@ ifdef LOCAL_BUILD
 PHONY: set-up-local-build
 LOCAL_BUILD_DEP:=set-up-local-build
 
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go-private:rw \
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../api:/go/src/github.com/projectcalico/api:rw \
+	-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go-private:rw \
 	-v $(CURDIR)/../typha-private:/go/src/github.com/projectcalico/typha-private:rw \
 	-v $(CURDIR)/../pod2daemon:/go/src/github.com/projectcalico/pod2daemon:rw
 
 $(LOCAL_BUILD_DEP):
-	$(DOCKER_GO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go-private \
+	$(DOCKER_GO_BUILD) go mod edit -replace=github.com/tigera/api=../api \
+	-replace=github.com/projectcalico/libcalico-go=../libcalico-go-private \
 	-replace=github.com/projectcalico/typha=../typha-private \
 	-replace=github.com/projectcalico/pod2daemon=../pod2daemon
 endif

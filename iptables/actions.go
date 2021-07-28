@@ -137,6 +137,18 @@ func (g AcceptAction) String() string {
 	return "Accept"
 }
 
+type NfqueueAction struct {
+	QueueNum int64
+}
+
+func (n NfqueueAction) ToFragment(features *Features) string {
+	return fmt.Sprintf("--jump NFQUEUE --queue-num %d", n.QueueNum)
+}
+
+func (n NfqueueAction) String() string {
+	return "Nfqueue"
+}
+
 type NflogAction struct {
 	Group       uint16
 	Prefix      string

@@ -311,7 +311,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoIPIP), "Drop IPIP packets from non-Calico hosts")...,
+			r.DropRules(Match().ProtocolNum(ProtoIPIP), false, "Drop IPIP packets from non-Calico hosts")...,
 		)
 	}
 
@@ -340,11 +340,11 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoESP), "Drop IPSec ESP packets from non-Calico hosts")...,
+			r.DropRules(Match().ProtocolNum(ProtoESP), false, "Drop IPSec ESP packets from non-Calico hosts")...,
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoUDP).
-				DestPorts(PortIKE),
+			r.DropRules(Match().ProtocolNum(ProtoUDP).DestPorts(PortIKE),
+				false,
 				"Drop IPSec IKE packets from non-Calico hosts")...,
 		)
 	}
@@ -1583,7 +1583,7 @@ func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openS
 		// Match on mark to check we're coming from a workload interface.
 		baseMatch = baseMatch.MarkMatchesWithMask(mark, mask)
 	}
-	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed(acceptLocal))...)
+	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed(acceptLocal), false)...)
 
 	return rules
 }
@@ -1641,20 +1641,26 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain() *Chain {
 	}
 }
 
-func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string) []Rule {
+// DropRules combines the matchCritera and comments given in the function parameters to the drop rules calculated when
+// the DefaultRenderer was constructed. If includeNfqueueRules is true, then all nfqueue drop rules are included.
+//
+// If the original drop rules have MatchCriteria the matchCriteria is combined with the existing MatchCritera on the
+// rule.
+func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, includeNfqueueRules bool, comments ...string) []Rule {
 	rules := []Rule{}
 
-	for _, action := range r.DropActions() {
-		rules = append(rules, Rule{
-			Match:   matchCriteria,
-			Action:  action,
-			Comment: comments,
-		})
+	for _, rule := range r.dropRules {
+		_, isNfqueueRule := rule.Action.(NfqueueAction)
+		if !includeNfqueueRules && isNfqueueRule {
+			continue
+		}
+
+		if matchCriteria != nil {
+			rule.Match = Combine(rule.Match, matchCriteria)
+		}
+		rule.Comment = comments
+		rules = append(rules, rule)
 	}
 
 	return rules
-}
-
-func (r *DefaultRuleRenderer) DropActions() []Action {
-	return r.dropActions
 }

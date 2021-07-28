@@ -184,6 +184,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			}).Panic("Not enough mark bits available.")
 		}
 
+		markDNSPolicy, _ := markBitsManager.NextSingleBitMark()
+
 		// Mark bits for endpoint mark. Currently Felix takes the rest bits from mask available for use.
 		markEndpointMark, allocated := markBitsManager.NextBlockBitsMark(markBitsManager.AvailableMarkBitCount())
 		if kubeIPVSSupportEnabled {
@@ -207,6 +209,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			"wireguardMark":       markWireguard,
 			"ipsecMark":           markIPsec,
 			"egressMark":          markEgressIP,
+			"dnsPolicyMark":       markDNSPolicy,
 		}).Info("Calculated iptables mark bits")
 
 		// Create a routing table manager. There are certain components that should take specific indices in the range
@@ -304,6 +307,8 @@ func StartDataplaneDriver(configParams *config.Config,
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
+				DNSPolicyNfqueueID: int64(configParams.DNSPolicyNfqueueID),
+
 				IptablesMarkAccept:          markAccept,
 				IptablesMarkPass:            markPass,
 				IptablesMarkDrop:            markDrop,
@@ -313,6 +318,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkScratch1:        markScratch1,
 				IptablesMarkEndpoint:        markEndpointMark,
 				IptablesMarkNonCaliEndpoint: markEndpointNonCaliEndpoint,
+				IptablesMarkDNSPolicy:       markDNSPolicy,
 
 				VXLANEnabled: configParams.VXLANEnabled,
 				VXLANPort:    configParams.VXLANPort,

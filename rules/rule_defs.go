@@ -317,7 +317,7 @@ type RuleRenderer interface {
 type DefaultRuleRenderer struct {
 	Config
 
-	dropActions        []iptables.Action
+	dropRules          []iptables.Rule
 	inputAcceptActions []iptables.Action
 	filterAllowAction  iptables.Action
 	mangleAllowAction  iptables.Action
@@ -341,6 +341,8 @@ type Config struct {
 
 	WorkloadIfacePrefixes []string
 
+	DNSPolicyNfqueueID int64
+
 	IptablesMarkAccept   uint32
 	IptablesMarkPass     uint32
 	IptablesMarkDrop     uint32
@@ -355,6 +357,8 @@ type Config struct {
 
 	// IptablesMarkProxy marks packets that are to/from proxy.
 	IptablesMarkProxy uint32
+	// IptablesMarkDNSPolicy marks packets that have been evaluated by a DNS policy rule.
+	IptablesMarkDNSPolicy uint32
 
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
@@ -425,6 +429,7 @@ var unusedBitsInBPFMode = map[string]bool{
 	"IptablesMarkScratch1":        true,
 	"IptablesMarkEndpoint":        true,
 	"IptablesMarkNonCaliEndpoint": true,
+	"IptablesMarkDNSPolicy":       true,
 }
 
 func (c *Config) validate() {
@@ -469,6 +474,10 @@ func (c *Config) validate() {
 		// Check the reflection found something we were expecting.
 		log.Panic("Didn't find any IptablesMarkXXX fields.")
 	}
+
+	if c.IptablesMarkDNSPolicy != 0x0 && c.DNSPolicyNfqueueID == 0 {
+		log.WithField("field", "DNSPolicyNfqueueID").Panic("Must not be 0 when the IptablesMarkDNSPolicy is set.")
+	}
 }
 
 func NewRenderer(config Config) RuleRenderer {
@@ -477,7 +486,7 @@ func NewRenderer(config Config) RuleRenderer {
 	// Convert configured actions to rule slices.
 	// First, what should we actually do when we'd normally drop a packet?  For
 	// sandbox mode, we support allowing the packet instead, or logging it.
-	var dropActions []iptables.Action
+	var dropRules []iptables.Rule
 	if strings.HasPrefix(config.ActionOnDrop, "LOG") {
 		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
 		logPrefix := "calico-drop"
@@ -487,13 +496,41 @@ func NewRenderer(config Config) RuleRenderer {
 				logPrefix = config.IptablesLogPrefix + " " + config.ActionOnDrop
 			}
 		}
-		dropActions = append(dropActions, iptables.LogAction{Prefix: logPrefix})
+		dropRules = append(dropRules, iptables.Rule{
+			Match:  iptables.Match(),
+			Action: iptables.LogAction{Prefix: logPrefix},
+		})
 	}
+
 	if strings.HasSuffix(config.ActionOnDrop, "ACCEPT") {
 		log.Warn("Action on drop set to ACCEPT.  Calico security is disabled!")
-		dropActions = append(dropActions, iptables.AcceptAction{})
+		dropRules = append(dropRules, iptables.Rule{
+			Match:  iptables.Match(),
+			Action: iptables.AcceptAction{},
+		})
 	} else {
-		dropActions = append(dropActions, iptables.DropAction{})
+		if config.IptablesMarkDNSPolicy != 0x0 {
+			dropRules = append(dropRules, iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(config.IptablesMarkDNSPolicy),
+				Action: iptables.NfqueueAction{QueueNum: config.DNSPolicyNfqueueID},
+			})
+		}
+		dropRules = append(dropRules, iptables.Rule{
+			Match:  iptables.Match(),
+			Action: iptables.DropAction{},
+		})
+	}
+
+	var dropActions []iptables.Action
+	for _, rule := range dropRules {
+		// Do not include the NFQUEUE action for possible DNS policy affected packets since the mark match is not
+		// included.
+		switch rule.Action.(type) {
+		case iptables.NfqueueAction:
+			continue
+		default:
+			dropActions = append(dropActions, rule.Action)
+		}
 	}
 
 	// Second, what should we do with packets that come from workloads to the host itself.
@@ -544,7 +581,7 @@ func NewRenderer(config Config) RuleRenderer {
 
 	return &DefaultRuleRenderer{
 		Config:             config,
-		dropActions:        dropActions,
+		dropRules:          dropRules,
 		inputAcceptActions: inputAcceptActions,
 		filterAllowAction:  filterAllowAction,
 		mangleAllowAction:  mangleAllowAction,

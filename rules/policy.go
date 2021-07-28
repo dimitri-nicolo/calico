@@ -257,6 +257,12 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		ruleCopy.DstNet = nil
 	}
 
+	// Figure out if this is a DNS policy rule before we potentially nil out DstDomainIpSetIds below.
+	isDNSPolicyRule := false
+	if len(ruleCopy.DstDomainIpSetIds) > 0 {
+		isDNSPolicyRule = true
+	}
+
 	// If there are selector-derived ipsets both for explicit IPs and for domain names, render a
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
@@ -307,24 +313,11 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		// success.  Add a match on that bit to the calculated rule.
 		match = match.MarkSingleBitSet(matchBlockBuilder.markAllBlocksPass)
 	}
-	markBit, actions := r.CalculateActions(ruleCopy, ipVersion, owner, dir, idx, name, untracked, staged)
+
+	rules := r.CombineMatchAndActionsForProtoRule(ruleCopy, match, owner, dir, idx, name, untracked, staged, isDNSPolicyRule)
 	rs := matchBlockBuilder.Rules
-	if markBit != 0 {
-		// The rule needs to do more than one action. Render a rule that
-		// executes the match criteria and sets the given mark bit if it
-		// matches, then render the actions as separate rules below.
-		rs = append(rs, iptables.Rule{
-			Match:  match,
-			Action: iptables.SetMarkAction{Mark: markBit},
-		})
-		match = iptables.Match().MarkSingleBitSet(markBit)
-	}
-	for _, action := range actions {
-		rs = append(rs, iptables.Rule{
-			Match:  match,
-			Action: action,
-		})
-	}
+
+	rs = append(rs, rules...)
 
 	// Render rule annotations as comments on each rule.
 	for i := range rs {
@@ -572,8 +565,27 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 	return
 }
 
-func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) (mark uint32, actions []iptables.Action) {
-	actions = []iptables.Action{}
+// CombineMatchAndActionsForProtoRule takes in the proto.Rule along with the match (and some other parameters) and
+// returns as set of rules. The actions that are needed are calculated from the proto.Rule and the parameters, then
+// the match given and actions calculated are combined into the returned set of rules.
+func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
+	pRule *proto.Rule,
+	match iptables.MatchCriteria,
+	owner RuleOwnerType,
+	dir RuleDir,
+	idx int,
+	name string,
+	untracked,
+	staged bool,
+	isDNSPolicyRule bool,
+) []iptables.Rule {
+	var rules []iptables.Rule
+	var mark uint32
+
+	markDNSPolicyRule := isDNSPolicyRule
+	if staged {
+		markDNSPolicyRule = false
+	}
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -581,8 +593,10 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		if logPrefix == "" {
 			logPrefix = "calico-drop"
 		}
-		actions = append(actions, iptables.LogAction{
-			Prefix: logPrefix,
+		rules = append(rules, iptables.Rule{
+			Action: iptables.LogAction{
+				Prefix: logPrefix,
+			},
 		})
 	}
 
@@ -600,15 +614,19 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 		// NFLOG the allow - we don't do this for untracked due to the performance hit.
 		if !untracked {
-			actions = append(actions, iptables.NflogAction{
-				Group:       nflogGroup,
-				Prefix:      CalculateNFLOGPrefixStr(RuleActionAllow, owner, dir, idx, name),
-				SizeEnabled: r.EnableNflogSize,
+			rules = append(rules, iptables.Rule{
+				Action: iptables.NflogAction{
+					Group:       nflogGroup,
+					Prefix:      CalculateNFLOGPrefixStr(RuleActionAllow, owner, dir, idx, name),
+					SizeEnabled: r.EnableNflogSize,
+				},
 			})
 		}
 
 		// Return to calling chain for end of policy.
-		actions = append(actions, iptables.ReturnAction{})
+		rules = append(rules, iptables.Rule{
+			Action: iptables.ReturnAction{},
+		})
 	case "next-tier", "pass":
 		// If this is not a staged policy then pass (called next-tier in the API for historical reasons) needs to set
 		// the pass mark.
@@ -618,15 +636,18 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 		// NFLOG the pass - we don't do this for untracked due to the performance hit.
 		if !untracked {
-			actions = append(actions, iptables.NflogAction{
-				Group:       nflogGroup,
-				Prefix:      CalculateNFLOGPrefixStr(RuleActionPass, owner, dir, idx, name),
-				SizeEnabled: r.EnableNflogSize,
+			rules = append(rules, iptables.Rule{
+				Action: iptables.NflogAction{
+					Group:       nflogGroup,
+					Prefix:      CalculateNFLOGPrefixStr(RuleActionPass, owner, dir, idx, name),
+					SizeEnabled: r.EnableNflogSize,
+				},
 			})
 		}
 
 		// Return to calling chain for end of policy.
-		actions = append(actions, iptables.ReturnAction{})
+		rules = append(rules, iptables.Rule{
+			Action: iptables.ReturnAction{}})
 	case "deny":
 		// If this is not a staged policy then deny maps to DROP.
 		if !staged {
@@ -635,28 +656,58 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 		// NFLOG the deny - we don't do this for untracked due to the performance hit.
 		if !untracked {
-			actions = append(actions, iptables.NflogAction{
-				Group:       nflogGroup,
-				Prefix:      CalculateNFLOGPrefixStr(RuleActionDeny, owner, dir, idx, name),
-				SizeEnabled: r.EnableNflogSize,
-			})
+			rules = append(rules, iptables.Rule{
+				Action: iptables.NflogAction{
+					Group:       nflogGroup,
+					Prefix:      CalculateNFLOGPrefixStr(RuleActionDeny, owner, dir, idx, name),
+					SizeEnabled: r.EnableNflogSize,
+				}})
 		}
 
 		if !staged {
 			// We defer to DropActions() to allow for "sandbox" mode.
-			actions = append(actions, r.DropActions()...)
+			rules = append(rules, r.DropRules(nil, true)...)
 		} else {
 			// For staged mode we simply return to calling chain for end of policy.
-			actions = append(actions, iptables.ReturnAction{})
+			rules = append(rules, iptables.Rule{
+				Action: iptables.ReturnAction{}})
 		}
 		//mark = r.IptablesMarkPass
 		//actions = append(actions, iptables.ReturnAction{})
 	case "log":
+		markDNSPolicyRule = false
 		// Handled above.
 	default:
 		log.WithField("action", pRule.Action).Panic("Unknown rule action")
 	}
-	return
+
+	finalRules := []iptables.Rule{}
+	// if the mark is not set then this is either a staged policy or the rule action is "log".
+	if mark != 0 {
+		// The rule needs to do more than one action. Render a rule that
+		// executes the match criteria and sets the given mark bit if it
+		// matches, then render the actions as separate rules below.
+		finalRules = append(finalRules, iptables.Rule{
+			Match:  match,
+			Action: iptables.SetMarkAction{Mark: mark},
+		})
+		match = iptables.Match().MarkSingleBitSet(mark)
+	}
+
+	for _, rule := range rules {
+		rule.Match = iptables.Combine(rule.Match, match)
+		finalRules = append(finalRules, rule)
+	}
+
+	// If this is not a staged policy, we have an DNS policy mark bit, and this rule has a DNS match, set the mark to
+	// signal that we may need to nfqueue the packet.
+	if markDNSPolicyRule && r.IptablesMarkDNSPolicy != 0x0 {
+		finalRules = append(finalRules, iptables.Rule{
+			Action: iptables.SetMarkAction{Mark: r.IptablesMarkDNSPolicy},
+		})
+	}
+
+	return finalRules
 }
 
 func appendProtocolMatch(match iptables.MatchCriteria, protocol *proto.Protocol, logCxt *log.Entry) iptables.MatchCriteria {
