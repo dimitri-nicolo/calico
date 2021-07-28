@@ -8,6 +8,7 @@ package worker
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
@@ -126,8 +127,12 @@ func (w *worker) Run(stop <-chan struct{}) {
 		_, ctrl := cache.NewIndexerInformer(watch.listWatcher, watch.obj, 0, w.resourceEventHandlerFuncs(),
 			cache.Indexers{})
 		go ctrl.Run(stop)
-		for !ctrl.HasSynced() {
+
+		if !cache.WaitForNamedCacheSync(reflect.TypeOf(watch.obj).String(), stop, ctrl.HasSynced) {
+			log.Error("Failed to sync resource %T", watch.obj)
+			return
 		}
+
 		go w.listenForPings(watch.ponger, stop)
 	}
 

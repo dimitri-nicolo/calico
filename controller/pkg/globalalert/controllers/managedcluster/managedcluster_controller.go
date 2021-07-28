@@ -90,11 +90,15 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 		select {
 		case pong := <-m.managedAlertControllerHealthPinger.ListenForPings():
 			pingSuccess := true
-			for i, hp := range pingers {
+			// If pinger is removed from slice within a loop, the loop doesn't know about the underlying changes to slice.
+			// Loop through all the pingers in reverse order, so if a pinger is removed all subsequent pingers
+			// that are shifted are part of already processed slice.
+			for i := len(pingers) - 1; i >= 0; i-- {
+				hp := pingers[i]
 				if err := hp.Ping(ctx); err != nil {
 					if statusError, isStatus := err.(*errors.StatusError); isStatus && statusError.Status().Code == http.StatusGone &&
 						statusError.Status().Message == health.PingChannelClosed {
-						pingers = append((pingers)[:i], (pingers)[i+1:]...)
+						pingers = append(pingers[:i], pingers[i+1:]...)
 					} else {
 						pingSuccess = false
 						log.WithError(err).Error("received error on health ping")
