@@ -4,6 +4,7 @@ package authorizationreview_test
 import (
 	"context"
 
+	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/onsi/ginkgo"
@@ -49,7 +50,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		// Set namespaces to nil to force an error in the mock client.
 		mock.Namespaces = nil
 
-		res, err := rest.Create(myContext, &libapi.AuthorizationReview{
+		res, err := rest.Create(myContext, &calico.AuthorizationReview{
 			Spec: libapi.AuthorizationReviewSpec{
 				ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 					{
@@ -65,7 +66,7 @@ var _ = Describe("RBAC calculator tests", func() {
 	})
 
 	It("handles namespace get auth evaluation with no permissions", func() {
-		res, err := rest.Create(myContext, &libapi.AuthorizationReview{
+		res, err := rest.Create(myContext, &calico.AuthorizationReview{
 			Spec: libapi.AuthorizationReviewSpec{
 				ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 					{
@@ -78,7 +79,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
-		ar := res.(*libapi.AuthorizationReview)
+		ar := res.(*calico.AuthorizationReview)
 		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]libapi.AuthorizedResourceVerbs{
 			{
 				Resource: "namespaces",
@@ -97,7 +98,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			"get-namespaces": {{Verbs: []string{"get"}, Resources: []string{"namespaces"}, APIGroups: []string{""}}},
 		}
 
-		res, err := rest.Create(myContext, &libapi.AuthorizationReview{
+		res, err := rest.Create(myContext, &calico.AuthorizationReview{
 			Spec: libapi.AuthorizationReviewSpec{
 				ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 					{
@@ -110,7 +111,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
-		ar := res.(*libapi.AuthorizationReview)
+		ar := res.(*calico.AuthorizationReview)
 		// get for namespace is expanded across configured namespaces.
 		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]libapi.AuthorizedResourceVerbs{
 			{
@@ -133,7 +134,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			"patch-namespaces": {{Verbs: []string{"patch"}, Resources: []string{"namespaces"}, APIGroups: []string{""}}},
 		}
 
-		res, err := rest.Create(myContext, &libapi.AuthorizationReview{
+		res, err := rest.Create(myContext, &calico.AuthorizationReview{
 			Spec: libapi.AuthorizationReviewSpec{
 				ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 					{
@@ -146,7 +147,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
-		ar := res.(*libapi.AuthorizationReview)
+		ar := res.(*calico.AuthorizationReview)
 		// Verbs other than get for namespace use cluster scoped if appropriate and will not expand across namespaces.
 		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]libapi.AuthorizedResourceVerbs{
 			{
@@ -169,7 +170,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			"allow-all": {{Verbs: []string{"*"}, Resources: []string{"*"}, APIGroups: []string{"*"}}},
 		}
 
-		res, err := rest.Create(myContext, &libapi.AuthorizationReview{
+		res, err := rest.Create(myContext, &calico.AuthorizationReview{
 			Spec: libapi.AuthorizationReviewSpec{
 				ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 					{
@@ -188,7 +189,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
-		ar := res.(*libapi.AuthorizationReview)
+		ar := res.(*calico.AuthorizationReview)
 		// Verbs other than get for namespace use cluster scoped if appropriate and will not expand across namespaces.
 		Expect(ar.Status.AuthorizedResourceVerbs).To(HaveLen(3))
 		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]libapi.AuthorizedResourceVerbs{
@@ -273,7 +274,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			"allow-all": {{Verbs: []string{"*"}, Resources: []string{"*"}, APIGroups: []string{"*"}}},
 		}
 
-		res, err := rest.Create(myContext, &libapi.AuthorizationReview{
+		res, err := rest.Create(myContext, &calico.AuthorizationReview{
 			Spec: libapi.AuthorizationReviewSpec{
 				ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 					{
@@ -292,7 +293,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(res).NotTo(BeNil())
-		ar := res.(*libapi.AuthorizationReview)
+		ar := res.(*calico.AuthorizationReview)
 		// Verbs other than get for namespace use cluster scoped if appropriate and will not expand across namespaces.
 		Expect(ar.Status.AuthorizedResourceVerbs).To(HaveLen(3))
 		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]libapi.AuthorizedResourceVerbs{
