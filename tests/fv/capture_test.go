@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	. "github.com/projectcalico/calicoctl/tests/fv/utils"
+	. "github.com/projectcalico/calicoctl/v3/tests/fv/utils"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 )
 
@@ -40,7 +40,7 @@ func TestCaptureArgs(t *testing.T) {
 
 	for _, entry := range tables {
 		log.Infof("Running calicoctl with %v", entry.args)
-		out, err := CalicoctlMayFail(entry.args...)
+		out, err := CalicoctlMayFail(true, entry.args...)
 		if entry.shouldFail {
 			Expect(err).To(HaveOccurred())
 		} else {

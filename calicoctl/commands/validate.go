@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,9 +23,10 @@ import (
 	"github.com/tigera/licensing/client"
 	"gopkg.in/yaml.v2"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
 )
 
 func Validate(args []string) error {

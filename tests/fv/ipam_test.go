@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +26,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	. "github.com/projectcalico/calicoctl/v3/tests/fv/utils"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
@@ -71,8 +73,8 @@ func TestIPAM(t *testing.T) {
 	var nodeName string
 	hostname, err := os.Hostname()
 	Expect(err).NotTo(HaveOccurred())
+	node := libapi.NewNode()
 	nodeName = strings.ToLower(hostname)
-	node := v3.NewNode()
 	node.Name = nodeName
 	_, err = client.Nodes().Create(ctx, node, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
@@ -86,12 +88,19 @@ func TestIPAM(t *testing.T) {
 	Expect(out).To(ContainSubstring("IPS IN USE"))
 
 	// Assign some IPs.
-	v4, v6, err := client.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
+	var v4, v6 []cnet.IPNet
+	v4Assignments, v6Assignments, err := client.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
 		Num4:  5,
 		Num6:  7,
 		Attrs: map[string]string{"note": "reserved by ipam_test.go"},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	if v4Assignments != nil {
+		v4 = v4Assignments.IPs
+	}
+	if v6Assignments != nil {
+		v6 = v6Assignments.IPs
+	}
 
 	// ipam show, pools only.
 	out = Calicoctl(false, "ipam", "show")
@@ -145,11 +154,18 @@ func TestIPAM(t *testing.T) {
 	// Allocate more than one block's worth (8) of IPs from that
 	// pool.
 	// Assign some IPs.
-	v4More, v6More, err := client.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
+	var v4More, v6More []cnet.IPNet
+	v4MoreAssignments, v6MoreAssignments, err := client.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
 		Num4:      11,
 		IPv4Pools: []cnet.IPNet{cnet.MustParseNetwork(pool.Spec.CIDR)},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	if v4MoreAssignments != nil {
+		v4More = v4MoreAssignments.IPs
+	}
+	if v6MoreAssignments != nil {
+		v6More = v6MoreAssignments.IPs
+	}
 
 	// ipam show, including blocks.
 	//
