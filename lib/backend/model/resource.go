@@ -26,6 +26,8 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	discovery "k8s.io/api/discovery/v1beta1"
+
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/namespace"
@@ -130,6 +132,11 @@ func init() {
 		KindKubernetesNetworkPolicy,
 		"kubernetesnetworkpolicies",
 		reflect.TypeOf(apiv3.NetworkPolicy{}),
+	)
+	registerResourceInfo(
+		KindKubernetesEndpointSlice,
+		"kubernetesendpointslices",
+		reflect.TypeOf(discovery.EndpointSlice{}),
 	)
 	registerResourceInfo(
 		apiv3.KindNetworkSet,
