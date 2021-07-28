@@ -24,7 +24,7 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )

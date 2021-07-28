@@ -17,11 +17,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/projectcalico/kube-controllers/pkg/config"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/projectcalico/kube-controllers/pkg/config"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,10 +30,10 @@ import (
 
 	rcache "github.com/projectcalico/kube-controllers/pkg/cache"
 	"github.com/projectcalico/kube-controllers/pkg/converter"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 

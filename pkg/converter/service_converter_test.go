@@ -18,7 +18,7 @@ import (
 	"math/rand"
 
 	"github.com/projectcalico/kube-controllers/pkg/converter"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"

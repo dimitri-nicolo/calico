@@ -21,11 +21,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
@@ -127,6 +127,7 @@ var _ = Describe("Config", func() {
 					SyncLabels:        true,
 					AutoHostEndpoints: false,
 					DeleteNodes:       true,
+					LeakGracePeriod:   &v1.Duration{Duration: 15 * time.Minute},
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Minute * 5,
@@ -160,6 +161,7 @@ var _ = Describe("Config", func() {
 					ReconcilerPeriod: nil,
 					SyncLabels:       v3.Enabled,
 					HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Disabled},
+					LeakGracePeriod:  &v1.Duration{Duration: 15 * time.Minute},
 				}))
 				Expect(c.Policy).To(Equal(&v3.PolicyControllerConfig{
 					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
@@ -191,6 +193,7 @@ var _ = Describe("Config", func() {
 							ReconcilerPeriod: nil,
 							SyncLabels:       v3.Disabled,
 							HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled},
+							LeakGracePeriod:  &v1.Duration{Duration: 20 * time.Minute},
 						},
 						Policy: &v3.PolicyControllerConfig{
 							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30}},
@@ -222,6 +225,7 @@ var _ = Describe("Config", func() {
 					SyncLabels:        false,
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
+					LeakGracePeriod:   &v1.Duration{Duration: 20 * time.Minute},
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 30,
@@ -495,6 +499,7 @@ var _ = Describe("Config", func() {
 					SyncLabels:        false,
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
+					LeakGracePeriod:   &v1.Duration{Duration: 15 * time.Minute},
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 105,
@@ -527,6 +532,7 @@ var _ = Describe("Config", func() {
 					ReconcilerPeriod: nil,
 					SyncLabels:       v3.Disabled,
 					HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled},
+					LeakGracePeriod:  &v1.Duration{Duration: 15 * time.Minute},
 				}))
 				Expect(c.Policy).To(Equal(&v3.PolicyControllerConfig{
 					ReconcilerPeriod: &v1.Duration{Duration: time.Second * 105}}))
