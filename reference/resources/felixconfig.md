@@ -99,7 +99,7 @@ spec:
 | flowLogsPositionFilePath | Specify the position of the external pipeline that reads flow logs on Linux nodes. This parameter only takes effect when `FlowLogsDynamicAggregationEnabled` is set to `true`. | string | string | `/var/log/calico/flows.log.pos` |
 | flowLogsFileMaxFiles  | Set the number of log files to keep. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | int | int | `5` |
 | flowLogsFileMaxFileSizeMB | Set the max size in MB of flow logs files before rotation. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | int | int | `100` |
-| flowLogsFlushInterval | The period, in seconds, at which Felix exports the flow logs. | int | int | `300` |
+| flowLogsFlushInterval | The period, in seconds, at which Felix exports the flow logs. | int | int | `300s` |
 | flowLogsFileAggregationKindForAllowed | How much to aggregate the flow logs sent to Elasticsearch for allowed traffic.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch. | 0-2 | [AggregationKind](#aggregationkind) | 2 |
 | flowLogsFileAggregationKindForDenied | How much to aggregate the flow logs sent to Elasticsearch for denied traffic.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch. | 0-2 | [AggregationKind](#aggregationkind) | 1 |
 | flowLogsFileIncludeService | When set to `true`, include destination service information in the aggregated flow log. Note that service information will only be included when the flow can be explicitly determined to be bound to a service (e.g. pre-DNAT destination matches a service ClusterIP). | `true`, `false` | boolean | `false` |
@@ -140,7 +140,7 @@ spec:
 | dnsLogsFileDirectory               | The directory where DNS logs files are stored. This parameter only takes effect when `DNSLogsFileEnabled` is `true`. | directory | string | `/var/log/calico/dnslogs` |
 | dnsLogsFileMaxFiles                | The number of files to keep when rotating DNS log files. This parameter only takes effect when `DNSLogsFileEnabled` is `true`. | int | int | `5` |
 | dnsLogsFileMaxFileSizeMB           | The max size in MB of DNS log files before rotation. This parameter only takes effect when `DNSLogsFileEnabled` is `true`. | int | int | `100` |
-| dnsLogsFlushInterval               | The period, in seconds, at which Felix exports DNS logs. | int | int | `300` |
+| dnsLogsFlushInterval               | The period, in seconds, at which Felix exports DNS logs. | int | int | `300s` |
 | dnsLogsFileAggregationKind         | How much to aggregate DNS logs.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate similar DNS logs from workloads in the same ReplicaSet. | `0`,`1` | int | `1` |
 | dnsLogsFileIncludeLabels           | Whether to include client and server workload labels in DNS logs. | `true`, `false` | boolean | `true` |
 | dnsLogsFilePerNodeLimit            | Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs. | int | int | `0` (no limit) |
