@@ -1083,6 +1083,22 @@ AdditionalLogSourceSpec
 <p>Configuration for importing audit logs from managed kubernetes cluster log sources.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>collectProcessPath</code><br>
+<em>
+<a href="#operator.tigera.io/v1.CollectProcessPathOption">
+CollectProcessPathOption
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configuration for enabling/disabling process path collection in flowlogs.
+If Enabled, this feature sets hostPID to true in order to read process cmdline.
+Default: Enabled</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2628,6 +2644,12 @@ Default: SHA256WithRSA</p>
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.CollectProcessPathOption">CollectProcessPathOption
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.LogCollectorSpec">LogCollectorSpec</a>)
+</p>
 <h3 id="operator.tigera.io/v1.ComplianceSpec">ComplianceSpec
 </h3>
 <p>
@@ -3543,6 +3565,22 @@ AdditionalLogSourceSpec
 <td>
 <em>(Optional)</em>
 <p>Configuration for importing audit logs from managed kubernetes cluster log sources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>collectProcessPath</code><br>
+<em>
+<a href="#operator.tigera.io/v1.CollectProcessPathOption">
+CollectProcessPathOption
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configuration for enabling/disabling process path collection in flowlogs.
+If Enabled, this feature sets hostPID to true in order to read process cmdline.
+Default: Enabled</p>
 </td>
 </tr>
 </tbody>

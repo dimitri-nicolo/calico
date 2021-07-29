@@ -368,6 +368,10 @@ spec:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP
                   socket stats
                 type: boolean
+              flowLogsCollectProcessPath:
+                description: FlowLogsCollectProcessPath enables flow logs reporting process path
+                  and args
+                type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
                   dynamically changing aggregation levels. Default is true.
@@ -442,6 +446,11 @@ spec:
                 description: 'FlowLogsFilePerFlowProcessLimit, is used to specify
                   the maximum number of flow log entries with distinct process information
                   beyond which process information will be aggregated. [Default: 2]'
+                type: integer
+              flowLogsFilePerFlowProcessArgsLimit:
+                description: 'flowLogsFilePerFlowProcessArgsLimit, is used to specify
+                  the maximum number of distinct arguments in flowlogs, beyond which
+                  arguments will be aggregated. [Default: 5]'
                 type: integer
               flowLogsFlushInterval:
                 description: FlowLogsFlushInterval configures the interval at which
