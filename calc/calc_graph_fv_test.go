@@ -402,6 +402,12 @@ var baseTests = []StateList{
 		nodesWithMoreIPsDeleted,
 	},
 
+	{
+		// Service NetworkPolicy basic case.
+		endpointSliceAndLocalWorkload,
+		endpointSliceActive,
+	},
+
 	// Egress IP states.  (All private-only.)
 	{
 		endpointWithOwnEgressGateway,

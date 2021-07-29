@@ -989,7 +989,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
 			Id: "API0|selector-cidr---rule-1---0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/31",
 		},
-		// Intersection with second CIDr picks up only one IP.
+		// Intersection with second CIDR picks up only one IP.
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
 			Id: "API1|selector-cidr---rule-2---0", RemoteAddresses: "10.1.0.1/32",

@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/selector"
@@ -99,6 +100,8 @@ type IPSetData struct {
 	// NamedPort contains the name of the named port represented by this IP set or "" for a
 	// selector-only IP set
 	NamedPort string
+	// The service that this IP set represents, in namespace/name format.
+	Service string
 	// cachedUID holds the calculated unique ID of this IP set, or "" if it hasn't been calculated
 	// yet.
 	cachedUID string
@@ -113,20 +116,25 @@ func (d *IPSetData) SetIDForDomains(dstDomains []string) {
 
 func (d *IPSetData) UniqueID() string {
 	if d.cachedUID == "" {
-		selID := d.Selector.UniqueID()
-		if d.NamedPortProtocol == labelindex.ProtocolNone {
-			if d.isDomainSet {
-				// Prefix with "d" instead of "s".
-				d.cachedUID = "d" + selID[1:]
-			} else if d.IsEgressSelector {
-				// Prefix with "e" instead of "s".
-				d.cachedUID = "e" + selID[1:]
-			} else {
-				d.cachedUID = selID
-			}
+		if d.Service != "" {
+			// Service based IP set.
+			d.cachedUID = hash.MakeUniqueID("svc", d.Service)
 		} else {
-			idToHash := selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
-			d.cachedUID = hash.MakeUniqueID("n", idToHash)
+			selID := d.Selector.UniqueID()
+			if d.NamedPortProtocol == labelindex.ProtocolNone {
+				if d.isDomainSet {
+					// Prefix with "d" instead of "s".
+					d.cachedUID = "d" + selID[1:]
+				} else if d.IsEgressSelector {
+					// Prefix with "e" instead of "s".
+					d.cachedUID = "e" + selID[1:]
+				} else {
+					d.cachedUID = selID
+				}
+			} else {
+				idToHash := selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
+				d.cachedUID = hash.MakeUniqueID("n", idToHash)
+			}
 		}
 	}
 	return d.cachedUID
@@ -143,6 +151,9 @@ func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
 	}
 	if d.IsEgressSelector {
 		return proto.IPSetUpdate_EGRESS_IP
+	}
+	if d.Service != "" {
+		return proto.IPSetUpdate_IP_AND_PORT
 	}
 	return proto.IPSetUpdate_NET
 }
@@ -316,6 +327,7 @@ type ParsedRule struct {
 	DstIPSetIDs          []string
 	DstDomainIPSetIDs    []string
 	DstDomains           []string
+	DstIPPortSetIDs      []string
 
 	NotProtocol             *numorstring.Protocol
 	NotSrcNets              []*net.IPNet
@@ -342,6 +354,8 @@ type ParsedRule struct {
 	OriginalSrcServiceAccountSelector string
 	OriginalDstServiceAccountNames    []string
 	OriginalDstServiceAccountSelector string
+	OriginalDstService                string
+	OriginalDstServiceNamespace       string
 
 	// These fields allow us to pass through the HTTP match criteria from the V3 datamodel. The iptables dataplane
 	// does not implement the match, but other dataplanes such as Dikastes do.
@@ -429,6 +443,13 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 	notSrcSelIPSets := selectorsToIPSets(notSrcSels, false)
 	notDstSelIPSets := selectorsToIPSets(notDstSels, false)
 
+	// Include any Service IPSet as well.
+	var dstIPPortSets []*IPSetData
+	if rule.DstService != "" {
+		svc := fmt.Sprintf("%s/%s", rule.DstServiceNamespace, rule.DstService)
+		dstIPPortSets = append(dstIPPortSets, &IPSetData{Service: svc})
+	}
+
 	parsedRule = &ParsedRule{
 		Action: rule.Action,
 
@@ -447,6 +468,7 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		DstIPSetIDs:          ipSetsToUIDs(dstSelIPSets),
 		DstDomainIPSetIDs:    ipSetsToUIDs(dstDomainIPSets),
 		DstDomains:           dstDomains,
+		DstIPPortSetIDs:      ipSetsToUIDs(dstIPPortSets),
 
 		ICMPType: rule.ICMPType,
 		ICMPCode: rule.ICMPCode,
@@ -477,6 +499,8 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		OriginalSrcServiceAccountSelector: rule.OriginalSrcServiceAccountSelector,
 		OriginalDstServiceAccountNames:    rule.OriginalDstServiceAccountNames,
 		OriginalDstServiceAccountSelector: rule.OriginalDstServiceAccountSelector,
+		OriginalDstService:                rule.DstService,
+		OriginalDstServiceNamespace:       rule.DstServiceNamespace,
 		HTTPMatch:                         rule.HTTPMatch,
 
 		LogPrefix: rule.LogPrefix,
@@ -491,6 +515,7 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 	allIPSets = append(allIPSets, notDstNamedPortIPSets...)
 	allIPSets = append(allIPSets, srcSelIPSets...)
 	allIPSets = append(allIPSets, dstSelIPSets...)
+	allIPSets = append(allIPSets, dstIPPortSets...)
 	allIPSets = append(allIPSets, notSrcSelIPSets...)
 	allIPSets = append(allIPSets, notDstSelIPSets...)
 	allIPSets = append(allIPSets, dstDomainIPSets...)

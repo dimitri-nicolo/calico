@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -10,8 +10,9 @@ import (
 
 	"github.com/projectcalico/felix/labelindex"
 
-	"github.com/projectcalico/felix/dispatcher"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	sel "github.com/projectcalico/libcalico-go/lib/selector"

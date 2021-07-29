@@ -2047,6 +2047,37 @@ var deleteExternalIPL7Annotation = deleteClusterIPL7Annotation.withKVUpdates(
 	withIPSet(tproxyIpSetNodeports, []string{}).
 	withName("deleteExternalIPL7Annotation")
 
+// Local workload endpoint and an endpoint slice for service named "svc".
+var endpointSliceAndLocalWorkload = empty.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+	KVPair{Key: endpointSliceKey1, Value: &endpointSlice1},
+).withRoutes(
+	// Routes for the local WEP.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{},
+).withActiveProfiles(
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-missing"},
+).withName("EndpointSliceInactive")
+
+// Add a network policy that makes the endpoint slice active.
+var endpointSliceActive = endpointSliceAndLocalWorkload.withKVUpdates(
+	KVPair{Key: servicePolicyKey, Value: &servicePolicy},
+).withName("EndpointSliceActive").withIPSet("svc:Jhwii46PCMT5NlhWsUqZmv7al8TeHFbNQMhoVg", []string{
+	"10.0.0.1,tcp:80",
+}).withActivePolicies(
+	proto.PolicyID{Tier: "default", Name: "svc-policy"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{Name: "default", EgressPolicyNames: []string{"svc-policy"}},
+	},
+)
+
 type StateList []State
 
 func (l StateList) String() string {

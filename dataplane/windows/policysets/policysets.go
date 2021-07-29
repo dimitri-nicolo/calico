@@ -262,6 +262,7 @@ func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Ru
 		ipSetIds.AddAll(rule.SrcIpSetIds)
 		ipSetIds.AddAll(rule.DstIpSetIds)
 		ipSetIds.AddAll(rule.DstDomainIpSetIds)
+		ipSetIds.AddAll(rule.DstIpPortSetIds)
 	}
 
 	return ipSetIds
@@ -516,6 +517,11 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 		} else {
 			dstAddresses = ipsetAddresses
 		}
+	}
+
+	if len(ruleCopy.DstIpPortSetIds) > 0 {
+		// TODO: Implement match on IP+port IP sets.
+		logCxt.Warn("Windows nodes do not yet support Service-based policy rules")
 	}
 
 	if len(dstAddresses) > 0 {

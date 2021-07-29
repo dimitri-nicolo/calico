@@ -23,6 +23,7 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -214,6 +215,13 @@ var _ = DescribeTable("ParsedRulesToProtoRules",
 			NotIcmp: &proto.Rule_NotIcmpType{
 				NotIcmpType: 11,
 			},
+		}),
+	Entry("Service match rule",
+		ParsedRule{
+			DstIPPortSetIDs: []string{"ipPortSetID"},
+		},
+		proto.Rule{
+			DstIpPortSetIds: []string{"ipPortSetID"},
 		}),
 	Entry("fully-loaded rule",
 		fullyLoadedParsedRule,
