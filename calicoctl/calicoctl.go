@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,10 +51,11 @@ func main() {
     version                  Display the version of this binary.
 
 Options:
-  -h --help               Show this screen.
-  -l --log-level=<level>  Set the log level (one of panic, fatal, error,
-                          warn, info, debug) [default: panic]
-  --context=<context>	  The name of the kubeconfig context to use.
+  -h --help                 Show this screen.
+  -l --log-level=<level>    Set the log level (one of panic, fatal, error,
+                            warn, info, debug) [default: panic]
+  --context=<context>       The name of the kubeconfig context to use.
+  --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
   The %s is used to manage Calico network and security
@@ -76,7 +77,7 @@ Description:
 	if err != nil {
 		if _, ok := err.(*docopt.UserError); ok {
 			// the user gave us bad input
-			fmt.Printf("Invalid option: '%s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(os.Args[1:], " "))
+			fmt.Printf("Invalid or incomplete arguments: '%s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(os.Args[1:], " "))
 		}
 		os.Exit(1)
 	}
@@ -100,6 +101,20 @@ Description:
 	if arguments["<command>"] != nil {
 		command := arguments["<command>"].(string)
 		args := append([]string{command}, arguments["<args>"].([]string)...)
+
+		// A "datastore migrate import" command should skip version mismatch checking,
+		// since the datastore will not have the cluster version set
+		isImport := args[0] == "datastore" && args[1] == "migrate" && args[2] == "import"
+
+		// Check for client/cluster version mismatch. If a mismatch occurs, check for
+		// --allow-version-mismatch arg to override/fail.
+		allowMismatch, ok := arguments["--allow-version-mismatch"].(bool)
+		if (!ok || !allowMismatch) && !isImport {
+			if err = commands.VersionMismatch(args); err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n Use --allow-version-mismatch to override.", err)
+				os.Exit(1)
+			}
+		}
 
 		var err error
 
