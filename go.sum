@@ -839,6 +839,8 @@ github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133 h1:/y3vUmVwRQiLX0
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210728234322-30d05e8e8608 h1:+p1Nm8bqPmr1aARXrlDsfL97a8Xe+js7TjgGpFvsbE8=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210728234322-30d05e8e8608/go.mod h1:lNvDVPU6G8wU5COZ9x8mpVgBXUkJfMtVb2fmaCmvpog=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210729212938-af1a004488ec h1:dLe321MXOBqN8wUNOMt1kxMIu2yCA6zxuTDF/jnCxhk=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210729212938-af1a004488ec/go.mod h1:VIVCZrYacot0ase6d//64vSuoyHQGZbYQXVgB1/nvYE=
 github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff h1:GGIQ223P8iC23xBHXzP1sAt5hM169hSDBGnxNTu4vkE=
 github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
