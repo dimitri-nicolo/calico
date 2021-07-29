@@ -8,8 +8,7 @@ show_toc: false
 
 ## About {{site.prodname}} on Azure
 
-While Azure does not support {{site.prodname}} networking, you can use
-{{site.prodname}} policy with one of the following networking options.
+You can use {{site.prodname}} policy with one of the following networking options.
 
 - **Azure user-defined routes**: This option provides networking without overlays.
   Disable {{site.prodname}} networking by setting `CALICO_NETWORKING_BACKEND` to `none`

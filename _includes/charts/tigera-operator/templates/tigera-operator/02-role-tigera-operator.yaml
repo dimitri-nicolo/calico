@@ -84,6 +84,17 @@ rules:
       - delete
       - watch
   - apiGroups:
+    - networking.k8s.io
+    resources:
+    - networkpolicies
+    verbs:
+      - create
+      - update
+      - delete
+      - get
+      - list
+      - watch
+  - apiGroups:
     - crd.projectcalico.org
     resources:
     - felixconfigurations
@@ -142,6 +153,8 @@ rules:
     verbs:
       - list
       - watch
+      - create 
+      - update
   # Needed for operator lock
   - apiGroups:
       - coordination.k8s.io
@@ -186,13 +199,16 @@ rules:
       - update
       - delete
       - watch
-  # For host network access.
+  # The following rule is only for operator certification purposes.
+  # The operator normally runs in a namespace with openshift.io/run-level=0 which bypasses SCC.
+  # However in certification tests, the operator is run in a normal namespace so this
+  # rule is needed for host networking and hostPath volume access.
   - apiGroups:
       - security.openshift.io
     resources:
       - securitycontextconstraints
     resourceNames:
-      - hostnetwork
+      - hostaccess
     verbs:
       - use
   # Need these permissions for the calicoctl init container.
@@ -216,6 +232,13 @@ rules:
       - ipamblocks
     verbs:
       - list
+  # Need this permission for the calicoctl version mismatch checking
+  - apiGroups:
+      - crd.projectcalico.org
+    resources:
+      - clusterinformations
+    verbs:
+      - get
   # For AWS security group setup.
   - apiGroups:
       - crd.projectcalico.org
@@ -252,7 +275,7 @@ rules:
       - update
       - delete
 {{- end }}
-    # Permissions below this point are required for TSEE only.
+  # Permissions below this point are required for TSEE only.
   # For AWS security group setup. In enterprise, also needed for IDS installer and curator cronjob.
   - apiGroups:
       - batch

@@ -10,7 +10,7 @@ Enable WireGuard to secure on the wire in-cluster pod traffic in a {{site.prodna
 
 ### Value
 
-{{ site.prodname }} automatically creates and manages WireGuard tunnels between nodes providing transport-level security for on the wire in-cluster pod traffic. WireGuard provides {% include open-new-window.html text='formally verified' url='https://www.wireguard.com/formal-verification/' %} secure and {% include open-new-window.html text='performant tunnels' url='https://www.wireguard.com/performance/' %} without any specialized hardware. For a deep dive in to WireGuard implementation, see {% include open-new-window.html text='whitepaper' url='https://www.wireguard.com/papers/wireguard.pdf' %}.
+When this feature is enabled, {{ site.prodname }} automatically creates and manages WireGuard tunnels between nodes providing transport-level security for on-the-wire, in-cluster pod traffic. WireGuard provides {% include open-new-window.html text='formally verified' url='https://www.wireguard.com/formal-verification/' %} secure and {% include open-new-window.html text='performant tunnels' url='https://www.wireguard.com/performance/' %} without any specialized hardware. For a deep dive in to WireGuard implementation, see this {% include open-new-window.html text='whitepaper' url='https://www.wireguard.com/papers/wireguard.pdf' %}.
 
 ### Features
 
@@ -38,6 +38,10 @@ All platforms listed above will encrypt pod-to-pod traffic. Additionally, when u
 - Operating system(s) of nodes running in the cluster must {% include open-new-window.html text='support WireGuard' url='https://www.wireguard.com/install/' %}
 - IP addresses for every node in the cluster. This is required to establish secure tunnels between the nodes. {{site.prodname}} can automatically do this using [IP Setting]({{site.baseurl}}/reference/node/configuration#ip-setting) and [IP autodetection methods]({{site.baseurl}}/reference/node/configuration#ip-autodetection-methods) available under [calico/node]({{site.baseurl}}/reference/node/configuration) resource.
     - Under [installation]({{site.baseurl}}/reference/installation/api), set the [autodetection method]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection) (`nodeAddressAutodetectionV4` and/or `nodeAddressAutodetectionV6`) for your cluster.
+
+> **Note**: WireGuard in {{site.prodname}} does not support IPv6 at this time. Also, encryption using WireGuard is not supported on managed Kubernetes platforms which don't use Calico CNI (e.g. managed Kubernetes platforms EKS, and GKE).
+> WireGuard is supported when using Azure CNI on AKS, and on this platform will encrypt not just pod-to-pod traffic but host-to-host traffic as well.
+{: .alert .alert-info}
 
 ### How to
 
@@ -74,7 +78,7 @@ AKS cluster nodes currently run Ubuntu with a kernel that has WireGuard installe
 <%
 To install WireGuard for OpenShift v4.6:
 
-  This approach uses kernel modules via container installation as outlined here {% include open-new-window.html text='atmoic wireguard' url='https://github.com/projectcalico/atomic-wireguard' %} 
+  This approach uses kernel modules via container installation as outlined here {% include open-new-window.html text='atomic wireguard' url='https://github.com/projectcalico/atomic-wireguard' %} 
 
    1. Create MachineConfig for WireGuard on your local machine.
    ```bash
@@ -119,8 +123,11 @@ To install WireGuard for OpenShift v4.6:
    cd ..
    ```
 
-   4. You must then set the URLs for the `KERNEL_CORE_RPM`, `KERNEL_DEVEL_RPM` and `KERNEL_MODULES_RPM` packages in the conf file `$FAKEROOT/etc/kvc/wireguard-kmod.conf`. You can determine the host kernel version to use in the URL by running `uname -r` on a host in your cluster. You can find links to official packages in your {% include open-new-window.html text='Red Hat subscription' url='https://access.redhat.com/downloads/content/package-browser' %} 
+   4. Configure/edit `kvc-wireguard-kmod/wireguard-kmod.conf`. 
+   
+       a. You must then set the URLs for the `KERNEL_CORE_RPM`, `KERNEL_DEVEL_RPM` and `KERNEL_MODULES_RPM` packages in the conf file `$FAKEROOT/etc/kvc/wireguard-kmod.conf`. 
 
+       b. For more details and help about configuring `kvc-wireguard-kmod/wireguard-kmod.conf`, see the {% include open-new-window.html text='kvc-wireguard-kmod README file' url='https://github.com/tigera/kvc-wireguard-kmod#quick-config-variables-guide' %}. Notes about wireguard version to kernel version compatibility is also available there.
 
    5. Get RHEL Entitlement data from your own RHEL8 system from a host in your cluster.
    ```bash

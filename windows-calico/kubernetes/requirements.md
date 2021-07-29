@@ -6,17 +6,20 @@ canonical_url: '/windows-calico/kubernetes/requirements'
 
 ### About {{site.prodnameWindows}}
 
-Because the Kubernetes and {{site.prodname}} control components do not run on Windows yet, a hybrid Linux/Windows cluster is required. {{site.prodnameWindows}} standard installation is distributed as a **.zip archive**. 
+Because the Kubernetes and {{site.prodname}} control components do not run on Windows yet, a hybrid Linux/Windows cluster is required. The {{site.prodnameWindows}} standard installation is distributed as a **.zip archive**.
 
 ### What's supported in this release
 
 ✓ Install: Manifest install for Kubernetes clusters
 
-✓ Platforms: Kubernetes, EKS
+✓ Platforms: Kubernetes, OpenShift, RKE, EKS, AKS
 
 ✓ Networking: 
   - Kubernetes, on-premises: Calico CNI with BGP or VXLAN
+  - OpenShift: Calico CNI with BGP or VXLAN
+  - Rancher Kubernetes Engine: Calico CNI with BGP or VXLAN
   - EKS: VPC CNI, or Calico CNI with BGP or VXLAN
+  - AKS: Azure CNI
 
 ### Requirements
 
@@ -43,7 +46,7 @@ Earlier versions may work, but we do not actively test {{site.prodnameWindows}} 
 
 - At least four Linux Kubernetes worker nodes to run {{site.prodname}}'s cluster-wide components that meets [Linux system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements), and is installed with {{site.prodname}} v3.5.0+
 - Must not be running in eBPF mode
-- VXLAN or BGP without encapsulation is supported if using Calico CNI. IPIP (default encapsulation mode) is not supported. Use the following command to turn off IPIP.
+- VXLAN or BGP without encapsulation is supported if using {{site.prodname}} CNI. IPIP ({{site.prodname}}'s default encapsulation mode) is not supported. Use the following command to turn off IPIP.
 ```bash
 kubectl patch felixconfiguration default -p '{"spec":{"ipipEnabled":false}}'
 ```
@@ -52,7 +55,7 @@ kubectl patch felixconfiguration default -p '{"spec":{"ipipEnabled":false}}'
 calicoctl ipam configure --strictaffinity=true
 ```
 
->**Note**: {{site.prodnameWindows}} requires four Linux worker nodes in order to meet high-availability requirements for Typha.
+>**Note**: For operator-managed Linux {{site.prodname}} clusters, three Linux worker nodes are required in order to meet high-availability requirements for Typha.
 {: .alert .alert-info}
 
 #### Windows platform 
@@ -64,8 +67,8 @@ calicoctl ipam configure --strictaffinity=true
     - OS 1809: Build 17763.1432, binary version: 10.0.17763.1432
     - OS 1903: Build 18362.1049, binary version: 10.0.18362.1049
     - OS 1909: Build 18363.1049, binary version: 10.0.18363.1049
-- Powershell for the installer
-- Make sure the Docker service is installed and running. {% include open-new-window.html text='Install Docker on Windows node' url='https://docs.microsoft.com/en-us/virtualization/windowscontainers/quick-start/set-up-environment?tabs=Windows-Server' %}.
+- PowerShell for the installer
+- Make sure {% include open-new-window.html text='Docker' url='https://docs.microsoft.com/en-us/virtualization/windowscontainers/quick-start/set-up-environment?tabs=Windows-Server' %} or {% include open-new-window.html text='containerd' url='https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd' %} is installed and running.
 - If you are using {{site.prodname}} BGP networking, the RemoteAccess service must be installed for the Windows BGP Router.
 - Windows nodes support only a single IP pool type (so, if using a VXLAN pool, you should only use VXLAN throughout the cluster).
 - TLS v1.2 enabled. For example:

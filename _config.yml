@@ -113,7 +113,7 @@ defaults:
       show_title: true
       show_read_time: true
       show_toc: true
-      version: master
+      version: v3.20
       sitemap: true
       # The registry field should end in a trailing `/` to ensure images formed with
       # it have the proper slashes
@@ -134,12 +134,12 @@ defaults:
         cni: quay.io/calico/cni
         kubeControllers: tigera/kube-controllers
         calicoKubeControllers: calico/kube-controllers
-        calico-upgrade: calico/upgrade
-        flannel: quay.io/coreos/flannel
-        dikastes: tigera/dikastes
-        flannelMigration: calico/flannel-migration-controller
-        pilot-webhook: calico/pilot-webhook
-        flexvol: calico/pod2daemon-flexvol
+        calico/node: calico/node
+        calicoctl: calico/ctl
+        typha: calico/typha
+        calico/cni: calico/cni
+        calico/apiserver: calico/apiserver
+        calico/kube-controllers: calico/kube-controllers
         fluentd: tigera/fluentd
         es-proxy: tigera/es-proxy
         cloudControllers: tigera/cloud-controllers

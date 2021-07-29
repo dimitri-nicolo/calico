@@ -117,6 +117,10 @@ spec:
 
 {% include content/serviceaccountmatch.md %}
 
+#### ServiceMatch 
+
+{% include content/servicematch.md %}
+
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
@@ -137,6 +141,3 @@ in order to use the following match criteria.
 | Datastore type           | Create/Delete | Update | Get/List | Notes
 |--------------------------|---------------|--------|----------|------
 | Kubernetes API datastore | Yes           | Yes    | Yes      |
-
-> **Note**: {{site.prodname}} `NetworkPolicy` resources with `knp.` prefixed names are determined from Kubernetes `NetworkPolicy`
-> resources and are read-only through `calicoctl`.

@@ -53,15 +53,10 @@ The following environment variables can be used to configure the {{site.prodname
 
 ### Node controller
 
-The node controller automatically cleans up configuration for nodes that no longer exist. The controller must have read
-access to the Kubernetes API to monitor `Node` events.
+The node controller has several functions.
 
-The node controller is not enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
-However, the {{site.prodname}} Kubernetes manifests explicitly specify the `ENABLED_CONTROLLERS` and enable this controller
-within the calico-kube-controllers deployment.
-
-To enable the node controller when using `kubernetes`, set the list of enabled controllers
-in the environment for kube-controllers to `node`. For example: `ENABLED_CONTROLLERS=node`
+- Garbage collects IP addresses.
+- Automatically provisions host endpoints for Kubernetes nodes.
 
 ### Federation controller
 

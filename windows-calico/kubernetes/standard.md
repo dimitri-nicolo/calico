@@ -97,13 +97,23 @@ On each Windows node, follow the steps below to configure `kubelet` and `kube-pr
 
 **Step 1: Configure kubelet**
 
-`kubelet` must be configured to use CNI networking by setting the following command line arguments:
+`kubelet` must be configured to use CNI networking by setting the following command line arguments, depending on the installed container runtime.
+
+For Docker:
 
 - `--network-plugin=cni`
 - `--cni-bin-dir=<directory for CNI binaries>`
 - `--cni-conf-dir=<directory for CNI configuration>`
 
-The settings for the latter two arguments are required by the {{site.prodname}} installer in the next stage.
+For containerd:
+
+- `--container-runtime=remote`
+- `--container-runtime-endpoint=npipe:////.//pipe//containerd-containerd`
+
+The CNI bin and conf dir settings are required by the {{site.prodname}} installer to install the CNI binaries and configuration file.
+
+>**Note**: Among other parameters, the containerd configuration file includes options to configure the CNI bin and conf dirs.
+{: .alert .alert-info}
 
 The following kubelet settings are also important:
 
@@ -122,7 +132,7 @@ The following kubelet settings are also important:
   | /29                    | 4              |
   | /30 or above           | Cannot be used |
 
-In addition, it's important that `kubelet` is started after the vSwitch has been created, which happens when {{site.prodname}}initializes the dataplane. Otherwise, `kubelet` can be disconnected for the API server when the vSwitch is created.
+In addition, it's important that `kubelet` is started after the vSwitch has been created, which happens when {{site.prodname}} initializes the dataplane. Otherwise, `kubelet` can be disconnected for the API server when the vSwitch is created.
 
 **AWS users**: Add the following argument to `kubelet`:
 
@@ -132,9 +142,14 @@ In addition, it's important that `kubelet` is started after the vSwitch has been
 
 - Waits for {{site.prodname}} to initialise the vSwitch
 - Starts `kubelet` with
-    - --network-plugin set to `cni`
-    - --cni-bin-dir set to `c:\k\cni`
-    - --cni-conf-dir set to `c:\k\cni\config`
+    - If containerd service is running, the following flags are set:
+        - --container-runtime set to `remote`
+        - --container-runtime-endpoint set to `npipe:////.//pipe//containerd-containerd`
+    - Otherwise, the following flags are set for Docker:
+        - --network-plugin set to `cni`
+        - --cni-bin-dir set to `c:\k\cni`
+        - --cni-conf-dir set to `c:\k\cni\config`
+        - --pod-infra-container-image set to `kubeletwin/pause`
     - --kubeconfig set to the path of node kubeconfig file
     - --hostname-override set to match {{site.prodname}}'s nodename
     - --node-ip set to the IP of the default vEthernet device
@@ -152,7 +167,7 @@ See the README in the same directory for more details. Feel free to modify the s
 - With the correct HNS network name used by the active CNI plugin. kube-proxy reads the HNS network name from an environment variable KUBE_NETWORK
   - With default configuration, {{site.prodname}} uses network name "{{site.prodname}}"
 - For VXLAN, with the source VIP for the pod subnet allocated to the node. This is the IP that kube-proxy uses when it does SNAT for a NodePort. For {{site.prodname}}, the source VIP should be the second IP address in the subnet chosen for the host. For example, if {{site.prodname}} chooses an IP block 10.0.0.0/26 then the source VIP should be 10.0.0.2. The script below will automatically wait for the block to be chosen and configure kube-proxy accordingly.
-- For {{site.prodname}} policy to function correctly with Kubernetes services, the WinDSR feature gate must be enabled. This requires Windows 1903 build 18317 or greater and Kubernetes v1.14 or greater.
+- For {{site.prodname}} policy to function correctly with Kubernetes services, the WinDSR feature gate must be enabled. This requires Windows Server build 17763.1432 or greater and Kubernetes v1.14 or greater.
 
 `kube-proxy` should be started via a script that waits for the Calico HNS network to be provisioned. The {{site.prodname}} package contains a suitable script for use with {{site.prodname}} networking at `{{site.rootDirWindows}}\kubernetes\kube-proxy-service.ps1`. The script:
 
@@ -209,7 +224,7 @@ Follow the steps below on each Windows node to install Kubernetes and {{site.pro
 
 **If using {{site.prodname}} BGP**
 
-Install the RemoteAccess service using the following Powershell commands:
+Install the RemoteAccess service using the following PowerShell commands:
 
 ```powershell
 Install-WindowsFeature RemoteAccess
