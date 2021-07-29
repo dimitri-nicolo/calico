@@ -74,6 +74,7 @@ hooks_installed:=$(shell ./install-git-hooks)
 install-git-hooks:
 	./install-git-hooks
 	
+## Serve a local view of your current site on port 4000
 serve: bin/helm
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.
 	# When set to 'pages', jekyll starts in safe mode which means it will not
@@ -88,7 +89,6 @@ serve: bin/helm
 	  -p 4000:4000 \
 	  jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll serve --incremental $(CONFIG)'
 
-## Serve a local view of your current site on port 4000
 .PHONY: build
 _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	docker run --rm -t -i \
