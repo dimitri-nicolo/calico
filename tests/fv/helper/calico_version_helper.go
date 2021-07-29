@@ -74,7 +74,8 @@ Description:
 
 	calicoVersion, _ := parsedArgs["--version"].(string)
 
-	if err := client.EnsureInitialized(ctx, calicoVersion, ""); err != nil {
+	// TODO: Enable it so tests will set separate Calico and EE versions.
+	if err := client.EnsureInitialized(ctx, calicoVersion, calicoVersion, ""); err != nil {
 		fmt.Printf("Could not set calico version to %s: %v\n", calicoVersion, err)
 		os.Exit(1)
 	}
