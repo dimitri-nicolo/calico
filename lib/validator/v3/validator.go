@@ -1873,10 +1873,10 @@ func validateGlobalNetworkPolicySpec(spec *api.GlobalNetworkPolicySpec, structLe
 	// If a ServiceSelector is specified by name, we also need a namespace. At a global scope,
 	// service names are not fully qualified and so need a namespace.
 	for _, r := range spec.Egress {
-		if r.Destination.Services != nil && r.Destination.NamespaceSelector == "" {
+		if r.Destination.Services != nil && r.Destination.Services.Namespace == "" {
 			structLevel.ReportError(
-				reflect.ValueOf(r.Destination.NamespaceSelector), "NamespaceSelector", "",
-				reason("must specify a namespace selector"), "",
+				reflect.ValueOf(r.Destination.Services.Namespace), "Namespace", "",
+				reason("must specify a namespace"), "",
 			)
 		}
 	}

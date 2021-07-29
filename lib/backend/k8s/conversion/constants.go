@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,12 +29,18 @@ const (
 	// We set this annotation to the empty string when the WEP is deleted by the CNI plugin.
 	// That signals that the IP no longer belongs to this pod.
 	AnnotationPodIP = "cni.projectcalico.org/podIP"
+
 	// AnnotationPodIPs is similar for the plural PodIPs field.
 	AnnotationPodIPs                  = "cni.projectcalico.org/podIPs"
 	AnnotationSecurityGroups          = "aws.tigera.io/security-groups"
 	AnnotationEgressSelector          = "egress.projectcalico.org/selector"
 	AnnotationEgressNamespaceSelector = "egress.projectcalico.org/namespaceSelector"
 	SecurityGroupLabelPrefix          = "sg.aws.tigera.io"
+
+	// AnnotationContainerID stores the container ID of the pod.  This allows us to disambiguate different pods
+	// that have the same name and namespace.  For example, stateful set pod that is restarted.  May be missing
+	// on older Pods.
+	AnnotationContainerID = "cni.projectcalico.org/containerID"
 
 	// NameLabel is a label that can be used to match a serviceaccount or namespace
 	// name exactly.
