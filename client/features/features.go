@@ -2,6 +2,8 @@ package features
 
 import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 const (
@@ -81,19 +83,20 @@ func IsValidPackageName(value string) bool {
 
 // OpenSourceAPIs maps calico open source APIs
 var OpenSourceAPIs = set{
-	api.NewBGPConfiguration().GetObjectKind().GroupVersionKind().String():                 true,
-	api.NewBGPPeer().GetObjectKind().GroupVersionKind().String():                          true,
-	api.NewClusterInformation().GetObjectKind().GroupVersionKind().String():               true,
-	api.NewFelixConfiguration().GetObjectKind().GroupVersionKind().String():               true,
-	api.NewGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():              true,
-	api.NewGlobalNetworkSet().GetObjectKind().GroupVersionKind().String():                 true,
-	api.NewHostEndpoint().GetObjectKind().GroupVersionKind().String():                     true,
-	api.NewIPPool().GetObjectKind().GroupVersionKind().String():                           true,
-	api.NewKubeControllersConfiguration().GetObjectKind().GroupVersionKind().String():     true,
-	api.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String():                    true,
-	api.NewNetworkSet().GetObjectKind().GroupVersionKind().String():                       true,
-	api.NewProfile().GetObjectKind().GroupVersionKind().String():                          true,
-	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():        true,
+	api.NewBGPConfiguration().GetObjectKind().GroupVersionKind().String():             true,
+	api.NewBGPPeer().GetObjectKind().GroupVersionKind().String():                      true,
+	api.NewClusterInformation().GetObjectKind().GroupVersionKind().String():           true,
+	api.NewFelixConfiguration().GetObjectKind().GroupVersionKind().String():           true,
+	api.NewGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():          true,
+	api.NewGlobalNetworkSet().GetObjectKind().GroupVersionKind().String():             true,
+	api.NewHostEndpoint().GetObjectKind().GroupVersionKind().String():                 true,
+	api.NewIPPool().GetObjectKind().GroupVersionKind().String():                       true,
+	api.NewKubeControllersConfiguration().GetObjectKind().GroupVersionKind().String(): true,
+	api.NewNetworkPolicy().GetObjectKind().GroupVersionKind().String():                true,
+	api.NewNetworkSet().GetObjectKind().GroupVersionKind().String():                   true,
+	libapi.NewNode().GetObjectKind().GroupVersionKind().String():                      true,
+	api.NewProfile().GetObjectKind().GroupVersionKind().String():                      true,
+	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():    true,
 }
 
 // EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names
@@ -118,8 +121,8 @@ var EnterpriseAPIsToFeatureName = map[string]string{
 
 // ManagementAPIs maps calico enterprise APIs used for managing/accessing resources
 var ManagementAPIs = set{
-	api.NewLicenseKey().GetObjectKind().GroupVersionKind().String():               true,
-	api.NewLicenseKeyList().GetObjectKind().GroupVersionKind().String():           true,
+	api.NewLicenseKey().GetObjectKind().GroupVersionKind().String():     true,
+	api.NewLicenseKeyList().GetObjectKind().GroupVersionKind().String(): true,
 }
 
 // CloudCommunityFeatures is defined by features such as: Management Portal UI, Policy Management and Policy Troubleshooting
