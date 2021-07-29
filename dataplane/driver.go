@@ -483,7 +483,9 @@ func StartDataplaneDriver(configParams *config.Config,
 				MaxFiles:        configParams.CaptureMaxFiles,
 			},
 
-			LookupsCache: lc,
+			LookupsCache:          lc,
+			DNSPolicyNfqueueID:    configParams.DNSPolicyNfqueueID,
+			DebugDNSResponseDelay: configParams.DebugDNSResponseDelay,
 		}
 
 		if configParams.BPFExternalServiceMode == "dsr" {

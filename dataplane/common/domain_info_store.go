@@ -119,6 +119,8 @@ type DomainInfoStore struct {
 	epoch    int
 	extraTTL time.Duration
 	resetC   chan struct{}
+
+	dnsResponseDelay time.Duration
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -136,12 +138,13 @@ type domainMappingExpired struct {
 }
 
 type DnsConfig struct {
-	Collector            collector.Collector
-	DNSCacheEpoch        int
-	DNSCacheFile         string
-	DNSCacheSaveInterval time.Duration
-	DNSExtraTTL          time.Duration
-	DNSLogsLatency       bool
+	Collector             collector.Collector
+	DNSCacheEpoch         int
+	DNSCacheFile          string
+	DNSCacheSaveInterval  time.Duration
+	DNSExtraTTL           time.Duration
+	DNSLogsLatency        bool
+	DebugDNSResponseDelay time.Duration
 }
 
 func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *DnsConfig) *DomainInfoStore {
@@ -177,6 +180,7 @@ func newDomainInfoStoreWithShims(
 		requestTimestamp:     make(map[dnsExchangeKey]uint64),
 		epoch:                config.DNSCacheEpoch,
 		extraTTL:             config.DNSExtraTTL,
+		dnsResponseDelay:     config.DebugDNSResponseDelay,
 		// Capacity 1 here is to allow UT to test the use of this channel without
 		// needing goroutines.
 		resetC: make(chan struct{}, 1),
@@ -705,6 +709,12 @@ func (s *DomainInfoStore) signalDomainInfoChange(name, reason string) {
 	// thread and the int_dataplane thread.
 	s.mutex.Unlock()
 	defer s.mutex.Lock()
+
+	if s.dnsResponseDelay != 0 {
+		log.Debugf("Delaying DNS response for domain %s name for %d millis", name, s.dnsResponseDelay)
+		time.Sleep(s.dnsResponseDelay)
+	}
+
 	changedNames.Iter(func(item interface{}) error {
 		log.Debugf("Signal domain change for %v -> %v", name, item.(string))
 		s.domainInfoChanges <- &DomainInfoChanged{Domain: item.(string), Reason: reason}
