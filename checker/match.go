@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import (
 
 	"fmt"
 
-	core "github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 )
 

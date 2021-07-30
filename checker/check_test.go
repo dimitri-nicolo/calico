@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package checker
 import (
 	"testing"
 
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	. "github.com/onsi/gomega"
 
 	"github.com/gogo/googleapis/google/rpc"
@@ -157,7 +157,12 @@ func TestCheckNoIngressPolicyRulesInTier(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
-	Expect(checkTiers(store, req)).To(Equal(rpc.Status{Code: OK}))
+
+	status := checkTiers(store, req)
+	expectedStatus := rpc.Status{Code: OK}
+	Expect(status.Code).To(Equal(expectedStatus.Code))
+	Expect(status.Message).To(Equal(expectedStatus.Message))
+	Expect(status.Details).To(BeNil())
 }
 
 // CheckStore when the store has no endpoint should deny requests.

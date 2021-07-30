@@ -4,14 +4,16 @@ go 1.15
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
-	github.com/envoyproxy/data-plane-api v0.0.0-20210121155913-ffd420ef8a9a
-	github.com/gogo/googleapis v1.2.0
+	github.com/envoyproxy/data-plane-api v0.0.0-00010101000000-000000000000
+	github.com/envoyproxy/go-control-plane v0.9.8
+	github.com/gogo/googleapis v1.4.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2-0.20210524102741-3503e05cfaa8
+	github.com/projectcalico/libcalico-go v1.7.2-0.20210728180245-279457908a65
 	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
+	google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 	google.golang.org/grpc v1.27.1
 )
 
