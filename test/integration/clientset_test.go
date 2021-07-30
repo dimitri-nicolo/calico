@@ -41,8 +41,6 @@ import (
 
 	licFeatures "github.com/tigera/licensing/client/features"
 
-	"github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
@@ -305,7 +303,7 @@ func TestStagedNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.NetworkPolicy{}
+				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
 			if err := testStagedNetworkPolicyClient(client, name); err != nil {
@@ -441,7 +439,7 @@ func TestTierClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.Tier{}
+				return &v3.Tier{}
 			}, true)
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
@@ -617,7 +615,7 @@ func TestStagedGlobalNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.StagedGlobalNetworkPolicy{}
+				return &v3.StagedGlobalNetworkPolicy{}
 			}, true)
 			defer shutdownServer()
 			if err := testStagedGlobalNetworkPolicyClient(client, name); err != nil {
@@ -1040,7 +1038,7 @@ func TestGlobalAlertClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalAlert{}
+				return &v3.GlobalAlert{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalAlertClient(client, name); err != nil {
@@ -1342,7 +1340,7 @@ func TestGlobalThreatFeedClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalThreatFeed{}
+				return &v3.GlobalThreatFeed{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalThreatFeedClient(client, name); err != nil {
@@ -1502,7 +1500,7 @@ func TestHostEndpointClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.HostEndpoint{}
+				return &v3.HostEndpoint{}
 			}, true)
 			defer shutdownServer()
 			if err := testHostEndpointClient(client, name); err != nil {
@@ -1622,7 +1620,7 @@ func TestGlobalReportClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalReport{}
+				return &v3.GlobalReport{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalReportClient(client, name); err != nil {
@@ -1860,7 +1858,7 @@ func TestGlobalReportTypeClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalReportType{}
+				return &v3.GlobalReportType{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalReportTypeClient(client, name); err != nil {
@@ -1986,7 +1984,7 @@ func TestIPPoolClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.IPPool{}
+				return &v3.IPPool{}
 			}, true)
 			defer shutdownServer()
 			if err := testIPPoolClient(client, name); err != nil {
@@ -2055,7 +2053,7 @@ func TestBGPConfigurationClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.BGPConfiguration{}
+				return &v3.BGPConfiguration{}
 			}, true)
 			defer shutdownServer()
 			if err := testBGPConfigurationClient(client, name); err != nil {
@@ -2116,7 +2114,7 @@ func TestBGPPeerClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.BGPPeer{}
+				return &v3.BGPPeer{}
 			}, true)
 			defer shutdownServer()
 			if err := testBGPPeerClient(client, name); err != nil {
@@ -2181,7 +2179,7 @@ func TestProfileClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.Profile{}
+				return &v3.Profile{}
 			}, true)
 			defer shutdownServer()
 			if err := testProfileClient(client, name); err != nil {
@@ -2246,7 +2244,7 @@ func TestRemoteClusterConfigurationClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.RemoteClusterConfiguration{}
+				return &v3.RemoteClusterConfiguration{}
 			}, true)
 			defer shutdownServer()
 			if err := testRemoteClusterConfigurationClient(client, name); err != nil {
@@ -2313,7 +2311,7 @@ func TestFelixConfigurationClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.FelixConfiguration{}
+				return &v3.FelixConfiguration{}
 			}, true)
 			defer shutdownServer()
 			if err := testFelixConfigurationClient(client, name); err != nil {
@@ -2386,7 +2384,7 @@ func TestKubeControllersConfigurationClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.KubeControllersConfiguration{}
+				return &v3.KubeControllersConfiguration{}
 			}, true)
 			defer shutdownServer()
 			if err := testKubeControllersConfigurationClient(client); err != nil {
@@ -2544,7 +2542,7 @@ func TestManagedClusterClient(t *testing.T) {
 			serverConfig := &TestServerConfig{
 				etcdServerList: []string{"http://localhost:2379"},
 				emptyObjFunc: func() runtime.Object {
-					return &projectcalico.ManagedCluster{}
+					return &v3.ManagedCluster{}
 				},
 				enableManagedClusterCreateAPI: true,
 				managedClustersCACertPath:     "../ca.crt",
@@ -2571,7 +2569,7 @@ func TestManagedClusterClient(t *testing.T) {
 		serverConfig := &TestServerConfig{
 			etcdServerList: []string{"http://localhost:2379"},
 			emptyObjFunc: func() runtime.Object {
-				return &projectcalico.ManagedCluster{}
+				return &v3.ManagedCluster{}
 			},
 			enableManagedClusterCreateAPI: false,
 			managedClustersCACertPath:     "../ca.crt",
@@ -2767,7 +2765,7 @@ func TestClusterInformationClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.ClusterInformation{}
+				return &v3.ClusterInformation{}
 			}, true)
 			defer shutdownServer()
 			if err := testClusterInformationClient(client, name); err != nil {
@@ -2938,7 +2936,7 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	}()
 
 	// Get the users permissions.
-	req := &projectcalico.AuthorizationReview{
+	req := &libapi.AuthorizationReview{
 		Spec: libapi.AuthorizationReviewSpec{
 			ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
 				{
