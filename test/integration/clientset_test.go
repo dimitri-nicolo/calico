@@ -41,8 +41,7 @@ import (
 
 	licFeatures "github.com/tigera/licensing/client/features"
 
-	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
-	_ "github.com/projectcalico/apiserver/pkg/apis/projectcalico/install"
+	"github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authenticationreview"

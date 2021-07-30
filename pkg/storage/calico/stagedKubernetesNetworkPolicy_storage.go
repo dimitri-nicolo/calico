@@ -15,7 +15,7 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

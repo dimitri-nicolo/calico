@@ -6,7 +6,7 @@ import (
 	"context"
 	"sort"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/apiserver/pkg/rbac"
 
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"

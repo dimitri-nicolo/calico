@@ -29,7 +29,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for

@@ -5,7 +5,7 @@ package managedcluster
 import (
 	"context"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
 
 	"k8s.io/apimachinery/pkg/api/meta"

@@ -21,7 +21,7 @@ import (
 	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 
-	aapi "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewGlobalAlertTemplateStorage creates a new libcalico-based storage.Interface implementation for GlobalAlertTemplates

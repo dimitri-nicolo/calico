@@ -16,6 +16,8 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_LMA_PROJECT_ID) $(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
+API_REPO=github.com/tigera/ap
+
 API_SERVER_IMAGE      ?=tigera/cnx-apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
@@ -142,7 +144,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean check-generated-files tigera/cnx-apiserver ut fv
+ci: clean tigera/cnx-apiserver ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
@@ -200,7 +202,7 @@ endif
 
 # Build the tigera/cnx-apiserver docker image.
 .PHONY: tigera/cnx-apiserver
-tigera/cnx-apiserver: .generate_files $(BINDIR)/apiserver $(BINDIR)/filecheck
+tigera/cnx-apiserver: $(BINDIR)/apiserver $(BINDIR)/filecheck
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/apiserver docker-image/bin/

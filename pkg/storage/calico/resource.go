@@ -33,7 +33,7 @@ import (
 
 	licClient "github.com/tigera/licensing/client"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type resourceObject interface {
