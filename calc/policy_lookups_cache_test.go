@@ -316,18 +316,18 @@ var _ = Describe("RuleID tests", func() {
 			Expect(rid).NotTo(BeNil())
 			Expect(rid.GetFlowLogPolicyName()).To(Equal(expectedFPName))
 		},
-		Entry("Global network policy", "default", "gnp-1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|default.gnp-1|allow"),
-		Entry("Global network policy in non default tier", "tier-1", "gnp-2", "", 2, rules.RuleDirEgress, rules.RuleActionPass, "tier-1|tier-1.gnp-2|pass"),
-		Entry("Namespaced network policy", "default", "np-1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|ns1/default.np-1|allow"),
-		Entry("Namespaced network policy in non default tier", "netsec", "np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.np-2|allow"),
-		Entry("Kubernetes network policy", "default", "knp.default.allow.all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/knp.default.allow.all|allow"),
-		Entry("Profile", "", "kns.ns3", "ns3", 0, rules.RuleDirIngress, rules.RuleActionAllow, "__PROFILE__|ns3/__PROFILE__.kns.ns3|allow"),
+		Entry("Global network policy", "default", "gnp-1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|default.gnp-1|allow|"),
+		Entry("Global network policy in non default tier", "tier-1", "gnp-2", "", 2, rules.RuleDirEgress, rules.RuleActionPass, "tier-1|tier-1.gnp-2|pass|0"),
+		Entry("Namespaced network policy", "default", "np-1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|ns1/default.np-1|allow|0"),
+		Entry("Namespaced network policy in non default tier", "netsec", "np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.np-2|allow|0"),
+		Entry("Kubernetes network policy", "default", "knp.default.allow.all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/knp.default.allow.all|allow|0"),
+		Entry("Profile", "", "kns.ns3", "ns3", 0, rules.RuleDirIngress, rules.RuleActionAllow, "__PROFILE__|ns3/__PROFILE__.kns.ns3|allow|0"),
 
-		Entry("Staged Global network policy", "default", "staged:gnp-1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|default.staged:gnp-1|allow"),
-		Entry("Staged Global network policy in non default tier", "tier-1", "staged:gnp-2", "", 2, rules.RuleDirEgress, rules.RuleActionPass, "tier-1|tier-1.staged:gnp-2|pass"),
-		Entry("Staged Namespaced network policy", "default", "staged:np.1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|ns1/default.staged:np.1|allow"),
-		Entry("Staged Namespaced network policy in non default tier", "netsec", "staged:np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.staged:np-2|allow"),
-		Entry("Staged Kubernetes network policy", "default", "staged:knp.default.allow.all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/staged:knp.default.allow.all|allow"),
+		Entry("Staged Global network policy", "default", "staged:gnp-1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|default.staged:gnp-1|allow|0"),
+		Entry("Staged Global network policy in non default tier", "tier-1", "staged:gnp-2", "", 2, rules.RuleDirEgress, rules.RuleActionPass, "tier-1|tier-1.staged:gnp-2|pass|0"),
+		Entry("Staged Namespaced network policy", "default", "staged:np.1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|ns1/default.staged:np.1|allow|1"),
+		Entry("Staged Namespaced network policy in non default tier", "netsec", "staged:np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.staged:np-2|allow|1"),
+		Entry("Staged Kubernetes network policy", "default", "staged:knp.default.allow.all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/staged:knp.default.allow.all|allow|1"),
 	)
 })
 
