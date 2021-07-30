@@ -20,9 +20,9 @@ spec:
     protocol: TCP
     destination:
       namespaceSelector: name == 'tigera-elasticsearch'
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       ports:
-      - 9200
+      - 5554
   - action: Allow
     protocol: UDP
     destination:
@@ -45,14 +45,14 @@ metadata:
 spec:
   tier: allow-tigera
   order: 1
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  selector: k8s-app == 'tigera-secure-es-gateway'
   types:
   - Ingress
   ingress:
   - action: Allow
     destination:
       ports:
-      - 9200
+      - 5554
     protocol: TCP
     source:
       namespaceSelector: name == 'tigera-intrusion-detection'
@@ -118,7 +118,7 @@ spec:
             items:
               - key: tls.crt
                 path: es-ca.pem
-            secretName: tigera-secure-es-http-certs-public
+            secretName: tigera-secure-es-gateway-http-certs-public
         - name: host-volume
           hostPath:
             path: /var/log/calico
