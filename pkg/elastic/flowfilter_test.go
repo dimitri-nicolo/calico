@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 package elastic_test
 
 import (
@@ -224,12 +224,12 @@ var _ = Describe("FlowFilter", func() {
 					mockFlowHelper.On("CanListPolicy", mock.Anything).Return(true, nil)
 				},
 				map[interface{}]int64{
-					"0|tier1|tier1.np1|pass":                     1000,
-					"1|tier1|tier1.staged:np1|allow":             1000,
-					"2|tier2|ns1/tier2.np1|pass":                 1000,
-					"3|tier2|ns1/tier2.staged:np1|allow":         1000,
-					"4|default|ns1/staged:knp.default.np1|allow": 1000,
-					"5|default|ns1/knp.default.np1|allow":        1000,
+					"0|tier1|tier1.np1|pass|-":                     1000,
+					"1|tier1|tier1.staged:np1|allow|-":             1000,
+					"2|tier2|ns1/tier2.np1|pass|-":                 1000,
+					"3|tier2|ns1/tier2.staged:np1|allow|-":         1000,
+					"4|default|ns1/staged:knp.default.np1|allow|-": 1000,
+					"5|default|ns1/knp.default.np1|allow|-":        1000,
 				},
 			},
 		},
@@ -240,28 +240,83 @@ var _ = Describe("FlowFilter", func() {
 					AggregatedTerms: map[string]*elastic.AggregatedTerm{
 						"policies": {
 							Buckets: map[interface{}]int64{
-								"0|tier1|tier1.np1|pass":                     1000,
-								"1|tier1|staged:tier1.np1|allow":             1000,
-								"2|tier2|ns1/tier2.np1|pass":                 1000,
-								"3|tier2|ns1/staged:tier2.np1|allow":         1000,
-								"4|default|ns1/staged:knp.default.np1|allow": 1000,
-								"5|default|ns1/knp.default.np1|allow":        1000,
+								"0|tier1|tier1.np1|pass|0":                     1000,
+								"1|tier1|staged:tier1.np1|allow|1":             1000,
+								"2|tier2|ns1/tier2.np1|pass|0":                 1000,
+								"3|tier2|ns1/staged:tier2.np1|allow|1":         1000,
+								"4|default|ns1/staged:knp.default.np1|allow|0": 1000,
+								"5|default|ns1/knp.default.np1|allow|1":        1000,
 							},
 						},
 					},
 				},
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow", 1000)).Return(true, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass|0", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow|1", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass|0", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow|1", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1", 1000)).Return(true, nil)
 				},
 				map[interface{}]int64{
-					"0|*|*|pass": 1000,
-					"1|default|ns1/staged:knp.default.np1|allow": 1000,
-					"2|default|ns1/knp.default.np1|allow":        1000,
+					"0|*|*|pass|*": 1000,
+					"1|default|ns1/staged:knp.default.np1|allow|0": 1000,
+					"2|default|ns1/knp.default.np1|allow|1":        1000,
+				},
+			},
+		},
+		TableEntry{
+			Description: "Should not modify all non staged flows if the user only has access to staged flows, mixed policies",
+			Parameters: []interface{}{
+				&elastic.CompositeAggregationBucket{
+					AggregatedTerms: map[string]*elastic.AggregatedTerm{
+						"policies": {
+							Buckets: map[interface{}]int64{
+								"0|tier1|tier1.np1|allow|0":                     1000,
+								"1|tier1|tier1.np1|deny|-1":                     1000,
+								"2|tier1|tier1.np1|pass":                        1000,
+								"3|tier1|staged:tier1.np1|allow":                1000,
+								"4|tier2|ns1/tier2.np1|deny|0":                  1000,
+								"5|tier2|ns1/tier2.np1|pass|-":                  1000,
+								"6|tier2|ns1/staged:tier2.np1|allow":            1000,
+								"7|tier3|ns2/tier3.np2|allow|0":                 1000,
+								"8|tier3|ns2/tier3.np3|allow|1":                 1000,
+								"9|tier3|ns3/tier3.np3|deny|-1":                 1000,
+								"10|tier3|ns3/tier3.np3|pass|0":                 1000,
+								"11|default|ns1/staged:knp.default.np1|allow|-": 1000,
+								"12|default|ns1/knp.default.np1|allow|-":        1000,
+							},
+						},
+					},
+				},
+				func(mockFlowHelper *rbac.MockFlowHelper) {
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|allow|0", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|tier1.np1|deny|-1", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier1|tier1.np1|pass", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier1|staged:tier1.np1|allow", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|tier2|ns1/tier2.np1|deny|0", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|tier2|ns1/tier2.np1|pass", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("6|tier2|ns1/staged:tier2.np1|allow", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("7|tier3|ns2/tier3.np2|allow|0", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("8|tier3|ns2/tier3.np3|allow|1", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("9|tier3|ns3/tier3.np3|deny|-1", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("10|tier3|ns3/tier3.np3|pass|0", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("11|default|ns1/staged:knp.default.np1|allow", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("12|default|ns1/knp.default.np1|allow|-", 1000)).Return(true, nil)
+				},
+				map[interface{}]int64{
+					"6|tier2|ns1/tier2.staged:np1|allow|-":   1000,
+					"8|tier3|ns2/tier3.np3|allow|1":          1000,
+					"11|default|ns1/knp.default.np1|allow|-": 1000,
+					"4|*|*|deny|*":                           1000,
+					"5|tier2|ns1/tier2.np1|pass|-":           1000,
+					"2|*|*|pass|*":                           1000,
+					"3|tier1|tier1.staged:np1|allow|-":       1000,
+					"7|tier3|ns2/tier3.np2|allow|0":          1000,
+					"9|*|*|deny|*":                           1000,
+					"10|tier3|ns3/tier3.np3|pass|0":          1000,
+					"0|*|*|allow|*":                          1000,
+					"1|*|*|deny|*":                           1000,
 				},
 			},
 		},
@@ -272,28 +327,28 @@ var _ = Describe("FlowFilter", func() {
 					AggregatedTerms: map[string]*elastic.AggregatedTerm{
 						"policies": {
 							Buckets: map[interface{}]int64{
-								"0|tier1|tier1.np1|pass":                     1000,
-								"1|tier1|staged:tier1.np1|allow":             1000,
-								"2|tier2|ns1/tier2.np1|pass":                 1000,
-								"3|tier2|ns1/staged:tier2.np1|allow":         1000,
-								"4|default|ns1/staged:knp.default.np1|allow": 1000,
-								"5|default|ns1/knp.default.np1|allow":        1000,
+								"0|tier1|tier1.np1|pass|0":                     1000,
+								"1|tier1|staged:tier1.np1|allow|1":             1000,
+								"2|tier2|ns1/tier2.np1|pass|0":                 1000,
+								"3|tier2|ns1/staged:tier2.np1|allow|1":         1000,
+								"4|default|ns1/staged:knp.default.np1|allow|0": 1000,
+								"5|default|ns1/knp.default.np1|allow|1":        1000,
 							},
 						},
 					},
 				},
 				func(mockFlowHelper *rbac.MockFlowHelper) {
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass", 1000)).Return(true, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass", 1000)).Return(true, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow", 1000)).Return(false, nil)
-					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("0|tier1|tier1.np1|pass|0", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("1|tier1|staged:tier1.np1|allow|1", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("2|tier2|ns1/tier2.np1|pass|0", 1000)).Return(true, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("3|tier2|ns1/staged:tier2.np1|allow|1", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("4|default|ns1/staged:knp.default.np1|allow|0", 1000)).Return(false, nil)
+					mockFlowHelper.On("CanListPolicy", mustParsePolicyHit("5|default|ns1/knp.default.np1|allow|1", 1000)).Return(true, nil)
 				},
 				map[interface{}]int64{
-					"0|tier1|tier1.np1|pass":              1000,
-					"1|tier2|ns1/tier2.np1|pass":          1000,
-					"2|default|ns1/knp.default.np1|allow": 1000,
+					"0|tier1|tier1.np1|pass|0":              1000,
+					"1|tier2|ns1/tier2.np1|pass|0":          1000,
+					"2|default|ns1/knp.default.np1|allow|1": 1000,
 				},
 			},
 		},
