@@ -9,7 +9,7 @@ section:
 - title: Packet capture
   path: /visibility/packetcapture  
 - title: Calico Enterprise logs
-  path: /visibility/elastic
+  path: /visibility/elastic/
   section:
   - title: Overview
     path: /visibility/elastic/overview

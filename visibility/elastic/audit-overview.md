@@ -19,7 +19,7 @@ canonical_url: /visibility/elastic/audit-overview
 - Staged global networkpolicies
 - Staged networkpolicies
 - Staged Kubernetes network policies
-- Global etwork sets
+- Global network sets
 - Network sets
 - Tiers
 - Host endpoints
