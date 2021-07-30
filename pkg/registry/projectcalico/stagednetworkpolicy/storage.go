@@ -20,6 +20,7 @@ import (
 	"context"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizer"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/util"

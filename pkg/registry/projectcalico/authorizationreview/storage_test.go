@@ -5,6 +5,7 @@ import (
 	"context"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/onsi/ginkgo"

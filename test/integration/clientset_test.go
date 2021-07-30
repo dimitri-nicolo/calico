@@ -49,8 +49,8 @@ import (
 
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 

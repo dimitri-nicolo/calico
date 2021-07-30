@@ -22,6 +22,7 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
 )
 
