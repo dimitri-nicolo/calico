@@ -37,7 +37,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 
-	"github.com/projectcalico/api/pkg/openapi"
+	"github.com/tigera/api/pkg/openapi"
 	"github.com/projectcalico/apiserver/pkg/apiserver"
 )
 

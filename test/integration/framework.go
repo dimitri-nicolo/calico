@@ -31,8 +31,8 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog"
 
-	v3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/projectcalico/api/pkg/client/clientset_generated/clientset"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/projectcalico/apiserver/cmd/apiserver/server"
 	"github.com/projectcalico/apiserver/pkg/apiserver"
 )
