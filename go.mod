@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
-	github.com/envoyproxy/data-plane-api v0.0.0-00010101000000-000000000000
 	github.com/envoyproxy/go-control-plane v0.9.8
+	github.com/envoyproxy/protoc-gen-validate v0.4.1 // indirect
 	github.com/gogo/googleapis v1.4.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
