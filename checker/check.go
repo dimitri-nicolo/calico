@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,17 @@ import (
 	"github.com/projectcalico/app-policy/policystore"
 	"github.com/projectcalico/app-policy/proto"
 
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
-	"github.com/gogo/googleapis/google/rpc"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
-var OK = rpc.Code_value["OK"]
-var PERMISSION_DENIED = rpc.Code_value["PERMISSION_DENIED"]
-var UNAVAILABLE = rpc.Code_value["UNAVAILABLE"]
-var INVALID_ARGUMENT = rpc.Code_value["INVALID_ARGUMENT"]
-var INTERNAL = rpc.Code_value["INTERNAL"]
+var OK = int32(code.Code_OK)
+var PERMISSION_DENIED = int32(code.Code_PERMISSION_DENIED)
+var UNAVAILABLE = int32(code.Code_UNAVAILABLE)
+var INVALID_ARGUMENT = int32(code.Code_INVALID_ARGUMENT)
+var INTERNAL = int32(code.Code_INTERNAL)
 
 // Action is an enumeration of actions a policy rule can take if it is matched.
 type Action int
@@ -44,7 +45,7 @@ const (
 
 // checkStore applies the tiered policy plus any config based corrections and returns OK if the check passes or
 // PERMISSION_DENIED if the check fails.
-func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.Status) {
+func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s status.Status) {
 	// Check using the configured policy
 	s = checkTiers(store, req)
 
@@ -65,8 +66,8 @@ func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.
 
 // checkTiers applies the tiered policy in the given store and returns OK if the check passes, or PERMISSION_DENIED if
 // the check fails. Note, if no policy matches, the default is PERMISSION_DENIED.
-func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.Status) {
-	s = rpc.Status{Code: PERMISSION_DENIED}
+func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s status.Status) {
+	s = status.Status{Code: PERMISSION_DENIED}
 	ep := store.Endpoint
 	if ep == nil {
 		log.Warning("CheckRequest before we synced Endpoint information.")
@@ -81,7 +82,7 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.
 		if r := recover(); r != nil {
 			// Recover from the panic if we know what it is and we know what to do with it.
 			if _, ok := r.(*InvalidDataFromDataPlane); ok {
-				s = rpc.Status{Code: INVALID_ARGUMENT}
+				s = status.Status{Code: INVALID_ARGUMENT}
 			} else {
 				panic(r)
 			}

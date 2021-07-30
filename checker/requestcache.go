@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import (
 	"regexp"
 	"sync"
 
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/app-policy/policystore"

@@ -22,8 +22,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	docopt "github.com/docopt/docopt-go"
-
 	"github.com/projectcalico/app-policy/checker"
 	"github.com/projectcalico/app-policy/health"
 	"github.com/projectcalico/app-policy/policystore"
@@ -32,8 +30,10 @@ import (
 	"github.com/projectcalico/app-policy/syncher"
 	"github.com/projectcalico/app-policy/uds"
 
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
-	authzv2alpha "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
+	"github.com/docopt/docopt-go"
+	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -110,7 +110,9 @@ func runServer(arguments map[string]interface{}) {
 	dpStats := make(chan statscache.DPStats, maxPendingDataplaneStats)
 	checkServer := checker.NewServer(ctx, stores, dpStats)
 	authz.RegisterAuthorizationServer(gs, checkServer)
-	authzv2alpha.RegisterAuthorizationServer(gs, checkServer)
+	checkServerV2 := checkServer.V2Compat()
+	authz_v2alpha.RegisterAuthorizationServer(gs, checkServerV2)
+	authz_v2.RegisterAuthorizationServer(gs, checkServerV2)
 
 	// Synchronize the policy store and start reporting stats.
 	opts := uds.GetDialOptions()

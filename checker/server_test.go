@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ import (
 	"context"
 	"testing"
 
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
-	"github.com/gogo/googleapis/google/rpc"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	. "github.com/onsi/gomega"
+	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/app-policy/policystore"
 	"github.com/projectcalico/app-policy/proto"
 	"github.com/projectcalico/app-policy/statscache"
 
-	"github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 )
 
 func TestCheckNoStore(t *testing.T) {
@@ -78,7 +78,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 		Expect(err).ToNot(HaveOccurred())
 		return rsp
 	}
-	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: OK}}))
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
 	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
 }
 
@@ -110,7 +110,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 					SocketAddress: &core.SocketAddress{
 						Address:       "1.2.3.4",
 						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 1000},
-						Protocol:      core.TCP,
+						Protocol:      core.SocketAddress_TCP,
 					},
 				},
 			},
@@ -122,7 +122,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 					SocketAddress: &core.SocketAddress{
 						Address:       "11.22.33.44",
 						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 2000},
-						Protocol:      core.TCP,
+						Protocol:      core.SocketAddress_TCP,
 					},
 				},
 			},
@@ -139,7 +139,8 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 		Expect(err).ToNot(HaveOccurred())
 		return rsp
 	}
-	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: OK}}))
+
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
 	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
 
 	// Enable stats, re-run the request and this time check we do get stats updates.
@@ -149,7 +150,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 		Expect(err).ToNot(HaveOccurred())
 		return rsp
 	}
-	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: OK}}))
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
 	Eventually(dpStats).Should(Receive(Equal(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
@@ -193,7 +194,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 					SocketAddress: &core.SocketAddress{
 						Address:       "1.2.3.4",
 						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 1000},
-						Protocol:      core.TCP,
+						Protocol:      core.SocketAddress_TCP,
 					},
 				},
 			},
@@ -205,7 +206,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 					SocketAddress: &core.SocketAddress{
 						Address:       "11.22.33.44",
 						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 2000},
-						Protocol:      core.TCP,
+						Protocol:      core.SocketAddress_TCP,
 					},
 				},
 			},
@@ -222,7 +223,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 		Expect(err).ToNot(HaveOccurred())
 		return rsp
 	}
-	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: PERMISSION_DENIED}}))
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: PERMISSION_DENIED}}))
 	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
 
 	// Enable stats, re-run the request and this time check we do get stats updates.
@@ -232,7 +233,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 		Expect(err).ToNot(HaveOccurred())
 		return rsp
 	}
-	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: PERMISSION_DENIED}}))
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: PERMISSION_DENIED}}))
 	Eventually(dpStats).Should(Receive(Equal(statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
