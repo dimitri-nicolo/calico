@@ -165,6 +165,9 @@ var (
 	}
 
 	stagedActionRegex = regexp.MustCompile("^(" + string(api.StagedActionSet) + "|" + string(api.StagedActionDelete) + ")$")
+
+	allDigits = regexp.MustCompile(`^\d+$`)
+	portRange = regexp.MustCompile(`^(\d+):(\d+)$`)
 )
 
 // Validate is used to validate the supplied structure according to the
@@ -306,6 +309,7 @@ func init() {
 	registerStructValidator(validate, validateRouteTableRange, api.RouteTableRange{})
 	registerStructValidator(validate, validateBGPConfigurationSpec, api.BGPConfigurationSpec{})
 	registerStructValidator(validate, validatePacketCapture, api.PacketCapture{})
+	registerStructValidator(validate, validatePacketCaptureRule, api.PacketCaptureRule{})
 	registerStructValidator(validate, validateDeepPacketInspection, api.DeepPacketInspection{})
 
 }
@@ -1747,6 +1751,28 @@ func validateNetworkSet(structLevel validator.StructLevel) {
 				reason("projectcalico.org/namespace is not a valid label name"),
 				"",
 			)
+		}
+	}
+}
+
+func validatePacketCaptureRule(structLevel validator.StructLevel) {
+	rule := structLevel.Current().Interface().(api.PacketCaptureRule)
+
+	// If the protocol does not support ports check that the port values have not
+	// been specified.
+	if rule.Protocol != nil && !rule.Protocol.SupportsPorts() {
+		if len(rule.Ports) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.Ports),
+				"Ports", "", reason(protocolPortsMsg), "")
+		}
+	}
+
+	if len(rule.Ports) != 0 {
+		for _, port := range rule.Ports {
+			if !allDigits.MatchString(port.String()) && !portRange.MatchString(port.String()) {
+				structLevel.ReportError(reflect.ValueOf(rule.Ports),
+					"Ports", "", reason("accepts only numerical values"), "")
+			}
 		}
 	}
 }

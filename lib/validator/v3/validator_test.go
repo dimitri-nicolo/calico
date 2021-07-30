@@ -3537,7 +3537,65 @@ func init() {
 		Entry("should accept a packet capture spec with all() selector", api.PacketCaptureSpec{
 			Selector: "all()",
 		}, true),
-		// DeepPacketInspection validation
+		Entry("should reject a packet capture spec with icmp protocol and ports", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Ports:    []numorstring.Port{numorstring.SinglePort(100)},
+					Protocol: protocolFromString("ICMP"),
+				},
+			},
+		}, false),
+		Entry("should accept a packet capture spec with numerical protocol", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromInt(1),
+				},
+			},
+		}, true),
+		Entry("should reject a packet capture spec with a named port", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Ports: []numorstring.Port{numorstring.NamedPort("http")},
+				},
+			},
+		}, false),
+		Entry("should accept a packet capture spec with a numerical port", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Ports: []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+		}, true),
+		Entry("should accept a packet capture spec with port ranges", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Ports: []numorstring.Port{mustParsePortRange(80, 100)},
+				},
+			},
+		}, true),
+		Entry("should accept a packet capture spec with tcp protocol", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromString("TCP"),
+				},
+			},
+		}, true),
+		Entry("should accept a packet capture spec with port and protocol", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromString("TCP"),
+					Ports:    []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+		}, true),
+		//DeepPacketInspection validation
 		Entry("should reject a deep packet inspection resource with an invalid selector", api.DeepPacketInspection{
 			ObjectMeta: v1.ObjectMeta{
 				Name: "test-dpi",
