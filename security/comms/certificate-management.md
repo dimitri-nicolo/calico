@@ -23,6 +23,8 @@ temporarily remove [the logstorage resource]({{site.baseurl}}/reference/installa
 before following the steps to enable certificate management and then re-apply afterwards. For detailed steps on 
 re-creating logstorage, read more on [how to create a new Elasticsearch cluster]({{site.baseurl}}/visibility/troubleshoot#how-to-create-a-new-cluster).
 
+Currently, this feature is not supported in combination with [Multi-cluster management]({{site.baseurl}}/multicluster/mcm/configure).
+
 **Supported algorithms**
 - Private Key Pair: RSA (size: 2048, 4096, 8192), ECDSA (curve: 256, 384, 521)
 - Certificate Signature: RSA (sha: 256, 384, 512), ECDSA (sha: 256, 384, 512)
