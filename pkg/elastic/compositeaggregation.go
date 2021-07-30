@@ -32,6 +32,9 @@ type AggCompositeSourceInfo struct {
 
 	// Sort order
 	Order string
+
+	// Allow missing.
+	AllowMissingBucket bool
 }
 
 // Structure encapsulating info about a aggregated term query.
@@ -150,15 +153,15 @@ func (q *CompositeAggregationQuery) getCompositeAggregation() *elastic.Composite
 		var vs elastic.CompositeAggregationValuesSource
 		if c.HistogramDateInterval != "" {
 			vs = elastic.NewCompositeAggregationDateHistogramValuesSource(c.Name).Field(c.Field).
-				CalendarInterval(c.HistogramDateInterval).Order(c.Order)
+				CalendarInterval(c.HistogramDateInterval).Order(c.Order).MissingBucket(c.AllowMissingBucket)
 		} else if c.HistogramInterval != 0 {
 			vs = elastic.NewCompositeAggregationHistogramValuesSource(c.Name, c.HistogramInterval).
-				Field(c.Field).Order(c.Order)
+				Field(c.Field).Order(c.Order).MissingBucket(c.AllowMissingBucket)
 		} else if c.Field != "" {
-			vs = elastic.NewCompositeAggregationTermsValuesSource(c.Name).Field(c.Field).Order(c.Order)
+			vs = elastic.NewCompositeAggregationTermsValuesSource(c.Name).Field(c.Field).Order(c.Order).MissingBucket(c.AllowMissingBucket)
 		} else if c.ScriptName != "" {
 			vs = elastic.NewCompositeAggregationTermsValuesSource(c.Name).
-				Script(elastic.NewScriptStored(c.ScriptName).Params(c.ScriptParams)).Order(c.Order)
+				Script(elastic.NewScriptStored(c.ScriptName).Params(c.ScriptParams)).Order(c.Order).MissingBucket(c.AllowMissingBucket)
 		}
 
 		compiledCompositeSources = append(compiledCompositeSources, vs)
