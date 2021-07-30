@@ -37,20 +37,22 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
-
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	licFeatures "github.com/tigera/licensing/client/features"
 
 	"github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 	_ "github.com/projectcalico/apiserver/pkg/apis/projectcalico/install"
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/apiserver/pkg/apiserver"
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
+
+	"github.com/tigera/api/pkg/lib/numorstring"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // TestGroupVersion is trivial.
@@ -58,7 +60,7 @@ func TestGroupVersion(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.NetworkPolicy{}
+				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
 			if err := testGroupVersion(client); err != nil {
@@ -74,7 +76,7 @@ func TestGroupVersion(t *testing.T) {
 
 func testGroupVersion(client calicoclient.Interface) error {
 	gv := client.ProjectcalicoV3().RESTClient().APIVersion()
-	if gv.Group != projectcalico.GroupName {
+	if gv.Group != v3.GroupName {
 		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
 	}
 	return nil
@@ -125,7 +127,7 @@ func TestNoName(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.NetworkPolicy{}
+				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
 			if err := testNoName(client); err != nil {
@@ -158,7 +160,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.NetworkPolicy{}
+				return &v3.NetworkPolicy{}
 			}, true)
 			defer shutdownServer()
 			if err := testNetworkPolicyClient(client, name); err != nil {
@@ -511,7 +513,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalNetworkPolicy{}
+				return &v3.GlobalNetworkPolicy{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalNetworkPolicyClient(client, name); err != nil {
@@ -721,7 +723,7 @@ func TestGlobalNetworkSetClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalNetworkSet{}
+				return &v3.GlobalNetworkSet{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalNetworkSetClient(client, name); err != nil {
@@ -787,7 +789,7 @@ func TestNetworkSetClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.NetworkSet{}
+				return &v3.NetworkSet{}
 			}, true)
 			defer shutdownServer()
 			if err := testNetworkSetClient(client, name); err != nil {
@@ -880,7 +882,7 @@ func TestLicenseKeyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.LicenseKey{}
+				return &v3.LicenseKey{}
 			}, false)
 			defer shutdownServer()
 			if err := testLicenseKeyClient(client, name); err != nil {
@@ -1207,7 +1209,7 @@ func TestGlobalAlertTemplateClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalAlertTemplate{}
+				return &v3.GlobalAlertTemplate{}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalAlertTemplateClient(client, name); err != nil {
@@ -2553,6 +2555,7 @@ func TestManagedClusterClient(t *testing.T) {
 			}
 
 			client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+
 			defer shutdownServer()
 			if err := testManagedClusterClient(client, name); err != nil {
 				t.Fatal(err)
@@ -3002,7 +3005,7 @@ func TestPacketCaptureClient(t *testing.T) {
 		const name = "test-packetcapture"
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.PacketCapture{}
+				return &v3.PacketCapture{}
 			}, true)
 			defer shutdownServer()
 			if err := testPacketCapturesClient(client, name); err != nil {
@@ -3071,6 +3074,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 
 	// Should be listing the packetCapture.
 	packetCaptures, err = packetCaptureClient.List(ctx, metav1.ListOptions{})
+
 	if err != nil {
 		return fmt.Errorf("error listing packetCaptures (%s)", err)
 	}
@@ -3118,7 +3122,7 @@ func TestDeepPacketInspectionClient(t *testing.T) {
 		const name = "test-deeppacketinspection"
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.DeepPacketInspection{}
+				return &v3.DeepPacketInspection{}
 			}, true)
 			defer shutdownServer()
 			if err := testDeepPacketInspectionClient(client, name); err != nil {

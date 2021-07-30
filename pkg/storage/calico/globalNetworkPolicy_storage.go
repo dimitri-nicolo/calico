@@ -18,7 +18,9 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -30,12 +32,12 @@ func NewGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalNetworkPolicy)
+		res := obj.(*api.GlobalNetworkPolicy)
 		return c.GlobalNetworkPolicies().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalNetworkPolicy)
+		res := obj.(*api.GlobalNetworkPolicy)
 		return c.GlobalNetworkPolicies().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -70,8 +72,8 @@ func NewGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		versioner:         etcd.APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(aapi.GlobalNetworkPolicy{}),
 		aapiListType:      reflect.TypeOf(aapi.GlobalNetworkPolicyList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.GlobalNetworkPolicy{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.GlobalNetworkPolicyList{}),
+		libCalicoType:     reflect.TypeOf(api.GlobalNetworkPolicy{}),
+		libCalicoListType: reflect.TypeOf(api.GlobalNetworkPolicyList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -92,17 +94,17 @@ type GlobalNetworkPolicyConverter struct {
 
 func (gc GlobalNetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
 	aapiGlobalNetworkPolicy := aapiObj.(*aapi.GlobalNetworkPolicy)
-	lcgGlobalNetworkPolicy := &libcalicoapi.GlobalNetworkPolicy{}
+	lcgGlobalNetworkPolicy := &api.GlobalNetworkPolicy{}
 	lcgGlobalNetworkPolicy.TypeMeta = aapiGlobalNetworkPolicy.TypeMeta
 	lcgGlobalNetworkPolicy.ObjectMeta = aapiGlobalNetworkPolicy.ObjectMeta
-	lcgGlobalNetworkPolicy.Kind = libcalicoapi.KindGlobalNetworkPolicy
-	lcgGlobalNetworkPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgGlobalNetworkPolicy.Kind = api.KindGlobalNetworkPolicy
+	lcgGlobalNetworkPolicy.APIVersion = api.GroupVersionCurrent
 	lcgGlobalNetworkPolicy.Spec = aapiGlobalNetworkPolicy.Spec
 	return lcgGlobalNetworkPolicy
 }
 
 func (gc GlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgGlobalNetworkPolicy := libcalicoObject.(*libcalicoapi.GlobalNetworkPolicy)
+	lcgGlobalNetworkPolicy := libcalicoObject.(*api.GlobalNetworkPolicy)
 	aapiGlobalNetworkPolicy := aapiObj.(*aapi.GlobalNetworkPolicy)
 	aapiGlobalNetworkPolicy.Spec = lcgGlobalNetworkPolicy.Spec
 	// Tier field maybe left blank when policy created vi OS libcalico.
@@ -122,7 +124,7 @@ func (gc GlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObj
 }
 
 func (gc GlobalNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgGlobalNetworkPolicyList := libcalicoListObject.(*libcalicoapi.GlobalNetworkPolicyList)
+	lcgGlobalNetworkPolicyList := libcalicoListObject.(*api.GlobalNetworkPolicyList)
 	aapiGlobalNetworkPolicyList := aapiListObj.(*aapi.GlobalNetworkPolicyList)
 	if libcalicoListObject == nil {
 		aapiGlobalNetworkPolicyList.Items = []aapi.GlobalNetworkPolicy{}
