@@ -5,8 +5,6 @@ package authenticationreview
 import (
 	"context"
 
-	"github.com/tigera/apiserver/pkg/apis/projectcalico"
-
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -15,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
-
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type REST struct{}
@@ -48,8 +44,8 @@ func (r *REST) Watch(ctx context.Context, options *internalversion.ListOptions) 
 
 // Takes the userinfo that the authn delegate has put into the context and returns it.
 func (r *REST) Create(ctx context.Context, obj runtime.Object, val rest.ValidateObjectFunc, createOpt *metav1.CreateOptions) (runtime.Object, error) {
-	ar := &projectcalico.AuthenticationReview{
-		Status: v3.AuthenticationReviewStatus{},
+	ar := &calico.AuthenticationReview{
+		Status: calico.AuthenticationReviewStatus{},
 	}
 
 	user, ok := request.UserFrom(ctx)
