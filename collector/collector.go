@@ -573,6 +573,7 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 			data.preDNATAddr = originalTuple.dst
 			data.preDNATPort = originalTuple.l4Dst
 		}
+		data.isProxied = ctInfo.IsProxy
 
 		c.applyConntrackStatUpdate(data,
 			ctInfo.Counters.Packets, ctInfo.Counters.Bytes,

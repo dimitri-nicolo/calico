@@ -402,6 +402,12 @@ type Data struct {
 	// Indicates if this is a connection
 	isConnection bool
 
+	// Connection mark, 0 if connection is not marked
+	mark int
+
+	// Indicates if this connection is proxied or not
+	isProxied bool
+
 	// Connection related counters.
 	conntrackPktsCtr         Counter
 	conntrackPktsCtrReverse  Counter
@@ -584,15 +590,28 @@ func (d *Data) IsExpired() bool {
 	return d.expired
 }
 
-// VerdictFound returns true if the verdict has been found for the local endpoints in this flow.
+// VerdictFound returns true if the verdict has been found for the local endpoints in this flow
+// for both egress and ingress barring some special conditions
+// Special case: For connections that went through a proxy, Ex: envoy proxy for L7 logs collection, only of the verdicts is found.
+// For L7 tproxied connections, going client -> service -> proxy -> backend (both client and backend on same node),
+// we get only egress verdict (true) for client -> service -> proxy, and ingress (true) for connection proxy -> backend.
+// This is because the end point tuple is no longer same once proxy happens (source port is different for tproxy case).
+// For such cases we make an exception in this logic
 func (d *Data) VerdictFound() bool {
-	if d.srcEp != nil && d.srcEp.IsLocal && !d.EgressRuleTrace.FoundVerdict() {
-		return false
+	// We expect at least one of the source or dest to be a local endpoint.
+	srcIsLocal := d.srcEp != nil && d.srcEp.IsLocal
+	dstIsLocal := d.dstEp != nil && d.dstEp.IsLocal
+
+	if d.isProxied {
+		// This is a proxied flow, we'll see both legs but we only expect a verdict for one of them
+		// so we return true if either leg has a verdict.
+		return srcIsLocal && d.EgressRuleTrace.FoundVerdict() || dstIsLocal && d.IngressRuleTrace.FoundVerdict()
+	} else {
+		// for non local flows we don't need any verdict
+		// for local flows we require egress or ingress verdicts based on the whether source or destination is local
+		return (!srcIsLocal || d.EgressRuleTrace.FoundVerdict()) && (!dstIsLocal || d.IngressRuleTrace.FoundVerdict())
 	}
-	if d.dstEp != nil && d.dstEp.IsLocal && !d.IngressRuleTrace.FoundVerdict() {
-		return false
-	}
-	return true
+
 }
 
 // Set In Counters' values to packets and bytes. Use the SetConntrackCounters* methods
