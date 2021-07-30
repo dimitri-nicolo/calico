@@ -200,6 +200,9 @@ func getKubernetesEvents(ctx context.Context, cs k8s.ClientSet, tr lmav1.TimeRan
 	// Query the Kubernetes events
 	k8sEvents, err := cs.CoreV1().Events("").List(ctx, metav1.ListOptions{})
 	if err != nil {
+		if kerrors.IsForbidden(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 

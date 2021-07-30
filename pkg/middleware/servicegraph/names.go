@@ -3,6 +3,7 @@ package servicegraph
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -102,9 +103,9 @@ func NewNameHelper(ctx context.Context, cs k8s.ClientSet, selectors []v1.NamedSe
 
 	wg.Wait()
 
-	if errNodes != nil {
+	if errNodes != nil && !errors.IsForbidden(errNodes) {
 		return nil, errNodes
-	} else if errHosts != nil {
+	} else if errHosts != nil && !errors.IsForbidden(errHosts) {
 		return nil, errHosts
 	}
 
