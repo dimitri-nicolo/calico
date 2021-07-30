@@ -7,7 +7,7 @@ canonical_url: /visibility/elastic/flow/processpath
 
 ### Big picture
 
-Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from `/proc/pid/cmdline` or obtained using eBPF kprobes.
+Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from `/proc/pid/cmdline` or obtained using eBPF kprobes and add them to flow logs.
 
 ### Value
 
@@ -15,14 +15,13 @@ Get visibility into the network activity at the process level using {{site.prodn
 
 ### Privileges
 
-This feature requires hostPID to be set to true in calico-node daemonset. `hostPID` when set to true provides access to the host process ID namespace.
-
+For full functionality, this feature requires the calico-node daemonset to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
 
 ### Concepts
 
 #### eBPF kprobe programs
 
-eBPF is a Linux kernel technology that allows safe mini-programs to be attached to various hooks inside the kernel. eBPF kprobe program is attached to sys_execve to read process path and arguments.
+eBPF is a Linux kernel technology that allows safe mini-programs to be attached to various hooks inside the kernel. To collect the path and arguments of short-lived processes, this feature uses an eBPF kprobe program.
 
 #### Reading from /proc/pid
 
@@ -44,12 +43,13 @@ using the command:
  kubectl patch logcollector.operator.tigera.io tigera-secure --type merge -p '{"spec":{"collectProcessPath":"Enabled"}}'
 ```
 
-Enabling/Disabling collectProcessPath causes a rolling update of the calico-node.
+Enabling/Disabling collectProcessPath causes a rolling update of the `calico-node`.
 
 #### View process path and arguments in flow logs using Kibana.
 
 Navigate to the Kibana Flow logs dashboard to view process path and arguments associated with a flow log entry.
 
-The executable path will appear in the `process_name` field and `process_args` will have the executable arguments.
-Information about these fields are described in the [Flow log datatype document](datatypes)
+The executable path will appear in the `process_name` field and `process_args` will have the executable arguments. Executable path
+and arguments cannot be collected under certain circumstances, in that `process_name` will have the task name and `process_args`
+will be empty. Information about these fields are described in the [Flow log datatype document](datatypes)
 
