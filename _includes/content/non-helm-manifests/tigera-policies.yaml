@@ -372,6 +372,7 @@ spec:
   # recommended to customize egress flow, based on configuration.
   - action: Allow
     protocol: TCP
+
 ---
 
 # This manifest creates a network policy to allow traffic between
@@ -490,6 +491,53 @@ spec:
       # Egress access to alertmanager
       selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
       ports: [9093]
+---
+
+# This manifest creates a network policy to allow traffic to access through tigera-prometheus-api.
+# reaching prometheus ins
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.tigera-prometheus-api
+  namespace: tigera-prometheus
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-prometheus-api'
+  types:
+    - Ingress
+    - Egress
+  ingress:
+    # for incoming connections from the kube-apiserver
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports: [9090]
+  egress:
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows to communicate with openshift-dns.
+      namespaceSelector: projectcalico.org/name == "openshift-dns"
+      selector: dns.operator.openshift.io/daemonset-dns == "default"
+      ports: [5353]
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This rule allows communicate with kube-dns.
+      namespaceSelector: projectcalico.org/name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports: [53]
+{%- endif %}
+  - action: Allow
+    # Egress access for tigera-prometheus-service
+    # to access the prometheus instance
+    protocol: TCP
+    destination:
+      selector: prometheus == "calico-node-prometheus"
+      ports: [9090]
 ---
 
 # This manifest creates a network policy to allow the prometheus-operator

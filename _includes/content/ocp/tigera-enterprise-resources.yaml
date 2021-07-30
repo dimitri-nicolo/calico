@@ -34,7 +34,3 @@ installation:
 installation:
   kubernetesProvider: openshift
 {% endhelm %}
-{% helm tigera-operator --execute templates/misc/99-prometheus-service.yaml %}
-installation:
-  kubernetesProvider: openshift
-{% endhelm %}
