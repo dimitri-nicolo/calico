@@ -1,10 +1,10 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 package metrics_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/license-agent/pkg/metrics"
 	"time"
 )
@@ -47,11 +47,11 @@ const validLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBM
 
 var licenseKey = struct {
 	description string
-	license     api.LicenseKey
+	license     apiv3.LicenseKey
 }{
 	description: "Test License",
-	license: api.LicenseKey{
-		Spec: api.LicenseKeySpec{
+	license: apiv3.LicenseKey{
+		Spec: apiv3.LicenseKeySpec{
 			Token:       validLicenseToken,
 			Certificate: validLicenseCertificate,
 		},

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2021 Tigera, Inc. All rights reserved.
 package metrics
 
 import (
@@ -9,11 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/security"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	licenseClient "github.com/tigera/licensing/client"
 )
 
@@ -145,7 +145,7 @@ func (lr *LicenseReporter) startReporter() {
 }
 
 //Decode License, get expiry date, maximum allowed nodes
-func (lr *LicenseReporter) LicenseHandler(lic api.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
+func (lr *LicenseReporter) LicenseHandler(lic apiv3.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
 
 	//Decode the LicenseKey
 	claims, err := licenseClient.Decode(lic)

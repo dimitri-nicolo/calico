@@ -176,6 +176,7 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+API_REPO=github.com/tigera/api
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
 
@@ -183,7 +184,7 @@ update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-licensing-pin replace-libcalico-pin
+update-pins: guard-ssh-forwarding-bug update-api-pin update-licensing-pin replace-libcalico-pin
 
 ###############################################################################
 # Utilities
