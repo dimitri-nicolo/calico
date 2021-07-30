@@ -7,7 +7,7 @@ canonical_url: /visibility/elastic/flow/processpath
 
 ### Big picture
 
-Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from /proc/pid/cmdline or obtained using eBPF kprobes. This feature requires linux kernel version (v4.4.0 and above)
+Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from `/proc/pid/cmdline` or obtained using eBPF kprobes.
 
 ### Value
 
@@ -15,7 +15,7 @@ Get visibility into the network activity at the process level using {{site.prodn
 
 ### Privileges
 
-This feature leverages /proc/pid/cmdline to read executable path and arguments. Hence this requires hostPID to be set to true. 
+This feature requires hostPID to be set to true in calico-node daemonset. `hostPID` when set to true provides access to the host process ID namespace.
 
 
 ### Concepts
@@ -43,6 +43,9 @@ using the command:
 ```
  kubectl patch logcollector.operator.tigera.io tigera-secure --type merge -p '{"spec":{"collectProcessPath":"Enabled"}}'
 ```
+
+Enabling/Disabling collectProcessPath causes a rolling update of the calico-node.
+
 #### View process path and arguments in flow logs using Kibana.
 
 Navigate to the Kibana Flow logs dashboard to view process path and arguments associated with a flow log entry.
