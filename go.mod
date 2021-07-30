@@ -12,16 +12,16 @@ require (
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/typha v0.7.3-0.20210524104642-ae095e9e80f3
+	github.com/projectcalico/typha v0.7.3-0.20210730161404-dccc9fee3e51
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20210720144753-0dd043a1a989
+	github.com/tigera/api v0.0.0-20210728170712-c0b5ecad82dc
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210722032128-5643dd899009
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210726154519-398fc305ff89
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210730225538-bf4a50e8b3f1
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210730231434-88558b2e3422
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

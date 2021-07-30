@@ -4,6 +4,8 @@ trap 'echo "\nCaught signal, exiting...\n"; exit 1' SIGINT SIGTERM
 
 : ${UPDATE_EXPECTED_DATA:=false}
 
+CALICOCTL="calicoctl --allow-version-mismatch"
+
 # Execute the suite of tests.  It is assumed the following environment variables will
 # have been set up beforehand:
 # -  DATASTORE_TYPE + other calico datastore envs
@@ -79,7 +81,7 @@ test_bgp_password() {
     turn_mesh_off
 
     # Create 4 nodes with various password peerings.
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
@@ -254,12 +256,12 @@ EOF
     turn_mesh_on
 
     # Delete remaining resources.
-    calicoctl delete node node1
-    calicoctl delete node node2
-    calicoctl delete node node3
-    calicoctl delete node node4
-    calicoctl delete bgppeer bgppeer-1
-    calicoctl delete bgppeer bgppeer-2
+    $CALICOCTL delete node node1
+    $CALICOCTL delete node node2
+    $CALICOCTL delete node node3
+    $CALICOCTL delete node node4
+    $CALICOCTL delete bgppeer bgppeer-1
+    $CALICOCTL delete bgppeer bgppeer-2
 
     # Check that passwords were not logged.
     password_logs="`grep 'password-' $LOGPATH/logd1 || true`"
@@ -304,7 +306,7 @@ metadata:
 spec:
   externalID: node$ii
 EOF
-        calicoctl apply -f - <<EOF
+        $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
@@ -363,7 +365,7 @@ EOF
     # Delete resources.
     kubectl delete secret my-secrets-1 -n kube-system
     for ii in `seq 1 $SCALE`; do
-        calicoctl delete bgppeer bgppeer-$ii
+        $CALICOCTL delete bgppeer bgppeer-$ii
         kubectl delete node node$ii
     done
 }
@@ -561,7 +563,7 @@ test_node_deletion() {
     turn_mesh_off
 
     # Create 4 nodes with a mesh of peerings.
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
@@ -615,7 +617,7 @@ EOF
     expect_peerings 3
 
     # Delete one of the nodes.
-    calicoctl delete node node3
+    $CALICOCTL delete node node3
 
     # Expect just 2 peerings.
     expect_peerings 2
@@ -627,10 +629,10 @@ EOF
     turn_mesh_on
 
     # Delete remaining resources.
-    calicoctl delete node node1
-    calicoctl delete node node2
-    calicoctl delete node node4
-    calicoctl delete bgppeer bgppeer-1
+    $CALICOCTL delete node node1
+    $CALICOCTL delete node node2
+    $CALICOCTL delete node node4
+    $CALICOCTL delete bgppeer bgppeer-1
 }
 
 # Test that when BGPPeers generate overlapping global and node-specific peerings, we reliably
@@ -646,7 +648,7 @@ test_idle_peers() {
     turn_mesh_off
 
     # Create 2 nodes, a global peering between them, and a node-specific peering between them.
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
@@ -689,7 +691,7 @@ EOF
     # 10 times, touch a Node resource to cause peerings to be recomputed, and check that we
     # always see just one peering.
     for n in `seq 1 10`; do
-        calicoctl apply -f - <<EOF
+        $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
@@ -711,9 +713,9 @@ EOF
     turn_mesh_on
 
     # Delete resources.  Note that deleting Node node1 also deletes the node-specific BGPPeer.
-    calicoctl delete node node1
-    calicoctl delete node node2
-    calicoctl delete bgppeer global
+    $CALICOCTL delete node node1
+    $CALICOCTL delete node node2
+    $CALICOCTL delete bgppeer global
 }
 
 expect_peerings() {
@@ -820,7 +822,7 @@ execute_tests_oneshot() {
 
 # Turn the node-to-node mesh off.
 turn_mesh_off() {
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: BGPConfiguration
 apiVersion: projectcalico.org/v3
 metadata:
@@ -832,7 +834,7 @@ EOF
 
 # Turn the node-to-node mesh on.
 turn_mesh_on() {
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: BGPConfiguration
 apiVersion: projectcalico.org/v3
 metadata:
@@ -851,7 +853,7 @@ run_individual_test() {
 
     # Populate Calico using calicoctl to load the input.yaml test data.
     echo "Populating calico with test data using calicoctl: " $testdir
-    calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
+    $CALICOCTL apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
 
     # Populate Kubernetes API with data if it exists for this test.
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml ]]; then
@@ -863,7 +865,7 @@ run_individual_test() {
 
     if [ -f /tests/mock_data/calicoctl/${testdir}/step2/input.yaml ]; then
         echo "Config changes for step 2"
-        calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/step2/input.yaml
+        $CALICOCTL apply -f /tests/mock_data/calicoctl/${testdir}/step2/input.yaml
 
         # Check config changes as expected.
         test_confd_templates ${testdir}/step2
@@ -880,9 +882,9 @@ run_individual_test() {
     fi
 
     if [ -f /tests/mock_data/calicoctl/${testdir}/step2/delete.yaml ]; then
-        calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/step2/delete.yaml
+        $CALICOCTL delete -f /tests/mock_data/calicoctl/${testdir}/step2/delete.yaml
     fi
-    calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
+    $CALICOCTL delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
 
 # Run an individual test using confd in daemon mode:
@@ -911,7 +913,7 @@ run_individual_test_oneshot() {
 
     # Populate Calico using calicoctl to load the input.yaml test data.
     echo "Populating calico with test data using calicoctl: " $testdir
-    calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
+    $CALICOCTL apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
 
     # Populate Kubernetes API with data if it exists for this test.
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml ]]; then
@@ -943,7 +945,7 @@ run_individual_test_oneshot() {
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml ]]; then
             kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
     fi
-    calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
+    $CALICOCTL delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
 
 # Run an individual test using oneshot mode:
@@ -1047,13 +1049,13 @@ compare_templates() {
 
     if [ $rc -eq 2 ]; then
         echo "Copying nodes to ${LOGPATH}/nodes.yaml"
-        calicoctl get nodes -o yaml > ${LOGPATH}/nodes.yaml
+        $CALICOCTL get nodes -o yaml > ${LOGPATH}/nodes.yaml
         echo "Copying bgp config to ${LOGPATH}/bgpconfig.yaml"
-        calicoctl get bgpconfigs -o yaml > ${LOGPATH}/bgpconfig.yaml
+        $CALICOCTL get bgpconfigs -o yaml > ${LOGPATH}/bgpconfig.yaml
         echo "Copying bgp peers to ${LOGPATH}/bgppeers.yaml"
-        calicoctl get bgppeers -o yaml > ${LOGPATH}/bgppeers.yaml
+        $CALICOCTL get bgppeers -o yaml > ${LOGPATH}/bgppeers.yaml
         echo "Copying ip pools to ${LOGPATH}/ippools.yaml"
-        calicoctl get ippools -o yaml > ${LOGPATH}/ippools.yaml
+        $CALICOCTL get ippools -o yaml > ${LOGPATH}/ippools.yaml
         echo "Listing running processes"
         ps
     fi
@@ -1080,7 +1082,7 @@ test_bgp_sourceaddr_gracefulrestart() {
 
     # Create 2 nodes with IPs directly on a local subnet, and a
     # peering between them.
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
@@ -1111,7 +1113,7 @@ EOF
     test_confd_templates sourceaddr_gracefulrestart/step1
 
     # Change the peering to omit source address.
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
 metadata:
@@ -1127,7 +1129,7 @@ EOF
     test_confd_templates sourceaddr_gracefulrestart/step2
 
     # Change the peering to specify max restart time.
-    calicoctl apply -f - <<EOF
+    $CALICOCTL apply -f - <<EOF
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
 metadata:
@@ -1150,6 +1152,6 @@ EOF
     turn_mesh_on
 
     # Delete remaining resources.
-    calicoctl delete node node1
-    calicoctl delete node node2
+    $CALICOCTL delete node node1
+    $CALICOCTL delete node node2
 }
