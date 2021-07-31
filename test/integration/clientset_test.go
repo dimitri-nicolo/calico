@@ -3023,8 +3023,7 @@ func testPacketCapturesClient(client calicoclient.Interface, name string) error 
 		return fmt.Errorf("Could not create a license")
 	}
 
-	ns := "default"
-	packetCaptureClient := client.ProjectcalicoV3().PacketCaptures(ns)
+	packetCaptureClient := client.ProjectcalicoV3().PacketCaptures()
 	packetCapture := &v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
 	// start from scratch
