@@ -1,11 +1,6 @@
 #!/bin/sh
 set -e -o pipefail
 
-# Make sure fluentd daemon is up.
-if ! pidof fluentd 1>/dev/null; then
-    exit 1
-fi
-
 # Query fluentd monitor_agent metrics
 # curl will return non-zero error code on failure.
 output=$(curl -s "http://localhost:24220/api/plugins.json")
