@@ -17,7 +17,6 @@ package remotecluster
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -38,6 +37,9 @@ type secretWatchData struct {
 
 	// Secret value.
 	secret *v1.Secret
+
+	// Error from the original Get request.
+	err error
 }
 
 type secretKey struct {
@@ -51,23 +53,33 @@ type SecretUpdateReceiver interface {
 
 type secretWatcher struct {
 	secretReceiver SecretUpdateReceiver
-	k8sClientset   *kubernetes.Clientset
 	mutex          sync.Mutex
 	watches        map[secretKey]*secretWatchData
+	backend        SecretWatcherBackend
+}
+
+type SecretWatcherBackend interface {
+	Watch(namespace, name string, handler cache.ResourceEventHandler, stopChan <-chan struct{})
+	Get(namespace, name string) (*v1.Secret, error)
 }
 
 func NewSecretWatcher(sur SecretUpdateReceiver, k8sClient *kubernetes.Clientset) *secretWatcher {
-	sw := &secretWatcher{
+	if k8sClient == nil {
+		log.Infof("No kubernetes client available, secrets will not be available for RemoteClusterConfiguration")
+		return nil
+	}
+	backend := &secretWatcherBackend{
+		k8sClientset: k8sClient,
+	}
+	return NewSecretWatcherWithBackend(sur, backend)
+}
+
+func NewSecretWatcherWithBackend(sur SecretUpdateReceiver, backend SecretWatcherBackend) *secretWatcher {
+	return &secretWatcher{
 		secretReceiver: sur,
 		watches:        make(map[secretKey]*secretWatchData),
+		backend:        backend,
 	}
-	if k8sClient != nil {
-		sw.k8sClientset = k8sClient
-		return sw
-	}
-	log.Infof("No kubernetes client available, secrets will not be available for RemoteClusterConfiguration")
-
-	return nil
 }
 
 func (sw *secretWatcher) MarkStale() {
@@ -85,11 +97,32 @@ func (sw *secretWatcher) ensureWatchingSecret(sk secretKey) {
 	} else {
 		log.Debugf("Start a watch for secret '%v' (namespace %v)", sk.name, sk.namespace)
 		// We're not watching this secret yet, so start a watch for it.
-		watcher := cache.NewListWatchFromClient(sw.k8sClientset.CoreV1().RESTClient(), "secrets", sk.namespace, fields.OneTermEqualSelector("metadata.name", sk.name))
-		_, controller := cache.NewInformer(watcher, &v1.Secret{}, 0, sw)
 		sw.watches[sk] = &secretWatchData{stopCh: make(chan struct{})}
-		go controller.Run(sw.watches[sk].stopCh)
+		sw.backend.Watch(sk.namespace, sk.name, sw, sw.watches[sk].stopCh)
 		log.Debugf("Controller for secret '%v' (namespace %v) is now running", sk.name, sk.namespace)
+	}
+}
+
+// ensureSecret is invoked when first querying a secret (or re-querying after initial failure). It updates the
+// existing entry with the current secret, obtained using Get.
+func (sw *secretWatcher) ensureSecret(sk secretKey) {
+	secret, err := sw.backend.Get(sk.namespace, sk.name)
+
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			// Store this error. If the next call to GetSecretData sees this error, it'll trigger it to recall ensureSecret.
+			// The error is cleared after a successful Get or after a successful update from the informer.
+			sw.watches[sk].err = err
+			sw.watches[sk].secret = nil
+		} else {
+			// Secret is not found, this is not an error condition, nil out secret and error.
+			sw.watches[sk].err = nil
+			sw.watches[sk].secret = nil
+		}
+	} else {
+		// No error - store the secret.
+		sw.watches[sk].err = nil
+		sw.watches[sk].secret = secret
 	}
 }
 
@@ -100,33 +133,26 @@ func (sw *secretWatcher) GetSecretData(namespace, name string) (map[string][]byt
 
 	sk := secretKey{namespace, name}
 
-	if _, ok := sw.watches[sk]; ok {
-		// Get and decode the Secret of interest.
-		if sw.watches[sk].secret == nil {
-			return nil, nil
-		}
-
-		// Mark it as still in use.
-		sw.watches[sk].stale = false
-
-		return sw.watches[sk].secret.Data, nil
-	} else {
-		// There is no watch running for the secret so directly query it to start with.
-		secret, err := sw.k8sClientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	// If this is the first time we've seen this secret then ensure we are watching it.
+	if _, ok := sw.watches[sk]; !ok {
 		// Ensure that we're watching this secret.
 		sw.ensureWatchingSecret(sk)
 
-		// Mark it as still in use.
-		sw.watches[sk].stale = false
+		// Ensure the secret value is initialized.
+		sw.ensureSecret(sk)
+	} else if sw.watches[sk].err != nil {
+		// Previous attempt to get the secret resulted in an error. Try again.
+		sw.ensureSecret(sk)
+	}
 
-		if err != nil && !kerrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to retrieve secret %s", err)
-		}
+	// Mark it as still in use.
+	sw.watches[sk].stale = false
 
-		if secret == nil {
-			return nil, nil
-		}
-
+	// Return the secret data.  If no secret return the error (if there is one) - no error and no secret indicates the
+	// secret did not exist when queried.
+	if secret := sw.watches[sk].secret; secret == nil {
+		return nil, sw.watches[sk].err
+	} else {
 		return secret.Data, nil
 	}
 }
@@ -176,6 +202,7 @@ func (sw *secretWatcher) updateSecret(secret *v1.Secret) {
 	defer sw.mutex.Unlock()
 	if _, ok := sw.watches[sk]; ok {
 		sw.watches[sk].secret = secret
+		sw.watches[sk].err = nil
 	}
 }
 
@@ -184,6 +211,7 @@ func (sw *secretWatcher) deleteSecret(sk secretKey) {
 	defer sw.mutex.Unlock()
 	if _, ok := sw.watches[sk]; ok {
 		sw.watches[sk].secret = nil
+		sw.watches[sk].err = nil
 	}
 }
 
@@ -197,4 +225,19 @@ func (sw *secretWatcher) deleteSecretWatcher(sk secretKey) {
 		}
 		delete(sw.watches, sk)
 	}
+}
+
+// secretWatcherBackend implements the SecretWatcherBackend interface.
+type secretWatcherBackend struct {
+	k8sClientset *kubernetes.Clientset
+}
+
+func (s *secretWatcherBackend) Watch(namespace, name string, handler cache.ResourceEventHandler, stopCh <-chan struct{}) {
+	watcher := cache.NewListWatchFromClient(s.k8sClientset.CoreV1().RESTClient(), "secrets", namespace, fields.OneTermEqualSelector("metadata.name", name))
+	_, controller := cache.NewInformer(watcher, &v1.Secret{}, 0, handler)
+	go controller.Run(stopCh)
+}
+
+func (s *secretWatcherBackend) Get(namespace, name string) (*v1.Secret, error) {
+	return s.k8sClientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 }
