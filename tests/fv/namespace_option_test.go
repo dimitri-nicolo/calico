@@ -65,7 +65,12 @@ func TestMultiOption(t *testing.T) {
 	_, err = client.NetworkPolicies().Create(ctx, np, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	out, err := CalicoctlMayFail(false, "get", "ippool", "-A")
+	// Set Calico version in ClusterInformation
+	out, err := SetCalicoVersion(false)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(out).To(ContainSubstring("Calico version set to"))
+
+	out, err = CalicoctlMayFail(false, "get", "ippool", "-A")
 	Expect(err).To(HaveOccurred())
 	Expect(out).To(Equal("IPPool is not namespaced\n"))
 
@@ -76,4 +81,14 @@ func TestMultiOption(t *testing.T) {
 	out = Calicoctl(false, "get", "networkPolicy", "-A")
 	out2 := Calicoctl(false, "get", "networkPolicy", "-a")
 	Expect(out).To(Equal(out2))
+
+	// Clean up resources
+	_, err = client.IPPools().Delete(ctx, "ipam-test-v4", options.DeleteOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = client.NetworkPolicies().Delete(ctx, "firstns", "policy1", options.DeleteOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = client.NetworkPolicies().Delete(ctx, "secondns", "policy2", options.DeleteOptions{})
+	Expect(err).NotTo(HaveOccurred())
 }

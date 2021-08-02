@@ -123,14 +123,14 @@ class TestCalicoctlCommands(TestBase):
         rc.assert_no_error()
 
         # Get the 2 resources by name
-        rc = calicoctl("get ippool %s %s" % (name(ippool_name1_rev1_v4), name(ippool_name2_rev1_v6)))
+        rc = calicoctl("get ippool %s %s --export" % (name(ippool_name1_rev1_v4), name(ippool_name2_rev1_v6)))
         rc.assert_no_error()
         rc.assert_output_equals(ippool_name1_rev1_table + "   \n\n" + ippool_name2_rev1_table)
 
         rcNoErr = rc
 
         # Get the 2 + one that does not exist
-        rc = calicoctl("get ippool %s %s %s" % (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)))
+        rc = calicoctl("get ippool %s %s %s --export" % (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)))
         rc.assert_error()
         rc.assert_output_equals(ippool_name1_rev1_table +
                 "   \n\n" +
@@ -138,7 +138,7 @@ class TestCalicoctlCommands(TestBase):
                 "      \n\n" +
                 "resource does not exist: IPPool(blah) with error: <nil>\n")
 
-        rc = calicoctl("get ippool %s %s %s" % (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)),
+        rc = calicoctl("get ippool %s %s %s --export" % (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)),
                 only_stdout=True)
 
         # Check that the output with no errors and with some errors equal for

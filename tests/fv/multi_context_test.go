@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,10 +44,24 @@ func TestMultiCluster(t *testing.T) {
 	out := Calicoctl(true, "create", "-f", "/go/src/github.com/projectcalico/calicoctl/test-data/licenses/license.yaml", "--context", "main")
 	Expect(out).To(ContainSubstring("Successfully"))
 
+	// Set Calico version in ClusterInformation for both contexts
+	out, err := SetCalicoVersion(true, "--context", "main")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(out).To(ContainSubstring("Calico version set to"))
+
+	out, err = SetCalicoVersion(true, "--context", "second")
+	Expect(err).ToNot(HaveOccurred())
+	Expect(out).To(ContainSubstring("Calico version set to"))
+
 	// This check will Fail, kubectl-config.yaml file that we are using for this only contains "main" context.
-	out, err := CalicoctlMayFail(true, "get", "node", "--context", "fake")
+	out, err = CalicoctlMayFail(true, "--allow-version-mismatch", "get", "node", "--context", "fake")
 	Expect(err).To(HaveOccurred())
 	Expect(out).To(ContainSubstring("Failed"))
+
+	// This check will Fail a version mismatch cannot be verified for context "fake"
+	out, err = CalicoctlMayFail(true, "get", "node", "--context", "fake")
+	Expect(err).To(HaveOccurred())
+	Expect(out).To(ContainSubstring("version mismatch"))
 
 	// This check should Pass
 	out = Calicoctl(true, "get", "node", "--context", "main")

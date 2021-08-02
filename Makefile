@@ -10,6 +10,7 @@ GIT_USE_SSH = true
 
 KUBE_APISERVER_PORT?=8080
 KUBE_MOCK_NODE_MANIFEST?=mock-node.yaml
+KUBE_CLUSTERINFO_CRD_MANIFEST?=crd.projectcalico.org_clusterinformations.yaml
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
@@ -68,7 +69,7 @@ LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/v3/calicoctl/commands.VERSION=$(GIT_VERSION
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} \;
-	rm -rf .go-pkg-cache bin build certs *.tar vendor Makefile.common* calicoctl/commands/report
+	rm -rf .go-pkg-cache bin build certs *.tar vendor Makefile.common* calicoctl/commands/report $(CALICO_VERSION_HELPER_DIR)/bin
 	docker rmi $(CALICOCTL_IMAGE):latest-$(ARCH) || true
 	docker rmi $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) || true
 ifeq ($(ARCH),amd64)
@@ -156,6 +157,16 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+CALICO_VERSION_HELPER_DIR=tests/fv/helper
+CALICO_VERSION_HELPER_BIN=$(CALICO_VERSION_HELPER_DIR)/bin/calico_version_helper
+CALICO_VERSION_HELPER_SRC=$(CALICO_VERSION_HELPER_DIR)/calico_version_helper.go
+
+.PHONY: version-helper
+version-helper: $(CALICO_VERSION_HELPER_BIN)
+$(CALICO_VERSION_HELPER_BIN): $(CALICO_VERSION_HELPER_SRC)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && \
+		go build -v -o $(CALICO_VERSION_HELPER_BIN) -ldflags "-X main.VERSION=$(GIT_VERSION)" $(CALICO_VERSION_HELPER_SRC)'
+
 ###############################################################################
 # UTs
 ###############################################################################
@@ -169,7 +180,7 @@ ut: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64
 ###############################################################################
 .PHONY: fv
 ## Run the tests in a container. Useful for CI, Mac dev.
-fv: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64
+fv: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64 version-helper
 	$(MAKE) run-etcd-host
 	# We start two API servers in order to test multiple kubeconfig support
 	$(MAKE) run-kubernetes-master KUBE_APISERVER_PORT=8080 KUBE_MOCK_NODE_MANIFEST=mock-node.yaml
@@ -193,7 +204,7 @@ ST_OPTIONS?=
 
 .PHONY: st
 ## Run the STs in a container
-st: bin/calicoctl-linux-amd64
+st: bin/calicoctl-linux-amd64 version-helper
 	$(MAKE) run-etcd-host
 	$(MAKE) run-kubernetes-master
 	# Use the host, PID and network namespaces from the host.
@@ -278,6 +289,16 @@ run-kubernetes-master: stop-kubernetes-master remote-deps
 		apply -f /manifests/tests/st/manifests/${KUBE_MOCK_NODE_MANIFEST}; \
 		do echo "Waiting for node to apply successfully..."; sleep 2; done
 
+	# Apply ClusterInformation CRD because the tests now require it
+	while ! docker run \
+	    --net=host \
+	    --rm \
+		-v $(CURDIR):/manifests \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} kubectl \
+		--server=http://127.0.0.1:${KUBE_APISERVER_PORT} \
+		apply -f /manifests/tests/st/manifests/${KUBE_CLUSTERINFO_CRD_MANIFEST}; \
+		do echo "Waiting for ClusterInformation CRD to apply successfully..."; sleep 2; done
+
 	# Create a namespace in the API for the tests to use.
 	-docker run \
 	    --net=host \
@@ -329,3 +350,114 @@ check-dirty: undo-go-sum
 .PHONY: cd
 ## Deploys images to registry
 cd: check-dirty image-all cd-common
+
+###############################################################################
+# Release
+###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+endif
+	$(MAKE) build-all image-all
+	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION)
+	$(MAKE) retag-build-images-with-registries IMAGETAG=latest
+
+	# Copy the amd64 variant to calicoctl - for now various downstream projects
+	# expect this naming convention. Until they can be swapped over, we still need to
+	# publish a binary called calicoctl.
+	$(MAKE) bin/calicoctl
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
+	if ! docker run $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
+
+	# Push images.
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION)
+
+	# Push binaries to GitHub release.
+	# Requires ghr: https://github.com/tcnksm/ghr
+	# Requires GITHUB_TOKEN environment variable set.
+	ghr -u projectcalico -r calicoctl \
+		-b "Release notes can be found at https://docs.projectcalico.org" \
+		-n $(VERSION) \
+		$(VERSION) ./bin/
+
+	@echo "Confirm that the release was published at the following URL."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	# Check latest versions match.
+	if ! docker run $(CALICOCTL_IMAGE):latest-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(CALICOCTL_IMAGE):latest-$(ARCH) version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN must be set for a release)
+endif
+ifeq (, $(shell which ghr))
+	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
+endif
