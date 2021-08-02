@@ -49,10 +49,11 @@ class TestCalicoctlCLIFlags(TestBase):
         rc = calicoctl("create", data=node_name1_rev1)
         rc.assert_no_error()
 
+        # The "datastore migrate import" command does not exist in EE calicoctl.
         # The "datastore migrate import" command bypasses version mismatch checking
-        rc = calicoctl("datastore migrate import -f a", allowVersionMismatch=False)
+        # rc = calicoctl("datastore migrate import -f a", allowVersionMismatch=False)
         # Assert that the error is not "version mismatch"
-        rc.assert_error("Invalid datastore type")
+        # rc.assert_error("Invalid datastore type")
 
         rc = calicoctl("version", allowVersionMismatch=False)
         rc.assert_no_error()
