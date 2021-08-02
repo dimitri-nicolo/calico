@@ -527,6 +527,9 @@ message IPAMPoolRemove {
 message IPAMPool {
   string cidr = 1;
   bool masquerade = 2;
+
+  // Enterprise additions; use IDs after 100.
+  string aws_subnet_id = 101;
 }
 
 message ServiceAccountUpdate {

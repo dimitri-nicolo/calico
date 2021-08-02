@@ -178,18 +178,18 @@ var _ = Describe("AWS Tests", func() {
 
 	It("should handle EC2 interactions correctly", func() {
 		mock := newMockClient()
-		cli := &ec2Client{
-			EC2Svc:        mock,
-			ec2InstanceId: testInstId,
+		cli := &EC2Client{
+			EC2Svc:     mock,
+			InstanceId: testInstId,
 		}
 
-		Expect(cli.getEC2NetworkInterfaceId(context.TODO())).To(Equal(testEniId))
-		Expect(cli.setEC2SourceDestinationCheck(context.TODO(), testEniId, false)).NotTo(HaveOccurred())
+		Expect(cli.GetPrimaryEC2NetworkInterfaceID(context.TODO())).To(Equal(testEniId))
+		Expect(cli.SetEC2SourceDestinationCheck(context.TODO(), testEniId, false)).NotTo(HaveOccurred())
 		Expect(mock.UsageCounter).To(BeNumerically("==", 2))
 
 		By("verifying Availability")
 		os.Setenv("AWS_EC2_METADATA_DISABLED", "true")
-		_, err := newEC2Client(context.TODO())
+		_, err := NewEC2Client(context.TODO())
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("EC2 metadata service is unavailable"))
 	})

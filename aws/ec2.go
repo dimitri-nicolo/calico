@@ -31,6 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
@@ -114,18 +115,18 @@ func (updater *EC2SrcDstCheckUpdater) Update(caliCheckOption string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	ec2Cli, err := newEC2Client(ctx)
+	ec2Cli, err := NewEC2Client(ctx)
 	if err != nil {
 		return err
 	}
 
-	ec2NetId, err := ec2Cli.getEC2NetworkInterfaceId(ctx)
+	ec2NetId, err := ec2Cli.GetPrimaryEC2NetworkInterfaceID(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting ec2 network-interface-id: %s", convertError(err))
 	}
 
 	checkEnabled := caliCheckOption == apiv3.AWSSrcDstCheckOptionEnable
-	err = ec2Cli.setEC2SourceDestinationCheck(ctx, ec2NetId, checkEnabled)
+	err = ec2Cli.SetEC2SourceDestinationCheck(ctx, ec2NetId, checkEnabled)
 	if err != nil {
 		return fmt.Errorf("error setting src-dst-check for network-interface-id: %s", convertError(err))
 	}
@@ -159,12 +160,12 @@ func getEC2Region(ctx context.Context, svc ec2MetadaAPI) (string, error) {
 	return region, nil
 }
 
-type ec2Client struct {
-	EC2Svc        ec2iface.EC2API
-	ec2InstanceId string
+type EC2Client struct {
+	EC2Svc     ec2iface.EC2API
+	InstanceID string
 }
 
-func newEC2Client(ctx context.Context) (*ec2Client, error) {
+func NewEC2Client(ctx context.Context) (*EC2Client, error) {
 	awsSession, err := awssession.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("error creating AWS session: %w", err)
@@ -184,7 +185,7 @@ func newEC2Client(ctx context.Context) (*ec2Client, error) {
 		return nil, fmt.Errorf("error getting ec2 region: %s", convertError(err))
 	}
 
-	instanceId, err := getEC2InstanceID(ctx, metadataSvc)
+	InstanceID, err := getEC2InstanceID(ctx, metadataSvc)
 	if err != nil {
 		return nil, fmt.Errorf("error getting ec2 instance-id: %s", convertError(err))
 	}
@@ -194,16 +195,16 @@ func newEC2Client(ctx context.Context) (*ec2Client, error) {
 		return nil, fmt.Errorf("error connecting to EC2 service")
 	}
 
-	return &ec2Client{
-		EC2Svc:        ec2Svc,
-		ec2InstanceId: instanceId,
+	return &EC2Client{
+		EC2Svc:     ec2Svc,
+		InstanceID: InstanceID,
 	}, nil
 }
 
-func (c *ec2Client) getEC2NetworkInterfaceId(ctx context.Context) (networkInstanceId string, err error) {
+func (c *EC2Client) GetPrimaryEC2NetworkInterfaceID(ctx context.Context) (networkInstanceId string, err error) {
 	input := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{
-			aws.String(c.ec2InstanceId),
+			aws.String(c.InstanceID),
 		},
 	}
 
@@ -214,7 +215,7 @@ func (c *ec2Client) getEC2NetworkInterfaceId(ctx context.Context) (networkInstan
 			if retriable(err) {
 				// if error is temporary, try again in a second.
 				time.Sleep(1 * time.Second)
-				log.WithField("instance-id", c.ec2InstanceId).Debug("retrying getting network-interface-id")
+				log.WithField("instance-id", c.InstanceID).Debug("retrying getting network-interface-id")
 				continue
 			}
 			return "", err
@@ -224,13 +225,20 @@ func (c *ec2Client) getEC2NetworkInterfaceId(ctx context.Context) (networkInstan
 	}
 
 	if out == nil || len(out.Reservations) == 0 {
-		return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.ec2InstanceId)
+		return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.InstanceID)
 	}
 
 	var interfaceId string
+	// Expect at most one reservation since we queried for a particular instance.
 	for _, instance := range out.Reservations[0].Instances {
+		if instance.InstanceId == nil || *instance.InstanceId != c.InstanceID {
+			// A reservation can contain more than one instance. Not clear if more than one can be returned here
+			// but be defensive.
+			continue
+		}
+		// Found our instance.
 		if len(instance.NetworkInterfaces) == 0 {
-			return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.ec2InstanceId)
+			return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.InstanceID)
 		}
 		// We are only modifying network interface with device-id-0 to update
 		// instance source-destination-check.
@@ -243,20 +251,20 @@ func (c *ec2Client) getEC2NetworkInterfaceId(ctx context.Context) (networkInstan
 				*(networkInterface.Attachment.DeviceIndex) == deviceIndexZero {
 				interfaceId = *(networkInterface.NetworkInterfaceId)
 				if interfaceId != "" {
-					log.Debugf("instance-id: %s, network-interface-id: %s", c.ec2InstanceId, interfaceId)
+					log.Debugf("instance-id: %s, network-interface-id: %s", c.InstanceID, interfaceId)
 					return interfaceId, nil
 				}
 			}
-			log.Debugf("instance-id: %s, network-interface-id: %s", c.ec2InstanceId, interfaceId)
+			log.Debugf("instance-id: %s, network-interface-id: %s", c.InstanceID, interfaceId)
 		}
 		if interfaceId == "" {
-			return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.ec2InstanceId)
+			return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.InstanceID)
 		}
 	}
 	return interfaceId, nil
 }
 
-func (c *ec2Client) setEC2SourceDestinationCheck(ctx context.Context, ec2NetId string, checkVal bool) error {
+func (c *EC2Client) SetEC2SourceDestinationCheck(ctx context.Context, ec2NetId string, checkVal bool) error {
 	input := &ec2.ModifyNetworkInterfaceAttributeInput{
 		NetworkInterfaceId: aws.String(ec2NetId),
 		SourceDestCheck: &ec2.AttributeBooleanValue{
