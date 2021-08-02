@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"os"
 
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -83,7 +83,7 @@ func (a *authenticator) Authenticate(authHeader string) (user.Info, int, error) 
 		return nil, 401, errors.New("authorization header is missing")
 	}
 
-	authenticationReview := libapi.NewAuthenticationReview()
+	authenticationReview := v3.NewAuthenticationReview()
 	buffer, _ := json.Marshal(authenticationReview)
 	reader := bytes.NewReader(buffer)
 

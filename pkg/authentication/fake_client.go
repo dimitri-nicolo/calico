@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // A Fake Authenticator satisfies the Authenticator interface and can be used for unit tests. It will mock/fake

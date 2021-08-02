@@ -37,8 +37,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
 	licFeatures "github.com/tigera/licensing/client/features"
 
 	"github.com/projectcalico/apiserver/pkg/apiserver"
@@ -2868,7 +2866,7 @@ func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 		return errors.New("expected an authentication review")
 	}
 
-	status := obj.(*libapi.AuthenticationReview).Status
+	status := obj.(*v3.AuthenticationReview).Status
 	if status.Name != name || status.Groups[0] != name || status.UID != uid || status.Extra[name][0] != name {
 		return errors.New("unexpected user info from authentication review")
 	}
@@ -2936,9 +2934,9 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	}()
 
 	// Get the users permissions.
-	req := &libapi.AuthorizationReview{
-		Spec: libapi.AuthorizationReviewSpec{
-			ResourceAttributes: []libapi.AuthorizationReviewResourceAttributes{
+	req := &v3.AuthorizationReview{
+		Spec: v3.AuthorizationReviewSpec{
+			ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
 				{
 					APIGroup:  "",
 					Resources: []string{"namespaces"},
@@ -2966,17 +2964,17 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 		return errors.New("expected an AuthorizationReview")
 	}
 
-	status := obj.(*libapi.AuthorizationReview).Status
+	status := obj.(*v3.AuthorizationReview).Status
 
-	if err := checkAuthorizationReviewStatus(status, libapi.AuthorizationReviewStatus{
-		AuthorizedResourceVerbs: []libapi.AuthorizedResourceVerbs{{
+	if err := checkAuthorizationReviewStatus(status, v3.AuthorizationReviewStatus{
+		AuthorizedResourceVerbs: []v3.AuthorizedResourceVerbs{{
 			APIGroup: "",
 			Resource: "namespaces",
-			Verbs:    []libapi.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+			Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
 		}, {
 			APIGroup: "",
 			Resource: "pods",
-			Verbs:    []libapi.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+			Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
 		},
 		}}); err != nil {
 		return err
@@ -2985,7 +2983,7 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	return nil
 }
 
-func checkAuthorizationReviewStatus(actual, expected libapi.AuthorizationReviewStatus) error {
+func checkAuthorizationReviewStatus(actual, expected v3.AuthorizationReviewStatus) error {
 	if reflect.DeepEqual(actual, expected) {
 		return nil
 	}

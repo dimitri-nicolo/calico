@@ -5,7 +5,7 @@ package authenticationreview
 import (
 	"context"
 
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,12 +19,12 @@ type REST struct{}
 
 // EmptyObject returns an empty instance
 func (r *REST) New() runtime.Object {
-	return &calico.AuthenticationReview{}
+	return &v3.AuthenticationReview{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.AuthenticationReviewList{}
+	return &v3.AuthenticationReviewList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
@@ -44,8 +44,8 @@ func (r *REST) Watch(ctx context.Context, options *internalversion.ListOptions) 
 
 // Takes the userinfo that the authn delegate has put into the context and returns it.
 func (r *REST) Create(ctx context.Context, obj runtime.Object, val rest.ValidateObjectFunc, createOpt *metav1.CreateOptions) (runtime.Object, error) {
-	ar := &calico.AuthenticationReview{
-		Status: calico.AuthenticationReviewStatus{},
+	ar := &v3.AuthenticationReview{
+		Status: v3.AuthenticationReviewStatus{},
 	}
 
 	user, ok := request.UserFrom(ctx)
