@@ -25,6 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"

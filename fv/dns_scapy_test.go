@@ -29,6 +29,9 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
@@ -36,9 +39,7 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/felix/timeshim"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
