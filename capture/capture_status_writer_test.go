@@ -13,10 +13,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/felix/capture"
-	"github.com/projectcalico/felix/proto"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/felix/capture"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )

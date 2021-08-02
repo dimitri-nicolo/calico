@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/proto"
