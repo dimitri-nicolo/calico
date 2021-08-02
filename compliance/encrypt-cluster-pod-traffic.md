@@ -39,10 +39,6 @@ All platforms listed above will encrypt pod-to-pod traffic. Additionally, when u
 - IP addresses for every node in the cluster. This is required to establish secure tunnels between the nodes. {{site.prodname}} can automatically do this using [IP Setting]({{site.baseurl}}/reference/node/configuration#ip-setting) and [IP autodetection methods]({{site.baseurl}}/reference/node/configuration#ip-autodetection-methods) available under [calico/node]({{site.baseurl}}/reference/node/configuration) resource.
     - Under [installation]({{site.baseurl}}/reference/installation/api), set the [autodetection method]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection) (`nodeAddressAutodetectionV4` and/or `nodeAddressAutodetectionV6`) for your cluster.
 
-> **Note**: WireGuard in {{site.prodname}} does not support IPv6 at this time. Also, encryption using WireGuard is not supported on managed Kubernetes platforms which don't use Calico CNI (e.g. managed Kubernetes platforms EKS, and GKE).
-> WireGuard is supported when using Azure CNI on AKS, and on this platform will encrypt not just pod-to-pod traffic but host-to-host traffic as well.
-{: .alert .alert-info}
-
 ### How to
 
 - [Install WireGuard](#install-wireguard)

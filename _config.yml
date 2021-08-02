@@ -113,7 +113,7 @@ defaults:
       show_title: true
       show_read_time: true
       show_toc: true
-      version: v3.20
+      version: master
       sitemap: true
       # The registry field should end in a trailing `/` to ensure images formed with
       # it have the proper slashes
