@@ -29,6 +29,7 @@ ee.tgz
 
 pinned_versions.yml
 pinned_images.yml
+charts
 
 # This prevents us from checking in a supplementary values.yaml file
 _includes/charts/*/values.yaml

@@ -4,7 +4,7 @@ description: Install the CLI for Calico.
 canonical_url: '/maintenance/clis/calicoctl/install'
 ---
 
-## About installing calicoctl
+### Big picture
 
 `calicoctl` allows you to create, read, update, and delete {{site.prodname}} objects
 from the command line. These objects represent the networking and policy
@@ -32,7 +32,17 @@ corresponds to your desired deployment.
 {% assign version = site.data.versions.first.title %}
 {% endif %}
 
-## Install calicoctl as a binary on a single host
+### How to
+
+> **Note**: Make sure you always install the version of `calicoctl` that matches the version of {{site.prodname}} running on your cluster.
+{: .alert .alert-info}
+
+- Install calicoctl as a binary on a single host (#install-calicoctl-as-a-binary-on-a-single-host)
+- Install calicoctl as a kubectl plugin on a single host (#install-calicoctl-as-a-kubectl-plugin-on-a-single-host)
+- Install calicoctl as a container on a single host (#install-calicoctl-as-a-container-on-a-single-host)
+- Install calicoctl as a Kubernetes pod (#install-calicoctl-as-a-kubernetes-pod)
+
+#### Install calicoctl as a binary on a single host
 
 {% tabs %}
 <label:Linux,active:true>
@@ -94,9 +104,9 @@ you want to install the binary.
 <label:Windows>
 <%
 
-1. Use the following powershell command to download the `calicoctl` binary.
+1. Use the following PowerShell command to download the `calicoctl` binary.
 
-   > **Tip**: Consider runing powershell as administraor and navigating
+   > **Tip**: Consider runing PowerShell as administrator and navigating
    > to a location that's in your `PATH`. For example, `C:\Windows`.
    {: .alert .alert-success}
 
@@ -107,7 +117,8 @@ Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-w
 %>
 {% endtabs %}
 
-## Install calicoctl as a kubectl plugin on a single host
+#### Install calicoctl as a kubectl plugin on a single host
+
 {% tabs %}
 <label:Linux,active:true>
 <%
@@ -169,9 +180,9 @@ you want to install the binary.
 <label:Windows>
 <%
 
-1. Use the following powershell command to download the `calicoctl` binary.
+1. Use the following PowerShell command to download the `calicoctl` binary.
 
-   > **Tip**: Consider runing powershell as administraor and navigating
+   > **Tip**: Consider runing PowerShell as administrator and navigating
    > to a location that's in your `PATH`. For example, `C:\Windows`.
    {: .alert .alert-success}
 

@@ -27,11 +27,16 @@ Kubernetes datastore (kdd)
 
 **Windows node requirements**
 - Versions:
-  - Windows Server 1809 (build Build 17763.1432 or greater)
-  - Windows Server 1903 (AKA 19H1 build 18362.1049 or greater)
-  - Windows Server 1909 (AKA 19H2 build 18362.1049 or greater), with Docker service enabled
+  - Windows Server 1809 (build 17763.1432 or greater)
+  - Windows Server 2004 (build 19041)
+  - Windows Server 20H2 (build 19042)
+
+  > **Note**: Windows Server version support differs for each Kubernetes version. Review the {% include open-new-window.html text='Windows OS Version Support' url='https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#windows-os-version-support' %} table for the Windows Server versions supported by each Kubernetes version.
+  {: .alert .alert-info}
+  
+- Container runtime: Docker or containerd installed and running. If containerd is running, it will be used as the container runtime otherwise Docker is assumed.
 - Remote access to the Windows node via Remote Desktop Protocol (RDP) or Windows Remote Management (WinRM)
-- Be able to run a command as Administrator using powershell.
+- Be able to run a command as Administrator using PowerShell.
 - Additionally, for EKS:
   - The VPC controllers must be installed to run Windows pods.
   - The Windows instance role must have permissions to get `namespaces` and get `secrets` in the calico-system namespace.
@@ -52,7 +57,10 @@ Kubernetes datastore (kdd)
       kubectl delete rolebinding calico-install-token --namespace calico-system
       kubectl delete role calico-install-token --namespace calico-system
       ```
-    
+  - An instance role on the Windows instance must have permissions to get `namespaces` and get `secrets` in the calico-system namespace (or kube-system namespace if you are using a non operator-managed {{site.prodname}} installation.)
+- Additionally, for AKS:
+    - {{site.prodnameWindows}} can be enabled only on newly created clusters.
+    - Kubernetes version 1.20+
 
 **Linux control node requirements**
 - Installed with {{site.prodname}} v3.5+
@@ -108,7 +116,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    kubectl patch installation default --type=merge -p '{"spec": {"calicoNetwork": {"bgp": "Disabled"}}}'
    ```
 
-1. Prepare directory for Kubernetes files on Windows node.
+1. Prepare the directory for Kubernetes files on Windows node.
 
    ```powershell
    mkdir c:\k
@@ -118,14 +126,14 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
 1. Copy the installation zip file  to **c:\tigera-calico-windows.zip**.
 
-1. Download the powershell script, **install-calico-windows.ps1**.
+1. Download the PowerShell script, **install-calico-windows.ps1**.
 
    ```powershell
    Invoke-WebRequest {{ "/scripts/install-calico-windows.ps1" | absolute_url }} -OutFile c:\install-calico-windows.ps1
    ```
 
 1. Install {{site.prodnameWindows}} for your datastore using the default parameters or [customize installation parameters](#configure-installation-parameters).
-   The powershell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
+   The PowerShell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
 
    You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
 
@@ -148,7 +156,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    Get-Service -Name CalicoFelix
    ```
 
-1. Install and start kubelet/kube-proxy service. Execute following powershell script/commands.
+1. Install and start kubelet/kube-proxy service. Execute following PowerShell script/commands.
 
    ```powershell
    {{site.rootDirWindows}}\kubernetes\install-kube-services.ps1
@@ -193,7 +201,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    Start-Service RemoteAccess
    ```
 
-1. Prepare directory for Kubernetes files on Windows node.
+1. Prepare the directory for Kubernetes files on Windows node.
 
    ```powershell
    mkdir c:\k
@@ -201,14 +209,14 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
 1. Copy the Kubernetes kubeconfig file from the master node (default, Location $HOME/.kube/config), to **c:\k\config**.
 
-1. Download the powershell script, **install-calico-windows.ps1**.
+1. Download the PowerShell script, **install-calico-windows.ps1**.
 
    ```powershell
    Invoke-WebRequest {{ "/scripts/install-calico-windows.ps1" | absolute_url }} -OutFile c:\install-calico-windows.ps1
    ```
 
 1. Install {{site.prodnameWindows}} for your datastore using the default parameters or [customize installation parameters](#configure-installation-parameters).
-   The powershell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
+   The PowerShell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
 
    You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
 
@@ -231,7 +239,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    Get-Service -Name CalicoFelix
    ```
 
-1. Install and start kubelet/kube-proxy service. Execute following powershell script/commands.
+1. Install and start kubelet/kube-proxy service. Execute following PowerShell script/commands.
 
    ```powershell
    {{site.rootDirWindows}}\kubernetes\install-kube-services.ps1
@@ -250,7 +258,18 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
   <label:EKS>
   <%
 
-1. Prepare directory for Kubernetes files on the Windows node.
+1. Ensure that a Windows instance role has permissions to get `namespaces` and to get `secrets` in the calico-system namespace (or kube-system namespace if you are using a non operator-managed {{site.prodname}} installation.)
+   One way to do this is by running the following comands to install the required permissions temporarily. Before running the commands, replace `<eks_node_name>` with the Kubernetes node name of the EKS Windows node, for example `ip-192-168-42-34.us-west-2.compute.internal`.
+   > **Note**: If you are using a non operator-managed {{site.prodname}} installation, replace the namespace `calico-system` with `kube-system` in the commands below.
+   {: .alert .alert-info}
+   ```bash
+   kubectl create clusterrole calico-install-ns --verb=get --resource=namespace
+   kubectl create clusterrolebinding calico-install-ns --clusterrole=calico-install-ns --user=system:node:<eks_node_name>
+   kubectl create role calico-install-token --verb=get,list --resource=secrets --namespace calico-system
+   kubectl create rolebinding calico-install-token --role=calico-install-token --user=system:node:<eks_node_name> --namespace calico-system
+   ```
+  
+1. Prepare the directory for Kubernetes files on the Windows node.
 
    ```powershell
    mkdir c:\k
@@ -258,14 +277,14 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
 1. [Install kubectl](https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html#windows){:target="_blank"} and move the kubectl binary to **c:\k**.
 
-1. Download the powershell script, **install-calico-windows.ps1**.
+1. Download the PowerShell script, **install-calico-windows.ps1**.
 
    ```powershell
    Invoke-WebRequest {{site.url}}/scripts/install-calico-windows.ps1 -OutFile c:\install-calico-windows.ps1
    ```
 
 1. Install {{site.prodnameWindows}} for your datastore using the default parameters or [customize installation parameters](#configure-installation-parameters).
-   The powershell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
+   The PowerShell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
    
    You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
 
@@ -292,6 +311,16 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    ```powershell
    Get-Service -Name kubelet
    Get-Service -Name kube-proxy
+   ```
+   
+1. If you installed temporary RBAC in the first step, remove the permissions by running the following commands.
+   > **Note**: If you are using a non operator-managed {{site.prodname}} installation, replace the namespace `calico-system` with `kube-system` in the commands below.
+   {: .alert .alert-info}
+   ```bash
+   kubectl delete clusterrolebinding calico-install-ns
+   kubectl delete clusterrole calico-install-ns
+   kubectl delete rolebinding calico-install-token --namespace calico-system
+   kubectl delete role calico-install-token --namespace calico-system
    ```
 %>
 
