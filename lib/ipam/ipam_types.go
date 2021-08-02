@@ -18,6 +18,7 @@ import (
 	"net"
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AssignIPArgs defines the set of arguments for assigning a specific IP address.
@@ -79,6 +80,10 @@ type AutoAssignArgs struct {
 
 	// If specified, the attributes of reserved IPv6 addresses in the block.
 	HostReservedAttrIPv6s *HostReservedAttr
+
+	// The intended use for the IP address.  Used to filter the available IP pools on their AllowedUses field.
+	// If omitted, defaults to v3.IPPoolAllowedUseWorkload for back-compatibility.
+	IntendedUse v3.IPPoolAllowedUse
 }
 
 // IPAMConfig contains global configuration options for Calico IPAM.

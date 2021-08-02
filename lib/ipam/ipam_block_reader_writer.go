@@ -39,10 +39,15 @@ type blockReaderWriter struct {
 	pools  PoolAccessorInterface
 }
 
-func (rw blockReaderWriter) getAffineBlocks(ctx context.Context, host string, ver int, pools []v3.IPPool) (blocksInPool, blocksNotInPool []cnet.IPNet, err error) {
-	blocksInPool = []cnet.IPNet{}
-	blocksNotInPool = []cnet.IPNet{}
-
+// getAffineBlocks gets all the IPAM blocks that are affine to this host and returns them as a slice of CIDRs.
+func (rw blockReaderWriter) getAffineBlocks(
+	ctx context.Context,
+	host string,
+	ver int,
+) (
+	blocks []cnet.IPNet,
+	err error,
+) {
 	// Lookup blocks affine to the specified host.
 	opts := model.BlockAffinityListOptions{Host: host, IPVersion: ver}
 	datastoreObjs, err := rw.client.List(ctx, opts, "")
@@ -60,33 +65,43 @@ func (rw blockReaderWriter) getAffineBlocks(ctx context.Context, host string, ve
 	// Iterate through and extract the block CIDRs.
 	for _, o := range datastoreObjs.KVPairs {
 		k := o.Key.(model.BlockAffinityKey)
+		blocks = append(blocks, k.CIDR)
+	}
+	return
+}
 
-		// Add the block if no IP pools were specified, or if IP pools were specified
-		// and the block falls within the given IP pools.
-		if len(pools) == 0 {
-			blocksInPool = append(blocksInPool, k.CIDR)
+// filterBlocksByPools splits the given list of blocks into two slices: blocksInPools contains the blocks that
+// are contained in one of the given pools, blocksNotInPools contains the complement.
+func filterBlocksByPools(blocks []cnet.IPNet, pools []v3.IPPool) (blocksInPools, blocksNotInPools []cnet.IPNet, err error) {
+	for _, block := range blocks {
+		var pool *v3.IPPool
+		pool, err = findContainingPool(pools, block.IP)
+		if err != nil {
+			return
+		}
+		if pool != nil {
+			blocksInPools = append(blocksInPools, block)
 		} else {
-			found := false
-			for _, pool := range pools {
-				var poolNet *cnet.IPNet
-				_, poolNet, err = cnet.ParseCIDR(pool.Spec.CIDR)
-				if err != nil {
-					log.Errorf("Error parsing CIDR: %s from pool: %s %v", pool.Spec.CIDR, pool.Name, err)
-					return
-				}
-
-				if poolNet.Contains(k.CIDR.IPNet.IP) {
-					blocksInPool = append(blocksInPool, k.CIDR)
-					found = true
-					break
-				}
-			}
-			if !found {
-				blocksNotInPool = append(blocksNotInPool, k.CIDR)
-			}
+			blocksNotInPools = append(blocksNotInPools, block)
 		}
 	}
 	return
+}
+
+func findContainingPool(pools []v3.IPPool, addr net.IP) (*v3.IPPool, error) {
+	for _, pool := range pools {
+		var poolNet *cnet.IPNet
+		_, poolNet, err := cnet.ParseCIDR(pool.Spec.CIDR)
+		if err != nil {
+			log.Errorf("Error parsing CIDR: %s from pool: %s %v", pool.Spec.CIDR, pool.Name, err)
+			return nil, err
+		}
+
+		if poolNet.Contains(addr) {
+			return &pool, nil
+		}
+	}
+	return nil, nil
 }
 
 // findUnclaimedBlock finds a block cidr which does not yet exist within the given list of pools. The provided pools
@@ -106,7 +121,7 @@ func (rw blockReaderWriter) findUnclaimedBlock(ctx context.Context, host string,
 		return nil, err
 	}
 
-	/// Build a map for faster lookups.
+	// Build a map for faster lookups.
 	exists := map[string]bool{}
 	for _, e := range existingBlocks.KVPairs {
 		exists[e.Key.(model.BlockKey).CIDR.String()] = true
