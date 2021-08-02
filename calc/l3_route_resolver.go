@@ -547,7 +547,7 @@ func (c *L3RouteResolver) OnPoolUpdate(update api.Update) (_ bool) {
 		c.allPools[poolKey] = *newPool
 		poolCIDR = ip.CIDRFromCalicoNet(newPool.CIDR).(ip.V4CIDR)
 		crossSubnet := newPool.IPIPMode == encap.CrossSubnet || newPool.VXLANMode == encap.CrossSubnet
-		c.trie.UpdatePool(poolCIDR, newPoolType, newPool.Masquerade, crossSubnet)
+		c.trie.UpdatePool(poolCIDR, newPoolType, newPool.Masquerade, crossSubnet, newPool.AWSSubnetID)
 	} else {
 		delete(c.allPools, poolKey)
 		c.trie.RemovePool(poolCIDR)
@@ -656,6 +656,10 @@ func (c *L3RouteResolver) flush() {
 			if ri.Pool.CrossSubnet {
 				logCxt.Debug("Cross-subnet enabled on this CIDR.")
 				poolAllowsCrossSubnet = true
+			}
+			if ri.Pool.AWSSubnetID != "" {
+				logCxt.Debug("Pool is backed by AWS subnet")
+				rt.AWSSubnetID = ri.Pool.AWSSubnetID
 			}
 			if ri.Block.NodeName != "" {
 				rt.DstNodeName = ri.Block.NodeName
@@ -805,7 +809,7 @@ func NewRouteTrie() *RouteTrie {
 	}
 }
 
-func (r *RouteTrie) UpdatePool(cidr ip.V4CIDR, poolType proto.IPPoolType, natOutgoing bool, crossSubnet bool) {
+func (r *RouteTrie) UpdatePool(cidr ip.V4CIDR, poolType proto.IPPoolType, natOutgoing bool, crossSubnet bool, awsSubnetID string) {
 	logrus.WithFields(logrus.Fields{
 		"cidr":        cidr,
 		"poolType":    poolType,
@@ -816,6 +820,7 @@ func (r *RouteTrie) UpdatePool(cidr ip.V4CIDR, poolType proto.IPPoolType, natOut
 		ri.Pool.Type = poolType
 		ri.Pool.NATOutgoing = natOutgoing
 		ri.Pool.CrossSubnet = crossSubnet
+		ri.Pool.AWSSubnetID = awsSubnetID
 	})
 	if !changed {
 		return
@@ -838,7 +843,7 @@ func (r *RouteTrie) MarkCIDRDirty(cidr ip.V4CIDR) {
 }
 
 func (r *RouteTrie) RemovePool(cidr ip.V4CIDR) {
-	r.UpdatePool(cidr, proto.IPPoolType_NONE, false, false)
+	r.UpdatePool(cidr, proto.IPPoolType_NONE, false, false, "")
 }
 
 func (r *RouteTrie) UpdateBlockRoute(cidr ip.V4CIDR, nodeName string) {
@@ -978,6 +983,7 @@ type RouteInfo struct {
 		Type        proto.IPPoolType // Only set if this CIDR represents an IP pool
 		NATOutgoing bool
 		CrossSubnet bool
+		AWSSubnetID string
 	}
 
 	// Block contains route information extracted from IPAM blocks.
