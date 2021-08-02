@@ -8,10 +8,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
 )

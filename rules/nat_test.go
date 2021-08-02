@@ -19,6 +19,7 @@ import (
 	"net"
 
 	"github.com/tigera/api/pkg/lib/numorstring"
+
 	. "github.com/projectcalico/felix/rules"
 
 	. "github.com/onsi/ginkgo"

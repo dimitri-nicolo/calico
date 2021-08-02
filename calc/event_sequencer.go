@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/labelindex"
