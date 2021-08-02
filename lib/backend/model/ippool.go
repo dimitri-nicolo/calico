@@ -16,10 +16,9 @@ package model
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
-
-	"reflect"
 
 	log "github.com/sirupsen/logrus"
 
@@ -104,4 +103,5 @@ type IPPool struct {
 	Masquerade    bool       `json:"masquerade"`
 	IPAM          bool       `json:"ipam"`
 	Disabled      bool       `json:"disabled"`
+	AWSSubnetID   string     `json:"aws_subnet_id"`
 }

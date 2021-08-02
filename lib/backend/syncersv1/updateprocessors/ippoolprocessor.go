@@ -86,6 +86,7 @@ func convertIPPoolV2ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 			Masquerade:    v3res.Spec.NATOutgoing,
 			IPAM:          !v3res.Spec.Disabled,
 			Disabled:      v3res.Spec.Disabled,
+			AWSSubnetID:   v3res.Spec.AWSSubnetID,
 		},
 		Revision: kvp.Revision,
 	}, nil
