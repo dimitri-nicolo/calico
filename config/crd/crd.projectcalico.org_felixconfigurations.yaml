@@ -447,6 +447,11 @@ spec:
                 description: FlowLogsFileMaxFiles sets the number of log files to
                   keep.
                 type: integer
+              flowLogsFilePerFlowProcessArgsLimit:
+                description: FlowLogsFilePerFlowProcessArgsLimit is used to specify
+                  the maximum number of distinct process args that will appear in
+                  the flowLogs. Default value is 5
+                type: integer
               flowLogsFilePerFlowProcessLimit:
                 description: 'FlowLogsFilePerFlowProcessLimit, is used to specify
                   the maximum number of flow log entries with distinct process information
@@ -612,11 +617,7 @@ spec:
                   in ipvs mode. Felix uses these ranges to separate host and workload
                   traffic. [Default: 30000:32767].'
                 items:
-                  anyOf:
-                  - type: integer
-                  - type: string
-                  pattern: ^.*
-                  x-kubernetes-int-or-string: true
+                  type: string
                 type: array
               l7LogsFileAggregationDestinationInfo:
                 description: 'L7LogsFileAggregationDestinationInfo is used to choose
@@ -776,14 +777,10 @@ spec:
                   the traffic is leaving on (ie it uses the iptables MASQUERADE target)
                 type: string
               natPortRange:
-                anyOf:
-                - type: integer
-                - type: string
                 description: NATPortRange specifies the range of ports that is used
                   for port mapping when doing outgoing NAT. When unset the default
                   behavior of the network stack is used.
-                pattern: ^.*
-                x-kubernetes-int-or-string: true
+                type: string
               netlinkTimeout:
                 type: string
               nfNetlinkBufSize:
