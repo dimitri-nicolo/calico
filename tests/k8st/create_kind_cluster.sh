@@ -150,6 +150,14 @@ nodes:
 - role: worker
 - role: worker
 - role: worker
+kubeadmConfigPatches:
+- |
+  apiVersion: kubeproxy.config.k8s.io/v1alpha1
+  kind: KubeProxyConfiguration
+  metadata:
+    name: config
+  conntrack:
+    maxPerCore: 0
 EOF
     fi
     kind_rc=$?
