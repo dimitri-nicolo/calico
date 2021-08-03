@@ -31,7 +31,6 @@ format used for capturing traffic by network tools.
 
 This feature is in a technical preview stage. PacketCapture does not support:
 
-- Enhanced filtering by selecting protocols and specific ports
 - Capping a capture using either time or size
 - Storing traffic in pcapng traffic
 - Capturing traffic from a multi-nic setup
@@ -89,6 +88,22 @@ metadata:
 spec:
   selector: all()
 ```
+
+In the following example, we select all workload endpoints in `sample` namespace and only TCP traffic.
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: PacketCapture
+metadata:
+  name: sample-capture-all
+  namespace: sample
+spec:
+  selector: all()
+  filters:
+    - protocol: TCP
+```
+
+More examples for filtering traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
 
 #### Configure packet capture rotation
 
