@@ -18,10 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	libv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // managedClusterReconciler is responsible for starting and managing GlobalAlertController for every managed cluster.
@@ -126,7 +124,7 @@ func (r *managedClusterReconciler) cancelAlertController(name string) {
 
 func clusterConnected(managedCluster *v3.ManagedCluster) bool {
 	for _, condition := range managedCluster.Status.Conditions {
-		if condition.Type == libv3.ManagedClusterStatusTypeConnected && condition.Status == libv3.ManagedClusterStatusValueTrue {
+		if condition.Type == v3.ManagedClusterStatusTypeConnected && condition.Status == v3.ManagedClusterStatusValueTrue {
 			return true
 		}
 	}

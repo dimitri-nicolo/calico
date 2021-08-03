@@ -5,7 +5,7 @@ package ut
 import (
 	"context"
 	"encoding/json"
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"io/ioutil"
 	"os"
 	"strings"

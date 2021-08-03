@@ -4,7 +4,7 @@ package cacher
 
 import (
 	"context"
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type MockGlobalThreatFeedCache struct {

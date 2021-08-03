@@ -16,7 +16,7 @@ import (
 	"time"
 
 	retry "github.com/avast/retry-go"
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"

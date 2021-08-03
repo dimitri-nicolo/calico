@@ -13,11 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
-	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 const (
@@ -36,7 +33,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -46,7 +43,7 @@ var _ = Describe("GlobalAlert", func() {
 					Query:       "action=allow",
 					Period:      &metav1.Duration{Duration: 5 * time.Second},
 				},
-				Status: calicov3.GlobalAlertStatus{
+				Status: v3.GlobalAlertStatus{
 					LastUpdate:   &metav1.Time{Time: now},
 					Active:       true,
 					Healthy:      true,
@@ -72,7 +69,7 @@ var _ = Describe("GlobalAlert", func() {
 				for _, c := range mockElasticSvc.ExpectedCalls {
 					if c.Method == "ExecuteAlert" {
 						wg.Done()
-						c.ReturnArguments = mock.Arguments{libcalicov3.GlobalAlertStatus{
+						c.ReturnArguments = mock.Arguments{v3.GlobalAlertStatus{
 							LastExecuted: &metav1.Time{Time: time.Now()},
 						}}
 					}
@@ -105,7 +102,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: calicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -115,7 +112,7 @@ var _ = Describe("GlobalAlert", func() {
 					Query:       "action=allow",
 					Period:      &metav1.Duration{Duration: 10 * time.Second},
 				},
-				Status: calicov3.GlobalAlertStatus{
+				Status: v3.GlobalAlertStatus{
 					LastUpdate:   &metav1.Time{Time: now},
 					Active:       true,
 					Healthy:      true,
@@ -147,7 +144,7 @@ var _ = Describe("GlobalAlert", func() {
 						} else {
 							Expect(diff.Seconds()).To(BeNumerically("<", 16))
 						}
-						c.ReturnArguments = mock.Arguments{libcalicov3.GlobalAlertStatus{
+						c.ReturnArguments = mock.Arguments{v3.GlobalAlertStatus{
 							LastExecuted: &metav1.Time{Time: time.Now()},
 						}}
 					}

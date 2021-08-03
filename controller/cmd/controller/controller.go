@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"syscall"
 
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"

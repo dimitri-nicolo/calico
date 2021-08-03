@@ -3,7 +3,7 @@
 package spyutil
 
 import (
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type Call struct {
