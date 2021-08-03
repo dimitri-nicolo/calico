@@ -130,6 +130,9 @@
     packetcapture-api:
       image: tigera/packetcapture-api
       version: master
+    tigera-prometheus-service:
+      image: tigera/prometheus-service
+      version: master
     es-gateway:
       image: tigera/es-gateway
       version: master
