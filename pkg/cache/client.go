@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
 
@@ -19,7 +19,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	informers "github.com/projectcalico/apiserver/pkg/client/informers_generated/externalversions/projectcalico/v3"
+	informers "github.com/tigera/api/pkg/client/informers_generated/externalversions/projectcalico/v3"
 )
 
 // ClientCache caches a client set and k8s config per cluster id

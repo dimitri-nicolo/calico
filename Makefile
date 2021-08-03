@@ -24,6 +24,7 @@ DEV_TAG_SUFFIX        ?= calient-0.dev
 # Used by Makefile.common
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 APISERVER_REPO  = github.com/tigera/apiserver
+API_REPO        = github.com/tigera/api
 
 # Mount Semaphore configuration files.
 ifdef ST_MODE
@@ -168,7 +169,7 @@ LMA_BRANCH=$(PIN_BRANCH)
 replace-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-lma-pin replace-apiserver-pin
+update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-lma-pin replace-apiserver-pin
 
 ###############################################################################
 # CI/CD
