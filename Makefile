@@ -1,5 +1,6 @@
-PACKAGE_NAME=github.com/projectcalico/libcalico-go
-GO_BUILD_VER=v0.53
+PACKAGE_NAME =github.com/projectcalico/libcalico-go
+GO_BUILD_VER =v0.53
+API_REPO     = github.com/tigera/api
 
 ORGANIZATION=tigera
 
