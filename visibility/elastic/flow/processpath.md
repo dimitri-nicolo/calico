@@ -1,5 +1,5 @@
 ---
-title: Enabling Process executable path and arguments in flow logs
+title: Enabling process executable path and arguments in flow logs
 description: Enabling Process executable path and arguments in flow logs
 canonical_url: /visibility/elastic/flow/processpath
 ---
