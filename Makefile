@@ -95,7 +95,7 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-update-pins: guard-ssh-forwarding-bug update-api-repo replace-libcalico-pin replace-apiserver-pin
+update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-apiserver-pin
 
 #############################################################################
 # Testing
