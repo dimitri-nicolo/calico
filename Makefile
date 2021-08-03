@@ -84,6 +84,7 @@ clean:
 # Updating pins
 ###############################################################################
 LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+API_REPO=github.com/tigera/api
 
 update-pins: update-api-pin replace-libcalico-pin
 
