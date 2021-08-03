@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // addHeaderRoundTripper implements the http.RoundTripper interface and inserts the headers in headers field

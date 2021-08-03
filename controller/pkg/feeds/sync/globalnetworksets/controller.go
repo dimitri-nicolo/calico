@@ -1,24 +1,26 @@
-// Copyright 2019-2020 Tigera Inc. All rights reserved.
+// Copyright 2019-2021 Tigera Inc. All rights reserved.
 
 package globalnetworksets
 
 import (
 	"context"
-	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"reflect"
 	"sync"
 	"time"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v3client "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	log "github.com/sirupsen/logrus"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3client "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 )
 
 const DefaultClientRetries = 5
@@ -58,9 +60,9 @@ type controller struct {
 	noGC    map[string]struct{}
 	gcMutex sync.RWMutex
 
-	failFuncs map[string]func(error)
-	feedCachers  map[string]cacher.GlobalThreatFeedCacher
-	fsMutex   sync.RWMutex
+	failFuncs   map[string]func(error)
+	feedCachers map[string]cacher.GlobalThreatFeedCacher
+	fsMutex     sync.RWMutex
 }
 
 // Wrapper for clientset errors, used in retry processing.
@@ -116,14 +118,14 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 
 	local := cache.NewStore(cache.MetaNamespaceKeyFunc)
 	return &controller{
-		client:    client,
-		local:     local,
-		queue:     queue,
-		remote:    remote,
-		informer:  informer,
-		noGC:      make(map[string]struct{}),
-		failFuncs: make(map[string]func(error)),
-		feedCachers:  make(map[string]cacher.GlobalThreatFeedCacher),
+		client:      client,
+		local:       local,
+		queue:       queue,
+		remote:      remote,
+		informer:    informer,
+		noGC:        make(map[string]struct{}),
+		failFuncs:   make(map[string]func(error)),
+		feedCachers: make(map[string]cacher.GlobalThreatFeedCacher),
 	}
 }
 

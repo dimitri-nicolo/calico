@@ -6,26 +6,26 @@ import (
 	"reflect"
 	"time"
 
-	v32 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v33 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
 	FeedsNamespace = "calico-monitoring"
 )
 
-func NewGlobalThreatFeedFromName(name string) *v32.GlobalThreatFeed {
-	return &v32.GlobalThreatFeed{
+func NewGlobalThreatFeedFromName(name string) *v3.GlobalThreatFeed {
+	return &v3.GlobalThreatFeed{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      name,
 			Namespace: FeedsNamespace,
 		},
-		Spec: v33.GlobalThreatFeedSpec{},
+		Spec: v3.GlobalThreatFeedSpec{},
 	}
 }
 
-func FeedNeedsRestart(a, b *v32.GlobalThreatFeed) bool {
+func FeedNeedsRestart(a, b *v3.GlobalThreatFeed) bool {
 	if a.Spec.Pull == nil && b.Spec.Pull == nil {
 		return false
 	}
@@ -65,8 +65,8 @@ func FeedNeedsRestart(a, b *v32.GlobalThreatFeed) bool {
 	return !reflect.DeepEqual(a.Spec.GlobalNetworkSet, b.Spec.GlobalNetworkSet)
 }
 
-func ParseFeedDuration(f *v32.GlobalThreatFeed) time.Duration {
-	period := v33.DefaultPullPeriod
+func ParseFeedDuration(f *v3.GlobalThreatFeed) time.Duration {
+	period := v3.DefaultPullPeriod
 	if f.Spec.Pull.Period != "" {
 		var err error
 		period, err = time.ParseDuration(f.Spec.Pull.Period)
@@ -75,11 +75,11 @@ func ParseFeedDuration(f *v32.GlobalThreatFeed) time.Duration {
 		}
 	}
 
-	return v33.DefaultPullPeriod
+	return v3.DefaultPullPeriod
 }
 
-func NewGlobalNetworkSet(tfName string) *v32.GlobalNetworkSet {
-	s := &v32.GlobalNetworkSet{
+func NewGlobalNetworkSet(tfName string) *v3.GlobalNetworkSet {
+	s := &v3.GlobalNetworkSet{
 		ObjectMeta: v1.ObjectMeta{Name: GlobalNetworkSetNameFromThreatFeed(tfName)},
 	}
 	return s

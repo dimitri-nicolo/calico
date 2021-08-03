@@ -9,7 +9,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/alert"
 	"k8s.io/apimachinery/pkg/api/errors"

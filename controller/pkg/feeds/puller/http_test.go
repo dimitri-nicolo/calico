@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Tigera Inc. All rights reserved.
+// Copyright 2019-2021 Tigera Inc. All rights reserved.
 
 package puller
 
@@ -11,17 +11,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -31,19 +30,19 @@ var (
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSets",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format: v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format: v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:    "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{
+					Headers: []v3.HTTPHeader{
 						{
 							Name:  "Accept",
 							Value: "text/plain",
@@ -54,7 +53,7 @@ var (
 						},
 						{
 							Name: "Config",
-							ValueFrom: &v32.HTTPHeaderSource{
+							ValueFrom: &v3.HTTPHeaderSource{
 								ConfigMapKeyRef: &v12.ConfigMapKeySelector{
 									Key: "config",
 								},
@@ -62,7 +61,7 @@ var (
 						},
 						{
 							Name: "Secret",
-							ValueFrom: &v32.HTTPHeaderSource{
+							ValueFrom: &v3.HTTPHeaderSource{
 								SecretKeyRef: &v12.SecretKeySelector{
 									Key: "secret",
 								},
@@ -71,7 +70,7 @@ var (
 						{
 							Name:  "Invalid",
 							Value: "ghi",
-							ValueFrom: &v32.HTTPHeaderSource{
+							ValueFrom: &v3.HTTPHeaderSource{
 								ConfigMapKeyRef: &v12.ConfigMapKeySelector{
 									Key: "config",
 								},
@@ -82,7 +81,7 @@ var (
 						},
 						{
 							Name: "CM Optional",
-							ValueFrom: &v32.HTTPHeaderSource{
+							ValueFrom: &v3.HTTPHeaderSource{
 								ConfigMapKeyRef: &v12.ConfigMapKeySelector{
 									Key:      "invalid",
 									Optional: util.BoolPtr(true),
@@ -91,7 +90,7 @@ var (
 						},
 						{
 							Name: "Secret Optional",
-							ValueFrom: &v32.HTTPHeaderSource{
+							ValueFrom: &v3.HTTPHeaderSource{
 								SecretKeyRef: &v12.SecretKeySelector{
 									Key:      "invalid",
 									Optional: util.BoolPtr(true),
@@ -114,12 +113,12 @@ var (
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "DomainNameSet",
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format: v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format: v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:    "http://mock.feed/v1",
 				},
 			},
@@ -470,10 +469,10 @@ func TestSetFeedURIAndHeaderWithConfigMapOptional(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := testGlobalThreatFeed.DeepCopy()
-	f.Spec.Pull.HTTP.Headers = []v32.HTTPHeader{
+	f.Spec.Pull.HTTP.Headers = []v3.HTTPHeader{
 		{
 			Name: "Header",
-			ValueFrom: &v32.HTTPHeaderSource{
+			ValueFrom: &v3.HTTPHeaderSource{
 				ConfigMapKeyRef: &v12.ConfigMapKeySelector{
 					Key:      "invalid",
 					Optional: util.BoolPtr(true),
@@ -495,10 +494,10 @@ func TestSetFeedURIAndHeaderWithConfigMapNotOptional(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := testGlobalThreatFeed.DeepCopy()
-	f.Spec.Pull.HTTP.Headers = []v32.HTTPHeader{
+	f.Spec.Pull.HTTP.Headers = []v3.HTTPHeader{
 		{
 			Name: "Header",
-			ValueFrom: &v32.HTTPHeaderSource{
+			ValueFrom: &v3.HTTPHeaderSource{
 				ConfigMapKeyRef: &v12.ConfigMapKeySelector{
 					Key:      "invalid",
 					Optional: util.BoolPtr(false),
@@ -519,10 +518,10 @@ func TestSetFeedURIAndHeaderWithConfigMapOptionalNotSpecified(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := testGlobalThreatFeed.DeepCopy()
-	f.Spec.Pull.HTTP.Headers = []v32.HTTPHeader{
+	f.Spec.Pull.HTTP.Headers = []v3.HTTPHeader{
 		{
 			Name: "Header",
-			ValueFrom: &v32.HTTPHeaderSource{
+			ValueFrom: &v3.HTTPHeaderSource{
 				ConfigMapKeyRef: &v12.ConfigMapKeySelector{
 					Key: "invalid",
 				},
@@ -554,10 +553,10 @@ func TestSetFeedURIAndHeaderWithSecretOptional(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := testGlobalThreatFeed.DeepCopy()
-	f.Spec.Pull.HTTP.Headers = []v32.HTTPHeader{
+	f.Spec.Pull.HTTP.Headers = []v3.HTTPHeader{
 		{
 			Name: "Header",
-			ValueFrom: &v32.HTTPHeaderSource{
+			ValueFrom: &v3.HTTPHeaderSource{
 				SecretKeyRef: &v12.SecretKeySelector{
 					Key:      "invalid",
 					Optional: util.BoolPtr(true),
@@ -578,10 +577,10 @@ func TestSetFeedURIAndHeaderWithSecretNotOptional(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := testGlobalThreatFeed.DeepCopy()
-	f.Spec.Pull.HTTP.Headers = []v32.HTTPHeader{
+	f.Spec.Pull.HTTP.Headers = []v3.HTTPHeader{
 		{
 			Name: "Header",
-			ValueFrom: &v32.HTTPHeaderSource{
+			ValueFrom: &v3.HTTPHeaderSource{
 				SecretKeyRef: &v12.SecretKeySelector{
 					Key:      "invalid",
 					Optional: util.BoolPtr(false),
@@ -602,10 +601,10 @@ func TestSetFeedURIAndHeaderWithSecretOptionalNotSpecified(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := testGlobalThreatFeed.DeepCopy()
-	f.Spec.Pull.HTTP.Headers = []v32.HTTPHeader{
+	f.Spec.Pull.HTTP.Headers = []v3.HTTPHeader{
 		{
 			Name: "Header",
-			ValueFrom: &v32.HTTPHeaderSource{
+			ValueFrom: &v3.HTTPHeaderSource{
 				SecretKeyRef: &v12.SecretKeySelector{
 					Key: "invalid",
 				},

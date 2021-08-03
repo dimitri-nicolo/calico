@@ -16,8 +16,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"

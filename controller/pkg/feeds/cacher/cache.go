@@ -4,8 +4,8 @@ package cacher
 
 import (
 	"context"
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	clientV3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientV3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

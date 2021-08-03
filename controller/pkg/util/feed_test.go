@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/gomega"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (
@@ -19,17 +19,17 @@ var (
 			Name:      "mock",
 			Namespace: FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format: v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format: v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:    "http://mock.feed/v1",
 				},
 			},
@@ -54,7 +54,7 @@ func TestParseFeedDurationInvalidPeriod(t *testing.T) {
 	f.Spec.Pull.Period = "h"
 
 	period := ParseFeedDuration(f)
-	g.Expect(period).Should(BeNumerically("==", v32.DefaultPullPeriod))
+	g.Expect(period).Should(BeNumerically("==", v3.DefaultPullPeriod))
 }
 
 func TestParseFeedDurationEmptyPeriod(t *testing.T) {
@@ -65,7 +65,7 @@ func TestParseFeedDurationEmptyPeriod(t *testing.T) {
 
 	period := ParseFeedDuration(f)
 
-	g.Expect(period).Should(BeNumerically("==", v32.DefaultPullPeriod))
+	g.Expect(period).Should(BeNumerically("==", v3.DefaultPullPeriod))
 }
 
 func TestParseFeedDurationNilPull(t *testing.T) {
@@ -93,13 +93,13 @@ func TestFeedNeedsRestart(t *testing.T) {
 	emptyFormat := testGlobalThreatFeed.DeepCopy()
 	emptyFormat.Spec.Pull.HTTP.Format.NewlineDelimited = nil
 	jsonFormat := emptyFormat.DeepCopy()
-	jsonFormat.Spec.Pull.HTTP.Format.JSON = &v32.ThreatFeedFormatJSON{Path: "$."}
+	jsonFormat.Spec.Pull.HTTP.Format.JSON = &v3.ThreatFeedFormatJSON{Path: "$."}
 	jsonFormat2 := emptyFormat.DeepCopy()
-	jsonFormat2.Spec.Pull.HTTP.Format.JSON = &v32.ThreatFeedFormatJSON{Path: "$.foo"}
+	jsonFormat2.Spec.Pull.HTTP.Format.JSON = &v3.ThreatFeedFormatJSON{Path: "$.foo"}
 	csvFormat := emptyFormat.DeepCopy()
-	csvFormat.Spec.Pull.HTTP.Format.CSV = &v32.ThreatFeedFormatCSV{FieldNum: UintPtr(1)}
+	csvFormat.Spec.Pull.HTTP.Format.CSV = &v3.ThreatFeedFormatCSV{FieldNum: UintPtr(1)}
 	csvFormat2 := emptyFormat.DeepCopy()
-	csvFormat2.Spec.Pull.HTTP.Format.CSV = &v32.ThreatFeedFormatCSV{FieldNum: UintPtr(2)}
+	csvFormat2.Spec.Pull.HTTP.Format.CSV = &v3.ThreatFeedFormatCSV{FieldNum: UintPtr(2)}
 	noGlobalNetworkSet := testGlobalThreatFeed.DeepCopy()
 	noGlobalNetworkSet.Spec.GlobalNetworkSet = nil
 

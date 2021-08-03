@@ -4,22 +4,24 @@ package cacher
 
 import (
 	"context"
-	. "github.com/onsi/gomega"
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/calico"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	. "github.com/onsi/gomega"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/calico"
 )
 
 func TestGlobalThreatFeedCache_GetCachedGlobalThreatFeed(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	name := "test-feed"
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	globalThreatFeed.SetName(name)
 	clientInterface := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: globalThreatFeed,
@@ -40,7 +42,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeed(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	name := "test-feed"
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	clientInterface := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: globalThreatFeed,
 	}
@@ -61,7 +63,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeed(t *testing.T) {
 		wg.Done()
 	}()
 
-	var cachedGlobalThreatFeed *apiV3.GlobalThreatFeed
+	var cachedGlobalThreatFeed *v3.GlobalThreatFeed
 	go func() {
 		time.Sleep(time.Second)
 		cachedGlobalThreatFeed = feedCacher.GetGlobalThreatFeed().GlobalThreatFeed
@@ -76,7 +78,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedConcurrently(t *testi
 	g := NewGomegaWithT(t)
 
 	name := "test-feed"
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	globalThreatFeed.SetName(name)
 	clientInterface := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: globalThreatFeed,
@@ -118,7 +120,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatus(t *testing.T) 
 	g := NewGomegaWithT(t)
 
 	name := "test-feed"
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	clientInterface := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: globalThreatFeed,
 	}
@@ -130,7 +132,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatus(t *testing.T) 
 	defer feedCacher.Close()
 
 	now := time.Now()
-	errorConditions := []v3.ErrorCondition {{Type: "testErrType1", Message: "testErrMessage1"}, {Type: "testErrType2", Message: "testErrMessage2"}}
+	errorConditions := []v3.ErrorCondition{{Type: "testErrType1", Message: "testErrMessage1"}, {Type: "testErrType2", Message: "testErrMessage2"}}
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -147,7 +149,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatus(t *testing.T) 
 		feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
 	}()
 
-	var cachedGlobalThreatFeed *apiV3.GlobalThreatFeed
+	var cachedGlobalThreatFeed *v3.GlobalThreatFeed
 	go func() {
 		time.Sleep(time.Second)
 		cachedGlobalThreatFeed = feedCacher.GetGlobalThreatFeed().GlobalThreatFeed
@@ -164,7 +166,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatusConcurrently(t 
 	g := NewGomegaWithT(t)
 
 	name := "test-feed"
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	clientInterface := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: globalThreatFeed,
 	}
@@ -177,7 +179,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatusConcurrently(t 
 
 	now := time.Now()
 	oneMinuteAgo := now.Add(-1 * time.Minute)
-	errorConditions := []v3.ErrorCondition {{Type: "testErrType1", Message: "testErrMessage1"}, {Type: "testErrType2", Message: "testErrMessage2"}}
+	errorConditions := []v3.ErrorCondition{{Type: "testErrType1", Message: "testErrMessage1"}, {Type: "testErrType2", Message: "testErrMessage2"}}
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)

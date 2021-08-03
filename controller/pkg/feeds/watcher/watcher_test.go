@@ -10,8 +10,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
@@ -146,19 +145,19 @@ func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -206,14 +205,14 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "DomainNameSet",
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -261,18 +260,18 @@ func TestWatcher_startFeed_defaultcontent(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+		Spec: v3.GlobalThreatFeedSpec{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -315,9 +314,9 @@ func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
@@ -356,14 +355,14 @@ func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{},
+			Pull: &v3.Pull{},
 		},
 	}
 
@@ -398,7 +397,7 @@ func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "DomainNameSet",
 		},
 	}
@@ -434,9 +433,9 @@ func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "DomainNameSet",
-			Pull:    &v32.Pull{},
+			Pull:    &v3.Pull{},
 		},
 	}
 
@@ -471,19 +470,19 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -518,19 +517,19 @@ func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "DomainNameSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -578,19 +577,19 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -619,19 +618,19 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -684,19 +683,19 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -751,7 +750,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
 		},
 	}
@@ -781,15 +780,15 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 	fw.searcher = searcher
 
 	f2 := f.DeepCopy()
-	f2.Spec.Pull = &v32.Pull{
+	f2.Spec.Pull = &v3.Pull{
 		Period: "12h",
-		HTTP: &v32.HTTPPull{
-			Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+		HTTP: &v3.HTTPPull{
+			Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 			URL:     "http://mock.feed/v1",
-			Headers: []v32.HTTPHeader{},
+			Headers: []v3.HTTPHeader{},
 		},
 	}
-	f2.Spec.GlobalNetworkSet = &v32.GlobalNetworkSetSync{
+	f2.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{
 		Labels: map[string]string{"level": "high"},
 	}
 
@@ -812,7 +811,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
 		},
 	}
@@ -859,19 +858,19 @@ func TestWatcher_updateFeed_IPSetToDomainNameSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -932,19 +931,19 @@ func TestWatcher_restartPuller_IPSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -989,14 +988,14 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "DomainNameSet",
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -1041,18 +1040,18 @@ func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+		Spec: v3.GlobalThreatFeedSpec{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -1097,19 +1096,19 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -1154,19 +1153,19 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},
@@ -1210,19 +1209,19 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 			Name:      "mock",
 			Namespace: util.FeedsNamespace,
 		},
-		Spec: v32.GlobalThreatFeedSpec{
+		Spec: v3.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+			GlobalNetworkSet: &v3.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",
 				},
 			},
-			Pull: &v32.Pull{
+			Pull: &v3.Pull{
 				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
+				HTTP: &v3.HTTPPull{
+					Format:  v3.ThreatFeedFormat{NewlineDelimited: &v3.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
-					Headers: []v32.HTTPHeader{},
+					Headers: []v3.HTTPHeader{},
 				},
 			},
 		},

@@ -17,12 +17,11 @@ import (
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	esClient "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	esClient "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 )
 
 const (
@@ -59,7 +58,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -87,7 +86,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "dns",
@@ -116,7 +115,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Summary:     "test alert summary ${source_namespace} ${count}",
 					Severity:    100,
 					DataSet:     "flows",
@@ -148,7 +147,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -176,7 +175,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: "test alert description ${source_namespace}/${source_name_aggr} ${max}",
 					Severity:    100,
 					DataSet:     "flows",
@@ -207,7 +206,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -237,7 +236,7 @@ var _ = Describe("GlobalAlert", func() {
 				ObjectMeta: v1.ObjectMeta{
 					Name: alertName,
 				},
-				Spec: libcalicov3.GlobalAlertSpec{
+				Spec: v3.GlobalAlertSpec{
 					Description: fmt.Sprintf("test alert: %s", alertName),
 					Severity:    100,
 					DataSet:     "flows",
@@ -258,9 +257,9 @@ var _ = Describe("GlobalAlert", func() {
 
 	Context("on error", func() {
 		It("should store only recent errors", func() {
-			var errs []libcalicov3.ErrorCondition
+			var errs []v3.ErrorCondition
 			for i := 0; i < 12; i++ {
-				errs = appendError(errs, libcalicov3.ErrorCondition{Message: fmt.Sprintf("Error %v", i)})
+				errs = appendError(errs, v3.ErrorCondition{Message: fmt.Sprintf("Error %v", i)})
 			}
 			Expect(len(errs)).Should(Equal(10))
 			Expect(errs[MaxErrorsSize-1].Message).Should(Equal("Error 11"))

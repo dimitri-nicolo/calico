@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/yalp/jsonpath"
 )

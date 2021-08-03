@@ -20,7 +20,7 @@ import (
 	"text/template"
 	"time"
 
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 

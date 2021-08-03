@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"io"
 	"net/http"
 	"net/url"

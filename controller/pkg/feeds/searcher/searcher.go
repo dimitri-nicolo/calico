@@ -5,7 +5,7 @@ package searcher
 import (
 	"context"
 	"fmt"
-	apisv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apisv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"

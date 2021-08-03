@@ -14,7 +14,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )

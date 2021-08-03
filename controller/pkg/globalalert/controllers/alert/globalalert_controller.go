@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // globalAlertController is responsible for watching GlobalAlert resource in a cluster.

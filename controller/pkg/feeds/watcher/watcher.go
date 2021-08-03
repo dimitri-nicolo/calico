@@ -9,10 +9,9 @@ import (
 	"sync"
 	"time"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v32 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v32 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -234,7 +233,7 @@ func (s *watcher) processQueue(obj interface{}) error {
 
 func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) {
 	switch f.Spec.Content {
-	case libcalicov3.ThreatFeedContentDomainNameSet:
+	case v3.ThreatFeedContentDomainNameSet:
 		s.startFeedWatcherDomains(ctx, f)
 	default:
 		// Note: ThreatFeedContentIPset is the default
@@ -253,8 +252,8 @@ func (s *watcher) startFeedWatcherIP(ctx context.Context, f *v3.GlobalThreatFeed
 	feedCacher.Run(ctx)
 
 	fw := feedWatcher{
-		feed:     fCopy,
-		searcher: searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
+		feed:       fCopy,
+		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
 		feedCacher: feedCacher,
 	}
 
@@ -286,8 +285,8 @@ func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThrea
 	feedCacher.Run(ctx)
 
 	fw := feedWatcher{
-		feed:     fCopy,
-		searcher: searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events),
+		feed:       fCopy,
+		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events),
 		feedCacher: feedCacher,
 	}
 
@@ -313,11 +312,11 @@ func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.Gl
 	fw.feed = newFeed.DeepCopy()
 
 	// Has it changed Content?
-	oldContent := libcalicov3.ThreatFeedContentIPset // the default
+	oldContent := v3.ThreatFeedContentIPset // the default
 	if oldFeed.Spec.Content != "" {
 		oldContent = oldFeed.Spec.Content
 	}
-	newContent := libcalicov3.ThreatFeedContentIPset
+	newContent := v3.ThreatFeedContentIPset
 	if newFeed.Spec.Content != "" {
 		newContent = newFeed.Spec.Content
 	}
@@ -367,7 +366,7 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
 		switch fw.feed.Spec.Content {
-		case libcalicov3.ThreatFeedContentDomainNameSet:
+		case v3.ThreatFeedContentDomainNameSet:
 			fw.puller = puller.NewDomainNameSetHTTPPuller(fw.feed, s.dnSet, s.configMapClient, s.secretsClient, s.httpClient, s.dnsController)
 		default:
 			// Note: ThreatFeedContentIPset is the default

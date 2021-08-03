@@ -7,10 +7,8 @@ import (
 	"reflect"
 	"time"
 
-	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -126,6 +124,6 @@ func (a *Alert) updateStatus(ctx context.Context) error {
 }
 
 // EqualAlertSpec does reflect.DeepEqual on give spec and cached alert spec.
-func (a *Alert) EqualAlertSpec(spec libcalicov3.GlobalAlertSpec) bool {
+func (a *Alert) EqualAlertSpec(spec v3.GlobalAlertSpec) bool {
 	return reflect.DeepEqual(a.alert.Spec, spec)
 }

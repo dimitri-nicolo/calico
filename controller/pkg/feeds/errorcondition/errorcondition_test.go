@@ -1,20 +1,21 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2021 Tigera Inc. All rights reserved.
 
 package errorcondition
 
 import (
 	"fmt"
-	. "github.com/onsi/gomega"
-	apiV3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"reflect"
 	"testing"
+
+	. "github.com/onsi/gomega"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func TestErrorCondition_AddError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	AddError(&globalThreatFeed.Status, "testErrType", fmt.Errorf("testErrMessage"))
 
 	g.Expect(len(globalThreatFeed.Status.ErrorConditions)).Should(Equal(1))
@@ -25,22 +26,22 @@ func TestErrorCondition_AddError(t *testing.T) {
 func TestErrorCondition_AddErrorOverMaxErrorLimit(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
-	for i := 0; i < MaxErrors+ 1; i++ {
+	globalThreatFeed := &v3.GlobalThreatFeed{}
+	for i := 0; i < MaxErrors+1; i++ {
 		AddError(&globalThreatFeed.Status, fmt.Sprintf("testErrType-%d", i), fmt.Errorf("testErrMessage-%d", i))
 	}
 
 	g.Expect(len(globalThreatFeed.Status.ErrorConditions)).Should(Equal(MaxErrors))
 	for i := 0; i < MaxErrors; i++ {
-		g.Expect(globalThreatFeed.Status.ErrorConditions[i].Type).Should(Equal(fmt.Sprintf("testErrType-%d", i + 1)))
-		g.Expect(globalThreatFeed.Status.ErrorConditions[i].Message).Should(Equal(fmt.Sprintf("testErrMessage-%d", i + 1)))
+		g.Expect(globalThreatFeed.Status.ErrorConditions[i].Type).Should(Equal(fmt.Sprintf("testErrType-%d", i+1)))
+		g.Expect(globalThreatFeed.Status.ErrorConditions[i].Message).Should(Equal(fmt.Sprintf("testErrMessage-%d", i+1)))
 	}
 }
 
 func TestErrorCondition_ClearError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	errorConditions := make([]v3.ErrorCondition, 0)
 	errorConditions = append(errorConditions,
 		v3.ErrorCondition{Type: "testErrType-1", Message: "testErrMessage-1"},
@@ -58,7 +59,7 @@ func TestErrorCondition_ClearError(t *testing.T) {
 func TestErrorCondition_ClearNonExistentError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	globalThreatFeed := &apiV3.GlobalThreatFeed{}
+	globalThreatFeed := &v3.GlobalThreatFeed{}
 	errorConditions := make([]v3.ErrorCondition, 0)
 	errorConditions = append(errorConditions,
 		v3.ErrorCondition{Type: "testErrType-1", Message: "testErrMessage-1"},
