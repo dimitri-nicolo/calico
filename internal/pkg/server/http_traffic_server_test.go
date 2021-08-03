@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package server_test
 
@@ -14,8 +14,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/apiserver/pkg/authentication"
-	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"

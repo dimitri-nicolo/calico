@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"

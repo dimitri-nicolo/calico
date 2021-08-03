@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package server_test
 
@@ -10,11 +10,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	apiv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	clientv3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"k8s.io/client-go/kubernetes"
 
@@ -48,7 +48,7 @@ import (
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/pkg/tunnel"
 
-	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
