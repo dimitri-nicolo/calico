@@ -15,7 +15,7 @@ Get visibility into the network activity at the process level using {{site.prodn
 
 ### Privileges
 
-For full functionality, this feature requires the `{{site.noderunning}}` `Daemonset` to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
+For full functionality, this feature requires the `{{site.noderunning}}` `DaemonSet` to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
 
 ### Concepts
 
@@ -23,9 +23,9 @@ For full functionality, this feature requires the `{{site.noderunning}}` `Daemon
 
 eBPF is a Linux kernel technology that allows safe mini-programs to be attached to various hooks inside the kernel. To collect the path and arguments of short-lived processes, this feature uses an eBPF kprobe program.
 
-#### Reading from /proc/pid
+#### Host's PID namespace
 
-For processes which were spawned before kprobes are attached, path and arguments are read from /proc/pid/cmdline.
+For long-lived processes, path and arguments are read from `/proc/pid/cmdline`.  This requires access to the host's PID namespace.  If the access is not available then the process path and arguments will only be captured (by the eBPF kprobes) for newly-created processes.
 
 ### Before you begin
 
@@ -43,7 +43,7 @@ using the command:
  kubectl patch logcollector.operator.tigera.io tigera-secure --type merge -p '{"spec":{"collectProcessPath":"Enabled"}}'
 ```
 
-Enabling/Disabling collectProcessPath causes a rolling update of the `{{site.noderunning}}`.
+Enabling/Disabling collectProcessPath causes a rolling update of the `{{site.noderunning}} DaemonSet`.
 
 #### View process path and arguments in flow logs using Kibana.
 
