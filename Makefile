@@ -16,7 +16,7 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_LMA_PROJECT_ID) $(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
-API_REPO=github.com/tigera/ap
+API_REPO=github.com/tigera/api
 
 API_SERVER_IMAGE      ?=tigera/cnx-apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
