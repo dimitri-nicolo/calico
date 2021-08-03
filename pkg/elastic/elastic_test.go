@@ -10,13 +10,25 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/lma/pkg/api"
 	. "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/list"
 )
+
+// NewNetworkPolicyList creates a new (zeroed) NetworkPolicyList struct with the TypeMetadata initialised to the current
+// version.
+// This is defined locally as it's a convenience method that is not widely used.
+func NewNetworkPolicyList() *apiv3.NetworkPolicyList {
+	return &apiv3.NetworkPolicyList{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       apiv3.KindNetworkPolicyList,
+			APIVersion: apiv3.GroupVersionCurrent,
+		},
+	}
+}
 
 type Resetable interface {
 	Reset()
@@ -42,7 +54,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 	It("should store and retrieve lists properly", func() {
 		By("storing a network policy list")
 		npResList := &list.TimestampedResourceList{
-			ResourceList:              apiv3.NewNetworkPolicyList(),
+			ResourceList:              NewNetworkPolicyList(),
 			RequestStartedTimestamp:   metav1.Time{Time: ts.Add(time.Minute)},
 			RequestCompletedTimestamp: metav1.Time{Time: ts.Add(time.Minute)},
 		}

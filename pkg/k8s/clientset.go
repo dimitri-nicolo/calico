@@ -15,8 +15,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/transport"
 
-	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
-	projectcalicov3 "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const (

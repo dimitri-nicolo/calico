@@ -6,7 +6,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Helper provides a set of functions to provide access to index-specific data. This hides

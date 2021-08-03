@@ -4,7 +4,7 @@ package api
 import (
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 var (

@@ -9,8 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/lma/pkg/k8s"
 )
@@ -21,7 +20,7 @@ func PerformAuthorizationReview(
 ) ([]v3.AuthorizedResourceVerbs, error) {
 	ar, err := client.ProjectcalicoV3().AuthorizationReviews().Create(
 		ctx,
-		&apiv3.AuthorizationReview{Spec: v3.AuthorizationReviewSpec{
+		&v3.AuthorizationReview{Spec: v3.AuthorizationReviewSpec{
 			ResourceAttributes: attr,
 		}},
 		metav1.CreateOptions{},
