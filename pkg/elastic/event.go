@@ -12,7 +12,7 @@ import (
 
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	api "github.com/tigera/lma/pkg/api"
 )

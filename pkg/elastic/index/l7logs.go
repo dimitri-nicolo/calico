@@ -9,7 +9,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
 
 	"github.com/tigera/lma/pkg/httputils"

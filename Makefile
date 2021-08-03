@@ -3,6 +3,7 @@ GO_BUILD_VER    ?= v0.53
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 APISERVER_REPO   = github.com/tigera/apiserver
+API_REPO         = github.com/tigera/api
 LOCAL_CHECKS     = mod-download
 
 ORGANIZATION=tigera
@@ -94,7 +95,7 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-apiserver-pin
+update-pins: guard-ssh-forwarding-bug update-api-repo replace-libcalico-pin replace-apiserver-pin
 
 #############################################################################
 # Testing
