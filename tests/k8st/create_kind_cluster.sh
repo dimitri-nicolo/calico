@@ -134,6 +134,8 @@ kubeadmConfigPatches:
   metadata:
     name: config
   mode: ipvs
+  conntrack:
+    maxPerCore: 0
 EOF
     else
 	${KIND} create cluster --config - <<EOF
