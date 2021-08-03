@@ -172,6 +172,7 @@ LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
 LIBCALICO_REPO=github.com/tigera/libcalico-go-private
 TYPHA_REPO=github.com/tigera/typha-private
+API_REPO=github.com/tigera/api
 
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
