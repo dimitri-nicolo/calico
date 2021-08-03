@@ -7,7 +7,7 @@ canonical_url: /visibility/elastic/flow/processpath
 
 ### Big picture
 
-Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from `/proc/pid/cmdline` or obtained using eBPF kprobes and add them to flow logs.
+Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from `/proc/pid/cmdline` or obtained using eBPF kprobes and they are added to flow logs.
 
 ### Value
 
@@ -15,7 +15,7 @@ Get visibility into the network activity at the process level using {{site.prodn
 
 ### Privileges
 
-For full functionality, this feature requires the calico-node daemonset to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
+For full functionality, this feature requires the `{{site.noderunning}}` `Daemonset` to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
 
 ### Concepts
 
@@ -43,7 +43,7 @@ using the command:
  kubectl patch logcollector.operator.tigera.io tigera-secure --type merge -p '{"spec":{"collectProcessPath":"Enabled"}}'
 ```
 
-Enabling/Disabling collectProcessPath causes a rolling update of the `calico-node`.
+Enabling/Disabling collectProcessPath causes a rolling update of the `{{site.noderunning}}`.
 
 #### View process path and arguments in flow logs using Kibana.
 
