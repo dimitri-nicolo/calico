@@ -246,7 +246,7 @@ echo
 # Apply the enterprise license.
 # FIXME(karthik): Applying the enterprise license here since the test written don't test for invalid or no license.
 # Once such tests are added, this will have to move into the test itself.
-${kubectl} exec -i -n kube-system calicoctl -- /calicoctl apply -f - < ${TSEE_TEST_LICENSE}
+${kubectl} exec -i -n kube-system calicoctl -- /calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
 
 function test_connection() {
     local svc="webserver-ipv$1"
