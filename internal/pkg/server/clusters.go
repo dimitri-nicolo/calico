@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/pkg/errors"
 
@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	apiv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	vtls "github.com/tigera/voltron/pkg/tls"
