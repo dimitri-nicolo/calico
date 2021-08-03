@@ -36,6 +36,21 @@ var _ = Describe("FlowMeta construction from MetricUpdate", func() {
 	)
 })
 
+func consists(actual, expected []FlowProcessReportedStats) bool {
+	count := 0
+	for _, expflow := range expected {
+		for _, actFlow := range actual {
+			if compareProcessReportedStats(expflow, actFlow) {
+				count = count + 1
+			}
+		}
+	}
+	if count == len(expected) {
+		return true
+	}
+	return false
+}
+
 var _ = Describe("Flow log types tests", func() {
 	Context("FlowExtraRef from MetricUpdate", func() {
 		It("generates the correct flowExtrasRef", func() {
@@ -60,9 +75,13 @@ var _ = Describe("Flow log types tests", func() {
 	})
 
 	Context("FlowStatsByProcess from MetricUpdate", func() {
+		arg1List := []string{"arg1"}
+		arg12List := []string{"arg1", "arg2"}
+		arg3List := []string{"arg3"}
+		emptyList := []string{"-"}
 		It("stores the correct FlowStatsByProcess when storing process is enabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2)
+			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2, 5)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -71,6 +90,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "1234",
 					NumProcessIDs:   1,
+					ProcessArgs:     arg1List,
+					NumProcessArgs:  1,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -95,9 +116,9 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
-			By("aggregating the metric update with same process name but different process ID")
+			By("aggregating the metric update with same process name but different process ID and args")
 			fsp.aggregateFlowStatsByProcess(&muWithSameProcessNameDifferentID)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
@@ -107,6 +128,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "*",
 					NumProcessIDs:   2,
+					ProcessArgs:     arg12List,
+					NumProcessArgs:  2,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             2,
 						PacketsOut:            0,
@@ -131,7 +154,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(2))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("aggregating the metric update with a different process name and ID")
 			fsp.aggregateFlowStatsByProcess(&muWithDifferentProcessNameDifferentID)
@@ -144,6 +167,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "*",
 					NumProcessIDs:   2,
+					ProcessArgs:     arg12List,
+					NumProcessArgs:  2,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             2,
 						PacketsOut:            0,
@@ -171,6 +196,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "23456",
 					NumProcessIDs:   1,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -195,7 +222,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(3))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("aggregating the metric update with same process name with update type expire")
 			fsp.aggregateFlowStatsByProcess(&muWithProcessNameExpire)
@@ -208,6 +235,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "*",
 					NumProcessIDs:   2,
+					ProcessArgs:     arg12List,
+					NumProcessArgs:  2,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             2,
 						PacketsOut:            0,
@@ -235,6 +264,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "23456",
 					NumProcessIDs:   1,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -259,7 +290,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(2))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("cleaning up the stats for the process name")
 			fsp.aggregateFlowStatsByProcess(&muWithSameProcessNameDifferentIDExpire)
@@ -274,6 +305,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "23456",
 					NumProcessIDs:   1,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             0,
 						PacketsOut:            0,
@@ -289,7 +322,7 @@ var _ = Describe("Flow log types tests", func() {
 			}
 			By("Flow logs continues to contain process ID")
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("Adding a new metric update after a reset, the new process ID information is exported")
 			fsp.aggregateFlowStatsByProcess(&muWithProcessName2)
@@ -301,6 +334,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "9876",
 					NumProcessIDs:   1,
+					NumProcessArgs:  1,
+					ProcessArgs:     arg3List,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -325,12 +360,12 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 		})
 
 		It("stores the correct FlowStatsByProcess with including process information is disabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(&muWithEndpointMeta, false, 0)
+			fsp := NewFlowStatsByProcess(&muWithEndpointMeta, false, 0, 5)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -339,6 +374,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 0,
 					ProcessID:       "-",
 					NumProcessIDs:   0,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -363,7 +400,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("aggregating the metric update")
 			fsp.aggregateFlowStatsByProcess(&muWithEndpointMetaWithService)
@@ -375,6 +412,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 0,
 					ProcessID:       "-",
 					NumProcessIDs:   0,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             2,
 						PacketsOut:            0,
@@ -399,7 +438,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("aggregating the metric update with update type expire")
 			fsp.aggregateFlowStatsByProcess(&muWithEndpointMetaExpire)
@@ -411,6 +450,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 0,
 					ProcessID:       "-",
 					NumProcessIDs:   0,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             2,
 						PacketsOut:            0,
@@ -435,7 +476,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(0))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("cleaning up the stats for the process name")
 			remainingActiveFlowsCount := fsp.gc()
@@ -445,7 +486,7 @@ var _ = Describe("Flow log types tests", func() {
 
 		It("limits the process name information when converting FlowStatsByProcess when process information collection is enabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2)
+			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2, 5)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -454,6 +495,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "1234",
 					NumProcessIDs:   1,
+					ProcessArgs:     arg1List,
+					NumProcessArgs:  1,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -478,7 +521,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("aggregating the metric update with different process name")
 			fsp.aggregateFlowStatsByProcess(&muWithProcessName2)
@@ -491,6 +534,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "1234",
 					NumProcessIDs:   1,
+					ProcessArgs:     arg1List,
+					NumProcessArgs:  1,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -518,6 +563,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "9876",
 					NumProcessIDs:   1,
+					ProcessArgs:     arg3List,
+					NumProcessArgs:  1,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -542,7 +589,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(2))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 			By("aggregating the metric update with a two additional process names")
 			fsp.aggregateFlowStatsByProcess(&muWithProcessName3)
@@ -558,6 +605,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "1234",
 					NumProcessIDs:   1,
+					ProcessArgs:     arg1List,
+					NumProcessArgs:  1,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -585,6 +634,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 1,
 					ProcessID:       "9876",
 					NumProcessIDs:   1,
+					ProcessArgs:     arg3List,
+					NumProcessArgs:  1,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             1,
 						PacketsOut:            0,
@@ -612,6 +663,8 @@ var _ = Describe("Flow log types tests", func() {
 					NumProcessNames: 2,
 					ProcessID:       "*",
 					NumProcessIDs:   2,
+					ProcessArgs:     emptyList,
+					NumProcessArgs:  0,
 					FlowReportedStats: FlowReportedStats{
 						PacketsIn:             2,
 						PacketsOut:            0,
@@ -636,7 +689,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(4))
-			Expect(fsp.toFlowProcessReportedStats()).Should(ConsistOf(expectedReportedStats))
+			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
 
 		})
 	})

@@ -172,13 +172,13 @@ type FlowSpec struct {
 	resetAggrData bool
 }
 
-func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit int) *FlowSpec {
+func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit, processArgsLimit int) *FlowSpec {
 	// NewFlowStatsByProcess potentially needs to update fields in mu *MetricUpdate hence passing it by pointer
 	// TODO: reconsider/refactor the inner functions called in NewFlowStatsByProcess to avoid above scenario
 	return &FlowSpec{
 		FlowLabels:         NewFlowLabels(*mu),
 		FlowPolicies:       NewFlowPolicies(*mu),
-		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit),
+		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit),
 		flowExtrasRef:      NewFlowExtrasRef(*mu, maxOriginalIPsSize),
 	}
 }
@@ -501,7 +501,8 @@ type FlowStats struct {
 	FlowReportedStats
 	FlowReportedTCPStats
 	flowReferences
-	processIDs set.Set
+	processIDs  set.Set
+	processArgs set.Set
 
 	// Reset Process IDs  on the next metric update aggregation cycle. this ensures that we only clear
 	// process ID information when we receive a new metric update.
@@ -526,6 +527,11 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	pids := set.New()
 	pids.Add(strconv.Itoa(mu.processID))
 
+	processArgs := set.New()
+	if mu.processArgs != "" {
+		processArgs.Add(mu.processArgs)
+	}
+
 	flowStats := FlowStats{
 		FlowReportedStats: FlowReportedStats{
 			NumFlows:              flowsRefs.Len(),
@@ -548,7 +554,8 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 			// flows associated with the flowMeta
 			flowsRefsActive: flowsRefsActive,
 		},
-		processIDs: pids,
+		processIDs:  pids,
+		processArgs: processArgs,
 	}
 	// Here we check if the metric update has a valid TCP stats.
 	// If the TCP stats is not valid (example: config is disabled),
@@ -637,6 +644,7 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 		// Only clear process IDs when aggregating a new metric update and after
 		// a prior export.
 		f.processIDs.Clear()
+		f.processArgs.Clear()
 		f.resetProcessIDs = false
 	}
 	switch {
@@ -649,6 +657,9 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 	}
 	f.flowsRefs.Add(mu.tuple)
 	f.processIDs.Add(strconv.Itoa(mu.processID))
+	if mu.processArgs != "" {
+		f.processArgs.Add(mu.processArgs)
+	}
 
 	f.NumFlows = f.flowsRefs.Len()
 	f.NumFlowsStarted = f.flowsStartedRefs.Len()
@@ -692,20 +703,22 @@ type FlowStatsByProcess struct {
 	statsByProcessName map[string]*FlowStats
 	// processNames stores the order in which process information is tracked and aggrgated.
 	// this is done so that when we export flow logs, we do so in the order they appeared.
-	processNames   *list.List
-	includeProcess bool
-	processLimit   int
+	processNames     *list.List
+	includeProcess   bool
+	processLimit     int
+	processArgsLimit int
 	// TODO(doublek): Track the most significant stats and show them as part
 	// of the flows that are included in the process limit. Current processNames
 	// only tracks insertion order.
 }
 
-func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit int) FlowStatsByProcess {
+func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, processArgsLimit int) FlowStatsByProcess {
 	f := FlowStatsByProcess{
 		statsByProcessName: make(map[string]*FlowStats),
 		processNames:       list.New(),
 		includeProcess:     includeProcess,
 		processLimit:       processLimit,
+		processArgsLimit:   processArgsLimit,
 	}
 	f.aggregateFlowStatsByProcess(mu)
 	return f
@@ -715,6 +728,7 @@ func (f *FlowStatsByProcess) aggregateFlowStatsByProcess(mu *MetricUpdate) {
 	if !f.includeProcess || mu.processName == "" {
 		mu.processName = flowLogFieldNotIncluded
 		mu.processID = 0
+		mu.processArgs = flowLogFieldNotIncluded
 	}
 	if stats, ok := f.statsByProcessName[mu.processName]; ok {
 		log.Debugf("Process stats found %+v for metric update %+v", stats, mu)
@@ -779,6 +793,7 @@ func (f *FlowStatsByProcess) gc() int {
 // toFlowProcessReportedStats returns atmost processLimit + 1 entry slice containing
 // flow stats grouped by process information.
 func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedStats {
+	var pArgs []string
 	if !f.includeProcess {
 		// If we are not configured to include process information then
 		// we expect to only have a single entry with no process information
@@ -790,6 +805,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				NumProcessNames:      0,
 				ProcessID:            flowLogFieldNotIncluded,
 				NumProcessIDs:        0,
+				ProcessArgs:          []string{"-"},
+				NumProcessArgs:       0,
 				FlowReportedStats:    stats.FlowReportedStats,
 				FlowReportedTCPStats: stats.FlowReportedTCPStats,
 			}
@@ -805,6 +822,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 	reportedStats := make([]FlowProcessReportedStats, 0, f.processLimit+1)
 	numProcessNames := 0
 	numPids := 0
+	numProcessArgs := 0
 	appendAggregatedStats := false
 	aggregatedReportedStats := FlowReportedStats{}
 	aggregatedReportedTCPStats := FlowReportedTCPStats{}
@@ -832,6 +850,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				NumProcessNames:      0,
 				ProcessID:            flowLogFieldNotIncluded,
 				NumProcessIDs:        0,
+				ProcessArgs:          []string{"-"},
+				NumProcessArgs:       0,
 				FlowReportedStats:    stats.FlowReportedStats,
 				FlowReportedTCPStats: stats.FlowReportedTCPStats,
 			}
@@ -861,11 +881,38 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			pid = flowLogFieldAggregated
 		}
 
+		argList := func(numAllowedArgs int, stats *FlowStats) []string {
+			var aList []string
+			numProcessArgs = stats.processArgs.Len()
+			if numProcessArgs == 0 {
+				return []string{"-"}
+			}
+			if numProcessArgs == 1 || numAllowedArgs == 1 {
+				stats.processArgs.Iter(func(item interface{}) error {
+					aList = append(aList, item.(string))
+					return set.StopIteration
+				})
+			} else {
+				argCount := 0
+				stats.processArgs.Iter(func(item interface{}) error {
+					aList = append(aList, item.(string))
+					argCount = argCount + 1
+					if argCount == numAllowedArgs {
+						return set.StopIteration
+					}
+					return nil
+				})
+			}
+			return aList
+		}
+
+		pArgs = argList(f.processArgsLimit, stats)
 		// If we've reached the process limit, then start aggregating the remaining
 		// stats so that we can add one additional entry containing this information.
 		if len(reportedStats) == f.processLimit {
 			numProcessNames++
 			numPids += numPids
+			numProcessArgs += numProcessArgs
 			aggregatedReportedStats.Add(stats.FlowReportedStats)
 			appendAggregatedStats = true
 			aggregatedReportedTCPStats.Add(stats.FlowReportedTCPStats)
@@ -875,6 +922,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				NumProcessNames:      1,
 				ProcessID:            pid,
 				NumProcessIDs:        numPids,
+				ProcessArgs:          pArgs,
+				NumProcessArgs:       numProcessArgs,
 				FlowReportedStats:    stats.FlowReportedStats,
 				FlowReportedTCPStats: stats.FlowReportedTCPStats,
 			}
@@ -887,6 +936,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			NumProcessNames:      numProcessNames,
 			ProcessID:            flowLogFieldAggregated,
 			NumProcessIDs:        numPids,
+			ProcessArgs:          pArgs,
+			NumProcessArgs:       numProcessArgs,
 			FlowReportedStats:    aggregatedReportedStats,
 			FlowReportedTCPStats: aggregatedReportedTCPStats,
 		}
@@ -897,10 +948,12 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 
 // FlowProcessReportedStats contains FlowReportedStats along with process information.
 type FlowProcessReportedStats struct {
-	ProcessName     string `json:"processName"`
-	NumProcessNames int    `json:"numProcessNames"`
-	ProcessID       string `json:"processID"`
-	NumProcessIDs   int    `json:"numProcessIDs"`
+	ProcessName     string   `json:"processName"`
+	NumProcessNames int      `json:"numProcessNames"`
+	ProcessID       string   `json:"processID"`
+	NumProcessIDs   int      `json:"numProcessIDs"`
+	ProcessArgs     []string `json:"processArgs"`
+	NumProcessArgs  int      `json:"numProcessArgs"`
 	FlowReportedStats
 	FlowReportedTCPStats
 }

@@ -474,14 +474,14 @@ func (d *Data) String() string {
 		"tuple={%v}, srcEp={%v} dstEp={%v}, dstSvc={%v}, connTrackCtr={packets=%v bytes=%v}, "+
 			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
 			"origSourceIPs={ips=%v totalCount=%v}, "+
-			"sourceProcessInfo{name=%s, pid=%d}, destProcessInfo{name=%s, pid=%d} "+
+			"sourceProcessInfo{name=%s, args=%s, pid=%d}, destProcessInfo{name=%s, args=%s, pid=%d} "+
 			"TcpStats{sendCongestionwnd=%v, smoothRtt=%v, minRtt=%v, mss=%v, totalRetrans=%v, lostOut=%v, unrecoveredTO=%v}",
 		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
 		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc,
-		d.SourceProcessData().Name, d.SourceProcessData().Pid, d.DestProcessData().Name, d.DestProcessData().Pid,
-		d.TcpStats.sendCongestionWnd, d.TcpStats.smoothRtt, d.TcpStats.minRtt, d.TcpStats.mss, d.TcpStats.totalRetrans.Absolute(),
-		d.TcpStats.lostOut.Absolute(), d.TcpStats.unRecoveredRTO.Absolute())
+		d.SourceProcessData().Name, d.SourceProcessData().Arguments, d.SourceProcessData().Pid, d.DestProcessData().Name,
+		d.DestProcessData().Arguments, d.DestProcessData().Pid, d.TcpStats.sendCongestionWnd, d.TcpStats.smoothRtt,
+		d.TcpStats.minRtt, d.TcpStats.mss, d.TcpStats.totalRetrans.Absolute(), d.TcpStats.lostOut.Absolute(), d.TcpStats.unRecoveredRTO.Absolute())
 }
 
 func (d *Data) touch() {
@@ -729,14 +729,15 @@ func (d *Data) SourceProcessData() ProcessData {
 // SetSourceProcessData sets the process name and PID for the connection tuple.
 // Returns false if a process name or PID is already related to the connection tuple
 // and returns true otherwise.
-func (d *Data) SetSourceProcessData(name string, pid int) bool {
+func (d *Data) SetSourceProcessData(name, args string, pid int) bool {
 	if len(d.sourceProcessData.Name) != 0 && d.sourceProcessData.Name != name &&
 		d.sourceProcessData.Pid != 0 && d.sourceProcessData.Pid != pid {
 		return false
 	}
 	d.sourceProcessData = ProcessData{
-		Name: name,
-		Pid:  pid,
+		Name:      name,
+		Pid:       pid,
+		Arguments: args,
 	}
 	d.setDirtyFlag()
 	d.touch()
@@ -750,14 +751,15 @@ func (d *Data) DestProcessData() ProcessData {
 // SetDestProcessData sets the process name and PID for the connection tuple.
 // Returns false if a process name or PID is already related to the connection tuple
 // and returns true otherwise.
-func (d *Data) SetDestProcessData(name string, pid int) bool {
+func (d *Data) SetDestProcessData(name, args string, pid int) bool {
 	if len(d.destProcessData.Name) != 0 && d.destProcessData.Name != name &&
 		d.destProcessData.Pid != 0 && d.destProcessData.Pid != pid {
 		return false
 	}
 	d.destProcessData = ProcessData{
-		Name: name,
-		Pid:  pid,
+		Name:      name,
+		Pid:       pid,
+		Arguments: args,
 	}
 	d.setDirtyFlag()
 	d.touch()
@@ -799,6 +801,7 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 		},
 		processName: d.DestProcessData().Name,
 		processID:   d.DestProcessData().Pid,
+		processArgs: d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
@@ -839,6 +842,7 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 		},
 		processName: d.SourceProcessData().Name,
 		processID:   d.SourceProcessData().Pid,
+		processArgs: d.SourceProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
@@ -877,6 +881,7 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 		},
 		processName: d.DestProcessData().Name,
 		processID:   d.DestProcessData().Pid,
+		processArgs: d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
@@ -915,6 +920,7 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 		},
 		processName: d.SourceProcessData().Name,
 		processID:   d.SourceProcessData().Pid,
+		processArgs: d.SourceProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		metricUpdate.sendCongestionWnd = &d.TcpStats.sendCongestionWnd
@@ -959,6 +965,7 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 		isConnection:  d.isConnection,
 		processName:   d.DestProcessData().Name,
 		processID:     d.DestProcessData().Pid,
+		processArgs:   d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		mu.sendCongestionWnd = &d.TcpStats.sendCongestionWnd

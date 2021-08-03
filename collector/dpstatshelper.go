@@ -153,6 +153,7 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 				IncludeTcpStats(configParams.FlowLogsCollectTcpStats).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
+				PerFlowProcessArgsLimit(configParams.FlowLogsFilePerFlowProcessArgsLimit).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
 			fr.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
@@ -168,6 +169,7 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
+				PerFlowProcessArgsLimit(configParams.FlowLogsFilePerFlowProcessArgsLimit).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
 			fr.AddAggregator(cad, []string{FlowLogsFileDispatcherName})

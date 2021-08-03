@@ -29,6 +29,7 @@ type FlowLogAggregator interface {
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
 	PerFlowProcessLimit(limit int) FlowLogAggregator
+	PerFlowProcessArgsLimit(limit int) FlowLogAggregator
 	FeedUpdate(*MetricUpdate) error
 	HasAggregationLevelChanged() bool
 	GetCurrentAggregationLevel() FlowAggregationKind
@@ -75,20 +76,21 @@ func init() {
 // The flowLogAggregator is responsible for creating, aggregating, and storing
 // aggregated flow logs until the flow logs are exported.
 type flowLogAggregator struct {
-	current              FlowAggregationKind
-	previous             FlowAggregationKind
-	initial              FlowAggregationKind
-	flowStore            map[FlowMeta]*flowEntry
-	flMutex              sync.RWMutex
-	includeLabels        bool
-	includePolicies      bool
-	includeService       bool
-	includeProcess       bool
-	maxOriginalIPsSize   int
-	aggregationStartTime time.Time
-	handledAction        rules.RuleAction
-	perFlowProcessLimit  int
-	includeTcpStats      bool
+	current                 FlowAggregationKind
+	previous                FlowAggregationKind
+	initial                 FlowAggregationKind
+	flowStore               map[FlowMeta]*flowEntry
+	flMutex                 sync.RWMutex
+	includeLabels           bool
+	includePolicies         bool
+	includeService          bool
+	includeProcess          bool
+	maxOriginalIPsSize      int
+	aggregationStartTime    time.Time
+	handledAction           rules.RuleAction
+	perFlowProcessLimit     int
+	includeTcpStats         bool
+	perFlowProcessArgsLimit int
 }
 
 type flowEntry struct {
@@ -183,6 +185,11 @@ func (c *flowLogAggregator) PerFlowProcessLimit(n int) FlowLogAggregator {
 	return c
 }
 
+func (c *flowLogAggregator) PerFlowProcessArgsLimit(n int) FlowLogAggregator {
+	c.perFlowProcessArgsLimit = n
+	return c
+}
+
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
 func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	defer fa.reportFlowLogStoreMetrics()
@@ -212,7 +219,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 
 	if !ok {
 		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
-		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit)
+		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit, fa.perFlowProcessArgsLimit)
 
 		newEntry := &flowEntry{
 			spec:         spec,

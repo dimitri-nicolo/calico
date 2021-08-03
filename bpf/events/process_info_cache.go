@@ -36,11 +36,12 @@ type BPFProcessInfoCache struct {
 	eventProcessInfo  <-chan EventProtoStats
 	eventTcpStatsInfo <-chan EventTcpStats
 	processInfoC      chan collector.ProcessInfo
+	processPathCache  *BPFProcessPathCache
 }
 
 // NewBPFProcessInfoCache returns a new BPFProcessInfoCache
 func NewBPFProcessInfoCache(eventProcessInfoChan <-chan EventProtoStats, eventTcpStatsInfoChan <-chan EventTcpStats,
-	gcInterval time.Duration, entryTTL time.Duration) *BPFProcessInfoCache {
+	gcInterval time.Duration, entryTTL time.Duration, processPathCache *BPFProcessPathCache) *BPFProcessInfoCache {
 	return &BPFProcessInfoCache{
 		stopC:             make(chan struct{}),
 		eventProcessInfo:  eventProcessInfoChan,
@@ -49,10 +50,17 @@ func NewBPFProcessInfoCache(eventProcessInfoChan <-chan EventProtoStats, eventTc
 		entryTTL:          entryTTL,
 		cache:             make(map[collector.Tuple]ProcessEntry),
 		lock:              sync.RWMutex{},
+		processPathCache:  processPathCache,
 	}
 }
 
 func (r *BPFProcessInfoCache) Start() error {
+	if r.processPathCache != nil {
+		err := r.processPathCache.Start()
+		if err != nil {
+			log.WithError(err).Error("error starting processPathCache")
+		}
+	}
 	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
@@ -89,6 +97,9 @@ func (r *BPFProcessInfoCache) run() {
 }
 
 func (r *BPFProcessInfoCache) Stop() {
+	if r.processPathCache != nil {
+		r.processPathCache.Stop()
+	}
 	r.stopOnce.Do(func() {
 		close(r.stopC)
 	})
@@ -133,6 +144,13 @@ func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessI
 	defer r.lock.Unlock()
 	log.Debugf("Updating process info %+v", info)
 	t := info.Tuple
+	if r.processPathCache != nil {
+		pathInfo, ok := r.processPathCache.Lookup(info.ProcessData.Pid)
+		if ok {
+			info.ProcessData.Name = pathInfo.Path
+			info.ProcessData.Arguments = pathInfo.Args
+		}
+	}
 	entry, ok := r.cache[t]
 	if ok {
 		entry.ProcessData = info.ProcessData

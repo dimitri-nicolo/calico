@@ -693,6 +693,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
 		processInfoCache             collector.ProcessInfoCache
+		processPathInfoCache         *events.BPFProcessPathCache
 	)
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 		var err error
@@ -756,8 +757,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
 			bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
-			eventProcessPathSink = events.NewEventProcessPathSink()
-			bpfEventPoller.Register(events.TypeProcessPath, eventProcessPathSink.HandleEvent)
+			if config.FlowLogsCollectProcessPath {
+				eventProcessPathSink = events.NewEventProcessPathSink()
+				bpfEventPoller.Register(events.TypeProcessPath, eventProcessPathSink.HandleEvent)
+			}
 		}
 	}
 
@@ -1192,13 +1195,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			entryTTL := time.Second * 10
 			var eventProcessC <-chan events.EventProtoStats
 			var eventTcpC <-chan events.EventTcpStats
+			var eventProcessPathC <-chan events.ProcessPath
 			if config.FlowLogsCollectProcessInfo {
 				eventProcessC = eventProtoStatsSink.EventProtoStatsChan()
+				if config.FlowLogsCollectProcessPath {
+					eventProcessPathC = eventProcessPathSink.EventProcessPathChan()
+					processPathInfoCache = events.NewBPFProcessPathCache(eventProcessPathC, gcInterval, entryTTL*30)
+				}
 			}
 			if config.FlowLogsCollectTcpStats {
 				eventTcpC = eventTcpStatsSink.EventTcpStatsChan()
 			}
-			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, gcInterval, entryTTL)
+			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, gcInterval, entryTTL, processPathInfoCache)
 			processInfoCache = prd
 		}
 

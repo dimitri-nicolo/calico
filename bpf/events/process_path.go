@@ -5,6 +5,8 @@ package events
 import (
 	"unsafe"
 
+	"bytes"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,12 +51,16 @@ func (sink *EventProcessPathSink) HandleEvent(e Event) {
 	parsedEvent := parseEventProcessPath(e.Data())
 	var arguments string
 	for _, arg := range parsedEvent.Arguments {
-		argstr := string(arg[:])
+		argstr := string(bytes.Trim(arg[:], "\x00"))
 		if len(argstr) > 0 {
-			arguments = arguments + " " + argstr
+			if arguments == "" {
+				arguments = argstr
+			} else {
+				arguments = arguments + " " + argstr
+			}
 		}
 	}
-	filePath := string(parsedEvent.Filename[:])
+	filePath := string(bytes.Trim(parsedEvent.Filename[:], "\x00"))
 	processData := ProcessPath{
 		Pid:       int(parsedEvent.Pid),
 		Filename:  filePath,
@@ -63,7 +69,7 @@ func (sink *EventProcessPathSink) HandleEvent(e Event) {
 	if log.GetLevel() == log.DebugLevel {
 		log.WithField("event", processData).Debug("Received syscall event")
 	}
-	//sink.outChan <- processData
+	sink.outChan <- processData
 }
 
 func (sink *EventProcessPathSink) EventProcessPathChan() <-chan ProcessPath {

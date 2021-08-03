@@ -21,6 +21,8 @@ type testProcessInfo struct {
 	numProcessIDs   int
 	processID       string
 	numProcessNames int
+	processArgs     []string
+	numProcessArgs  int
 }
 
 type testTcpStats struct {
@@ -35,7 +37,7 @@ type testTcpStats struct {
 }
 
 var (
-	noProcessInfo  = testProcessInfo{"-", 0, "-", 0}
+	noProcessInfo  = testProcessInfo{"-", 0, "-", 0, []string{"-"}, 0}
 	noTcpStatsInfo = testTcpStats{
 		SendCongestionWnd: TCPWnd{Min: 0, Mean: 0},
 		SmoothRtt:         TCPRtt{Max: 0, Mean: 0},
@@ -93,8 +95,62 @@ var (
 	}
 )
 
+func checkProcessArgs(actual, expected []string, numArgs int) bool {
+	count := 0
+	actualArgSet := set.New()
+	for _, a := range actual {
+		actualArgSet.Add(a)
+	}
+	if actualArgSet.Len() != numArgs {
+		return false
+	}
+	actualArgSet.Iter(func(item interface{}) error {
+		arg := item.(string)
+		for _, e := range expected {
+			if arg == e {
+				count = count + 1
+			}
+		}
+		return nil
+	})
+	if count == numArgs {
+		return true
+	}
+	return false
+}
+
+// compareProcessReportedStats compares FlowProcessReportedStats. With process Args
+// being aggregated into a list, and the order in which these args are added of the
+// arguments is not guaranteed, explicitly iterate over the args list and compare.
+func compareProcessReportedStats(actual, expected FlowProcessReportedStats) bool {
+	count := 0
+	if actual.ProcessName == expected.ProcessName &&
+		actual.NumProcessNames == expected.NumProcessNames &&
+		actual.ProcessID == expected.ProcessID &&
+		actual.NumProcessIDs == expected.NumProcessIDs &&
+		actual.NumProcessArgs == expected.NumProcessArgs &&
+		actual.FlowReportedStats == expected.FlowReportedStats &&
+		actual.FlowReportedTCPStats == expected.FlowReportedTCPStats &&
+		len(actual.ProcessArgs) == len(expected.ProcessArgs) {
+	} else {
+		return false
+	}
+	for _, a := range actual.ProcessArgs {
+		for _, e := range expected.ProcessArgs {
+			if a == e {
+				count = count + 1
+			}
+		}
+	}
+	if count == len(expected.ProcessArgs) {
+		return true
+	}
+	return false
+}
+
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
+
 	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, dsvc FlowService, sl, dl map[string]string, fp FlowPolicies, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) {
 		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, dsvc, sl, dl, fp, fe, fpi, tcps)
 
@@ -103,9 +159,14 @@ var _ = Describe("Flow log aggregator tests", func() {
 		flNoTime.FlowMeta = fl.FlowMeta
 		flNoTime.FlowLabels = fl.FlowLabels
 		flNoTime.FlowPolicies = fl.FlowPolicies
-		flNoTime.FlowProcessReportedStats = fl.FlowProcessReportedStats
 
-		Expect(flNoTime).Should(Equal(expectedFlow))
+		var expFlowNoProc FlowLog
+		expFlowNoProc.FlowMeta = expectedFlow.FlowMeta
+		expFlowNoProc.FlowLabels = expectedFlow.FlowLabels
+		expFlowNoProc.FlowPolicies = expectedFlow.FlowPolicies
+
+		Expect(flNoTime).Should(Equal(expFlowNoProc))
+		Expect(compareProcessReportedStats(fl.FlowProcessReportedStats, expectedFlow.FlowProcessReportedStats)).Should(Equal(true))
 	}
 	expectFlowLogsMatch := func(actualFlows []*FlowLog, expectedFlows []FlowLog) {
 		By("Checking all flowlogs match")
@@ -228,6 +289,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		fpi := testProcessInfo{}
 		procNames := set.New()
 		procID := set.New()
+		procArgs := set.New()
 		processName := ""
 		processID := ""
 		for i, mu := range mus {
@@ -237,6 +299,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			}
 			procNames.Add(mu.processName)
 			procID.Add(mu.processID)
+			if mu.processArgs != "" {
+				procArgs.Add(mu.processArgs)
+			}
 		}
 
 		if procNames.Len() == 1 {
@@ -263,6 +328,22 @@ var _ = Describe("Flow log aggregator tests", func() {
 		} else {
 			fpi.processID = "*"
 			fpi.numProcessIDs = procID.Len()
+		}
+		fpi.numProcessArgs = procArgs.Len()
+		if fpi.numProcessArgs == 0 {
+			fpi.processArgs = []string{"-"}
+		} else {
+			argCount := 0
+			procArgs.Iter(func(item interface{}) error {
+				if item.(string) != "" {
+					fpi.processArgs = append(fpi.processArgs, item.(string))
+					argCount = argCount + 1
+					if argCount == 5 {
+						return set.StopIteration
+					}
+				}
+				return nil
+			})
 		}
 		return fpi
 	}
@@ -987,6 +1068,51 @@ var _ = Describe("Flow log aggregator tests", func() {
 		})
 	})
 
+	Context("Flow log aggregator process args", func() {
+		muWithProcessNameArg1 := muWithProcessName
+		muWithProcessNameArg2 := muWithProcessName
+		muWithProcessNameArg2.processArgs = "arg2"
+		muWithProcessNameArg3 := muWithProcessName
+		muWithProcessNameArg3.processArgs = "arg3"
+		muWithProcessNameArg4 := muWithProcessName
+		muWithProcessNameArg4.processArgs = "arg4"
+		muWithProcessNameArg5 := muWithProcessName
+		muWithProcessNameArg5.processArgs = "arg5"
+		muWithProcessNameArg6 := muWithProcessName
+		muWithProcessNameArg6.processArgs = "arg6"
+		It("Aggregates process args", func() {
+			By("Creating an aggregator with perflow process args limit set to default")
+			caa := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2).PerFlowProcessArgsLimit(5)
+			_ = caa.FeedUpdate(&muWithProcessNameArg1)
+			_ = caa.FeedUpdate(&muWithProcessNameArg2)
+			_ = caa.FeedUpdate(&muWithProcessNameArg3)
+			_ = caa.FeedUpdate(&muWithProcessNameArg4)
+			_ = caa.FeedUpdate(&muWithProcessNameArg5)
+			_ = caa.FeedUpdate(&muWithProcessNameArg6)
+			messages := caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog := messages[0]
+			Expect(flowLog.FlowProcessReportedStats.NumProcessArgs).Should(Equal(6))
+			expectedArgList := []string{"arg1", "arg2", "arg3", "arg4", "arg5", "arg6"}
+			Expect(checkProcessArgs(flowLog.FlowProcessReportedStats.ProcessArgs, expectedArgList, 5)).Should(Equal(true))
+		})
+		It("Process arg test with increased process args limit", func() {
+			By("Creating an aggregator with perflow process args limit set to 6")
+			caa := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2).PerFlowProcessArgsLimit(6)
+			_ = caa.FeedUpdate(&muWithProcessNameArg1)
+			_ = caa.FeedUpdate(&muWithProcessNameArg2)
+			_ = caa.FeedUpdate(&muWithProcessNameArg3)
+			_ = caa.FeedUpdate(&muWithProcessNameArg4)
+			_ = caa.FeedUpdate(&muWithProcessNameArg5)
+			_ = caa.FeedUpdate(&muWithProcessNameArg6)
+			messages := caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog := messages[0]
+			Expect(flowLog.FlowProcessReportedStats.NumProcessArgs).Should(Equal(6))
+			expectedArgList := []string{"arg1", "arg2", "arg3", "arg4", "arg5", "arg6"}
+			Expect(checkProcessArgs(flowLog.FlowProcessReportedStats.ProcessArgs, expectedArgList, 6)).Should(Equal(true))
+		})
+	})
 	Context("Flow log aggregator process information", func() {
 
 		It("Includes process information with default aggregation", func() {
@@ -1474,6 +1600,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			muWithoutProcessName := muWithProcessName
 			muWithoutProcessName.processName = ""
 			muWithoutProcessName.processID = 0
+			muWithoutProcessName.processArgs = ""
 
 			// copy original intended value as muWithoutProcessName will be modified
 			originalMuWithoutProcessName := muWithoutProcessName

@@ -13,7 +13,8 @@ import (
 )
 
 var _ = Describe("FlowLog JSON serialization", func() {
-
+	argList := []string{"arg1", "arg2"}
+	emptyList := []string{"-"}
 	Describe("should set every field", func() {
 		policies := FlowPolicies{
 			"0|tier.policy|pass":                      emptyValue,
@@ -65,6 +66,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				NumProcessNames: 2,
 				ProcessID:       "*",
 				NumProcessIDs:   2,
+				ProcessArgs:     argList,
+				NumProcessArgs:  2,
 				FlowReportedStats: FlowReportedStats{
 					PacketsIn:             1,
 					PacketsOut:            2,
@@ -156,6 +159,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				NumProcessNames: 0,
 				ProcessID:       "-",
 				NumProcessIDs:   0,
+				ProcessArgs:     emptyList,
+				NumProcessArgs:  0,
 				FlowReportedStats: FlowReportedStats{
 					PacketsIn:             1,
 					PacketsOut:            2,
@@ -209,6 +214,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"NumOrigSourceIPs":     nil,
 			"NumProcessNames":      0,
 			"NumProcessIDs":        0,
+			"NumProcessArgs":       0,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
@@ -270,6 +276,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				NumProcessNames: 2,
 				ProcessID:       "1234",
 				NumProcessIDs:   2,
+				ProcessArgs:     argList,
+				NumProcessArgs:  2,
 				FlowReportedStats: FlowReportedStats{
 					PacketsIn:             1,
 					PacketsOut:            2,
