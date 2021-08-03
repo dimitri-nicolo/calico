@@ -23,8 +23,9 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/klog"
 
+	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -32,7 +33,7 @@ import (
 
 	licClient "github.com/tigera/licensing/client"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type resourceObject interface {

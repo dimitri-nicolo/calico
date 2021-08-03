@@ -27,7 +27,7 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type policyStrategy struct {

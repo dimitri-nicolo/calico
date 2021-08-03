@@ -6,7 +6,8 @@ import (
 	"context"
 	"sort"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/apiserver/pkg/rbac"
 
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -15,8 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
-
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type REST struct {
@@ -25,12 +24,12 @@ type REST struct {
 
 // EmptyObject returns an empty instance
 func (r *REST) New() runtime.Object {
-	return &calico.AuthorizationReview{}
+	return &v3.AuthorizationReview{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.AuthorizationReviewList{}
+	return &v3.AuthorizationReviewList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
@@ -50,8 +49,8 @@ func (r *REST) Watch(ctx context.Context, options *internalversion.ListOptions) 
 
 // Takes the userinfo that the authn delegate has put into the context and returns it.
 func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
-	in := obj.(*calico.AuthorizationReview)
-	out := &calico.AuthorizationReview{
+	in := obj.(*v3.AuthorizationReview)
+	out := &v3.AuthorizationReview{
 		TypeMeta:   in.TypeMeta,
 		ObjectMeta: in.ObjectMeta,
 		Spec:       in.Spec,

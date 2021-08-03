@@ -22,10 +22,12 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
 	"github.com/projectcalico/apiserver/pkg/rbac"
 	calicoauthenticationreview "github.com/projectcalico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	calicoauthorizationreview "github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
+
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	calicobgpconfiguration "github.com/projectcalico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgppeer "github.com/projectcalico/apiserver/pkg/registry/projectcalico/bgppeer"
 	calicoclusterinformation "github.com/projectcalico/apiserver/pkg/registry/projectcalico/clusterinformation"

@@ -20,7 +20,7 @@ import (
 	"k8s.io/kubernetes/pkg/registry/rbac/validation"
 	rbac_auth "k8s.io/kubernetes/plugin/pkg/auth/authorizer/rbac"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Verb is a bit-wise set of available verbs for Kubernetes RBAC. Use Verbs() to convert to a slice of strings.

@@ -12,12 +12,12 @@ import (
 	"net/url"
 	"os"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	log "github.com/sirupsen/logrus"
 )

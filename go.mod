@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/go-openapi/spec v0.19.5
-	github.com/google/gofuzz v1.2.0
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
@@ -13,21 +12,21 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818
+	github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05
+	github.com/tigera/licensing v1.0.1-0.20210726173647-5647b0a97123
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/apiserver v0.21.0
 	k8s.io/client-go v0.21.0
-	k8s.io/code-generator v0.21.0-rc.0
+	k8s.io/code-generator v0.21.2
 	k8s.io/component-base v0.21.0-rc.0
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 	k8s.io/kubernetes v1.21.0-rc.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210715143844-c5878717b364
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210803100212-d990fa006fbd
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0

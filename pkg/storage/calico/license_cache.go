@@ -8,7 +8,7 @@ import (
 	licClient "github.com/tigera/licensing/client"
 	"k8s.io/klog"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // LicenseCache stores LicenseKeys and validates API restrictions

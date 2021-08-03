@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	calico "github.com/projectcalico/apiserver/pkg/apis/projectcalico"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func TestInvalidFieldError(t *testing.T) {

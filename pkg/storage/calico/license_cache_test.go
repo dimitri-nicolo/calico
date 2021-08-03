@@ -5,7 +5,7 @@ package calico
 import (
 	"testing"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func TestEgressAccessControls(t *testing.T) {

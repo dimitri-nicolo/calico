@@ -24,12 +24,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	v3calico "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 // WaitForGlobalNetworkPoliciesToNotExist waits for the GlobalNetworkPolicy with the given name to no
 // longer exist.
-func WaitForGlobalNetworkPoliciesToNotExist(client v3calico.ProjectcalicoV3Interface, name string) error {
+func WaitForGlobalNetworkPoliciesToNotExist(client calicoclient.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for broker %v to not exist", name)
@@ -49,7 +49,7 @@ func WaitForGlobalNetworkPoliciesToNotExist(client v3calico.ProjectcalicoV3Inter
 
 // WaitForGlobalNetworkPoliciesToExist waits for the GlobalNetworkPolicy with the given name
 // to exist.
-func WaitForGlobalNetworkPoliciesToExist(client v3calico.ProjectcalicoV3Interface, name string) error {
+func WaitForGlobalNetworkPoliciesToExist(client calicoclient.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for serviceClass %v to exist", name)
@@ -65,7 +65,7 @@ func WaitForGlobalNetworkPoliciesToExist(client v3calico.ProjectcalicoV3Interfac
 
 // WaitForTierToNotExist waits for the Tier with the given
 // name to no longer exist.
-func WaitForTierToNotExist(client v3calico.ProjectcalicoV3Interface, name string) error {
+func WaitForTierToNotExist(client calicoclient.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for serviceClass %v to not exist", name)
@@ -85,7 +85,7 @@ func WaitForTierToNotExist(client v3calico.ProjectcalicoV3Interface, name string
 
 // WaitForTierToExist waits for the Tier with the given name
 // to exist.
-func WaitForTierToExist(client v3calico.ProjectcalicoV3Interface, name string) error {
+func WaitForTierToExist(client calicoclient.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			klog.V(5).Infof("Waiting for serviceClass %v to exist", name)

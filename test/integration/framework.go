@@ -31,11 +31,11 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/klog"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
 	"github.com/projectcalico/apiserver/cmd/apiserver/server"
-	_ "github.com/projectcalico/apiserver/pkg/apis/projectcalico/install"
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/apiserver/pkg/apiserver"
-	calicoclient "github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset"
 )
 
 const defaultEtcdPathPrefix = ""

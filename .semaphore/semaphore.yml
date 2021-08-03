@@ -51,7 +51,7 @@ blocks:
       jobs:
         - name: Static Checks
           execution_time_limit:
-            minutes: 15
+            minutes: 10
           commands:
             - make static-checks
 
