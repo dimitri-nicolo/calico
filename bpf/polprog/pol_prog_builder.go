@@ -621,6 +621,11 @@ func (p *Builder) writeRule(r Rule, actionLabel string, destLeg matchLeg) {
 		p.writeIPSetMatch(true, destLeg, rule.NotDstIpSetIds)
 	}
 
+	if len(rule.DstIpPortSetIds) > 0 {
+		log.WithField("ipPortSetIDs", rule.DstIpPortSetIds).Debugf("DstIpPortSetIds match")
+		p.writeIPSetMatch(false, destLeg, rule.DstIpPortSetIds)
+	}
+
 	if len(rule.SrcPorts) > 0 || len(rule.SrcNamedPortIpSetIds) > 0 {
 		log.WithField("ports", rule.SrcPorts).Debugf("SrcPorts match")
 		p.writePortsMatch(false, legSource, rule.SrcPorts, rule.SrcNamedPortIpSetIds)
