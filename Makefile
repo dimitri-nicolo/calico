@@ -7,8 +7,6 @@ LOCAL_CHECKS     = lint-cache-dir goimports
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 # Used only when doing local build
 LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
-# Used so semaphore commits generated files when pins are updated
-EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
@@ -82,9 +80,6 @@ VERSION_FLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERS
 BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
-
-GIT_PIN_UPDATE_COMMIT_EXTRA_FILES =\*_generated.go
-POST_PIN_UPDATE_TARGETS           =gen-files
 
 ##############################################################################
 # Download and include Makefile.common before anything else
