@@ -4,7 +4,11 @@ go 1.15
 
 require (
 	github.com/Microsoft/hcsshim v0.8.10-0.20200715222032-5eafd1556990
-	github.com/aws/aws-sdk-go v1.35.24
+	github.com/aws/aws-sdk-go-v2 v1.7.1
+	github.com/aws/aws-sdk-go-v2/config v1.5.0
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.3.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.12.0
+	github.com/aws/smithy-go v1.6.0
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/containernetworking/plugins v0.8.5
 	github.com/davecgh/go-spew v1.1.1
@@ -30,6 +34,7 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
+	github.com/projectcalico/api v0.0.0-20210727230154-ae822ba06c23
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v0.0.0-20210730214600-1e304d763cc0
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
