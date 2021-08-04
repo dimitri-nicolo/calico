@@ -21,6 +21,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	kapiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	discovery "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/encap"
@@ -1006,6 +1008,33 @@ var deleteSvcWithL7Annotation = KVPair{
 var deleteExternalSvcWithL7Annotation = KVPair{
 	Key:   model.ResourceKey{Kind: v3.KindK8sService, Name: "service3", Namespace: "ns2"},
 	Value: nil,
+}
+
+// Resource for endpoint slice and service policy tests.
+var p = int32(80)
+var tcp = v1.ProtocolTCP
+var endpointSliceKey1 = model.ResourceKey{Name: "eps", Namespace: "default", Kind: "KubernetesEndpointSlice"}
+var endpointSlice1 = discovery.EndpointSlice{
+	ObjectMeta: metav1.ObjectMeta{Name: "eps", Namespace: "default", Labels: map[string]string{"kubernetes.io/service-name": "svc"}},
+	Endpoints: []discovery.Endpoint{
+		{Addresses: []string{"10.0.0.1"}},
+	},
+	Ports: []discovery.EndpointPort{
+		{Port: &p, Protocol: &tcp},
+	},
+}
+var servicePolicyKey = model.PolicyKey{Name: "svc-policy"}
+var servicePolicy = model.Policy{
+	Namespace: "default",
+	OutboundRules: []model.Rule{
+		{
+			Action:              "Allow",
+			DstService:          "svc",
+			DstServiceNamespace: "default",
+		},
+	},
+	Types:    []string{"egress"},
+	Selector: "all()",
 }
 
 func intPtr(i int) *int {

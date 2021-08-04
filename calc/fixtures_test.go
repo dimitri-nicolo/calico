@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -49,6 +50,7 @@ var CaptureAllKey = model.ResourceKey{Name: "packet-capture-all", Namespace: "de
 var CaptureSelectionKey = model.ResourceKey{Name: "packet-capture-selection", Namespace: "default", Kind: v3.KindPacketCapture}
 var CaptureDevKey = model.ResourceKey{Name: "packet-capture-dev", Namespace: "default", Kind: v3.KindPacketCapture}
 var CaptureDifferentNamespaceKey = model.ResourceKey{Name: "packet-capture-different-namespace", Namespace: "different", Kind: v3.KindPacketCapture}
+var CaptureBPFFilterKey = model.ResourceKey{Name: "packet-capture-bpf-filter", Namespace: "default", Kind: v3.KindPacketCapture}
 var CaptureAllValue = &v3.PacketCapture{
 	TypeMeta: metav1.TypeMeta{
 		Kind: v3.KindPacketCapture,
@@ -107,5 +109,61 @@ var CaptureDifferentNamespaceValue = &v3.PacketCapture{
 	},
 	Spec: v3.PacketCaptureSpec{
 		Selector: "all()",
+	},
+}
+var tcpProtocol = numorstring.ProtocolFromString("TCP")
+var udpProtocol = numorstring.ProtocolFromString("UDP")
+
+var CaptureTCPTrafficValue = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindPacketCapture,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "packet-capture-bpf-filter",
+	},
+	Spec: v3.PacketCaptureSpec{
+		Selector: "all()",
+		Filters: []v3.PacketCaptureRule{
+			{
+				Protocol: &tcpProtocol,
+			},
+		},
+	},
+}
+
+var CaptureUDPTrafficValue = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindPacketCapture,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "packet-capture-bpf-filter",
+	},
+	Spec: v3.PacketCaptureSpec{
+		Selector: "all()",
+		Filters: []v3.PacketCaptureRule{
+			{
+				Protocol: &udpProtocol,
+			},
+		},
+	},
+}
+
+var CaptureUDPTrafficValueAndLabelB = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindPacketCapture,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "packet-capture-bpf-filter",
+	},
+	Spec: v3.PacketCaptureSpec{
+		Selector: "label == 'b'",
+		Filters: []v3.PacketCaptureRule{
+			{
+				Protocol: &udpProtocol,
+			},
+		},
 	},
 }

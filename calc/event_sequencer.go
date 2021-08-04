@@ -651,7 +651,7 @@ func memberToProto(member labelindex.IPSetMember) string {
 	return ""
 }
 
-func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey) {
+func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey, spec PacketCaptureSpecification) {
 	id := buf.packetCaptureKey(key, endpoint)
 	delete(buf.pendingPacketCaptureRemovals, id)
 	buf.pendingPacketCaptureUpdates[id] = &proto.PacketCaptureUpdate{
@@ -662,6 +662,9 @@ func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint
 			OrchestratorId: endpoint.OrchestratorID,
 			WorkloadId:     endpoint.WorkloadID,
 			EndpointId:     endpoint.EndpointID,
+		},
+		Specification: &proto.PacketCaptureSpecification{
+			BpfFilter: spec.BPFFilter,
 		},
 	}
 }

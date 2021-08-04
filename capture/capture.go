@@ -68,6 +68,7 @@ type rotatingPcapFile struct {
 	handle       *pcap.Handle
 	ticker       *time.Ticker
 	loggingID    string
+	bpfFilter    string
 }
 
 type Option func(file *rotatingPcapFile)
@@ -97,6 +98,13 @@ func WithRotationSeconds(v int) Option {
 func WithMaxFiles(v int) Option {
 	return func(c *rotatingPcapFile) {
 		c.maxFiles = v
+	}
+}
+
+// WithBPFFilter adds a bpf filter when capturing traffic
+func WithBPFFilter(filter string) Option {
+	return func(c *rotatingPcapFile) {
+		c.bpfFilter = filter
 	}
 }
 
@@ -404,6 +412,13 @@ func (capture *rotatingPcapFile) Start() error {
 	capture.handle, err = pcap.OpenLive(capture.deviceName, int32(maxSizePerPacket), false, defaultReadTimeout)
 	if err != nil {
 		return err
+	}
+
+	if len(capture.bpfFilter) != 0 {
+		err = capture.handle.SetBPFFilter(capture.bpfFilter)
+		if err != nil {
+			return err
+		}
 	}
 
 	packetSource := gopacket.NewPacketSource(capture.handle, capture.handle.LinkType())

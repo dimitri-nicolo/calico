@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -762,6 +762,15 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	} else if len(pRule.DstDomainIpSetIds) > 1 {
 		log.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one DstDomainIpSetIds.")
+	}
+
+	for _, ipsetID := range pRule.DstIpPortSetIds {
+		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
+		match = match.DestIPPortSet(ipsetName)
+		logCxt.WithFields(log.Fields{
+			"ipsetID":   ipsetID,
+			"ipSetName": ipsetName,
+		}).Debug("Adding dst IP+port set match")
 	}
 
 	if len(pRule.DstPorts) > 0 {

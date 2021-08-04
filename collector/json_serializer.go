@@ -67,10 +67,12 @@ type FlowLogJSONOutput struct {
 	HTTPRequestsAllowedIn int64 `json:"http_requests_allowed_in"`
 	HTTPRequestsDeniedIn  int64 `json:"http_requests_denied_in"`
 
-	ProcessName     string `json:"process_name"`
-	NumProcessNames int64  `json:"num_process_names"`
-	ProcessID       string `json:"process_id"`
-	NumProcessIDs   int64  `json:"num_process_ids"`
+	ProcessName     string   `json:"process_name"`
+	NumProcessNames int64    `json:"num_process_names"`
+	ProcessID       string   `json:"process_id"`
+	NumProcessIDs   int64    `json:"num_process_ids"`
+	ProcessArgs     []string `json:"process_args"`
+	NumProcessArgs  int64    `json:"num_process_args"`
 
 	OrigSourceIPs    []net.IP `json:"original_source_ips"`
 	NumOrigSourceIPs int64    `json:"num_original_source_ips"`
@@ -204,6 +206,8 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.NumProcessNames = int64(l.NumProcessNames)
 	out.ProcessID = l.ProcessID
 	out.NumProcessIDs = int64(l.NumProcessIDs)
+	out.ProcessArgs = l.ProcessArgs
+	out.NumProcessArgs = int64(l.NumProcessArgs)
 
 	out.SendCongestionWndMean = int64(l.SendCongestionWnd.Mean)
 	out.SendCongestionWndMin = int64(l.SendCongestionWnd.Min)
@@ -328,6 +332,8 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.NumProcessNames = int(o.NumProcessNames)
 	fl.ProcessID = o.ProcessID
 	fl.NumProcessIDs = int(o.NumProcessIDs)
+	fl.ProcessArgs = o.ProcessArgs
+	fl.NumProcessArgs = int(o.NumProcessArgs)
 
 	fl.SendCongestionWnd.Mean = int(o.SendCongestionWndMean)
 	fl.SendCongestionWnd.Min = int(o.SendCongestionWndMin)

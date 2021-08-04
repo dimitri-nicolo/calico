@@ -778,6 +778,8 @@ func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogRe
 			NumProcessNames: fpi.numProcessNames,
 			ProcessID:       fpi.processID,
 			NumProcessIDs:   fpi.numProcessIDs,
+			ProcessArgs:     fpi.processArgs,
+			NumProcessArgs:  fpi.numProcessArgs,
 			FlowReportedStats: FlowReportedStats{
 				NumFlows:          nf,
 				NumFlowsStarted:   nfs,

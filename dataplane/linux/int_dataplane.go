@@ -693,6 +693,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		collectorPacketInfoReader    collector.PacketInfoReader
 		collectorConntrackInfoReader collector.ConntrackInfoReader
 		processInfoCache             collector.ProcessInfoCache
+		processPathInfoCache         *events.BPFProcessPathCache
 	)
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 		var err error
@@ -756,8 +757,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Info("BPF: Registered events sink for TypeProtoStats")
 			eventProtoStatsSink = events.NewEventProtoStatsSink()
 			bpfEventPoller.Register(events.TypeProtoStats, eventProtoStatsSink.HandleEvent)
-			eventProcessPathSink = events.NewEventProcessPathSink()
-			bpfEventPoller.Register(events.TypeProcessPath, eventProcessPathSink.HandleEvent)
+			if config.FlowLogsCollectProcessPath {
+				eventProcessPathSink = events.NewEventProcessPathSink()
+				bpfEventPoller.Register(events.TypeProcessPath, eventProcessPathSink.HandleEvent)
+			}
 		}
 	}
 
@@ -1192,13 +1195,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			entryTTL := time.Second * 10
 			var eventProcessC <-chan events.EventProtoStats
 			var eventTcpC <-chan events.EventTcpStats
+			var eventProcessPathC <-chan events.ProcessPath
 			if config.FlowLogsCollectProcessInfo {
 				eventProcessC = eventProtoStatsSink.EventProtoStatsChan()
+				if config.FlowLogsCollectProcessPath {
+					eventProcessPathC = eventProcessPathSink.EventProcessPathChan()
+					processPathInfoCache = events.NewBPFProcessPathCache(eventProcessPathC, gcInterval, entryTTL*30)
+				}
 			}
 			if config.FlowLogsCollectTcpStats {
 				eventTcpC = eventTcpStatsSink.EventTcpStatsChan()
 			}
-			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, gcInterval, entryTTL)
+			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, gcInterval, entryTTL, processPathInfoCache)
 			processInfoCache = prd
 		}
 
@@ -1318,7 +1326,7 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 		c.VXLANMTU = hostMTU - vxlanMTUOverhead
 	}
 	if c.Wireguard.MTU == 0 {
-		if c.KubernetesProvider == felixconfig.ProviderAKS && c.RouteSource == "WorkloadIPs" {
+		if c.KubernetesProvider == felixconfig.ProviderAKS && c.Wireguard.EncryptHostTraffic {
 			// The default MTU on Azure is 1500, but the underlying network stack will fragment packets at 1400 bytes,
 			// see https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-tcpip-performance-tuning#azure-and-vm-mtu
 			// for details.
@@ -1692,7 +1700,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 
 		var rawRules []iptables.Rule
 		if t.IPVersion == 4 && rulesConfig.WireguardEnabled && len(rulesConfig.WireguardInterfaceName) > 0 &&
-			rulesConfig.RouteSource == "WorkloadIPs" {
+			d.config.Wireguard.EncryptHostTraffic {
 			// Set a mark on packets coming from any interface except for lo, wireguard, or pod veths to ensure the RPF
 			// check allows it.
 			log.Debug("Adding Wireguard iptables rule chain")

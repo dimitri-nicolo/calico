@@ -46,7 +46,7 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_jump = {
 /* Add new values to the end as these are program indices */
 enum cali_jump_index {
 	PROG_INDEX_POLICY,
-	PROG_INDEX_EPILOGUE,
+	PROG_INDEX_ALLOWED,
 	PROG_INDEX_ICMP,
 	PROG_INDEX_DROP,
 };

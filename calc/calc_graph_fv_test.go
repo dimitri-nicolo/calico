@@ -402,6 +402,12 @@ var baseTests = []StateList{
 		nodesWithMoreIPsDeleted,
 	},
 
+	{
+		// Service NetworkPolicy basic case.
+		endpointSliceAndLocalWorkload,
+		endpointSliceActive,
+	},
+
 	// Egress IP states.  (All private-only.)
 	{
 		endpointWithOwnEgressGateway,
@@ -701,7 +707,13 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 func stringify(routes set.Set) []string {
 	out := make([]string, 0, routes.Len())
 	routes.Iter(func(item interface{}) error {
-		out = append(out, fmt.Sprintf("%+v", item))
+		switch item.(type) {
+		case proto.PacketCaptureUpdate:
+			var update = item.(proto.PacketCaptureUpdate)
+			out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
+		default:
+			out = append(out, fmt.Sprintf("%+v", item))
+		}
 		return nil
 	})
 	sort.Strings(out)

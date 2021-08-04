@@ -4,7 +4,11 @@ go 1.15
 
 require (
 	github.com/Microsoft/hcsshim v0.8.10-0.20200715222032-5eafd1556990
-	github.com/aws/aws-sdk-go v1.35.24
+	github.com/aws/aws-sdk-go-v2 v1.7.1
+	github.com/aws/aws-sdk-go-v2/config v1.5.0
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.3.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.12.0
+	github.com/aws/smithy-go v1.6.0
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/containernetworking/plugins v0.8.5
 	github.com/davecgh/go-spew v1.1.1
@@ -31,7 +35,7 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20210715003609-86f5318f4023
+	github.com/projectcalico/pod2daemon v0.0.0-20210730214600-1e304d763cc0
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/client_model v0.2.0
@@ -41,8 +45,8 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/api v0.0.0-20210720144753-0dd043a1a989
-	github.com/tigera/licensing v1.0.1-0.20210727052330-3acce9adc848
+	github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05
+	github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd
 	github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.0
@@ -67,7 +71,7 @@ replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/libcalico-go => github.com/fasaxc/libcalico-go-private v1.7.2-0.20210802144127-ee849a945074
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210726154519-398fc305ff89
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210803101820-5d9c25feb29f
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

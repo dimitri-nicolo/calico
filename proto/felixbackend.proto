@@ -299,6 +299,9 @@ message Rule {
   repeated string dst_ip_set_ids = 11;
   repeated string dst_domain_ip_set_ids = 14;
 
+  // IP sets on which we should match both IP and port.
+  repeated string dst_ip_port_set_ids = 15;
+
   Protocol not_protocol = 102;
 
   repeated string not_src_net = 103;
@@ -322,6 +325,10 @@ message Rule {
   string original_dst_namespace_selector = 117;
   string original_not_src_selector = 118;
   string original_not_dst_selector = 119;
+
+  // Original destination service match criteria.
+  string original_dst_service = 130;
+  string original_dst_service_namespace = 131;
 
   // Pass through of the v3 datamodel service account match criteria.
   ServiceAccountMatch src_service_account_match = 120;
@@ -761,6 +768,7 @@ message GlobalBGPConfigUpdate {
 message PacketCaptureUpdate {
   PacketCaptureID id = 1;
   WorkloadEndpointID endpoint = 2;
+  PacketCaptureSpecification specification = 3;
 }
 
 message PacketCaptureRemove {
@@ -776,4 +784,8 @@ message PacketCaptureID {
 message PacketCaptureStatusUpdate {
   PacketCaptureID id = 1;
   repeated string capture_files = 2;
+}
+
+message PacketCaptureSpecification {
+  string bpfFilter = 1;
 }

@@ -83,10 +83,11 @@ type TcpStatsData struct {
 	IsDirty           bool
 }
 
-// ProcessData contains information about a process which includes its name and PID.
+// ProcessData contains information about a process which includes its name, arguments and PID.
 type ProcessData struct {
-	Name string
-	Pid  int
+	Name      string
+	Pid       int
+	Arguments string
 }
 
 // TODO(doublek): Is this the right level of abstraction or should this be something for

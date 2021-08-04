@@ -28,22 +28,22 @@ var _ = Describe("PacketCapture Storage Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("Cannot call stop with start", func() {
+	It("Calling stop without start will return an empty spec", func() {
 		var err error
 		var activeCaptures capture.ActiveCaptures
 		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir}, make(chan interface{}))
 		Expect(err).NotTo(HaveOccurred())
-		err, _ = activeCaptures.Remove(capture.Key{CaptureName: "any"})
-		Expect(err).To(HaveOccurred())
+		var spec = activeCaptures.Remove(capture.Key{CaptureName: "any"})
+		Expect(spec.DeviceName).To(BeEmpty())
 	})
 
 	It("Cannot call start multiple times for the same capture", func() {
 		var err error
 		var activeCaptures capture.ActiveCaptures
 		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir}, make(chan interface{}))
-		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, "eth0")
+		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, capture.Specification{DeviceName: "eth0"})
 		Expect(err).NotTo(HaveOccurred())
-		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, "eth0")
+		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, capture.Specification{DeviceName: "eth0"})
 		Expect(err).To(HaveOccurred())
 	})
 })

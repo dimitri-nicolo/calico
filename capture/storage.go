@@ -15,8 +15,9 @@ import (
 // Adding a new capture triggers a capture start
 // Removing a capture triggers a capture end
 type ActiveCaptures interface {
-	Add(key Key, deviceName string) error
-	Remove(key Key) (error, string)
+	Contains(key Key) (bool, Specification)
+	Add(key Key, spec Specification) error
+	Remove(key Key) Specification
 }
 
 // ErrNotFound will be returned when trying to remove a capture that has not been marked as active
@@ -35,9 +36,20 @@ type Key struct {
 	CaptureName        string
 }
 
+// Specification represent specifics for starting the capture
+type Specification struct {
+	Version    int
+	BPFFilter  string
+	DeviceName string
+}
+
+type captureTuple struct {
+	Capture
+	Specification
+}
+
 type activeCaptures struct {
-	deviceRef       map[Key]string
-	cache           map[Key]Capture
+	cache           map[Key]captureTuple
 	captureDir      string
 	maxSizeBytes    int
 	rotationSeconds int
@@ -52,8 +64,7 @@ func NewActiveCaptures(config Config, statusUpdates chan interface{}) (ActiveCap
 	}
 
 	return &activeCaptures{
-		cache:           map[Key]Capture{},
-		deviceRef:       map[Key]string{},
+		cache:           map[Key]captureTuple{},
 		captureDir:      config.Directory,
 		maxSizeBytes:    config.MaxSizeBytes,
 		rotationSeconds: config.RotationSeconds,
@@ -62,8 +73,13 @@ func NewActiveCaptures(config Config, statusUpdates chan interface{}) (ActiveCap
 	}, nil
 }
 
-func (activeCaptures *activeCaptures) Add(key Key, deviceName string) error {
-	log.WithField("CAPTURE", key.CaptureName).Infof("Adding capture for device name %s for %s", deviceName, key)
+func (activeCaptures activeCaptures) Contains(key Key) (bool, Specification) {
+	tuple, ok := activeCaptures.cache[key]
+	return ok, tuple.Specification
+}
+
+func (activeCaptures *activeCaptures) Add(key Key, spec Specification) error {
+	log.WithField("CAPTURE", key.CaptureName).Infof("Adding capture for device name %s for %s", spec.DeviceName, key)
 
 	var err error
 	_, ok := activeCaptures.cache[key]
@@ -91,11 +107,12 @@ func (activeCaptures *activeCaptures) Add(key Key, deviceName string) error {
 		key.Namespace,
 		key.CaptureName,
 		podName,
-		deviceName,
+		spec.DeviceName,
 		activeCaptures.statusUpdates,
 		WithMaxSizeBytes(activeCaptures.maxSizeBytes),
 		WithRotationSeconds(activeCaptures.rotationSeconds),
 		WithMaxFiles(activeCaptures.maxFiles),
+		WithBPFFilter(spec.BPFFilter),
 	)
 
 	go func() {
@@ -106,24 +123,20 @@ func (activeCaptures *activeCaptures) Add(key Key, deviceName string) error {
 		}
 	}()
 
-	activeCaptures.cache[key] = newCapture
-	activeCaptures.deviceRef[key] = deviceName
+	activeCaptures.cache[key] = captureTuple{newCapture, spec}
 
 	return nil
 }
 
-func (activeCaptures *activeCaptures) Remove(key Key) (error, string) {
+func (activeCaptures *activeCaptures) Remove(key Key) Specification {
 	log.WithField("CAPTURE", key.CaptureName).Infof("Removing capture %s", key)
 
-	_, ok := activeCaptures.cache[key]
+	capture, ok := activeCaptures.cache[key]
 	if !ok {
-		return ErrNotFound, ""
+		return Specification{}
 	}
 
-	activeCaptures.cache[key].Stop()
-	delete(activeCaptures.cache, key)
-	deviceName := activeCaptures.deviceRef[key]
-	delete(activeCaptures.deviceRef, key)
+	capture.Stop()
 
-	return nil, deviceName
+	return capture.Specification
 }

@@ -410,7 +410,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	if ok {
 		log.Debugf("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
 		if !data.reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
-			data.SetSourceProcessData(processInfo.Name, processInfo.Pid)
+			data.SetSourceProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
 		if processInfo.TcpStatsData.IsDirty {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
@@ -429,7 +429,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	if ok {
 		log.Debugf("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
 		if !data.reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
-			data.SetDestProcessData(processInfo.Name, processInfo.Pid)
+			data.SetDestProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
 		if processInfo.TcpStatsData.IsDirty {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)

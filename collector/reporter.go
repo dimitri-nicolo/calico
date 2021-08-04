@@ -123,6 +123,7 @@ type MetricUpdate struct {
 	// Optional process info
 	processName string
 	processID   int
+	processArgs string
 
 	//optional Tcp v4 socket stats
 	sendCongestionWnd *int
@@ -156,11 +157,11 @@ func (mu MetricUpdate) String() string {
 		origIPs = []net.IP{}
 	}
 	if mu.sendCongestionWnd != nil && mu.smoothRtt != nil && mu.minRtt != nil && mu.mss != nil {
-		return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d} tcpSocketStats={%d, %d, %d, %d, %d, %d, %d}",
-			mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID, *mu.sendCongestionWnd, *mu.smoothRtt, *mu.minRtt, *mu.mss, mu.tcpMetric.deltaTotalRetrans, mu.tcpMetric.deltaLostOut, mu.tcpMetric.deltaUnRecoveredRTO)
+		return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d, %s} tcpSocketStats={%d, %d, %d, %d, %d, %d, %d}",
+			mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID, mu.processArgs, *mu.sendCongestionWnd, *mu.smoothRtt, *mu.minRtt, *mu.mss, mu.tcpMetric.deltaTotalRetrans, mu.tcpMetric.deltaLostOut, mu.tcpMetric.deltaUnRecoveredRTO)
 	} else {
-		return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d} tcpSocketStats={0, 0, 0, 0, 0, 0, 0}",
-			mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID)
+		return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d} processInfo={%s, %d, %s} tcpSocketStats={0, 0, 0, 0, 0, 0, 0}",
+			mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs, mu.processName, mu.processID, mu.processArgs)
 	}
 }
 

@@ -216,6 +216,13 @@ var _ = DescribeTable("ParsedRulesToProtoRules",
 				NotIcmpType: 11,
 			},
 		}),
+	Entry("Service match rule",
+		ParsedRule{
+			DstIPPortSetIDs: []string{"ipPortSetID"},
+		},
+		proto.Rule{
+			DstIpPortSetIds: []string{"ipPortSetID"},
+		}),
 	Entry("fully-loaded rule",
 		fullyLoadedParsedRule,
 		fullyLoadedProtoRule),

@@ -358,6 +358,7 @@ type Config struct {
 	FlowLogsPositionFilePath              string `config:"string;/var/log/calico/flows.log.pos"`
 	FlowLogsAggregationThresholdBytes     int    `config:"int;8192"`
 	FlowLogsFilePerFlowProcessLimit       int    `config:"int;2"`
+	FlowLogsFilePerFlowProcessArgsLimit   int    `config:"int;5"`
 
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
 	DNSLogsFileEnabled         bool          `config:"bool;false"`

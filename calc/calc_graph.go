@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/serviceindex"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -107,8 +108,14 @@ type ipsecCallbacks interface {
 
 // packetCaptureCallbacks will be called when a match activates/deactivates a selection for a packet capture
 type packetCaptureCallbacks interface {
-	OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey)
+	OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey, specification PacketCaptureSpecification)
 	OnPacketCaptureInactive(key model.ResourceKey, endpoint model.WorkloadEndpointKey)
+}
+
+// PacketCaptureSpecification is an internal structure used to pass fields from PacketCaptureSpec to be
+// sent to the data plane
+type PacketCaptureSpecification struct {
+	BPFFilter string
 }
 
 type PipelineCallbacks interface {
@@ -238,11 +245,34 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	// below.
 	ruleScanner.RulesUpdateCallbacks = callbacks
 
+	serviceIndex := serviceindex.NewServiceIndex()
+	serviceIndex.RegisterWith(allUpdDispatcher)
+	// Send the Service IP set member index's outputs to the dataplane.
+	serviceIndex.OnMemberAdded = func(ipSetID string, member labelindex.IPSetMember) {
+		if log.GetLevel() >= log.DebugLevel {
+			log.WithFields(log.Fields{
+				"ipSetID": ipSetID,
+				"member":  member,
+			}).Debug("Member added to service IP set.")
+		}
+		callbacks.OnIPSetMemberAdded(ipSetID, member)
+	}
+	serviceIndex.OnMemberRemoved = func(ipSetID string, member labelindex.IPSetMember) {
+		if log.GetLevel() >= log.DebugLevel {
+			log.WithFields(log.Fields{
+				"ipSetID": ipSetID,
+				"member":  member,
+			}).Debug("Member removed from service IP set.")
+		}
+		callbacks.OnIPSetMemberRemoved(ipSetID, member)
+	}
+
 	// The rule scanner only goes as far as figuring out which tags/selectors/named ports are
 	// active. Next we need to figure out which endpoints (and hence which IP addresses/ports) are
 	// in each tag/selector/named port. The IP set member index calculates the set of IPs and named
 	// ports that should be in each IP set.  To do that, it matches the active selectors/tags/named
-	// ports extracted by the rule scanner against all the endpoints.
+	// ports extracted by the rule scanner against all the endpoints. The service index does the same
+	// for service based rules, building IP set contributions from endpoint slices.
 	//
 	//        ...
 	//     Dispatcher (all updates)
@@ -256,7 +286,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//       \              |
 	//        \_____        |
 	//              \       |
-	//            IP set member index
+	//            IP set member index / service index
 	//                   |
 	//                   | IP set member added/removed
 	//                   |
@@ -268,7 +298,9 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	ruleScanner.OnIPSetActive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now active")
 		callbacks.OnIPSetAdded(ipSet.UniqueID(), ipSet.DataplaneProtocolType())
-		if ipSet.Selector != nil {
+		if ipSet.Service != "" {
+			serviceIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Service)
+		} else if ipSet.Selector != nil {
 			if !(ipSet.isDomainSet || ipSet.IsEgressSelector) {
 				defer gaugeNumActiveSelectors.Inc()
 			}
@@ -277,7 +309,9 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	}
 	ruleScanner.OnIPSetInactive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now inactive")
-		if ipSet.Selector != nil {
+		if ipSet.Service != "" {
+			serviceIndex.DeleteIPSet(ipSet.UniqueID())
+		} else if ipSet.Selector != nil {
 			if !(ipSet.isDomainSet || ipSet.IsEgressSelector) {
 				defer gaugeNumActiveSelectors.Dec()
 			}

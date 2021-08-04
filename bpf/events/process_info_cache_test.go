@@ -46,6 +46,11 @@ var (
 		LostOut:           3,
 		UnrecoveredRTO:    4,
 	}
+	processPathEvent1 = events.ProcessPath{
+		Pid:       12345,
+		Filename:  "/usr/bin/curl",
+		Arguments: "example.com",
+	}
 	processEvent1DifferentProcessName = events.EventProtoStats{
 		Proto:       uint32(6),
 		Saddr:       [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 10, 128, 0, 14}, // 10.128.0.14
@@ -64,9 +69,10 @@ type lookupResult struct {
 
 var _ = Describe("ProcessInfoCache tests", func() {
 	var (
-		pic              collector.ProcessInfoCache
-		testProcessChan  chan events.EventProtoStats
-		testTcpStatsChan chan events.EventTcpStats
+		pic                 collector.ProcessInfoCache
+		testProcessChan     chan events.EventProtoStats
+		testTcpStatsChan    chan events.EventTcpStats
+		testProcessPathChan chan events.ProcessPath
 	)
 
 	eventuallyCheckCache := func(tuple collector.Tuple, dir collector.TrafficDirection, expectedProcessInfo collector.ProcessInfo, infoInCache bool) {
@@ -79,7 +85,9 @@ var _ = Describe("ProcessInfoCache tests", func() {
 	BeforeEach(func() {
 		testProcessChan = make(chan events.EventProtoStats, 10)
 		testTcpStatsChan = make(chan events.EventTcpStats, 10)
-		pic = events.NewBPFProcessInfoCache(testProcessChan, testTcpStatsChan, gcInterval, ttl)
+		testProcessPathChan = make(chan events.ProcessPath, 10)
+		pp := events.NewBPFProcessPathCache(testProcessPathChan, gcInterval, 30*ttl)
+		pic = events.NewBPFProcessInfoCache(testProcessChan, testTcpStatsChan, gcInterval, ttl, pp)
 		pic.Start()
 	})
 	It("Should cache process information", func() {
@@ -92,7 +100,6 @@ var _ = Describe("ProcessInfoCache tests", func() {
 		testProcessChan <- processEvent1
 		testTcpStatsChan <- tcpStatsEvent1
 
-		//time.Sleep(1 * time.Millisecond)
 		By("Checking that lookup returns process information and is converted correctly")
 		expectedProcessInfo = collector.ProcessInfo{
 			Tuple: tuple1,
@@ -122,6 +129,40 @@ var _ = Describe("ProcessInfoCache tests", func() {
 			ProcessData: collector.ProcessData{
 				Name: "wget",
 				Pid:  54321,
+			},
+			TcpStatsData: collector.TcpStatsData{
+				SendCongestionWnd: 10,
+				SmoothRtt:         1234,
+				MinRtt:            256,
+				Mss:               128,
+				TotalRetrans:      2,
+				LostOut:           3,
+				UnrecoveredRTO:    4,
+				IsDirty:           true,
+			},
+		}
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, true)
+	})
+	It("Should cache process path information if available", func() {
+		By("Checking that lookup cache doesn't contain the right process info")
+		expectedProcessInfo := collector.ProcessInfo{}
+
+		eventuallyCheckCache(tuple1, collector.TrafficDirOutbound, expectedProcessInfo, false)
+
+		By("Sending a process info event, path event")
+		testProcessPathChan <- processPathEvent1
+		time.Sleep(1 * time.Millisecond)
+		testProcessChan <- processEvent1
+		testTcpStatsChan <- tcpStatsEvent1
+
+		//time.Sleep(1 * time.Millisecond)
+		By("Checking that lookup returns process information and is converted correctly")
+		expectedProcessInfo = collector.ProcessInfo{
+			Tuple: tuple1,
+			ProcessData: collector.ProcessData{
+				Name:      "/usr/bin/curl",
+				Pid:       12345,
+				Arguments: "example.com",
 			},
 			TcpStatsData: collector.TcpStatsData{
 				SendCongestionWnd: 10,

@@ -717,6 +717,7 @@ var (
 
 		processName:       "test-process",
 		processID:         1234,
+		processArgs:       "arg1",
 		sendCongestionWnd: &sendCongestionWnd,
 		smoothRtt:         &smoothRtt,
 		minRtt:            &minRtt,
@@ -753,6 +754,7 @@ var (
 
 		processName:       "test-process",
 		processID:         4321,
+		processArgs:       "arg2",
 		sendCongestionWnd: &sendCongestionWnd,
 		smoothRtt:         &smoothRtt,
 		minRtt:            &minRtt,
@@ -812,6 +814,7 @@ var (
 
 		processName:       "test-process",
 		processID:         4321,
+		processArgs:       "arg2",
 		sendCongestionWnd: &sendCongestionWnd,
 		smoothRtt:         &smoothRtt,
 		minRtt:            &minRtt,
@@ -939,6 +942,7 @@ var (
 
 		processName:       "test-process-2",
 		processID:         9876,
+		processArgs:       "arg3",
 		sendCongestionWnd: &sendCongestionWnd,
 		smoothRtt:         &smoothRtt,
 		minRtt:            &minRtt,
@@ -975,6 +979,7 @@ var (
 
 		processName:       "test-process-3",
 		processID:         5678,
+		processArgs:       "",
 		sendCongestionWnd: &sendCongestionWnd,
 		smoothRtt:         &smoothRtt,
 		minRtt:            &minRtt,
@@ -1011,6 +1016,7 @@ var (
 
 		processName:       "test-process-4",
 		processID:         34567,
+		processArgs:       "",
 		sendCongestionWnd: &sendCongestionWnd,
 		smoothRtt:         &smoothRtt,
 		minRtt:            &minRtt,
