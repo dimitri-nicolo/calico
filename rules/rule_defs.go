@@ -379,11 +379,12 @@ type Config struct {
 	AllowVXLANPacketsFromWorkloads bool
 	AllowIPIPPacketsFromWorkloads  bool
 
-	WireguardEnabled       bool
-	WireguardInterfaceName string
-	WireguardIptablesMark  uint32
-	WireguardListeningPort int
-	RouteSource            string
+	WireguardEnabled            bool
+	WireguardInterfaceName      string
+	WireguardIptablesMark       uint32
+	WireguardListeningPort      int
+	WireguardEncryptHostTraffic bool
+	RouteSource                 string
 
 	IptablesLogPrefix         string
 	IncludeDropActionInPrefix bool
