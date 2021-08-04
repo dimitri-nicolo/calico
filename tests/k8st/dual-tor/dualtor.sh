@@ -523,6 +523,15 @@ nodes:
   networks: ${RB_NETWORKS}
 - role: worker
   networks: ${RB_NETWORKS}
+kubeadmConfigPatches:
+- |
+  apiVersion: kubeproxy.config.k8s.io/v1alpha1
+  kind: KubeProxyConfiguration
+  metadata:
+    name: config
+  conntrack:
+    maxPerCore: 0
+
 EOF
 
     ${KIND} load docker-image calico-test/busybox-with-reliable-nc

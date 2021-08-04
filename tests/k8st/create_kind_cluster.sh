@@ -134,6 +134,8 @@ kubeadmConfigPatches:
   metadata:
     name: config
   mode: ipvs
+  conntrack:
+    maxPerCore: 0
 EOF
     else
 	${KIND} create cluster --config - <<EOF
@@ -148,6 +150,14 @@ nodes:
 - role: worker
 - role: worker
 - role: worker
+kubeadmConfigPatches:
+- |
+  apiVersion: kubeproxy.config.k8s.io/v1alpha1
+  kind: KubeProxyConfiguration
+  metadata:
+    name: config
+  conntrack:
+    maxPerCore: 0
 EOF
     fi
     kind_rc=$?
@@ -244,7 +254,7 @@ echo
 # Apply the enterprise license.
 # FIXME(karthik): Applying the enterprise license here since the test written don't test for invalid or no license.
 # Once such tests are added, this will have to move into the test itself.
-${kubectl} exec -i -n kube-system calicoctl -- /calicoctl apply -f - < ${TSEE_TEST_LICENSE}
+${kubectl} exec -i -n kube-system calicoctl -- /calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
 
 function test_connection() {
     local svc="webserver-ipv$1"
