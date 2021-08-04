@@ -1,13 +1,12 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package capture_test
+package calc_test
 
 import (
 	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/projectcalico/felix/calc"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/felix/capture"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,7 +25,7 @@ var _ = Describe("BpfFilters tests for PacketCapture", func() {
 
 	DescribeTable("Parse BPF filters",
 		func(rules []v3.PacketCaptureRule, expected string) {
-			var filter = capture.RenderBPFFilter(rules, "")
+			var filter = calc.RenderBPFFilter(rules, "")
 			Expect(filter).To(Equal(expected))
 		},
 		Entry("No filters", compose(), ""),

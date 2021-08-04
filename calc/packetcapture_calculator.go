@@ -12,7 +12,6 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/multidict"
@@ -58,7 +57,7 @@ func (pcc *PacketCaptureCalculator) onMatchStarted(selID, labelId interface{}) {
 
 func (pcc *PacketCaptureCalculator) extractSpecification(pc *v3.PacketCapture) PacketCaptureSpecification {
 	return PacketCaptureSpecification{
-		BPFFilter: capture.RenderBPFFilter(pc.Spec.Filters, strings.JoinQualifiedName(pc.Namespace, pc.Name)),
+		BPFFilter: RenderBPFFilter(pc.Spec.Filters, strings.JoinQualifiedName(pc.Namespace, pc.Name)),
 	}
 }
 
