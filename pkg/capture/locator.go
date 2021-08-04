@@ -9,7 +9,7 @@ import (
 	"github.com/tigera/packetcapture-api/pkg/cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const tigeraFluentdNs = "tigera-fluentd"

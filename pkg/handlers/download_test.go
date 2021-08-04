@@ -25,8 +25,7 @@ import (
 	"github.com/tigera/packetcapture-api/pkg/middleware"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-	calicolib "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const loremLipsum = "Lorem Lipsum"
@@ -45,8 +44,8 @@ var _ = Describe("Download", func() {
 			Name:      "name",
 			Namespace: "ns",
 		},
-		Status: calicolib.PacketCaptureStatus{
-			Files: []calicolib.PacketCaptureFile{
+		Status: v3.PacketCaptureStatus{
+			Files: []v3.PacketCaptureFile{
 				{
 					Node:      "node",
 					Directory: "dir",
@@ -64,8 +63,8 @@ var _ = Describe("Download", func() {
 			Name:      "name",
 			Namespace: "ns",
 		},
-		Status: calicolib.PacketCaptureStatus{
-			Files: []calicolib.PacketCaptureFile{
+		Status: v3.PacketCaptureStatus{
+			Files: []v3.PacketCaptureFile{
 				{
 					Node:      "nodeOne",
 					Directory: "dir",
