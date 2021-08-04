@@ -1553,6 +1553,14 @@ type testFlowLog struct {
 	ipSets         map[string][]string
 }
 
+func (t testFlowLog) UnmatchedPackets() []testCase {
+	return nil
+}
+
+func (t testFlowLog) XDP() bool {
+	return false
+}
+
 func (t testFlowLog) Policy() polprog.Rules {
 	return t.policy
 }
