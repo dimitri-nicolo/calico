@@ -143,7 +143,7 @@ func (r *NFLogReader) convertNflogPkt(dir rules.RuleDir, nPktAggr *nfnetlink.Nfl
 	return info
 }
 
-func convertCtEntryToConntrackInfo(ctEntry nfnetlink.CtEntry) (ConntrackInfo, error) {
+func convertCtEntryToConntrackInfo(ctEntry nfnetlink.CtEntry, markProxy uint32) (ConntrackInfo, error) {
 	var (
 		ctTuple nfnetlink.CtTuple
 		err     error
@@ -184,6 +184,10 @@ func convertCtEntryToConntrackInfo(ctEntry nfnetlink.CtEntry) (ConntrackInfo, er
 			Bytes:   ctEntry.ReplyCounters.Bytes,
 		},
 	}
+	// exclude the case when mark is not set
+	if markProxy != 0 {
+		ctInfo.IsProxy = (uint32(ctEntry.Mark) & markProxy) == markProxy
+	}
 
 	if ctEntry.IsDNAT() {
 		ctInfo.IsDNAT = true
@@ -199,16 +203,18 @@ type NetLinkConntrackReader struct {
 	wg       sync.WaitGroup
 	stopC    chan struct{}
 
-	ticker jitter.JitterTicker
-	outC   chan []ConntrackInfo
+	ticker    jitter.JitterTicker
+	outC      chan []ConntrackInfo
+	markProxy uint32
 }
 
 // NewNetLinkConntrackReader returns a new NetLinkConntrackReader
-func NewNetLinkConntrackReader(period time.Duration) *NetLinkConntrackReader {
+func NewNetLinkConntrackReader(period time.Duration, markProxy uint32) *NetLinkConntrackReader {
 	return &NetLinkConntrackReader{
-		stopC:  make(chan struct{}),
-		ticker: jitter.NewTicker(period, period/10),
-		outC:   make(chan []ConntrackInfo, 1000),
+		stopC:     make(chan struct{}),
+		ticker:    jitter.NewTicker(period, period/10),
+		outC:      make(chan []ConntrackInfo, 1000),
+		markProxy: markProxy,
 	}
 }
 
@@ -237,7 +243,7 @@ func (r *NetLinkConntrackReader) run() {
 		case <-r.ticker.Channel():
 			ctInfos := make([]ConntrackInfo, 0, ConntrackInfoBatchSize)
 			_ = nfnetlink.ConntrackList(func(ctEntry nfnetlink.CtEntry) {
-				ci, err := convertCtEntryToConntrackInfo(ctEntry)
+				ci, err := convertCtEntryToConntrackInfo(ctEntry, r.markProxy)
 				if err != nil {
 					log.Error(err.Error())
 					return
