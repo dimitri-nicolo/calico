@@ -3,9 +3,6 @@ module github.com/tigera/packetcapture-api
 go 1.15
 
 require (
-	github.com/emicklei/go-restful v2.11.2-0.20200112161605-a7c079c43d51+incompatible // indirect
-	github.com/go-openapi/jsonreference v0.19.4-0.20191224164422-1f9748e5f45e // indirect
-	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
@@ -13,7 +10,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05
+	github.com/tigera/api v0.0.0-20210803234024-4710c751340e
 	github.com/tigera/lma v0.0.0-20210803232129-f9eb048df57c
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
@@ -23,7 +20,7 @@ require (
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210803110216-76cbc97fbf5c
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210803100212-d990fa006fbd
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210804001131-c4b3dce7e65d
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
