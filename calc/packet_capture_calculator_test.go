@@ -19,8 +19,8 @@ type myMockedCallbacks struct {
 	mock.Mock
 }
 
-func (m *myMockedCallbacks) OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey) {
-	_ = m.Called(key, endpoint)
+func (m *myMockedCallbacks) OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey, specification calc.PacketCaptureSpecification) {
+	_ = m.Called(key, endpoint, specification)
 }
 
 func (m *myMockedCallbacks) OnPacketCaptureInactive(key model.ResourceKey, endpoint model.WorkloadEndpointKey) {
@@ -30,8 +30,9 @@ func (m *myMockedCallbacks) OnPacketCaptureInactive(key model.ResourceKey, endpo
 var _ = Describe("PacketCaptureCalculator", func() {
 	// output defines how PacketCaptureCallbacks calls will be matched
 	type output struct {
-		captureKey model.ResourceKey
-		endpoint   model.WorkloadEndpointKey
+		captureKey    model.ResourceKey
+		endpoint      model.WorkloadEndpointKey
+		specification calc.PacketCaptureSpecification
 	}
 
 	DescribeTable("Starts matching workload endpoints against packet captures",
@@ -41,7 +42,7 @@ var _ = Describe("PacketCaptureCalculator", func() {
 			// Mock OnPacketCaptureActive to return the expectedActive output
 			// We expect OnPacketCaptureActive to be called only with these values
 			for _, value := range expectedActive {
-				mockCallbacks.On("OnPacketCaptureActive", value.captureKey, value.endpoint)
+				mockCallbacks.On("OnPacketCaptureActive", value.captureKey, value.endpoint, value.specification)
 			}
 
 			// Mock OnPacketCaptureInactive to return the expectedInactive output
@@ -574,5 +575,180 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			},
 		}, []output{}, []output{}),
+		Entry("1 workload endpoint sent after capture with selector all() and tcp protocol", []api.Update{
+			// update for packet capture for packet-capture-bpf-filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureTCPTrafficValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+		}, []output{
+			// Expect a single update for packet-capture-bpf-filter with bfp filter for tcp protocol -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(tcp)",
+				},
+			},
+		}, []output{}),
+		Entry("1 capture added and then updated with a filter tcp protocol", []api.Update{
+			// update for packet capture for new packet-capture-bpf-filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureAllValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-bpf-filter with a new filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureTCPTrafficValue,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect start for packet-capture-bpf-filter  -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+			},
+			// Expect update for packet-capture-bpf-filter with bfp filter for tcp protocol -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(tcp)",
+				},
+			},
+		}, []output{}),
+		Entry("1 capture added with tcp filter then updated with an udp filter protocol", []api.Update{
+			// update for packet capture for new packet-capture-bpf-filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureTCPTrafficValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-bpf-filter with a new filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureUDPTrafficValue,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect start for packet-capture-bpf-filter  with bfp filter for tcp protocol -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(tcp)",
+				},
+			},
+			// Expect update for packet-capture-bpf-filter with bfp filter for udp protocol -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(udp)",
+				},
+			},
+		}, []output{}),
+		Entry("1 capture added with tcp filter then updated with a selector and filter change", []api.Update{
+			// update for packet capture for new packet-capture-bpf-filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureTCPTrafficValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep2
+			{
+				KVPair: model.KVPair{
+					Key:   Wep2Key,
+					Value: Wep2Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-bpf-filter with a new filter
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureBPFFilterKey,
+					Value: CaptureUDPTrafficValueAndLabelB,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect start for packet-capture-bpf-filter  with bfp filter for tcp protocol -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(tcp)",
+				},
+			},
+			// Expect start for packet-capture-bpf-filter  with bfp filter for tcp protocol -> wep2
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep2Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(tcp)",
+				},
+			},
+			// Expect update for packet-capture-bpf-filter with bfp filter for udp protocol -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep2Key,
+				specification: calc.PacketCaptureSpecification{
+					BPFFilter: "(udp)",
+				},
+			},
+		}, []output{
+			// Expect one removal for packet-capture-bpf-filter -> wep1
+			{
+				captureKey: CaptureBPFFilterKey,
+				endpoint:   Wep1Key,
+			},
+		}),
 	)
 })

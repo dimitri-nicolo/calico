@@ -473,11 +473,15 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		Expect(d.activeVTEPs).To(HaveKey(event.Node), "delete for unknown VTEP")
 		delete(d.activeVTEPs, event.Node)
 	case *proto.PacketCaptureUpdate:
-		d.activePacketCaptures.Add(fmt.Sprintf("%+v", *event))
+		var update = *event
+		var id = fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint)
+		d.activePacketCaptures.Add(id)
 	case *proto.PacketCaptureRemove:
-		Expect(d.activePacketCaptures.Contains(fmt.Sprintf("%+v", *event))).To(BeTrue(),
+		var remove = *event
+		var id = fmt.Sprintf("%+v-%+v", remove.Id, remove.Endpoint)
+		Expect(d.activePacketCaptures.Contains(id)).To(BeTrue(),
 			"Received PacketCaptureRemove for non-existent entry")
-		d.activePacketCaptures.Discard(fmt.Sprintf("%+v", *event))
+		d.activePacketCaptures.Discard(id)
 	case *proto.IPSecTunnelAdd:
 		Expect(d.activeIPSecTunnels.Contains(event.TunnelAddr)).To(BeFalse(),
 			"Received IPSecTunnelAdd for already-existing tunnel")

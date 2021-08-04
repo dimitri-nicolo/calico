@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"reflect"
 
-	log "github.com/sirupsen/logrus"
+	"k8s.io/utils/strings"
 
-	"github.com/projectcalico/felix/labelindex"
+	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/felix/dispatcher"
+	"github.com/projectcalico/felix/labelindex"
+	"github.com/projectcalico/felix/multidict"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	sel "github.com/projectcalico/libcalico-go/lib/selector"
@@ -23,6 +25,9 @@ import (
 type PacketCaptureCalculator struct {
 	// Cache all packet captures
 	allPacketCaptures map[model.ResourceKey]*v3.PacketCapture
+
+	// Cache matching between a packet capture and workload endpoints
+	packetCapturesToWorkloadEndpoints multidict.IfaceToIface
 
 	// Label index, matching packet capture selectors against local endpoints.
 	labelIndex *labelindex.InheritIndex
@@ -36,6 +41,7 @@ type PacketCaptureCalculator struct {
 func NewPacketCaptureCalculator(callbacks packetCaptureCallbacks) *PacketCaptureCalculator {
 	pcc := &PacketCaptureCalculator{}
 	pcc.allPacketCaptures = make(map[model.ResourceKey]*v3.PacketCapture)
+	pcc.packetCapturesToWorkloadEndpoints = multidict.NewIfaceToIface()
 	pcc.labelIndex = labelindex.NewInheritIndex(pcc.onMatchStarted, pcc.onMatchStopped)
 	pcc.packetCaptureCallbacks = callbacks
 	return pcc
@@ -43,12 +49,22 @@ func NewPacketCaptureCalculator(callbacks packetCaptureCallbacks) *PacketCapture
 
 func (pcc *PacketCaptureCalculator) onMatchStarted(selID, labelId interface{}) {
 	log.WithField("CAPTURE", selID).Infof("Start matching %v to packet capture", labelId)
-	pcc.OnPacketCaptureActive(selID.(model.ResourceKey), labelId.(model.WorkloadEndpointKey))
+	var pc = pcc.allPacketCaptures[selID.(model.ResourceKey)]
+	var specification = pcc.extractSpecification(pc)
+	pcc.packetCapturesToWorkloadEndpoints.Put(selID, labelId)
+	pcc.OnPacketCaptureActive(selID.(model.ResourceKey), labelId.(model.WorkloadEndpointKey), specification)
+}
+
+func (pcc *PacketCaptureCalculator) extractSpecification(pc *v3.PacketCapture) PacketCaptureSpecification {
+	return PacketCaptureSpecification{
+		BPFFilter: RenderBPFFilter(pc.Spec.Filters, strings.JoinQualifiedName(pc.Namespace, pc.Name)),
+	}
 }
 
 func (pcc *PacketCaptureCalculator) onMatchStopped(selID, labelId interface{}) {
 	captureKey := selID.(model.ResourceKey)
 	log.WithField("CAPTURE", selID).Debugf("Stop matching %v to packet capture", labelId)
+	pcc.packetCapturesToWorkloadEndpoints.Discard(selID, labelId)
 	pcc.OnPacketCaptureInactive(captureKey, labelId.(model.WorkloadEndpointKey))
 }
 
@@ -80,11 +96,11 @@ func (pcc *PacketCaptureCalculator) OnUpdate(update api.Update) (_ bool) {
 			if update.Value != nil {
 				old, found := pcc.allPacketCaptures[key]
 				if found && reflect.DeepEqual(old, update.Value.(*v3.PacketCapture)) {
-					log.WithField("key", update.Key).Debug("No-op policy change; ignoring.")
+					log.WithField("CAPTURE", update.Key).Debug("No-op policy change; ignoring.")
 					return
 				}
 
-				pcc.updatePacketCapture(update.Value.(*v3.PacketCapture), key)
+				pcc.updatePacketCapture(update.Value.(*v3.PacketCapture), key, old)
 			} else {
 				pcc.deletePacketCapture(key)
 			}
@@ -99,12 +115,29 @@ func (pcc *PacketCaptureCalculator) OnUpdate(update api.Update) (_ bool) {
 	return
 }
 
-func (pcc *PacketCaptureCalculator) updatePacketCapture(capture *v3.PacketCapture, key model.ResourceKey) {
+func (pcc *PacketCaptureCalculator) updatePacketCapture(capture *v3.PacketCapture, key model.ResourceKey, previousValue *v3.PacketCapture) {
 	sel := pcc.parseSelector(capture)
 	// add/update the packet capture value
 	pcc.allPacketCaptures[key] = capture
 	// update selector index and start matching against workload endpoints
 	pcc.labelIndex.UpdateSelector(key, sel)
+	// if other fields (than the selector) have been updated
+	// we need to propagate the update to the data plane
+	if pcc.hasOtherFieldsUpdated(previousValue, capture) {
+		pcc.packetCapturesToWorkloadEndpoints.Iter(key, func(wep interface{}) {
+			pcc.OnPacketCaptureActive(key, wep.(model.WorkloadEndpointKey), pcc.extractSpecification(capture))
+		})
+	}
+}
+
+func (pcc *PacketCaptureCalculator) hasOtherFieldsUpdated(old *v3.PacketCapture, new *v3.PacketCapture) bool {
+	var otherFieldsUpdated = false
+	if old != nil {
+		if !reflect.DeepEqual(old.Spec.Filters, new.Spec.Filters) {
+			otherFieldsUpdated = true
+		}
+	}
+	return otherFieldsUpdated
 }
 
 func (pcc *PacketCaptureCalculator) parseSelector(capture *v3.PacketCapture) sel.Selector {

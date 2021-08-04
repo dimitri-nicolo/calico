@@ -762,6 +762,7 @@ message GlobalBGPConfigUpdate {
 message PacketCaptureUpdate {
   PacketCaptureID id = 1;
   WorkloadEndpointID endpoint = 2;
+  PacketCaptureSpecification specification = 3;
 }
 
 message PacketCaptureRemove {
@@ -777,4 +778,8 @@ message PacketCaptureID {
 message PacketCaptureStatusUpdate {
   PacketCaptureID id = 1;
   repeated string capture_files = 2;
+}
+
+message PacketCaptureSpecification {
+  string bpfFilter = 1;
 }

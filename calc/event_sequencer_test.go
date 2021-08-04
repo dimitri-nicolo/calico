@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -414,6 +414,14 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 var _ = Describe("PacketCaptures update/remove", func() {
 	var uut *calc.EventSequencer
 	var recorder *dataplaneRecorder
+	var anyFilter = "anyFilter"
+	var anotherFilter = "anotherFilter"
+	var anySpecification = calc.PacketCaptureSpecification{
+		BPFFilter: anyFilter,
+	}
+	var anotherSpecification = calc.PacketCaptureSpecification{
+		BPFFilter: anotherFilter,
+	}
 
 	BeforeEach(func() {
 		uut = calc.NewEventSequencer(&dummyConfigInterface{})
@@ -422,8 +430,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 	})
 
 	It("should flush latest update", func() {
-		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
-		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key, anySpecification)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key, anotherSpecification)
 		uut.Flush()
 		Expect(recorder.Messages).To(Equal([]interface{}{
 			&proto.PacketCaptureUpdate{
@@ -434,11 +442,14 @@ var _ = Describe("PacketCaptures update/remove", func() {
 				Endpoint: &proto.WorkloadEndpointID{
 					WorkloadId: Wep1Key.WorkloadID,
 				},
+				Specification: &proto.PacketCaptureSpecification{
+					BpfFilter: anotherFilter,
+				},
 			}}))
 	})
 
 	It("should coalesce add + remove", func() {
-		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key, anySpecification)
 		uut.OnPacketCaptureInactive(CaptureAllKey, Wep1Key)
 		uut.Flush()
 		Expect(recorder.Messages).To(BeNil())
@@ -446,7 +457,7 @@ var _ = Describe("PacketCaptures update/remove", func() {
 
 	It("should coalesce remove + add", func() {
 		uut.OnPacketCaptureInactive(CaptureAllKey, Wep1Key)
-		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key, anySpecification)
 		uut.Flush()
 		Expect(recorder.Messages).To(Equal([]interface{}{
 			&proto.PacketCaptureUpdate{
@@ -457,11 +468,14 @@ var _ = Describe("PacketCaptures update/remove", func() {
 				Endpoint: &proto.WorkloadEndpointID{
 					WorkloadId: Wep1Key.WorkloadID,
 				},
+				Specification: &proto.PacketCaptureSpecification{
+					BpfFilter: anyFilter,
+				},
 			}}))
 	})
 
 	It("should send remove for flushed packet captures", func() {
-		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key, anySpecification)
 		uut.Flush()
 		Expect(recorder.Messages).To(Equal([]interface{}{&proto.PacketCaptureUpdate{
 			Id: &proto.PacketCaptureID{
@@ -470,6 +484,9 @@ var _ = Describe("PacketCaptures update/remove", func() {
 			},
 			Endpoint: &proto.WorkloadEndpointID{
 				WorkloadId: Wep1Key.WorkloadID,
+			},
+			Specification: &proto.PacketCaptureSpecification{
+				BpfFilter: anyFilter,
 			},
 		}}))
 		// Clear messages

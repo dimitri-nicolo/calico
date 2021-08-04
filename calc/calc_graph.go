@@ -108,8 +108,14 @@ type ipsecCallbacks interface {
 
 // packetCaptureCallbacks will be called when a match activates/deactivates a selection for a packet capture
 type packetCaptureCallbacks interface {
-	OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey)
+	OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey, specification PacketCaptureSpecification)
 	OnPacketCaptureInactive(key model.ResourceKey, endpoint model.WorkloadEndpointKey)
+}
+
+// PacketCaptureSpecification is an internal structure used to pass fields from PacketCaptureSpec to be
+// sent to the data plane
+type PacketCaptureSpecification struct {
+	BPFFilter string
 }
 
 type PipelineCallbacks interface {
