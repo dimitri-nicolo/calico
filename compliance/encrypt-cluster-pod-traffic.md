@@ -24,11 +24,11 @@ This how-to guide uses the following {{site.prodname}} features:
 
 The following platforms using only IPv4:
 - Kubernetes, on-premises
-- EKS using Calico CNI only
-- AKS using Calico CNI
+- EKS using Calico CNI
+- EKS using AWS CNI
 - AKS using Azure CNI
 
-All platforms listed above will encrypt pod-to-pod traffic. Additionally, when using AKS and Azure CNI, host-to-host traffic will also be encrypted.
+All platforms listed above will encrypt pod-to-pod traffic. Additionally, when using AKS or EKS, host-to-host traffic will also be encrypted, including host-networked pods.
 
 > Note: WireGuard encryption is not currently compatible with egress gateway functionality.
 {: .alert .alert-info }
@@ -42,6 +42,9 @@ All platforms listed above will encrypt pod-to-pod traffic. Additionally, when u
 ### How to
 
 - [Install WireGuard](#install-wireguard)
+    - [AKS](#aks)
+    - [EKS](#eks)
+    - [OpenShift](#openshift)
 - [Enable WireGuard for a cluster](#enable-wireguard-for-a-cluster)
 - [Verify encryption is enabled](#verify-encryption-is-enabled)
 - [Disable WireGuard for an individual node](#disable-wireguard-for-an-individual-node)
@@ -53,10 +56,14 @@ WireGuard is included in Linux 5.6+ kernels, and has been backported to earlier 
 
 Install WireGuard on cluster nodes using {% include open-new-window.html text='instructions for your operating system' url='https://www.wireguard.com/install/' %}. Note that you may need to reboot your nodes after installing WireGuard to make the kernel modules available on your system.
 
-   Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
-{% tabs %}
-<label:Kubernetes-EKS,active:true>
-<%
+Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
+
+##### AKS
+
+AKS cluster nodes run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
+
+##### EKS
+
 To install WireGuard on the default Amazon Machine Image (AMI):
 
    ```bash
@@ -65,13 +72,9 @@ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noa
 sudo curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
 sudo yum install wireguard-dkms wireguard-tools -y
    ```
-%>
-<label:Kubernetes-AKS>
-<%
-AKS cluster nodes currently run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
-%>
-<label:OpenShift>
-<%
+
+##### OpenShift
+
 To install WireGuard for OpenShift v4.6:
 
   This approach uses kernel modules via container installation as outlined here {% include open-new-window.html text='atomic wireguard' url='https://github.com/projectcalico/atomic-wireguard' %} 
@@ -145,8 +148,6 @@ To install WireGuard for OpenShift v4.6:
    ```bash
    oc create -f mc-wg.yaml
    ```
-%>
-{% endtabs %}
 
 #### Enable WireGuard for a cluster
 
