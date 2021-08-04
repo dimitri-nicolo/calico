@@ -728,10 +728,10 @@ var _ = Describe("FlowLog", func() {
 				},
 				Entry("single policy hit allowed at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|allow", "doc_count": 1},
+						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
 					}, nil,
 					[]map[string]interface{}{
-						{"key": "0|tier2|namespace2/policy2|allow", "doc_count": 1},
+						{"key": "0|tier2|namespace2/policy2|allow|0", "doc_count": 1},
 					}, nil,
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
@@ -746,7 +746,7 @@ var _ = Describe("FlowLog", func() {
 				),
 				Entry("single policy hit allowed at src and denied at dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|allow", "doc_count": 1},
+						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
 					}, nil,
 					nil,
 					[]map[string]interface{}{
@@ -778,16 +778,16 @@ var _ = Describe("FlowLog", func() {
 				),
 				Entry("single policy hit allowed and denied at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace1/policy1|allow", "doc_count": 1},
+						{"key": "0|tier1|namespace1/policy1|allow|0", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier4|namespace4/policy4|deny", "doc_count": 1},
+						{"key": "0|tier4|namespace4/policy4|deny|-1", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier3|namespace3/policy3|allow", "doc_count": 1},
+						{"key": "0|tier3|namespace3/policy3|allow|0", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier2|namespace2/policy2|deny", "doc_count": 1},
+						{"key": "0|tier2|namespace2/policy2|deny|-1", "doc_count": 1},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
@@ -811,32 +811,32 @@ var _ = Describe("FlowLog", func() {
 				// src and dst.
 				Entry("multiple policy hits for allowed and denied at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier11|namespace11/tier11.policy11|pass", "doc_count": 1},
-						{"key": "1|tier12|namespace12/tier12.staged:policy12|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace11/tier11.policy11|pass|0", "doc_count": 1},
+						{"key": "1|tier12|namespace12/tier12.staged:policy12|deny|-1", "doc_count": 1},
 						{"key": "2|tier12|namespace12/tier12.policy13|pass", "doc_count": 1},
-						{"key": "3|tier13|namespace13/tier13.policy14|pass", "doc_count": 1},
+						{"key": "3|tier13|namespace13/tier13.policy14|pass|3", "doc_count": 1},
 						{"key": "4|tier14|namespace14/tier14.policy15|allow", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier21|namespace21/tier21.policy21|pass", "doc_count": 1},
+						{"key": "0|tier21|namespace21/tier21.policy21|pass|0", "doc_count": 1},
 						{"key": "1|tier22|namespace22/tier22.staged:policy22|deny", "doc_count": 1},
-						{"key": "2|tier22|namespace22/tier22.policy23|pass", "doc_count": 1},
+						{"key": "2|tier22|namespace22/tier22.policy23|pass|0", "doc_count": 1},
 						{"key": "3|tier23|namespace23/tier23.policy24|pass", "doc_count": 1},
-						{"key": "4|tier24|namespace24/tier24.policy25|deny", "doc_count": 1},
+						{"key": "4|tier24|namespace24/tier24.policy25|deny|0", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier31|namespace31/tier31.policy31|pass", "doc_count": 1},
-						{"key": "1|tier32|namespace32/tier32.staged:policy32|deny", "doc_count": 1},
+						{"key": "0|tier31|namespace31/tier31.policy31|pass|0", "doc_count": 1},
+						{"key": "1|tier32|namespace32/tier32.staged:policy32|deny|0", "doc_count": 1},
 						{"key": "2|tier32|namespace32/tier32.policy33|pass", "doc_count": 1},
-						{"key": "3|tier33|namespace33/tier33.policy34|pass", "doc_count": 1},
+						{"key": "3|tier33|namespace33/tier33.policy34|pass|0", "doc_count": 1},
 						{"key": "4|tier34|namespace34/tier34.policy35|allow", "doc_count": 1},
 					},
 					[]map[string]interface{}{
-						{"key": "0|tier41|namespace41/tier41.policy41|pass", "doc_count": 1},
+						{"key": "0|tier41|namespace41/tier41.policy41|pass|-", "doc_count": 1},
 						{"key": "1|tier42|namespace42/tier42.staged:policy42|deny", "doc_count": 1},
 						{"key": "2|tier42|namespace42/tier42.policy43|pass", "doc_count": 1},
-						{"key": "3|tier43|namespace43/tier43.policy44|pass", "doc_count": 1},
-						{"key": "4|tier44|namespace44/tier44.policy45|deny", "doc_count": 1},
+						{"key": "3|tier43|namespace43/tier43.policy44|pass|-", "doc_count": 1},
+						{"key": "4|tier44|namespace44/tier44.policy45|deny|-", "doc_count": 1},
 					},
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
@@ -981,10 +981,10 @@ var _ = Describe("FlowLog", func() {
 				},
 				Entry("single obfuscated policy hit allowed at src and dst",
 					[]map[string]interface{}{
-						{"key": "0|tier1|namespace/policy|allow", "doc_count": 1},
+						{"key": "0|tier1|namespace/policy|allow|0", "doc_count": 1},
 					}, nil,
 					[]map[string]interface{}{
-						{"key": "0|tier2|namespace/policy2|allow", "doc_count": 1},
+						{"key": "0|tier2|namespace/policy2|allow|0", "doc_count": 1},
 					}, nil,
 					&PolicyReport{
 						AllowedFlowPolicies: []*FlowResponsePolicy{
@@ -1007,15 +1007,15 @@ var _ = Describe("FlowLog", func() {
 				Entry("multiple obfuscated passes before non obfuscated deny at src and dst",
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier11|namespace1/tier11.policy11|pass", "doc_count": 1},
-						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
-						{"key": "2|tier13|namespace1/tier13.policy13|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.policy11|pass|0", "doc_count": 1},
+						{"key": "1|tier12|namespace1/tier12.policy12|pass|1", "doc_count": 1},
+						{"key": "2|tier13|namespace1/tier13.policy13|deny|2", "doc_count": 1},
 					},
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier21|namespace2/tier21.policy21|pass", "doc_count": 1},
-						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
-						{"key": "2|tier23|namespace2/tier23.policy23|deny", "doc_count": 1},
+						{"key": "0|tier21|namespace2/tier21.policy21|pass|0", "doc_count": 1},
+						{"key": "1|tier22|namespace2/tier22.policy22|pass|1", "doc_count": 1},
+						{"key": "2|tier23|namespace2/tier23.policy23|deny|2", "doc_count": 1},
 					},
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
@@ -1040,15 +1040,15 @@ var _ = Describe("FlowLog", func() {
 				Entry("multiple obfuscated passes before obfuscated deny",
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier11|namespace1/tier11.policy11|pass", "doc_count": 1},
-						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
-						{"key": "2|tier13|namespace1/tier13.policy13|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.policy11|pass|0", "doc_count": 1},
+						{"key": "1|tier12|namespace1/tier12.policy12|pass|1", "doc_count": 1},
+						{"key": "2|tier13|namespace1/tier13.policy13|deny|2", "doc_count": 1},
 					},
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier21|namespace2/tier21.policy21|pass", "doc_count": 1},
-						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
-						{"key": "2|tier23|namespace2/tier23.policy23|deny", "doc_count": 1},
+						{"key": "0|tier21|namespace2/tier21.policy21|pass|0", "doc_count": 1},
+						{"key": "1|tier22|namespace2/tier22.policy22|pass|1", "doc_count": 1},
+						{"key": "2|tier23|namespace2/tier23.policy23|deny|2", "doc_count": 1},
 					},
 					&PolicyReport{
 						DeniedFlowPolicies: []*FlowResponsePolicy{
@@ -1068,18 +1068,18 @@ var _ = Describe("FlowLog", func() {
 				Entry("multiple obfuscated passes before non obfuscated staged deny before obfuscated deny",
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier11|namespace1/tier11.policy11|pass", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.policy11|pass|0", "doc_count": 1},
 						{"key": "1|tier12|namespace1/tier12.policy12|pass", "doc_count": 1},
-						{"key": "2|tier13|namespace1/tier13.staged:policy13|deny", "doc_count": 1},
-						{"key": "3|tier13|namespace11/tier13.policy14|pass", "doc_count": 1},
+						{"key": "2|tier13|namespace1/tier13.staged:policy13|deny|0", "doc_count": 1},
+						{"key": "3|tier13|namespace11/tier13.policy14|pass|1", "doc_count": 1},
 						{"key": "4|tier14|namespace1/tier14.policy15|deny", "doc_count": 1},
 					},
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier21|namespace2/tier21.policy21|pass", "doc_count": 1},
+						{"key": "0|tier21|namespace2/tier21.policy21|pass|0", "doc_count": 1},
 						{"key": "1|tier22|namespace2/tier22.policy22|pass", "doc_count": 1},
-						{"key": "2|tier23|namespace2/tier23.staged:policy23|deny", "doc_count": 1},
-						{"key": "3|tier23|namespace21/tier23.policy24|pass", "doc_count": 1},
+						{"key": "2|tier23|namespace2/tier23.staged:policy23|deny|0", "doc_count": 1},
+						{"key": "3|tier23|namespace21/tier23.policy24|pass|1", "doc_count": 1},
 						{"key": "4|tier24|namespace2/tier24.policy25|deny", "doc_count": 1},
 					},
 					&PolicyReport{
@@ -1108,14 +1108,14 @@ var _ = Describe("FlowLog", func() {
 				Entry("omit obfuscated staged deny combine obfuscated pass and deny",
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier11|namespace1/tier11.staged:policy11|deny", "doc_count": 1},
+						{"key": "0|tier11|namespace1/tier11.staged:policy11|deny|0", "doc_count": 1},
 						{"key": "1|tier11|namespace1/tier11.policy12|pass", "doc_count": 1},
-						{"key": "2|tier12|namespace1/tier12.policy13|deny", "doc_count": 1},
+						{"key": "2|tier12|namespace1/tier12.policy13|deny|2", "doc_count": 1},
 					},
 					nil,
 					[]map[string]interface{}{
-						{"key": "0|tier21|namespace2/tier21.staged:policy21|deny", "doc_count": 1},
-						{"key": "1|tier21|namespace2/tier21.policy22|pass", "doc_count": 1},
+						{"key": "0|tier21|namespace2/tier21.staged:policy21|deny|0", "doc_count": 1},
+						{"key": "1|tier21|namespace2/tier21.policy22|pass|1", "doc_count": 1},
 						{"key": "2|tier22|namespace2/tier22.policy23|deny", "doc_count": 1},
 					},
 					&PolicyReport{

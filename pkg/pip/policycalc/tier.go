@@ -7,6 +7,9 @@ import (
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
+// rule id index equals -1 for end-of-tier deny.
+const ruleIdIndexEndOfTierDeny = -1
+
 // calculateCompiledTiersAndImpactedPolicies compiles the Tiers and policies and returns ingress and egress sets of
 // -  The compiled tiers (With policies)
 // -  The set of policies that are impacted by a resource update.
@@ -491,14 +494,23 @@ func addPolicyToResponse(r *EndpointResponse, tier, namespace, name string, flag
 		}
 	}
 
+	var ruleIdIndex *int
 	for _, actionStr := range flags.ToActionStrings() {
 		action := api.ActionFromString(actionStr)
 		if action == api.ActionInvalid {
 			log.Errorf("flag converted to invalid action")
 			continue
 		}
+		// TODO(dimitrin): Remove the following action "eot-deny" redefinition to "deny". Remove the
+		// ActionEndOfTierDeny from AllActions in lma. Define the rule id index while defining the
+		// action.
+		if action == api.ActionEndOfTierDeny {
+			ruleIdIndex = new(int)
+			*ruleIdIndex = -1
+			action = api.ActionDeny
+		}
 
-		newPolicyHit, err := api.NewPolicyHit(action, 0, matchIndex, staged, name, namespace, tier)
+		newPolicyHit, err := api.NewPolicyHit(action, 0, matchIndex, staged, name, namespace, tier, ruleIdIndex)
 		if err != nil {
 			log.WithError(err).Errorf("failed to create new policy hit")
 			continue
@@ -519,7 +531,15 @@ func getFlagsFromFlowLog(flowLogName string, flow *api.Flow) (api.ActionFlag, bo
 			if policyAction != api.ActionInvalid && policyAction != thisActionFlag {
 				return 0, false
 			}
-			policyAction = thisActionFlag
+			// When the policy action and the rule index id are 'deny' and -1 respectively, set the
+			// policyAction to end-of-tier deny.
+			if p.RuleIdIndex() != nil &&
+				*p.RuleIdIndex() == ruleIdIndexEndOfTierDeny &&
+				thisActionFlag == api.ActionDeny {
+				policyAction = api.ActionEndOfTierDeny
+			} else {
+				policyAction = thisActionFlag
+			}
 		}
 	}
 
