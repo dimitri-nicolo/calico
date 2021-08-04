@@ -24,4 +24,5 @@ type Config struct {
 	InterfaceName       string
 	MTU                 int
 	RouteSource         string
+	EncryptHostTraffic  bool
 }

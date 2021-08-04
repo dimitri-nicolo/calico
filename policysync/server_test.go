@@ -22,9 +22,9 @@ import (
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/pod2daemon/binder"
 
+	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 )
