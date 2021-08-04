@@ -124,7 +124,7 @@ var retvalToStr = map[int]string{
 }
 
 func TestCompileTemplateRun(t *testing.T) {
-	runBpfTest(t, "calico_to_workload_ep", &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
+	runBpfTest(t, "calico_to_workload_ep", false, &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
 		_, _, _, _, pktBytes, err := testPacketUDPDefault()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -150,7 +150,7 @@ type testLogger interface {
 	Logf(format string, args ...interface{})
 }
 
-func setupAndRun(logger testLogger, loglevel string, section string, rules *polprog.Rules,
+func setupAndRun(logger testLogger, loglevel, section string, forXDP bool, rules *polprog.Rules,
 	runFn func(progName string), opts ...testOption) {
 
 	topts := testOpts{
@@ -186,31 +186,33 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(bpfFsDir)
 
-	obj := "../../bpf-gpl/bin/test_"
-	if strings.Contains(section, "from") {
-		obj += "from_"
-	} else {
-		obj += "to_"
-	}
-
+	obj := "../../bpf-gpl/bin/xdp_debug"
 	progLog := ""
+	if !forXDP {
+		obj = "../../bpf-gpl/bin/test_"
+		if strings.Contains(section, "from") {
+			obj += "from_"
+		} else {
+			obj += "to_"
+		}
 
-	if strings.Contains(section, "host") {
-		obj += "hep_"
-		progLog = "HEP"
-	} else {
-		obj += "wep_"
-		progLog = "WEP"
-	}
+		if strings.Contains(section, "host") {
+			obj += "hep_"
+			progLog = "HEP"
+		} else {
+			obj += "wep_"
+			progLog = "WEP"
+		}
 
-	log.WithField("hostIP", hostIP).Info("Host IP")
-	log.WithField("intfIP", intfIP).Info("Intf IP")
-	obj += fmt.Sprintf("fib_%s_skb0x%x", loglevel, skbMark)
+		log.WithField("hostIP", hostIP).Info("Host IP")
+		log.WithField("intfIP", intfIP).Info("Intf IP")
+		obj += fmt.Sprintf("fib_%s_skb0x%x", loglevel, skbMark)
 
-	if strings.Contains(section, "_dsr") {
-		obj += "_dsr"
-		// XXX bit of a hack, we should change the section names to contain _dsr
-		section = strings.Trim(section, "_dsr")
+		if strings.Contains(section, "_dsr") {
+			obj += "_dsr"
+			// XXX bit of a hack, we should change the section names to contain _dsr
+			section = strings.Trim(section, "_dsr")
+		}
 	}
 
 	obj += ".o"
@@ -257,9 +259,9 @@ outter:
 }
 
 // runBpfTest runs a specific section of the entire bpf program in isolation
-func runBpfTest(t *testing.T, section string, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
+func runBpfTest(t *testing.T, section string, forXDP bool, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
 	RegisterTestingT(t)
-	setupAndRun(t, "debug", section, rules, func(progName string) {
+	setupAndRun(t, "debug", section, forXDP, rules, func(progName string) {
 		t.Run(section, func(_ *testing.T) {
 			testFn(func(dataIn []byte) (bpfRunResult, error) {
 				res, err := bpftoolProgRun(progName, dataIn)
@@ -402,7 +404,7 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, polProg bool, maps ...bpf.Map) e
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "1", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_1"))
 	if err != nil {
-		return errors.Wrap(err, "failed to update jump map (epilogue program)")
+		return errors.Wrap(err, "failed to update jump map (allowed program)")
 	}
 	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "2", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_2"))
 	if err != nil {
