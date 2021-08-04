@@ -1,21 +1,17 @@
 ---
-title: Enabling process executable path and arguments in flow logs
-description: Enabling Process executable path and arguments in flow logs
+title: Enable process-level information in flow logs.
+description: Get visibility into process-level network activity in flow logs.
 canonical_url: /visibility/elastic/flow/processpath
 ---
 
 
 ### Big picture
 
-Configure {{site.prodname}} to collect process executable path and the arguments with which the executable was invoked. The path and arguments are read from `/proc/pid/cmdline` or obtained using eBPF kprobes and they are added to flow logs.
+Configure {{site.prodname}} to collect process executable path and arguments and add them to flow logs.
 
 ### Value
 
 Get visibility into the network activity at the process level using {{site.prodname}} flow logs.
-
-### Privileges
-
-For full functionality, this feature requires the `{{site.noderunning}}` `DaemonSet` to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
 
 ### Concepts
 
@@ -32,6 +28,10 @@ For long-lived processes, path and arguments are read from `/proc/pid/cmdline`. 
 Ensure that your kernel contains support for eBPF kprobes that {{site.prodname}} uses. The minimum supported
 kernel for this is feature is: `v4.4.0`.
 
+### Privileges
+
+For full functionality, this feature requires the `{{site.noderunning}}` `DaemonSet` to have access to the host's PID namespace. The Tigera Operator will automatically grant this extra privilege to the daemonset if the feature is enabled in the operator's LogCollector resource, as described below.
+
 ## How to
 
 #### Enable process path and argument collection
@@ -45,7 +45,7 @@ using the command:
 
 Enabling/Disabling collectProcessPath causes a rolling update of the `{{site.noderunning}} DaemonSet`.
 
-#### View process path and arguments in flow logs using Kibana.
+#### View process path and arguments in flow logs using Kibana
 
 Navigate to the Kibana Flow logs dashboard to view process path and arguments associated with a flow log entry.
 
