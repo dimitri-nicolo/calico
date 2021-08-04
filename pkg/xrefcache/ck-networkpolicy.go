@@ -11,13 +11,11 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/internet"
@@ -523,31 +521,31 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
 	// TODO(rlb): We could get rid of this if we has a single source of truth for the resources.
 	switch tr := res.(type) {
-	case *pcv3.NetworkPolicy:
+	case *apiv3.NetworkPolicy:
 		res = &apiv3.NetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *pcv3.GlobalNetworkPolicy:
+	case *apiv3.GlobalNetworkPolicy:
 		res = &apiv3.GlobalNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *pcv3.StagedNetworkPolicy:
+	case *apiv3.StagedNetworkPolicy:
 		res = &apiv3.StagedNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *pcv3.StagedGlobalNetworkPolicy:
+	case *apiv3.StagedGlobalNetworkPolicy:
 		res = &apiv3.StagedGlobalNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *pcv3.StagedKubernetesNetworkPolicy:
+	case *apiv3.StagedKubernetesNetworkPolicy:
 		res = &apiv3.StagedKubernetesNetworkPolicy{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,

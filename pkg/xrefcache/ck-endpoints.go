@@ -12,17 +12,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	internalv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/set"
-
-	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/ips"
@@ -119,7 +119,7 @@ func (c *CacheEntryEndpoint) GetOrderedTiersAndPolicies() []*TierWithOrderedPoli
 // versionedK8sNamespace implements the VersionedEndpointResource interface.
 type versionedK8sPod struct {
 	*corev1.Pod
-	v3      *apiv3.WorkloadEndpoint
+	v3      *internalv3.WorkloadEndpoint
 	v1      *model.WorkloadEndpoint
 	validIP bool
 }
@@ -348,7 +348,7 @@ func (c *endpointHandler) newCacheEntry() CacheEntry {
 func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
 	switch tr := res.(type) {
-	case *pcv3.HostEndpoint:
+	case *apiv3.HostEndpoint:
 		res = &apiv3.HostEndpoint{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
@@ -417,7 +417,7 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 		// SAAS-833)
 		kvp := kvps[0]
 
-		v3, ok := kvp.Value.(*apiv3.WorkloadEndpoint)
+		v3, ok := kvp.Value.(*internalv3.WorkloadEndpoint)
 		if !ok {
 			// Handle gracefully the possibility that the Value is nil.
 			log.Error("Pod to workload endpoint conversion failed")

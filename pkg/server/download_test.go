@@ -9,7 +9,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
-	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/tigera/compliance/pkg/datastore"
 

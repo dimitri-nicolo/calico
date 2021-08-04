@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 /*
 Copyright 2016 The Kubernetes Authors.
 
@@ -29,10 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 )
@@ -139,7 +138,7 @@ func getJobStartEndTime(j *batchv1.Job) (*metav1.Time, *metav1.Time) {
 }
 
 // byActiveReportEndTime sorts a list of active jobs by report end timestamp.
-type byActiveReportEndTime []apiv3.ReportJob
+type byActiveReportEndTime []v3.ReportJob
 
 func (o byActiveReportEndTime) Len() int      { return len(o) }
 func (o byActiveReportEndTime) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
@@ -152,7 +151,7 @@ func (o byActiveReportEndTime) Less(i, j int) bool {
 }
 
 // byCompletedReportEndTime sorts a list of active jobs by report end timestamp.
-type byCompletedReportEndTime []apiv3.CompletedReportJob
+type byCompletedReportEndTime []v3.CompletedReportJob
 
 func (o byCompletedReportEndTime) Len() int      { return len(o) }
 func (o byCompletedReportEndTime) Swap(i, j int) { o[i], o[j] = o[j], o[i] }

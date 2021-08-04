@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 /*
 Copyright 2016 The Kubernetes Authors.
 
@@ -49,11 +49,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	ref "k8s.io/client-go/tools/reference"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/hashutils"
@@ -66,8 +65,8 @@ var (
 	// controllerKind contains the schema.GroupVersionKind for this controller type.
 	controllerKind = schema.GroupVersionKind{
 		Kind:    "GlobalReport",
-		Version: apiv3.VersionCurrent,
-		Group:   apiv3.Group,
+		Version: v3.VersionCurrent,
+		Group:   v3.Group,
 	}
 )
 
@@ -265,9 +264,9 @@ func (cc *ComplianceController) syncOne(rep *v3.GlobalReport, js []batchv1.Job, 
 func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.Job, now time.Time) bool {
 	// Keep track of the active, successful and failed jobs. We'll simply replace all of these in the Status
 	// at the end.
-	var active []apiv3.ReportJob
-	var successful []apiv3.CompletedReportJob
-	var failed []apiv3.CompletedReportJob
+	var active []v3.ReportJob
+	var successful []v3.CompletedReportJob
+	var failed []v3.CompletedReportJob
 
 	// If we don't have a last scheduled time stored, and we should have scheduled at least one job by now, then we
 	// should query the archived store to see if there are any archived entries.
@@ -288,7 +287,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 				log.Infof("No archived report data for %s", rep.Name)
 			} else {
 				log.Infof("Updating the last end time from archived rep %s: %v - %v", rep.Name, start, end)
-				rep.Status.LastScheduledReportJob = &apiv3.ReportJob{
+				rep.Status.LastScheduledReportJob = &v3.ReportJob{
 					Start: *start,
 					End:   *end,
 					Job:   &v1.ObjectReference{},
@@ -324,7 +323,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 		finished, status := getFinishedStatus(&j)
 		inActiveList := inActiveList(*rep, j.ObjectMeta.UID)
 
-		job := apiv3.ReportJob{
+		job := v3.ReportJob{
 			Start: *start,
 			End:   *end,
 			Job:   jref,
@@ -343,7 +342,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 		} else if status == batchv1.JobFailed {
 			// The job failed, include in our failed set.
 			log.Debugf("Job failed: %s/%s", j.Namespace, j.Name)
-			failed = append(failed, apiv3.CompletedReportJob{
+			failed = append(failed, v3.CompletedReportJob{
 				ReportJob:         job,
 				JobCompletionTime: j.Status.CompletionTime,
 			})
@@ -359,7 +358,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 		} else {
 			// The job completed, include in our successful set.
 			log.Debugf("Job successful: %s/%s", j.Namespace, j.Name)
-			successful = append(successful, apiv3.CompletedReportJob{
+			successful = append(successful, v3.CompletedReportJob{
 				ReportJob:         job,
 				JobCompletionTime: j.Status.CompletionTime,
 			})
@@ -402,7 +401,7 @@ func (cc *ComplianceController) removeOldestJobs(rep *v3.GlobalReport) bool {
 	log.Debugf("Removing oldest jobs for %s", rep.Name)
 
 	// Track which jobs we need to delete.
-	var jobsToDelete []apiv3.ReportJob
+	var jobsToDelete []v3.ReportJob
 
 	// Start with the succesful jobs.
 	numSuccessfulToDelete := len(rep.Status.LastSuccessfulReportJobs) - cc.cfg.MaxSuccessfulJobsHistory
@@ -546,7 +545,7 @@ func (cc *ComplianceController) startReportJobs(rep *v3.GlobalReport, now time.T
 			log.Debugf("Unable to make object reference for job for %s", rep.Name)
 			continue
 		}
-		job := apiv3.ReportJob{
+		job := v3.ReportJob{
 			Start: metav1.Time{Time: jobTime.Start},
 			End:   metav1.Time{Time: jobTime.End},
 			Job:   jref,

@@ -14,7 +14,7 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/elastic"
 
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // New creates a new server.
