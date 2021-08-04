@@ -427,6 +427,13 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		syncer.Stop()
 	})
 
+	It("should handle endpoint slices", func() {
+		By("Performing a List of EndpointSlices", func() {
+			_, err := c.List(ctx, model.ResourceListOptions{Kind: model.KindKubernetesEndpointSlice}, "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	It("should handle a Namespace with DefaultDeny (v1beta annotation for namespace isolation)", func() {
 		ns := k8sapi.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
