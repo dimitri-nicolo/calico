@@ -670,13 +670,12 @@ github.com/tcnksm/go-input v0.0.0-20180404061846-548a7d7a8ee8/go.mod h1:IlWNj9v/
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae h1:vgGSvdW5Lqg+I1aZOlG32uyE6xHpLdKhZzcTEktz5wM=
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
-github.com/tigera/api v0.0.0-20210720144753-0dd043a1a989/go.mod h1:AKyG8BeBcQJKgRXfNP1Gkp85x0bGW92SJz8rA1LJGms=
 github.com/tigera/api v0.0.0-20210728170712-c0b5ecad82dc h1:fkFJV2Re5nXTuOMXW3Sg+nQHDfmk+LSwuCug2NrV9O4=
 github.com/tigera/api v0.0.0-20210728170712-c0b5ecad82dc/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210729172758-8d94e3c6a1fa h1:giMY1I63bB6MGDHxMaG8yb7dV7YyyjhY0v3bBDNZuUA=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210729172758-8d94e3c6a1fa/go.mod h1:OkJBtA+WJ2kfBQZhQZFENpyN8SIeCwGJmNKKi7rgsGM=
-github.com/tigera/licensing v1.0.1-0.20210727052330-3acce9adc848 h1:SDPl2M6s6Vi9IRiWUk/zOpSN+WJZnIPY0oNmCZ8zdQo=
-github.com/tigera/licensing v1.0.1-0.20210727052330-3acce9adc848/go.mod h1:svyd+KM1kREG6kPQZ8gUYrwqiR4VJaxQG1wvtY1bt3g=
+github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05 h1:96aLjQjs4qXlvtemv3I52HpgPcAKbPPZdplv0Y0xrDY=
+github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210804155628-14471b3708c7 h1:aqOCqM1HcfUmpIa56fs4aYfNoGSuRTVsYPWSdc5cAIc=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210804155628-14471b3708c7/go.mod h1:rZuPXPcJYPP9OQjUqqDMr4LF4MaBH4MC/xW65J4rV2k=
 github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd h1:g5lB9xwWroU39uvCG8YqTGZayyeDO4v/QBrxc9v8w3k=
 github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd/go.mod h1:UTzib8HXu0NNpCfMOigJbvxhxTGzq8plx+lo7DtmDn4=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
