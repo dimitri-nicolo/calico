@@ -603,7 +603,6 @@ func (a *wrappedCallbacks) OnSecretUpdated(namespace, name string) {
 			l := log.WithFields(fields)
 			a.updateRCC(k, v.remoteClusterConfig, "Secret update", l)
 		}
-
 	}
 
 	a.cleanStaleSecrets()

@@ -27,87 +27,76 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer":                               schema_libcalico_go_lib_apis_v1_BGPPeer(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerList":                           schema_libcalico_go_lib_apis_v1_BGPPeerList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata":                       schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec":                           schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfig":                       schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata":               schema_libcalico_go_lib_apis_v1_CalicoAPIConfigMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec":                   schema_libcalico_go_lib_apis_v1_CalicoAPIConfigSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort":                          schema_libcalico_go_lib_apis_v1_EndpointPort(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule":                            schema_libcalico_go_lib_apis_v1_EntityRule(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig":                            schema_libcalico_go_lib_apis_v1_EtcdConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint":                          schema_libcalico_go_lib_apis_v1_HostEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointList":                      schema_libcalico_go_lib_apis_v1_HostEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata":                  schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec":                      schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields":                            schema_libcalico_go_lib_apis_v1_ICMPFields(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration":                     schema_libcalico_go_lib_apis_v1_IPIPConfiguration(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT":                                 schema_libcalico_go_lib_apis_v1_IPNAT(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool":                                schema_libcalico_go_lib_apis_v1_IPPool(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolList":                            schema_libcalico_go_lib_apis_v1_IPPoolList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata":                        schema_libcalico_go_lib_apis_v1_IPPoolMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec":                            schema_libcalico_go_lib_apis_v1_IPPoolSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig":                            schema_libcalico_go_lib_apis_v1_KubeConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Node":                                  schema_libcalico_go_lib_apis_v1_Node(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec":                           schema_libcalico_go_lib_apis_v1_NodeBGPSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeList":                              schema_libcalico_go_lib_apis_v1_NodeList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata":                          schema_libcalico_go_lib_apis_v1_NodeMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec":                              schema_libcalico_go_lib_apis_v1_NodeSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef":                               schema_libcalico_go_lib_apis_v1_OrchRef(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Policy":                                schema_libcalico_go_lib_apis_v1_Policy(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyList":                            schema_libcalico_go_lib_apis_v1_PolicyList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata":                        schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec":                            schema_libcalico_go_lib_apis_v1_PolicySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Profile":                               schema_libcalico_go_lib_apis_v1_Profile(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileList":                           schema_libcalico_go_lib_apis_v1_ProfileList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata":                       schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec":                           schema_libcalico_go_lib_apis_v1_ProfileSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule":                                  schema_libcalico_go_lib_apis_v1_Rule(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Tier":                                  schema_libcalico_go_lib_apis_v1_Tier(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierList":                              schema_libcalico_go_lib_apis_v1_TierList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata":                          schema_libcalico_go_lib_apis_v1_TierMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec":                              schema_libcalico_go_lib_apis_v1_TierSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint":                      schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointList":                  schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata":              schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":                  schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute":                   schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReview":                  schema_libcalico_go_lib_apis_v3_AuthenticationReview(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReviewList":              schema_libcalico_go_lib_apis_v3_AuthenticationReviewList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReviewStatus":            schema_libcalico_go_lib_apis_v3_AuthenticationReviewStatus(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReview":                   schema_libcalico_go_lib_apis_v3_AuthorizationReview(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewList":               schema_libcalico_go_lib_apis_v3_AuthorizationReviewList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewResourceAttributes": schema_libcalico_go_lib_apis_v3_AuthorizationReviewResourceAttributes(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec":               schema_libcalico_go_lib_apis_v3_AuthorizationReviewSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus":             schema_libcalico_go_lib_apis_v3_AuthorizationReviewStatus(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup":               schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerb":                schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerb(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerbs":               schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerbs(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity":                         schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList":                     schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec":                     schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock":                             schema_libcalico_go_lib_apis_v3_IPAMBlock(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockList":                         schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec":                         schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig":                            schema_libcalico_go_lib_apis_v3_IPAMConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigList":                        schema_libcalico_go_lib_apis_v3_IPAMConfigList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec":                        schema_libcalico_go_lib_apis_v3_IPAMConfigSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle":                            schema_libcalico_go_lib_apis_v3_IPAMHandle(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleList":                        schema_libcalico_go_lib_apis_v3_IPAMHandleList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec":                        schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT":                                 schema_libcalico_go_lib_apis_v3_IPNAT(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                                  schema_libcalico_go_lib_apis_v3_Node(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress":                           schema_libcalico_go_lib_apis_v3_NodeAddress(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":                           schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                              schema_libcalico_go_lib_apis_v3_NodeList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec":                              schema_libcalico_go_lib_apis_v3_NodeSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeStatus":                            schema_libcalico_go_lib_apis_v3_NodeStatus(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec":                     schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                               schema_libcalico_go_lib_apis_v3_OrchRef(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint":                      schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointList":                  schema_libcalico_go_lib_apis_v3_WorkloadEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec":                  schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer":                  schema_libcalico_go_lib_apis_v1_BGPPeer(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerList":              schema_libcalico_go_lib_apis_v1_BGPPeerList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata":          schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec":              schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfig":          schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata":  schema_libcalico_go_lib_apis_v1_CalicoAPIConfigMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec":      schema_libcalico_go_lib_apis_v1_CalicoAPIConfigSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort":             schema_libcalico_go_lib_apis_v1_EndpointPort(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule":               schema_libcalico_go_lib_apis_v1_EntityRule(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig":               schema_libcalico_go_lib_apis_v1_EtcdConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint":             schema_libcalico_go_lib_apis_v1_HostEndpoint(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointList":         schema_libcalico_go_lib_apis_v1_HostEndpointList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata":     schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec":         schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields":               schema_libcalico_go_lib_apis_v1_ICMPFields(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration":        schema_libcalico_go_lib_apis_v1_IPIPConfiguration(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT":                    schema_libcalico_go_lib_apis_v1_IPNAT(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool":                   schema_libcalico_go_lib_apis_v1_IPPool(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolList":               schema_libcalico_go_lib_apis_v1_IPPoolList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata":           schema_libcalico_go_lib_apis_v1_IPPoolMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec":               schema_libcalico_go_lib_apis_v1_IPPoolSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig":               schema_libcalico_go_lib_apis_v1_KubeConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Node":                     schema_libcalico_go_lib_apis_v1_Node(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec":              schema_libcalico_go_lib_apis_v1_NodeBGPSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeList":                 schema_libcalico_go_lib_apis_v1_NodeList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata":             schema_libcalico_go_lib_apis_v1_NodeMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec":                 schema_libcalico_go_lib_apis_v1_NodeSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef":                  schema_libcalico_go_lib_apis_v1_OrchRef(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Policy":                   schema_libcalico_go_lib_apis_v1_Policy(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyList":               schema_libcalico_go_lib_apis_v1_PolicyList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata":           schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec":               schema_libcalico_go_lib_apis_v1_PolicySpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Profile":                  schema_libcalico_go_lib_apis_v1_Profile(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileList":              schema_libcalico_go_lib_apis_v1_ProfileList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata":          schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec":              schema_libcalico_go_lib_apis_v1_ProfileSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule":                     schema_libcalico_go_lib_apis_v1_Rule(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Tier":                     schema_libcalico_go_lib_apis_v1_Tier(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierList":                 schema_libcalico_go_lib_apis_v1_TierList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata":             schema_libcalico_go_lib_apis_v1_TierMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec":                 schema_libcalico_go_lib_apis_v1_TierSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint":         schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointList":     schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata": schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":     schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute":      schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity":            schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList":        schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec":        schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock":                schema_libcalico_go_lib_apis_v3_IPAMBlock(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockList":            schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec":            schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig":               schema_libcalico_go_lib_apis_v3_IPAMConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigList":           schema_libcalico_go_lib_apis_v3_IPAMConfigList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec":           schema_libcalico_go_lib_apis_v3_IPAMConfigSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle":               schema_libcalico_go_lib_apis_v3_IPAMHandle(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleList":           schema_libcalico_go_lib_apis_v3_IPAMHandleList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec":           schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT":                    schema_libcalico_go_lib_apis_v3_IPNAT(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                     schema_libcalico_go_lib_apis_v3_Node(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress":              schema_libcalico_go_lib_apis_v3_NodeAddress(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":              schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                 schema_libcalico_go_lib_apis_v3_NodeList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec":                 schema_libcalico_go_lib_apis_v3_NodeSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeStatus":               schema_libcalico_go_lib_apis_v3_NodeStatus(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec":        schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                  schema_libcalico_go_lib_apis_v3_OrchRef(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint":         schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointList":     schema_libcalico_go_lib_apis_v3_WorkloadEndpointList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec":     schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref),
 	}
 }
 
@@ -2109,462 +2098,6 @@ func schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref common.ReferenceCal
 				},
 			},
 		},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthenticationReview(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReviewStatus"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReviewStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthenticationReviewList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "AuthenticationReviewList is a list of AuthenticationReview objects.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
-						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReview"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReview", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthenticationReviewStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"uid": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"groups": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-					"extra": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type: []string{"array"},
-										Items: &spec.SchemaOrArray{
-											Schema: &spec.Schema{
-												SchemaProps: spec.SchemaProps{
-													Default: "",
-													Type:    []string{"string"},
-													Format:  "",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizationReview(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec"),
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizationReviewList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "AuthorizationReviewList is a list of AuthorizationReview objects.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
-						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReview"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReview", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizationReviewResourceAttributes(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"apiGroup": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The API Group to check.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"resources": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of resources to check within the same API Group.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-					"verbs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of verbs to check. This is expanded for each resource and within the same API Group.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizationReviewSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"resourceAttributes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of resource attributes that are being checked. Each resource attribute is expanded into individual kind/resource and verbs.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewResourceAttributes"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewResourceAttributes"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizationReviewStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"authorizedResourceVerbs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of authorized resource actions. A given API Group and resource combination will appear at most once in this slice.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerbs"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerbs"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"tier": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The tier.  This is only valid for tiered policies, and tiers.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The namespace. If this is empty then the user is authorized cluster-wide (i.e. across all namespaces). This will always be empty for cluster-scoped resources when the user is authorized.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"namespace"},
-			},
-		},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerb(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"verb": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The verb.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"resourceGroups": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The group of resource instances that are authorized for this verb.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"verb", "resourceGroups"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerbs(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"apiGroup": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The API group.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"resource": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The resource.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"verbs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of authorized actions for this resource. For a specific verb, this contains the set of resources for which the user is authorized to perform that action. This is calculated to avoid duplication such that a single resource instance can only be associated with a single entry in this slice. This allows a consumer of this API to issue a minimal set of queries (e.g. watches) that cover, uniquely, the authorized set of resources.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerb"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerb"},
 	}
 }
 

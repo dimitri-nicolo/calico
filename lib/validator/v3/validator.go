@@ -165,6 +165,9 @@ var (
 	}
 
 	stagedActionRegex = regexp.MustCompile("^(" + string(api.StagedActionSet) + "|" + string(api.StagedActionDelete) + ")$")
+
+	allDigits = regexp.MustCompile(`^\d+$`)
+	portRange = regexp.MustCompile(`^(\d+):(\d+)$`)
 )
 
 // Validate is used to validate the supplied structure according to the
@@ -306,6 +309,7 @@ func init() {
 	registerStructValidator(validate, validateRouteTableRange, api.RouteTableRange{})
 	registerStructValidator(validate, validateBGPConfigurationSpec, api.BGPConfigurationSpec{})
 	registerStructValidator(validate, validatePacketCapture, api.PacketCapture{})
+	registerStructValidator(validate, validatePacketCaptureRule, api.PacketCaptureRule{})
 	registerStructValidator(validate, validateDeepPacketInspection, api.DeepPacketInspection{})
 
 }
@@ -1442,6 +1446,38 @@ func validateEntityRule(structLevel validator.StructLevel) {
 		structLevel.ReportError(reflect.ValueOf(rule.NamespaceSelector),
 			"NamespaceSelector field", "", reason(globalSelectorOnly), "")
 	}
+
+	if rule.Services != nil {
+		// Make sure it's not empty.
+		if rule.Services.Name == "" {
+			structLevel.ReportError(reflect.ValueOf(rule.Services),
+				"Services field", "", reason("must specify a service name"), "")
+		}
+
+		// Make sure the rest of the entity rule is consistent.
+		if rule.NamespaceSelector != "" {
+			structLevel.ReportError(reflect.ValueOf(rule.Services),
+				"Services field", "", reason("cannot specify NamespaceSelector and Services on the same rule"), "")
+		}
+		if rule.Selector != "" || rule.NotSelector != "" {
+			structLevel.ReportError(reflect.ValueOf(rule.Services),
+				"Services field", "", reason("cannot specify Selector/NotSelector and Services on the same rule"), "")
+		}
+		if rule.ServiceAccounts != nil {
+			structLevel.ReportError(reflect.ValueOf(rule.Services),
+				"Services field", "", reason("cannot specify ServiceAccounts and Services on the same rule"), "")
+		}
+		if len(rule.Ports) != 0 || len(rule.NotPorts) != 0 {
+			// Service rules use ports specified on the endpoints.
+			structLevel.ReportError(reflect.ValueOf(rule.Services),
+				"Services field", "", reason("cannot specify Ports/NotPorts and Services on the same rule"), "")
+		}
+		if len(rule.Nets) != 0 || len(rule.NotNets) != 0 {
+			// Service rules use ports specified on the endpoints.
+			structLevel.ReportError(reflect.ValueOf(rule.Services),
+				"Services field", "", reason("cannot specify Nets/NotNets and Services on the same rule"), "")
+		}
+	}
 }
 
 func validateNodeSpec(structLevel validator.StructLevel) {
@@ -1573,13 +1609,35 @@ func validateNetworkPolicySpec(spec *api.NetworkPolicySpec, structLevel validato
 		}
 	}
 
-	// Check (and disallow) rules with application layer policy for egress rules.
-	if len(spec.Egress) > 0 {
-		for _, r := range spec.Egress {
-			useALP, v, f := ruleUsesAppLayerPolicy(&r)
-			if useALP {
-				structLevel.ReportError(v, f, "", reason("not allowed in egress rule"), "")
-			}
+	for _, r := range spec.Egress {
+		// Services are only allowed as a destination.
+		if r.Source.Services != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Source.Services), "Services", "",
+				reason("not allowed in egress rule source"), "",
+			)
+		}
+
+		// Check (and disallow) rules with application layer policy for egress rules.
+		useALP, v, f := ruleUsesAppLayerPolicy(&r)
+		if useALP {
+			structLevel.ReportError(v, f, "", reason("not allowed in egress rule"), "")
+		}
+	}
+
+	// Services are only allowed on egress rules.
+	for _, r := range spec.Ingress {
+		if r.Source.Services != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Source.Services), "Services", "",
+				reason("not allowed in ingress rule"), "",
+			)
+		}
+		if r.Destination.Services != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Destination.Services), "Services", "",
+				reason("not allowed in ingress rule"), "",
+			)
 		}
 	}
 
@@ -1697,6 +1755,28 @@ func validateNetworkSet(structLevel validator.StructLevel) {
 	}
 }
 
+func validatePacketCaptureRule(structLevel validator.StructLevel) {
+	rule := structLevel.Current().Interface().(api.PacketCaptureRule)
+
+	// If the protocol does not support ports check that the port values have not
+	// been specified.
+	if rule.Protocol != nil && !rule.Protocol.SupportsPorts() {
+		if len(rule.Ports) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.Ports),
+				"Ports", "", reason(protocolPortsMsg), "")
+		}
+	}
+
+	if len(rule.Ports) != 0 {
+		for _, port := range rule.Ports {
+			if !allDigits.MatchString(port.String()) && !portRange.MatchString(port.String()) {
+				structLevel.ReportError(reflect.ValueOf(rule.Ports),
+					"Ports", "", reason("accepts only numerical values"), "")
+			}
+		}
+	}
+}
+
 func validatePacketCapture(structLevel validator.StructLevel) {
 	pc := structLevel.Current().Interface().(api.PacketCapture)
 	for k := range pc.GetLabels() {
@@ -1784,13 +1864,46 @@ func validateGlobalNetworkPolicySpec(spec *api.GlobalNetworkPolicySpec, structLe
 		}
 	}
 
-	// Check (and disallow) rules with application layer policy for egress rules.
-	if len(spec.Egress) > 0 {
-		for _, r := range spec.Egress {
-			useALP, v, f := ruleUsesAppLayerPolicy(&r)
-			if useALP {
-				structLevel.ReportError(v, f, "", reason("not allowed in egress rules"), "")
-			}
+	for _, r := range spec.Egress {
+		// Services are only allowed as a destination.
+		if r.Source.Services != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Source.Services), "Services", "",
+				reason("not allowed in egress rule source"), "",
+			)
+		}
+
+		// Check (and disallow) rules with application layer policy for egress rules.
+		useALP, v, f := ruleUsesAppLayerPolicy(&r)
+		if useALP {
+			structLevel.ReportError(v, f, "", reason("not allowed in egress rules"), "")
+		}
+	}
+
+	// Services are only allowed on egress rules.
+	for _, r := range spec.Ingress {
+		if r.Source.Services != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Source.Services), "Services", "",
+				reason("not allowed in ingress rule"), "",
+			)
+		}
+		if r.Destination.Services != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Destination.Services), "Services", "",
+				reason("not allowed in ingress rule"), "",
+			)
+		}
+	}
+
+	// If a ServiceSelector is specified by name, we also need a namespace. At a global scope,
+	// service names are not fully qualified and so need a namespace.
+	for _, r := range spec.Egress {
+		if r.Destination.Services != nil && r.Destination.Services.Namespace == "" {
+			structLevel.ReportError(
+				reflect.ValueOf(r.Destination.Services.Namespace), "Namespace", "",
+				reason("must specify a namespace"), "",
+			)
 		}
 	}
 
