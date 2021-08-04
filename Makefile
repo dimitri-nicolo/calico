@@ -90,11 +90,12 @@ clean:
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
 LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+API_REPO=github.com/tigera/api
 
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: update-licensing-pin replace-libcalico-pin
+update-pins: update-api-pin update-licensing-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary
