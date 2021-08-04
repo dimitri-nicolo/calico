@@ -6,6 +6,7 @@ LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
 TYPHA_REPO               = github.com/tigera/typha-private
 APISERVER_REPO           =github.com/tigera/apiserver
+API_REPO                 =github.com/tigera/api
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_COMPLIANCE_PROJECT_ID)
@@ -359,7 +360,7 @@ LMA_BRANCH=$(PIN_BRANCH)
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-lma-pin
 ###############################################################################
 
 ###############################################################################

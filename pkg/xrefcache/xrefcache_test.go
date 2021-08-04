@@ -9,10 +9,8 @@ import (
 
 	networkingv1 "k8s.io/api/networking/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/config"
@@ -402,7 +400,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(tier),
-				Resource:   &pcv3.Tier{TypeMeta: tier.TypeMeta, ObjectMeta: tier.ObjectMeta, Spec: tier.Spec},
+				Resource:   &apiv3.Tier{TypeMeta: tier.TypeMeta, ObjectMeta: tier.ObjectMeta, Spec: tier.Spec},
 			},
 		})
 		res := tester.XrefCache.Get(resources.GetResourceID(tier))
@@ -427,7 +425,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(gns),
-				Resource:   &pcv3.GlobalNetworkSet{TypeMeta: gns.TypeMeta, ObjectMeta: gns.ObjectMeta, Spec: gns.Spec},
+				Resource:   &apiv3.GlobalNetworkSet{TypeMeta: gns.TypeMeta, ObjectMeta: gns.ObjectMeta, Spec: gns.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(gns))
@@ -452,7 +450,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(netset),
-				Resource:   &pcv3.NetworkSet{TypeMeta: netset.TypeMeta, ObjectMeta: netset.ObjectMeta, Spec: netset.Spec},
+				Resource:   &apiv3.NetworkSet{TypeMeta: netset.TypeMeta, ObjectMeta: netset.ObjectMeta, Spec: netset.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(netset))
@@ -477,7 +475,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(gnp),
-				Resource:   &pcv3.GlobalNetworkPolicy{TypeMeta: gnp.TypeMeta, ObjectMeta: gnp.ObjectMeta, Spec: gnp.Spec},
+				Resource:   &apiv3.GlobalNetworkPolicy{TypeMeta: gnp.TypeMeta, ObjectMeta: gnp.ObjectMeta, Spec: gnp.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(gnp))
@@ -502,7 +500,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(np),
-				Resource:   &pcv3.NetworkPolicy{TypeMeta: np.TypeMeta, ObjectMeta: np.ObjectMeta, Spec: np.Spec},
+				Resource:   &apiv3.NetworkPolicy{TypeMeta: np.TypeMeta, ObjectMeta: np.ObjectMeta, Spec: np.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(np))
@@ -532,7 +530,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(snp),
-				Resource:   &pcv3.StagedNetworkPolicy{TypeMeta: snp.TypeMeta, ObjectMeta: snp.ObjectMeta, Spec: snp.Spec},
+				Resource:   &apiv3.StagedNetworkPolicy{TypeMeta: snp.TypeMeta, ObjectMeta: snp.ObjectMeta, Spec: snp.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(snp))
@@ -563,7 +561,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(sgnp),
-				Resource:   &pcv3.StagedGlobalNetworkPolicy{TypeMeta: sgnp.TypeMeta, ObjectMeta: sgnp.ObjectMeta, Spec: sgnp.Spec},
+				Resource:   &apiv3.StagedGlobalNetworkPolicy{TypeMeta: sgnp.TypeMeta, ObjectMeta: sgnp.ObjectMeta, Spec: sgnp.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
@@ -594,7 +592,7 @@ var _ = Describe("xref cache multiple update transactions", func() {
 			{
 				Type:       syncer.UpdateTypeSet,
 				ResourceID: resources.GetResourceID(sknp),
-				Resource:   &pcv3.StagedKubernetesNetworkPolicy{TypeMeta: sknp.TypeMeta, ObjectMeta: sknp.ObjectMeta, Spec: sknp.Spec},
+				Resource:   &apiv3.StagedKubernetesNetworkPolicy{TypeMeta: sknp.TypeMeta, ObjectMeta: sknp.ObjectMeta, Spec: sknp.Spec},
 			},
 		})
 		res = tester.XrefCache.Get(resources.GetResourceID(sknp))

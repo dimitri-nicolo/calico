@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 package datastore
 
 import (
@@ -9,10 +9,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type resourceHelper struct {
@@ -108,7 +107,7 @@ func listCalicoNetworkPolicies(c ClientSet) (resources.ResourceList, error) {
 	var npList *v3.NetworkPolicyList
 	for _, tier := range tiers.Items {
 		nps, err := c.NetworkPolicies("").List(context.Background(), metav1.ListOptions{
-			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
+			LabelSelector: v3.LabelTier + "=" + tier.Name,
 		})
 		if err != nil {
 			return nil, err
@@ -147,7 +146,7 @@ func listCalicoGlobalNetworkPolicies(c ClientSet) (resources.ResourceList, error
 	var npList *v3.GlobalNetworkPolicyList
 	for _, tier := range tiers.Items {
 		nps, err := c.GlobalNetworkPolicies().List(context.Background(), metav1.ListOptions{
-			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
+			LabelSelector: v3.LabelTier + "=" + tier.Name,
 		})
 		if err != nil {
 			return nil, err
@@ -173,7 +172,7 @@ func listCalicoStagedNetworkPolicies(c ClientSet) (resources.ResourceList, error
 	var npList *v3.StagedNetworkPolicyList
 	for _, tier := range tiers.Items {
 		nps, err := c.StagedNetworkPolicies("").List(context.Background(), metav1.ListOptions{
-			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
+			LabelSelector: v3.LabelTier + "=" + tier.Name,
 		})
 		if err != nil {
 			return nil, err
@@ -200,7 +199,7 @@ func listCalicoStagedGlobalNetworkPolicies(c ClientSet) (resources.ResourceList,
 	var npList *v3.StagedGlobalNetworkPolicyList
 	for _, tier := range tiers.Items {
 		nps, err := c.StagedGlobalNetworkPolicies().List(context.Background(), metav1.ListOptions{
-			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
+			LabelSelector: v3.LabelTier + "=" + tier.Name,
 		})
 		if err != nil {
 			return nil, err

@@ -4,11 +4,9 @@ package xrefcache
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
-
-	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
@@ -120,7 +118,7 @@ func (c *tierHandler) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) s
 func (c *tierHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
 	switch tr := res.(type) {
-	case *pcv3.Tier:
+	case *apiv3.Tier:
 		res = &apiv3.Tier{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,

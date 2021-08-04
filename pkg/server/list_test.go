@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 package server_test
 
 import (
@@ -11,7 +11,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
-	"github.com/projectcalico/apiserver/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
@@ -23,9 +23,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
@@ -34,12 +32,12 @@ import (
 func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedReportData {
 	return &api.ArchivedReportData{
 		UISummary: `{"foobar":"hello-100-goodbye"}`,
-		ReportData: &calicov3.ReportData{
+		ReportData: &v3.ReportData{
 			ReportName:     reportName,
 			ReportTypeName: reportTypeName,
 			StartTime:      now,
 			EndTime:        nowPlusHour,
-			EndpointsSummary: calicov3.EndpointsSummary{
+			EndpointsSummary: v3.EndpointsSummary{
 				NumTotal: 100,
 			},
 			GenerationTime: now,
@@ -52,11 +50,11 @@ func newGlobalReportType(typeName string) v3.GlobalReportType {
 		ObjectMeta: v1.ObjectMeta{
 			Name: typeName,
 		},
-		Spec: calicov3.ReportTypeSpec{
-			UISummaryTemplate: calicov3.ReportTemplate{
+		Spec: v3.ReportTypeSpec{
+			UISummaryTemplate: v3.ReportTemplate{
 				Template: "{\"foobar\":\"hello-{{ .EndpointsSummary.NumTotal }}-goodbye\"}",
 			},
-			DownloadTemplates: []calicov3.ReportTemplate{
+			DownloadTemplates: []v3.ReportTemplate{
 				{
 					Name:        "boo.csv",
 					Description: "This is a boo file",

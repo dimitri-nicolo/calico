@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 

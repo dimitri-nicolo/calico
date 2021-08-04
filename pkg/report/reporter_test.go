@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 package report
 
 import (
@@ -16,10 +16,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	v3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/flow"
@@ -49,7 +48,7 @@ type fakeAuditer struct {
 	updated []resources.Resource
 }
 
-func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.AuditEventsSelection, start, end *time.Time) <-chan *api.AuditEventResult {
+func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *api.AuditEventResult {
 	ch := make(chan *api.AuditEventResult)
 
 	send := func(verb string, rs []resources.Resource) {
@@ -145,10 +144,10 @@ var _ = Describe("Report tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "report",
 				},
-				Spec: apiv3.ReportSpec{
+				Spec: v3.ReportSpec{
 					ReportType: "report-type",
 					Schedule:   "@daily",
-					Endpoints: &apiv3.EndpointsSelection{
+					Endpoints: &v3.EndpointsSelection{
 						Selector: "has(label1)",
 					},
 				},
@@ -157,9 +156,9 @@ var _ = Describe("Report tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "report-type",
 				},
-				Spec: apiv3.ReportTypeSpec{
+				Spec: v3.ReportTypeSpec{
 					IncludeEndpointData:  true,
-					AuditEventsSelection: &apiv3.AuditEventsSelection{},
+					AuditEventsSelection: &v3.AuditEventsSelection{},
 				},
 			},
 		}
@@ -190,12 +189,12 @@ var _ = Describe("Report tests", func() {
 			xc:               xc.XrefCache,
 			replayer:         replayer,
 			healthy:          func() { healthCnt++ },
-			inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
-			services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
-			namespaces:       make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
+			inScopeEndpoints: make(map[v3.ResourceID]*reportEndpoint),
+			services:         make(map[v3.ResourceID]xrefcache.CacheEntryFlags),
+			namespaces:       make(map[v3.ResourceID]xrefcache.CacheEntryFlags),
 			serviceAccounts:  resources.NewSet(),
 			policies:         resources.NewSet(),
-			data: &apiv3.ReportData{
+			data: &v3.ReportData{
 				ReportName:     "report",
 				ReportTypeName: "report-type",
 				ReportSpec:     cfg.Report.Spec,
@@ -248,12 +247,12 @@ var _ = Describe("Report tests", func() {
 		By("Setting GNP1, NP1 and k8sNP1 to match pod1 only")
 		gnp1 := xc.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
 			nil,
-			[]apiv3.Rule{},
+			[]v3.Rule{},
 			&Order1,
 		)
 		np1 := xc.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
 			nil,
-			[]apiv3.Rule{},
+			[]v3.Rule{},
 			&Order1,
 		)
 		knp1 := xc.SetK8sNetworkPolicy(Name1, Namespace1, Select1,
@@ -264,12 +263,12 @@ var _ = Describe("Report tests", func() {
 		By("Setting GNP2, NP2 and k8sNP2 to match pod2 only")
 		gnp2 := xc.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
 			nil,
-			[]apiv3.Rule{},
+			[]v3.Rule{},
 			&Order1,
 		)
 		np2 := xc.SetNetworkPolicy(TierDefault, Name2, Namespace1, Select2,
 			nil,
-			[]apiv3.Rule{},
+			[]v3.Rule{},
 			&Order1,
 		)
 		knp2 := xc.SetK8sNetworkPolicy(Name2, Namespace1, Select2,
@@ -280,12 +279,12 @@ var _ = Describe("Report tests", func() {
 		By("Updating GNP1, NP1 and k8sNP1 to match pod2 only -  they should all remain in-scope though")
 		gnp1_2 := xc.SetGlobalNetworkPolicy(TierDefault, Name1, Select2,
 			nil,
-			[]apiv3.Rule{},
+			[]v3.Rule{},
 			&Order1,
 		)
 		np1_2 := xc.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select2,
 			nil,
-			[]apiv3.Rule{},
+			[]v3.Rule{},
 			&Order1,
 		)
 		knp1_2 := xc.SetK8sNetworkPolicy(Name1, Namespace1, Select2,

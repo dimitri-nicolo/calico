@@ -8,11 +8,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
-
-	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
@@ -189,13 +187,13 @@ func (c *networkSetHandler) recalculate(id apiv3.ResourceID, entry CacheEntry) s
 func (c *networkSetHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
 	switch tr := res.(type) {
-	case *pcv3.GlobalNetworkSet:
+	case *apiv3.GlobalNetworkSet:
 		res = &apiv3.GlobalNetworkSet{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
-	case *pcv3.NetworkSet:
+	case *apiv3.NetworkSet:
 		res = &apiv3.NetworkSet{
 			TypeMeta:   tr.TypeMeta,
 			ObjectMeta: tr.ObjectMeta,

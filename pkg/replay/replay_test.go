@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package replay_test
 
 import (
@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/replay"
@@ -31,6 +31,18 @@ import (
 
 func init() {
 	log.SetLevel(log.DebugLevel)
+}
+
+// NewNetworkPolicyList creates a new (zeroed) NetworkPolicyList struct with the TypeMetadata initialised to the current
+// version.
+// This is defined locally as it's a convenience method that is not widely used.
+func NewNetworkPolicyList() *apiv3.NetworkPolicyList {
+	return &apiv3.NetworkPolicyList{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       apiv3.KindNetworkPolicyList,
+			APIVersion: apiv3.GroupVersionCurrent,
+		},
+	}
 }
 
 var _ = Describe("Replay", func() {
@@ -65,7 +77,7 @@ var _ = Describe("Replay", func() {
 			Spec:       apiv3.NetworkPolicySpec{Selector: `foo == "bar"`},
 		}
 
-		npList := apiv3.NewNetworkPolicyList()
+		npList := NewNetworkPolicyList()
 		npList.GetObjectKind().SetGroupVersionKind(resources.TypeCalicoNetworkPolicies.GroupVersionKind())
 
 		npList.Items = append(npList.Items, np)
