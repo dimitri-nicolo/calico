@@ -889,10 +889,10 @@ github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05 h1:96aLjQjs4qXlvtemv3I5
 github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210803234024-4710c751340e h1:qeGh0tQO826MGWbao06x/qL/g1B0negzl3EH5zS/1K8=
 github.com/tigera/api v0.0.0-20210803234024-4710c751340e/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/apiserver v0.0.0-20210804160716-53e036e3ece5 h1:nyUfn+JKJ3Fh086H+FRn+5g0fAF1UAyMFYg36lCkrYA=
-github.com/tigera/apiserver v0.0.0-20210804160716-53e036e3ece5/go.mod h1:liS5UwYqNhOmO0ubqnGPvmogxj9K1NO1xTQRLJqwNSg=
-github.com/tigera/compliance v0.0.0-20210804171326-03d4fb1a28e9 h1:2kiLPw+XoqgZl9s6RlYnrDYVh91gexSCns8GqTZxJ58=
-github.com/tigera/compliance v0.0.0-20210804171326-03d4fb1a28e9/go.mod h1:D8F9RHvwDoi8UrJoCanO+fgg5LlVEbl9ukhfGSA1Mlo=
+github.com/tigera/apiserver v0.0.0-20210804173353-1bbe3a62166c h1:gHO3APo3g1w8JF8QwIYXiEw7eWHe+btzjcgCs/HLZfM=
+github.com/tigera/apiserver v0.0.0-20210804173353-1bbe3a62166c/go.mod h1:a2j0PwhnHuE48zgVyBVPQrSt66eua20fkZ2VmuzS9s8=
+github.com/tigera/compliance v0.0.0-20210804173826-130e333d04a0 h1:o8/MAHQMdUnhhOaWCTvtw5KGuTmEeWNxFVdhlvQFf5k=
+github.com/tigera/compliance v0.0.0-20210804173826-130e333d04a0/go.mod h1:c8e1ssnZFpX2oQxNQbJF3Eg2kzkyforY4v/DmxZqxJE=
 github.com/tigera/felix-private v0.0.0-20210804162511-4d8aa4fa7753 h1:NvEaoOyHDoet6/hhSITVX/yGjnHjUVuAqR2L5DOOcF4=
 github.com/tigera/felix-private v0.0.0-20210804162511-4d8aa4fa7753/go.mod h1:UMkGyyP5VyguIIRxknZmPX0YXYCOTj1YvLGFN7ClssA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210804172703-8d269c1e3794 h1:acejYGvK8STAmqQK8wiAVGocQ6mPnIXJvQkVDva6k6Q=
@@ -901,6 +901,8 @@ github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd h1:g5lB9xwWroU3
 github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd/go.mod h1:UTzib8HXu0NNpCfMOigJbvxhxTGzq8plx+lo7DtmDn4=
 github.com/tigera/lma v0.0.0-20210804161652-17d9ba6000c0 h1:SqjYBZqWV0aDSXtGr4vEnFndbRRBZH/1Dz8VdiwxEv0=
 github.com/tigera/lma v0.0.0-20210804161652-17d9ba6000c0/go.mod h1:95V8cQruoXR4Ojszl8fGyhX+exZnsFtcj2iFYmemjTs=
+github.com/tigera/lma v0.0.0-20210804174041-7de9849bb0b5 h1:Henf0HP5rXUhC7m0Hj5iVKGMw7RP60sWZ1+cuB6iKmM=
+github.com/tigera/lma v0.0.0-20210804174041-7de9849bb0b5/go.mod h1:UkYyqe1tZf8vbTImDoQjFEl72bKdUCgHhu6Gp0+Ogvk=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210804165541-2082952529bd h1:JtSyVdkkmSMelWNw/vaKyRt1nbt8zQwNx1n6LA2dMk4=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210804165541-2082952529bd/go.mod h1:5IArooP0GsXj59YPlBZHevmrDRUtJs+CygRNfFcwRwk=
