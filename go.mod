@@ -26,4 +26,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.1 // indirect
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/projectcalico/libcalico-go v1.7.2-0.20210713191420-8e9b91bd573a
+replace github.com/projectcalico/libcalico-go => github.com/projectcalico/libcalico-go v1.7.2-0.20210727232737-a62724233980
