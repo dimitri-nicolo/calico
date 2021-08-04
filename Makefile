@@ -117,6 +117,17 @@ clean:
 ###############################################################################
 # Testing
 ###############################################################################
+GINKGO_ARGS += -cover -timeout 20m
+GINKGO = ginkgo $(GINKGO_ARGS)
+
+#############################################
+# Run unit level tests
+#############################################
+
+.PHONY: ut
+## Run only Unit Tests.
+ut:
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download && $(GINKGO) pkg/*'
 
 ###############################################################################
 # Updating pins
@@ -140,7 +151,7 @@ update-pins: guard-ssh-forwarding-bug
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: static-checks
+ci: clean static-checks ut
 
 ## Deploys images to registry
 cd: image-all cd-common

@@ -1,3 +1,4 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -47,7 +48,12 @@ func init() {
 	// Setup logging. Default to WARN log level.
 	cfg.SetupLogging()
 
-	log.Infof("Starting %s with %s", config.EnvConfigPrefix, cfg)
+	// Print out configuration (minus sensitive fields)
+	printCfg := &config.Config{}
+	*printCfg = *cfg
+	printCfg.ElasticPassword = "" // wipe out sensitive field
+
+	log.Infof("Starting %s with %s", config.EnvConfigPrefix, printCfg)
 
 	if len(cfg.ElasticCatchAllRoute) > 0 {
 		// Catch-all route should ...

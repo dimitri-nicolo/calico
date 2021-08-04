@@ -25,4 +25,6 @@ Makefile.common*
 
 release-notes-*
 
+# Testing
 test/scratch
+*.coverprofile

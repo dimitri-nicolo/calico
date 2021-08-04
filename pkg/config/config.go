@@ -1,3 +1,4 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package config
 
 import (
@@ -32,7 +33,7 @@ type Config struct {
 	// to call both the Elasticsearch and Kibana APIs. Since it needs access, before any other
 	// component, the credentials should be for the ES admin user.
 	ElasticUsername string `default:"" split_words:"true"`
-	ElasticPassword string `default:"" split_words:"true"`
+	ElasticPassword string `default:"" split_words:"true" json:",omitempty"`
 
 	ElasticEndpoint        string `default:"https://tigera-secure-internal-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
 	ElasticCatchAllRoute   string `default:"/" split_words:"true"`

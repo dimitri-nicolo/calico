@@ -1,3 +1,4 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package middlewares
 
 import (
@@ -36,7 +37,7 @@ func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handle
 
 		// Attempt to lookup a credentials for matching ES user (i.e. can be used with ES API) that matches to the current user.
 		secretName := fmt.Sprintf("%s-%s", user.Username, ElasticsearchCredsSecretSuffix)
-		username, password, err := getPlainESCredentials(c, r, secretName)
+		username, password, err := getPlainESCredentials(c, secretName)
 		if err != nil {
 			log.Errorf("unable to authenticate user: %s", err)
 			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
@@ -59,7 +60,7 @@ func NewSwapElasticCredMiddlware(c cache.SecretsCache) func(http.Handler) http.H
 }
 
 // getPlainESCredentials attempts to retrieve credentials from the given secretName using the provided k8s client for given request.
-func getPlainESCredentials(c cache.SecretsCache, r *http.Request, secretName string) (string, string, error) {
+func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, string, error) {
 	secret, err := c.GetSecret(secretName)
 	if err != nil {
 		return "", "", err

@@ -1,3 +1,4 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package config
 
 import "github.com/tigera/es-gateway/pkg/proxy"

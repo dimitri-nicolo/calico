@@ -1,3 +1,4 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package middlewares
 
 import (
@@ -49,7 +50,7 @@ func elasticAuthHandler(c cache.SecretsCache, next http.Handler) http.Handler {
 
 		// Authenticate user credentials by comparing with secret containing gateway ES credentials.
 		secretName := fmt.Sprintf("%s-%s", username, ESGatewayPasswordSecretSuffix)
-		hashed, err := getHashedESCredentials(c, r, secretName)
+		hashed, err := getHashedESCredentials(c, secretName)
 		if err != nil {
 			log.Errorf("unable to authenticate user: %s", err)
 			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
@@ -97,7 +98,7 @@ func extractCredentials(value string) (string, string, error) {
 
 // getHashedESCredentials attempts to retrieve a hashed credentials value from the given secretName using the provided k8s
 // client for the given request.
-func getHashedESCredentials(c cache.SecretsCache, r *http.Request, secretName string) (string, error) {
+func getHashedESCredentials(c cache.SecretsCache, secretName string) (string, error) {
 	secret, err := c.GetSecret(secretName)
 	if err != nil {
 		return "", err
