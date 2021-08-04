@@ -659,7 +659,7 @@ func (c *L3RouteResolver) flush() {
 			}
 			if ri.Pool.AWSSubnetID != "" {
 				logCxt.Debug("Pool is backed by AWS subnet")
-				rt.AWSSubnetID = ri.Pool.AWSSubnetID
+				rt.AwsSubnetId = ri.Pool.AWSSubnetID
 			}
 			if ri.Block.NodeName != "" {
 				rt.DstNodeName = ri.Block.NodeName
