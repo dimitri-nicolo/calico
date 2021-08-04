@@ -4,6 +4,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/tigera/es-gateway/pkg/metrics"
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
@@ -93,7 +94,7 @@ func init() {
 // Start up HTTPS server for ES Gateway.
 func main() {
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-
+	metricsAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.NetricsPort)
 	// Create Kibana target that will be used to configure all routing to Kibana target.
 	kibanaTarget, err := proxy.CreateTarget(
 		kibanaCatchAllRoute,
@@ -158,6 +159,11 @@ func main() {
 		log.WithError(err).Fatal("failed to configure Kibana client for ES Gateway.")
 	}
 
+	collector, err := metrics.NewCollector()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	opts := []server.Option{
 		server.WithAddr(addr),
 		server.WithESTarget(esTarget),
@@ -167,12 +173,18 @@ func main() {
 		server.WithKibanaClient(kbClient),
 		server.WithK8sClient(k8sClient),
 		server.WithAdminUser(cfg.ElasticUsername, cfg.ElasticPassword),
+		server.WithCollector(collector),
 	}
 
 	srv, err := server.New(opts...)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create ES Gateway server.")
 	}
+
+	go func() {
+		log.Infof("ES Gateway listening for metrics requests at %s", metricsAddr)
+		log.Fatal(collector.Serve(metricsAddr))
+	}()
 
 	log.Infof("ES Gateway listening for HTTPS requests at %s", addr)
 	log.Fatal(srv.ListenAndServeHTTPS())

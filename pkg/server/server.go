@@ -4,6 +4,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"github.com/tigera/es-gateway/pkg/metrics"
 	"net/http"
 	"time"
 
@@ -46,7 +47,8 @@ type Server struct {
 	adminESUsername string // Used to store the username for a real ES admin user
 	adminESPassword string // Used to store the password for a real ES admin user
 
-	cache cache.SecretsCache // Used to store secrets related authN and credential swapping
+	cache     cache.SecretsCache // Used to store secrets related authN and credential swapping
+	collector metrics.Collector // Used to collect prometheus metrics.
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -81,12 +83,7 @@ func New(opts ...Option) (*Server, error) {
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
-	middlewares := mid.GetHandlerMap(
-		srv.esClient,
-		srv.cache,
-		srv.adminESUsername,
-		srv.adminESPassword,
-	)
+	middlewares := mid.GetHandlerMap(srv.cache, srv.collector)
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
 	healthHandler := health.GetHealthHandler(srv.esClient, srv.kbClient, srv.k8sClient)
@@ -121,7 +118,7 @@ func New(opts ...Option) (*Server, error) {
 		srv.esTarget.Routes,
 		srv.esTarget.CatchAllRoute,
 		middlewares,
-		http.HandlerFunc(esHandler),
+		esHandler,
 	)
 	if err != nil {
 		return nil, err
@@ -187,6 +184,7 @@ func getLogRouteMatchHandler(routeName string) func(h http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Debugf("Request %s as been matched with route \"%s\"", r.RequestURI, routeName)
 			h.ServeHTTP(w, r)
+			log.Warnf("response: %v", r.Response)
 		})
 	}
 }
@@ -212,6 +210,10 @@ func buildMiddlewareChain(r *proxy.Route, h mid.HandlerMap, f http.Handler) http
 		// Alongside auth, add credential swapping middlware to the Handler chain for this
 		// Route
 		chain = append(chain, h[mid.TypeSwap])
+	}
+
+	if r.MetricsCollection {
+		chain = append(chain, h[mid.TypeMetrics])
 	}
 
 	// Now apply the chain of middleware handlers on the given route handler f, starting with the last one.

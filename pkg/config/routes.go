@@ -15,12 +15,14 @@ var (
 			Path:        "/{target}/_create/{id}",
 			HTTPMethods: []string{"PUT", "POST"},
 			RequireAuth: true,
+			MetricsCollection: true,
 		},
 		proxy.Route{
 			Name:        "es-create-new-doc-by-id",
 			Path:        "/{target}/_doc/{id}",
 			HTTPMethods: []string{"PUT", "POST"},
 			RequireAuth: true,
+			MetricsCollection: true,
 		},
 		// Fluentd component uses the Elasticsearch bulk API by default to create log data.
 		// https://docs.fluentd.org/output/elasticsearch
@@ -29,12 +31,14 @@ var (
 			Path:        "/_bulk",
 			HTTPMethods: []string{"POST"},
 			RequireAuth: true,
+			MetricsCollection: true,
 		},
 		proxy.Route{
 			Name:        "es-create-new-doc-bulk-by-index",
 			Path:        "/{target}/_bulk",
 			HTTPMethods: []string{"POST"},
 			RequireAuth: true,
+			MetricsCollection: true,
 		},
 		// -------------------------------------------------------------------------------------------------
 	}

@@ -9,16 +9,16 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )
 
 // GetProxyHandler generates an HTTP proxy handler based on the given Target.
-func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request), error) {
+func GetProxyHandler(t *proxy.Target) (http.HandlerFunc, error) {
 	p := httputil.NewSingleHostReverseProxy(t.Dest)
 	p.FlushInterval = -1
 
