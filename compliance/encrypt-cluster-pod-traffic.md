@@ -42,9 +42,6 @@ All platforms listed above will encrypt pod-to-pod traffic. Additionally, when u
 ### How to
 
 - [Install WireGuard](#install-wireguard)
-    - [AKS](#aks)
-    - [EKS](#eks)
-    - [OpenShift](#openshift)
 - [Enable WireGuard for a cluster](#enable-wireguard-for-a-cluster)
 - [Verify encryption is enabled](#verify-encryption-is-enabled)
 - [Disable WireGuard for an individual node](#disable-wireguard-for-an-individual-node)
@@ -56,14 +53,11 @@ WireGuard is included in Linux 5.6+ kernels, and has been backported to earlier 
 
 Install WireGuard on cluster nodes using {% include open-new-window.html text='instructions for your operating system' url='https://www.wireguard.com/install/' %}. Note that you may need to reboot your nodes after installing WireGuard to make the kernel modules available on your system.
 
-Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
+Use the following instructions for these platforms that are not listed on the WireGuard installation page.
 
-##### AKS
-
-AKS cluster nodes run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
-
-##### EKS
-
+{% tabs %}
+<label:EKS,active:true>
+<%
 To install WireGuard on the default Amazon Machine Image (AMI):
 
    ```bash
@@ -72,9 +66,13 @@ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noa
 sudo curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
 sudo yum install wireguard-dkms wireguard-tools -y
    ```
-
-##### OpenShift
-
+%>
+<label:AKS>
+<%
+AKS cluster nodes run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
+%>
+<label:OpenShift>
+<%
 To install WireGuard for OpenShift v4.6:
 
   This approach uses kernel modules via container installation as outlined here {% include open-new-window.html text='atomic wireguard' url='https://github.com/projectcalico/atomic-wireguard' %} 
@@ -148,6 +146,8 @@ To install WireGuard for OpenShift v4.6:
    ```bash
    oc create -f mc-wg.yaml
    ```
+%>
+{% endtabs %}
 
 #### Enable WireGuard for a cluster
 
