@@ -42,7 +42,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/tigera/api v0.0.0-20210803234024-4710c751340e
-	github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd
+	github.com/tigera/licensing v1.0.1-0.20210804210859-470579579771
 	github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.0
@@ -66,8 +66,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210804155628-14471b3708c7
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210804165541-2082952529bd
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210804185949-e48549a4184d
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210804194426-e15f1b8b06b1
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
