@@ -1,1 +1,1 @@
-Mirantis Kubernetes Engine 3.3.5
+Mirantis Kubernetes Engine 3.4.4

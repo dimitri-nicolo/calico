@@ -23,16 +23,16 @@ Other versions may work, but we do not actively test {{site.prodname}}
 
 We test {{site.prodname}} {{page.version}} against the following managed Kubernetes versions.
 
-- AKS: 1.20 
-- GKE: 1.19
-- EKS: 1.19
+- AKS: 1.21 
+- GKE: 1.20
+- EKS: 1.21
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
 
-#### Supported Mirantis Kubernetes Engine (RKE) versions
+#### Supported Mirantis Kubernetes Engine (MKE) versions
 
-We test {{site.prodname}} {{page.version}} against the following RKE versions.
+We test {{site.prodname}} {{page.version}} against the following MKE versions.
 
 {% include content/docker-ee.md %}
 
