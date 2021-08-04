@@ -157,6 +157,9 @@ type ec2MetadaAPI interface {
 type ec2API interface {
 	DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
 	ModifyNetworkInterfaceAttribute(ctx context.Context, params *ec2.ModifyNetworkInterfaceAttributeInput, optFns ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error)
+	DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
+	DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error)
+	DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error)
 }
 
 func getEC2InstanceID(ctx context.Context, svc ec2MetadaAPI) (string, error) {
@@ -208,16 +211,16 @@ func NewEC2Client(ctx context.Context) (*EC2Client, error) {
 
 	return &EC2Client{
 		EC2Svc:        ec2Svc,
-		InstanceId: instanceId,
+		InstanceID: instanceId,
 	}, nil
 }
 
 var ErrNotFound = errors.New("resource not found")
 
-func (c *EC2Client) GetMyInstance(ctx context.Context) (instance *ec2.Instance, err error) {
+func (c *EC2Client) GetMyInstance(ctx context.Context) (instance *types.Instance, err error) {
 	input := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{
-			c.InstanceId,
+			c.InstanceID,
 		},
 	}
 
@@ -253,14 +256,14 @@ func (c *EC2Client) GetMyInstance(ctx context.Context) (instance *ec2.Instance, 
 				continue
 			}
 			// Found our instance.
-			return instance, nil
+			return &instance, nil
 		}
 	}
 	return nil, fmt.Errorf("no returned results matched ID %s: %w",
 		c.InstanceID, ErrNotFound)
 }
 
-func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]*ec2.Subnet, error) {
+func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]types.Subnet, error) {
 	inst, err := c.GetMyInstance(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get my instance: %w", err)
@@ -268,11 +271,11 @@ func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]*ec2.Subnet, error
 	if inst.Placement == nil || inst.Placement.AvailabilityZone == nil {
 		return nil, fmt.Errorf("instance had no placement information")
 	}
-	dso, err := c.EC2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
-		Filters: []*ec2.Filter{
+	dso, err := c.EC2Svc.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+		Filters: []types.Filter{
 			{
 				Name:   aws.String("availability-zone"),
-				Values: []*string{inst.Placement.AvailabilityZone},
+				Values: []string{*inst.Placement.AvailabilityZone},
 			},
 		},
 	})
@@ -282,27 +285,24 @@ func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]*ec2.Subnet, error
 	return dso.Subnets, nil
 }
 
-func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*ec2.InstanceTypeInfo, error) {
+func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*types.InstanceTypeInfo, error) {
 	inst, err := c.GetMyInstance(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get my instance: %w", err)
 	}
-	if inst.InstanceType == nil {
-		return nil, fmt.Errorf("instance had nil type")
-	}
-	ito, err := c.EC2Svc.DescribeInstanceTypesWithContext(ctx, &ec2.DescribeInstanceTypesInput{
-		InstanceTypes: []*string{inst.InstanceType},
+	ito, err := c.EC2Svc.DescribeInstanceTypes(ctx, &ec2.DescribeInstanceTypesInput{
+		InstanceTypes: []types.InstanceType{inst.InstanceType},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve instance type %v: %w", *inst.InstanceType, err)
+		return nil, fmt.Errorf("failed to retrieve instance type %v: %w", inst.InstanceType, err)
 	}
 	for _, it := range ito.InstanceTypes {
-		if it.InstanceType != nil && *it.InstanceType == *inst.InstanceType {
-			return it, nil
+		if it.InstanceType == inst.InstanceType {
+			return &it, nil
 		}
 	}
 	return nil, fmt.Errorf("failed to retrieve instance type %v: query returned no results",
-		*inst.InstanceType)
+		inst.InstanceType)
 }
 
 type NetworkCapabilities struct {
@@ -319,7 +319,7 @@ func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkC
 	return InstanceTypeNetworkCapabilities(instType)
 }
 
-func InstanceTypeNetworkCapabilities(instType *ec2.InstanceTypeInfo) (netc NetworkCapabilities, err error) {
+func InstanceTypeNetworkCapabilities(instType *types.InstanceTypeInfo) (netc NetworkCapabilities, err error) {
 	if instType.NetworkInfo == nil {
 		err = fmt.Errorf("intance type missing network info")
 		return
@@ -335,16 +335,17 @@ func InstanceTypeNetworkCapabilities(instType *ec2.InstanceTypeInfo) (netc Netwo
 			netc.MAxIPv6PerInterface = int(*instType.NetworkInfo.Ipv6AddressesPerInterface)
 		}
 	}
+	return
 }
 
-func (c *EC2Client) GetMyEC2NetworkInterfaces(ctx context.Context) ([]*ec2.NetworkInterface, error) {
+func (c *EC2Client) GetMyEC2NetworkInterfaces(ctx context.Context) ([]types.NetworkInterface, error) {
 	// We use DescribeNetworkInterfaces rather than retrieving the list attached to the Instance so that we can
 	// see the tags.
-	nio, err := c.EC2Svc.DescribeNetworkInterfacesWithContext(ctx, &ec2.DescribeNetworkInterfacesInput{
-		Filters: []*ec2.Filter{
+	nio, err := c.EC2Svc.DescribeNetworkInterfaces(ctx, &ec2.DescribeNetworkInterfacesInput{
+		Filters: []types.Filter{
 			{
 				Name:   aws.String("attachment.instance-id"),
-				Values: []*string{aws.String(c.InstanceID)},
+				Values: []string{c.InstanceID},
 			},
 		},
 	})
@@ -410,17 +411,14 @@ func (c *EC2Client) SetEC2SourceDestinationCheck(ctx context.Context, ec2NetId s
 	return err
 }
 
-func NetworkInterfaceIsCalicoSecondary(nic *ec2.NetworkInterface) bool {
+func NetworkInterfaceIsCalicoSecondary(nic *types.NetworkInterface) bool {
 	v, _ := LookupTag(nic.TagSet, NetworkInterfaceTagUse)
 	return v == NetworkInterfaceUseSecondary
 }
 
-func LookupTag(tags []*ec2.Tag, key string) (value string, found bool) {
+func LookupTag(tags []types.Tag, key string) (value string, found bool) {
 	for _, t := range tags {
-		if t == nil || t.Key == nil {
-			continue
-		}
-		if *t.Key == key {
+		if t.Key != nil && *t.Key == key {
 			found = true
 			if t.Value != nil {
 				value = *t.Value

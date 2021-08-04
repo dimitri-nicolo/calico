@@ -43,6 +43,18 @@ type mockClient struct {
 	UsageCounter int
 }
 
+func (c *mockClient) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error) {
+	panic("implement me")
+}
+
 func newMockClient() *mockClient {
 	return &mockClient{UsageCounter: 0}
 }
@@ -193,7 +205,7 @@ var _ = Describe("AWS Tests", func() {
 		mock := newMockClient()
 		client := &EC2Client{
 			EC2Svc:     mock,
-			InstanceId: testInstId,
+			InstanceID: testInstId,
 		}
 
 		Expect(client.GetMyPrimaryEC2NetworkInterfaceID(context.TODO())).To(Equal(testEniId))
