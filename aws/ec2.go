@@ -210,7 +210,7 @@ func NewEC2Client(ctx context.Context) (*EC2Client, error) {
 	}
 
 	return &EC2Client{
-		EC2Svc:        ec2Svc,
+		EC2Svc:     ec2Svc,
 		InstanceID: instanceId,
 	}, nil
 }
@@ -307,8 +307,8 @@ func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*types.InstanceTypeI
 
 type NetworkCapabilities struct {
 	MaxNetworkInterfaces int
-	MaxIPv4PerInterface int
-	MAxIPv6PerInterface int
+	MaxIPv4PerInterface  int
+	MAxIPv6PerInterface  int
 }
 
 func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkCapabilities, err error) {

@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	"github.com/sirupsen/logrus"
 )
 
 type awsSubnetManager struct {
@@ -161,7 +162,7 @@ func (a awsSubnetManager) resync() error {
 		// Found one of our managed interfaces; collect its IPs.
 		logCtx := logrus.WithField("id", *n.NetworkInterfaceId)
 		logCtx.Debug("Found Calico NIC")
-		secondaryNICsByID[*n.NetworkInterfaceId] =  n
+		secondaryNICsByID[*n.NetworkInterfaceId] = n
 		nicIDsBySubnet[*n.SubnetId] = append(nicIDsBySubnet[*n.SubnetId], *n.NetworkInterfaceId)
 		for _, addr := range n.PrivateIpAddresses {
 			if addr == nil || addr.PrivateIpAddress == nil {
@@ -202,6 +203,7 @@ func NewAWSSubnetManager() *awsSubnetManager {
 }
 
 var _ Manager = &awsSubnetManager{}
+
 //
 // func foo() {
 // 	// Get my instance, find my AZ.
