@@ -18,7 +18,7 @@ import (
 	lmaapi "github.com/tigera/lma/pkg/apis/v1"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

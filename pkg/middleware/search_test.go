@@ -23,7 +23,7 @@ import (
 	calicojson "github.com/tigera/lma/pkg/test/json"
 	"github.com/tigera/lma/pkg/test/thirdpartymock"
 
-	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )

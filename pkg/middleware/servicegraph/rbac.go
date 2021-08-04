@@ -9,7 +9,7 @@ import (
 	"github.com/tigera/lma/pkg/httputils"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	log "github.com/sirupsen/logrus"
 

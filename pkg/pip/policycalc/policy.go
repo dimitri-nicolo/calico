@@ -3,7 +3,7 @@ package policycalc
 import (
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	"github.com/tigera/lma/pkg/api"

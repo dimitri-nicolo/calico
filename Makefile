@@ -1,6 +1,7 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
 GO_BUILD_VER    ?= v0.53
 GIT_USE_SSH      = true
+API_REPO         = github.com/tigera/api
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 APISERVER_REPO   = github.com/tigera/apiserver
 FELIX_REPO       = github.com/tigera/felix-private
@@ -225,7 +226,7 @@ update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-compliance-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-compliance-pin update-lma-pin
 
 ###############################################################################
 # Utilities
