@@ -21,7 +21,7 @@ import (
 	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )

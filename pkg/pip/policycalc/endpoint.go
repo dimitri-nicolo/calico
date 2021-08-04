@@ -6,14 +6,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/lma/pkg/api"
 
-	pcv3 "github.com/projectcalico/apiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // New creates a new EndpointCache.
@@ -87,8 +86,6 @@ func (e *EndpointCache) OnUpdates(updates []syncer.Update) {
 		// the data.
 		case *v3.HostEndpoint:
 			e.addOrUpdate(namespaceName("", r.Name), r)
-		case *pcv3.HostEndpoint:
-			e.addOrUpdate(namespaceName("", r.Name), r)
 		}
 	}
 }
@@ -123,8 +120,6 @@ func (e *EndpointCache) populateEndpointData(ed *EndpointData) {
 	case *corev1.Pod:
 		e.populateEndpointDataPod(r, ed)
 	case *v3.HostEndpoint:
-		e.populateEndpointDataHEP(&r.ObjectMeta, &r.Spec, ed)
-	case *pcv3.HostEndpoint:
 		e.populateEndpointDataHEP(&r.ObjectMeta, &r.Spec, ed)
 	}
 

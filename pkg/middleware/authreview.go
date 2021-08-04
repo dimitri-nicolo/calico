@@ -8,7 +8,7 @@ import (
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmak8s "github.com/tigera/lma/pkg/k8s"
 
-	libcalv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type AuthorizationReview interface {
