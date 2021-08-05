@@ -10,8 +10,8 @@ PACKAGES+=" nss-sysinit yum libdnf unbound-libs"
 
 # Remove systemd and dependencies.
 PACKAGES+=" systemd systemd-udev systemd-pam dracut-squash dracut-network dracut dbus kexec-tools dhcp-client device-mapper"
-PACKAGES+=" device-mapper-libs os-prober grub2-tools grub2-tools-efi grub2-tools-extra grub2-tools-minimal grubby"
-PACKAGES+=" libkcapi-hmaccalc libkcapi cryptsetup-libs iputils trousers trousers-lib kpartx"
+PACKAGES+=" device-mapper-libs os-prober grub2-tools grub2-tools-minimal grubby libkcapi-hmaccalc libkcapi cryptsetup-libs"
+PACKAGES+=" iputils trousers trousers-lib kpartx"
 
 PACKAGES+=" json-c freetype fontconfig libpng kmod bind-export-libs rpm-build-libs kmod-libs openldap ima-evm-utils xz"
 PACKAGES+=" libidn2 gnupg2 gnutls gnupg2 gpgme glib2 librepo elfutils-libs libsolv libmodulemd shadow-utils libsemanage"
