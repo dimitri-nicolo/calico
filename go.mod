@@ -15,7 +15,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20210805182922-ad16e584d37b
+	github.com/tigera/api v0.0.0-20210805191125-a0e5e71d76a4
 	github.com/tigera/compliance v0.0.0-20210805041756-ed05e3bf4a68
 	github.com/tigera/lma v0.0.0-20210805041606-3317f006e5ea
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
