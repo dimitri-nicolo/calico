@@ -14,9 +14,6 @@ re evaluated with the new ECK version and must match the bash script readiness p
 if this is to be deployed with ECK 1.2, check the readiness probe script for ECK 1.2 here 
 https://github.com/elastic/cloud-on-k8s/blob/1.2/pkg/controller/elasticsearch/nodespec/readiness_probe.go#L31.
 * The ECK version in the go.mod file must be updated to match the version of ECK this is deployed with.
-* The Dockerfile must be compared to the original docker file of the new Elasticsearch version to see if the modifications
-(besides running the cleanup script) should be changed or removed. For instance if you were upgrading to Elasticsearch v7.10.1
-you would need to compare our Dockerfile to the docker file here https://github.com/elastic/elasticsearch/blob/v7.10.1/distribution/docker/src/docker/Dockerfile
 
 ### Building the image
 
