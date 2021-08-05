@@ -3,7 +3,7 @@
 > By default, Felix considers routing table indexes from 1-250 to be under its control, and hence will remove the routing tables created by AWS CNI. This can cause loss of connectivity between pods if they are not on the primary ENI.
 > 
 > **Note**: The following steps will result in loss of connectivity between some pods. It is recommended to only make such changes during a maintenance window.
-> The following steps must be performed on a cluster which uses AWS CNI, to ensure that AWS CNI and Felix manage separate ranges of routing tables:
+> To ensure that AWS CNI and Felix manage separate ranges of routing tables, you must do the following:
 > 
 > 1. Configure Felix to manage a routing table range which is distinct from the range used by AWS CNI:
 >     ```bash
