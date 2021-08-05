@@ -99,7 +99,7 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 				http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
 				return
 			}
-			log.Debugf("Received request %s from %s (with user %s), will proxy to %s", r.RequestURI, fmt.Sprintf("%s (%s)", r.RemoteAddr, r.Header), user.Username, t.Dest)
+			log.Debugf("Received request %s from %s (authenticated for user %s), will proxy to %s", r.RequestURI, r.RemoteAddr, user.Username, t.Dest)
 		}
 
 		p.ServeHTTP(w, r)
