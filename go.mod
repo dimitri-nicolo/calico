@@ -39,7 +39,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20210805182922-ad16e584d37b // indirect
+	github.com/tigera/api v0.0.0-20210805191125-a0e5e71d76a4 // indirect
 	github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b
 	github.com/tigera/lma v0.0.0-20210805041606-3317f006e5ea
 	k8s.io/client-go v11.0.0+incompatible // indirect
