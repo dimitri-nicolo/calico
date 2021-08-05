@@ -2164,7 +2164,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 		t.Run(fmt.Sprintf("should drop %s", tc), func(t *testing.T) {
 			RegisterTestingT(t)
 			if tp.XDP() {
-				runProgram(tc, testStateMap, polProgFD, XDPDrop, state.PolicyNoMatch)
+				runProgram(tc, testStateMap, polProgFD, XDPDrop, state.PolicyDeny)
 			} else {
 				runProgram(tc, testStateMap, polProgFD, RCDrop, state.PolicyDeny)
 			}
