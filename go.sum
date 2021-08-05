@@ -888,6 +888,8 @@ github.com/tigera/api v0.0.0-20210803234024-4710c751340e h1:qeGh0tQO826MGWbao06x
 github.com/tigera/api v0.0.0-20210803234024-4710c751340e/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063 h1:ZmzcXEMTQYSOrGCuDMCYZINL1aaOjDQNOEOqPXlU/Y8=
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
+github.com/tigera/api v0.0.0-20210805182922-ad16e584d37b h1:XCt6fs9PTB5lB0YfMxS+mpYfPVuVwmaCTSpCZTRPmjk=
+github.com/tigera/api v0.0.0-20210805182922-ad16e584d37b/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/apiserver v0.0.0-20210805041029-16a66f49f51b h1:l4DX3COoJD/A45WC2z/9y/00YGS7KOz7+CdPKlDAiNU=
 github.com/tigera/apiserver v0.0.0-20210805041029-16a66f49f51b/go.mod h1:KIH3fvnHB1vEhXuKpMqtRH6FDu327T1ykGR6dqPkum4=
 github.com/tigera/compliance v0.0.0-20210805041756-ed05e3bf4a68 h1:zn4OBUpDuPyOHDa/3cQC+ip33WB4/aLIkMYA0oT1gqs=
@@ -905,8 +907,8 @@ github.com/tigera/lma v0.0.0-20210805040710-c5b4d28c5691/go.mod h1:1PGITHZpvtZwx
 github.com/tigera/lma v0.0.0-20210805041606-3317f006e5ea h1:06Nla11kwdnmCuK+gOdTN3A+4Os1qYMA+YvwkYBLUyE=
 github.com/tigera/lma v0.0.0-20210805041606-3317f006e5ea/go.mod h1:UO2vV6HlfErJov41cTXW3n/rcxF7lQ1aYtnT8MYvyhg=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210805012123-5166585ad46e h1:ZHc5zpq4m85TTivM7vu9O4qmiXtdqVg7jzGqtQr5bCY=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210805012123-5166585ad46e/go.mod h1:kWR0TPx6dgmtdxh/hb/gN8dYWmuwOOLn03S3cdbbStk=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210805183045-04c424a2daea h1:nsGb2gRZ+9LdZbSzm26D5PJnl8ssfI0ldfo5vcLIH5Y=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210805183045-04c424a2daea/go.mod h1:t2OvJIQmuPQCznUIOB+5lY+Apq+DxA5wzGIeOV2yu4w=
 github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
