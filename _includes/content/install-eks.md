@@ -14,8 +14,6 @@ Make sure you have an EKS cluster **without {{site.prodname}} installed** and:
 
 ##### Install {{site.prodname}}
 
-{% include /content/install-awscni-routetable-issue.md %}
-
 1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Install the Tigera operator and custom resource definitions.
@@ -101,6 +99,8 @@ Make sure you have an EKS cluster **without {{site.prodname}} installed** and:
    ```
 {% endif %}
 Wait until the `apiserver` shows a status of `Available`, then proceed to [installing a license](#install-the-calico-enterprise-license).
+
+{% include /content/install-awscni-routetable-issue.md %}
 
 #### Install EKS with Calico networking
 
