@@ -14,7 +14,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/typha v0.7.3-0.20210730161404-dccc9fee3e51
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20210803234024-4710c751340e
+	github.com/tigera/api v0.0.0-20210805004937-7a70d5252063
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
