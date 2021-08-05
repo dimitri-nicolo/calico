@@ -519,6 +519,8 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/tigera/api v0.0.0-20210803234024-4710c751340e h1:qeGh0tQO826MGWbao06x/qL/g1B0negzl3EH5zS/1K8=
 github.com/tigera/api v0.0.0-20210803234024-4710c751340e/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
+github.com/tigera/api v0.0.0-20210805004937-7a70d5252063 h1:ZmzcXEMTQYSOrGCuDMCYZINL1aaOjDQNOEOqPXlU/Y8=
+github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210804185949-e48549a4184d h1:mY/RK5SHYV80F532/6SJfWhqFdNfTCUpW2aYLzc83tM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210804185949-e48549a4184d/go.mod h1:4wDKe+tLi4riOckkWCuU3s6bYkmwecsJEURg2NMHXfk=
 github.com/tigera/licensing v1.0.1-0.20210804210859-470579579771 h1:eXPthgUhJTipeqRD5hByxlhwWwTdo6E6vdBU/1yS64o=
