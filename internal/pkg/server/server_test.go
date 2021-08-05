@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,13 +39,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
-	"github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/pkg/tunnel"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
@@ -223,97 +222,76 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		Context("Adding / removing managed clusters", func() {
 			It("should get an empty list if no managed clusters are registered", func() {
-				var list []clusters.ManagedCluster
-
-				Eventually(func() int {
-					var code int
-					list, code = listClusters(httpsAddr)
-					return code
-				}).Should(Equal(200))
-				Expect(len(list)).To(Equal(0))
+				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(0))
 			})
 
 			It("should be able to register multiple clusters", func() {
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterA},
 				}, metav1.CreateOptions{})
 
 				Expect(err).ShouldNot(HaveOccurred())
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
 				}, metav1.CreateOptions{})
 
 				Expect(err).ShouldNot(HaveOccurred())
-				var list []clusters.ManagedCluster
-				var code int
-				Eventually(func() int {
-					list, code = listClusters(httpsAddr)
-					return len(list)
-				}, 5*time.Second, 200*time.Millisecond).Should(Equal(2))
 
-				Expect(code).To(Equal(200))
-				Expect(list).To(Equal([]clusters.ManagedCluster{
-					{ID: "clusterA"},
-					{ID: "clusterB"},
-				}))
+				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(2))
+				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
+				Expect(list.Items[1].GetObjectMeta().GetName()).To(Equal("clusterB"))
 			})
 
 			It("should be able to list the remaining clusters after deleting one", func() {
 				By("adding two cluster")
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterA},
 				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
 				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				var list []clusters.ManagedCluster
-				var code int
-				Eventually(func() int {
-					list, code = listClusters(httpsAddr)
-					return len(list)
-				}, 5*time.Second, 200*time.Millisecond).Should(Equal(2))
-
-				Expect(code).To(Equal(200))
-				Expect(list).To(Equal([]clusters.ManagedCluster{
-					{ID: "clusterA"}, {ID: "clusterB"},
-				}))
+				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(2))
+				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
+				Expect(list.Items[1].GetObjectMeta().GetName()).To(Equal("clusterB"))
 
 				By("removing one cluster")
 				Expect(k8sAPI.ManagedClusters().Delete(context.Background(), clusterB, metav1.DeleteOptions{})).ShouldNot(HaveOccurred())
-				Eventually(func() int {
-					list, code = listClusters(httpsAddr)
-					return len(list)
-				}, 5*time.Second, 200*time.Millisecond).Should(Equal(1))
 
-				Expect(code).To(Equal(200))
-				Expect(list).To(Equal([]clusters.ManagedCluster{
-					{ID: "clusterA"},
-				}))
+				list, err = k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(1))
+				Expect(list.Items[0].GetObjectMeta().GetName()).To(Equal("clusterA"))
 			})
 
 			It("should be able to register clusterB after it's been deleted again", func() {
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
 				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(k8sAPI.ManagedClusters().Delete(context.Background(), clusterB, metav1.DeleteOptions{})).ShouldNot(HaveOccurred())
-				Eventually(func() int {
-					list, _ := listClusters(httpsAddr)
-					return len(list)
-				}).Should(Equal(0))
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(0))
+
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{Name: clusterB},
 				}, metav1.CreateOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
-				Eventually(func() int {
-					list, _ := listClusters(httpsAddr)
-					return len(list)
-				}).Should(Equal(1))
+
+				list, err = k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(1))
 			})
 		})
 
@@ -350,7 +328,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should not be able to proxy to a cluster without a tunnel", func() {
-				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err := k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       calicov3.KindManagedCluster,
 						APIVersion: calicov3.GroupVersionCurrent,
@@ -450,7 +428,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					payload, _ := base64.RawURLEncoding.DecodeString(strings.Split(jennyToken, ".")[1])
 					keyset.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(jennyToken, "Bearer "))).Return(payload, nil)
 
-					_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+					_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        clusterA,
 							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterACert)},
@@ -534,7 +512,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 
 						Expect(err).NotTo(HaveOccurred())
-						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
 								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterBCert)},
@@ -631,10 +609,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 	Context("Voltron tunnel configured with tls certificate with invalid Key Extension", func() {
 		var (
-			wg                    *sync.WaitGroup
-			srv                   *server.Server
-			httpsAddr, tunnelAddr string
-			defaultServer         *httptest.Server
+			wg            *sync.WaitGroup
+			srv           *server.Server
+			tunnelAddr    string
+			defaultServer *httptest.Server
 		)
 
 		BeforeEach(func() {
@@ -668,7 +646,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			voltronTunnelCAs = x509.NewCertPool()
 			voltronTunnelCAs.AppendCertsFromPEM(test.CertToPemBytes(voltronTunnelCert))
 
-			srv, httpsAddr, tunnelAddr, wg = createAndStartServer(
+			srv, _, tunnelAddr, wg = createAndStartServer(
 				k8sAPI,
 				config,
 				authenticator,
@@ -695,17 +673,16 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			By("adding ClusterA")
-			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        clusterA,
 					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(cert)},
 				},
 			}, metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
-			Eventually(func() int {
-				list, _ := listClusters(httpsAddr)
-				return len(list)
-			}).Should(Equal(1))
+			list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(list.Items).To(HaveLen(1))
 
 			// Try to connect clusterA to the new fake voltron, should fail
 			tlsCert, err := tls.X509KeyPair(test.CertToPemBytes(cert), test.KeyToPemBytes(privKey))
@@ -767,7 +744,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				key, cert, err := test.CreateCertPair(tmpl, voltronTunnelCert, voltronTunnelPrivKey)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &apiv3.ManagedCluster{
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: clusterA,
 						Annotations: map[string]string{
@@ -777,10 +754,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				}, metav1.CreateOptions{})
 
 				Expect(err).ShouldNot(HaveOccurred())
-				Eventually(func() int {
-					list, _ := listClusters(httpAddr)
-					return len(list)
-				}).Should(Equal(1))
+				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(list.Items).To(HaveLen(1))
 
 				tlsCert, err := tls.X509KeyPair(test.CertToPemBytes(cert), test.KeyToPemBytes(key))
 				Expect(err).ShouldNot(HaveOccurred())
@@ -962,31 +938,6 @@ func configureHTTPSClient() *http.Client {
 			},
 		},
 	}
-}
-
-func listClusters(server string) ([]clusters.ManagedCluster, int) {
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-			ServerName:         "localhost",
-		},
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get("https://" + server + "/voltron/api/clusters")
-	Expect(err).NotTo(HaveOccurred())
-
-	if resp.StatusCode != 200 {
-		return nil, resp.StatusCode
-	}
-
-	var list []clusters.ManagedCluster
-
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&list)
-	Expect(err).NotTo(HaveOccurred())
-
-	return list, 200
 }
 
 func clientHelloReq(addr string, target string, expectStatus int) {

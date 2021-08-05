@@ -19,12 +19,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"k8s.io/apiserver/pkg/authentication/user"
 )
@@ -127,7 +128,6 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator authenticat
 
 	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
-	srv.proxyMux.HandleFunc("/voltron/api/clusters", srv.clusters.apiHandle)
 
 	var tunOpts []tunnel.ServerOption
 

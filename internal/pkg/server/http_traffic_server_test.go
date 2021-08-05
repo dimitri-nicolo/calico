@@ -13,7 +13,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
@@ -21,6 +20,8 @@ import (
 	"github.com/tigera/voltron/internal/pkg/server"
 	"golang.org/x/net/http2"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 func init() {
