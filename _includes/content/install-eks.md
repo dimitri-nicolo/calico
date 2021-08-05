@@ -14,6 +14,8 @@ Make sure you have an EKS cluster **without {{site.prodname}} installed** and:
 
 ##### Install {{site.prodname}}
 
+{% include /content/install-awscni-routetable-issue.md %}
+
 1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Install the Tigera operator and custom resource definitions.
