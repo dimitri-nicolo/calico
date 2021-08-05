@@ -1,16 +1,11 @@
----
-title: Configure calicoctl to connect to the datastore
-description: Sample configuration files for the datastore.
-canonical_url: '/maintenance/clis/calicoctl/configure/datastore'
----
 
-## Default configuration
+### Default configuration
 
 By default, calicoctl will attempt to read from the Kubernetes API using the default kubeconfig located at `$(HOME)/.kube/config`.
 
 If the default kubeconfig does not exist, or you would like to specify alternative API access information, you can do so using the following configuration options.
 
-## Complete list of Kubernetes API connection configuration
+### Complete list of Kubernetes API connection configuration
 
 | Configuration file option | Environment variable | Description                                                                                               | Schema
 | --------------------------|----------------------| ----------------------------------------------------------------------------------------------------------|
@@ -35,7 +30,7 @@ If the default kubeconfig does not exist, or you would like to specify alternati
 {: .alert .alert-info}
 
 
-## Examples
+### Examples
 
 #### Kubernetes command line
 
