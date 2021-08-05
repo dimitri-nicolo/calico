@@ -16,6 +16,7 @@ package remotecluster_test
 
 import (
 	"errors"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,12 +60,12 @@ var (
 )
 
 type mockSecretWatcherBackend struct {
-	handler       cache.ResourceEventHandler
-	getVal        *v1.Secret
-	getErr        error
-	watches       []types.NamespacedName
-	gets          []types.NamespacedName
-	updates       []types.NamespacedName
+	handler cache.ResourceEventHandler
+	getVal  *v1.Secret
+	getErr  error
+	watches []types.NamespacedName
+	gets    []types.NamespacedName
+	updates []types.NamespacedName
 }
 
 func (s *mockSecretWatcherBackend) Watch(namespace, name string, handler cache.ResourceEventHandler, stopCh <-chan struct{}) {
