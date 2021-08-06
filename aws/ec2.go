@@ -411,7 +411,7 @@ func (c *EC2Client) SetEC2SourceDestinationCheck(ctx context.Context, ec2NetId s
 	return err
 }
 
-func NetworkInterfaceIsCalicoSecondary(nic *types.NetworkInterface) bool {
+func NetworkInterfaceIsCalicoSecondary(nic types.NetworkInterface) bool {
 	v, _ := LookupTag(nic.TagSet, NetworkInterfaceTagUse)
 	return v == NetworkInterfaceUseSecondary
 }
