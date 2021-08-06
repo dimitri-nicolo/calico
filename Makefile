@@ -525,7 +525,7 @@ HELM_RELEASE=helm-v2.17.0-linux-amd64.tar.gz
 bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
-	wget -q https://storage.googleapis.com/kubernetes-helm/$(HELM_RELEASE) -O $(TMP)/$(HELM_RELEASE)
+	wget https://storage.googleapis.com/kubernetes-helm/$(HELM_RELEASE) -O $(TMP)/$(HELM_RELEASE)
 	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
