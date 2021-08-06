@@ -100,6 +100,8 @@ Make sure you have an EKS cluster **without {{site.prodname}} installed** and:
 {% endif %}
 Wait until the `apiserver` shows a status of `Available`, then proceed to [installing a license](#install-the-calico-enterprise-license).
 
+{% include /content/install-awscni-routetable-issue.md %}
+
 #### Install EKS with Calico networking
 
 {% if include.clusterType == "standalone" %}
