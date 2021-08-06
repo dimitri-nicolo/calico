@@ -204,6 +204,8 @@ type Config struct {
 
 	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
+	DNSPolicyNfqueueID int `config:"int;100;"`
+
 	FelixHostname string `config:"hostname;;local,non-zero"`
 	NodeIP        net.IP `config:"ipv4;;"`
 
