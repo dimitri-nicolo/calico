@@ -1762,8 +1762,8 @@ func validatePacketCaptureRule(structLevel validator.StructLevel) {
 	// been specified.
 	if rule.Protocol != nil && !rule.Protocol.SupportsPorts() {
 		if len(rule.Ports) > 0 {
-			structLevel.ReportError(reflect.ValueOf(rule.Ports),
-				"Ports", "", reason(protocolPortsMsg), "")
+			structLevel.ReportError(reflect.ValueOf(rule.Protocol),
+				"Protocol", "", reason("protocol does not accept ports"), "")
 		}
 	}
 
