@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -28,11 +30,146 @@ const (
 	timeStrTo   = "2021-05-30T21:38:10Z"
 )
 
+func toJson(obj interface{}) string {
+	b, err := json.MarshalIndent(obj, "      ", "  ")
+	ExpectWithOffset(2, err).NotTo(HaveOccurred())
+	return "      " + string(b)
+}
+
+func compareEdges(actual, expected v1.GraphEdge) []string {
+	var errStrs []string
+	if !reflect.DeepEqual(actual.Stats, expected.Stats) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Stats are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Stats),
+			toJson(expected.Stats)),
+		)
+	}
+	if !reflect.DeepEqual(actual.Selectors, expected.Selectors) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Selectors are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Selectors),
+			toJson(expected.Selectors)),
+		)
+	}
+	if !reflect.DeepEqual(actual.ServicePorts, expected.ServicePorts) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  ServicePorts are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.ServicePorts),
+			toJson(expected.ServicePorts)),
+		)
+	}
+	if !reflect.DeepEqual(actual.EndpointProtoPorts, expected.EndpointProtoPorts) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  EndpointProtoPorts are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.EndpointProtoPorts),
+			toJson(expected.EndpointProtoPorts)),
+		)
+	}
+	if len(errStrs) > 0 {
+		// Prepend a heading for this edge.
+		errStrs = append([]string{"==== Edge data is incorrect for " + actual.ID.String() + " ===="}, errStrs...)
+	}
+
+	// Handle new fields not being added.
+	if len(errStrs) == 0 {
+		ExpectWithOffset(1, actual).To(Equal(expected), "Edge comparison function needs updating")
+	}
+
+	return errStrs
+}
+
+func compareNodes(actual, expected v1.GraphNode) []string {
+	//	Events GraphEvents `json:"events,omitempty"`
+	var errStrs []string
+	if !reflect.DeepEqual(actual.ParentID, expected.ParentID) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  ParentID are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.ParentID),
+			toJson(expected.ParentID)),
+		)
+	}
+	if !reflect.DeepEqual(actual.ServicePorts, expected.ServicePorts) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  ServicePorts are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.ServicePorts),
+			toJson(expected.ServicePorts)),
+		)
+	}
+	if !reflect.DeepEqual(actual.AggregatedProtoPorts, expected.AggregatedProtoPorts) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  AggregatedProtoPorts are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.AggregatedProtoPorts),
+			toJson(expected.AggregatedProtoPorts)),
+		)
+	}
+	if !reflect.DeepEqual(actual.Stats, expected.Stats) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Stats are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Stats),
+			toJson(expected.Stats)),
+		)
+	}
+	if !reflect.DeepEqual(actual.Expandable, expected.Expandable) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Expandable are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Expandable),
+			toJson(expected.Expandable)),
+		)
+	}
+	if !reflect.DeepEqual(actual.Expanded, expected.Expanded) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Expanded are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Expanded),
+			toJson(expected.Expanded)),
+		)
+	}
+	if !reflect.DeepEqual(actual.FollowEgress, expected.FollowEgress) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  FollowEgress are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.FollowEgress),
+			toJson(expected.FollowEgress)),
+		)
+	}
+	if !reflect.DeepEqual(actual.FollowIngress, expected.FollowIngress) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  FollowIngress are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.FollowIngress),
+			toJson(expected.FollowIngress)),
+		)
+	}
+	if !reflect.DeepEqual(actual.Selectors, expected.Selectors) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Selectors are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Selectors),
+			toJson(expected.Selectors)),
+		)
+	}
+	if !reflect.DeepEqual(actual.Events, expected.Events) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  Events are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.Events),
+			toJson(expected.Events)),
+		)
+	}
+	if len(errStrs) > 0 {
+		// Prepend a heading for this edge.
+		errStrs = append([]string{"==== Node data is incorrect for " + string(actual.ID) + " ===="}, errStrs...)
+	}
+
+	// Handle new fields not being added.
+	if len(errStrs) == 0 && !reflect.DeepEqual(actual, expected) {
+		ExpectWithOffset(1, actual).To(Equal(expected), "Node comparison function needs updating")
+	}
+
+	return errStrs
+}
+
 var _ = Describe("Service graph data tests", func() {
 	// Track last handled response filename and expected data.
 	var expectDataFilename string
 	var actualDataFilename string
-	var actualData map[string]interface{}
+	var actualData *v1.ServiceGraphResponse
 
 	AfterEach(func() {
 		// If the test failed then write out the actual contents of the file. We can verify the data by hand and if
@@ -108,95 +245,89 @@ var _ = Describe("Service graph data tests", func() {
 				return
 			}
 
-			// Parse the response. Unmarshal into a generic map for easier comparison (also we haven't implemented
-			// all the unmarshal methods required)
-			var actual map[string]interface{}
+			// Parse the response and the expected response.
+			var actual, expected v1.ServiceGraphResponse
 			err = json.Unmarshal(writer.Body.Bytes(), &actual)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(actual).To(HaveKey("time_intervals"))
-			Expect(actual).To(HaveKey("nodes"))
-			Expect(actual).To(HaveKey("edges"))
-			if actual["edges"] != nil {
-				Expect(actual["edges"]).To(BeAssignableToTypeOf([]interface{}{}))
-			}
-			if actual["nodes"] != nil {
-				Expect(actual["nodes"]).To(BeAssignableToTypeOf([]interface{}{}))
-			}
+			actualData = &actual
 
 			// Track the last handled response data and the response filename. We use this to write out the expected
 			// file in the event of an error.  It makes dev cycles easier.
-			actualData = actual
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
 
 			// Parse the expected response.
-			var expected map[string]interface{}
 			content, err := ioutil.ReadFile(expectDataFilename)
 			Expect(err).NotTo(HaveOccurred())
 			err = json.Unmarshal(content, &expected)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(expected).To(HaveKey("time_intervals"))
-			Expect(expected).To(HaveKey("nodes"))
-			Expect(expected).To(HaveKey("edges"))
-			if expected["edges"] == nil {
-				Expect(actual["edges"]).To(BeNil())
-			} else {
-				Expect(actual["edges"]).To(BeAssignableToTypeOf([]interface{}{}))
+
+			// Compile a complete list of differences.
+			actualEdgesMap := make(map[v1.GraphEdgeID]v1.GraphEdge)
+			expectedEdgesMap := make(map[v1.GraphEdgeID]v1.GraphEdge)
+			actualNodesMap := make(map[v1.GraphNodeID]v1.GraphNode)
+			expectedNodesMap := make(map[v1.GraphNodeID]v1.GraphNode)
+
+			for i := range actual.Edges {
+				actualEdgesMap[actual.Edges[i].ID] = actual.Edges[i]
 			}
-			if expected["nodes"] == nil {
-				Expect(actual["nodes"]).To(BeNil())
-			} else {
-				Expect(actual["nodes"]).To(BeAssignableToTypeOf([]interface{}{}))
+			for i := range expected.Edges {
+				expectedEdgesMap[expected.Edges[i].ID] = expected.Edges[i]
+			}
+			for i := range actual.Nodes {
+				actualNodesMap[actual.Nodes[i].ID] = actual.Nodes[i]
+			}
+			for i := range expected.Nodes {
+				expectedNodesMap[expected.Nodes[i].ID] = expected.Nodes[i]
 			}
 
-			// Compile the set of node and edge IDs and compare - just comparing the node and edge IDs makes development
-			// and sanity checking these test much easier.
-			var actualEdgeIds []interface{}
-			var actualNodeIds []interface{}
-			var expectedEdgeIds []interface{}
-			var expectedNodeIds []interface{}
-			if actual["edges"] != nil {
-				for _, edge := range actual["edges"].([]interface{}) {
-					Expect(edge).To(BeAssignableToTypeOf(map[string]interface{}{}))
-					actualEdgeIds = append(actualEdgeIds, edge.(map[string]interface{})["id"])
-				}
-				for _, edge := range expected["edges"].([]interface{}) {
-					Expect(edge).To(BeAssignableToTypeOf(map[string]interface{}{}))
-					expectedEdgeIds = append(expectedEdgeIds, edge.(map[string]interface{})["id"])
-				}
-			}
-			if actual["nodes"] != nil {
-				for _, node := range actual["nodes"].([]interface{}) {
-					Expect(node).To(BeAssignableToTypeOf(map[string]interface{}{}))
-					actualNodeIds = append(actualNodeIds, node.(map[string]interface{})["id"])
+			var errStrs []string
 
-					// Sanity check the node ID and node type match.
-					id, ok := node.(map[string]interface{})["id"].(string)
-					Expect(ok).To(BeTrue())
-					tp, ok := node.(map[string]interface{})["type"].(string)
-					Expect(ok).To(BeTrue())
-
-					idt := strings.Split(id, "/")
-					idt = strings.Split(idt[0], ";")
-
-					Expect(idt[0]).To(Equal(tp))
-				}
-				for _, node := range expected["nodes"].([]interface{}) {
-					Expect(node).To(BeAssignableToTypeOf(map[string]interface{}{}))
-					expectedNodeIds = append(expectedNodeIds, node.(map[string]interface{})["id"])
+			for id, actual := range actualEdgesMap {
+				expected, ok := expectedEdgesMap[id]
+				if ok {
+					errStrs = append(errStrs, compareEdges(actual, expected)...)
+					delete(expectedEdgesMap, id)
+				} else {
+					errStrs = append(errStrs, "==== Edge found but not expected: "+id.String()+" ====")
 				}
 			}
-
-			Expect(actualEdgeIds).To(ConsistOf(expectedEdgeIds))
-			Expect(actualNodeIds).To(ConsistOf(expectedNodeIds))
-
-			// Compare the full sets of data ignoring the order of the slices.
-			Expect(actual["time_intervals"]).To(Equal(expected["time_intervals"]))
-			if actual["edges"] != nil {
-				Expect(actual["edges"]).To(ConsistOf(expected["edges"]))
+			for id := range expectedEdgesMap {
+				errStrs = append(errStrs, "==== Edge expected but not found: "+id.String()+" ====")
 			}
-			if actual["nodes"] != nil {
-				Expect(actual["nodes"]).To(ConsistOf(expected["nodes"]))
+
+			for id, actual := range actualNodesMap {
+				expected, ok := expectedNodesMap[id]
+				if ok {
+					errStrs = append(errStrs, compareNodes(actual, expected)...)
+					delete(expectedNodesMap, id)
+				} else {
+					errStrs = append(errStrs, "==== Node found but not expected: "+string(id)+" ====")
+				}
+			}
+			for id := range expectedNodesMap {
+				errStrs = append(errStrs, "==== Node expected but not found: "+string(id)+" ====")
+			}
+
+			if !reflect.DeepEqual(actual.TimeIntervals, expected.TimeIntervals) {
+				errStrs = append(errStrs, fmt.Sprintf(
+					"==== Time intervals are not the same ====\n  Actual=%v\n  Expected=%v",
+					toJson(actual.TimeIntervals),
+					toJson(expected.TimeIntervals)),
+				)
+			}
+
+			if !reflect.DeepEqual(actual.Selectors, expected.Selectors) {
+				errStrs = append(errStrs, fmt.Sprintf(
+					"  Selectors are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+					toJson(actual.Selectors),
+					toJson(expected.Selectors)),
+				)
+			}
+
+			if len(errStrs) > 0 {
+				err := errors.New(strings.Join(errStrs, "\n\n"))
+				Expect(err).NotTo(HaveOccurred())
 			}
 		},
 		Entry("No request parameters",
@@ -444,24 +575,14 @@ var _ = Describe("Service graph data tests", func() {
 				// Should be same results as if no request params.
 			}, http.StatusOK, "001-no-req-parms", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
-		Entry("Expanded hosts with direction specified, but ingress/egress not split",
+		Entry("Expanded hosts",
 			v1.ServiceGraphRequest{
 				SelectedView: v1.GraphView{
-					Focus:    []v1.GraphNodeID{"hosts/*;dir/ingress"},
-					Expanded: []v1.GraphNodeID{"hosts/*;dir/ingress"},
+					Focus:    []v1.GraphNodeID{"hosts/*"},
+					Expanded: []v1.GraphNodeID{"hosts/*"},
 				},
 				// Should be same results as if no request params.
-			}, http.StatusOK, "024-expanded-hosts-with-dir-no-split", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
-		),
-		Entry("Expanded hosts with direction specified, and ingress/egress split",
-			v1.ServiceGraphRequest{
-				SelectedView: v1.GraphView{
-					SplitIngressEgress: true,
-					Focus:              []v1.GraphNodeID{"hosts/*;dir/ingress"},
-					Expanded:           []v1.GraphNodeID{"hosts/*;dir/ingress"},
-				},
-				// Should be same results as if no request params.
-			}, http.StatusOK, "025-expanded-hosts-with-dir-split", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
+			}, http.StatusOK, "024-expanded-hosts", RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil),
 		),
 	)
 

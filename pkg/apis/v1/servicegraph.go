@@ -32,4 +32,7 @@ type ServiceGraphResponse struct {
 	// Nodes and edges for the graph.
 	Nodes []GraphNode `json:"nodes"`
 	Edges []GraphEdge `json:"edges"`
+
+	// Selectors for the view.
+	Selectors GraphSelectors `json:"selectors"`
 }
