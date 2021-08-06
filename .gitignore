@@ -6,3 +6,4 @@ test/tmp/*
 .idea
 .manifest.yaml
 Makefile.common*
+.vscode
