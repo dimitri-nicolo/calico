@@ -375,11 +375,17 @@ func chainsForIfaces(ipVersion uint8,
 						Prefix: fmt.Sprintf("DPE|%s", tierName),
 					},
 				})
-				outRules = append(outRules, iptables.Rule{
-					Match:   iptables.Match().MarkClear(16),
-					Action:  iptables.DropAction{},
-					Comment: []string{"Drop if no policies passed packet"},
-				})
+				outRules = append(outRules, []iptables.Rule{
+					{
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).MarkClear(16),
+						Action:  iptables.NfqueueAction{QueueNum: 100},
+						Comment: []string{"Drop if no policies passed packet"},
+					},
+					{
+						Match:   iptables.Match().MarkClear(16),
+						Action:  iptables.DropAction{},
+						Comment: []string{"Drop if no policies passed packet"},
+					}}...)
 			}
 
 		} else if tableKind == "applyOnForward" {
@@ -403,11 +409,17 @@ func chainsForIfaces(ipVersion uint8,
 					Prefix: "DRE",
 				},
 			})
-			outRules = append(outRules, iptables.Rule{
-				Match:   iptables.Match(),
-				Action:  iptables.DropAction{},
-				Comment: []string{"Drop if no profiles matched"},
-			})
+			outRules = append(outRules, []iptables.Rule{
+				{
+					Match:   iptables.Match().MarkSingleBitSet(0x00001),
+					Action:  iptables.NfqueueAction{QueueNum: 100},
+					Comment: []string{"Drop if no profiles matched"},
+				},
+				{
+					Match:   iptables.Match(),
+					Action:  iptables.DropAction{},
+					Comment: []string{"Drop if no profiles matched"},
+				}}...)
 		}
 
 		inRules := []iptables.Rule{}
@@ -473,11 +485,17 @@ func chainsForIfaces(ipVersion uint8,
 						Prefix: fmt.Sprintf("DPI|%s", tierName),
 					},
 				})
-				inRules = append(inRules, iptables.Rule{
-					Match:   iptables.Match().MarkClear(16),
-					Action:  iptables.DropAction{},
-					Comment: []string{"Drop if no policies passed packet"},
-				})
+				inRules = append(inRules, []iptables.Rule{
+					{
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).MarkClear(16),
+						Action:  iptables.NfqueueAction{QueueNum: 100},
+						Comment: []string{"Drop if no policies passed packet"},
+					},
+					{
+						Match:   iptables.Match().MarkClear(16),
+						Action:  iptables.DropAction{},
+						Comment: []string{"Drop if no policies passed packet"},
+					}}...)
 			}
 
 		} else if tableKind == "applyOnForward" {
@@ -501,11 +519,17 @@ func chainsForIfaces(ipVersion uint8,
 					Prefix: "DRI",
 				},
 			})
-			inRules = append(inRules, iptables.Rule{
-				Match:   iptables.Match(),
-				Action:  iptables.DropAction{},
-				Comment: []string{"Drop if no profiles matched"},
-			})
+			inRules = append(inRules, []iptables.Rule{
+				{
+					Match:   iptables.Match().MarkSingleBitSet(0x00001),
+					Action:  iptables.NfqueueAction{QueueNum: 100},
+					Comment: []string{"Drop if no profiles matched"},
+				},
+				{
+					Match:   iptables.Match(),
+					Action:  iptables.DropAction{},
+					Comment: []string{"Drop if no profiles matched"},
+				}}...)
 		}
 
 		if tableKind == "preDNAT" {
@@ -786,6 +810,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				IPIPTunnelAddress:           nil,
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:          100,
 				IptablesMarkEgress:          0x4,
 				IptablesMarkAccept:          0x8,
 				IptablesMarkPass:            0x10,
@@ -793,6 +818,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				IptablesMarkScratch1:        0x40,
 				IptablesMarkDrop:            0x80,
 				IptablesMarkIPsec:           0x10000,
+				IptablesMarkDNSPolicy:       0x00001,
 				IptablesMarkEndpoint:        0xff00,
 				IptablesMarkNonCaliEndpoint: 0x0100,
 				KubeIPVSSupportEnabled:      true,

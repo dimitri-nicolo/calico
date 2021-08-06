@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -366,7 +366,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 
 	if !adminUp {
 		// Endpoint is admin-down, drop all traffic to/from it.
-		rules = append(rules, r.DropRules(Match(), "Endpoint admin disabled")...)
+		rules = append(rules, r.DropRules(Match(), false, "Endpoint admin disabled")...)
 		return &Chain{
 			Name:  chainName,
 			Rules: rules,
@@ -503,7 +503,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					})
 
 					rules = append(rules, r.DropRules(
-						Match().MarkClear(r.IptablesMarkPass), "Drop if no policies passed packet")...)
+						Match().MarkClear(r.IptablesMarkPass), true, "Drop if no policies passed packet")...)
 				} else {
 					// If we do not require an end of tier drop (i.e. because all of the policies in the tier are
 					// staged), then add an end of tier pass nflog action so that we can at least track that we
@@ -566,7 +566,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				SizeEnabled: r.EnableNflogSize,
 			},
 		})
-		rules = append(rules, r.DropRules(Match(), "Drop if no profiles matched")...)
+		rules = append(rules, r.DropRules(Match(), true, "Drop if no profiles matched")...)
 		//}
 	}
 

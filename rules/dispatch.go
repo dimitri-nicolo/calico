@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ func (r *DefaultRuleRenderer) WorkloadDispatchChains(
 
 	// If there is no policy at all for a workload endpoint, we don't allow any traffic through
 	// it.
-	endRules := r.DropRules(Match(), "Unknown interface")
+	endRules := r.DropRules(Match(), false, "Unknown interface")
 
 	return r.interfaceNameDispatchChains(
 		names,

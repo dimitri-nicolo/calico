@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -184,18 +184,20 @@ var ruleTestData = []TableEntry{
 
 var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	var rrConfigNormal = Config{
-		IPIPEnabled:          true,
-		IPIPTunnelAddress:    nil,
-		IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		IptablesMarkEgress:   0x40,
-		IptablesMarkAccept:   0x80,
-		IptablesMarkPass:     0x100,
-		IptablesMarkScratch0: 0x200,
-		IptablesMarkScratch1: 0x400,
-		IptablesMarkDrop:     0x800,
-		IptablesLogPrefix:    "calico-drop",
-		IptablesMarkEndpoint: 0xff000,
+		IPIPEnabled:           true,
+		IPIPTunnelAddress:     nil,
+		IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:    100,
+		IptablesMarkEgress:    0x40,
+		IptablesMarkAccept:    0x80,
+		IptablesMarkPass:      0x100,
+		IptablesMarkScratch0:  0x200,
+		IptablesMarkScratch1:  0x400,
+		IptablesMarkDrop:      0x800,
+		IptablesMarkDNSPolicy: 0x00001,
+		IptablesLogPrefix:     "calico-drop",
+		IptablesMarkEndpoint:  0xff000,
 	}
 
 	DescribeTable(
@@ -206,7 +208,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
-			Expect(len(rules)).To(Equal(3))
+			numRules := 3
+			if len(in.DstDomainIpSetIds) > 0 {
+				numRules = 4
+			}
+			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x80}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
@@ -220,6 +226,12 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match:  iptables.Match().MarkSingleBitSet(0x80),
 				Action: iptables.ReturnAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(rules[3]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 
 			// Explicit allow should be treated the same as empty.
 			in.Action = "allow"
@@ -266,7 +278,13 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 				// For next-tier, should be one match rule that sets the mark, then one
 				// that reads the mark and returns.
-				Expect(len(rules)).To(Equal(3))
+				numRules := 3
+
+				if len(in.DstDomainIpSetIds) > 0 {
+					numRules = 4
+				}
+
+				Expect(len(rules)).To(Equal(numRules))
 				Expect(rules[0].Match.Render()).To(Equal(expMatch))
 				Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x100}))
 				Expect(rules[1]).To(Equal(iptables.Rule{
@@ -280,6 +298,12 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					Match:  iptables.Match().MarkSingleBitSet(0x100),
 					Action: iptables.ReturnAction{},
 				}))
+
+				if len(in.DstDomainIpSetIds) > 0 {
+					Expect(rules[3]).To(Equal(iptables.Rule{
+						Action: iptables.SetMarkAction{Mark: 0x00001},
+					}))
+				}
 			}
 		},
 		ruleTestData...,
@@ -366,7 +390,12 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For deny, should be one match rule that just does the DROP.
-			Expect(len(rules)).To(Equal(3))
+			expectedLen := 4
+			if len(in.DstDomainIpSetIds) > 0 {
+				expectedLen = 5
+			}
+
+			Expect(len(rules)).To(Equal(expectedLen))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
@@ -377,9 +406,19 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(rules[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(rules[4]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 		},
 		ruleTestData...,
 	)
@@ -427,9 +466,14 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(chains[0].Name).To(Equal("cali-pi-default/default.foo"))
 			Expect(chains[1].Name).To(Equal("cali-po-default/default.foo"))
 
+			numInboundRules := 4
+			if len(in.DstDomainIpSetIds) > 0 {
+				numInboundRules = 5
+			}
+
 			inbound := chains[0].Rules
 			outbound := chains[1].Rules
-			Expect(inbound).To(HaveLen(3))
+			Expect(inbound).To(HaveLen(numInboundRules))
 			Expect(outbound).To(HaveLen(0))
 			Expect(inbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
@@ -441,9 +485,19 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				},
 			}))
 			Expect(inbound[2]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(inbound[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(inbound[4]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 		},
 		ruleTestData...,
 	)
@@ -472,8 +526,14 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			inbound := chains[0].Rules
 			outbound := chains[1].Rules
+
+			numOutboundRules := 4
+			if len(in.DstDomainIpSetIds) > 0 {
+				numOutboundRules = 5
+			}
+
 			Expect(inbound).To(HaveLen(0))
-			Expect(outbound).To(HaveLen(3))
+			Expect(outbound).To(HaveLen(numOutboundRules))
 			Expect(outbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(outbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(outbound[1]).To(Equal(iptables.Rule{
@@ -484,9 +544,19 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				},
 			}))
 			Expect(outbound[2]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(outbound[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(outbound[4]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 		},
 		ruleTestData...,
 	)
@@ -605,7 +675,13 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For LOG-and-DROP, should get two rules with the same match criteria;
 			// first should log, second should drop.
-			Expect(len(rules)).To(Equal(4))
+
+			numRules := 5
+			if len(in.DstDomainIpSetIds) > 0 {
+				numRules = 6
+			}
+
+			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
@@ -622,9 +698,18 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				},
 			}))
 			Expect(rules[3]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(rules[4]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(rules[5]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001}}))
+			}
 		},
 		ruleTestData...,
 	)
@@ -665,7 +750,13 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For LOG-and-ACCEPT, should get two rules with the same match criteria;
 			// first should log, second should accept.
-			Expect(len(rules)).To(Equal(4))
+
+			numRules := 4
+			if len(in.DstDomainIpSetIds) > 0 {
+				numRules = 5
+			}
+
+			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
@@ -685,6 +776,12 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.AcceptAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(rules[4]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 		},
 		ruleTestData...,
 	)
@@ -724,7 +821,13 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For ACCEPT, should get a single accept rule.
-			Expect(len(rules)).To(Equal(3))
+
+			numRules := 3
+			if len(in.DstDomainIpSetIds) > 0 {
+				numRules = 4
+			}
+
+			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
@@ -738,6 +841,12 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.AcceptAction{},
 			}))
+
+			if len(in.DstDomainIpSetIds) > 0 {
+				Expect(rules[3]).To(Equal(iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
+			}
 		},
 		ruleTestData...,
 	)
@@ -1527,18 +1636,20 @@ var _ = Describe("rule metadata tests", func() {
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
 	}
 	var rrConfigNormal = Config{
-		IPIPEnabled:          true,
-		IPIPTunnelAddress:    nil,
-		IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		IptablesMarkEgress:   0x40,
-		IptablesMarkAccept:   0x80,
-		IptablesMarkPass:     0x100,
-		IptablesMarkScratch0: 0x200,
-		IptablesMarkScratch1: 0x400,
-		IptablesMarkDrop:     0x800,
-		IptablesLogPrefix:    "calico-drop",
-		IptablesMarkEndpoint: 0xff000,
+		IPIPEnabled:           true,
+		IPIPTunnelAddress:     nil,
+		IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:    100,
+		IptablesMarkEgress:    0x40,
+		IptablesMarkAccept:    0x80,
+		IptablesMarkPass:      0x100,
+		IptablesMarkScratch0:  0x200,
+		IptablesMarkScratch1:  0x400,
+		IptablesMarkDrop:      0x800,
+		IptablesLogPrefix:     "calico-drop",
+		IptablesMarkDNSPolicy: 0x00001,
+		IptablesMarkEndpoint:  0xff000,
 	}
 
 	It("IPv4 should include annotations in comments", func() {
@@ -1559,5 +1670,72 @@ var _ = Describe("rule metadata tests", func() {
 			Expect(r.Comment).To(ContainElement("testkey00=testvalue00"))
 			Expect(r.Comment).To(ContainElement("testkey01=testvalue01"))
 		}
+	})
+})
+
+var _ = Describe("DNS policy rules", func() {
+	var rrConfigNormal = Config{
+		IPIPEnabled:           true,
+		IPIPTunnelAddress:     nil,
+		IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:    100,
+		IptablesMarkEgress:    0x40,
+		IptablesMarkAccept:    0x80,
+		IptablesMarkPass:      0x100,
+		IptablesMarkScratch0:  0x200,
+		IptablesMarkScratch1:  0x400,
+		IptablesMarkDrop:      0x800,
+		IptablesLogPrefix:     "calico-drop",
+		IptablesMarkDNSPolicy: 0x00001,
+		IptablesMarkEndpoint:  0xff000,
+	}
+
+	It("Renders the mark dns policy rule when DstDomainIpSetIds and DstIpSetIds are both set", func() {
+		pRule := proto.Rule{
+			DstIpSetIds:       []string{"ipsetid1"},
+			DstDomainIpSetIds: []string{"ipsetid2"},
+		}
+
+		renderer := NewRenderer(rrConfigNormal)
+
+		iptableRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
+			RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
+
+		expected := []iptables.Rule{
+			{
+				Action: iptables.SetMaskedMarkAction{Mask: 1536},
+			},
+			{
+				Match:  iptables.Match().DestIPSet("cali40ipsetid1"),
+				Action: iptables.SetMarkAction{Mark: 512},
+			},
+			{
+				Match:  iptables.Match().DestIPSet("cali40ipsetid2"),
+				Action: iptables.SetMarkAction{Mark: 512},
+			},
+			{
+				Match:  iptables.Match().MarkSingleBitSet(0x200),
+				Action: iptables.SetMarkAction{Mark: 128},
+			},
+			{
+				Match: iptables.Match().MarkSingleBitSet(0x80),
+				Action: iptables.NflogAction{
+					Group:       1,
+					Prefix:      "API0|default.foo",
+					SizeEnabled: false,
+					Size:        0,
+				},
+			},
+			{
+				Match:  iptables.Match().MarkSingleBitSet(0x80),
+				Action: iptables.ReturnAction{},
+			},
+			{
+				Action: iptables.SetMarkAction{Mark: 0x00001},
+			},
+		}
+
+		Expect(iptableRules).Should(Equal(expected))
 	})
 })
