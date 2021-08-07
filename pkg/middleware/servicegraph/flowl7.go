@@ -48,7 +48,7 @@ var (
 		{Name: "dest_service_name", Field: "dest_service_name"},
 		//{Name: "dest_service_port_name", Field: "dest_service_port_name"},
 		{Name: "dest_service_port_num", Field: "dest_service_port"},
-		{Name: "dest_port_num", Field: "dest_port_num"},
+		{Name: "dest_port_num", Field: "dest_port_num", AllowMissingBucket: true},
 		{Name: "source_type", Field: "src_type"},
 		{Name: "source_namespace", Field: "src_namespace"},
 		{Name: "source_name_aggr", Field: "src_name_aggr"},

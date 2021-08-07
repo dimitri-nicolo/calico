@@ -65,7 +65,7 @@ var (
 		{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
 		{Name: "dest_service_name", Field: "dest_service_name"},
 		{Name: "dest_service_port_name", Field: "dest_service_port"},
-		{Name: "dest_service_port_num", Field: "dest_service_port_num"},
+		{Name: "dest_service_port_num", Field: "dest_service_port_num", AllowMissingBucket: true},
 		{Name: "proto", Field: "proto"},
 		{Name: "dest_port_num", Field: "dest_port"},
 		{Name: "source_type", Field: "source_type"},

@@ -3,6 +3,7 @@ package servicegraph
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,28 +18,31 @@ type FlowConfig struct {
 }
 
 func GetFlowConfig(ctx context.Context, cs k8s.ClientSet) (*FlowConfig, error) {
+	// Assume the defaults unless explicitly overridden.
+	fc := &FlowConfig{
+		L3FlowFlushInterval: time.Minute * 5,
+		L7FlowFlushInterval: time.Minute * 5,
+		DNSLogFlushInterval: time.Minute * 5,
+	}
+
 	felixConfig, err := cs.ProjectcalicoV3().FelixConfigurations().Get(ctx, "default", v1.GetOptions{})
 	if err != nil {
+		if errors.IsForbidden(err) {
+			// If forbidden just use the defaults. We shouldn't prevent graph access in this case.
+			return fc, nil
+		}
 		return nil, err
 	}
 
-	// Assume the default flush interval unless explicitly overridden.
-	l3FlowFlushInterval := time.Minute * 5
 	if felixConfig.Spec.FlowLogsFlushInterval != nil {
-		l3FlowFlushInterval = felixConfig.Spec.FlowLogsFlushInterval.Duration
+		fc.L7FlowFlushInterval = felixConfig.Spec.FlowLogsFlushInterval.Duration
 	}
-	l7LogsFlushInterval := time.Minute * 5
 	if felixConfig.Spec.L7LogsFlushInterval != nil {
-		l7LogsFlushInterval = felixConfig.Spec.L7LogsFlushInterval.Duration
+		fc.L7FlowFlushInterval = felixConfig.Spec.L7LogsFlushInterval.Duration
 	}
-	dnsLogsFlushInterval := time.Minute * 5
 	if felixConfig.Spec.DNSLogsFlushInterval != nil {
-		dnsLogsFlushInterval = felixConfig.Spec.DNSLogsFlushInterval.Duration
+		fc.DNSLogFlushInterval = felixConfig.Spec.DNSLogsFlushInterval.Duration
 	}
 
-	return &FlowConfig{
-		L3FlowFlushInterval: l3FlowFlushInterval,
-		L7FlowFlushInterval: l7LogsFlushInterval,
-		DNSLogFlushInterval: dnsLogsFlushInterval,
-	}, nil
+	return fc, nil
 }
