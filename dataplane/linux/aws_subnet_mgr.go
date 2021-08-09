@@ -66,7 +66,6 @@ func NewAWSSubnetManager(
 	})
 
 	return &awsSubnetManager{
-
 		poolsByID:                 map[string]*proto.IPAMPool{},
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},

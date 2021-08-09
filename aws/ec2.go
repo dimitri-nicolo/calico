@@ -271,7 +271,7 @@ func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]types.Subnet, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to get my instance: %w", err)
 	}
-	if inst.Placement == nil || inst.Placement.AvailabilityZone == nil {
+	if inst.Placement == nil || inst.Placement.AvailabilityZone == nil || inst.VpcId == nil {
 		return nil, fmt.Errorf("instance had no placement information")
 	}
 	dso, err := c.EC2Svc.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
@@ -279,6 +279,10 @@ func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]types.Subnet, erro
 			{
 				Name:   aws.String("availability-zone"),
 				Values: []string{*inst.Placement.AvailabilityZone},
+			},
+			{
+				Name: aws.String("vpc-id"),
+				Values: []string{*inst.VpcId},
 			},
 		},
 	})
@@ -310,8 +314,8 @@ func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*types.InstanceTypeI
 
 type NetworkCapabilities struct {
 	MaxNetworkInterfaces int
-	MaxIPv4PerInterface  int
-	MAxIPv6PerInterface  int
+	MaxIPv4PerInterface int
+	MaxIPv6PerInterface int
 }
 
 func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkCapabilities, err error) {
@@ -335,7 +339,7 @@ func InstanceTypeNetworkCapabilities(instType *types.InstanceTypeInfo) (netc Net
 	netc.MaxIPv4PerInterface = int(*instType.NetworkInfo.Ipv4AddressesPerInterface)
 	if instType.NetworkInfo.Ipv6Supported != nil && *instType.NetworkInfo.Ipv6Supported {
 		if instType.NetworkInfo.Ipv6AddressesPerInterface != nil {
-			netc.MAxIPv6PerInterface = int(*instType.NetworkInfo.Ipv6AddressesPerInterface)
+			netc.MaxIPv6PerInterface = int(*instType.NetworkInfo.Ipv6AddressesPerInterface)
 		}
 	}
 	return
