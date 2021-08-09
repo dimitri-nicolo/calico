@@ -883,9 +883,26 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 
 		argList := func(numAllowedArgs int, stats *FlowStats) []string {
 			var aList []string
+			var tempStr string
 			numProcessArgs = stats.processArgs.Len()
 			if numProcessArgs == 0 {
 				return []string{"-"}
+			}
+			if numPids == 1 {
+				// This is a corner case. Logically there should be a 
+				// single argument if the numPids is 1. There could be more
+				// when aggregating, reason being 1 flow has args from kprobes
+				// and other flow has args read from /proc/pid/cmdline. In this
+				// we just show a single arg which is longest, with numProcessArgs
+				// set to 1.
+				stats.processArgs.Iter(func(item interface{}) error {
+					if len(item.(string)) > len(tempStr) {
+						tempStr = item.(string)
+					}
+					return nil
+				})
+				numProcessArgs = 1
+				return []string{tempStr}
 			}
 			if numProcessArgs == 1 || numAllowedArgs == 1 {
 				stats.processArgs.Iter(func(item interface{}) error {

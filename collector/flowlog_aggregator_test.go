@@ -1072,14 +1072,19 @@ var _ = Describe("Flow log aggregator tests", func() {
 		muWithProcessNameArg1 := muWithProcessName
 		muWithProcessNameArg2 := muWithProcessName
 		muWithProcessNameArg2.processArgs = "arg2"
+		muWithProcessNameArg2.processID = 1324
 		muWithProcessNameArg3 := muWithProcessName
 		muWithProcessNameArg3.processArgs = "arg3"
+		muWithProcessNameArg3.processID = 1432
 		muWithProcessNameArg4 := muWithProcessName
 		muWithProcessNameArg4.processArgs = "arg4"
+		muWithProcessNameArg4.processID = 4321
 		muWithProcessNameArg5 := muWithProcessName
 		muWithProcessNameArg5.processArgs = "arg5"
+		muWithProcessNameArg5.processID = 3214
 		muWithProcessNameArg6 := muWithProcessName
 		muWithProcessNameArg6.processArgs = "arg6"
+		muWithProcessNameArg5.processID = 2143
 		It("Aggregates process args", func() {
 			By("Creating an aggregator with perflow process args limit set to default")
 			caa := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2).PerFlowProcessArgsLimit(5)
@@ -1111,6 +1116,20 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(flowLog.FlowProcessReportedStats.NumProcessArgs).Should(Equal(6))
 			expectedArgList := []string{"arg1", "arg2", "arg3", "arg4", "arg5", "arg6"}
 			Expect(checkProcessArgs(flowLog.FlowProcessReportedStats.ProcessArgs, expectedArgList, 6)).Should(Equal(true))
+		})
+		It("Process aggregation, same process ID, different arguments", func() {
+			By("Creating an aggregator, aggregating same ID with different args")
+			caa := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).AggregateOver(FlowDefault).IncludePolicies(true).IncludeProcess(true).PerFlowProcessLimit(2).PerFlowProcessArgsLimit(5)
+			muWithProcessNameArg1SamePid := muWithProcessNameArg1
+			muWithProcessNameArg1SamePid.processArgs = "arg123"
+			_ = caa.FeedUpdate(&muWithProcessNameArg1)
+			_ = caa.FeedUpdate(&muWithProcessNameArg1SamePid)
+			messages := caa.GetAndCalibrate(FlowDefault)
+			Expect(len(messages)).Should(Equal(1))
+			flowLog := messages[0]
+			Expect(flowLog.FlowProcessReportedStats.NumProcessArgs).Should(Equal(1))
+			expectedArgList := []string{"arg123"}
+			Expect(checkProcessArgs(flowLog.FlowProcessReportedStats.ProcessArgs, expectedArgList, 1)).Should(Equal(true))
 		})
 	})
 	Context("Flow log aggregator process information", func() {
