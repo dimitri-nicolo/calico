@@ -5,13 +5,15 @@ package intdataplane
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/aws"
@@ -31,12 +33,17 @@ type awsSubnetManager struct {
 	healthAgg  *health.HealthAggregator
 	ipamClient ipam.Interface
 	k8sClient  *kubernetes.Clientset
+	nodeName   string
 }
 
 const (
 	healthNameSubnetCapacity = "have-at-most-one-aws-subnet"
 	healthNameAWSInSync      = "aws-enis-in-sync"
 )
+
+func NewAWSSubnetManager() *awsSubnetManager {
+	return &awsSubnetManager{}
+}
 
 func newAWSSubnetManager(
 	healthAgg *health.HealthAggregator,
@@ -161,10 +168,6 @@ func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	a.resyncNeeded = true
 }
 
-type awsNICInfo struct {
-	awsNIC *ec2.NetworkInterface
-}
-
 func (a awsSubnetManager) CompleteDeferredWork() error {
 	if !a.resyncNeeded {
 		return nil
@@ -180,7 +183,7 @@ func (a awsSubnetManager) CompleteDeferredWork() error {
 }
 
 func (a awsSubnetManager) resync() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
 	ec2Client, err := aws.NewEC2Client(ctx)
@@ -203,8 +206,17 @@ func (a awsSubnetManager) resync() error {
 	nicIDsBySubnet := map[string][]string{}
 	nicIDByIP := map[ip.CIDR]string{}
 	nicIDByPrimaryIP := map[ip.CIDR]string{}
+	inUseDeviceIndexes := map[int32]bool{}
+	freeIPv4CapacityByNICID := map[string]int{}
+	var primaryNIC *ec2types.NetworkInterface
 	for _, n := range myNICs {
+		if n.Attachment != nil && n.Attachment.DeviceIndex!= nil {
+			inUseDeviceIndexes[*n.Attachment.DeviceIndex] = true
+		}
 		if !aws.NetworkInterfaceIsCalicoSecondary(n) {
+			if primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex !=nil && *n.Attachment.DeviceIndex == 0 {
+				primaryNIC = &n
+			}
 			continue
 		}
 		// Found one of our managed interfaces; collect its IPs.
@@ -225,9 +237,15 @@ func (a awsSubnetManager) resync() error {
 				nicIDByIP[cidr] = *n.NetworkInterfaceId
 			}
 		}
+		freeIPv4CapacityByNICID[*n.NetworkInterfaceId] = netCaps.MaxIPv4PerInterface - len(n.PrivateIpAddresses)
+		logCtx.WithField("availableIPs", freeIPv4CapacityByNICID[*n.NetworkInterfaceId]).Debug("Calculated available IPs")
+		if freeIPv4CapacityByNICID[*n.NetworkInterfaceId] < 0 {
+			logCtx.Errorf("NIC appears to have more IPs (%v) that it should (%v)", len(n.PrivateIpAddresses), netCaps.MaxIPv4PerInterface)
+			freeIPv4CapacityByNICID[*n.NetworkInterfaceId] = 0
+		}
 	}
 
-	// Scan for IPs thatare present on our AWS NICs but no longer required by Calico.
+	// Scan for IPs that are present on our AWS NICs but no longer required by Calico.
 	ipsToRelease := set.New()
 	for addr, nicID := range nicIDByIP {
 		if _, ok := a.localAWSRoutesByDst[addr]; !ok {
@@ -319,6 +337,192 @@ func (a awsSubnetManager) resync() error {
 	// TODO Update secondaryNICsByID et al after deletions.
 
 	// Given the selected subnet, filter down the routes to only those that we can support.
+	filteredRoutes := filterRoutesByAWSSubnet(missingRoutes, bestSubnet)
+	if len(filteredRoutes) == 0 {
+		logrus.Debug("No new AWS IPs to program")
+		return nil
+	}
+	logrus.WithField("numNewRoutes", len(filteredRoutes)).Info("Need to program new AWS IPs")
+
+	// TODO Look up NICs that we created but failed to attach and re-use them or clean them up (if they're from the wrong subnet)
+	// TODO Look up any existing IPs we have in IPAM and use one of those rather than allocating new.
+
+	// Allocate IPs for the new NICs
+	totalIPs := a.localRouteDestsBySubnetID[bestSubnet].Len()
+	if netCaps.MaxIPv4PerInterface <= 1 {
+		logrus.Error("Instance type doesn't support secondary IPs")
+		return fmt.Errorf("instance type doesn't support secondary IPs")
+	}
+	totalNICsNeeded := totalIPs / (netCaps.MaxIPv4PerInterface - 1)
+	nicsAlreadyAllocated := len(nicIDsBySubnet[bestSubnet])
+	numNICsNeeded := totalNICsNeeded - nicsAlreadyAllocated
+
+	logrus.WithField("subnet", bestSubnet).Info("Allocating new AWS NIC.")
+	ipamCtx, ipamCancel := context.WithTimeout(context.Background(), 90*time.Second)
+
+	// TODO Using the node name here for consistency with tunnel IPs but I'm not sure if nodeName can change on AWS?
+	handle := fmt.Sprintf("aws-secondary-ifaces-%s", a.nodeName)
+	v4addrs, _, err := a.ipamClient.AutoAssign(ipamCtx, ipam.AutoAssignArgs{
+		Num4:     numNICsNeeded,
+		HandleID: &handle,
+		Attrs: map[string]string{
+			ipam.AttributeType: "aws-secondary-iface",
+			ipam.AttributeNode: a.nodeName,
+		},
+		Hostname:    a.nodeName,
+		IntendedUse: v3.IPPoolAllowedUseHostSecondary,
+	})
+	ipamCancel()
+	if err != nil {
+		return err
+	}
+	if len(v4addrs.IPs) == 0 {
+		return fmt.Errorf("failed to allocate IP for secondary interface: %v", v4addrs.Msgs)
+	}
+	logrus.WithField("ips", v4addrs.IPs).Info("Allocated primary IPs for secondary interfaces")
+	if len(v4addrs.IPs) < numNICsNeeded {
+		logrus.WithFields(logrus.Fields{
+			"needed": numNICsNeeded,
+			"allocated": len(v4addrs.IPs),
+		}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
+	}
+
+	// Figure out the security groups of our primary NIC, we'll copy these to the new interfaces that we create.
+	var securityGroups []string
+	for _, sg := range primaryNIC.Groups {
+		if sg.GroupId == nil {
+			continue
+		}
+		securityGroups = append(securityGroups, *sg.GroupId)
+	}
+
+	// Create the new NICs for the IPs we were able to get.
+	for _, addr := range v4addrs.IPs {
+		ipStr := addr.IP.String()
+		token := fmt.Sprintf("calico-secondary-%s-%s", ec2Client.InstanceID, ipStr)
+		cno, err := ec2Client.EC2Svc.CreateNetworkInterface(ctx, &ec2.CreateNetworkInterfaceInput{
+			SubnetId:                       &bestSubnet,
+			ClientToken:                    &token,
+			Description:                    stringPointer(fmt.Sprintf("Calico secondary NIC for instance %s", ec2Client.InstanceID)),
+			Groups:                         securityGroups,
+			Ipv6AddressCount:               int32Ptr(0),
+			PrivateIpAddress:               stringPointer(ipStr),
+			TagSpecifications:              []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeNetworkInterface,
+					Tags:         []ec2types.Tag{
+						{
+							Key:   stringPointer(aws.NetworkInterfaceTagUse),
+							Value: stringPointer(aws.NetworkInterfaceUseSecondary),
+						},
+						{
+							Key:   stringPointer(aws.NetworkInterfaceTagOwningInstance),
+							Value: stringPointer(ec2Client.InstanceID),
+						},
+					},
+				},
+			},
+		})
+		if err != nil {
+			// TODO handle idempotency; make sure that we can't get a successful failure(!)
+			logrus.WithError(err).Error("Failed to create interface.")
+			continue
+		}
+
+		// Find a free device index.
+		devIdx := int32(0)
+		for inUseDeviceIndexes[devIdx] {
+			devIdx++
+		}
+		inUseDeviceIndexes[devIdx] = true
+		attOut, err := ec2Client.EC2Svc.AttachNetworkInterface(ctx, &ec2.AttachNetworkInterfaceInput{
+			DeviceIndex:        &devIdx,
+			InstanceId:         &ec2Client.InstanceID,
+			NetworkInterfaceId: cno.NetworkInterface.NetworkInterfaceId,
+			NetworkCardIndex:   nil, // TODO Multi-network card handling
+		})
+		if err != nil {
+			// TODO handle idempotency; make sure that we can't get a successful failure(!)
+			logrus.WithError(err).Error("Failed to attach interface to host.")
+			continue
+		}
+		logrus.WithFields(logrus.Fields{
+			"attachmentID":safeReadString(attOut.AttachmentId),
+			"networkCard": safeReadInt32(attOut.NetworkCardIndex),
+		}).Info("Attached NIC.")
+
+		// Calculate the free IPs from the output. Once we add an idempotency token, it'll be possible to have
+		// >1 IP in place already.
+		freeIPv4CapacityByNICID[*cno.NetworkInterface.NetworkInterfaceId] = netCaps.MaxIPv4PerInterface -
+			len(cno.NetworkInterface.PrivateIpAddresses)
+
+		// TODO disable source/dest check?
+	}
+
+	// Assign secondary IPs to NICs.
+	for nicID, freeIPs := range freeIPv4CapacityByNICID {
+		if freeIPs == 0 {
+			continue
+		}
+		routesToAdd := filteredRoutes
+		if len(routesToAdd) > freeIPs {
+			routesToAdd = routesToAdd[:freeIPs]
+		}
+		filteredRoutes = filteredRoutes[len(routesToAdd):]
+
+		var ipAddrs []string
+		for _, r := range filteredRoutes {
+			ipAddrs = append(ipAddrs, trimPrefixLen(r.Dst))
+		}
+
+		_, err := ec2Client.EC2Svc.AssignPrivateIpAddresses(ctx, &ec2.AssignPrivateIpAddressesInput{
+			NetworkInterfaceId:             &nicID,
+			AllowReassignment:              boolPtr(true),
+			PrivateIpAddresses:             ipAddrs,
+		})
+		if err != nil {
+			logrus.WithError(err).WithField("nidID", nicID).Error("Failed to assign IPs to my NIC.")
+			// TODO What now?
+		}
+		logrus.WithFields(logrus.Fields{"nicID": nicID, "addrs": ipAddrs}).Info("Assigned IPs to secondary NIC.")
+	}
+
+	// TODO update k8s Node with capacities
+	// Report health
+
+	return nil
+}
+
+func trimPrefixLen(cidr string) string {
+	parts := strings.Split(cidr, "/")
+	return parts[0]
+}
+
+func safeReadInt32(iptr *int32) string {
+	if iptr == nil {
+		return "<nil>"
+	}
+	return fmt.Sprint(*iptr)
+}
+func safeReadString(sptr *string) string {
+	if sptr == nil {
+		return "<nil>"
+	}
+	return *sptr
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+func int32Ptr(i int32) *int32 {
+	return &i
+}
+
+func stringPointer(s string) *string {
+	return &s
+}
+
+func filterRoutesByAWSSubnet(missingRoutes []*proto.RouteUpdate, bestSubnet string) []*proto.RouteUpdate {
 	var filteredRoutes []*proto.RouteUpdate
 	for _, r := range missingRoutes {
 		if r.AwsSubnetId != bestSubnet {
@@ -330,32 +534,7 @@ func (a awsSubnetManager) resync() error {
 		}
 		filteredRoutes = append(filteredRoutes, r)
 	}
-	if len(filteredRoutes) == 0 {
-		logrus.Debug("No new AWS IPs to program")
-		return nil
-	}
-	logrus.WithField("numNewRoutes", len(filteredRoutes)).Info("Need to program new AWS IPs")
-
-	// Allocate new NICs where needed.
-	totalIPs := a.localRouteDestsBySubnetID[bestSubnet].Len()
-	if netCaps.MaxIPv4PerInterface <= 1 {
-		logrus.Error("Instance type doesn't support secondary IPs")
-		return fmt.Errorf("instance type doesn't support secondary IPs")
-	}
-	totalNICsNeeded := totalIPs / (netCaps.MaxIPv4PerInterface - 1)
-	nicsAlreadyAllocated := len(nicIDsBySubnet[bestSubnet])
-	newNICsNeeded := totalNICsNeeded - nicsAlreadyAllocated
-	for i := 0; i < newNICsNeeded; i++ {
-		logrus.WithField("subnet", bestSubnet).Info("Allocating new AWS NIC.")
-
-	}
-
-	// Assign IPs to NICs.
-
-	// TODO update k8s Node with capacities
-	// Report health
-
-	return nil
+	return filteredRoutes
 }
 
 func (a awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nicIDsBySubnet map[string][]string) string {
@@ -385,83 +564,4 @@ func (a awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nicI
 	return bestSubnet
 }
 
-func NewAWSSubnetManager() *awsSubnetManager {
-	return &awsSubnetManager{}
-}
-
 var _ Manager = &awsSubnetManager{}
-
-//
-// func foo() {
-// 	// Get my instance, find my AZ.
-// 	// Maintain set of awsSubnets referenced by IP pools.
-// 	// When set changes:
-// 	// - Figure out which subnets are in my AZ.
-// 	// - Deterministically choose one subnet (there should only be one).
-// 	// - When subnet changes (or start of day), reconcile Node resource allocation and local ENI(s).
-//
-// 	// Start of day:
-// 	// - Get my instance type
-// 	// - Used c.EC2Svc.DescribeInstanceTypes() to get the number of interfaces and IPs-per-interface
-//
-// 	// Reconcile node resource:
-// 	// Get my Calico Node resource
-// 	// Find name of k8s node from it (OrchRef)
-// 	// Get my k8s node using k8s client
-// 	// - Scan its extended resources.
-// 	// - Patch out extended resources availability for subnets that we no longer have.
-// 	// - Patch in extended resources availability for the subnet we now have.
-//
-// 	// Find the interfaces attached ot this instance already.
-//
-// 	// Check if we've already got the interfaces that we _want_.
-//
-// 	// Remove any interfaces that we no longer want.
-//
-// 	// For each interface that we're missing:
-// 	// - Figure out <next available device ID> on this instance.
-// 	//   - If there are no available slots, error.
-// 	// - Search for any unattached interfaces that match our tags.
-// 	// - If not found, create a new interface.
-// 	// - Attach the found/created interface to <next available device ID>
-// 	// - Delete any interfaces that turned up in the search that we no longer want.
-//
-// 	// Free any secondary IPs that no longer apply to local pods.
-// 	// Claim any IPs that now apply to local pods.
-//
-// 	descIfacesOut, _ := c.EC2Svc.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
-// 		Filters:             nil,
-// 		MaxResults:          nil,
-// 		NetworkInterfaceIds: nil,
-// 		NextToken:           nil,
-// 	})
-//
-// 	primaryIP := "10.0.0.1"
-// 	nodeName := "my-node"
-// 	subnetID := "sn-12345"
-// 	c.EC2Svc.CreateNetworkInterface(
-// 		&ec2.CreateNetworkInterfaceInput{
-// 			Description:      stringPtr("Calico NIC for instance abcd1234"),
-// 			Groups:           []*string{stringPtr("sg-12345")},
-// 			PrivateIpAddress: stringPtr(primaryIP),
-// 			SubnetId:         stringPtr(subnetID),
-// 			TagSpecifications: []*ec2.TagSpecification{
-// 				{
-// 					ResourceType: stringPtr("network-interface"),
-// 					Tags: []*ec2.Tag{{
-// 						Key:   stringPtr("projectcalico.org/node"),
-// 						Value: stringPtr(nodeName),
-// 					}},
-// 				},
-// 			},
-// 		},
-// 	)
-//
-// 	c.EC2Svc.AttachNetworkInterface(&ec2.AttachNetworkInterfaceInput{
-// 		DeviceIndex:        nil,
-// 		DryRun:             nil,
-// 		InstanceId:         nil,
-// 		NetworkCardIndex:   nil,
-// 		NetworkInterfaceId: nil,
-// 	})
-// }
