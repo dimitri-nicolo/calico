@@ -241,8 +241,8 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				}
 			case model.ProfileRulesKey:
 				t.Name = clusterName + "/" + t.Name
-				updates[i].Value.(*model.ProfileRules).InboundRules = []model.Rule{}
-				updates[i].Value.(*model.ProfileRules).OutboundRules = []model.Rule{}
+				updates[i].Value.(*model.ProfileRules).InboundRules = nil
+				updates[i].Value.(*model.ProfileRules).OutboundRules = nil
 				updates[i].Key = t
 			case model.ProfileLabelsKey:
 				t.Name = clusterName + "/" + t.Name

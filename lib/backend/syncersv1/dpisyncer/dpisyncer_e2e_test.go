@@ -71,7 +71,7 @@ var _ = testutils.E2eDatastoreDescribe("DPI syncer tests", testutils.DatastoreK8
 			k8sBackend.Clean()
 
 			// Remove the test namespace
-			err = k8sClientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+			testutils.DeleteNamespace(k8sClientset, namespace)
 
 			syncTester = testutils.NewSyncerTester()
 			syncer = dpisyncer.New(k8sBackend, syncTester)
@@ -79,7 +79,7 @@ var _ = testutils.E2eDatastoreDescribe("DPI syncer tests", testutils.DatastoreK8
 
 		AfterEach(func() {
 			// Remove the test namespace
-			err = k8sClientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+			testutils.DeleteNamespace(k8sClientset, namespace)
 			syncTester.ExpectCacheSize(0)
 			if syncer != nil {
 				syncer.Stop()
@@ -239,6 +239,16 @@ var _ = testutils.E2eDatastoreDescribe("DPI syncer tests", testutils.DatastoreK8
 			_, err = v3Client.WorkloadEndpoints().Delete(ctx, namespace, "node1-k8s-pod1-eth0", options.DeleteOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			expectedCacheSize -= 1
+			syncTester.ExpectCacheSize(expectedCacheSize)
+
+			By("Deleting the underlying Pod resource")
+			var zero int64
+			policy := metav1.DeletePropagationBackground
+			err = k8sClientset.CoreV1().Pods(namespace).Delete(ctx, "pod1", metav1.DeleteOptions{
+				GracePeriodSeconds: &zero,
+				PropagationPolicy:  &policy,
+			})
+			Expect(err).ShouldNot(HaveOccurred())
 			syncTester.ExpectCacheSize(expectedCacheSize)
 		})
 	})

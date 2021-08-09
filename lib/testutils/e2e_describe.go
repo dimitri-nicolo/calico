@@ -15,10 +15,12 @@ package testutils
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 type DatastoreType int
@@ -71,4 +73,18 @@ func E2eDatastoreDescribe(description string, datastores DatastoreType, body fun
 	}
 
 	return true
+}
+
+// GetK8sInlineConfig returns a CalicoAPIConfig with the kubeconfig inline.
+func GetK8sInlineConfig() apiconfig.CalicoAPIConfig {
+	kc, err := ioutil.ReadFile(kubeconfig)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return apiconfig.CalicoAPIConfig{
+		Spec: apiconfig.CalicoAPIConfigSpec{
+			DatastoreType: apiconfig.Kubernetes,
+			KubeConfig: apiconfig.KubeConfig{
+				KubeconfigInline: string(kc),
+			},
+		},
+	}
 }
