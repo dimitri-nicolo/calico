@@ -3,10 +3,6 @@
 set -e
 set -x
 
-# SONG: TEMPORARILY SKIP WINDOWS FVs
-echo "Temporarily skipping Windows FVs - please re-enable me!"
-exit 0
-
 FV_DIR="/home/semaphore/process/testing/winfv"
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME:=docker}"
 
