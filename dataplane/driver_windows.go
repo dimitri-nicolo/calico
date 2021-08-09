@@ -19,10 +19,9 @@ import (
 	"os/exec"
 	"sync"
 	"time"
-
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
@@ -30,7 +29,6 @@ import (
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/security"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -40,6 +38,7 @@ func StartDataplaneDriver(configParams *config.Config,
 	configChangedRestartCallback func(),
 	fatalErrorCallback func(error),
 	childExitedRestartCallback func(),
+	ipamClient ipam.Interface,
 	k8sClientSet *kubernetes.Clientset,
 	lookupsCache *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	log.Info("Using Windows dataplane driver.")

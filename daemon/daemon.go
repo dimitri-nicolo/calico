@@ -463,6 +463,7 @@ configRetry:
 		configChangedRestartCallback,
 		fatalErrorCallback,
 		childExitedRestartCallback,
+		v3Client.IPAM(),
 		k8sClientSet,
 		lookupsCache,
 	)

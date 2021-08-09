@@ -10,11 +10,12 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/ip"
@@ -41,14 +42,11 @@ const (
 	healthNameAWSInSync      = "aws-enis-in-sync"
 )
 
-func NewAWSSubnetManager() *awsSubnetManager {
-	return &awsSubnetManager{}
-}
-
-func newAWSSubnetManager(
+func NewAWSSubnetManager(
 	healthAgg *health.HealthAggregator,
 	ipamClient ipam.Interface,
 	k8sClient *kubernetes.Clientset,
+	nodeName string,
 ) *awsSubnetManager {
 	healthAgg.RegisterReporter(healthNameSubnetCapacity, &health.HealthReport{
 		Ready: true,
@@ -68,10 +66,16 @@ func newAWSSubnetManager(
 	})
 
 	return &awsSubnetManager{
-		resyncNeeded: true,
-		healthAgg:    healthAgg,
-		ipamClient:   ipamClient,
-		k8sClient:    k8sClient,
+
+		poolsByID:                 map[string]*proto.IPAMPool{},
+		poolIDsBySubnetID:         map[string]set.Set{},
+		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
+		localRouteDestsBySubnetID: map[string]set.Set{},
+		resyncNeeded:              true,
+		healthAgg:                 healthAgg,
+		ipamClient:                ipamClient,
+		k8sClient:                 k8sClient,
+		nodeName:                  nodeName,
 	}
 }
 
@@ -210,11 +214,11 @@ func (a awsSubnetManager) resync() error {
 	freeIPv4CapacityByNICID := map[string]int{}
 	var primaryNIC *ec2types.NetworkInterface
 	for _, n := range myNICs {
-		if n.Attachment != nil && n.Attachment.DeviceIndex!= nil {
+		if n.Attachment != nil && n.Attachment.DeviceIndex != nil {
 			inUseDeviceIndexes[*n.Attachment.DeviceIndex] = true
 		}
 		if !aws.NetworkInterfaceIsCalicoSecondary(n) {
-			if primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex !=nil && *n.Attachment.DeviceIndex == 0 {
+			if primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex != nil && *n.Attachment.DeviceIndex == 0 {
 				primaryNIC = &n
 			}
 			continue
@@ -269,12 +273,14 @@ func (a awsSubnetManager) resync() error {
 		}
 		localSubnetIDs.Add(*s.SubnetId)
 	}
+	logrus.WithField("subnets", localSubnetIDs).Info("Looked up local AWS Subnets.")
 	localIPPoolSubnetIDs := set.New()
 	for subnetID := range a.poolIDsBySubnetID {
 		if localSubnetIDs.Contains(subnetID) {
 			localIPPoolSubnetIDs.Add(subnetID)
 		}
 	}
+	logrus.WithField("subnets", localIPPoolSubnetIDs).Info("AWS Subnets with associated Calico IP pool.")
 
 	// Scan for NICs that are in a subnet that no longer matches an IP pool.
 	nicsToRelease := set.New()
@@ -382,7 +388,7 @@ func (a awsSubnetManager) resync() error {
 	logrus.WithField("ips", v4addrs.IPs).Info("Allocated primary IPs for secondary interfaces")
 	if len(v4addrs.IPs) < numNICsNeeded {
 		logrus.WithFields(logrus.Fields{
-			"needed": numNICsNeeded,
+			"needed":    numNICsNeeded,
 			"allocated": len(v4addrs.IPs),
 		}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
 	}
@@ -401,16 +407,16 @@ func (a awsSubnetManager) resync() error {
 		ipStr := addr.IP.String()
 		token := fmt.Sprintf("calico-secondary-%s-%s", ec2Client.InstanceID, ipStr)
 		cno, err := ec2Client.EC2Svc.CreateNetworkInterface(ctx, &ec2.CreateNetworkInterfaceInput{
-			SubnetId:                       &bestSubnet,
-			ClientToken:                    &token,
-			Description:                    stringPointer(fmt.Sprintf("Calico secondary NIC for instance %s", ec2Client.InstanceID)),
-			Groups:                         securityGroups,
-			Ipv6AddressCount:               int32Ptr(0),
-			PrivateIpAddress:               stringPointer(ipStr),
-			TagSpecifications:              []ec2types.TagSpecification{
+			SubnetId:         &bestSubnet,
+			ClientToken:      &token,
+			Description:      stringPointer(fmt.Sprintf("Calico secondary NIC for instance %s", ec2Client.InstanceID)),
+			Groups:           securityGroups,
+			Ipv6AddressCount: int32Ptr(0),
+			PrivateIpAddress: stringPointer(ipStr),
+			TagSpecifications: []ec2types.TagSpecification{
 				{
 					ResourceType: ec2types.ResourceTypeNetworkInterface,
-					Tags:         []ec2types.Tag{
+					Tags: []ec2types.Tag{
 						{
 							Key:   stringPointer(aws.NetworkInterfaceTagUse),
 							Value: stringPointer(aws.NetworkInterfaceUseSecondary),
@@ -447,8 +453,8 @@ func (a awsSubnetManager) resync() error {
 			continue
 		}
 		logrus.WithFields(logrus.Fields{
-			"attachmentID":safeReadString(attOut.AttachmentId),
-			"networkCard": safeReadInt32(attOut.NetworkCardIndex),
+			"attachmentID": safeReadString(attOut.AttachmentId),
+			"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
 		}).Info("Attached NIC.")
 
 		// Calculate the free IPs from the output. Once we add an idempotency token, it'll be possible to have
@@ -476,9 +482,9 @@ func (a awsSubnetManager) resync() error {
 		}
 
 		_, err := ec2Client.EC2Svc.AssignPrivateIpAddresses(ctx, &ec2.AssignPrivateIpAddressesInput{
-			NetworkInterfaceId:             &nicID,
-			AllowReassignment:              boolPtr(true),
-			PrivateIpAddresses:             ipAddrs,
+			NetworkInterfaceId: &nicID,
+			AllowReassignment:  boolPtr(true),
+			PrivateIpAddresses: ipAddrs,
 		})
 		if err != nil {
 			logrus.WithError(err).WithField("nidID", nicID).Error("Failed to assign IPs to my NIC.")

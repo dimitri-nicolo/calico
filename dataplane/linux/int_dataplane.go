@@ -28,6 +28,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -234,6 +235,9 @@ type Config struct {
 	// Optional stats collector
 	Collector collector.Collector
 
+	// AWS-specials.
+	AWSSecondaryInterfacesEnabled bool
+
 	// Config for DNS policy.
 	DNSCacheFile         string
 	DNSCacheSaveInterval time.Duration
@@ -243,6 +247,7 @@ type Config struct {
 
 	LookPathOverride func(file string) (string, error)
 
+	IPAMClient   ipam.Interface
 	KubeClientSet *kubernetes.Clientset
 
 	FeatureDetectOverrides map[string]string
@@ -1043,6 +1048,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 	captureManager := newCaptureManager(activeCaptures, config.RulesConfig.WorkloadIfacePrefixes)
 	dp.RegisterManager(captureManager)
+
+	if config.AWSSecondaryInterfacesEnabled {
+		awsSubnetManager := NewAWSSubnetManager(
+			config.HealthAggregator,
+			config.IPAMClient,
+			config.KubeClientSet,
+			config.FelixHostname,
+		)
+		dp.RegisterManager(awsSubnetManager)
+	}
 
 	if config.IPv6Enabled {
 		mangleTableV6 := iptables.NewTable(
