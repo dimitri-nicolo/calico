@@ -37,6 +37,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -383,6 +384,35 @@ const (
 	aksMTUOverhead       = 100
 )
 
+func getEKSPrimaryENIByMAC(mac net.HardwareAddr) (string, error) {
+	links, err := netlink.LinkList()
+	if err != nil {
+		return "", err
+	}
+
+	equal := func(a, b net.HardwareAddr) bool {
+		if len(a) != len(b) {
+			return false
+		}
+
+		for i := 0; i < len(a); i++ {
+			if a[i] != b[i] {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	for _, link := range links {
+		if attrs := link.Attrs(); attrs != nil && equal(attrs.HardwareAddr, mac) {
+			return attrs.Name, nil
+		}
+	}
+
+	return "", fmt.Errorf("no matching link for mac %s", mac)
+}
+
 func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
 	if config.DNSLogsLatency && !config.BPFEnabled {
 		// With non-BPF dataplane, set SO_TIMESTAMP so we get timestamps on packets passed
@@ -397,6 +427,29 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
+
+		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
+			eksPrimaryENI, err := aws.PrimaryInterface()
+			if err != nil {
+				log.WithError(err).Fatal("Could not get EKS primary interface")
+			}
+
+			if eksPrimaryENI.MacAddress == nil {
+				// Extremelly unlikely, but it is a pointer ...
+				log.Fatal("Primary interface does not have MAC")
+			}
+
+			mac, err := net.ParseMAC(*eksPrimaryENI.MacAddress)
+			if err != nil {
+				log.WithError(err).Fatal("Failed to parse MAC address")
+			}
+
+			config.RulesConfig.EKSPrimaryENI, err = getEKSPrimaryENIByMAC(mac)
+			if err != nil {
+				log.WithError(err).Fatal("Failed find primary EKS link name")
+			}
+		}
+
 		ruleRenderer = rules.NewRenderer(config.RulesConfig)
 	}
 	epMarkMapper := rules.NewEndpointMarkMapper(

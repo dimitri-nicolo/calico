@@ -423,6 +423,8 @@ type Config struct {
 	EgressIPVXLANVNI  int
 	EgressIPInterface string
 
+	EKSPrimaryENI string
+
 	DNSTrustedServers []config.ServerPort
 
 	TPROXYMode string
