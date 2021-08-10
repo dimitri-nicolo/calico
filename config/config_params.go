@@ -443,6 +443,7 @@ type Config struct {
 
 	DebugPanicAfter       time.Duration `config:"seconds;0"`
 	DebugSimulateDataRace bool          `config:"bool;false"`
+	DebugDNSResponseDelay time.Duration `config:"millis;0"`
 
 	// Configure where Felix gets its routing information.
 	// - workloadIPs: use workload endpoints to construct routes.

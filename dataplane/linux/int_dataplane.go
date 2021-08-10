@@ -63,6 +63,7 @@ import (
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/felix/nfqueue"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -241,7 +242,9 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
-	LookPathOverride func(file string) (string, error)
+	DNSPolicyNfqueueID    int
+	DebugDNSResponseDelay time.Duration
+	LookPathOverride      func(file string) (string, error)
 
 	KubeClientSet *kubernetes.Clientset
 
@@ -366,6 +369,8 @@ type InternalDataplane struct {
 	callbacks         *common.Callbacks
 
 	loopSummarizer *logutils.Summarizer
+
+	packetProcessor *nfqueue.DNSPolicyPacketProcessor
 }
 
 const (
@@ -379,12 +384,11 @@ const (
 )
 
 func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
-
 	if config.DNSLogsLatency && !config.BPFEnabled {
 		// With non-BPF dataplane, set SO_TIMESTAMP so we get timestamps on packets passed
-		// up via NFLOG.
+		// up via NFLOG and NFQUEUE.
 		if err := EnableTimestamping(); err != nil {
-			log.WithError(err).Warning("Couldn't enable timestamping, so DNS latency will not be measured")
+			log.WithError(err).Warning("Couldn't enable timestamping, so DNS and NFQUEUE latency will not be measured")
 		} else {
 			log.Info("Timestamping enabled, so DNS latency will be measured")
 		}
@@ -424,6 +428,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
 		stopChan:          stopChan,
 	}
+
+	nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
+
+	if err == nil {
+		packetProcessor := nfqueue.NewDNSPolicyPacketProcessor(nf)
+
+		packetProcessor.Start()
+		dp.packetProcessor = packetProcessor
+	} else {
+		log.WithError(err).Error("failed to open NFQUEUE, DNS optimizations are now disabled")
+	}
+
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
 	dp.ifaceMonitor.StateCallback = dp.onIfaceStateChange
@@ -581,12 +597,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
 	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges, &common.DnsConfig{
-		Collector:            config.Collector,
-		DNSCacheEpoch:        config.DNSCacheEpoch,
-		DNSCacheFile:         config.DNSCacheFile,
-		DNSCacheSaveInterval: config.DNSCacheSaveInterval,
-		DNSExtraTTL:          config.DNSExtraTTL,
-		DNSLogsLatency:       config.DNSLogsLatency,
+		Collector:             config.Collector,
+		DNSCacheEpoch:         config.DNSCacheEpoch,
+		DNSCacheFile:          config.DNSCacheFile,
+		DNSCacheSaveInterval:  config.DNSCacheSaveInterval,
+		DNSExtraTTL:           config.DNSExtraTTL,
+		DNSLogsLatency:        config.DNSLogsLatency,
+		DebugDNSResponseDelay: config.DebugDNSResponseDelay,
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
@@ -1438,6 +1455,12 @@ func (d *InternalDataplane) Start() {
 			}
 		},
 		stopChannel)
+}
+
+func (d *InternalDataplane) Stop() {
+	if d.packetProcessor != nil {
+		d.packetProcessor.Stop()
+	}
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
