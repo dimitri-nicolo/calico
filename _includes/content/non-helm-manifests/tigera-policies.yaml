@@ -1303,7 +1303,7 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-tigera.es-kube-controller-access
-  namespace: tigera-elasticsearch
+  namespace: calico-system
 spec:
   order: 1
   tier: allow-tigera
