@@ -4,10 +4,11 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 
 	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -57,15 +58,14 @@ var (
 	}}
 )
 
-// PerformUserAuthorizationReviewForElasticLogs performs an authorization review on behalf of the user specified in the
-// HTTP request.
+// PerformUserAuthorizationReviewForElasticLogs performs an authorization review impersonating the user.
 //
 // This function requests a set of permissions for the various endpoint types and policy types, used for filtering
 // flow logs and other elastic logs.
 func PerformUserAuthorizationReviewForElasticLogs(
-	ctx context.Context, csFactory k8s.ClientSetFactory, req *http.Request, cluster string,
+	ctx context.Context, csFactory k8s.ClientSetFactory, user user.Info, cluster string,
 ) ([]v3.AuthorizedResourceVerbs, error) {
-	cs, err := csFactory.NewClientSetForUserRequest(req, cluster)
+	cs, err := csFactory.NewClientSetForUser(user, cluster)
 	if err != nil {
 		return nil, err
 	}

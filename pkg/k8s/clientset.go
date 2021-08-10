@@ -2,7 +2,6 @@
 package k8s
 
 import (
-	"errors"
 	"net/http"
 	"os"
 	"sync"
@@ -10,10 +9,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/transport"
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -28,8 +27,13 @@ const (
 )
 
 type ClientSetFactory interface {
-	NewClientSetForUserRequest(req *http.Request, cluster string) (ClientSet, error)
+	// Returns a client set authenticated by the app impersonating the user.
+	NewClientSetForUser(user user.Info, clusterID string) (ClientSet, error)
+
+	// Returns a client set authenticated by the app.
 	NewClientSetForApplication(cluster string) (ClientSet, error)
+
+	// Returns rest config for the application.
 	NewRestConfigForApplication(clusterID string) *rest.Config
 }
 
@@ -74,8 +78,8 @@ func (f *clientSetFactory) NewClientSetForApplication(clusterID string) (ClientS
 
 // NewClientSetForUserRequest creates a client set for the user (as per request) in the specified cluster. If no cluster
 // is specified this defaults to the management cluster ("cluster").
-func (f *clientSetFactory) NewClientSetForUserRequest(req *http.Request, clusterID string) (ClientSet, error) {
-	return f.getClientSet(req, clusterID)
+func (f *clientSetFactory) NewClientSetForUser(user user.Info, clusterID string) (ClientSet, error) {
+	return f.getClientSet(user, clusterID)
 }
 
 // NewRestConfigForApplication returns a K8S *rest.Config tailored for a particular cluster. Managed clusters will forward
@@ -96,7 +100,7 @@ func (f *clientSetFactory) NewRestConfigForApplication(clusterID string) *rest.C
 	return restConfig
 }
 
-func (f *clientSetFactory) getClientSet(req *http.Request, clusterID string) (ClientSet, error) {
+func (f *clientSetFactory) getClientSet(user user.Info, clusterID string) (ClientSet, error) {
 	// Copy the rest config.
 	restConfig := f.copyRESTConfig()
 
@@ -112,32 +116,12 @@ func (f *clientSetFactory) getClientSet(req *http.Request, clusterID string) (Cl
 		restConfig.CAFile = f.multiClusterForwardingCA
 	}
 
-	// If the request has been specified then we are after a user-specific client set, so add the users bearer token
-	// and impersonation info.
-	if req != nil {
-		// Copy the authorization header.  We should have this in the request.
-		if auth := req.Header.Values("Authorization"); len(auth) == 0 {
-			return nil, errors.New("missing Authorization header in request")
-		} else {
-			headers["Authorization"] = auth
+	// If the user has been specified then we are after a user-specific client set, so set the impersonation info.
+	if user != nil {
+		restConfig.Impersonate = rest.ImpersonationConfig{
+			UserName: user.GetName(),
+			Groups:   user.GetGroups(),
 		}
-
-		// Copy the impersonation info headers.  If the actual user is not allowed to impersonate then requests by this
-		// client should fail.
-		if user := req.Header.Values(transport.ImpersonateUserHeader); len(user) != 0 {
-			headers[transport.ImpersonateUserHeader] = user
-		}
-		if group := req.Header.Values(transport.ImpersonateGroupHeader); len(group) != 0 {
-			headers[transport.ImpersonateGroupHeader] = group
-		}
-		if extra := req.Header.Values(transport.ImpersonateUserExtraHeaderPrefix); len(extra) != 0 {
-			headers[transport.ImpersonateUserExtraHeaderPrefix] = extra
-		}
-
-		// Since we explicitly updating these headers, just remove authentication info from the rest config.
-		restConfig.BearerToken = ""
-		restConfig.Username = ""
-		restConfig.Impersonate = rest.ImpersonationConfig{}
 	}
 
 	// Wrap to add the supplied headers if any.

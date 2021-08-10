@@ -10,6 +10,7 @@ import (
 	"github.com/tigera/lma/pkg/policyrec"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	. "github.com/onsi/ginkgo"
