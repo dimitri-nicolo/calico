@@ -670,7 +670,6 @@ github.com/tcnksm/go-input v0.0.0-20180404061846-548a7d7a8ee8/go.mod h1:IlWNj9v/
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae h1:vgGSvdW5Lqg+I1aZOlG32uyE6xHpLdKhZzcTEktz5wM=
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
-github.com/tigera/api v0.0.0-20210805004937-7a70d5252063 h1:ZmzcXEMTQYSOrGCuDMCYZINL1aaOjDQNOEOqPXlU/Y8=
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d h1:fa+3I5Iw7tP9xFuguiQeImGQ5Jv/h2xzi5MTBZcmG8c=
 github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
