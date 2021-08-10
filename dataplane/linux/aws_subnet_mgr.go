@@ -137,10 +137,10 @@ func (a awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 
 func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	if route != nil && !route.LocalWorkload {
-		return // We only care about local workload routes.
+		route = nil
 	}
 	if route != nil && route.AwsSubnetId == "" {
-		return // We only care about AWS routes.
+		route = nil
 	}
 
 	// Update the index from subnet ID to route dest.  We do this first so we can look up the
@@ -161,12 +161,14 @@ func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 		if a.localRouteDestsBySubnetID[oldSubnetID].Len() == 0 {
 			delete(a.localRouteDestsBySubnetID, oldSubnetID)
 		}
+		a.resyncNeeded = true
 	}
 	if newSubnetID != "" && oldSubnetID != newSubnetID {
 		if _, ok := a.localRouteDestsBySubnetID[newSubnetID]; !ok {
 			a.localRouteDestsBySubnetID[newSubnetID] = set.New()
 		}
 		a.localRouteDestsBySubnetID[newSubnetID].Add(dst)
+		a.resyncNeeded = true
 	}
 
 	// Save off the route itself.
@@ -174,11 +176,12 @@ func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 		if _, ok := a.localAWSRoutesByDst[dst]; !ok {
 			return // Not a route we were tracking.
 		}
+		a.resyncNeeded = true
 		delete(a.localAWSRoutesByDst, dst)
 	} else {
 		a.localAWSRoutesByDst[dst] = route
+		a.resyncNeeded = true
 	}
-	a.resyncNeeded = true
 }
 
 func (a awsSubnetManager) CompleteDeferredWork() error {
@@ -328,6 +331,7 @@ func (a awsSubnetManager) resync() error {
 				"addr": addr,
 				"nic":  nicID,
 			}).Debug("Local workload IP is already present on one of our AWS NICs.")
+			continue
 		}
 		logrus.WithFields(logrus.Fields{
 			"addr":      addr,
