@@ -104,12 +104,22 @@ func (a awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	}
 	if oldSubnetID != "" && oldSubnetID != newSubnetID {
 		// Old AWS subnet is no longer correct. clean up the index.
+		logrus.WithFields(logrus.Fields{
+			"oldSubnet": oldSubnetID,
+			"newSubnet":newSubnetID,
+			"pool":id,
+		}).Info("IP pool no longer associated with AWS subnet.")
 		a.poolIDsBySubnetID[oldSubnetID].Discard(id)
 		if a.poolIDsBySubnetID[oldSubnetID].Len() == 0 {
 			delete(a.poolIDsBySubnetID, oldSubnetID)
 		}
 	}
 	if newSubnetID != "" && oldSubnetID != newSubnetID {
+		logrus.WithFields(logrus.Fields{
+			"oldSubnet": oldSubnetID,
+			"newSubnet":newSubnetID,
+			"pool":id,
+		}).Info("IP pool now associated with AWS subnet.")
 		if _, ok := a.poolIDsBySubnetID[newSubnetID]; !ok {
 			a.poolIDsBySubnetID[newSubnetID] = set.New()
 		}

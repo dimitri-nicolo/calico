@@ -543,7 +543,9 @@ func (c *L3RouteResolver) OnPoolUpdate(update api.Update) (_ bool) {
 	newPoolType := c.poolTypeForPool(newPool)
 	logCxt := logrus.WithFields(logrus.Fields{"oldType": oldPoolType, "newType": newPoolType})
 	if newPool != nil && newPoolType != proto.IPPoolType_NONE {
-		logCxt.Info("Pool is active")
+		logCxt.WithFields(logrus.Fields{
+			"newPool": *newPool,
+		}).Info("Pool is active")
 		c.allPools[poolKey] = *newPool
 		poolCIDR = ip.CIDRFromCalicoNet(newPool.CIDR).(ip.V4CIDR)
 		crossSubnet := newPool.IPIPMode == encap.CrossSubnet || newPool.VXLANMode == encap.CrossSubnet
