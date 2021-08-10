@@ -238,6 +238,7 @@ github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239/go.mod h1:Gdwt2ce0
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.5.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
+github.com/florianl/go-nfqueue v1.2.0/go.mod h1:2z3Tfqwv2ueuK6h563xUHRcCh1mv38wS9EjiWiesk84=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
@@ -902,10 +903,10 @@ github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d h1:fa+3I5Iw7tP9xFuguiQe
 github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/apiserver v0.0.0-20210806154205-f8c729897436 h1:lHCmPE6PK+yYIph3vn+ZnaiMBodzR5WHUushFDkPdr0=
 github.com/tigera/apiserver v0.0.0-20210806154205-f8c729897436/go.mod h1:e7ItahYB7etqwWaxhYWdk1ohGsty3wlyEwonthllFfs=
-github.com/tigera/compliance v0.0.0-20210810140729-982dfa9cab51 h1:ZrQe/BqT7pjs6VCBQEkVwfUKBL4cO7vAoQBofx3FH9I=
-github.com/tigera/compliance v0.0.0-20210810140729-982dfa9cab51/go.mod h1:8cqN92wB/xvl2Yc+U3nq4JurTS8N8vbq4em+eljNR7o=
-github.com/tigera/felix-private v0.0.0-20210809213245-1ca8c04cc516 h1:M57Or/TAsZ8VxUW/59EwhPK1o4dCYhVKp8tOMlQ00WI=
-github.com/tigera/felix-private v0.0.0-20210809213245-1ca8c04cc516/go.mod h1:juxQWC3yPHnCL1WVEQCg3xolwynwhLnNh/PQxzQM9kQ=
+github.com/tigera/compliance v0.0.0-20210810190406-b67b30db70d5 h1:mM/4RaT1PSLdVQJRC0+GjeG89ELdXdaGjqGBU9z2634=
+github.com/tigera/compliance v0.0.0-20210810190406-b67b30db70d5/go.mod h1:NZBAOgCtpNV/KLi7oFTxCd/T/UJnSz+Ta8j1p8u7XFw=
+github.com/tigera/felix-private v0.0.0-20210810185120-2065ab3c6159 h1:/x+dkwAGxrnnRD+d6qPomsZx3bml+Qg6bW80gR8Z7RM=
+github.com/tigera/felix-private v0.0.0-20210810185120-2065ab3c6159/go.mod h1:s8drbxoHNiiqLB75dF9sbfRXeuxFl0g+XRrOtymdRms=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210806153520-93d0e3e7a0a5 h1:1aKM0dPV3v9p356Xz6dtg1toXw265hqi0kgnpn4D/6M=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210806153520-93d0e3e7a0a5/go.mod h1:bwZrX5KQlcbmp+klaVK1R4Z7or3XPFnnHzOS4t/rRgM=
 github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b h1:e/wex7uN9uRFqsPDOVyupng/+MqbSU3lTEZkfP9DS9c=
@@ -1161,6 +1162,7 @@ golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200519105757-fe76b779f299/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20200828194041-157a740278f4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200909081042-eff7692f9009/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200916030750-2334cc1a136f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
