@@ -372,108 +372,109 @@ func (a awsSubnetManager) resync() error {
 	nicsAlreadyAllocated := len(nicIDsBySubnet[bestSubnet])
 	numNICsNeeded := totalNICsNeeded - nicsAlreadyAllocated
 
-	logrus.WithField("subnet", bestSubnet).Info("Allocating new AWS NIC.")
-	ipamCtx, ipamCancel := context.WithTimeout(context.Background(), 90*time.Second)
+	if numNICsNeeded > 0 {
+		ipamCtx, ipamCancel := context.WithTimeout(context.Background(), 90*time.Second)
 
-	// TODO Using the node name here for consistency with tunnel IPs but I'm not sure if nodeName can change on AWS?
-	handle := fmt.Sprintf("aws-secondary-ifaces-%s", a.nodeName)
-	v4addrs, _, err := a.ipamClient.AutoAssign(ipamCtx, ipam.AutoAssignArgs{
-		Num4:     numNICsNeeded,
-		HandleID: &handle,
-		Attrs: map[string]string{
-			ipam.AttributeType: "aws-secondary-iface",
-			ipam.AttributeNode: a.nodeName,
-		},
-		Hostname:    a.nodeName,
-		IntendedUse: v3.IPPoolAllowedUseHostSecondary,
-	})
-	ipamCancel()
-	if err != nil {
-		return err
-	}
-	if len(v4addrs.IPs) == 0 {
-		return fmt.Errorf("failed to allocate IP for secondary interface: %v", v4addrs.Msgs)
-	}
-	logrus.WithField("ips", v4addrs.IPs).Info("Allocated primary IPs for secondary interfaces")
-	if len(v4addrs.IPs) < numNICsNeeded {
-		logrus.WithFields(logrus.Fields{
-			"needed":    numNICsNeeded,
-			"allocated": len(v4addrs.IPs),
-		}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
-	}
-
-	// Figure out the security groups of our primary NIC, we'll copy these to the new interfaces that we create.
-	var securityGroups []string
-	for _, sg := range primaryNIC.Groups {
-		if sg.GroupId == nil {
-			continue
+		// TODO Using the node name here for consistency with tunnel IPs but I'm not sure if nodeName can change on AWS?
+		handle := fmt.Sprintf("aws-secondary-ifaces-%s", a.nodeName)
+		v4addrs, _, err := a.ipamClient.AutoAssign(ipamCtx, ipam.AutoAssignArgs{
+			Num4:     numNICsNeeded,
+			HandleID: &handle,
+			Attrs: map[string]string{
+				ipam.AttributeType: "aws-secondary-iface",
+				ipam.AttributeNode: a.nodeName,
+			},
+			Hostname:    a.nodeName,
+			IntendedUse: v3.IPPoolAllowedUseHostSecondary,
+		})
+		ipamCancel()
+		if err != nil {
+			return err
 		}
-		securityGroups = append(securityGroups, *sg.GroupId)
-	}
+		if v4addrs == nil || len(v4addrs.IPs) == 0 {
+			return fmt.Errorf("failed to allocate IP for secondary interface: %v", v4addrs.Msgs)
+		}
+		logrus.WithField("ips", v4addrs.IPs).Info("Allocated primary IPs for secondary interfaces")
+		if len(v4addrs.IPs) < numNICsNeeded {
+			logrus.WithFields(logrus.Fields{
+				"needed":    numNICsNeeded,
+				"allocated": len(v4addrs.IPs),
+			}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
+		}
 
-	// Create the new NICs for the IPs we were able to get.
-	for _, addr := range v4addrs.IPs {
-		ipStr := addr.IP.String()
-		token := fmt.Sprintf("calico-secondary-%s-%s", ec2Client.InstanceID, ipStr)
-		cno, err := ec2Client.EC2Svc.CreateNetworkInterface(ctx, &ec2.CreateNetworkInterfaceInput{
-			SubnetId:         &bestSubnet,
-			ClientToken:      &token,
-			Description:      stringPointer(fmt.Sprintf("Calico secondary NIC for instance %s", ec2Client.InstanceID)),
-			Groups:           securityGroups,
-			Ipv6AddressCount: int32Ptr(0),
-			PrivateIpAddress: stringPointer(ipStr),
-			TagSpecifications: []ec2types.TagSpecification{
-				{
-					ResourceType: ec2types.ResourceTypeNetworkInterface,
-					Tags: []ec2types.Tag{
-						{
-							Key:   stringPointer(aws.NetworkInterfaceTagUse),
-							Value: stringPointer(aws.NetworkInterfaceUseSecondary),
-						},
-						{
-							Key:   stringPointer(aws.NetworkInterfaceTagOwningInstance),
-							Value: stringPointer(ec2Client.InstanceID),
+		// Figure out the security groups of our primary NIC, we'll copy these to the new interfaces that we create.
+		var securityGroups []string
+		for _, sg := range primaryNIC.Groups {
+			if sg.GroupId == nil {
+				continue
+			}
+			securityGroups = append(securityGroups, *sg.GroupId)
+		}
+
+		// Create the new NICs for the IPs we were able to get.
+		for _, addr := range v4addrs.IPs {
+			ipStr := addr.IP.String()
+			token := fmt.Sprintf("calico-secondary-%s-%s", ec2Client.InstanceID, ipStr)
+			cno, err := ec2Client.EC2Svc.CreateNetworkInterface(ctx, &ec2.CreateNetworkInterfaceInput{
+				SubnetId:         &bestSubnet,
+				ClientToken:      &token,
+				Description:      stringPointer(fmt.Sprintf("Calico secondary NIC for instance %s", ec2Client.InstanceID)),
+				Groups:           securityGroups,
+				Ipv6AddressCount: int32Ptr(0),
+				PrivateIpAddress: stringPointer(ipStr),
+				TagSpecifications: []ec2types.TagSpecification{
+					{
+						ResourceType: ec2types.ResourceTypeNetworkInterface,
+						Tags: []ec2types.Tag{
+							{
+								Key:   stringPointer(aws.NetworkInterfaceTagUse),
+								Value: stringPointer(aws.NetworkInterfaceUseSecondary),
+							},
+							{
+								Key:   stringPointer(aws.NetworkInterfaceTagOwningInstance),
+								Value: stringPointer(ec2Client.InstanceID),
+							},
 						},
 					},
 				},
-			},
-		})
-		if err != nil {
-			// TODO handle idempotency; make sure that we can't get a successful failure(!)
-			logrus.WithError(err).Error("Failed to create interface.")
-			continue
-		}
+			})
+			if err != nil {
+				// TODO handle idempotency; make sure that we can't get a successful failure(!)
+				logrus.WithError(err).Error("Failed to create interface.")
+				continue
+			}
 
-		// Find a free device index.
-		devIdx := int32(0)
-		for inUseDeviceIndexes[devIdx] {
-			devIdx++
-		}
-		inUseDeviceIndexes[devIdx] = true
-		attOut, err := ec2Client.EC2Svc.AttachNetworkInterface(ctx, &ec2.AttachNetworkInterfaceInput{
-			DeviceIndex:        &devIdx,
-			InstanceId:         &ec2Client.InstanceID,
-			NetworkInterfaceId: cno.NetworkInterface.NetworkInterfaceId,
-			NetworkCardIndex:   nil, // TODO Multi-network card handling
-		})
-		if err != nil {
-			// TODO handle idempotency; make sure that we can't get a successful failure(!)
-			logrus.WithError(err).Error("Failed to attach interface to host.")
-			continue
-		}
-		logrus.WithFields(logrus.Fields{
-			"attachmentID": safeReadString(attOut.AttachmentId),
-			"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
-		}).Info("Attached NIC.")
+			// Find a free device index.
+			devIdx := int32(0)
+			for inUseDeviceIndexes[devIdx] {
+				devIdx++
+			}
+			inUseDeviceIndexes[devIdx] = true
+			attOut, err := ec2Client.EC2Svc.AttachNetworkInterface(ctx, &ec2.AttachNetworkInterfaceInput{
+				DeviceIndex:        &devIdx,
+				InstanceId:         &ec2Client.InstanceID,
+				NetworkInterfaceId: cno.NetworkInterface.NetworkInterfaceId,
+				NetworkCardIndex:   nil, // TODO Multi-network card handling
+			})
+			if err != nil {
+				// TODO handle idempotency; make sure that we can't get a successful failure(!)
+				logrus.WithError(err).Error("Failed to attach interface to host.")
+				continue
+			}
+			logrus.WithFields(logrus.Fields{
+				"attachmentID": safeReadString(attOut.AttachmentId),
+				"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
+			}).Info("Attached NIC.")
 
-		// Calculate the free IPs from the output. Once we add an idempotency token, it'll be possible to have
-		// >1 IP in place already.
-		freeIPv4CapacityByNICID[*cno.NetworkInterface.NetworkInterfaceId] = netCaps.MaxIPv4PerInterface -
-			len(cno.NetworkInterface.PrivateIpAddresses)
+			// Calculate the free IPs from the output. Once we add an idempotency token, it'll be possible to have
+			// >1 IP in place already.
+			freeIPv4CapacityByNICID[*cno.NetworkInterface.NetworkInterfaceId] = netCaps.MaxIPv4PerInterface -
+				len(cno.NetworkInterface.PrivateIpAddresses)
 
-		// TODO disable source/dest check?
+			// TODO disable source/dest check?
+		}
 	}
-
+	
 	// Assign secondary IPs to NICs.
 	for nicID, freeIPs := range freeIPv4CapacityByNICID {
 		if freeIPs == 0 {
