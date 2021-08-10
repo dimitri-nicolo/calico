@@ -98,7 +98,7 @@ type userAuthorizationReviewMock struct {
 // PerformReviewForElasticLogs wraps a mocked version of the authorization review method
 // PerformReviewForElasticLogs.
 func (a userAuthorizationReviewMock) PerformReviewForElasticLogs(
-	ctx context.Context, req *http.Request, cluster string,
+	ctx context.Context, cluster string,
 ) ([]libcalicov3.AuthorizedResourceVerbs, error) {
 	return a.verbs, a.err
 }

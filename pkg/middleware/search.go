@@ -136,7 +136,7 @@ func search(
 	r *http.Request,
 ) (*v1.SearchResponse, error) {
 	// Create a context with timeout to ensure we don't block for too long with this query.
-	ctx, cancelWithTimeout := context.WithTimeout(context.Background(), params.Timeout.Duration)
+	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), params.Timeout.Duration)
 	// Releases timer resources if the operation completes before the timeout.
 	defer cancelWithTimeout()
 
@@ -160,7 +160,7 @@ func search(
 	esquery = esquery.Filter(timeRange)
 
 	// Rbac query.
-	verbs, err := authReview.PerformReviewForElasticLogs(ctx, r, params.ClusterName)
+	verbs, err := authReview.PerformReviewForElasticLogs(ctx, params.ClusterName)
 	if err != nil {
 		return nil, err
 	}
