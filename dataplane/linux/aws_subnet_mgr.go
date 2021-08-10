@@ -488,10 +488,11 @@ func (a awsSubnetManager) resync() error {
 		filteredRoutes = filteredRoutes[len(routesToAdd):]
 
 		var ipAddrs []string
-		for _, r := range filteredRoutes {
+		for _, r := range routesToAdd {
 			ipAddrs = append(ipAddrs, trimPrefixLen(r.Dst))
 		}
 
+		logrus.WithFields(logrus.Fields{"nic": nicID, "addrs": ipAddrs})
 		_, err := ec2Client.EC2Svc.AssignPrivateIpAddresses(ctx, &ec2.AssignPrivateIpAddressesInput{
 			NetworkInterfaceId: &nicID,
 			AllowReassignment:  boolPtr(true),
