@@ -55,12 +55,12 @@
       image: tigera/es-proxy
       version: master
     eck-kibana:
-      version: 7.10.1
+      version: 7.11.2
     kibana:
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 7.10.1
+      version: 7.11.2
     elasticsearch:
       image: tigera/elasticsearch
       version: master
@@ -142,7 +142,7 @@
     elasticsearch-operator:
       registry: quay.io
       image: tigera/eck-operator
-      version: 1.2.1
+      version: 1.3.2
     prometheus-operator:
       image: tigera/prometheus-operator
       version: v0.38.1
