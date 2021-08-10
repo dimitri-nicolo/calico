@@ -5,15 +5,19 @@ import (
 	"context"
 	"net/http"
 
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	lmak8s "github.com/tigera/lma/pkg/k8s"
+	log "github.com/sirupsen/logrus"
+
+	"k8s.io/apiserver/pkg/endpoints/request"
 
 	libcalv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/httputils"
+	lmak8s "github.com/tigera/lma/pkg/k8s"
 )
 
 type AuthorizationReview interface {
 	PerformReviewForElasticLogs(
-		ctx context.Context, req *http.Request, cluster string,
+		ctx context.Context, cluster string,
 	) ([]libcalv3.AuthorizedResourceVerbs, error)
 }
 
@@ -32,8 +36,19 @@ func NewAuthorizationReview(csFactory lmak8s.ClientSetFactory) AuthorizationRevi
 //
 // This function wraps lma's PerformUserAuthorizationReviewForElasticLogs.
 func (a userAuthorizationReview) PerformReviewForElasticLogs(
-	ctx context.Context, req *http.Request, cluster string,
+	ctx context.Context, cluster string,
 ) ([]libcalv3.AuthorizedResourceVerbs, error) {
-	verbs, err := lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, a.csf, req, cluster)
+	user, ok := request.UserFrom(ctx)
+	if !ok {
+		// There should be user info on the request context. If not this is is server error since an earlier handler
+		// should have authenticated.
+		log.Debug("No user information on request")
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusInternalServerError,
+			Msg:    "No user information on request",
+		}
+	}
+
+	verbs, err := lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, a.csf, user, cluster)
 	return verbs, err
 }

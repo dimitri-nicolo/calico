@@ -4,8 +4,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
+	"github.com/projectcalico/libcalico-go/lib/net"
 
 	"github.com/tigera/lma/pkg/api"
 

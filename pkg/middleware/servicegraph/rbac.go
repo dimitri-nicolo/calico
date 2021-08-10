@@ -59,7 +59,7 @@ type RBACFilter interface {
 
 // NewRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
 func NewRBACFilter(
-	ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, req *http.Request, cluster string,
+	ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, cluster string,
 ) (RBACFilter, error) {
 
 	var verbs []v3.AuthorizedResourceVerbs
@@ -67,7 +67,7 @@ func NewRBACFilter(
 	var verbsErr, l7Err, dnsErr, alertsErr error
 	wg := sync.WaitGroup{}
 
-	usr, ok := request.UserFrom(ctx)
+	user, ok := request.UserFrom(ctx)
 	if !ok {
 		// There should be user info on the request context. If not this is is server error since an earlier handler
 		// should have authenticated.
@@ -81,22 +81,22 @@ func NewRBACFilter(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, csFactory, req, cluster)
+		verbs, verbsErr = lmaauth.PerformUserAuthorizationReviewForElasticLogs(ctx, csFactory, user, cluster)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		l7Permitted, l7Err = authz.Authorize(usr, esauth.CreateLMAResourceAttributes(cluster, "l7"), nil)
+		l7Permitted, l7Err = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "l7"), nil)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dnsPermitted, dnsErr = authz.Authorize(usr, esauth.CreateLMAResourceAttributes(cluster, "dns"), nil)
+		dnsPermitted, dnsErr = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "dns"), nil)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		alertsPermitted, alertsErr = authz.Authorize(usr, esauth.CreateLMAResourceAttributes(cluster, "events"), nil)
+		alertsPermitted, alertsErr = authz.Authorize(user, esauth.CreateLMAResourceAttributes(cluster, "events"), nil)
 	}()
 	wg.Wait()
 

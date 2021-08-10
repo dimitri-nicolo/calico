@@ -905,6 +905,8 @@ github.com/tigera/apiserver v0.0.0-20210806154205-f8c729897436 h1:lHCmPE6PK+yYIp
 github.com/tigera/apiserver v0.0.0-20210806154205-f8c729897436/go.mod h1:e7ItahYB7etqwWaxhYWdk1ohGsty3wlyEwonthllFfs=
 github.com/tigera/compliance v0.0.0-20210810190406-b67b30db70d5 h1:mM/4RaT1PSLdVQJRC0+GjeG89ELdXdaGjqGBU9z2634=
 github.com/tigera/compliance v0.0.0-20210810190406-b67b30db70d5/go.mod h1:NZBAOgCtpNV/KLi7oFTxCd/T/UJnSz+Ta8j1p8u7XFw=
+github.com/tigera/compliance v0.0.0-20210810202752-bf9d71eb4ed3 h1:QW7L3itgENeCnDxXYwixBynyIXSMBRlJVGTWLboA+H4=
+github.com/tigera/compliance v0.0.0-20210810202752-bf9d71eb4ed3/go.mod h1:b2Yzsj3m4jY7h0jSLmizIWdLn2XzGwzRb5RrWqiiuZA=
 github.com/tigera/felix-private v0.0.0-20210810185120-2065ab3c6159 h1:/x+dkwAGxrnnRD+d6qPomsZx3bml+Qg6bW80gR8Z7RM=
 github.com/tigera/felix-private v0.0.0-20210810185120-2065ab3c6159/go.mod h1:s8drbxoHNiiqLB75dF9sbfRXeuxFl0g+XRrOtymdRms=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210806153520-93d0e3e7a0a5 h1:1aKM0dPV3v9p356Xz6dtg1toXw265hqi0kgnpn4D/6M=
@@ -913,6 +915,8 @@ github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b h1:e/wex7uN9uRF
 github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b/go.mod h1:ZQPJD/V9qpXlUzkaDHzJ6MNaqgo6Mhbb4aFN7uYDNLI=
 github.com/tigera/lma v0.0.0-20210806154814-20822bd37ab9 h1:NcLvfvVgMMl9mXfTi+fFTiDRACflyu4enGqly4nyCK4=
 github.com/tigera/lma v0.0.0-20210806154814-20822bd37ab9/go.mod h1:RQTv8q6vmTajNayYaq/S47bXRuEx6v2ZnRmBJ9PS2Qo=
+github.com/tigera/lma v0.0.0-20210810201642-93b5e827ff15 h1:W06Gq0C5QPemp2gTgy/ArwDiuJMY13k5OUJkMnriuCQ=
+github.com/tigera/lma v0.0.0-20210810201642-93b5e827ff15/go.mod h1:RQTv8q6vmTajNayYaq/S47bXRuEx6v2ZnRmBJ9PS2Qo=
 github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210810142526-c0796d8f8c82 h1:DGuKD2HrFpBzOMdQulEbTEBymmlnc7f52RIFvcNCOSI=
 github.com/tigera/typha-private v0.6.0-beta1.0.20210810142526-c0796d8f8c82/go.mod h1:O9bfV3bRyDtdof43MV1s+PHU0asp6Sx4AZqKgVD9X20=

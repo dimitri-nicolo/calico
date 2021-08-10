@@ -66,7 +66,7 @@ func (r *realServiceGraphBackend) GetEvents(cluster string, tr lmav1.TimeRange) 
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
-	return NewRBACFilter(ctx, r.authz, r.clientSetFactory, rd.HTTPRequest, rd.ServiceGraphRequest.Cluster)
+	return NewRBACFilter(ctx, r.authz, r.clientSetFactory, rd.ServiceGraphRequest.Cluster)
 }
 
 func (r *realServiceGraphBackend) NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error) {

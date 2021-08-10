@@ -16,8 +16,8 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d
-	github.com/tigera/compliance v0.0.0-20210810190406-b67b30db70d5
-	github.com/tigera/lma v0.0.0-20210806154814-20822bd37ab9
+	github.com/tigera/compliance v0.0.0-20210810202752-bf9d71eb4ed3
+	github.com/tigera/lma v0.0.0-20210810201642-93b5e827ff15
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
