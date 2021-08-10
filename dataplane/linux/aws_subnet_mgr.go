@@ -368,7 +368,8 @@ func (a awsSubnetManager) resync() error {
 		logrus.Error("Instance type doesn't support secondary IPs")
 		return fmt.Errorf("instance type doesn't support secondary IPs")
 	}
-	totalNICsNeeded := totalIPs / (netCaps.MaxIPv4PerInterface - 1)
+	secondaryIPsPerIface := netCaps.MaxIPv4PerInterface - 1
+	totalNICsNeeded := (totalIPs + secondaryIPsPerIface-1) / secondaryIPsPerIface
 	nicsAlreadyAllocated := len(nicIDsBySubnet[bestSubnet])
 	numNICsNeeded := totalNICsNeeded - nicsAlreadyAllocated
 
@@ -474,7 +475,7 @@ func (a awsSubnetManager) resync() error {
 			// TODO disable source/dest check?
 		}
 	}
-	
+
 	// Assign secondary IPs to NICs.
 	for nicID, freeIPs := range freeIPv4CapacityByNICID {
 		if freeIPs == 0 {
