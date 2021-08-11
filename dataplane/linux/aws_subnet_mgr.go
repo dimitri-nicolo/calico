@@ -132,7 +132,7 @@ func (a awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	} else {
 		a.poolsByID[id] = pool
 	}
-	a.resyncNeeded = true
+	a.queueResync("IP pool updated")
 }
 
 func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
@@ -161,14 +161,14 @@ func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 		if a.localRouteDestsBySubnetID[oldSubnetID].Len() == 0 {
 			delete(a.localRouteDestsBySubnetID, oldSubnetID)
 		}
-		a.resyncNeeded = true
+		a.queueResync("route subnet changed")
 	}
 	if newSubnetID != "" && oldSubnetID != newSubnetID {
 		if _, ok := a.localRouteDestsBySubnetID[newSubnetID]; !ok {
 			a.localRouteDestsBySubnetID[newSubnetID] = set.New()
 		}
 		a.localRouteDestsBySubnetID[newSubnetID].Add(dst)
-		a.resyncNeeded = true
+		a.queueResync("route subnet added")
 	}
 
 	// Save off the route itself.
@@ -176,12 +176,20 @@ func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 		if _, ok := a.localAWSRoutesByDst[dst]; !ok {
 			return // Not a route we were tracking.
 		}
-		a.resyncNeeded = true
+		a.queueResync("route deleted")
 		delete(a.localAWSRoutesByDst, dst)
 	} else {
 		a.localAWSRoutesByDst[dst] = route
-		a.resyncNeeded = true
+		a.queueResync("route updated")
 	}
+}
+
+func (a awsSubnetManager) queueResync(reason string) {
+	if a.resyncNeeded {
+		return
+	}
+	logrus.WithField("reason", reason).Info("Resync needed")
+	a.resyncNeeded = true
 }
 
 func (a awsSubnetManager) CompleteDeferredWork() error {
@@ -191,8 +199,10 @@ func (a awsSubnetManager) CompleteDeferredWork() error {
 
 	err := a.resync()
 	if err != nil {
+		logrus.WithError(err).Warn("Failed to resync AWS subnet state.")
 		return err
 	}
+	logrus.Info("Resync completed successfully.")
 	a.resyncNeeded = false
 
 	return nil
