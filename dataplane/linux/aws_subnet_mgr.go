@@ -79,7 +79,7 @@ func NewAWSSubnetManager(
 	return sm
 }
 
-func (a awsSubnetManager) OnUpdate(msg interface{}) {
+func (a *awsSubnetManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.IPAMPoolUpdate:
 		a.onPoolUpdate(msg.Id, msg.Pool)
@@ -92,7 +92,7 @@ func (a awsSubnetManager) OnUpdate(msg interface{}) {
 	}
 }
 
-func (a awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
+func (a *awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	// Update the index from subnet ID to pool ID.  We do this first so we can look up the
 	// old version of the pool (if any).
 	oldSubnetID := ""
@@ -136,7 +136,7 @@ func (a awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	a.queueResync("IP pool updated")
 }
 
-func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
+func (a *awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	if route != nil && !route.LocalWorkload {
 		route = nil
 	}
@@ -185,7 +185,7 @@ func (a awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	}
 }
 
-func (a awsSubnetManager) queueResync(reason string) {
+func (a *awsSubnetManager) queueResync(reason string) {
 	if a.resyncNeeded {
 		return
 	}
@@ -193,10 +193,8 @@ func (a awsSubnetManager) queueResync(reason string) {
 	a.resyncNeeded = true
 }
 
-func (a awsSubnetManager) CompleteDeferredWork() error {
-	logrus.WithField("resyncNeeded", a.resyncNeeded).Info("Resync needed?")
+func (a *awsSubnetManager) CompleteDeferredWork() error {
 	if !a.resyncNeeded {
-		logrus.Info("Resync not needed, returning early")
 		return nil
 	}
 
@@ -207,12 +205,11 @@ func (a awsSubnetManager) CompleteDeferredWork() error {
 	}
 	a.resyncNeeded = false
 	logrus.Info("Resync completed successfully.")
-	logrus.WithField("resyncNeeded", a.resyncNeeded).Info("Resync needed?")
 
 	return nil
 }
 
-func (a awsSubnetManager) resync() error {
+func (a *awsSubnetManager) resync() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
@@ -573,7 +570,7 @@ func filterRoutesByAWSSubnet(missingRoutes []*proto.RouteUpdate, bestSubnet stri
 	return filteredRoutes
 }
 
-func (a awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nicIDsBySubnet map[string][]string) string {
+func (a *awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nicIDsBySubnet map[string][]string) string {
 	// If the IP pools only name one then that is preferred.  If there's more than one in the IP pools but we've already
 	// got a local NIC, that one is preferred.  If there's a tie, pick the one with the most routes.
 	subnetScores := map[string]int{}
