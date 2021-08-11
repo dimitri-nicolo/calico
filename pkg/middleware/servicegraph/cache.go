@@ -179,7 +179,6 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 			}},
 		})
 	}
-	fd.ServiceGroups.FinishMappings()
 
 	// Filter the L7 flows based on RBAC. All other graph content is removed through graph pruning.
 	if rbacFilter.IncludeL7Logs() {
@@ -191,7 +190,11 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 			// Update the names in the flow (if required).
 			rf = nameHelper.ConvertL7Flow(rf)
 
+			if rf.Edge.ServicePort != nil {
+				fd.ServiceGroups.AddMapping(*rf.Edge.ServicePort, rf.Edge.Dest)
+			}
 			stats := rf.Stats
+
 			fd.FilteredFlows = append(fd.FilteredFlows, TimeSeriesFlow{
 				Edge: rf.Edge,
 				Stats: []v1.GraphStats{{
@@ -200,6 +203,9 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 			})
 		}
 	}
+
+	// We have loaded all L3 and L7 data.  Finish the service group mappings.
+	fd.ServiceGroups.FinishMappings()
 
 	// Filter the DNS logs based on RBAC. All other graph content is removed through graph pruning.
 	if rbacFilter.IncludeDNSLogs() {

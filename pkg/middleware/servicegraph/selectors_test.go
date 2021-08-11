@@ -93,7 +93,6 @@ var _ = Describe("Selector tests", func() {
 			"a",
 			[]string{},
 		)
-		Expect(selIn).To(BeNil())
 		Expect(selIn.SelectorString()).To(BeNil())
 	})
 })

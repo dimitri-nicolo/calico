@@ -972,12 +972,12 @@ var _ = Describe("Graph API tests", func() {
 		Expect(edge.String()).To(Equal("Edge(a -> b)"))
 	})
 
-	It("handles GraphNode.IncludeStats", func() {
+	It("handles GraphNode.IncludeStatsWithin", func() {
 		node := GraphNode{}
 
 		// Have 6 sets of stats, each is a cycle of the set of stats defined above. After including everything the
 		// stats in each of the 6 positions should be equal.
-		node.IncludeStats([]GraphStats{
+		node.IncludeStatsWithin([]GraphStats{
 			firstStats,
 			secondL3Stats,
 			secondL7Stats,
@@ -985,7 +985,7 @@ var _ = Describe("Graph API tests", func() {
 			secondDNSStats,
 			thirdStats,
 		})
-		node.IncludeStats([]GraphStats{
+		node.IncludeStatsWithin([]GraphStats{
 			secondL3Stats,
 			secondL7Stats,
 			secondProcessStats,
@@ -993,7 +993,7 @@ var _ = Describe("Graph API tests", func() {
 			thirdStats,
 			firstStats,
 		})
-		node.IncludeStats([]GraphStats{
+		node.IncludeStatsWithin([]GraphStats{
 			secondL7Stats,
 			secondProcessStats,
 			secondDNSStats,
@@ -1001,7 +1001,7 @@ var _ = Describe("Graph API tests", func() {
 			firstStats,
 			secondL3Stats,
 		})
-		node.IncludeStats([]GraphStats{
+		node.IncludeStatsWithin([]GraphStats{
 			secondProcessStats,
 			secondDNSStats,
 			thirdStats,
@@ -1009,7 +1009,7 @@ var _ = Describe("Graph API tests", func() {
 			secondL3Stats,
 			secondL7Stats,
 		})
-		node.IncludeStats([]GraphStats{
+		node.IncludeStatsWithin([]GraphStats{
 			secondDNSStats,
 			thirdStats,
 			firstStats,
@@ -1019,10 +1019,10 @@ var _ = Describe("Graph API tests", func() {
 		})
 
 		// We have a checkpoint for the first and second set of stats.
-		Expect(node.Stats).To(HaveLen(6))
-		expectStats(node.Stats[0], firstSecondCombinedStats, "First and second combined stats")
+		Expect(node.StatsWithin).To(HaveLen(6))
+		expectStats(node.StatsWithin[0], firstSecondCombinedStats, "First and second combined stats")
 
-		node.IncludeStats([]GraphStats{
+		node.IncludeStatsWithin([]GraphStats{
 			thirdStats,
 			firstStats,
 			secondL3Stats,
@@ -1030,11 +1030,11 @@ var _ = Describe("Graph API tests", func() {
 			secondProcessStats,
 			secondDNSStats,
 		})
-		node.IncludeStats(nil)
+		node.IncludeStatsWithin(nil)
 
 		// All of the stats should be the same (in each time position)
-		Expect(node.Stats).To(HaveLen(6))
-		for i, stats := range node.Stats {
+		Expect(node.StatsWithin).To(HaveLen(6))
+		for i, stats := range node.StatsWithin {
 			expectStats(stats, firstSecondThirdCombinedStats, fmt.Sprintf("All stats, index %d", i))
 		}
 	})
