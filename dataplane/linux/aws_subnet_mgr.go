@@ -65,17 +65,18 @@ func NewAWSSubnetManager(
 		Live:  true,
 	})
 
-	return &awsSubnetManager{
+	sm :=  &awsSubnetManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set{},
-		resyncNeeded:              true,
 		healthAgg:                 healthAgg,
 		ipamClient:                ipamClient,
 		k8sClient:                 k8sClient,
 		nodeName:                  nodeName,
 	}
+	sm.queueResync("first run")
+	return sm
 }
 
 func (a awsSubnetManager) OnUpdate(msg interface{}) {
@@ -193,7 +194,9 @@ func (a awsSubnetManager) queueResync(reason string) {
 }
 
 func (a awsSubnetManager) CompleteDeferredWork() error {
+	logrus.WithField("resyncNeeded", a.resyncNeeded).Info("Resync needed?")
 	if !a.resyncNeeded {
+		logrus.Info("Resync not needed, returning early")
 		return nil
 	}
 
@@ -202,8 +205,9 @@ func (a awsSubnetManager) CompleteDeferredWork() error {
 		logrus.WithError(err).Warn("Failed to resync AWS subnet state.")
 		return err
 	}
-	logrus.Info("Resync completed successfully.")
 	a.resyncNeeded = false
+	logrus.Info("Resync completed successfully.")
+	logrus.WithField("resyncNeeded", a.resyncNeeded).Info("Resync needed?")
 
 	return nil
 }
