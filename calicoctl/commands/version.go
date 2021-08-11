@@ -235,9 +235,9 @@ Description:
 		return fmt.Errorf("Unable to get Cluster Information to verify version mismatch: %w", err)
 	}
 
-	clusterv := ci.Spec.CalicoVersion
+	clusterv := ci.Spec.CNXVersion
 	if clusterv == "" {
-		// CalicoVersion field not specified in the cluster, so skip check.
+		// CNXVersion field not specified in the cluster, so skip check.
 		return nil
 	} else {
 		clusterv = strings.Split(clusterv, "-")[0]
