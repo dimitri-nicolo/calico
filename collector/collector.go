@@ -729,11 +729,10 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	ips := make([]net.IP, 0, len(d.HttpData))
 
 	for _, hd := range d.HttpData {
-		if c.l7LogReporter != nil && hd.Type != "" {
+		if c.l7LogReporter != nil && isL7Data {
 			// If the l7LogReporter has been set, then L7 logs are configured to be run.
-			// If the HttpData has a type, then this is an L7 log.
 			c.LogL7(hd, data, t, httpDataCount)
-		} else if hd.Type == "" {
+		} else if !isL7Data {
 			var origSrcIP string
 			if len(hd.XRealIp) != 0 {
 				origSrcIP = hd.XRealIp
@@ -761,8 +760,9 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 		data.AddOriginalSourceIPs(bs)
 	} else if httpDataCount != 0 && !isL7Data {
 		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
-	} else if httpDataCount != 0 && c.l7LogReporter != nil && isL7Data {
+	} else if httpDataCount != 0 && c.l7LogReporter != nil && len(d.HttpData) == 0 && isL7Data {
 		// Record overflow L7 log counts
+		// Overflow logs will have counts but no HttpData
 		// Create an empty HTTPData since this is an overflow log
 		hd := &proto.HTTPData{}
 		c.LogL7(hd, data, t, httpDataCount)
