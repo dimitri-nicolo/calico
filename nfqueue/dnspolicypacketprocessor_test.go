@@ -15,6 +15,10 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+const (
+	dnrMarkBit = uint32(0x400000)
+)
+
 var _ = Describe("DNSPolicyPacketProcessor", func() {
 	Context("Packet hasn't expired", func() {
 		When("a single packet is sent for processing", func() {
@@ -34,6 +38,7 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 
 				processor := nfqueue.NewDNSPolicyPacketProcessor(
 					nf,
+					dnrMarkBit,
 					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
 					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
@@ -85,6 +90,7 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 
 				processor := nfqueue.NewDNSPolicyPacketProcessor(
 					nf,
+					dnrMarkBit,
 					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
 					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
@@ -112,11 +118,12 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 
 				nf := new(nfqueue.MockNfqueue)
 				nf.On("SetVerdict", uint32(2), gonfqueue.NfRepeat).Return(nil).Once()
-				nf.On("SetVerdict", uint32(2), gonfqueue.NfDrop).Return(nil).Once()
+				nf.On("SetVerdictWithMark", uint32(2), gonfqueue.NfRepeat, int(dnrMarkBit)).Return(nil).Once()
 				nf.On("PacketAttributesChannel").Return(readOnlyattrChan)
 
 				processor := nfqueue.NewDNSPolicyPacketProcessor(
 					nf,
+					dnrMarkBit,
 					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
 					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
@@ -132,6 +139,45 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				attrChan <- packet
 
 				time.Sleep(200 * time.Millisecond)
+
+				attrChan <- packet
+
+				time.Sleep(200 * time.Millisecond)
+
+				nf.AssertExpectations(GinkgoT())
+			})
+		})
+		When("when a packet comes through with the dnr bit set", func() {
+			It("drops the packet on the second immediately", func() {
+				packetID := uint32(2)
+				packetPayload := newTestIPV4Packet(net.IP{8, 8, 8, 8}, net.IP{9, 9, 9, 9}, layers.TCPPort(300), layers.TCPPort(600))
+
+				attrChan := make(chan gonfqueue.Attribute)
+				defer close(attrChan)
+
+				var readOnlyattrChan <-chan gonfqueue.Attribute
+				readOnlyattrChan = attrChan
+
+				nf := new(nfqueue.MockNfqueue)
+				nf.On("SetVerdict", uint32(2), gonfqueue.NfDrop).Return(nil).Once()
+				nf.On("PacketAttributesChannel").Return(readOnlyattrChan)
+
+				processor := nfqueue.NewDNSPolicyPacketProcessor(
+					nf,
+					dnrMarkBit,
+					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
+					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
+				)
+
+				processor.Start()
+				defer processor.Stop()
+
+				mark := dnrMarkBit
+				packet := gonfqueue.Attribute{
+					PacketID: &packetID,
+					Mark:     &mark,
+					Payload:  &packetPayload,
+				}
 
 				attrChan <- packet
 

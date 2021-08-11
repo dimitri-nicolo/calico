@@ -654,6 +654,11 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 			mark = r.IptablesMarkDrop
 		}
 
+		nfqueueRule := r.NfqueueRule(nil)
+		if !staged && nfqueueRule != nil {
+			rules = append(rules, *nfqueueRule)
+		}
+
 		// NFLOG the deny - we don't do this for untracked due to the performance hit.
 		if !untracked {
 			rules = append(rules, iptables.Rule{
@@ -666,7 +671,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 
 		if !staged {
 			// We defer to DropActions() to allow for "sandbox" mode.
-			rules = append(rules, r.DropRules(nil, true)...)
+			rules = append(rules, r.DropRules(nil)...)
 		} else {
 			// For staged mode we simply return to calling chain for end of policy.
 			rules = append(rules, iptables.Rule{

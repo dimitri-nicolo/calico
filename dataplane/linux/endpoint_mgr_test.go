@@ -368,18 +368,18 @@ func chainsForIfaces(ipVersion uint8,
 				// Only end with a drop rule in the filter chain.  In the raw chain,
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
-				outRules = append(outRules, iptables.Rule{
-					Match: iptables.Match().MarkClear(16),
-					Action: iptables.NflogAction{
-						Group:  outboundGroup,
-						Prefix: fmt.Sprintf("DPE|%s", tierName),
-					},
-				})
 				outRules = append(outRules, []iptables.Rule{
 					{
-						Match:   iptables.Match().MarkSingleBitSet(0x00001).MarkClear(16),
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(16),
 						Action:  iptables.NfqueueAction{QueueNum: 100},
 						Comment: []string{"Drop if no policies passed packet"},
+					},
+					{
+						Match: iptables.Match().MarkClear(16),
+						Action: iptables.NflogAction{
+							Group:  outboundGroup,
+							Prefix: fmt.Sprintf("DPE|%s", tierName),
+						},
 					},
 					{
 						Match:   iptables.Match().MarkClear(16),
@@ -402,18 +402,18 @@ func chainsForIfaces(ipVersion uint8,
 		}
 
 		if tableKind == "normal" {
-			outRules = append(outRules, iptables.Rule{
-				Match: iptables.Match(),
-				Action: iptables.NflogAction{
-					Group:  outboundGroup,
-					Prefix: "DRE",
-				},
-			})
 			outRules = append(outRules, []iptables.Rule{
 				{
-					Match:   iptables.Match().MarkSingleBitSet(0x00001),
+					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 					Action:  iptables.NfqueueAction{QueueNum: 100},
 					Comment: []string{"Drop if no profiles matched"},
+				},
+				{
+					Match: iptables.Match(),
+					Action: iptables.NflogAction{
+						Group:  outboundGroup,
+						Prefix: "DRE",
+					},
 				},
 				{
 					Match:   iptables.Match(),
@@ -478,18 +478,18 @@ func chainsForIfaces(ipVersion uint8,
 				// Only end with a drop rule in the filter chain.  In the raw chain,
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
-				inRules = append(inRules, iptables.Rule{
-					Match: iptables.Match().MarkClear(16),
-					Action: iptables.NflogAction{
-						Group:  inboundGroup,
-						Prefix: fmt.Sprintf("DPI|%s", tierName),
-					},
-				})
 				inRules = append(inRules, []iptables.Rule{
 					{
-						Match:   iptables.Match().MarkSingleBitSet(0x00001).MarkClear(16),
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(16),
 						Action:  iptables.NfqueueAction{QueueNum: 100},
 						Comment: []string{"Drop if no policies passed packet"},
+					},
+					{
+						Match: iptables.Match().MarkClear(16),
+						Action: iptables.NflogAction{
+							Group:  inboundGroup,
+							Prefix: fmt.Sprintf("DPI|%s", tierName),
+						},
 					},
 					{
 						Match:   iptables.Match().MarkClear(16),
@@ -512,18 +512,18 @@ func chainsForIfaces(ipVersion uint8,
 		}
 
 		if tableKind == "normal" {
-			inRules = append(inRules, iptables.Rule{
-				Match: iptables.Match(),
-				Action: iptables.NflogAction{
-					Group:  inboundGroup,
-					Prefix: "DRI",
-				},
-			})
 			inRules = append(inRules, []iptables.Rule{
 				{
-					Match:   iptables.Match().MarkSingleBitSet(0x00001),
+					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 					Action:  iptables.NfqueueAction{QueueNum: 100},
 					Comment: []string{"Drop if no profiles matched"},
+				},
+				{
+					Match: iptables.Match(),
+					Action: iptables.NflogAction{
+						Group:  inboundGroup,
+						Prefix: "DRI",
+					},
 				},
 				{
 					Match:   iptables.Match(),
@@ -806,25 +806,26 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		BeforeEach(func() {
 			rrConfigNormal = rules.Config{
-				IPIPEnabled:                 true,
-				IPIPTunnelAddress:           nil,
-				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyNfqueueID:          100,
-				IptablesMarkEgress:          0x4,
-				IptablesMarkAccept:          0x8,
-				IptablesMarkPass:            0x10,
-				IptablesMarkScratch0:        0x20,
-				IptablesMarkScratch1:        0x40,
-				IptablesMarkDrop:            0x80,
-				IptablesMarkIPsec:           0x10000,
-				IptablesMarkDNSPolicy:       0x00001,
-				IptablesMarkEndpoint:        0xff00,
-				IptablesMarkNonCaliEndpoint: 0x0100,
-				KubeIPVSSupportEnabled:      true,
-				WorkloadIfacePrefixes:       []string{"cali", "tap"},
-				VXLANPort:                   4789,
-				VXLANVNI:                    4096,
+				IPIPEnabled:                      true,
+				IPIPTunnelAddress:                nil,
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				IptablesMarkEgress:               0x4,
+				IptablesMarkAccept:               0x8,
+				IptablesMarkPass:                 0x10,
+				IptablesMarkScratch0:             0x20,
+				IptablesMarkScratch1:             0x40,
+				IptablesMarkDrop:                 0x80,
+				IptablesMarkIPsec:                0x10000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				IptablesMarkEndpoint:             0xff00,
+				IptablesMarkNonCaliEndpoint:      0x0100,
+				KubeIPVSSupportEnabled:           true,
+				WorkloadIfacePrefixes:            []string{"cali", "tap"},
+				VXLANPort:                        4789,
+				VXLANVNI:                         4096,
 			}
 			eth0Addrs = set.New()
 			eth0Addrs.Add(ipv4)

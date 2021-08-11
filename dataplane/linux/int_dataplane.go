@@ -429,15 +429,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		stopChan:          stopChan,
 	}
 
-	nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
+	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 {
+		nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
 
-	if err == nil {
-		packetProcessor := nfqueue.NewDNSPolicyPacketProcessor(nf)
+		if err == nil {
+			packetProcessor := nfqueue.NewDNSPolicyPacketProcessor(nf, config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
 
-		packetProcessor.Start()
-		dp.packetProcessor = packetProcessor
-	} else {
-		log.WithError(err).Error("failed to open NFQUEUE, DNS optimizations are now disabled")
+			packetProcessor.Start()
+			dp.packetProcessor = packetProcessor
+		} else {
+			log.WithError(err).Error("failed to open NFQUEUE, DNS optimizations are now disabled")
+		}
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.

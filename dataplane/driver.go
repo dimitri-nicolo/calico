@@ -184,7 +184,14 @@ func StartDataplaneDriver(configParams *config.Config,
 			}).Panic("Not enough mark bits available.")
 		}
 
-		markDNSPolicy, _ := markBitsManager.NextSingleBitMark()
+		var markDNSPolicy, markSkipDNSPolicyNfqueue uint32
+		// If this is in BPF mode don't even try to allocate DNS policy bits. The markDNSPolicy bit is used as a flag
+		// to enable the DNS policy enhancements and we don't want to somehow have the markDNSPolicy bit set without
+		// the markSkipDNSPolicyNfqueue.
+		if !configParams.BPFEnabled {
+			markDNSPolicy, _ = markBitsManager.NextSingleBitMark()
+			markSkipDNSPolicyNfqueue, _ = markBitsManager.NextSingleBitMark()
+		}
 
 		// Mark bits for endpoint mark. Currently Felix takes the rest bits from mask available for use.
 		markEndpointMark, allocated := markBitsManager.NextBlockBitsMark(markBitsManager.AvailableMarkBitCount())
@@ -199,17 +206,18 @@ func StartDataplaneDriver(configParams *config.Config,
 			markEndpointNonCaliEndpoint = uint32(1) << uint(bits.TrailingZeros32(markEndpointMark))
 		}
 		log.WithFields(log.Fields{
-			"acceptMark":          markAccept,
-			"passMark":            markPass,
-			"dropMark":            markDrop,
-			"scratch0Mark":        markScratch0,
-			"scratch1Mark":        markScratch1,
-			"endpointMark":        markEndpointMark,
-			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
-			"wireguardMark":       markWireguard,
-			"ipsecMark":           markIPsec,
-			"egressMark":          markEgressIP,
-			"dnsPolicyMark":       markDNSPolicy,
+			"acceptMark":           markAccept,
+			"passMark":             markPass,
+			"dropMark":             markDrop,
+			"scratch0Mark":         markScratch0,
+			"scratch1Mark":         markScratch1,
+			"endpointMark":         markEndpointMark,
+			"endpointMarkNonCali":  markEndpointNonCaliEndpoint,
+			"wireguardMark":        markWireguard,
+			"ipsecMark":            markIPsec,
+			"egressMark":           markEgressIP,
+			"dnsPolicyMark":        markDNSPolicy,
+			"skipDNSPolicyNfqueue": markSkipDNSPolicyNfqueue,
 		}).Info("Calculated iptables mark bits")
 
 		// Create a routing table manager. There are certain components that should take specific indices in the range
@@ -309,16 +317,17 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				DNSPolicyNfqueueID: int64(configParams.DNSPolicyNfqueueID),
 
-				IptablesMarkAccept:          markAccept,
-				IptablesMarkPass:            markPass,
-				IptablesMarkDrop:            markDrop,
-				IptablesMarkIPsec:           markIPsec,
-				IptablesMarkEgress:          markEgressIP,
-				IptablesMarkScratch0:        markScratch0,
-				IptablesMarkScratch1:        markScratch1,
-				IptablesMarkEndpoint:        markEndpointMark,
-				IptablesMarkNonCaliEndpoint: markEndpointNonCaliEndpoint,
-				IptablesMarkDNSPolicy:       markDNSPolicy,
+				IptablesMarkAccept:               markAccept,
+				IptablesMarkPass:                 markPass,
+				IptablesMarkDrop:                 markDrop,
+				IptablesMarkIPsec:                markIPsec,
+				IptablesMarkEgress:               markEgressIP,
+				IptablesMarkScratch0:             markScratch0,
+				IptablesMarkScratch1:             markScratch1,
+				IptablesMarkEndpoint:             markEndpointMark,
+				IptablesMarkNonCaliEndpoint:      markEndpointNonCaliEndpoint,
+				IptablesMarkDNSPolicy:            markDNSPolicy,
+				IptablesMarkSkipDNSPolicyNfqueue: markSkipDNSPolicyNfqueue,
 
 				VXLANEnabled: configParams.VXLANEnabled,
 				VXLANPort:    configParams.VXLANPort,

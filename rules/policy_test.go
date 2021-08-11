@@ -184,20 +184,21 @@ var ruleTestData = []TableEntry{
 
 var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	var rrConfigNormal = Config{
-		IPIPEnabled:           true,
-		IPIPTunnelAddress:     nil,
-		IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyNfqueueID:    100,
-		IptablesMarkEgress:    0x40,
-		IptablesMarkAccept:    0x80,
-		IptablesMarkPass:      0x100,
-		IptablesMarkScratch0:  0x200,
-		IptablesMarkScratch1:  0x400,
-		IptablesMarkDrop:      0x800,
-		IptablesMarkDNSPolicy: 0x00001,
-		IptablesLogPrefix:     "calico-drop",
-		IptablesMarkEndpoint:  0xff000,
+		IPIPEnabled:                      true,
+		IPIPTunnelAddress:                nil,
+		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:               100,
+		IptablesMarkEgress:               0x40,
+		IptablesMarkAccept:               0x80,
+		IptablesMarkPass:                 0x100,
+		IptablesMarkScratch0:             0x200,
+		IptablesMarkScratch1:             0x400,
+		IptablesMarkDrop:                 0x800,
+		IptablesMarkDNSPolicy:            0x00001,
+		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+		IptablesLogPrefix:                "calico-drop",
+		IptablesMarkEndpoint:             0xff000,
 	}
 
 	DescribeTable(
@@ -399,15 +400,15 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
-			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
-				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
 			Expect(rules[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
@@ -478,15 +479,15 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(inbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(inbound[1]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(inbound[2]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
-			}))
-			Expect(inbound[2]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
-				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
 			Expect(inbound[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
@@ -537,15 +538,15 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(outbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(outbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(outbound[1]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(outbound[2]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  2,
 					Prefix: "DPE0|default.foo",
 				},
-			}))
-			Expect(outbound[2]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
-				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
 			Expect(outbound[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
@@ -685,21 +686,21 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
+				Action: iptables.NfqueueAction{QueueNum: 100},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[3]).To(Equal(iptables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
 					Prefix: "calico-drop",
 				},
-			}))
-			Expect(rules[3]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSingleBitSet(0x00001).MarkSingleBitSet(0x800),
-				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
 			Expect(rules[4]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
@@ -1636,20 +1637,21 @@ var _ = Describe("rule metadata tests", func() {
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
 	}
 	var rrConfigNormal = Config{
-		IPIPEnabled:           true,
-		IPIPTunnelAddress:     nil,
-		IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyNfqueueID:    100,
-		IptablesMarkEgress:    0x40,
-		IptablesMarkAccept:    0x80,
-		IptablesMarkPass:      0x100,
-		IptablesMarkScratch0:  0x200,
-		IptablesMarkScratch1:  0x400,
-		IptablesMarkDrop:      0x800,
-		IptablesLogPrefix:     "calico-drop",
-		IptablesMarkDNSPolicy: 0x00001,
-		IptablesMarkEndpoint:  0xff000,
+		IPIPEnabled:                      true,
+		IPIPTunnelAddress:                nil,
+		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:               100,
+		IptablesMarkEgress:               0x40,
+		IptablesMarkAccept:               0x80,
+		IptablesMarkPass:                 0x100,
+		IptablesMarkScratch0:             0x200,
+		IptablesMarkScratch1:             0x400,
+		IptablesMarkDrop:                 0x800,
+		IptablesLogPrefix:                "calico-drop",
+		IptablesMarkDNSPolicy:            0x00001,
+		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+		IptablesMarkEndpoint:             0xff000,
 	}
 
 	It("IPv4 should include annotations in comments", func() {
@@ -1675,20 +1677,21 @@ var _ = Describe("rule metadata tests", func() {
 
 var _ = Describe("DNS policy rules", func() {
 	var rrConfigNormal = Config{
-		IPIPEnabled:           true,
-		IPIPTunnelAddress:     nil,
-		IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyNfqueueID:    100,
-		IptablesMarkEgress:    0x40,
-		IptablesMarkAccept:    0x80,
-		IptablesMarkPass:      0x100,
-		IptablesMarkScratch0:  0x200,
-		IptablesMarkScratch1:  0x400,
-		IptablesMarkDrop:      0x800,
-		IptablesLogPrefix:     "calico-drop",
-		IptablesMarkDNSPolicy: 0x00001,
-		IptablesMarkEndpoint:  0xff000,
+		IPIPEnabled:                      true,
+		IPIPTunnelAddress:                nil,
+		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:               100,
+		IptablesMarkEgress:               0x40,
+		IptablesMarkAccept:               0x80,
+		IptablesMarkPass:                 0x100,
+		IptablesMarkScratch0:             0x200,
+		IptablesMarkScratch1:             0x400,
+		IptablesMarkDrop:                 0x800,
+		IptablesLogPrefix:                "calico-drop",
+		IptablesMarkDNSPolicy:            0x00001,
+		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+		IptablesMarkEndpoint:             0xff000,
 	}
 
 	It("Renders the mark dns policy rule when DstDomainIpSetIds and DstIpSetIds are both set", func() {

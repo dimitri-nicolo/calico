@@ -47,6 +47,7 @@ type Nfqueue interface {
 	// SetVerdict signals the kernel the next action for a specified package id. Implementations of this must be
 	// thread safe.
 	SetVerdict(id uint32, verdict int) error
+	SetVerdictWithMark(id uint32, verdict, mark int) error
 	PacketAttributesChannel() <-chan gonfqueue.Attribute
 }
 

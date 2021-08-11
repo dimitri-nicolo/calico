@@ -311,7 +311,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoIPIP), false, "Drop IPIP packets from non-Calico hosts")...,
+			r.DropRules(Match().ProtocolNum(ProtoIPIP), "Drop IPIP packets from non-Calico hosts")...,
 		)
 	}
 
@@ -340,11 +340,10 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoESP), false, "Drop IPSec ESP packets from non-Calico hosts")...,
+			r.DropRules(Match().ProtocolNum(ProtoESP), "Drop IPSec ESP packets from non-Calico hosts")...,
 		)
 		inputRules = append(inputRules,
 			r.DropRules(Match().ProtocolNum(ProtoUDP).DestPorts(PortIKE),
-				false,
 				"Drop IPSec IKE packets from non-Calico hosts")...,
 		)
 	}
@@ -1583,7 +1582,7 @@ func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openS
 		// Match on mark to check we're coming from a workload interface.
 		baseMatch = baseMatch.MarkMatchesWithMask(mark, mask)
 	}
-	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed(acceptLocal), false)...)
+	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed(acceptLocal))...)
 
 	return rules
 }
@@ -1593,7 +1592,8 @@ func (r *DefaultRuleRenderer) allCalicoMarkBits() uint32 {
 		r.IptablesMarkPass |
 		r.IptablesMarkScratch0 |
 		r.IptablesMarkScratch1 |
-		r.IptablesMarkIPsec
+		r.IptablesMarkIPsec |
+		r.IptablesMarkDNSPolicy
 }
 
 func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *Chain {
@@ -1642,19 +1642,14 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain() *Chain {
 }
 
 // DropRules combines the matchCritera and comments given in the function parameters to the drop rules calculated when
-// the DefaultRenderer was constructed. If includeNfqueueRules is true, then all nfqueue drop rules are included.
+// the DefaultRenderer was constructed.
 //
 // If the original drop rules have MatchCriteria the matchCriteria is combined with the existing MatchCritera on the
 // rule.
-func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, includeNfqueueRules bool, comments ...string) []Rule {
+func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string) []Rule {
 	rules := []Rule{}
 
 	for _, rule := range r.dropRules {
-		_, isNfqueueRule := rule.Action.(NfqueueAction)
-		if !includeNfqueueRules && isNfqueueRule {
-			continue
-		}
-
 		if matchCriteria != nil {
 			rule.Match = Combine(rule.Match, matchCriteria)
 		}
@@ -1663,4 +1658,21 @@ func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, includeNfque
 	}
 
 	return rules
+}
+
+// NfqueueRule combines the matchCritera and comments given in the function parameters to the nfqueue rule calculated when
+// the DefaultRenderer was constructed.
+func (r DefaultRuleRenderer) NfqueueRule(matchCriteria MatchCriteria, comments ...string) *Rule {
+	if r.Config.IptablesMarkDNSPolicy != 0x0 && r.nfqueueRule != nil {
+		nfqueueRule := *r.nfqueueRule
+
+		if matchCriteria != nil {
+			nfqueueRule.Match = Combine(nfqueueRule.Match, matchCriteria)
+		}
+		nfqueueRule.Comment = comments
+
+		return &nfqueueRule
+	}
+
+	return nil
 }
