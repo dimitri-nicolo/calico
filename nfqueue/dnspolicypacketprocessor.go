@@ -33,9 +33,9 @@ var (
 		Help: "Summary for measuring the latency of releasing packets.",
 	})
 
-	prometheusPacketDropLatency = cprometheus.NewSummary(prometheus.SummaryOpts{
+	prometheusPacketDNRLatency = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_dns_policy_nfqueue_monitor_drop_latency",
-		Help: "Summary for measuring the latency of dropping packets.",
+		Help: "Summary for measuring the latency of repeating packets for the last time.",
 	})
 
 	prometheusReleasePacketBatchSizeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -53,9 +53,9 @@ var (
 		Help: "Count of the number of packets that have come into the monitor",
 	})
 
-	prometheusPacketsNfDroppedCount = prometheus.NewCounter(prometheus.CounterOpts{
+	prometheusPacketsFinalRepeatCount = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "felix_dns_policy_nfqueue_monitor_nf_dropped",
-		Help: "Count of the number of packets that have been nf_dropped",
+		Help: "Count of the number of packets that have been nfrepeated for the last time",
 	})
 
 	prometheusPacketsNfRepeatedCount = prometheus.NewCounter(prometheus.CounterOpts{
@@ -66,38 +66,43 @@ var (
 
 func init() {
 	prometheus.MustRegister(prometheusPacketReleaseLatency)
-	prometheus.MustRegister(prometheusPacketDropLatency)
+	prometheus.MustRegister(prometheusPacketDNRLatency)
 	prometheus.MustRegister(prometheusReleasePacketBatchSizeGauge)
 	prometheus.MustRegister(prometheusDropPacketBatchSizeGauge)
 	prometheus.MustRegister(prometheusPacketsInCount)
-	prometheus.MustRegister(prometheusPacketsNfDroppedCount)
+	prometheus.MustRegister(prometheusPacketsFinalRepeatCount)
 	prometheus.MustRegister(prometheusPacketsNfRepeatedCount)
 	prometheus.MustRegister(prometheusNfqueueQueuedLatency)
 }
 
 const (
-	defaultPacketDropTimeout     = 1000 * time.Millisecond
+	defaultPacketDropTimeout = 1000 * time.Millisecond
+	// Max time is set to 15 seconds because the timemanager expires times after 10 seconds for a given 6 tuple. This
+	// is just to protect against the edge case where different packets have the same packet ids (as is the case with
+	// nping).
+	defaultMaximumPacketTimeout  = 15 * time.Second
 	defaultPacketReleaseTimeout  = 300 * time.Millisecond
 	defaultReleaseTickerDuration = 50 * time.Millisecond
 
 	failedToSetVerdictMessage = "failed to set the nfqueue verdict for the packet"
 )
 
-// TODO rethink this objects name, i.e. is it a processor, a monitor (I keep referring to it as a monitor).
-
 // DNSPolicyPacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
 // signal.
 type DNSPolicyPacketProcessor struct {
 	nf Nfqueue
 
+	dnrMark uint32
+
 	done chan struct{}
 
 	packetDropTimeout     time.Duration
+	maximumPacketTimeout  time.Duration
 	packetReleaseTimeout  time.Duration
 	releaseTickerDuration time.Duration
 
-	packetReleaseChan chan []nfqueuePacket
-	packetDropChan    chan []nfqueuePacket
+	packetReleaseChan      chan []nfqueuePacket
+	packetFinalReleaseChan chan []nfqueuePacket
 
 	previouslyQueuedMark uint32
 
@@ -133,16 +138,18 @@ func (packet *nfqueuePacket) logLinePrefix() string {
 		packet.id, packet.protocol, packet.srcIP, packet.dstIP, packet.srcPort, packet.dstPort)
 }
 
-func NewDNSPolicyPacketProcessor(nf Nfqueue, options ...Option) *DNSPolicyPacketProcessor {
+func NewDNSPolicyPacketProcessor(nf Nfqueue, dnrMark uint32, options ...Option) *DNSPolicyPacketProcessor {
 	processor := &DNSPolicyPacketProcessor{
-		nf:                    nf,
-		done:                  make(chan struct{}),
-		packetDropTimeout:     defaultPacketDropTimeout,
-		packetReleaseTimeout:  defaultPacketReleaseTimeout,
-		releaseTickerDuration: defaultReleaseTickerDuration,
-		packetReleaseChan:     make(chan []nfqueuePacket, 100),
-		packetDropChan:        make(chan []nfqueuePacket, 100),
-		timeManager:           timemanager.New(),
+		nf:                     nf,
+		dnrMark:                dnrMark,
+		done:                   make(chan struct{}),
+		packetDropTimeout:      defaultPacketDropTimeout,
+		maximumPacketTimeout:   defaultMaximumPacketTimeout,
+		packetReleaseTimeout:   defaultPacketReleaseTimeout,
+		releaseTickerDuration:  defaultReleaseTickerDuration,
+		packetReleaseChan:      make(chan []nfqueuePacket, 100),
+		packetFinalReleaseChan: make(chan []nfqueuePacket, 100),
+		timeManager:            timemanager.New(),
 	}
 
 	for _, option := range options {
@@ -159,7 +166,7 @@ func (processor *DNSPolicyPacketProcessor) Start() {
 
 	// We create separate release and drop loops so we don't block processing packets while we set the verdicts.
 	go processor.loopReleasingPackets()
-	go processor.loopDroppingPackets()
+	go processor.loopFinalPacketRelease()
 }
 
 func (processor *DNSPolicyPacketProcessor) Stop() {
@@ -170,14 +177,14 @@ func (processor *DNSPolicyPacketProcessor) Stop() {
 
 func (processor *DNSPolicyPacketProcessor) listenForIncomingPackets() {
 	// TODO rename this, since we have a packetsToDrop (why does this get called packets)
-	packets := make([]nfqueuePacket, 0, 100)
-	packetsToDrop := make([]nfqueuePacket, 0, 100)
+	releasePackets := make([]nfqueuePacket, 0, 100)
+	finalReleasePackets := make([]nfqueuePacket, 0, 100)
 
 	ticker := time.NewTicker(processor.releaseTickerDuration)
 
 	defer ticker.Stop()
 	defer close(processor.packetReleaseChan)
-	defer close(processor.packetDropChan)
+	defer close(processor.packetFinalReleaseChan)
 
 done:
 	for {
@@ -195,15 +202,15 @@ done:
 				queuedTime: time.Now(),
 			}
 
-			prometheusReleasePacketBatchSizeGauge.Set(float64(len(packets)))
-			prometheusDropPacketBatchSizeGauge.Set(float64(len(packetsToDrop)))
+			prometheusReleasePacketBatchSizeGauge.Set(float64(len(releasePackets)))
+			prometheusDropPacketBatchSizeGauge.Set(float64(len(finalReleasePackets)))
 
 			rawPacket := gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv4, gopacket.Lazy)
 			ipv4, _ := rawPacket.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
 			if ipv4 == nil {
 				log.Debug(packet.logLinePrefix(), "Dropping non ipv4 packet.")
 
-				packetsToDrop = append(packetsToDrop, packet)
+				finalReleasePackets = append(finalReleasePackets, packet)
 				continue
 			}
 
@@ -220,6 +227,16 @@ done:
 				packet.dstPort = uint16(udp.DstPort)
 			}
 
+			// This case protects against a packet looping forever in case the nfqueue rule is missing the negative
+			// match against the dnr mark.
+			if attr.Mark != nil && *attr.Mark&processor.dnrMark != 0x0 {
+				log.Error(packet.logLinePrefix(), "dropping packet with do not repeat mark.")
+				repeatSetVerdictOnFail(3, func() error {
+					return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfDrop)
+				}, packet.logLinePrefix(), failedToSetVerdictMessage)
+				continue
+			}
+
 			// If there is a timestamp on the packet attempt to gather some metrics about how long it took the first
 			// packet to get to this point.
 			if !processor.timeManager.Exists(packet.idHash()) && attr.Timestamp != nil {
@@ -228,23 +245,32 @@ done:
 
 			timestamp := processor.timeManager.AddTime(packet.idHash())
 
+			// This case protects against a packet looping forever because something in iptables removed the dnr mark.
+			if time.Since(timestamp) >= processor.maximumPacketTimeout {
+				log.Error(packet.logLinePrefix(), "dropping packet that's exceeded the maximum packet timeout")
+				repeatSetVerdictOnFail(3, func() error {
+					return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfDrop)
+				}, packet.logLinePrefix(), failedToSetVerdictMessage)
+				continue
+			}
+
 			// If the packets time in the system has exceed the maximum allowed time then drop the packet.
 			if time.Since(timestamp) >= processor.packetDropTimeout {
 				log.Debug(packet.logLinePrefix(), "Dropping packet that's exceeded the timeout.")
 
-				packetsToDrop = append(packetsToDrop, packet)
+				finalReleasePackets = append(finalReleasePackets, packet)
 				continue
 			}
 
 			prometheusPacketsInCount.Inc()
 
 			log.Debug(packet.logLinePrefix(), "Processing new packet.")
-			packets = append(packets, packet)
+			releasePackets = append(releasePackets, packet)
 		case <-ticker.C:
-			packetsToRelease := make([]nfqueuePacket, 0, len(packets))
-			packetsToHold := make([]nfqueuePacket, 0, len(packets))
+			packetsToRelease := make([]nfqueuePacket, 0, len(releasePackets))
+			packetsToHold := make([]nfqueuePacket, 0, len(releasePackets))
 
-			for _, packet := range packets {
+			for _, packet := range releasePackets {
 				if time.Since(packet.queuedTime) >= processor.packetReleaseTimeout {
 					packetsToRelease = append(packetsToRelease, packet)
 				} else {
@@ -256,12 +282,12 @@ done:
 				processor.packetReleaseChan <- packetsToRelease
 			}
 
-			if len(packetsToDrop) > 0 {
-				processor.packetDropChan <- packetsToDrop
+			if len(finalReleasePackets) > 0 {
+				processor.packetFinalReleaseChan <- finalReleasePackets
 			}
 
-			packets = packetsToHold
-			packetsToDrop = make([]nfqueuePacket, 0, 500)
+			releasePackets = packetsToHold
+			finalReleasePackets = make([]nfqueuePacket, 0, 500)
 		}
 	}
 }
@@ -282,19 +308,19 @@ func (processor *DNSPolicyPacketProcessor) loopReleasingPackets() {
 	}
 }
 
-func (processor *DNSPolicyPacketProcessor) loopDroppingPackets() {
-	for packets := range processor.packetDropChan {
+func (processor *DNSPolicyPacketProcessor) loopFinalPacketRelease() {
+	for packets := range processor.packetFinalReleaseChan {
 		startTime := time.Now()
 		for _, packet := range packets {
-			log.Debug(packet.logLinePrefix(), "Dropping packet.")
+			log.Debug(packet.logLinePrefix(), "Repeating packet for the last time.")
 
-			prometheusPacketsNfDroppedCount.Inc()
+			prometheusPacketsFinalRepeatCount.Inc()
 
 			repeatSetVerdictOnFail(3, func() error {
-				return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfDrop)
+				return processor.nf.SetVerdictWithMark(packet.packetID, gonfqueue.NfRepeat, int(processor.dnrMark))
 			}, packet.logLinePrefix(), "failed to set verdict for packet")
 		}
-		prometheusPacketDropLatency.Observe(time.Since(startTime).Seconds())
+		prometheusPacketDNRLatency.Observe(time.Since(startTime).Seconds())
 	}
 }
 

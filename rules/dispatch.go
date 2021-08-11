@@ -42,7 +42,7 @@ func (r *DefaultRuleRenderer) WorkloadDispatchChains(
 
 	// If there is no policy at all for a workload endpoint, we don't allow any traffic through
 	// it.
-	endRules := r.DropRules(Match(), false, "Unknown interface")
+	endRules := r.DropRules(Match(), "Unknown interface")
 
 	return r.interfaceNameDispatchChains(
 		names,

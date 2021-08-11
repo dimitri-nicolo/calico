@@ -366,7 +366,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 
 	if !adminUp {
 		// Endpoint is admin-down, drop all traffic to/from it.
-		rules = append(rules, r.DropRules(Match(), false, "Endpoint admin disabled")...)
+		rules = append(rules, r.DropRules(Match(), "Endpoint admin disabled")...)
 		return &Chain{
 			Name:  chainName,
 			Rules: rules,
@@ -488,6 +488,11 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 
 			if chainType == chainTypeNormal || chainType == chainTypeForward {
 				if endOfTierDrop {
+					nfqueueRule := r.NfqueueRule(Match().MarkClear(r.IptablesMarkPass), "Drop if no policies passed packet")
+					if nfqueueRule != nil {
+						rules = append(rules, *nfqueueRule)
+					}
+
 					// When rendering normal and forward rules, if no policy marked the packet as "pass", drop the
 					// packet.
 					//
@@ -502,8 +507,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 						},
 					})
 
-					rules = append(rules, r.DropRules(
-						Match().MarkClear(r.IptablesMarkPass), true, "Drop if no policies passed packet")...)
+					rules = append(rules, r.DropRules(Match().MarkClear(r.IptablesMarkPass), "Drop if no policies passed packet")...)
 				} else {
 					// If we do not require an end of tier drop (i.e. because all of the policies in the tier are
 					// staged), then add an end of tier pass nflog action so that we can at least track that we
@@ -549,6 +553,11 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				})
 		}
 
+		nfqueueRule := r.NfqueueRule(Match(), "Drop if no profiles matched")
+		if nfqueueRule != nil {
+			rules = append(rules, *nfqueueRule)
+		}
+
 		// When rendering normal rules, if no profile marked the packet as accepted, drop
 		// the packet.
 		//
@@ -566,7 +575,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				SizeEnabled: r.EnableNflogSize,
 			},
 		})
-		rules = append(rules, r.DropRules(Match(), true, "Drop if no profiles matched")...)
+
+		rules = append(rules, r.DropRules(Match(), "Drop if no profiles matched")...)
 		//}
 	}
 
