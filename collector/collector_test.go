@@ -1332,6 +1332,10 @@ func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
 var _ = Describe("Reporting Metrics", func() {
 	var c *collector
 	var nflogReader *NFLogReader
+	var mockReporter *mockReporter
+	var rm *ReporterManager
+	var lm *calc.LookupsCache
+
 	const (
 		ageTimeout        = time.Duration(3) * time.Second
 		reportingDelay    = time.Duration(2) * time.Second
@@ -1344,9 +1348,6 @@ var _ = Describe("Reporting Metrics", func() {
 		ExportingInterval:            exportingInterval,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager()
-	mockReporter := newMockReporter()
-	rm.RegisterMetricsReporter(mockReporter)
 	BeforeEach(func() {
 		epMap := map[[16]byte]*calc.EndpointData{
 			localIp1:  localEd1,
@@ -1360,7 +1361,10 @@ var _ = Describe("Reporting Metrics", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
+		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
+		rm = NewReporterManager()
+		mockReporter = newMockReporter()
+		rm.RegisterMetricsReporter(mockReporter)
 		rm.Start()
 		nflogReader = NewNFLogReader(lm, 0, 0, 0, false)
 		nflogReader.Start()
