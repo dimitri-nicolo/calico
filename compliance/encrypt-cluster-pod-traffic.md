@@ -10,7 +10,7 @@ Enable WireGuard to secure on the wire in-cluster pod traffic in a {{site.prodna
 
 ### Value
 
-{{ site.prodname }} automatically creates and manages WireGuard tunnels between nodes providing transport-level security for on the wire in-cluster pod traffic. WireGuard provides {% include open-new-window.html text='formally verified' url='https://www.wireguard.com/formal-verification/' %} secure and {% include open-new-window.html text='performant tunnels' url='https://www.wireguard.com/performance/' %} without any specialized hardware. For a deep dive in to WireGuard implementation, see {% include open-new-window.html text='whitepaper' url='https://www.wireguard.com/papers/wireguard.pdf' %}.
+When this feature is enabled, {{ site.prodname }} automatically creates and manages WireGuard tunnels between nodes providing transport-level security for on-the-wire, in-cluster pod traffic. WireGuard provides {% include open-new-window.html text='formally verified' url='https://www.wireguard.com/formal-verification/' %} secure and {% include open-new-window.html text='performant tunnels' url='https://www.wireguard.com/performance/' %} without any specialized hardware. For a deep dive in to WireGuard implementation, see this {% include open-new-window.html text='whitepaper' url='https://www.wireguard.com/papers/wireguard.pdf' %}.
 
 ### Features
 
@@ -24,7 +24,11 @@ This how-to guide uses the following {{site.prodname}} features:
 
 The following platforms using only IPv4:
 - Kubernetes, on-premises
-- EKS using Calico CNI only
+- EKS using Calico CNI
+- EKS using AWS CNI
+- AKS using Azure CNI
+
+All platforms listed above will encrypt pod-to-pod traffic. Additionally, when using AKS or EKS, host-to-host traffic will also be encrypted, including host-networked pods.
 
 > Note: WireGuard encryption is not currently compatible with egress gateway functionality.
 {: .alert .alert-info }
@@ -45,11 +49,14 @@ The following platforms using only IPv4:
 
 #### Install WireGuard
 
+WireGuard is included in Linux 5.6+ kernels, and has been backported to earlier Linux kernels in some Linux distributions.
+
 Install WireGuard on cluster nodes using {% include open-new-window.html text='instructions for your operating system' url='https://www.wireguard.com/install/' %}. Note that you may need to reboot your nodes after installing WireGuard to make the kernel modules available on your system.
 
-   Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
+Use the following instructions for these platforms that are not listed on the WireGuard installation page.
+
 {% tabs %}
-<label:Kubernetes-EKS,active:true>
+<label:EKS,active:true>
 <%
 To install WireGuard on the default Amazon Machine Image (AMI):
 
@@ -60,11 +67,15 @@ sudo curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo https://copr.fedorainf
 sudo yum install wireguard-dkms wireguard-tools -y
    ```
 %>
+<label:AKS>
+<%
+AKS cluster nodes run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
+%>
 <label:OpenShift>
 <%
 To install WireGuard for OpenShift v4.6:
 
-  This approach uses kernel modules via container installation as outlined here {% include open-new-window.html text='atmoic wireguard' url='https://github.com/projectcalico/atomic-wireguard' %} 
+  This approach uses kernel modules via container installation as outlined here {% include open-new-window.html text='atomic wireguard' url='https://github.com/projectcalico/atomic-wireguard' %} 
 
    1. Create MachineConfig for WireGuard on your local machine.
    ```bash
@@ -109,8 +120,11 @@ To install WireGuard for OpenShift v4.6:
    cd ..
    ```
 
-   4. You must then set the URLs for the `KERNEL_CORE_RPM`, `KERNEL_DEVEL_RPM` and `KERNEL_MODULES_RPM` packages in the conf file `$FAKEROOT/etc/kvc/wireguard-kmod.conf`. You can determine the host kernel version to use in the URL by running `uname -r` on a host in your cluster. You can find links to official packages in your {% include open-new-window.html text='Red Hat subscription' url='https://access.redhat.com/downloads/content/package-browser' %} 
+   4. Configure/edit `kvc-wireguard-kmod/wireguard-kmod.conf`. 
+   
+       a. You must then set the URLs for the `KERNEL_CORE_RPM`, `KERNEL_DEVEL_RPM` and `KERNEL_MODULES_RPM` packages in the conf file `$FAKEROOT/etc/kvc/wireguard-kmod.conf`. 
 
+       b. For more details and help about configuring `kvc-wireguard-kmod/wireguard-kmod.conf`, see the {% include open-new-window.html text='kvc-wireguard-kmod README file' url='https://github.com/tigera/kvc-wireguard-kmod#quick-config-variables-guide' %}. Notes about wireguard version to kernel version compatibility is also available there.
 
    5. Get RHEL Entitlement data from your own RHEL8 system from a host in your cluster.
    ```bash

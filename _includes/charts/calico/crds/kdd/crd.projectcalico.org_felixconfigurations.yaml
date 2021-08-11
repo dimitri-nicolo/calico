@@ -96,6 +96,14 @@ spec:
                   node appears to use the IP of the ingress node; this requires a
                   permissive L2 network.  [Default: Tunnel]'
                 type: string
+              bpfExtToServiceConnmark:
+                description: 'BPFExtToServiceConnmark in BPF mode, controls a
+                  32bit mark that is set on connections from an external client to
+                  a local service. This mark allows us to control how packets of
+                  that connection are routed within the host and how is routing
+                  intepreted by RPF check. [Default: 0]'
+                type: integer
+
               bpfKubeProxyEndpointSlicesEnabled:
                 description: BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls
                   whether Felix's embedded kube-proxy accepts EndpointSlices or not.
@@ -368,6 +376,10 @@ spec:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP
                   socket stats
                 type: boolean
+              flowLogsCollectProcessPath:
+                description: FlowLogsCollectProcessPath enables flow logs reporting process path
+                  and args
+                type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
                   dynamically changing aggregation levels. Default is true.
@@ -442,6 +454,11 @@ spec:
                 description: 'FlowLogsFilePerFlowProcessLimit, is used to specify
                   the maximum number of flow log entries with distinct process information
                   beyond which process information will be aggregated. [Default: 2]'
+                type: integer
+              flowLogsFilePerFlowProcessArgsLimit:
+                description: 'flowLogsFilePerFlowProcessArgsLimit, is used to specify
+                  the maximum number of distinct arguments in flowlogs, beyond which
+                  arguments will be aggregated. [Default: 5]'
                 type: integer
               flowLogsFlushInterval:
                 description: FlowLogsFlushInterval configures the interval at which
@@ -590,6 +607,14 @@ spec:
                 type: string
               ipv6Support:
                 type: boolean
+              kubeMasqueradeBit:
+                description: 'KubeMasqueradeBit should be set to the same value
+                  as --iptables-masquerade-bit of kube-proxy when TPROXY is
+                  used.  This defaults to the corresponding kube-proxy default
+                  value so it only needs to change if kube-proxy is using a
+                  non-standard setting.  Must be within the range of 0-31.
+                  OpenShift sets the bit to 0 by default. [Default: 14].'
+                type: integer
               kubeNodePortRanges:
                 description: 'KubeNodePortRanges holds list of port ranges used for
                   service node ports. Only used if felix detects kube-proxy running
@@ -655,11 +680,13 @@ spec:
               l7LogsFileAggregationSourceInfo:
                 description: 'L7LogsFileAggregationExcludeSourceInfo is used to choose
                   the type of aggregation for the source metadata on L7 log entries.
-                  [Default: IncludeL7SourceInfo - include source metadata]. Accepted
-                  values are IncludeL7SourceInfo and ExcludeL7SourceInfo. IncludeL7SourceInfo
-                  - Include source metadata in the logs. ExcludeL7SourceInfo - Aggregate
-                  over all other fields ignoring the source aggregated name, namespace,
-                  and type.'
+                  [Default: IncludeL7SourceInfoNoPort - include all source metadata
+                  except for the source port]. Accepted values are IncludeL7SourceInfo,
+                  IncludeL7SourceInfoNoPort, and ExcludeL7SourceInfo. IncludeL7SourceInfo
+                  - Include source metadata in the logs. IncludeL7SourceInfoNoPort
+                  - Include source metadata in the logs excluding the source port.
+                  ExcludeL7SourceInfo - Aggregate over all other fields ignoring the
+                  source aggregated name, namespace, and type.'
                 type: string
               l7LogsFileAggregationTrimURL:
                 description: 'L7LogsFileAggregationTrimURL is used to choose the type
@@ -825,6 +852,12 @@ spec:
                 type: string
               prometheusReporterPort:
                 type: integer
+              prometheusWireGuardMetricsEnabled:
+                description: 'PrometheusWireGuardMetricsEnabled disables wireguard
+                  metrics collection, which the Prometheus client does by default,
+                  when set to false. This reduces the number of metrics reported,
+                  reducing Prometheus load. [Default: true]'
+                type: boolean
               removeExternalRoutes:
                 description: Whether or not to remove device routes that have not
                   been programmed by Felix. Disabling this will allow external applications
@@ -881,6 +914,15 @@ spec:
                 type: string
               syslogReporterNetwork:
                 type: string
+              tproxyMode:
+                description: 'TPROXYMode sets whether traffic is directed through
+                  a transparent proxy for further processing or not and how is the
+                  proxying done. [Default: Disabled]'
+                type: string
+              tproxyPort:
+                description: 'TPROXYPort sets to which port proxied traffic should
+                  be redirected. [Default: 16001]'
+                type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
                   number and cluster size to projectcalico.org. Logs warnings returned

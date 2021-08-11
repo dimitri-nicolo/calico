@@ -43,6 +43,17 @@ To release Calico, you need **the following permissions**:
 
 - You must have admin access to docs.tigera.io site on netlify.
 
+- To publish the helm release to the repo, you’ll need an AWS helm profile:
+  Add this to your ~/.aws/config
+      ```
+      [profile helm]
+      role_arn = arn:aws:iam::<production_account_id>:role/CalicoDevHelmAdmin
+      mfa_serial = arn:aws:iam::<tigera-dev_account_id>:mfa/myusername
+      source_profile = default
+      region = us-east-2
+      ```
+  Your user will need permission for assuming the helm admin role in the production account.
+  
 You'll also need **several GB of disk space** (~7GB for v3.4.0, for example).
 
 Some of the release scripts also require **tools to be installed** in your dev environment:
@@ -186,6 +197,8 @@ This makes sure that requests coming to `/archive/vX.Y` (without a slash) don't 
 1. In [netlify/_redirects](netlify/_redirects) add a line for the new release following the other examples
 (Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
 This makes sure that requests coming to `/vX.Y` (without a slash) don't fail with 404 when this branch is promoted to latest.
+
+1. In [netlify/sitemap-index.xml](netlify/sitemap-index.xml) append a new sitemap location to the sitemap index for the release version.
 
 1. If appropriate, update the list of tested versions for different platforms in the appropriate documents.
 

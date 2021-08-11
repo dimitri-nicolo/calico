@@ -28,14 +28,14 @@ section:
     path: /security/comms/manager-tls
   - title: TLS certificates for log storage
     path: /security/comms/log-storage-tls
-  - title: TLS certificates for Kibana
-    path: /security/comms/kibana-tls
   - title: TLS certificates for the API server
     path: /security/comms/apiserver-tls
   - title: TLS certificates for Typha and Node
     path: /security/comms/typha-node-tls
   - title: TLS certificates for compliance
     path: /security/comms/compliance-tls
+  - title: TLS certificates for PacketCapture APIs
+    path: /security/comms/packetcapture-tls
   - title: Certificate Management
     path: /security/comms/certificate-management
 - title: CLIs
@@ -52,7 +52,7 @@ section:
       - title: Overview
         path: /maintenance/clis/calicoctl/configure/overview
       - title: Configure calicoctl to connect to the datastore
-        path: /maintenance/clis/calicoctl/configure/database
+        path: /maintenance/clis/calicoctl/configure/datastore
   - title: calicoq
     path: /maintenance/clis/calicoq/
     section:
@@ -76,7 +76,7 @@ section:
     path: /maintenance/logstorage/adjust-log-storage-size
   - title: Advanced node scheduling
     path: /maintenance/logstorage/advanced-node-scheduling
-- title: License management
+- title: License expiration and renewal
   path: /maintenance/license-options
 - title: Monitoring 
   path: /maintenance/monitor/
@@ -99,22 +99,21 @@ section:
       path: /maintenance/monitor/metrics/metrics
     - title: Elasticsearch and Fluentd metrics
       path: /maintenance/monitor/metrics/elasticsearch-and-fluentd-metrics
-- title: Performance and scaling
-  path: /maintenance/performance/
-  section:
-  - title: eBPF
-    path: /maintenance/performance/ebpf/
-    section: 
-    - title: About eBPF
-      path: /maintenance/performance/ebpf/about-ebpf
-    - title: Install eBPF on a new cluster
-      path: /maintenance/performance/ebpf/install
-    - title: Enable eBPF on an existing cluster
-      path: /maintenance/performance/ebpf/enabling-ebpf
-    - title: Create an EKS cluster for eBPF mode
-      path: /maintenance/performance/ebpf/ebpf-and-eks
-  - title: Reduce node impacts on datastore
-    path: /reference/typha/overview
+- title: eBPF
+  path: /maintenance/ebpf/
+  section: 
+  - title: About eBPF
+    path: /maintenance/ebpf/about-ebpf
+  - title: Install eBPF on a new cluster
+    path: /maintenance/ebpf/install
+  - title: Enable eBPF on an existing cluster
+    path: /maintenance/ebpf/enabling-ebpf
+  - title: Create an EKS cluster for eBPF mode
+    path: /maintenance/ebpf/ebpf-and-eks
+  - title: Troubleshoot eBPF dataplane
+    path: /maintenance/ebpf/troubleshoot-ebpf  
+- title: Reduce node impacts on datastore
+  path: /reference/typha/overview
 - title: Remove nodes from a cluster
   path: /maintenance/decommissioning-a-node    
 - title: Troubleshooting
@@ -124,5 +123,3 @@ section:
     path: /maintenance/troubleshoot/troubleshooting
   - title: Component logs
     path: /maintenance/troubleshoot/component-logs
-  - title: eBPF Dataplane
-    path: /maintenance/troubleshoot/troubleshoot-ebpf

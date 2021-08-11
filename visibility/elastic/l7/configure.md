@@ -4,112 +4,126 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
->**Note**: This feature is currently unavailable for RKE and OpenShift clusters.
+>**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
 {: .alert .alert-info}
 
-## Big Picture
+## Big picture
 
-Use {{site.prodname}} L7 logs to monitor application activity.
+Deploy Envoy and use {{site.prodname}} L7 logs to monitor application activity.
 
 ## Value
 
-Just like visibility into L3/4 {{site.prodname}} metrics, platform operators and
-development teams want L7 metrics to see how applications are interacting with each
+Just like L3/4 {{site.prodname}} logs, platform operators and
+development teams want visibility into L7 logs to see how applications are interacting with each
 other. {{site.prodname}} flow logs only display which workloads are communicating
-with each other, not the specific request details. {{site.prodname}} provides L7
-metrics, regardless of if you are using a service mesh or not.
+with each other, not the specific request details. {{site.prodname}} provides visibility into L7 traffic without the need of a service mesh.
 
-L7 metrics are also key for detecting anomalous behaviors like attempts to
+L7 logs are also key for detecting anomalous behaviors like attempts to
 access applications, restricted URLs, and scans for particular URLs.
 
 ## Concepts
 
 ### About L7 logs
 
-{{site.prodname}} implements an Envoy log collector so L7 metrics can be collected with
-or without a service mesh (like Istio).
+L7 logs capture application interactions from HTTP header data in requests. Data shows what is actually sent in communications between specific pods, providing more specificity than flow logs. (Flow logs capture data only from connections for workload interactions).
 
-#### Log data differences
+Calico Enterprise collects L7 logs by sending the selected traffic through an Envoy proxy.
 
-L7 logs and flow logs capture different types of data for troubleshooting.
+L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 
-* L7 logs for application interactions.
-  Captures header data from requests. Data shows what is actually sent in communications
-  between specific pods, and is greater in volume and specificity than flow logs.
+## Before you begin
 
-* Flow logs for workload interactions.
-  Captures data from connections and shows communications between workloads.
+**Not supported**
 
-## Before you begin...
+* Windows
+* eBPF dataplane
+* RKE clusters
 
-In the namespace of the pod that you want to monitor, create a Kubernetes pull secret
-for accessing {{site.prodname}} images. This should match the pull secret created
-during [{{site.prodname}} installation]({{site.baseurl}}/getting-started/kubernetes/quickstart).
+**Limitations**
 
-```bash
-kubectl create secret generic tigera-pull-secret -n <application pod namespace> --from-file=.dockerconfigjson=<path/to/pull/secret> --type kubernetes.io/dockerconfigjson
-```
+* Traffic selection for L7 metric collection is limited only to ClusterIPs.
+* L7 log collection is not supported for Nodeport type services and host-network pod backend services (Ex. kubernetes service in the default namespace).
+* Pods accessing itself through ClusterIPs are not supported. 
+* When selecting and deselecting traffic for L7 log collection, active connections may be disrupted
 
-> **Important**: Enabling L7 logs requires at least an additional 1 GB LogStorage per node per one day retention period. 
->Please adjust your [Log Storage](https://docs.tigera.io/maintenance/logstorage/adjust-log-storage-size) before proceeding. 
+**Required**
+
+> **Important**: L7 logs require a minimum of 1 additional GB of log storage per node, per one day retention period. Adjust your [Log Storage](https://docs.tigera.io/maintenance/logstorage/adjust-log-storage-size) now. 
 {: .alert .alert-danger}
 
-## How to
+- Configure Felix for log data collection
 
-#### Step 1: Configure the envoy log collector
-
-In this step, you configure the Envoy log collector to gather the L7 metrics.
-
-1. Download the patch file to patch-envoy.yaml.
-   ```
-   curl {{ "/manifests/l7/patch-envoy.yaml" | absolute_url }} -O
-   ```
-
-1. In the “env” section of the envoy-collector container in `patch-envoy.yaml`, set the
-   following environment variables to meet your needs:
-
-| Environment Variable                | Default Value                         | Description |
-| ----------------------------------- | ------------------------------------- | ----------- |
-| `ENVOY_LOG_INTERVAL_SECONDS`        | 5 seconds                             | Interval in seconds for sending L7 log information for processing. |
-| `ENVOY_LOG_REQUESTS_PER_INTERVAL`   | Unlimited (-1)                        | Maximum number of unique L7 logs that are sent during each interval. All other requests beyond this limit are tracked in the count of requests. To ignore the maximum limit, set this to any negative number (for example, -1). |
-| `ENVOY_LOG_PATH`                    | `/tmp/envoy.log`                      | Path to envoy log files in the container. |
-| `FELIX_DIAL_TARGET`                 |                                       | Path of the socket for communication with Felix. |
-| `LOG_LEVEL`                         | `Panic`                               | Logging level. There are seven levels: `Trace`, `Debug`, `Info`, `Warning`, `Error`, `Fatal` and `Panic`. |
-
-1. Download the Envoy config.
-   ```
-   curl {{ "/manifests/l7/envoy-config.yaml" | absolute_url }} -O
-   ```
-
-1. Create the Envoy config.
-   ```
-   kubectl create configmap envoy-config -n <application pod namespace> --from-file=envoy-config.yaml
-   ```
-
-#### Step 2: Configure Felix for log data collection
-
-In this step, you enable the Policy Sync API on Felix.
-
-1. Enable the Policy Sync API in Felix. To do this cluster-wide, modify the `default`
-FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.
+  Enable the Policy Sync API in Felix. To do this cluster-wide, modify the `default` FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.
 
     ```bash
     kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
     ```
 
-1. (Optional) Configure L7 log aggregation, retention, and reporting. See the
-[Felix Configuration documentation]({{site.baseurl}}/reference/felix/configuration#calico-enterprise-specific-configuration)
-for more details.
+  Configure L7 log aggregation, retention, and reporting. See the
+  [Felix Configuration documentation]({{site.baseurl}}/reference/felix/configuration#calico-enterprise-specific-configuration)
+  for more details.
 
-#### Step 3: Install the envoy log collector
+## How to
 
-Now that Felix has been configured, apply the customized `patch-envoy.yaml` from Step 1.
+### Configure L7 logs
 
-```
-kubectl patch deployment <name of application deployment> -n <namespace> --patch "$(cat patch-envoy.yaml)"
-```
+#### Step 1: Configure the L7 log collector
 
-#### Step 4: Test your installation
+In this step, you configure the L7 log collector to gather the L7 logs.
+
+1. Download the manifest file for L7 log collector daemonset.
+   ```
+   curl {{ "/manifests/l7/daemonset/l7-collector-daemonset.yaml" | absolute_url }} -O
+   ```
+
+1. In the “env” section of the `l7-collector` container in `l7-collector-daemonset.yaml`, set the
+   following environment variables to meet your needs:
+
+   | Environment Variable                | Default Value                         | Description |
+   | ----------------------------------- | ------------------------------------- | ----------- |
+   | `ENVOY_LOG_INTERVAL_SECONDS`        | 5 seconds                             | Interval in seconds for sending L7 log information for processing. |
+   | `ENVOY_LOG_REQUESTS_PER_INTERVAL`   | Unlimited (-1)                        | Maximum number of unique L7 logs that are sent during each interval. All other requests beyond this limit are tracked in the count of requests. To ignore the maximum limit, set this to any negative number (for example, -1). |
+   | `ENVOY_LOG_PATH`                    | `/tmp/envoy.log`                      | Path to envoy log files in the container. This should match `access_log` path in `envoy-config.yaml`|
+   | `FELIX_DIAL_TARGET`                 |                                       | Path of the socket for communication with Felix. |
+   | `LOG_LEVEL`                         | `Panic`                               | Logging level. There are seven levels: `Trace`, `Debug`, `Info`, `Warning`, `Error`, `Fatal` and `Panic`. |
+
+1. Download the Envoy config.
+   ```
+   curl {{ "/manifests/l7/daemonset/envoy-config.yaml" | absolute_url }} -O
+   ```
+
+1. Create the Envoy config in `calico-system` namespace.
+   ```
+   kubectl create configmap envoy-config -n calico-system --from-file=envoy-config.yaml
+   ```
+
+#### Step 2: Enable L7 log collection
+
+Apply the customized `l7-collector-daemonset.yaml` from Step 1 and ensure that `l7-collector` and `envoy-proxy` containers are in Running state. 
+
+   ```
+   kubectl apply -f l7-collector-daemonset.yaml
+   ```
+
+Enable L7 log collection daemonset mode in Felix by setting [Felix configuration]({{site.baseurl}}/reference/resources/felixconfig) variable `tproxyMode` to `Enabled` or by setting felix environment variable `FELIX_TPROXYMODE` to `Enabled`.
+
+   ```
+   kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"tproxyMode":"Enabled"}}'
+   ```
+
+#### Step 3: Select traffic for L7 log collection
+
+1. Annotate the services you wish to collect L7 logs as shown.
+   ```
+   kubectl annotate svc <service-name> -n <service-namespace> projectcalico.org/l7-logging=true
+   ```
+
+2. To disable L7 log collection remove the annotation.
+   ```
+   kubectl annotate svc <service-name> -n <service-namespace> projectcalico.org/l7-logging-
+   ```
+
+#### Step 4: Test your configuration
 
 To test your installation, you must first know the appropriate path to access your cluster.
 The path can be either of the following:
@@ -118,7 +132,7 @@ The path can be either of the following:
 
 After identifying the path, `curl` your service with a command similar to the following:
 ```
-curl <path to access service>:<optional port>/<path>
+curl --head <path to access service>:<optional port>/<path>
 ```
 
 Now view the L7 logs in Kibana by selecting the `tigera_secure_ee_l7` index pattern. You

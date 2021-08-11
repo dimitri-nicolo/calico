@@ -1,5 +1,5 @@
 ---
-title: L7 logs.
+title: L7 logs
 description: Configure Elasticsearch L7 logs.
 canonical_url: '/visibility/elastic/l7/index'
 show_read_time: false

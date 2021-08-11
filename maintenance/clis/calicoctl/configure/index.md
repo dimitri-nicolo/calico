@@ -1,8 +1,7 @@
 ---
 title: Configure calicoctl
 description: Configure the calicoctl to access your datastore.
-show_read_time: false
-show_toc: false
+canonical_url: '/maintenance/clis/calicoctl/configure/index'
 ---
 
 {{ page.description }}

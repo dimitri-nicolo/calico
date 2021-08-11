@@ -19,4 +19,19 @@ version.
 - [{{ version }}](/{{ version }}/)
 {%- endif %}
 {%- endfor %}
+
+<div id="release-list" class="hidden" markdown="0">
+    <li><a href="/">{% if site.data.versions.first.title == "master" %}nightly{% else %}{{site.data.versions.first.title | slice: 0,4 | replace: "v", "Version "}}{% endif %}<span class="badge release-badge latest">latest</span></a></li>
+    <li role="separator" class="divider"></li>
+    <li><a href="/master">nightly<span class="badge release-badge nightly">master</span></a></li>
+    {%- for version in site.data.archives %}
+        {%- if version.first %}
+        {%- for v in version["legacy"] %}
+        <li><a href="/{{ v }}">Version {{ v | replace: "v", "" }}</a></li>
+        {%- endfor %}
+        {%- else %}
+        <li><a href="/{{ version }}">Version {{ version | replace: "v", ""  }}</a></li>
+        {%- endif %}
+    {%- endfor %}
+</div>
 {% endif %}

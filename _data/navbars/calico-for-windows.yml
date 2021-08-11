@@ -17,6 +17,11 @@ section:
     path: /windows-calico/kubernetes/standard
   - title: Install Calico Enterprise for Windows on Rancher RKE
     path: /windows-calico/kubernetes/rancher
+- title: OpenShift
+  path: /windows-calico/openshift/
+  section:
+  - title: Install Calico Enterprise for Windows on OpenShift
+    path: /windows-calico/openshift/installation
 - title: Flow logs for Windows workloads
   path: /windows-calico/flowlogs
 - title: Configure DNS policy for workloads

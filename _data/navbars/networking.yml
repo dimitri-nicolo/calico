@@ -4,7 +4,14 @@ order: 2
 section:
 - title: Determine best networking option
   path: /networking/determine-best-networking
-- title: Configure networking
+- title: Networking basics
+  path: /networking/training/
+  section:
+  - title: Networking overview
+    path: /networking/training/about-networking
+  - title: Kubernetes network model
+    path: /networking/training/about-kubernetes-networking    
+- title: Configure Calico Enterprise networking
   path: /networking/configuring
   section:
   - title: Configure BGP peering

@@ -108,3 +108,5 @@ will peer with it.
 ### Selector
 
 {% include content/selectors.md %}
+
+[parse-duration]: https://golang.org/pkg/time/#ParseDuration

@@ -20,8 +20,6 @@ OPERATOR_MAPPED_IMAGES = {
     'tigera-operator': 'tigeraOperator',
     'calicoctl': 'calicoctl',
     # non-tigera components
-    'alertmanager': 'alertmanager',
-    'prometheus': 'prometheus',
     'prometheus-operator': 'prometheusOperator',
     'prometheus-config-reloader': 'prometheusConfigReloader',
     'configmap-reload': 'configmapReload',
@@ -72,10 +70,13 @@ EXCLUDED_IMAGES = [
     'envoy',
     'anomaly_detection_jobs',
     'elasticsearch-metrics',
+    'packetcapture-api',
 
     # third party images
     'elasticsearch',
     'elasticsearch-operator',
+    'alertmanager',
+    'prometheus',
 ]
 
 REGISTRY_EXCEPTION = [

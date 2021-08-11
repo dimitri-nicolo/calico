@@ -3,7 +3,3 @@ layout: null
 ---
 
 {% include content/non-helm-manifests/custom-resources.yaml kubernetesProvider="EKS" cniPlugin="Calico" %}
-
-{% helm tigera-operator --execute templates/crs/prometheus/alertmanager.yaml --execute templates/crs/prometheus/prometheus.yaml --execute templates/crs/prometheus/prometheusrule.yaml --execute templates/crs/prometheus/servicemonitor.yaml %}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}

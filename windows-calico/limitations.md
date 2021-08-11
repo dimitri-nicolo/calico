@@ -8,12 +8,12 @@ canonical_url: '/windows-calico/limitations'
 
 | Feature                        |                                                              |
 | ------------------------------ | ------------------------------------------------------------ |
-| Install                        | **Supported:** EKS ([non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy)), AWS, GCE, Azure, Kubernetes on-premises, OpenShift. <br /><br />**Not supported**: AKS, GKE, IKS, and Typha component for scaling (Linux-based feature) |
-| Install method                 | **Supported**: Manifest with manual upgrade<br /><br />**Not supported**: Operator install |
+| Distributions                  | **Supported:**<br />- EKS ([non-production only](#service-clusterips-incompatible-with-selectors-on-pod-ips-in-network-policy))<br />- AWS<br />- GCE<br />- Azure<br />- Kubernetes on-premises<br />- OpenShift<br /><br />**Not supported:**<br />- AKS<br />- GKE<br />- IKS |
+| Install and upgrade            | **Supported**: Manifest with manual upgrade<br /><br />**Not supported**: <br />- Operator install<br />- Non-cluster hosts<br />- Typha component for scaling (Linux-based feature) |
 | Networking                     | **Supported**:<br />- Calico Enterprise VXLAN, no cross-subnet or VXLAN MTU settings with [limitations](#vxlan-networking-limitations)<br />- Calico Enterprise non-overlay mode with BGP peering with [limitations](#bgp-networking-limitations)<br />- IPv4 |
 |                                | **Not supported**: <br />- Overlay mode with BGP peering<br />- IP in IP overlay with BPG routing<br />- Cross-subnet support and MTU setting for VXLAN<br />- IPv6 and dual stack<br />- Dual-ToR<br />- Service advertisement<br />- Multiple networks to pods |
 | Policy                         | **Supported**: <br />- Tiered policy with [limitations](#network-policy-with-tiers)<br />- DNS policy with [limitations](#dns-policy-limitations)<br />- Policy recommendations<br />- Policy impact preview |
-|                                | **Not supported**: <br />- Staged network-policy<br />- Firewall integrations<br />- Application Layer Policy (ALP) for Istio<br />- Non-cluster hosts, including automatic host endpoints |
+|                                | **Not supported**: <br />- Staged network-policy<br />- Firewall integrations<br />- Application Layer Policy (ALP) for Istio<br />- Policy for hosts (host endpoints, including automatic host endpoints) |
 | Visibility and troubleshooting | **Supported**:<br />- Flow logs for traffic to/from windows pods with [limitations](#flow-log-limitations)           <br />- Audit logs<br />- Alerts |
 |                                | **Not supported**: <br />- Packet capture<br />- DNS logs<br />- iptable logs<br />- L7 metrics |
 | Threat defense                 | **Supported**: Block traffic to/from src/dst based on a threat feed |
@@ -127,7 +127,7 @@ Felix must reprogram the HNS ACL policy attached to the pod. This reprogramming 
 
 ### Service ClusterIPs incompatible with selectors on pod IPs in network policy
 
-**Windows 1809 and 1903 prior to build 18317**
+**Windows 1809 prior to build 17763.1432**
 
 On Windows nodes, kube-proxy unconditionally applies source NAT to traffic from local pods to service ClusterIPs. This means that, at the destination pod, where policy is applied, the traffic appears to come from the source host rather than the source pod. In turn, this means that a network policy with a source selector matching the source pod will not match the expected traffic.
 

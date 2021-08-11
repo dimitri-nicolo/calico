@@ -38,7 +38,7 @@ First make sure you have a compatible AKS cluster, see [Create a compatible AKS 
 1. Download the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```bash
-   curl -O -L {{ "/manifests/custom-resources.yaml" | absolute_url }}
+   curl -O -L {{ "/manifests/aks/custom-resources.yaml" | absolute_url }}
    ```
 
    Remove the `Manager` custom resource from the manifest file.
@@ -111,7 +111,7 @@ When all components show a status of `Available`, proceed to the next section.'
 
 To secure {{site.prodname}} component communications, install the following set of network policies.
 ```
-kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
+kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 {% endif %}
 

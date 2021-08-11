@@ -1,5 +1,5 @@
 ---
-title: Compliance
+title: Compliance reports
 description: Get reports on Kubernetes workloads and environments for regulatory compliance.
 canonical_url: '/compliance/index'
 show_read_time: false

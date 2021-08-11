@@ -21,7 +21,7 @@ This how-to guide uses the following features:
 
 By default, the {{site.prodname}} log storage uses self-signed certificates on connections. To provide TLS certificates,
 get the certificate and key pair for the {{site.prodname}} log storage using any X.509-compatible tool or from your organization's 
-Certificate Authority. The certificate must include the following Subject Alternate Name or DNS name `tigera-secure-es-http.tigera-elasticsearch.svc`.
+Certificate Authority. The certificate must include the following Subject Alternate Names or DNS names `tigera-secure-es-http.tigera-elasticsearch.svc` and `tigera-secure-es-gateway-http.tigera-elasticsearch.svc`.
 
 If your cluster has Windows nodes, the certificate must additionally include `tigera-secure-es-http.tigera-elasticsearch.svc.<cluster_domain>` where `<cluster_domain>` is the local domain specified for in-cluster DNS.
 

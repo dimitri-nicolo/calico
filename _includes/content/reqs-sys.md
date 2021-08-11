@@ -26,6 +26,14 @@
   > [Preventing NetworkManager from controlling {{site.prodname}} interfaces]({{ site.baseurl }}/maintenance/troubleshoot/troubleshooting#configure-networkmanager)
   > before installing {{site.prodname}}.
   {: .alert .alert-info}
+  
+- If your Linux distribution comes with installed Firewalld or another iptables manager it should be disabled. 
+  These may interfere with rules added by {{site.prodname}} and result in unexpected behavior.
+  
+  > **Note**: 
+  > If a host firewall is needed, it can be configured by {{site.prodname}} HostEndpoint and GlobalNetworkPolicy.
+  > More information about configuration at [Security for host]({{ site.baseurl }}/security/hosts).
+  {: .alert .alert-info}
 
 - In order to properly run Elasticsearch, nodes must be configured according to the
   [Elasticsearch system configuration documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/system-config.html){:target="_blank"}

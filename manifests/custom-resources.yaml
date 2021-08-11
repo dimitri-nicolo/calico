@@ -3,22 +3,3 @@ layout: null
 ---
 
 {% include content/non-helm-manifests/custom-resources.yaml %}
-
-{% helm tigera-operator --execute templates/crs/prometheus/alertmanager.yaml%}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}
-{% helm tigera-operator --execute templates/crs/prometheus/prometheus.yaml%}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}
-{% helm tigera-operator --execute templates/crs/prometheus/prometheusrule.yaml%}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}
-{% helm tigera-operator --execute templates/crs/prometheus/servicemonitor.yaml%}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}
-{% helm tigera-operator --execute templates/crs/prometheus/elasticsearch_servicemonitor.yaml%}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}
-{% helm tigera-operator --execute templates/crs/prometheus/fluentd_podmonitor.yaml%}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}

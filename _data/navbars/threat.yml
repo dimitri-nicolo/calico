@@ -19,8 +19,8 @@ section:
   path: /threat/suspicious-ips
 - title: Suspicious domains
   path: /threat/suspicious-domains
-- title: External IP addresses that access clusters
-  path: /threat/ingress
+- title: Suspicious external IPs
+  path: /threat/suspicious-external-ips
 - title: Anonymization attacks  
   path: /threat/tor-vpn-feed-and-dashboard
 - title: Honeypods

@@ -4,6 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   name: logcollectors.operator.tigera.io
   annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
     helm.sh/hook: crd-install
 spec:
   group: operator.tigera.io
@@ -139,6 +140,14 @@ spec:
                     - logTypes
                     type: object
                 type: object
+              collectProcessPath:
+                description: 'Configuration for enabling/disabling process path collection
+                  in flowlogs. If Enabled, this feature sets hostPID to true in order
+                  to read process cmdline. Default: Enabled'
+                enum:
+                - Enabled
+                - Disabled
+                type: string
             type: object
           status:
             description: Most recently observed state for Tigera log collection.

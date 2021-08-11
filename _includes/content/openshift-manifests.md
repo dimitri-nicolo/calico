@@ -16,14 +16,39 @@ curl {{ "/manifests/ocp/crds/01-crd-installation.yaml" | absolute_url }} -o mani
 curl {{ "/manifests/ocp/crds/01-crd-intrusiondetection.yaml" | absolute_url }} -o manifests/01-crd-intrusiondetection.yaml
 curl {{ "/manifests/ocp/crds/01-crd-logstorage.yaml" | absolute_url }} -o manifests/01-crd-logstorage.yaml
 curl {{ "/manifests/ocp/crds/01-crd-logcollector.yaml" | absolute_url }} -o manifests/01-crd-logcollector.yaml
+curl {{ "/manifests/ocp/crds/01-crd-monitor.yaml" | absolute_url }} -o manifests/01-crd-monitor.yaml
 curl {{ "/manifests/ocp/crds/01-crd-tigerastatus.yaml" | absolute_url }} -o manifests/01-crd-tigerastatus.yaml
 curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml" | absolute_url }} -o manifests/01-crd-managementclusterconnection.yaml
 curl {{ "/manifests/ocp/crds/01-crd-managementcluster.yaml" | absolute_url }} -o manifests/01-crd-managementcluster.yaml
-{%- for data in site.static_files %}
-{%- if data.path contains '/manifests/ocp/crds/calico' %}
-curl {{ data.path | absolute_url }} -o manifests/{{data.name}}
-{%- endif -%}
-{% endfor %}
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_bgpconfigurations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_bgpconfigurations.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_bgppeers.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_bgppeers.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_blockaffinities.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_blockaffinities.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_clusterinformations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_clusterinformations.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_deeppacketinspections.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_deeppacketinspections.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_felixconfigurations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_felixconfigurations.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalalerts.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalalerts.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalalerttemplates.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalalerttemplates.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalnetworkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalnetworkpolicies.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalnetworksets.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalnetworksets.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalreports.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalreports.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalreporttypes.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalreporttypes.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_globalthreatfeeds.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_globalthreatfeeds.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_hostendpoints.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_hostendpoints.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_ipamblocks.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_ipamblocks.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_ipamconfigs.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_ipamconfigs.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_ipamhandles.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_ipamhandles.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_ippools.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_ippools.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_kubecontrollersconfigurations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_kubecontrollersconfigurations.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_licensekeys.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_licensekeys.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_managedclusters.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_managedclusters.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_networkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_networkpolicies.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_networksets.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_networksets.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_packetcaptures.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_packetcaptures.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_remoteclusterconfigurations.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_remoteclusterconfigurations.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_stagedglobalnetworkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_stagedglobalnetworkpolicies.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_stagedkubernetesnetworkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_stagedkubernetesnetworkpolicies.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_stagednetworkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_stagednetworkpolicies.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_tiers.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_tiers.yaml
 curl {{ "/manifests/ocp/tigera-operator/00-namespace-tigera-operator.yaml" | absolute_url }} -o manifests/00-namespace-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml" | absolute_url }} -o manifests/02-rolebinding-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute_url }} -o manifests/02-role-tigera-operator.yaml
@@ -36,9 +61,9 @@ curl {{ "/manifests/ocp/02-pull-secret.yaml" | absolute_url }} -o manifests/02-p
 {%- unless page.openshift_manifests_ignore_installation_cr %}
 curl {{ "/manifests/ocp/01-cr-installation.yaml" | absolute_url }} -o manifests/01-cr-installation.yaml
 {%- endunless %}
-{%- unless page.openshift_manifests_ignore_apiserver_cr %}
+{%- if page.openshift_manifests_include_apiserver_cr %}
 curl {{ "/manifests/ocp/01-cr-apiserver.yaml" | absolute_url }} -o manifests/01-cr-apiserver.yaml
-{%- endunless %}
+{%- endif %}
 ```
 {% unless page.openshift_manifests_ignore_installation_cr %}
 > **Note**: Read more about customizing the file `manifests/01-cr-installation.yaml` in the [Installation API Reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)

@@ -4,7 +4,6 @@ description: Upgrading from an earlier release of Calico Enterprise on OpenShift
 canonical_url: /maintenance/openshift-upgrade
 show_toc: false
 openshift_manifests_ignore_pullsecret: true
-openshift_manifests_ignore_apiserver_cr: true
 openshift_manifests_ignore_installation_cr: true
 ---
 
@@ -54,12 +53,6 @@ mkdir manifests
 
 1. {% include content/openshift-prometheus-operator.md %}
 
-1. If you are using the default Prometheus configuration (provided in the [custom-resources.yaml]({{ "/manifests/custom-resources.yaml" | absolute_url }})
-   file applied on installation) then use the following command to upgrade the Prometheus components:
-   ```bash
-   oc apply -f {{ "/manifests/upgrade/prometheus.yaml" | absolute_url }}
-   ```
-
 1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
    CR to your cluster.
    ```bash
@@ -83,6 +76,17 @@ mkdir manifests
    
    ```bash
    oc apply -f {{ "/manifests/ocp/tigera-policies.yaml" | absolute_url }}
+   ```
+
+1. If your cluster is v3.7 or older, apply a new [Monitor]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Monitor)
+   CR to your cluster.
+   ```bash
+   oc apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: Monitor
+   metadata:
+     name: tigera-secure
+   EOF
    ```
 
 1. You can now monitor the upgrade progress with the following command:
