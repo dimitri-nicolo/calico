@@ -73,7 +73,7 @@ hooks_installed:=$(shell ./install-git-hooks)
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
-	
+
 ## Serve a local view of your current site on port 4000
 serve: bin/helm
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.
@@ -135,13 +135,13 @@ dev-image: $(addsuffix -dev-image, $(filter-out calico felix, $(RELEASE_REPOS)))
 # Dynamically declare new make targets for all calico subprojects...
 $(addsuffix -dev-image,$(RELEASE_REPOS)): %-dev-image: ../%
 	echo "TARGET:"
-	echo $< 
+	echo $<
 	@cd $< && export TAG=$$($(TAG_COMMAND)); make image retag-build-images-with-registries \
 		ARCHES=amd64 \
 		BUILD_IMAGE=$(REGISTRY)/$* \
 		PUSH_IMAGES=$(REGISTRY)/$* \
 		LOCAL_BUILD=$(LOCAL_BUILD) \
-		IMAGETAG=$$TAG 
+		IMAGETAG=$$TAG
 
 ## Push locally built images.
 dev-push: $(addsuffix -dev-push, $(filter-out calico felix, $(RELEASE_REPOS)))
@@ -325,7 +325,7 @@ update_canonical_urls:
 backport_docs_change:
 ifndef VERSION
 	$(error VERSION is undefined - run using make backport_docs_change VERSION=vX.Y)
-endif  
+endif
 ifndef ORIG_VERSION
 	# Backporting changes from master.
 	$(eval ORIG_VERSION = master)
@@ -430,7 +430,7 @@ helm-index: release-prereqs
 	rm -rf charts
 
 ## Generates release notes for the given version.
-release-notes: 
+release-notes:
 	VERSION=$(CALICO_VER) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./release-scripts/generate-release-notes.py
 
 update-authors:
@@ -465,7 +465,7 @@ IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml
 # a different location, but we still need to package them up for patch
 # releases.
 DEFAULT_MANIFEST_SRC=./_site/manifests
-OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4 
+OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4
 ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
 DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation
 endif
@@ -541,7 +541,7 @@ _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versio
 	  -w /calico \
 	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
-# The following chunk of conditionals sets the Version of the helm chart. 
+# The following chunk of conditionals sets the Version of the helm chart.
 # Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
 ifdef CHART_RELEASE
 # the presence of CHART_RELEASE indicates we're trying to cut an official chart release.
