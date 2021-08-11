@@ -4,6 +4,7 @@ package intdataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -65,7 +66,7 @@ func NewAWSSubnetManager(
 		Live:  true,
 	})
 
-	sm :=  &awsSubnetManager{
+	sm := &awsSubnetManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
@@ -107,8 +108,8 @@ func (a *awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 		// Old AWS subnet is no longer correct. clean up the index.
 		logrus.WithFields(logrus.Fields{
 			"oldSubnet": oldSubnetID,
-			"newSubnet":newSubnetID,
-			"pool":id,
+			"newSubnet": newSubnetID,
+			"pool":      id,
 		}).Info("IP pool no longer associated with AWS subnet.")
 		a.poolIDsBySubnetID[oldSubnetID].Discard(id)
 		if a.poolIDsBySubnetID[oldSubnetID].Len() == 0 {
@@ -118,8 +119,8 @@ func (a *awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	if newSubnetID != "" && oldSubnetID != newSubnetID {
 		logrus.WithFields(logrus.Fields{
 			"oldSubnet": oldSubnetID,
-			"newSubnet":newSubnetID,
-			"pool":id,
+			"newSubnet": newSubnetID,
+			"pool":      id,
 		}).Info("IP pool now associated with AWS subnet.")
 		if _, ok := a.poolIDsBySubnetID[newSubnetID]; !ok {
 			a.poolIDsBySubnetID[newSubnetID] = set.New()
@@ -198,16 +199,26 @@ func (a *awsSubnetManager) CompleteDeferredWork() error {
 		return nil
 	}
 
-	err := a.resync()
-	if err != nil {
-		logrus.WithError(err).Warn("Failed to resync AWS subnet state.")
-		return err
+	var resyncErr error
+	for attempt := 0 ; attempt < 3; attempt++ {
+		resyncErr = a.resync()
+		if errors.Is(resyncErr, errResyncNeeded) {
+			// Expected retry needed for some more complex cases...
+			logrus.Info("Restarting resync after modifying AWS state.")
+			continue
+		} else if resyncErr != nil {
+			logrus.WithError(resyncErr).Warn("Failed to resync AWS subnet state.")
+			continue
+		}
+		a.resyncNeeded = false
+		logrus.Info("Resync completed successfully.")
+		break
 	}
-	a.resyncNeeded = false
-	logrus.Info("Resync completed successfully.")
 
-	return nil
+	return resyncErr
 }
+
+var errResyncNeeded = errors.New("resync needed")
 
 func (a *awsSubnetManager) resync() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
@@ -235,10 +246,20 @@ func (a *awsSubnetManager) resync() error {
 	nicIDByPrimaryIP := map[ip.CIDR]string{}
 	inUseDeviceIndexes := map[int32]bool{}
 	freeIPv4CapacityByNICID := map[string]int{}
+	attachmentIDByNICID := map[string]string{}
 	var primaryNIC *ec2types.NetworkInterface
 	for _, n := range myNICs {
-		if n.Attachment != nil && n.Attachment.DeviceIndex != nil {
-			inUseDeviceIndexes[*n.Attachment.DeviceIndex] = true
+		if n.NetworkInterfaceId == nil {
+			logrus.Debug("AWS NIC had no NetworkInterfaceId.")
+			continue
+		}
+		if n.Attachment != nil {
+			if n.Attachment.DeviceIndex != nil {
+				inUseDeviceIndexes[*n.Attachment.DeviceIndex] = true
+			}
+			if n.Attachment.AttachmentId != nil {
+				attachmentIDByNICID[*n.NetworkInterfaceId] = *n.Attachment.AttachmentId
+			}
 		}
 		if !aws.NetworkInterfaceIsCalicoSecondary(n) {
 			if primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex != nil && *n.Attachment.DeviceIndex == 0 {
@@ -358,13 +379,56 @@ func (a *awsSubnetManager) resync() error {
 		return nil
 	}
 
-	// TODO AWS update phase:
+	// Release any IPs that are no longer required.
+	ipsToRelease.Iter(func(item interface{}) error {
+		addr := item.(ip.CIDR)
+		nicID := nicIDByIP[addr]
+		_, err := ec2Client.EC2Svc.UnassignPrivateIpAddresses(ctx, &ec2.UnassignPrivateIpAddressesInput{
+			NetworkInterfaceId: &nicID,
+			// TODO batch up all updates for same NIC?
+			PrivateIpAddresses: []string{addr.Addr().String()},
+		})
+		if err != nil {
+			logrus.WithError(err).Error("Failed to release AWS IP.")
+			return nil
+		}
+		delete(nicIDByIP, addr)
+		freeIPv4CapacityByNICID[nicID]++
+		return nil
+	})
 
-	// TODO Free IPs that are no longer needed.
-	// TODO Update nicIDByIP et al after deletions.
+	if nicsToRelease.Len() > 0 {
+		// Release any NICs we no longer want.
+		nicsToRelease.Iter(func(item interface{}) error {
+			nicID := item.(string)
+			attachID := attachmentIDByNICID[nicID]
+			_, err := ec2Client.EC2Svc.(*ec2.Client).DetachNetworkInterface(ctx, &ec2.DetachNetworkInterfaceInput{
+				AttachmentId: &attachID,
+				Force:        boolPtr(true),
+			})
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"nicID": nicID,
+					"attachID": attachID,
+				}).Error("Failed to detach unneeded NIC")
+			}
+			// Worth trying this even if detach fails.  Possible someone the failure was caused by it already
+			// being detached.
+			_, err = ec2Client.EC2Svc.(*ec2.Client).DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+				NetworkInterfaceId: &nicID,
+			})
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"nicID": nicID,
+					"attachID": attachID,
+				}).Error("Failed to delete unneeded NIC")
+			}
+			return nil
+		})
 
-	// TODO Free NICs that are no longer needed.
-	// TODO Update secondaryNICsByID et al after deletions.
+		// Go again from the top so we don't need to try fixing up all the maps.
+		return errResyncNeeded
+	}
 
 	// Given the selected subnet, filter down the routes to only those that we can support.
 	filteredRoutes := filterRoutesByAWSSubnet(missingRoutes, bestSubnet)
@@ -373,6 +437,69 @@ func (a *awsSubnetManager) resync() error {
 		return nil
 	}
 	logrus.WithField("numNewRoutes", len(filteredRoutes)).Info("Need to program new AWS IPs")
+
+	dio, err := ec2Client.EC2Svc.DescribeNetworkInterfaces(ctx, &ec2.DescribeNetworkInterfacesInput{
+		Filters: []ec2types.Filter{
+			{
+				Name:   stringPointer("tag:" + aws.NetworkInterfaceTagOwningInstance),
+				Values: []string{ec2Client.InstanceID},
+			},
+			{
+				Name:   stringPointer("status"),
+				Values: []string{"available" /* Not attached to the instance */ },
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list unattached NICs that belong to this node: %w", err)
+	}
+
+	attachedOrphan := false
+	for _, nic := range dio.NetworkInterfaces {
+		subnetID := safeReadString(nic.SubnetId)
+		if subnetID != bestSubnet {
+			nicID := safeReadString(nic.NetworkInterfaceId)
+			logrus.WithField("nicID", nicID).Info(
+				"Found orphaned NIC from wrong subnet, deleting.")
+			_, err = ec2Client.EC2Svc.(*ec2.Client).DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+				NetworkInterfaceId: nic.NetworkInterfaceId,
+			})
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"nicID": nicID,
+				}).Error("Failed to delete unwanted NIC")
+				// Could bail out here but having an orphaned NIC doesn't stop us from getting _our_ state right.
+			}
+			continue
+		}
+
+		// Find a free device index.
+		devIdx := int32(0)
+		for inUseDeviceIndexes[devIdx] {
+			devIdx++
+		}
+		inUseDeviceIndexes[devIdx] = true
+		attOut, err := ec2Client.EC2Svc.AttachNetworkInterface(ctx, &ec2.AttachNetworkInterfaceInput{
+			DeviceIndex:        &devIdx,
+			InstanceId:         &ec2Client.InstanceID,
+			NetworkInterfaceId: nic.NetworkInterfaceId,
+			NetworkCardIndex:   nil, // TODO Multi-network card handling
+		})
+		if err != nil {
+			// TODO handle idempotency; make sure that we can't get a successful failure(!)
+			logrus.WithError(err).Error("Failed to attach interface to host.")
+			continue
+		}
+		logrus.WithFields(logrus.Fields{
+			"attachmentID": safeReadString(attOut.AttachmentId),
+			"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
+		}).Info("Attached NIC.")
+		attachedOrphan = true
+	}
+	if attachedOrphan {
+		// Laziness!  Avoid recalculating indexes after attaching the orphaned NICs.
+		return errResyncNeeded
+	}
 
 	// TODO Look up NICs that we created but failed to attach and re-use them or clean them up (if they're from the wrong subnet)
 	// TODO Look up any existing IPs we have in IPAM and use one of those rather than allocating new.
@@ -384,7 +511,7 @@ func (a *awsSubnetManager) resync() error {
 		return fmt.Errorf("instance type doesn't support secondary IPs")
 	}
 	secondaryIPsPerIface := netCaps.MaxIPv4PerInterface - 1
-	totalNICsNeeded := (totalIPs + secondaryIPsPerIface-1) / secondaryIPsPerIface
+	totalNICsNeeded := (totalIPs + secondaryIPsPerIface - 1) / secondaryIPsPerIface
 	nicsAlreadyAllocated := len(nicIDsBySubnet[bestSubnet])
 	numNICsNeeded := totalNICsNeeded - nicsAlreadyAllocated
 
