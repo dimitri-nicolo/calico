@@ -10,10 +10,8 @@ import (
 
 	"github.com/projectcalico/apiserver/pkg/rbac"
 
-	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
@@ -35,16 +33,6 @@ func NewList() runtime.Object {
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(calculator rbac.Calculator) *REST {
 	return &REST{calculator: calculator}
-}
-
-// Necessary to satisfy generated informers, but not intended for real use.
-func (r *REST) List(ctx context.Context, options *internalversion.ListOptions) (runtime.Object, error) {
-	return NewList(), nil
-}
-
-// Necessary to satisfy generated informers, but not intended for real use.
-func (r *REST) Watch(ctx context.Context, options *internalversion.ListOptions) (watch.Interface, error) {
-	return watch.NewEmptyWatch(), nil
 }
 
 // Takes the userinfo that the authn delegate has put into the context and returns it.
