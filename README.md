@@ -33,3 +33,21 @@ For more information, see `make help`.
 
 [controllers-src]: https://github.com/projectcalico/kube-controllers/tree/master/pkg/controllers
 [calico-docs]: https://docs.projectcalico.org/latest/reference/kube-controllers/configuration
+
+#### Build tags
+
+There are two variants of kube-controllers Cloud and Enterprise. To build or deploy the Cloud version preprend `TESLA=true` to make commands.
+
+To add code that only targets one of the variants include the following at the top of the .go file:
+
+Cloud/Tesla only:
+```
+// +build tesla
+```
+
+Enterprise only:
+```
+// +build !tesla
+```
+
+Note that this only works at the file-level, meaning you can only include or exclude entire files.
