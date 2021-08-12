@@ -251,6 +251,8 @@ curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
 -H "Authorizaton: Bearer $TOKEN" -H "X-CLUSTER-ID: $MANAGED_CLUSTER"
 ```
 
+Users accessing packet captures from management and managed clusters need to be allowed `CREATE` actions for `authenticationreviews` in api group `projectcalico.org` in the management cluster, as in the example in the section above.
+
 Next, get the token from the service account.
 Using the running example of a service account named, `jane` in the default namespace:
 

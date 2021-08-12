@@ -1137,6 +1137,13 @@ spec:
       source:
         selector: k8s-app == 'compliance-server'
         namespaceSelector: name == 'tigera-compliance'
+    - action: Allow
+      destination:
+        ports: [5556]
+      protocol: TCP
+      source:
+        selector: k8s-app == 'tigera-packetcapture'
+        namespaceSelector: name == 'tigera-packetcapture'
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
     - action: Allow
