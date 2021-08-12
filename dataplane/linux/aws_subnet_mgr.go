@@ -11,6 +11,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
+	calinet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/kubernetes"
@@ -221,6 +223,11 @@ func (a *awsSubnetManager) CompleteDeferredWork() error {
 var errResyncNeeded = errors.New("resync needed")
 
 func (a *awsSubnetManager) resync() error {
+	// TODO Arbitrary timeout for whole operation.
+	// TODO Split this up into methods.
+	// TODO Decouple the AWS resync from the main goroutine.  AWS could be slow or throttle us.  don't want to hold others up.
+	// TODO Set up per-ENI routing.
+
 	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
@@ -438,9 +445,12 @@ func (a *awsSubnetManager) resync() error {
 	}
 	logrus.WithField("numNewRoutes", len(filteredRoutes)).Info("Need to program new AWS IPs")
 
+	// Look for any AWS interfaces that belong to this node (as recorded in a tag that we attach to the node)
+	// but are not actually attached to this node.
 	dio, err := ec2Client.EC2Svc.DescribeNetworkInterfaces(ctx, &ec2.DescribeNetworkInterfacesInput{
 		Filters: []ec2types.Filter{
 			{
+				// We label all our NICs at creation time with the instance they belong to.
 				Name:   stringPointer("tag:" + aws.NetworkInterfaceTagOwningInstance),
 				Values: []string{ec2Client.InstanceID},
 			},
@@ -456,28 +466,32 @@ func (a *awsSubnetManager) resync() error {
 
 	attachedOrphan := false
 	for _, nic := range dio.NetworkInterfaces {
+		// Find next free device index.
+		devIdx := int32(0)
+		for inUseDeviceIndexes[devIdx] {
+			devIdx++
+		}
+
 		subnetID := safeReadString(nic.SubnetId)
-		if subnetID != bestSubnet {
+		if subnetID != bestSubnet || int(devIdx) >= netCaps.MaxNetworkInterfaces {
 			nicID := safeReadString(nic.NetworkInterfaceId)
 			logrus.WithField("nicID", nicID).Info(
-				"Found orphaned NIC from wrong subnet, deleting.")
+				"Found unattached NIC that belongs to this node and is no longer needed, deleting.")
 			_, err = ec2Client.EC2Svc.(*ec2.Client).DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
 				NetworkInterfaceId: nic.NetworkInterfaceId,
 			})
 			if err != nil {
 				logrus.WithError(err).WithFields(logrus.Fields{
 					"nicID": nicID,
-				}).Error("Failed to delete unwanted NIC")
+				}).Error("Failed to delete unattached NIC")
 				// Could bail out here but having an orphaned NIC doesn't stop us from getting _our_ state right.
 			}
 			continue
 		}
 
-		// Find a free device index.
-		devIdx := int32(0)
-		for inUseDeviceIndexes[devIdx] {
-			devIdx++
-		}
+		logrus.WithFields(logrus.Fields{
+			"nicID": nic.NetworkInterfaceId,
+		}).Info("Found unattached NIC that belongs to this node; trying to attach it.")
 		inUseDeviceIndexes[devIdx] = true
 		attOut, err := ec2Client.EC2Svc.AttachNetworkInterface(ctx, &ec2.AttachNetworkInterfaceInput{
 			DeviceIndex:        &devIdx,
@@ -493,16 +507,42 @@ func (a *awsSubnetManager) resync() error {
 		logrus.WithFields(logrus.Fields{
 			"attachmentID": safeReadString(attOut.AttachmentId),
 			"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
-		}).Info("Attached NIC.")
+		}).Info("Attached the loose NIC.")
 		attachedOrphan = true
 	}
 	if attachedOrphan {
 		// Laziness!  Avoid recalculating indexes after attaching the orphaned NICs.
+		logrus.Info("Restarting resync after cleaning up loose interfaces.")
 		return errResyncNeeded
 	}
 
-	// TODO Look up NICs that we created but failed to attach and re-use them or clean them up (if they're from the wrong subnet)
-	// TODO Look up any existing IPs we have in IPAM and use one of those rather than allocating new.
+	// TODO Using the node name here for consistency with tunnel IPs but I'm not sure if nodeName can change on AWS?
+	handle := fmt.Sprintf("aws-secondary-ifaces-%s", a.nodeName)
+
+	// Now we've cleaned up any unneeded NICs. Free any IPs that are assigned to us in IPAM but not in use for
+	// one of our NICs.
+	{
+		ourIPs, err := a.ipamClient.IPsByHandle(ctx, handle)
+		if err != nil && !errors.Is(err, calierrors.ErrorResourceDoesNotExist{}) {
+			return fmt.Errorf("failed to look up our existing IPs: %w", err)
+		}
+		for _, addr := range ourIPs {
+			cidr := ip.CIDRFromNetIP(addr.IP)
+			if _, ok := nicIDByPrimaryIP[cidr]; !ok {
+				// IP is not assigned to any of our local NICs and, if we got this far, we've already attached
+				// any orphaned NICs or deleted them.  Clean up the IP.
+				logrus.WithField("addr", addr).Info(
+					"Found IP assigned to this node in IPAM but not in use for an AWS NIC, freeing it.")
+				_, err := a.ipamClient.ReleaseIPs(ctx, []calinet.IP{addr})
+				if err != nil {
+					logrus.WithError(err).WithField("ip", addr).Error(
+						"Failed to free host IP that we no longer need.")
+				}
+			}
+		}
+	}
+
+	// TODO clean up any NICs that are missing from IPAM?  Shouldn't be possible but would be good to do.
 
 	// Allocate IPs for the new NICs
 	totalIPs := a.localRouteDestsBySubnetID[bestSubnet].Len()
@@ -518,8 +558,6 @@ func (a *awsSubnetManager) resync() error {
 	if numNICsNeeded > 0 {
 		ipamCtx, ipamCancel := context.WithTimeout(context.Background(), 90*time.Second)
 
-		// TODO Using the node name here for consistency with tunnel IPs but I'm not sure if nodeName can change on AWS?
-		handle := fmt.Sprintf("aws-secondary-ifaces-%s", a.nodeName)
 		v4addrs, _, err := a.ipamClient.AutoAssign(ipamCtx, ipam.AutoAssignArgs{
 			Num4:     numNICsNeeded,
 			HandleID: &handle,
