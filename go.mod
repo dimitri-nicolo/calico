@@ -14,7 +14,7 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20210730161404-dccc9fee3e51
 	github.com/prometheus/client_golang v1.10.0
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d
+	github.com/tigera/api v0.0.0-20210811233112-d1fa879b2ae8
 	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
@@ -29,7 +29,7 @@ replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20210810143921-9e79f59fe0c9
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20210809144547-cffdc999709b
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210811230820-827155d122fc
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210811233317-321b8b8c8133
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210806153520-93d0e3e7a0a5
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210810142526-c0796d8f8c82
 
