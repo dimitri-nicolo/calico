@@ -37,9 +37,10 @@ The following user-configured resources are related to Elasticsearch:
 1. Check the TigeraStatus for problems.  
    `kubectl get tigerastatus -o yaml`
 
-### How to apply a valid license
-- If you have an platinum license, log in to Kibana and apply the license.
-- If you have an enterprise license, apply it [using kubectl](https://www.elastic.co/guide/en/cloud-on-k8s/1.3/k8s-licensing.html) in the `tigera-eck-operator` namespace.
+### How to handle expired license
+Starting from {{site.prodname}} v3.7, all {{site.prodname}} features work with Elasticsearch basic license.
+
+If Elasticsearch platinum or enterprise license expires, ECK operator will switch it to basic license, if this doesn't happen automatically and if you notice license expiration error, switch to basic license by calling [the Elasticsearch API.](https://www.elastic.co/guide/en/elasticsearch/reference/current/start-basic.html)
 
 ### How to create a new cluster
 > **Important**: Be aware that removing LogStorage temporarily removes Elasticsearch from your cluster. Features that depend on LogStorage are temporarily unavailable, including the dashboards in the Manager UI. Data ingestion is also temporarily paused, but will resume when the LogStorage is up and running again.
@@ -49,7 +50,7 @@ Follow these steps to create a new Elasticsearch cluster.
 1. (Optional) To delete all current data follow this step. For each PersistentVolume in StorageClass `tigera-elasticsearch` that is currently mounted, set the ReclaimPolicy to `Recycle` or `Delete`.
 1. Export your current LogStorage resource to a file.
 ```bash
-kubectl get logstorage tigera-secure -o yaml --export=true > log-storage.yaml
+kubectl get logstorage tigera-secure -o yaml > log-storage.yaml
 ```
 
 1. Delete logstorage.
@@ -73,8 +74,6 @@ kubectl apply -f log-storage.yaml
 ```bash
 watch kubectl get tigerastatus
 ```
-
-1. (Optional) If you have a valid license, [apply a license](#how-to-apply-a-valid-license).
 
 ### Common problems
 
