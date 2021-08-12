@@ -1892,6 +1892,30 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.ServiceNamespace).To(Equal(""))
 		Expect(update.ServicePortNum).To(Equal(0))
 	})
+
+	It("should properly handle empty endpoint data (external nodeport traffic)", func() {
+		c.LogL7(hd, nil, t, 100)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Tuple).To(Equal(t))
+		Expect(update.SrcEp).To(BeNil())
+		Expect(update.DstEp).To(BeNil())
+		Expect(update.Duration).To(Equal(10))
+		Expect(update.DurationMax).To(Equal(12))
+		Expect(update.BytesReceived).To(Equal(60))
+		Expect(update.BytesSent).To(Equal(40))
+		Expect(update.ResponseCode).To(Equal("200"))
+		Expect(update.Method).To(Equal("GET"))
+		Expect(update.Path).To(Equal("/test/path"))
+		Expect(update.UserAgent).To(Equal("firefox"))
+		Expect(update.Type).To(Equal("http/1.1"))
+		Expect(update.Count).To(Equal(1))
+		Expect(update.Domain).To(Equal("www.test.com"))
+		Expect(update.ServiceName).To(Equal(""))
+		Expect(update.ServiceNamespace).To(Equal(""))
+		Expect(update.ServicePortName).To(Equal(""))
+		Expect(update.ServicePortNum).To(Equal(0))
+	})
 })
 
 // Define a separate metric type that doesn't include the actual stats.  We use this
