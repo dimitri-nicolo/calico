@@ -118,7 +118,7 @@ func (idf *IDInfo) GetAggrEndpointID() v1.GraphNodeID {
 	switch aggrType {
 	case v1.GraphNodeTypeReplicaSet:
 		return v1.GraphNodeID(fmt.Sprintf("%s/%s/%s", aggrType, idf.Endpoint.Namespace, idf.Endpoint.NameAggr))
-	case v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeHosts:
+	case v1.GraphNodeTypeNetwork, v1.GraphNodeTypeNetworkSet:
 		var id string
 		if idf.Endpoint.Namespace == "" {
 			id = fmt.Sprintf("%s/%s", aggrType, idf.Endpoint.NameAggr)
@@ -131,6 +131,14 @@ func (idf *IDInfo) GetAggrEndpointID() v1.GraphNodeID {
 			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, svcGpId))
 		} else if dirId := idf.getDirectionID(); dirId != "" {
 			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, dirId))
+		}
+		return v1.GraphNodeID(id)
+	case v1.GraphNodeTypeHosts:
+		id := fmt.Sprintf("%s/%s", aggrType, idf.Endpoint.NameAggr)
+
+		// If there is a service group then include the service group.
+		if svcGpId := idf.GetServiceGroupID(); svcGpId != "" {
+			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, svcGpId))
 		}
 		return v1.GraphNodeID(id)
 	}
@@ -167,8 +175,6 @@ func (idf *IDInfo) GetEndpointID() v1.GraphNodeID {
 		// (this effectively separates out sources and sinks.
 		if svcGpId := idf.GetServiceGroupID(); svcGpId != "" {
 			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, svcGpId))
-		} else if dirId := idf.getDirectionID(); dirId != "" {
-			return v1.GraphNodeID(fmt.Sprintf("%s;%s", id, dirId))
 		}
 		return v1.GraphNodeID(id)
 	}
