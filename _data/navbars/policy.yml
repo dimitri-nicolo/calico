@@ -38,6 +38,8 @@ section:
       path: /security/namespace-policy
     - title: Service accounts rules
       path: /security/service-accounts
+    - title: Service rules in policy
+      path: /security/service-policy  
     - title: External IPs or networks rules
       path: /security/external-ips-policy
     - title: ICMP/ping rules
