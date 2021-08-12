@@ -901,8 +901,8 @@ github.com/tigera/api v0.0.0-20210805004937-7a70d5252063 h1:ZmzcXEMTQYSOrGCuDMCY
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d h1:fa+3I5Iw7tP9xFuguiQeImGQ5Jv/h2xzi5MTBZcmG8c=
 github.com/tigera/api v0.0.0-20210805201339-a9f52be9823d/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/api v0.0.0-20210811233112-d1fa879b2ae8 h1:sAhlzGxyhTmEDMvFHBF6MCeLQUBE+f1zpTrjc66MliY=
-github.com/tigera/api v0.0.0-20210811233112-d1fa879b2ae8/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
+github.com/tigera/api v0.0.0-20210812172217-abee4d8b0c71 h1:E+/XS+21CHA/+SS/4j4GB9k+d/zLhste6KO8Z8kXf1A=
+github.com/tigera/api v0.0.0-20210812172217-abee4d8b0c71/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/apiserver v0.0.0-20210806154205-f8c729897436 h1:lHCmPE6PK+yYIph3vn+ZnaiMBodzR5WHUushFDkPdr0=
 github.com/tigera/apiserver v0.0.0-20210806154205-f8c729897436/go.mod h1:e7ItahYB7etqwWaxhYWdk1ohGsty3wlyEwonthllFfs=
 github.com/tigera/compliance v0.0.0-20210812170245-f7d9c05fbc67 h1:CWysCQIetRYHQXS5BNACKLhpWuJc/G+tyup1pdCcMPs=
