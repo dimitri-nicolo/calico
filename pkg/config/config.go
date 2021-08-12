@@ -19,15 +19,17 @@ type Config struct {
 	HTTPSKey  string `default:"/certs/https/tls.key" split_words:"true"`
 	LogLevel  string `default:"INFO" split_words:"true"`
 
-	// Dex settings for authentication.
-	DexEnabled        bool   `default:"false" split_words:"true"`
-	DexIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
-	DexClientID       string `default:"tigera-manager" split_words:"true"`
-	DexJwksUrl        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
-	DexUsernameClaim  string `default:"email" split_words:"true"`
-	DexGroupsClaim    string `split_words:"true"`
-	DexUsernamePrefix string `split_words:"true"`
-	DexGroupsPrefix   string `split_words:"true"`
+	// Dex settings
+	DexEnabled      bool   `default:"false" split_words:"true"`
+
+	// OIDC Authentication settings.
+	OIDCAuthJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
+	OIDCAuthIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
+	OIDCAuthClientID       string `default:"tigera-manager" split_words:"true"`
+	OIDCAuthUsernameClaim  string `default:"email" split_words:"true"`
+	OIDCAuthUsernamePrefix string `split_words:"true"`
+	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
+	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
 	// Multi-cluster settings
 	MultiClusterForwardingCA       string `default:"/manager-tls/cert"`

@@ -83,17 +83,18 @@ func mustGetAuthenticator(cfg *config.Config) authentication.Authenticator {
 	}
 
 	if cfg.DexEnabled {
+		log.Debug("Configuring Dex for authentication")
 		opts := []lmaauth.DexOption{
-			lmaauth.WithGroupsClaim(cfg.DexGroupsClaim),
-			lmaauth.WithJWKSURL(cfg.DexJwksUrl),
-			lmaauth.WithUsernamePrefix(cfg.DexUsernamePrefix),
-			lmaauth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
 
 		dex, err := lmaauth.NewDexAuthenticator(
-			cfg.DexIssuer,
-			cfg.DexClientID,
-			cfg.DexUsernameClaim,
+			cfg.OIDCAuthIssuer,
+			cfg.OIDCAuthClientID,
+			cfg.OIDCAuthUsernameClaim,
 			opts...)
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")

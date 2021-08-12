@@ -66,6 +66,7 @@ func (auth *Auth) Authenticate(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		}
 
 		if len(userName) != 0 {
+			log.Debug("Will check if the service account is allowed to impersonate")
 			// build resource attributes needed to perform authorization for impersonation
 			var resAttributes = auth.buildResourceAttributesForImpersonation(userName, groups, extras)
 			// authorize impersonation for user, service accounts, groups, extras

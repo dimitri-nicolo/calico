@@ -16,7 +16,7 @@ type state struct {
 // Health is a health handler that will return 200 OK status code and a json response
 // on GET request. A 404 FileNotFound will be returned if other method is used
 func Health(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
+	log.Tracef("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
 	var s = state{Status: "Ok"}
 
 	switch r.Method {
