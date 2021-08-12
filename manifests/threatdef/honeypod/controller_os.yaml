@@ -23,7 +23,6 @@ rules:
   - apiGroups: ["crd.projectcalico.org"]
     resources: ["licensekeys"]
     verbs: ["list","watch", "get"]
-
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -74,7 +73,7 @@ spec:
         - name: ELASTIC_SCHEME
           value: https
         - name: ELASTIC_HOST
-          value: tigera-secure-es-http.tigera-elasticsearch.svc
+          value: tigera-secure-es-gateway-http.tigera-elasticsearch.svc
         - name: ELASTIC_PORT
           value: "9200"
         - name: ELASTIC_SSL_VERIFY
@@ -126,7 +125,7 @@ spec:
           items:
           - key: tls.crt
             path: ca.pem
-          secretName: tigera-secure-es-http-certs-public
+          secretName: tigera-secure-es-gateway-http-certs-public
       - name: pcap
         hostPath:
           path: /var/log/calico/pcap/
@@ -154,6 +153,13 @@ spec:
       ports:
       - 9200
   - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: projectcalico.org/name == 'tigera-elasticsearch'
+      selector: k8s-app == 'tigera-secure-es-gateway'
+      ports:
+      - 5554
+  - action: Allow
     protocol: UDP
     destination:
       namespaceSelector: projectcalico.org/name == 'kube-system'
@@ -178,7 +184,6 @@ spec:
         - '443'
         - '6443'
         - '12388'
-
 ---
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
