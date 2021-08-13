@@ -560,6 +560,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
+	var awsTableIndexes []int
+	if config.AWSSecondaryInterfacesEnabled {
+		// FIXME allocate these on demand or at least allocate the right number for the number of possible ENIs.
+		for i := 0; i < 16; i++ {
+			rti, err := config.RouteTableManager.GrabIndex()
+			if err != nil {
+				logrus.WithError(err).Panic("Failed to allocate route table index for AWS subnet manager.")
+			}
+			awsTableIndexes = append(awsTableIndexes, rti)
+		}
+	}
+
 	if config.EgressIPEnabled {
 		// If IPIP or VXLAN is enabled, MTU of egress.calico device should be 50 bytes less than
 		// MTU of IPIP or VXLAN device. MTU of the VETH device of a workload should be set to
@@ -1050,21 +1062,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.RegisterManager(captureManager)
 
 	if config.AWSSecondaryInterfacesEnabled {
-		// FIXME allocate these on demand or at least allocate the right number for the number of possible ENIs.
-		var routeTableIndexes []int
-		for i:=0; i<16; i++ {
-			rti, err := config.RouteTableManager.GrabIndex()
-			if err != nil {
-				logrus.WithError(err).Panic("Failed to allocate route table index for AWS subnet manager.")
-			}
-			routeTableIndexes = append(routeTableIndexes, rti)
-		}
 		awsSubnetManager := NewAWSSubnetManager(
 			config.HealthAggregator,
 			config.IPAMClient,
 			config.KubeClientSet,
 			config.FelixHostname,
-			routeTableIndexes,
+			awsTableIndexes,
 			dp.config,
 			dp.loopSummarizer,
 		)
