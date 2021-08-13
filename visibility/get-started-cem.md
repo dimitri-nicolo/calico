@@ -35,6 +35,24 @@ The {{site.prodname}} Manager is a web application for viewing and editing tiere
 
 {{site.prodname}} Manager supports industry-standard user authentication methods (token, OIDC, OAuth, and basic) to configure user logins. To access resources, {{site.prodname}} uses standard Kubernetes-based authentication with the standard Kubernetes RBAC roles and role-bindings. Admins can create fine-grained access control to {{site.prodname}} and Kubernetes resources and actions (CRUD) to promote self-service.  
 
+### Quick tour of Manager UI
+
+#### Service graph
+
+The Service graph provides a point-to-point, topographical representation of all traffic within your cluster. It allows DevOps, SREs, and platform operators to gain a rapid understanding of applications and services in their deployment. Highlights include:
+
+- Select a node or edge to display details of the flow activity on the right-side panel, while automatically filtering and displaying source raw flow log data on the bottom panel 
+- View details of flows and relationships between namespaces, services, and deployments 
+- Create layers to manage scale by grouping resources in meaningful ways (for example, monitoring, infrastructure, storage, networking). Then, save the group to a view, and manage views with the show/hide toggle.
+
+![service-graph]({{site.baseurl}}/images/service-graph.png)
+
+
+**Quick demo: 3:53 MINs**
+
+<iframe width="360" height="115" src="https://www.youtube.com/embed/s80Tc8MYxeI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
 #### Policy dashboard: workloads, policies, and access guardrails made visible
 
 **Sound familiar?**
@@ -72,6 +90,10 @@ Kubernetes network connectivity is difficult to triage and debug in security wor
 The Flow Visualizer lets you quickly drill down and pinpoint which policies are allowing and denying traffic between their services.
 
 ![flow-viz-red]({{site.baseurl}}/images/flow-viz-red.png)
+
+**3:09 MINS**
+
+<iframe width="260" height="127" src="https://www.youtube.com/embed/0vXdMDJsTu0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 #### Threat intelligence feeds
 
