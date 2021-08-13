@@ -4,9 +4,6 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
-
 ## Big picture
 
 Deploy Envoy and use {{site.prodname}} L7 logs to monitor application activity.
@@ -41,10 +38,9 @@ L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 
 **Limitations**
 
-* Traffic selection for L7 metric collection is limited only to ClusterIPs.
-* L7 log collection is not supported for Nodeport type services and host-network pod backend services (Ex. kubernetes service in the default namespace).
-* Pods accessing itself through ClusterIPs are not supported. 
-* When selecting and deselecting traffic for L7 log collection, active connections may be disrupted
+* L7 log collection is not supported for host-network pod backend services (Ex. kubernetes service in the default namespace).
+* When selecting and deselecting traffic for L7 log collection, active connections may be disrupted.
+* On EKS clusters, `eth0` must be the main network interface.
 
 **Required**
 
