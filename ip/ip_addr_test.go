@@ -15,6 +15,8 @@
 package ip_test
 
 import (
+	"fmt"
+
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
 
 	. "github.com/projectcalico/felix/ip"
@@ -50,6 +52,25 @@ var _ = DescribeTable("IpAddr",
 		0, 0, 0xbe, 0xef},
 		"011011011110101011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001011111011101111",
 	),
+)
+
+var _ = DescribeTable("Addr addition",
+	func(addrStr string, n int, expected string) {
+		addr := FromString(addrStr)
+		out := addr.Add(n)
+		exp := FromString(expected)
+		Expect(out).To(Equal(exp), fmt.Sprintf("%s + %v should equal %s", addrStr, n, expected))
+		sub := out.Add(-n)
+		Expect(sub).To(Equal(addr), fmt.Sprintf("%s - %v should equal %s", expected, n, addrStr))
+	},
+	Entry("IPv4 + 0", "10.0.0.1", 0, "10.0.0.1"),
+	Entry("IPv4 + 1", "10.0.0.1", 1, "10.0.0.2"),
+	Entry("IPv4 + 256", "10.0.0.1", 256, "10.0.1.1"),
+	Entry("IPv4 + 255", "10.0.0.1", 255, "10.0.1.0"),
+	Entry("IPv6 + 0", "::1", 0, "::1"),
+	Entry("IPv6 + 1", "::1", 1, "::2"),
+	Entry("IPv6 + 255", "::1", 255, "::100"),
+	Entry("IPv6 ::1:ffff:ffff:ffff + 1", "::1:ffff:ffff:ffff", 1, "::2:0:0:0"),
 )
 
 var _ = DescribeTable("CIDR",
