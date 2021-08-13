@@ -1,3 +1,4 @@
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 package policyrec_test
 
 import (
