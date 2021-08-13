@@ -7,6 +7,9 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_PROMETHEUS_SERVICE_PROJECT_ID)
 PROMETHEUS_SERVICE_IMAGE ?=tigera/prometheus-service
 BUILD_IMAGES             ?=$(PROMETHEUS_SERVICE_IMAGE)
 DEV_REGISTRIES           ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES       ?= quay.io
+RELEASE_BRANCH_PREFIX    ?= release-calient
+DEV_TAG_SUFFIX           ?= calient-0.dev
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
