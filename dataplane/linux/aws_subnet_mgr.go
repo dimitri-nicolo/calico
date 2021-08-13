@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -944,8 +945,9 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 
 func (a *awsSubnetManager) getOrAllocRoutingTable(tableIndex int, ifaceName string) routeTable {
 	if _, ok := a.routeTables[tableIndex]; !ok {
+		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
 		a.routeTables[tableIndex] = routetable.New(
-			[]string{"^" + ifaceName + "$", routetable.InterfaceNone},
+			[]string{"^" + regexp.QuoteMeta(ifaceName) + "$", routetable.InterfaceNone},
 			4,
 			false,
 			a.dpConfig.NetlinkTimeout,
