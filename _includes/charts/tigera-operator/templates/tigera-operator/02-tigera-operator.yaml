@@ -78,6 +78,7 @@ spec:
           command:
             - calicoctl
           args:
+            - --allow-version-mismatch
             - create
             - --skip-exists
             - --skip-empty
