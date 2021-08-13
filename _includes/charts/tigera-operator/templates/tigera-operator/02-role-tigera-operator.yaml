@@ -99,6 +99,7 @@ rules:
     resources:
     - felixconfigurations
     verbs:
+    - create
     - patch
     - list
     - get
