@@ -42,19 +42,19 @@ type awsSubnetManager struct {
 	awsGatewayAddr             ip.Addr
 	routeTableIndexByIfaceName map[string]int
 	freeRouteTableIndexes      []int
+	routeTables map[int]routeTable
+	routeRules *routerule.RouteRules
+	lastRules   []*routerule.Rule
 
 	resyncNeeded bool
 
+	nodeName   string
+	dpConfig    Config
+
 	healthAgg  *health.HealthAggregator
+	opRecorder  logutils.OpRecorder
 	ipamClient ipam.Interface
 	k8sClient  *kubernetes.Clientset
-	nodeName   string
-	routeRules *routerule.RouteRules
-
-	dpConfig    Config
-	opRecorder  logutils.OpRecorder
-	routeTables map[int]routeTable
-	lastRules   []*routerule.Rule
 }
 
 const (
@@ -116,6 +116,8 @@ func NewAWSSubnetManager(
 
 		routeTableIndexByIfaceName: map[string]int{},
 		freeRouteTableIndexes:      routeTableIndexes,
+		awsNICsByID: nil , // Set on first resync
+		routeTables: map[int]routeTable{},
 
 		routeRules: rules,
 		dpConfig:   dpConfig,
