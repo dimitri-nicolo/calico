@@ -905,7 +905,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 		{
 			routes := []routetable.Target{
 				{
-					Type: routetable.TargetTypeOnLink,
+					Type: routetable.TargetTypeGlobalUnicast,
 					CIDR: a.awsGatewayAddr.AsCIDR(),
 				},
 				{
