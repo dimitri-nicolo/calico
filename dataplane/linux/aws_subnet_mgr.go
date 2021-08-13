@@ -6,15 +6,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/felix/routerule"
+	"github.com/projectcalico/felix/routetable"
 	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/vishvananda/netlink"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/libcalico-go/lib/health"
@@ -32,12 +38,23 @@ type awsSubnetManager struct {
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
 
+	awsNICsByID                map[string]ec2types.NetworkInterface
+	awsGatewayAddr             ip.Addr
+	routeTableIndexByIfaceName map[string]int
+	freeRouteTableIndexes      []int
+
 	resyncNeeded bool
 
 	healthAgg  *health.HealthAggregator
 	ipamClient ipam.Interface
 	k8sClient  *kubernetes.Clientset
 	nodeName   string
+	routeRules *routerule.RouteRules
+
+	dpConfig    Config
+	opRecorder  logutils.OpRecorder
+	routeTables map[int]routeTable
+	lastRules   []*routerule.Rule
 }
 
 const (
@@ -50,6 +67,9 @@ func NewAWSSubnetManager(
 	ipamClient ipam.Interface,
 	k8sClient *kubernetes.Clientset,
 	nodeName string,
+	routeTableIndexes []int,
+	dpConfig Config,
+	opRecorder logutils.OpRecorder,
 ) *awsSubnetManager {
 	healthAgg.RegisterReporter(healthNameSubnetCapacity, &health.HealthReport{
 		Ready: true,
@@ -68,6 +88,22 @@ func NewAWSSubnetManager(
 		Live:  true,
 	})
 
+	rules, err := routerule.New(
+		4,
+		101,
+		set.FromArray(routeTableIndexes),
+		routerule.RulesMatchSrcFWMarkTable,
+		routerule.RulesMatchSrcFWMark,
+		dpConfig.NetlinkTimeout,
+		func() (routerule.HandleIface, error) {
+			return netlink.NewHandle(syscall.NETLINK_ROUTE)
+		},
+		opRecorder,
+	)
+	if err != nil {
+		logrus.WithError(err).Panic("Failed to init routing rules manager.")
+	}
+
 	sm := &awsSubnetManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
 		poolIDsBySubnetID:         map[string]set.Set{},
@@ -77,6 +113,13 @@ func NewAWSSubnetManager(
 		ipamClient:                ipamClient,
 		k8sClient:                 k8sClient,
 		nodeName:                  nodeName,
+
+		routeTableIndexByIfaceName: map[string]int{},
+		freeRouteTableIndexes:      routeTableIndexes,
+
+		routeRules: rules,
+		dpConfig:   dpConfig,
+		opRecorder: opRecorder,
 	}
 	sm.queueResync("first run")
 	return sm
@@ -201,32 +244,34 @@ func (a *awsSubnetManager) CompleteDeferredWork() error {
 		return nil
 	}
 
-	var resyncErr error
-	for attempt := 0 ; attempt < 3; attempt++ {
-		resyncErr = a.resync()
-		if errors.Is(resyncErr, errResyncNeeded) {
+	var awsResyncErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		awsResyncErr = a.resyncWithAWS()
+		if errors.Is(awsResyncErr, errResyncNeeded) {
 			// Expected retry needed for some more complex cases...
 			logrus.Info("Restarting resync after modifying AWS state.")
 			continue
-		} else if resyncErr != nil {
-			logrus.WithError(resyncErr).Warn("Failed to resync AWS subnet state.")
+		} else if awsResyncErr != nil {
+			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
 			continue
 		}
 		a.resyncNeeded = false
 		logrus.Info("Resync completed successfully.")
 		break
 	}
+	if awsResyncErr != nil {
+		return awsResyncErr
+	}
 
-	return resyncErr
+	return a.resyncWithDataplane()
 }
 
 var errResyncNeeded = errors.New("resync needed")
 
-func (a *awsSubnetManager) resync() error {
+func (a *awsSubnetManager) resyncWithAWS() error {
 	// TODO Arbitrary timeout for whole operation.
 	// TODO Split this up into methods.
 	// TODO Decouple the AWS resync from the main goroutine.  AWS could be slow or throttle us.  don't want to hold others up.
-	// TODO Set up per-ENI routing.
 
 	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
@@ -247,7 +292,7 @@ func (a *awsSubnetManager) resync() error {
 
 	// Collect the current state of this instance and our NICs according to AWS.
 	myNICs, err := ec2Client.GetMyEC2NetworkInterfaces(ctx)
-	secondaryNICsByID := map[string]ec2types.NetworkInterface{}
+	a.awsNICsByID = map[string]ec2types.NetworkInterface{}
 	nicIDsBySubnet := map[string][]string{}
 	nicIDByIP := map[ip.CIDR]string{}
 	nicIDByPrimaryIP := map[ip.CIDR]string{}
@@ -277,7 +322,7 @@ func (a *awsSubnetManager) resync() error {
 		// Found one of our managed interfaces; collect its IPs.
 		logCtx := logrus.WithField("id", *n.NetworkInterfaceId)
 		logCtx.Debug("Found Calico NIC")
-		secondaryNICsByID[*n.NetworkInterfaceId] = n
+		a.awsNICsByID[*n.NetworkInterfaceId] = n
 		nicIDsBySubnet[*n.SubnetId] = append(nicIDsBySubnet[*n.SubnetId], *n.NetworkInterfaceId)
 		for _, addr := range n.PrivateIpAddresses {
 			if addr.PrivateIpAddress == nil {
@@ -335,7 +380,7 @@ func (a *awsSubnetManager) resync() error {
 
 	// Scan for NICs that are in a subnet that no longer matches an IP pool.
 	nicsToRelease := set.New()
-	for nicID, nic := range secondaryNICsByID {
+	for nicID, nic := range a.awsNICsByID {
 		if _, ok := a.poolIDsBySubnetID[*nic.SubnetId]; ok {
 			continue
 		}
@@ -415,7 +460,7 @@ func (a *awsSubnetManager) resync() error {
 			})
 			if err != nil {
 				logrus.WithError(err).WithFields(logrus.Fields{
-					"nicID": nicID,
+					"nicID":    nicID,
 					"attachID": attachID,
 				}).Error("Failed to detach unneeded NIC")
 			}
@@ -426,7 +471,7 @@ func (a *awsSubnetManager) resync() error {
 			})
 			if err != nil {
 				logrus.WithError(err).WithFields(logrus.Fields{
-					"nicID": nicID,
+					"nicID":    nicID,
 					"attachID": attachID,
 				}).Error("Failed to delete unneeded NIC")
 			}
@@ -456,7 +501,7 @@ func (a *awsSubnetManager) resync() error {
 			},
 			{
 				Name:   stringPointer("status"),
-				Values: []string{"available" /* Not attached to the instance */ },
+				Values: []string{"available" /* Not attached to the instance */},
 			},
 		},
 	})
@@ -685,6 +730,28 @@ func (a *awsSubnetManager) resync() error {
 		logrus.WithFields(logrus.Fields{"nicID": nicID, "addrs": ipAddrs}).Info("Assigned IPs to secondary NIC.")
 	}
 
+	// Get the details of our subnet.
+	{
+		dso, err := ec2Client.EC2Svc.(*ec2.Client).DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+			SubnetIds: []string{bestSubnet},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to read details of AWS subnet: %w", err)
+		}
+		if len(dso.Subnets) == 0 {
+			return fmt.Errorf("our subnet not found id=%s", bestSubnet)
+		}
+		ourSubnet := dso.Subnets[0]
+		if ourSubnet.CidrBlock == nil {
+			return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
+		}
+		ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
+		if err != nil {
+			return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
+		}
+		a.awsGatewayAddr = ourCIDR.Addr().Add(1)
+	}
+
 	// TODO update k8s Node with capacities
 	// Report health
 
@@ -762,4 +829,158 @@ func (a *awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nic
 	return bestSubnet
 }
 
-var _ Manager = &awsSubnetManager{}
+func (a *awsSubnetManager) resyncWithDataplane() error {
+	// TODO Listen for interface updates
+
+	// Index the AWS NICs on MAC.
+	awsIfacesByMAC := map[string]ec2types.NetworkInterface{}
+	for _, awsNIC := range a.awsNICsByID {
+		if awsNIC.MacAddress == nil {
+			continue
+		}
+		hwAddr, err := net.ParseMAC(*awsNIC.MacAddress)
+		if err != nil {
+			logrus.WithError(err).Error("Failed to parse MAC address of AWS NIC.")
+		}
+		awsIfacesByMAC[hwAddr.String()] = awsNIC
+	}
+
+	// Find all the local NICs and match them up with AWS NICs.
+	ifaces, err := netlink.LinkList()
+	if err != nil {
+		return fmt.Errorf("failed to load local interfaces: %w", err)
+	}
+	var rules []*routerule.Rule
+	for _, iface := range ifaces {
+		ifaceName := iface.Attrs().Name
+		mac := iface.Attrs().HardwareAddr.String()
+		awsNIC, ok := awsIfacesByMAC[mac]
+		if !ok {
+			continue
+		}
+		if awsNIC.NetworkInterfaceId == nil {
+			continue // Very unlikely.
+		}
+		logrus.WithFields(logrus.Fields{
+			"mac":      mac,
+			"name":     ifaceName,
+			"awsNICID": awsNIC.NetworkInterfaceId,
+		}).Debug("Matched local NIC with AWs NIC.")
+
+		// Enable the NIC.
+		err := netlink.LinkSetUp(iface)
+		if err != nil {
+			ifaceName := iface.Attrs().Name
+			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set link up")
+		}
+
+		// For each IP assigned to the NIC, we'll add a routing rule that sends traffic _from_ that IP to
+		// a dedicated routing table for the NIC.
+		routingTableID := a.getOrAllocRoutingTableID(ifaceName)
+
+		for _, privateIP := range awsNIC.PrivateIpAddresses {
+			if privateIP.PrivateIpAddress == nil {
+				continue
+			}
+			cidr, err := ip.ParseCIDROrIP(*privateIP.PrivateIpAddress)
+			if err != nil {
+				logrus.WithField("ip", *privateIP.PrivateIpAddress).Warn("Bad IP from AWS NIC")
+			}
+			rule := routerule.NewRule(4, 101).MatchSrcAddress(cidr.ToIPNet()).GoToTable(routingTableID)
+			rules = append(rules, rule)
+		}
+
+		// Program routes into the NIC-specific routing table.  These work as follows:
+		// - Add a default route via the AWS subnet's gateway.  This is how traffic to the outside world gets
+		//   routed properly.
+		// - Add narrower routes for Calico IP pools that throw the packet back to the main routing tables.
+		//   this is required to make RPF checks pass when traffic arrives from a Calico tunnel going to an
+		//   AWS-networked pod.
+		rt := a.getOrAllocRoutingTable(routingTableID, ifaceName)
+		{
+			routes := []routetable.Target{
+				{
+					Type: routetable.TargetTypeOnLink,
+					CIDR: a.awsGatewayAddr.AsCIDR(),
+				},
+				{
+					Type: routetable.TargetTypeGlobalUnicast,
+					CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
+					GW:   a.awsGatewayAddr,
+				},
+			}
+			rt.SetRoutes(ifaceName, routes)
+		}
+		{
+			var noIFRoutes []routetable.Target
+			for _, pool := range a.poolsByID {
+				if !pool.Masquerade {
+					continue // Assuming that non-masquerade pools are reachable over the main network.
+				}
+				noIFRoutes = append(noIFRoutes, routetable.Target{
+					Type: routetable.TargetTypeThrow,
+					CIDR: ip.MustParseCIDROrIP(pool.Cidr),
+				})
+			}
+			rt.SetRoutes(routetable.InterfaceNone, noIFRoutes)
+		}
+	}
+
+	// TODO Avoid reprogramming all rules every time just to clean up.
+	for _, r := range a.lastRules {
+		a.routeRules.RemoveRule(r)
+	}
+	for _, r := range rules {
+		a.routeRules.SetRule(r)
+	}
+	a.lastRules = rules
+
+	return nil
+}
+
+func (a *awsSubnetManager) getOrAllocRoutingTable(tableIndex int, ifaceName string) routeTable {
+	if _, ok := a.routeTables[tableIndex]; !ok {
+		a.routeTables[tableIndex] = routetable.New(
+			[]string{"^" + ifaceName + "$", routetable.InterfaceNone},
+			4,
+			false,
+			a.dpConfig.NetlinkTimeout,
+			nil,
+			a.dpConfig.DeviceRouteProtocol,
+			true,
+			tableIndex,
+			a.opRecorder,
+		)
+	}
+	return a.routeTables[tableIndex]
+}
+
+func (a *awsSubnetManager) getOrAllocRoutingTableID(ifaceName string) int {
+	if _, ok := a.routeTableIndexByIfaceName[ifaceName]; !ok {
+		a.routeTableIndexByIfaceName[ifaceName] = a.freeRouteTableIndexes[0]
+		a.freeRouteTableIndexes = a.freeRouteTableIndexes[1:]
+	}
+	return a.routeTableIndexByIfaceName[ifaceName]
+}
+
+func (a *awsSubnetManager) releaseRoutingTableID(ifaceName string) {
+	id := a.routeTableIndexByIfaceName[ifaceName]
+	delete(a.routeTableIndexByIfaceName, ifaceName)
+	a.freeRouteTableIndexes = append(a.freeRouteTableIndexes, id)
+}
+
+func (a *awsSubnetManager) GetRouteTableSyncers() []routeTableSyncer {
+	var rts []routeTableSyncer
+	for _, t := range a.routeTables {
+		rts = append(rts, t)
+	}
+	return rts
+}
+
+func (a *awsSubnetManager) GetRouteRules() []routeRules {
+	return []routeRules{a.routeRules}
+}
+
+var _ Manager = (*awsSubnetManager)(nil)
+var _ ManagerWithRouteRules = (*awsSubnetManager)(nil)
+var _ ManagerWithRouteTables = (*awsSubnetManager)(nil)
