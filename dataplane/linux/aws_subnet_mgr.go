@@ -433,6 +433,27 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 		return nil
 	}
 
+	// Record the gateway address of the best subnet.
+	{
+		for _, subnet := range localSubnets {
+			if subnet.SubnetId != nil && *subnet.SubnetId == bestSubnet {
+				ourSubnet := subnet
+				if ourSubnet.CidrBlock == nil {
+					return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
+				}
+				ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
+				if err != nil {
+					return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
+				}
+				addr := ourCIDR.Addr().Add(1)
+				if addr != a.awsGatewayAddr {
+					a.awsGatewayAddr = addr
+					logrus.WithField("addr", a.awsGatewayAddr).Info("Calculated new AWS gateway.")
+				}
+			}
+		}
+	}
+
 	// Release any IPs that are no longer required.
 	ipsToRelease.Iter(func(item interface{}) error {
 		addr := item.(ip.CIDR)
@@ -730,24 +751,6 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 			// TODO What now?
 		}
 		logrus.WithFields(logrus.Fields{"nicID": nicID, "addrs": ipAddrs}).Info("Assigned IPs to secondary NIC.")
-	}
-
-	// Get the details of our subnet.
-	{
-		for _, subnet := range localSubnets {
-			if subnet.SubnetId != nil && *subnet.SubnetId == bestSubnet {
-				ourSubnet := subnet
-				if ourSubnet.CidrBlock == nil {
-					return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
-				}
-				ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
-				if err != nil {
-					return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
-				}
-				a.awsGatewayAddr = ourCIDR.Addr().Add(1)
-				logrus.WithField("addr", a.awsGatewayAddr).Info("Calculated AWS gateway.")
-			}
-		}
 	}
 
 	// TODO update k8s Node with capacities
