@@ -734,24 +734,20 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 
 	// Get the details of our subnet.
 	{
-		dso, err := ec2Client.EC2Svc.(*ec2.Client).DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
-			SubnetIds: []string{bestSubnet},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to read details of AWS subnet: %w", err)
+		for _, subnet := range localSubnets {
+			if subnet.SubnetId != nil && *subnet.SubnetId == bestSubnet {
+				ourSubnet := subnet
+				if ourSubnet.CidrBlock == nil {
+					return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
+				}
+				ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
+				if err != nil {
+					return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
+				}
+				a.awsGatewayAddr = ourCIDR.Addr().Add(1)
+				logrus.WithField("addr", a.awsGatewayAddr).Info("Calculated AWS gateway.")
+			}
 		}
-		if len(dso.Subnets) == 0 {
-			return fmt.Errorf("our subnet not found id=%s", bestSubnet)
-		}
-		ourSubnet := dso.Subnets[0]
-		if ourSubnet.CidrBlock == nil {
-			return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
-		}
-		ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
-		if err != nil {
-			return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
-		}
-		a.awsGatewayAddr = ourCIDR.Addr().Add(1)
 	}
 
 	// TODO update k8s Node with capacities
@@ -833,6 +829,9 @@ func (a *awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nic
 
 func (a *awsSubnetManager) resyncWithDataplane() error {
 	// TODO Listen for interface updates
+	if a.awsGatewayAddr == nil {
+		return nil
+	}
 
 	// Index the AWS NICs on MAC.
 	awsIfacesByMAC := map[string]ec2types.NetworkInterface{}
