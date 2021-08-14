@@ -54,6 +54,16 @@ env:
  - name: AD_train_interval_minutes
    value: "20"
 ```
+
+### Disabling jobs
+Jobs can be disabled. It usually happens if some job creates too many alerts,
+and its configuration requires time for research.
+- **AD_DISABLED_JOBS** - Default: "". By default, all jobs are enabled.
+To disable several jobs, separate job names with `,`. 
+For example: `http_connection_spike,dga`
+
+
+
    
 ### Variables of the Elasticsearch: 
 -   **CLUSTER_NAME** - Default: "cluster". 
