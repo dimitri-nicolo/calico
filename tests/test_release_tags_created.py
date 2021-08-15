@@ -50,6 +50,8 @@ MAPPED_COMPONENTS = {
     'anomaly_detection_jobs': 'anomaly_detection_jobs',
     'elasticsearch-metrics': 'elasticsearch-metrics',
     'packetcapture-api': 'packetcapture-api',
+    'tigera-prometheus-service': 'prometheus-service',
+    'es-gateway': 'es-gateway',
 }
 
 SKIP_COMPONENTS = [

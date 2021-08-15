@@ -71,6 +71,8 @@ EXCLUDED_IMAGES = [
     'anomaly_detection_jobs',
     'elasticsearch-metrics',
     'packetcapture-api',
+    'tigera-prometheus-service',
+    'es-gateway',
 
     # third party images
     'elasticsearch',
