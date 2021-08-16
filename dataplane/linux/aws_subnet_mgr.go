@@ -837,6 +837,7 @@ func (a *awsSubnetManager) calculateBestSubnet(localIPPoolSubnetIDs set.Set, nic
 func (a *awsSubnetManager) resyncWithDataplane() error {
 	// TODO Listen for interface updates
 	if a.awsGatewayAddr == nil {
+		logrus.Info("No AWS gateway address yet.")
 		return nil
 	}
 
@@ -874,7 +875,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			"mac":      mac,
 			"name":     ifaceName,
 			"awsNICID": awsNIC.NetworkInterfaceId,
-		}).Debug("Matched local NIC with AWs NIC.")
+		}).Info("Matched local NIC with AWs NIC.")
 
 		// Enable the NIC.
 		err := netlink.LinkSetUp(iface)
@@ -888,48 +889,48 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			addrs, err := netlink.AddrList(iface, netlink.FAMILY_V4)
 			if err != nil {
 				logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
-				goto skipAddr
-			}
-			found := false
-			addrStr := *awsNIC.PrivateIpAddress
-			newAddr, err := netlink.ParseAddr(addrStr + "/" + fmt.Sprint(a.awsSubnet.Prefix()))
-			if err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{
-					"name": ifaceName,
-					"addr": addrStr,
-				}).Error("Failed to parse address.")
-			}
-			newAddr.Scope = int(netlink.SCOPE_LINK)
 
-			for _, a := range addrs {
-				if a.Equal(*newAddr) {
-					found = true
-					continue
-				}
-				err := netlink.AddrDel(iface, &a)
+			} else {
+				found := false
+				addrStr := *awsNIC.PrivateIpAddress
+				newAddr, err := netlink.ParseAddr(addrStr + "/" + fmt.Sprint(a.awsSubnet.Prefix()))
 				if err != nil {
 					logrus.WithError(err).WithFields(logrus.Fields{
 						"name": ifaceName,
-						"addr": a,
-					}).Error("Failed to clean up old address.")
+						"addr": addrStr,
+					}).Error("Failed to parse address.")
 				}
-			}
-			if !found {
-				err := netlink.AddrAdd(iface, newAddr)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{
-						"name": ifaceName,
-						"addr": newAddr,
-					}).Error("Failed to add new address.")
-				} else {
-					logrus.WithError(err).WithFields(logrus.Fields{
-						"name": ifaceName,
-						"addr": newAddr,
-					}).Info("Added address.")
+				newAddr.Scope = int(netlink.SCOPE_LINK)
+
+				for _, a := range addrs {
+					if a.Equal(*newAddr) {
+						found = true
+						continue
+					}
+					err := netlink.AddrDel(iface, &a)
+					if err != nil {
+						logrus.WithError(err).WithFields(logrus.Fields{
+							"name": ifaceName,
+							"addr": a,
+						}).Error("Failed to clean up old address.")
+					}
+				}
+				if !found {
+					err := netlink.AddrAdd(iface, newAddr)
+					if err != nil {
+						logrus.WithError(err).WithFields(logrus.Fields{
+							"name": ifaceName,
+							"addr": newAddr,
+						}).Error("Failed to add new address.")
+					} else {
+						logrus.WithError(err).WithFields(logrus.Fields{
+							"name": ifaceName,
+							"addr": newAddr,
+						}).Info("Added address.")
+					}
 				}
 			}
 		}
-	skipAddr:
 
 		// For each IP assigned to the NIC, we'll add a routing rule that sends traffic _from_ that IP to
 		// a dedicated routing table for the NIC.
@@ -944,6 +945,10 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			if privateIP.PrivateIpAddress == nil {
 				continue
 			}
+			logrus.WithFields(logrus.Fields{
+				"addr": *privateIP.PrivateIpAddress,
+				"rtID": routingTableID,
+			}).Info("Adding routing rule.")
 			cidr, err := ip.ParseCIDROrIP(*privateIP.PrivateIpAddress)
 			if err != nil {
 				logrus.WithField("ip", *privateIP.PrivateIpAddress).Warn("Bad IP from AWS NIC")
