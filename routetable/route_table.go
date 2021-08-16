@@ -753,7 +753,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 				logCxt.WithError(err).Debug("Failed to add route on first attempt, retrying...")
 			} else {
 				logCxt.WithError(err).WithFields(log.Fields{
-					"route": route,
+					"route":  route,
 					"target": target,
 				}).Warn("Failed to add route")
 			}

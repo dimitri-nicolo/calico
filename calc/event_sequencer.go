@@ -552,8 +552,8 @@ func (buf *EventSequencer) flushIPPoolUpdates() {
 		buf.Callback(&proto.IPAMPoolUpdate{
 			Id: cidrToIPPoolID(key),
 			Pool: &proto.IPAMPool{
-				Cidr:       pool.CIDR.String(),
-				Masquerade: pool.Masquerade,
+				Cidr:        pool.CIDR.String(),
+				Masquerade:  pool.Masquerade,
 				AwsSubnetId: pool.AWSSubnetID,
 			},
 		})

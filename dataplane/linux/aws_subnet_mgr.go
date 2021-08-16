@@ -14,15 +14,16 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/vishvananda/netlink"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
 	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/vishvananda/netlink"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
@@ -41,6 +42,7 @@ type awsSubnetManager struct {
 
 	awsNICsByID                map[string]ec2types.NetworkInterface
 	awsGatewayAddr             ip.Addr
+	awsSubnet                  ip.CIDR
 	routeTableIndexByIfaceName map[string]int
 	freeRouteTableIndexes      []int
 	routeTables                map[int]routeTable
@@ -446,6 +448,7 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 				if err != nil {
 					return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
 				}
+				a.awsSubnet = ourCIDR
 				addr := ourCIDR.Addr().Add(1)
 				if addr != a.awsGatewayAddr {
 					a.awsGatewayAddr = addr
@@ -888,7 +891,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			}
 			found := false
 			addrStr := *awsNIC.PrivateIpAddress
-			newAddr, err := netlink.ParseAddr(addrStr + "/32")
+			newAddr, err := netlink.ParseAddr(addrStr + "/" + fmt.Sprint(a.awsSubnet.Prefix()))
 			if err != nil {
 				logrus.WithError(err).WithFields(logrus.Fields{
 					"name": ifaceName,

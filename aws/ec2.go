@@ -284,7 +284,7 @@ func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]types.Subnet, erro
 				Values: []string{*inst.Placement.AvailabilityZone},
 			},
 			{
-				Name: aws.String("vpc-id"),
+				Name:   aws.String("vpc-id"),
 				Values: []string{*inst.VpcId},
 			},
 		},
@@ -317,8 +317,8 @@ func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*types.InstanceTypeI
 
 type NetworkCapabilities struct {
 	MaxNetworkInterfaces int
-	MaxIPv4PerInterface int
-	MaxIPv6PerInterface int
+	MaxIPv4PerInterface  int
+	MaxIPv6PerInterface  int
 }
 
 func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkCapabilities, err error) {

@@ -23,12 +23,13 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
+
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -48,6 +49,7 @@ import (
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/wireguard"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/security"
 )
 
@@ -453,7 +455,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 
-			IPAMClient: ipamClient,
+			IPAMClient:    ipamClient,
 			KubeClientSet: k8sClientSet,
 
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
