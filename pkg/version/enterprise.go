@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-// +build !cloud
+// +build !tesla
 
 package version
 

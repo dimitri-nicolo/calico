@@ -31,6 +31,20 @@ ES_GATEWAY_ENABLE_KIBANA_MUTUAL_TLS | false | Flag for enabling mTLS with Kibana
 
 There are two variants of es-gateway Cloud and Enterprise. To build or deploy the Cloud version preprend `TESLA=true` to make commands.
 
+To add code that only targets one of the variants include the following at the top of the .go file:
+
+Cloud only:
+```
+// +build tesla
+```
+
+Enterprise only:
+```
+// +build !tesla
+```
+
+Note that this only works at the file-level, meaning you can only include or exclude entire files.
+
 An example of using build tags to write variant specific code can be found in:
 - [pkg/version/version.go](pkg/version/version.go)
 - [pkg/version/cloud.go](pkg/version/cloud.go)

@@ -19,9 +19,9 @@ DEV_REGISTRIES        ?= gcr.io/unique-caldron-775/cnx
 
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
-	BUILD_TAGS            ?= -tags cloud
-	RELEASE_BRANCH_PREFIX = release-cloud
-	DEV_TAG_SUFFIX        = cloud-0.dev
+	BUILD_TAGS            ?= -tags tesla
+	RELEASE_BRANCH_PREFIX = release-tesla
+	DEV_TAG_SUFFIX        = tesla-0.dev
 	IMAGETAG_PREFIX       ?= tesla
 endif
 
