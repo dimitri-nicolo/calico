@@ -39,7 +39,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210816171142-bcd182b3b451
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210816203422-ae8f6e430914
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
