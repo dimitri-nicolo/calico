@@ -151,6 +151,8 @@ func (t Target) RouteScope() netlink.Scope {
 		return netlink.SCOPE_UNIVERSE
 	case TargetTypeNoEncap:
 		return netlink.SCOPE_UNIVERSE
+	case TargetTypeVXLAN:
+		return netlink.SCOPE_UNIVERSE
 	case TargetTypeThrow:
 		return netlink.SCOPE_UNIVERSE
 	case TargetTypeBlackhole:
@@ -750,7 +752,10 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 			if firstTry {
 				logCxt.WithError(err).Debug("Failed to add route on first attempt, retrying...")
 			} else {
-				logCxt.WithError(err).WithField("route", route).Warn("Failed to add route")
+				logCxt.WithError(err).WithFields(log.Fields{
+					"route": route,
+					"target": target,
+				}).Warn("Failed to add route")
 			}
 			updatesFailed = true
 		} else {
