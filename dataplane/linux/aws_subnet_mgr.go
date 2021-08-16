@@ -43,17 +43,17 @@ type awsSubnetManager struct {
 	awsGatewayAddr             ip.Addr
 	routeTableIndexByIfaceName map[string]int
 	freeRouteTableIndexes      []int
-	routeTables map[int]routeTable
-	routeRules *routerule.RouteRules
-	lastRules   []*routerule.Rule
+	routeTables                map[int]routeTable
+	routeRules                 *routerule.RouteRules
+	lastRules                  []*routerule.Rule
 
 	resyncNeeded bool
 
-	nodeName   string
-	dpConfig    Config
+	nodeName string
+	dpConfig Config
 
 	healthAgg  *health.HealthAggregator
-	opRecorder  logutils.OpRecorder
+	opRecorder logutils.OpRecorder
 	ipamClient ipam.Interface
 	k8sClient  *kubernetes.Clientset
 }
@@ -117,8 +117,8 @@ func NewAWSSubnetManager(
 
 		routeTableIndexByIfaceName: map[string]int{},
 		freeRouteTableIndexes:      routeTableIndexes,
-		awsNICsByID: nil , // Set on first resync
-		routeTables: map[int]routeTable{},
+		awsNICsByID:                nil, // Set on first resync
+		routeTables:                map[int]routeTable{},
 
 		routeRules: rules,
 		dpConfig:   dpConfig,
@@ -863,7 +863,8 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 		if !ok {
 			continue
 		}
-		if awsNIC.NetworkInterfaceId == nil {
+		if awsNIC.NetworkInterfaceId == nil || awsNIC.PrivateIpAddress == nil {
+			logrus.WithField("nic", awsNIC).Warn("AWS NIC missing ID or address?")
 			continue // Very unlikely.
 		}
 		logrus.WithFields(logrus.Fields{
@@ -877,6 +878,45 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 		if err != nil {
 			ifaceName := iface.Attrs().Name
 			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set link up")
+		}
+
+		{
+			// Make sure the interface has its primary IP.  This is needed for ARP to work.
+			addrs, err := netlink.AddrList(iface, 4)
+			if err != nil {
+				logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
+			}
+			found := false
+			addrStr := *awsNIC.PrivateIpAddress
+			newAddr, err := netlink.ParseAddr(addrStr + "/32")
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"name": ifaceName,
+					"addr": addrStr,
+				}).Error("Failed to parse address.")
+			}
+			newAddr.Scope = int(netlink.SCOPE_LINK)
+
+			for _, a := range addrs {
+				if a.Equal(*newAddr) {
+					found = true
+					continue
+				}
+				err := netlink.AddrDel(iface, &a)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{
+						"name": ifaceName,
+						"addr": a,
+					}).Error("Failed to clean up old address.")
+				}
+			}
+			if !found {
+				err := netlink.AddrAdd(iface, newAddr)
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"name": ifaceName,
+					"addr": newAddr,
+				}).Error("Failed to add new address.")
+			}
 		}
 
 		// For each IP assigned to the NIC, we'll add a routing rule that sends traffic _from_ that IP to
