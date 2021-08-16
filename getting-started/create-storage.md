@@ -40,8 +40,11 @@ Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-st
 Determine the storage types that are available on your cluster. If you are using dynamic provisioning, verify it is supported.
 If you are using local disks, you may find the {% include open-new-window.html text='sig-storage local static provisioner' url='https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner' %} useful. It creates and manages PersistentVolumes by watching for disks mounted in a configured directory.
 
-  > **Note**: Do not use the host path storage provisioner. This provisioner is not suitable for production and results in scalability issues, instability, and data loss.
-{: .alert .alert-info}
+  > **Warning**: Do not use the host path storage provisioner. This provisioner is not suitable for production and results in scalability issues, instability, and data loss.
+{: .alert .alert-warning}
+
+  > **Warning**: Do not use shared network file systems, such as AWS' EFS or Azure's azure-file. These file systems may result in decreases of performance and data loss.
+{: .alert .alert-warning}
 
 ### How to
 
@@ -94,15 +97,11 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: tigera-elasticsearch
-provisioner: kubernetes.io/azure-file
-mountOptions:
-  - uid=1000
-  - gid=1000
-  - mfsymlinks
-  - nobrl
-  - cache=none
+provisioner: kubernetes.io/azure-disk
 parameters:
-  skuName: Standard_LRS
+  cachingmode: ReadOnly
+  kind: Managed
+  storageaccounttype: StandardSSD_LRS
 reclaimPolicy: Retain
 volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
