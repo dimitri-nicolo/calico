@@ -9,6 +9,10 @@ type GraphEdgeID struct {
 	DestNodeID   GraphNodeID `json:"dest_node_id"`
 }
 
+func (e GraphEdgeID) String() string {
+	return fmt.Sprintf("Edge(%s -> %s)", e.SourceNodeID, e.DestNodeID)
+}
+
 type GraphEdge struct {
 	// The graph edge ID.
 	ID GraphEdgeID `json:"id"`
@@ -49,5 +53,5 @@ func (e *GraphEdge) IncludeStats(ts []GraphStats) {
 }
 
 func (e GraphEdge) String() string {
-	return fmt.Sprintf("Edge(%s -> %s)", e.ID.SourceNodeID, e.ID.DestNodeID)
+	return e.ID.String()
 }

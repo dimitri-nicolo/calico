@@ -2,7 +2,11 @@
 package servicegraph
 
 import (
+	"fmt"
 	"sort"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
@@ -11,6 +15,225 @@ const (
 	maxSelectorItemsPerGroup = 50
 )
 
+// GraphSelectorsConstructor provides selectors used to asynchronously perform associated queries for an edge or a node.
+// These selectors are used in the other raw and service graph APIs to look update additional data for an edge or a
+// node. The format of these selectors is the Kibana-style selector.  For example,
+//   source_namespace == "namespace1 || (dest_type == "wep" && dest_namespace == "namespace2")
+//
+// The JSON formatted output of this is actually a simple set of selector strings for each search option:
+// {
+//   "l3_flows": "xx = 'y'",
+//   "l7_flows": "xx = 'y'",
+//   "dns_logs": "xx = 'y'"
+//   "alerts": "_id = 'abcdef'"
+// }
+type GraphSelectorsConstructor struct {
+	L3Flows *GraphSelectorConstructor
+	L7Flows *GraphSelectorConstructor
+	DNSLogs *GraphSelectorConstructor
+	Alerts  *GraphSelectorConstructor
+}
+
+// And combines two sets of selectors by ANDing them together.
+func (s GraphSelectorsConstructor) And(s2 GraphSelectorsConstructor) GraphSelectorsConstructor {
+	return GraphSelectorsConstructor{
+		L3Flows: NewGraphSelectorConstructor(v1.OpAnd, s.L3Flows, s2.L3Flows),
+		L7Flows: NewGraphSelectorConstructor(v1.OpAnd, s.L7Flows, s2.L7Flows),
+		DNSLogs: NewGraphSelectorConstructor(v1.OpAnd, s.DNSLogs, s2.DNSLogs),
+		Alerts:  NewGraphSelectorConstructor(v1.OpAnd, s.Alerts, s2.Alerts),
+	}
+}
+
+// Or combines two sets of selectors by ORing them together.
+func (s GraphSelectorsConstructor) Or(s2 GraphSelectorsConstructor) GraphSelectorsConstructor {
+	return GraphSelectorsConstructor{
+		L3Flows: NewGraphSelectorConstructor(v1.OpOr, s.L3Flows, s2.L3Flows),
+		L7Flows: NewGraphSelectorConstructor(v1.OpOr, s.L7Flows, s2.L7Flows),
+		DNSLogs: NewGraphSelectorConstructor(v1.OpOr, s.DNSLogs, s2.DNSLogs),
+		Alerts:  NewGraphSelectorConstructor(v1.OpOr, s.Alerts, s2.Alerts),
+	}
+}
+
+// ToGraphSelectors creates the v1.GraphSelector format.
+func (s GraphSelectorsConstructor) ToGraphSelectors() v1.GraphSelectors {
+	return v1.GraphSelectors{
+		L3Flows: s.L3Flows.SelectorString(),
+		L7Flows: s.L7Flows.SelectorString(),
+		DNSLogs: s.DNSLogs.SelectorString(),
+		Alerts:  s.Alerts.SelectorString(),
+	}
+}
+
+type GraphSelectorConstructor struct {
+	operator v1.GraphSelectorOperator
+
+	// Valid if operator is && or ||
+	selectors []*GraphSelectorConstructor
+
+	// Valid if operator is ==, != or IN.  Value is an interface to allow string, numerical and slice values.
+	key   string
+	value interface{}
+}
+
+func (s *GraphSelectorConstructor) SelectorString() *string {
+	if s == nil {
+		return nil
+	} else if ss, noMatch := s.selectorString(false); noMatch {
+		return nil
+	} else {
+		return &ss
+	}
+}
+
+func (s *GraphSelectorConstructor) selectorString(nested bool) (sel string, noMatch bool) {
+	if s == nil {
+		return "", false
+	}
+	sb := strings.Builder{}
+
+	writeKey := func(key string) {
+		// The key needs to be quoted if it contains a "."
+		if strings.Contains(key, ".") {
+			sb.WriteString("\"")
+			sb.WriteString(s.key)
+			sb.WriteString("\"")
+		} else {
+			sb.WriteString(s.key)
+		}
+	}
+	switch s.operator {
+	case v1.OpAnd, v1.OpOr:
+		parts := make(map[string]struct{})
+		var foundNoMatch bool
+		var ordered []string
+		for i := 0; i < len(s.selectors); i++ {
+			if ss, noMatch := s.selectors[i].selectorString(true); noMatch {
+				// The process selector indicates "not valid". If this is an OpAnd then then entire selector is not
+				// valid, otherwise we just skip this
+				if s.operator == v1.OpAnd {
+					return "", true
+				}
+				foundNoMatch = true
+			} else if _, ok := parts[ss]; !ok {
+				parts[ss] = struct{}{}
+				ordered = append(ordered, ss)
+			}
+		}
+		sort.Strings(ordered)
+		if len(ordered) > 0 {
+			if nested {
+				sb.WriteString("(")
+			}
+			for i := 0; i < len(ordered)-1; i++ {
+				sb.WriteString(ordered[i])
+				sb.WriteString(string(s.operator))
+			}
+			sb.WriteString(ordered[len(ordered)-1])
+			if nested {
+				sb.WriteString(")")
+			}
+		} else if foundNoMatch {
+			// We found one or more no matches with no valid selectors, so the full selector is non-matching.
+			return "", true
+		}
+	case v1.OpEqual, v1.OpNotEqual:
+		writeKey(s.key)
+		sb.WriteString(string(s.operator))
+		if _, ok := s.value.(string); ok {
+			sb.WriteString(fmt.Sprintf("\"%s\"", s.value))
+		} else {
+			sb.WriteString(fmt.Sprintf("%v", s.value))
+		}
+	case v1.OpIn:
+		if nested {
+			sb.WriteString("(")
+		}
+		value := s.value.([]string)
+		writeKey(s.key)
+		sb.WriteString(string(v1.OpEqual))
+		sb.WriteString("\"")
+		sb.WriteString(value[0])
+		sb.WriteString("\"")
+		for i := 1; i < len(value); i++ {
+			sb.WriteString(string(v1.OpOr))
+			sb.WriteString(s.key)
+			sb.WriteString(string(v1.OpEqual))
+			sb.WriteString("\"")
+			sb.WriteString(value[i])
+			sb.WriteString("\"")
+		}
+		if nested {
+			sb.WriteString(")")
+		}
+		/*
+			sb.WriteString(s.key)
+			sb.WriteString(string(s.operator))
+			sb.WriteString(v1.OpInListStart)
+			sb.WriteString("\"")
+			value := s.value.([]string)
+			for i := 0; i < len(value)-1; i++ {
+				sb.WriteString(value[i])
+				sb.WriteString("\"")
+				sb.WriteString(v1.OpInListSep)
+				sb.WriteString("\"")
+			}
+			sb.WriteString(value[len(value)-1])
+			sb.WriteString("\"")
+			sb.WriteString(v1.OpInListEnd)
+		*/
+	case v1.OpNoMatch:
+		return "", true
+	}
+	return sb.String(), false
+}
+
+func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...interface{}) *GraphSelectorConstructor {
+	gs := &GraphSelectorConstructor{
+		operator: op,
+	}
+	switch op {
+	case v1.OpNoMatch:
+		// Nothing to extract for the no-match operator.
+	case v1.OpAnd, v1.OpOr:
+		for _, part := range parts {
+			egs, ok := part.(*GraphSelectorConstructor)
+			if egs == nil || !ok {
+				continue
+			}
+			if egs.operator == op {
+				// If same operand, then expand into this selector to reduce nesting.
+				gs.selectors = append(gs.selectors, egs.selectors...)
+			} else {
+				gs.selectors = append(gs.selectors, egs)
+			}
+		}
+
+		// Special case if we have zero or 1 expressions.
+		if len(gs.selectors) == 0 {
+			return nil
+		} else if len(gs.selectors) == 1 {
+			return gs.selectors[0]
+		}
+	case v1.OpEqual, v1.OpNotEqual:
+		gs.key = parts[0].(string)
+		gs.value = parts[1]
+	case v1.OpIn:
+		gs.key = parts[0].(string)
+
+		// At the moment, the only time we use OpIn is for a slice of strings. This may change in the future, but
+		// no point handling other types just yet.
+		value := parts[1].([]string)
+		if len(value) == 0 {
+			return nil
+		}
+		gs.value = value
+	default:
+		log.Errorf("Unexpected selector type: %s", op)
+	}
+
+	return gs
+}
+
 // SelectorPairs contains source and dest pairs of graph node selectors.
 // The source selector represents the selector used when an edge originates from that node.
 // The dest selector represents the selector used when an edge terminates at that node.
@@ -18,16 +241,12 @@ const (
 // This is a convenience since most of the selectors can be split into source and dest related queries. It is not
 // required for the API.
 type SelectorPairs struct {
-	Source v1.GraphSelectors
-	Dest   v1.GraphSelectors
+	Source GraphSelectorsConstructor
+	Dest   GraphSelectorsConstructor
 }
 
-func (s SelectorPairs) ToNodeSelectors() v1.GraphSelectors {
+func (s SelectorPairs) ToNodeSelectors() GraphSelectorsConstructor {
 	return s.Source.Or(s.Dest)
-}
-
-func (s SelectorPairs) ToEdgeSelectors() v1.GraphSelectors {
-	return s.Source.And(s.Dest)
 }
 
 // And combines two sets of selectors by ANDing them together.
@@ -81,21 +300,21 @@ func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
 //           service namespaces in the same group, so ignoring this for now.
 func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPairs {
 	return SelectorPairs{
-		Source: v1.GraphSelectors{
-			L3Flows: v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-			L7Flows: v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
-			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
+		Source: GraphSelectorsConstructor{
+			L3Flows: NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
+			L7Flows: NewGraphSelectorConstructor(v1.OpEqual, "src_namespace", namespace),
+			DNSLogs: NewGraphSelectorConstructor(v1.OpEqual, "client_namespace", namespace),
 		},
-		Dest: v1.GraphSelectors{
-			L3Flows: v1.NewGraphSelector(v1.OpOr,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+		Dest: GraphSelectorsConstructor{
+			L3Flows: NewGraphSelectorConstructor(v1.OpOr,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
 			),
-			L7Flows: v1.NewGraphSelector(v1.OpOr,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
+			L7Flows: NewGraphSelectorConstructor(v1.OpOr,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
 			),
-			DNSLogs: v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
+			DNSLogs: NewGraphSelectorConstructor(v1.OpEqual, "servers.namespace", namespace),
 		},
 	}
 }
@@ -108,20 +327,20 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 	selectors := SelectorPairs{
 		// L7 selectors for service are the same for source and dest since we always have the service when it is
 		// available.
-		Source: v1.GraphSelectors{
-			L7Flows: v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", svc.Name),
+		Source: GraphSelectorsConstructor{
+			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", svc.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", svc.Name),
 			),
 		},
-		Dest: v1.GraphSelectors{
-			L3Flows: v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", svc.Name),
+		Dest: GraphSelectorsConstructor{
+			L3Flows: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", svc.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", svc.Name),
 			),
-			L7Flows: v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", svc.Namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", svc.Name),
+			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", svc.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", svc.Name),
 			),
 		},
 	}
@@ -155,41 +374,41 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 	selectors := SelectorPairs{
 		// L7 selectors for service are the same for source and dest since we always have the service when it is
 		// available.
-		Source: v1.GraphSelectors{
-			L7Flows: v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
+		Source: GraphSelectorsConstructor{
+			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
 			),
 		},
-		Dest: v1.GraphSelectors{
-			L3Flows: v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
+		Dest: GraphSelectorsConstructor{
+			L3Flows: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
 			),
-			L7Flows: v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
+			L7Flows: NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_namespace", sp.NamespacedName.Namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_service_name", sp.NamespacedName.Name),
 			),
 		},
 	}
 
 	if sp.Protocol != "tcp" {
 		// L7 flows are TCP only.
-		selectors.Source.L7Flows = v1.NewGraphSelector(v1.OpNoMatch)
-		selectors.Dest.L7Flows = v1.NewGraphSelector(v1.OpNoMatch)
+		selectors.Source.L7Flows = NewGraphSelectorConstructor(v1.OpNoMatch)
+		selectors.Dest.L7Flows = NewGraphSelectorConstructor(v1.OpNoMatch)
 	} else {
-		selectors.Dest.L7Flows = v1.NewGraphSelector(v1.OpAnd,
+		selectors.Dest.L7Flows = NewGraphSelectorConstructor(v1.OpAnd,
 			selectors.Dest.L7Flows,
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_port_name", sp.PortName),
-			v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.Port),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_service_port_name", sp.PortName),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_service_port", sp.Port),
 		)
 	}
 
-	selectors.Dest.L3Flows = v1.NewGraphSelector(v1.OpAnd,
+	selectors.Dest.L3Flows = NewGraphSelectorConstructor(v1.OpAnd,
 		selectors.Dest.L3Flows,
-		v1.NewGraphSelector(v1.OpEqual, "dest_service_port", sp.PortName),
-		v1.NewGraphSelector(v1.OpEqual, "dest_service_port_num", sp.Port),
-		v1.NewGraphSelector(v1.OpEqual, "proto", sp.Protocol),
+		NewGraphSelectorConstructor(v1.OpEqual, "dest_service_port", sp.PortName),
+		NewGraphSelectorConstructor(v1.OpEqual, "dest_service_port_num", sp.Port),
+		NewGraphSelectorConstructor(v1.OpEqual, "proto", sp.Protocol),
 	)
 
 	// Also include the actual service endpoints in the destination selectors. Construct the ORed set of endpoints.
@@ -249,45 +468,45 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 	rawType, isAgg := mapGraphNodeTypeToRawType(epType)
 	namespace = blankToSingleDash(namespace)
 
-	var l3Dest, l7Dest, l3Source, l7Source, dnsSource, dnsDest *v1.GraphSelector
+	var l3Dest, l7Dest, l3Source, l7Source, dnsSource, dnsDest *GraphSelectorConstructor
 	if rawType == "wep" {
 		// DNS logs are only recorded for wep types.
 		if isAgg {
-			dnsSource = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "client_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "client_name_aggr", nameAggr),
+			dnsSource = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "client_namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "client_name_aggr", nameAggr),
 			)
-			dnsDest = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "servers.name_aggr", nameAggr),
+			dnsDest = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "servers.namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "servers.name_aggr", nameAggr),
 			)
 		} else {
-			dnsDest = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "servers.namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "servers.name", name),
+			dnsDest = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "servers.namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "servers.name", name),
 			)
 		}
 
 		// Similarly, L7 logs are only recorded for wep types and also only with aggregated names. If the protocol is
 		// known then only include for TCP.
 		if isAgg && (proto == "" || proto == "tcp") {
-			l7Source = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "src_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "src_name_aggr", nameAggr),
+			l7Source = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "src_namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "src_name_aggr", nameAggr),
 			)
-			l7Dest = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
-				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", nameAggr),
+			l7Dest = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", nameAggr),
 			)
 		} else {
-			l7Source = v1.NewGraphSelector(v1.OpNoMatch)
-			l7Dest = v1.NewGraphSelector(v1.OpNoMatch)
+			l7Source = NewGraphSelectorConstructor(v1.OpNoMatch)
+			l7Dest = NewGraphSelectorConstructor(v1.OpNoMatch)
 		}
 	} else {
-		l7Source = v1.NewGraphSelector(v1.OpNoMatch)
-		l7Dest = v1.NewGraphSelector(v1.OpNoMatch)
-		dnsSource = v1.NewGraphSelector(v1.OpNoMatch)
-		dnsDest = v1.NewGraphSelector(v1.OpNoMatch)
+		l7Source = NewGraphSelectorConstructor(v1.OpNoMatch)
+		l7Dest = NewGraphSelectorConstructor(v1.OpNoMatch)
+		dnsSource = NewGraphSelectorConstructor(v1.OpNoMatch)
+		dnsDest = NewGraphSelectorConstructor(v1.OpNoMatch)
 	}
 
 	if epType == v1.GraphNodeTypeHosts {
@@ -297,102 +516,102 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		hosts := s.nameHelper.GetCompiledHostNamesFromAggregatedName(nameAggr)
 		if len(hosts) > maxSelectorItemsPerGroup {
 			// Too many individual items. Don't filter on the hosts.
-			l3Source = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
+			l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
 			)
-			l3Dest = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
+			l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
 			)
 		} else if len(hosts) == 1 {
 			// Only one host, just use equals.
-			l3Source = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-				v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", hosts[0]),
+			l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
+				NewGraphSelectorConstructor(v1.OpEqual, "source_name_aggr", hosts[0]),
 			)
-			l3Dest = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-				v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", hosts[0]),
+			l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", hosts[0]),
 			)
 		} else {
 			// Multiple (or no) host names, use "in" operator.  The in operator will not include a zero length
 			// comparison (which would be the case if there are no node selectors specified).
 			sort.Strings(hosts)
-			l3Source = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-				v1.NewGraphSelector(v1.OpIn, "source_name_aggr", hosts),
+			l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
+				NewGraphSelectorConstructor(v1.OpIn, "source_name_aggr", hosts),
 			)
-			l3Dest = v1.NewGraphSelector(v1.OpAnd,
-				v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-				v1.NewGraphSelector(v1.OpIn, "dest_name_aggr", hosts),
+			l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+				NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
+				NewGraphSelectorConstructor(v1.OpIn, "dest_name_aggr", hosts),
 			)
 		}
 	} else if epType == v1.GraphNodeTypeHost {
 		// Handle host separately. We provide an internal aggregation for these types which means we copy
 		// the aggregated name into the name and provide a calculated aggregated name.  Make sure we use the non
 		// aggregated name but use the aggregated name field for the selector.
-		l3Source = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", name),
+		l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_name_aggr", name),
 		)
-		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", name),
+		l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", name),
 		)
 	} else if isAgg {
-		l3Source = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-			v1.NewGraphSelector(v1.OpEqual, "source_name_aggr", nameAggr),
+		l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_name_aggr", nameAggr),
 		)
-		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
-			v1.NewGraphSelector(v1.OpEqual, "dest_name_aggr", nameAggr),
+		l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", nameAggr),
 		)
 	} else {
-		l3Source = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "source_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "source_namespace", namespace),
-			v1.NewGraphSelector(v1.OpEqual, "source_name", nameAggr),
+		l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "source_name", nameAggr),
 		)
-		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_type", rawType),
-			v1.NewGraphSelector(v1.OpEqual, "dest_namespace", namespace),
-			v1.NewGraphSelector(v1.OpEqual, "dest_name", nameAggr),
+		l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_type", rawType),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_namespace", namespace),
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_name", nameAggr),
 		)
 	}
 	if port != 0 {
-		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "dest_port", port),
+		l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "dest_port", port),
 			l3Dest,
 		)
 	}
 	if proto != "" {
-		l3Source = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "proto", proto),
+		l3Source = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "proto", proto),
 			l3Source,
 		)
-		l3Dest = v1.NewGraphSelector(v1.OpAnd,
-			v1.NewGraphSelector(v1.OpEqual, "proto", proto),
+		l3Dest = NewGraphSelectorConstructor(v1.OpAnd,
+			NewGraphSelectorConstructor(v1.OpEqual, "proto", proto),
 			l3Dest,
 		)
 	}
 
 	gsp := SelectorPairs{
-		Source: v1.GraphSelectors{},
-		Dest:   v1.GraphSelectors{},
+		Source: GraphSelectorsConstructor{},
+		Dest:   GraphSelectorsConstructor{},
 	}
 
 	// If a direction has been specified then we only include one side of the flow.
 	if dir != DirectionIngress {
-		gsp.Source = v1.GraphSelectors{
+		gsp.Source = GraphSelectorsConstructor{
 			L3Flows: l3Source,
 			L7Flows: l7Source,
 			DNSLogs: dnsSource,
 		}
 	}
 	if dir != DirectionEgress {
-		gsp.Dest = v1.GraphSelectors{
+		gsp.Dest = GraphSelectorsConstructor{
 			L3Flows: l3Dest,
 			L7Flows: l7Dest,
 			DNSLogs: dnsDest,
