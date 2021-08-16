@@ -885,9 +885,10 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 
 		{
 			// Make sure the interface has its primary IP.  This is needed for ARP to work.
-			addrs, err := netlink.AddrList(iface, 4)
+			addrs, err := netlink.AddrList(iface, netlink.FAMILY_V4)
 			if err != nil {
 				logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
+				goto skipAddr
 			}
 			found := false
 			addrStr := *awsNIC.PrivateIpAddress
@@ -915,18 +916,31 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			}
 			if !found {
 				err := netlink.AddrAdd(iface, newAddr)
-				logrus.WithError(err).WithFields(logrus.Fields{
-					"name": ifaceName,
-					"addr": newAddr,
-				}).Error("Failed to add new address.")
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{
+						"name": ifaceName,
+						"addr": newAddr,
+					}).Error("Failed to add new address.")
+				} else {
+					logrus.WithError(err).WithFields(logrus.Fields{
+						"name": ifaceName,
+						"addr": newAddr,
+					}).Info("Added address.")
+				}
 			}
 		}
+	skipAddr:
 
 		// For each IP assigned to the NIC, we'll add a routing rule that sends traffic _from_ that IP to
 		// a dedicated routing table for the NIC.
 		routingTableID := a.getOrAllocRoutingTableID(ifaceName)
 
-		for _, privateIP := range awsNIC.PrivateIpAddresses {
+		var secondaryIPs []ec2types.NetworkInterfacePrivateIpAddress
+		if len(awsNIC.PrivateIpAddresses) > 1 {
+			// Ignore the primary IP, it doesn't need a special routing table.
+			secondaryIPs = awsNIC.PrivateIpAddresses[1:]
+		}
+		for _, privateIP := range secondaryIPs {
 			if privateIP.PrivateIpAddress == nil {
 				continue
 			}
