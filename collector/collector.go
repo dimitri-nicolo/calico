@@ -897,8 +897,6 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	// Translate endpoint data into L7Update
 	update := L7Update{
 		Tuple:         tuple,
-		SrcEp:         data.srcEp,
-		DstEp:         data.dstEp,
 		Duration:      int(hd.Duration),
 		DurationMax:   int(hd.DurationMax),
 		BytesReceived: int(hd.BytesReceived),
@@ -908,6 +906,14 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		UserAgent:     hd.UserAgent,
 		Type:          hd.Type,
 		Domain:        hd.Domain,
+	}
+
+	// If there is no endpoint data for the supplied tuple, skip logging this info.
+	// This means that this log was collected for traffic that was forwarded through
+	// this node (like traffic through a nodeport service).
+	if data != nil {
+		update.SrcEp = data.srcEp
+		update.DstEp = data.dstEp
 	}
 
 	// Handle setting the response code. An empty response code is valid for overflow logs.
@@ -924,7 +930,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	}
 
 	// Grab the destination metadata to use the namespace to validate the service name
-	dstMeta, err := getFlowLogEndpointMetadata(data.dstEp, tuple.dst)
+	dstMeta, err := getFlowLogEndpointMetadata(update.DstEp, tuple.dst)
 	if err != nil {
 		reportDataplaneStatsUpdateErrorMetrics(1)
 		log.WithError(err).Errorf("Failed to extract metadata for destination %v", update.DstEp)
@@ -943,7 +949,13 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	var validService bool
 	svcName := addr
 	svcNamespace := dstMeta.Namespace
-	svcPortName := data.dstSvc.Port
+
+	// TODO: Find a separate way of retrieving this data when we do not
+	// have endpoint data on this node.
+	var svcPortName string
+	if data != nil {
+		svcPortName = data.dstSvc.Port
+	}
 
 	if ip := net.ParseIP(addr); ip != nil {
 		// Address is an IP. Attempt to look up a service name by cluster IP
