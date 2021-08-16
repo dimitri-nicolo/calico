@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,6 +80,7 @@ type NetConf struct {
 	} `json:"ipam,omitempty"`
 	Args                 Args                   `json:"args"`
 	MTU                  int                    `json:"mtu"`
+	NumQueues            int                    `json:"num_queues"`
 	Nodename             string                 `json:"nodename"`
 	NodenameFile         string                 `json:"nodename_file"`
 	IPAMLockFile         string                 `json:"ipam_lock_file"`
