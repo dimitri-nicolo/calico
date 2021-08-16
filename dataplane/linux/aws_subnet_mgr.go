@@ -459,6 +459,7 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 	}
 
 	// Release any IPs that are no longer required.
+	needRefresh := false
 	ipsToRelease.Iter(func(item interface{}) error {
 		addr := item.(ip.CIDR)
 		nicID := nicIDByIP[addr]
@@ -473,6 +474,7 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 		}
 		delete(nicIDByIP, addr)
 		freeIPv4CapacityByNICID[nicID]++
+		needRefresh = true
 		return nil
 	})
 
@@ -729,7 +731,6 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 	}
 
 	// Assign secondary IPs to NICs.
-	needRefresh := false
 	for nicID, freeIPs := range freeIPv4CapacityByNICID {
 		if freeIPs == 0 {
 			continue
