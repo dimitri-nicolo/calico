@@ -429,35 +429,6 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 		missingRoutes = append(missingRoutes, route)
 	}
 
-	// We only support a single local subnet, choose one based on some heuristics.
-	bestSubnet := a.calculateBestSubnet(localIPPoolSubnetIDs, nicIDsBySubnet)
-	if bestSubnet == "" {
-		logrus.Debug("No AWS subnets needed.")
-		return nil
-	}
-
-	// Record the gateway address of the best subnet.
-	{
-		for _, subnet := range localSubnets {
-			if subnet.SubnetId != nil && *subnet.SubnetId == bestSubnet {
-				ourSubnet := subnet
-				if ourSubnet.CidrBlock == nil {
-					return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
-				}
-				ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
-				if err != nil {
-					return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
-				}
-				a.awsSubnet = ourCIDR
-				addr := ourCIDR.Addr().Add(1)
-				if addr != a.awsGatewayAddr {
-					a.awsGatewayAddr = addr
-					logrus.WithField("addr", a.awsGatewayAddr).Info("Calculated new AWS gateway.")
-				}
-			}
-		}
-	}
-
 	// Release any IPs that are no longer required.
 	needRefresh := false
 	ipsToRelease.Iter(func(item interface{}) error {
@@ -511,10 +482,45 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 		return errResyncNeeded
 	}
 
+	// We only support a single local subnet, choose one based on some heuristics.
+	bestSubnet := a.calculateBestSubnet(localIPPoolSubnetIDs, nicIDsBySubnet)
+	if bestSubnet == "" {
+		logrus.Debug("No AWS subnets needed.")
+		if needRefresh {
+			return errResyncNeeded
+		}
+		return nil
+	}
+
+	// Record the gateway address of the best subnet.
+	{
+		for _, subnet := range localSubnets {
+			if subnet.SubnetId != nil && *subnet.SubnetId == bestSubnet {
+				ourSubnet := subnet
+				if ourSubnet.CidrBlock == nil {
+					return fmt.Errorf("our subnet missing its CIDR id=%s", bestSubnet) // AWS bug?
+				}
+				ourCIDR, err := ip.ParseCIDROrIP(*ourSubnet.CidrBlock)
+				if err != nil {
+					return fmt.Errorf("our subnet had malformed CIDR %q: %w", *ourSubnet.CidrBlock, err)
+				}
+				a.awsSubnet = ourCIDR
+				addr := ourCIDR.Addr().Add(1)
+				if addr != a.awsGatewayAddr {
+					a.awsGatewayAddr = addr
+					logrus.WithField("addr", a.awsGatewayAddr).Info("Calculated new AWS gateway.")
+				}
+			}
+		}
+	}
+
 	// Given the selected subnet, filter down the routes to only those that we can support.
 	filteredRoutes := filterRoutesByAWSSubnet(missingRoutes, bestSubnet)
 	if len(filteredRoutes) == 0 {
 		logrus.Debug("No new AWS IPs to program")
+		if needRefresh {
+			return errResyncNeeded
+		}
 		return nil
 	}
 	logrus.WithField("numNewRoutes", len(filteredRoutes)).Info("Need to program new AWS IPs")
