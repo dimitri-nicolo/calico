@@ -28,7 +28,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -37,6 +36,8 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
@@ -247,7 +248,7 @@ type Config struct {
 
 	LookPathOverride func(file string) (string, error)
 
-	IPAMClient   ipam.Interface
+	IPAMClient    ipam.Interface
 	KubeClientSet *kubernetes.Clientset
 
 	FeatureDetectOverrides map[string]string
@@ -2113,6 +2114,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.reschedC = nil
 		case <-throttleC:
 			d.applyThrottle.Refill()
+			continue
 		case <-healthTicks:
 			d.reportHealth()
 		case <-retryTicker.C:
