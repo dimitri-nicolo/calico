@@ -729,6 +729,7 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 	}
 
 	// Assign secondary IPs to NICs.
+	needRefresh := false
 	for nicID, freeIPs := range freeIPv4CapacityByNICID {
 		if freeIPs == 0 {
 			continue
@@ -755,6 +756,11 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 			// TODO What now?
 		}
 		logrus.WithFields(logrus.Fields{"nicID": nicID, "addrs": ipAddrs}).Info("Assigned IPs to secondary NIC.")
+		needRefresh = true
+	}
+
+	if needRefresh {
+		return errResyncNeeded
 	}
 
 	// TODO update k8s Node with capacities
