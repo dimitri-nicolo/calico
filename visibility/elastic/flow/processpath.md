@@ -1,5 +1,5 @@
 ---
-title: Enable process-level information in flow logs.
+title: Enable process-level information in flow logs
 description: Get visibility into process-level network activity in flow logs.
 canonical_url: /visibility/elastic/flow/processpath
 ---
