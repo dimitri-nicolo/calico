@@ -8,8 +8,20 @@ In order to install images from your private registry, you must first pull the i
    docker pull {{ operator.registry }}/{{ operator.image }}:{{ operator.version }}
    {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
+   {% unless component[1].image contains "-windows" -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%} {% endif -%}
    docker pull {{ registry }}{{ component[1].image }}:{{component[1].version}}
+   {% endunless -%}
+   {% endif -%}
+   {% endfor -%}
+   ```
+
+   For hybrid Linux + Windows clusters, pull the following Windows images.
+
+   ```bash
+   {% for component in site.data.versions.first.components -%}
+   {% if component[1].image contains "-windows" -%}
+   docker pull {{ registry }}{{ component[1].image }}:{{ component[1].version }}
    {% endif -%}
    {% endfor -%}
    ```
@@ -20,8 +32,20 @@ In order to install images from your private registry, you must first pull the i
    docker tag {{ operator.registry }}/{{ operator.image }}:{{ operator.version }} $PRIVATE_REGISTRY/{{ operator.image }}:{{ operator.version }}
    {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
+   {% unless component[1].image contains "-windows" -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%} {% endif -%}
    docker tag {{ registry }}{{ component[1].image }}:{{component[1].version}} $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}
+   {% endunless -%}
+   {% endif -%}
+   {% endfor -%}
+   ```
+
+   For hybrid Linux + Windows clusters, retag the following Windows images with the name of your private registry.
+
+   ```bash
+   {% for component in site.data.versions.first.components -%}
+   {% if component[1].image contains "-windows" -%}
+   docker tag {{ registry }}{{ component[1].image }}:{{ component[1].version }} $PRIVATE_REGISTRY/$IMAGE_PATH/{{ component[1].image | split: "/" | last }}:{{ component[1].version }}
    {% endif -%}
    {% endfor -%}
    ```
@@ -32,7 +56,19 @@ In order to install images from your private registry, you must first pull the i
    docker push $PRIVATE_REGISTRY/{{ operator.image }}:{{ operator.version }}
    {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
+   {% unless component[1].image contains "-windows" -%}
    docker push $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}
+   {% endunless -%}
+   {% endif -%}
+   {% endfor -%}
+   ```
+
+   For hybrid Linux + Windows clusters, push the following Windows images to your private registry.
+
+   ```bash
+   {% for component in site.data.versions.first.components -%}
+   {% if component[1].image contains "-windows" -%}
+   docker push $PRIVATE_REGISTRY/$IMAGE_PATH/{{ component[1].image | split: "/" | last}}:{{component[1].version}}
    {% endif -%}
    {% endfor -%}
    ```
@@ -70,7 +106,6 @@ sed -ie "s?quay.io?$PRIVATE_REGISTRY?g" tigera-prometheus-operator.yaml
 sed -ie "/serviceAccountName: calico-prometheus-operator/a \      imagePullSecrets:\n\      - name: $PRIVATE_REGISTRY_PULL_SECRET"  tigera-prometheus-operator.yaml
 ```
 {% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
-
 
 Before applying `custom-resources.yaml`, modify registry references to use your custom registry:
 
