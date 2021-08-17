@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210816180225-57c7161ec6a5
-	github.com/tigera/lma v0.0.0-20210816204750-65c2b526297d
+	github.com/tigera/lma v0.0.0-20210817010124-14c6477e5e75
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -37,10 +37,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210816204101-6ad7fdd5b297
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210817005523-00a655153c2e
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210816193823-38b350839e4c
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210816203422-ae8f6e430914
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210816175035-997b223a9937
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210817005655-674dfdc81fca
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
