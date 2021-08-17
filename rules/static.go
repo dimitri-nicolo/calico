@@ -1172,6 +1172,10 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		// connection that is proxied and marked accordingly or not.
 		tproxyEstablRules := []Rule{
 			{
+				Comment: []string{"Clean upstream mark, not needed anymore"},
+				Action:  ClearMarkAction{Mark: uint32(r.TPROXYUpstreamConnMark)},
+			},
+			{
 				Comment: []string{"Restore proxy mark from connection if not set"},
 				Match:   Match().MarkClear(mark),
 				Action:  RestoreConnMarkAction{RestoreMask: mark},
@@ -1258,6 +1262,8 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 
+		upMark := uint32(r.TPROXYUpstreamConnMark)
+
 		rules := []Rule{
 			{
 				// Proxied connections for regular services do not have
@@ -1265,6 +1271,12 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				// identify the upstream part and mark it.
 				Comment: []string{"Mark any non-local connection as local for return"},
 				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			},
+			{
+				Comment: []string{"Save tproxy upstream mark in conntrack if set"},
+				// XXX use the same mark in conntrack for now
+				Match:  Match().MarkMatchesWithMask(upMark, upMark),
+				Action: SetConnMarkAction{Mark: upMark, Mask: upMark},
 			},
 			{
 				// Proxied connections that are pod-to-self need to be masqueraded
@@ -1283,6 +1295,28 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{
 			Name:  ChainMangleOutputTProxy,
+			Rules: rules,
+		})
+
+		rules = []Rule{
+			{
+				Comment: []string{"Restore tproxy upstream mark in conntrack if not set"},
+				// XXX use the same mark in conntrack for now
+				Match:  Match().MarkClear(upMark),
+				Action: RestoreConnMarkAction{RestoreMask: upMark},
+			},
+			{
+				// If it is upstream and from local address, it means it is
+				// retuning traffic from local host and we need to turn it back
+				// to the proxy on the local host.
+				Comment: []string{"If upstream and from local address, accept it"},
+				Match:   Match().MarkMatchesWithMask(upMark, upMark).ConntrackState("RELATED,ESTABLISHED"),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+			},
+		}
+
+		chains = append(chains, &Chain{
+			Name:  ChainMangleOutputTProxyHostNet,
 			Rules: rules,
 		})
 	}
@@ -1375,11 +1409,18 @@ func (r *DefaultRuleRenderer) StaticMangleOutputChain(ipVersion uint8) *Chain {
 	rules := []Rule{}
 
 	if r.TPROXYModeEnabled() {
-		rules = append(rules, Rule{
-			Comment: []string{"Process non-local connections as proxied"},
-			Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
-			Action:  JumpAction{Target: ChainMangleOutputTProxy},
-		})
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Process non-local connections as proxied"},
+				Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
+				Action:  JumpAction{Target: ChainMangleOutputTProxy},
+			},
+			Rule{
+				Comment: []string{"Check local connections for host networked workloads"},
+				Match:   Match().SrcAddrType(AddrTypeLocal, false),
+				Action:  JumpAction{Target: ChainMangleOutputTProxyHostNet},
+			},
+		)
 	}
 
 	return &Chain{

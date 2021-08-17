@@ -375,10 +375,11 @@ func StartDataplaneDriver(configParams *config.Config,
 				BPFEnabled:                         configParams.BPFEnabled,
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
-				TPROXYMode:         configParams.TPROXYMode,
-				TPROXYPort:         configParams.TPROXYPort,
-				IptablesMarkProxy:  markProxy,
-				KubeMasqueradeMark: k8sMasqMark,
+				TPROXYMode:             configParams.TPROXYMode,
+				TPROXYPort:             configParams.TPROXYPort,
+				TPROXYUpstreamConnMark: configParams.TPROXYUpstreamConnMark,
+				IptablesMarkProxy:      markProxy,
+				KubeMasqueradeMark:     k8sMasqMark,
 			},
 
 			Wireguard: wireguard.Config{

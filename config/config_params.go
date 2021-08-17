@@ -484,8 +484,9 @@ type Config struct {
 	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
 
 	// Configures Transparent proxying modes
-	TPROXYMode string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
-	TPROXYPort int    `config:"int;16001"`
+	TPROXYMode             string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
+	TPROXYPort             int    `config:"int;16001"`
+	TPROXYUpstreamConnMark int    `config:"int;0x17"`
 
 	KubeMasqueradeBit int `config:"int;14"`
 

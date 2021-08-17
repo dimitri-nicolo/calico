@@ -64,6 +64,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				options      infrastructure.TopologyOptions
 				calicoClient client.Interface
 				w            [numNodes][2]*workload.Workload
+				hostW        [numNodes]*workload.Workload
 				clientset    *kubernetes.Clientset
 			)
 
@@ -135,6 +136,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				}
 
 				options.ExtraEnvVars["FELIX_TPROXYMODE"] = TPROXYMode
+				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"
 				// XXX until we can safely remove roting rules and not break other tests
 				options.EnableIPv6 = false
 
@@ -194,6 +196,15 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				}
 
 				for ii := range felixes {
+					hostW[ii] = workload.Run(
+						felixes[ii],
+						fmt.Sprintf("host%d", ii),
+						"default",
+						felixes[ii].IP, // Same IP as felix means "run in the host's namespace"
+						"8055",
+						"tcp")
+					hostW[ii].ConfigureInInfra(infra)
+
 					// Two workloads on each host so we can check the same host and other host cases.
 					w[ii][0] = addWorkload(true, ii, 0, 8055, nil)
 					w[ii][1] = addWorkload(true, ii, 1, 8055, nil)
@@ -242,7 +253,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					}
 					return true
 				}, "20s", "1s").Should(BeTrue())
-
 			})
 
 			JustAfterEach(func() {
@@ -786,6 +796,54 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							ExpectWithSrcIPs(felixes[1].IP), ExpectWithPorts(nodeport), expectedFelix1IP)
 						cc.CheckConnectivity()
 					})
+				})
+			})
+
+			Context("Host networked backend", func() {
+				var pod, svc string
+
+				JustBeforeEach(func() {
+					pod = hostW[0].IP + ":8055"
+					svc = clusterIP + ":8090"
+
+					for _, f := range felixes {
+						// Mimic the kube-proxy service iptable clusterIP rule.
+						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-p", "tcp",
+							"-d", clusterIP,
+							"-m", "tcp", "--dport", "8090",
+							"-j", "DNAT", "--to-destination",
+							pod)
+						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
+							"-j", "MASQUERADE", "--random-fully")
+					}
+					// for this context create service before each test
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					if TPROXYMode == "Enabled" {
+						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+					}
+					createService(v1Svc, clientset)
+				})
+
+				It("should have connectivity via ClusterIP", func() {
+					By("asserting that ipaddress, port exists in ipset ")
+					assertIPPortInIPSet(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true)
+
+					cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090), ExpectWithSrcIPs(felixes[1].IP))
+					cc.CheckConnectivity()
+
+					Expect(proxies[0].AcceptedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
 				})
 			})
 
