@@ -75,11 +75,11 @@ func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 	// Extract EndpointMetadata info
 	srcMeta, err := getFlowLogEndpointMetadata(mu.srcEp, mu.tuple.src)
 	if err != nil {
-		return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
+		return FlowMeta{}, fmt.Errorf("could not extract metadata for source %v", mu.srcEp)
 	}
 	dstMeta, err := getFlowLogEndpointMetadata(mu.dstEp, mu.tuple.dst)
 	if err != nil {
-		return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
+		return FlowMeta{}, fmt.Errorf("could not extract metadata for destination %v", mu.dstEp)
 	}
 
 	f.SrcMeta = srcMeta
@@ -94,7 +94,7 @@ func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no rule id present")
-		return f, fmt.Errorf("Invalid metric update")
+		return f, fmt.Errorf("invalid metric update")
 	}
 
 	action, direction := getFlowLogActionAndReporterFromRuleID(lastRuleID)
@@ -338,7 +338,7 @@ func NewFlowPolicies(mu MetricUpdate) FlowPolicies {
 		if rid == nil {
 			continue
 		}
-		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
+		fp[fmt.Sprintf("%d|%s|%s", idx, rid.GetFlowLogPolicyName(), rid.IndexStr)] = emptyValue
 	}
 	return fp
 }
@@ -351,7 +351,7 @@ func (fp FlowPolicies) aggregateFlowPolicies(mu MetricUpdate) {
 		if rid == nil {
 			continue
 		}
-		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
+		fp[fmt.Sprintf("%d|%s|%s", idx, rid.GetFlowLogPolicyName(), rid.IndexStr)] = emptyValue
 	}
 }
 
@@ -990,7 +990,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
 	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies originalSourceIPs numOriginalSourceIPs destServiceNamespace dstServiceName dstServicePort processName numProcessNames processPid numProcessIds
 	// Sample entry with no aggregation and no labels.
-	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"] [1.0.0.1] 1 kube-system kube-dns dig 23033 0
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow|0"] [1.0.0.1] 1 kube-system kube-dns dig 23033 0
 
 	var (
 		srcType, dstType FlowLogEndpointType
