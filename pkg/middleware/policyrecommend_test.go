@@ -211,7 +211,7 @@ var (
 				"policies": &elastic.AggregatedTerm{
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
-						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow": 1,
+						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0": 1,
 					},
 				},
 			},
@@ -248,7 +248,7 @@ var (
 				"policies": &elastic.AggregatedTerm{
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
-						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow": 1,
+						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0": 1,
 					},
 				},
 			},
@@ -288,7 +288,7 @@ var (
 				"policies": &elastic.AggregatedTerm{
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
-						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow": 1,
+						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0": 1,
 					},
 				},
 			},

@@ -34,7 +34,7 @@
               "buckets": [
                 {
                   "doc_count": 1896,
-                  "key": "0|*|*|allow"
+                  "key": "0|*|*|allow|*"
                 }
               ]
             },
@@ -107,7 +107,7 @@
               "buckets": [
                 {
                   "doc_count": 1896,
-                  "key": "0|*|*|allow"
+                  "key": "0|*|*|allow|*"
                 }
               ]
             },

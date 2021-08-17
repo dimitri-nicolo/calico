@@ -137,7 +137,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow))
 		Expect(r.Include).To(BeTrue())
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|__PROFILE__|__PROFILE__.kns.ns2|allow"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|__PROFILE__|__PROFILE__.kns.ns2|allow|-"}))
 	})
 
 	It("HEP does not match namespaced policy - end of tiers deny (implicit deny through felix)", func() {
@@ -147,7 +147,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagDeny))
 		Expect(r.Include).To(BeTrue())
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny|-"}))
 	})
 
 	// ---- ICMP/NotICMP matcher ----
@@ -162,7 +162,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagDeny))
 		Expect(r.Include).To(BeTrue())
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|deny"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|deny|-"}))
 	})
 
 	It("checking dest ingress deny exact match deny when ICMP is non-nil and protocol is ICMP", func() {
@@ -188,7 +188,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(r.Action).To(Equal(api.ActionFlagDeny | api.ActionFlagEndOfTierDeny))
 		Expect(r.Include).To(BeTrue())
 		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{
-			"0|meh|ns1/meh.policy|deny", "0|meh|ns1/meh.policy|eot-deny",
+			"0|meh|ns1/meh.policy|deny|-", "0|meh|ns1/meh.policy|deny|-1",
 		}))
 	})
 
@@ -217,7 +217,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | api.ActionFlagEndOfTierDeny))
 		Expect(r.Include).To(BeTrue())
 		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{
-			"0|meh|ns1/meh.policy|allow", "0|meh|ns1/meh.policy|eot-deny",
+			"0|meh|ns1/meh.policy|allow|-", "0|meh|ns1/meh.policy|deny|-1",
 		}))
 	})
 
@@ -1149,7 +1149,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// Inexact allow (through inexact pass) and exact end of tier deny means overall indeterminate.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | api.ActionFlagEndOfTierDeny))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "0|meh|ns1/meh.policy|eot-deny", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass|-", "0|meh|ns1/meh.policy|deny|-1", "1|__PROFILE__|__PROFILE__.kns.ns1|allow|-"}))
 	})
 
 	It("checking dest ingress allow non-match when Source.ServiceAccounts is non-nil", func() {
@@ -1178,7 +1178,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// Inexact allow and exact end of tier deny means overall indeterminate.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | ActionFlagFlowLogRemovedUncertainty))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|allow"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|allow|-"}))
 	})
 
 	It("checking dest ingress pass inexact match is fixed from flow data, but missing end-of-tiers flow policy hit", func() {
@@ -1186,7 +1186,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass|0", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1196,7 +1196,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// logs because the final profile hit is not in the logs.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass|-", "1|__PROFILE__|__PROFILE__.kns.ns1|allow|-"}))
 	})
 
 	It("checking dest ingress pass inexact match is fixed and fully verified by flow data", func() {
@@ -1204,8 +1204,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
-			mustCreatePolicyHit("0|__PROFILE__|__PROFILE__.kns.ns1|allow", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass|0", 1),
+			mustCreatePolicyHit("0|__PROFILE__|__PROFILE__.kns.ns1|allow|0", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1214,7 +1214,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// Inexact pass confirmed by flow and exact end-of-all-tiers allow.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | ActionFlagFlowLogRemovedUncertainty))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass|-", "1|__PROFILE__|__PROFILE__.kns.ns1|allow|-"}))
 	})
 
 	It("checking dest ingress pass inexact match is fixed from flow data, but contradicts final profile match", func() {
@@ -1222,8 +1222,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
-			mustCreatePolicyHit("0|__PROFILE__|__PROFILE__.kns.ns1|deny", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass|0", 1),
+			mustCreatePolicyHit("0|__PROFILE__|__PROFILE__.kns.ns1|deny|-1", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1232,7 +1232,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// Inexact pass confirmed by flow and exact end-of-all-tiers allow.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | ActionFlagFlowLogConflictsWithCalculated))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass|-", "1|__PROFILE__|__PROFILE__.kns.ns1|allow|-"}))
 	})
 
 	It("checking dest ingress allow inexact match is not fixed from flow data when action does not match", func() {
@@ -1240,7 +1240,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|pass|0", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1250,7 +1250,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// cannot be used.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | api.ActionFlagEndOfTierDeny | ActionFlagFlowLogConflictsWithCalculated))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|allow", "0|meh|ns1/meh.policy|eot-deny"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|allow|-", "0|meh|ns1/meh.policy|deny|-1"}))
 	})
 
 	It("checking dest ingress allow inexact match is fixed by end of tier deny flow log", func() {
@@ -1258,7 +1258,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny|-1", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1268,7 +1268,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// flow data.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagEndOfTierDeny | ActionFlagFlowLogRemovedUncertainty))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|eot-deny"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|deny|-1"}))
 	})
 
 	It("checking dest ingress allow inexact match is not fixed from flow data when flow contains multiple actions for same policy", func() {
@@ -1276,8 +1276,8 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow", 1),
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|allow|-", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny|-", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1288,7 +1288,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | api.ActionFlagEndOfTierDeny))
 		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{
-			"0|meh|ns1/meh.policy|pass", "0|meh|ns1/meh.policy|eot-deny", "1|__PROFILE__|__PROFILE__.kns.ns1|allow",
+			"0|meh|ns1/meh.policy|pass|-", "0|meh|ns1/meh.policy|deny|-1", "1|__PROFILE__|__PROFILE__.kns.ns1|allow|-",
 		}))
 	})
 
@@ -1312,7 +1312,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
 		f.Policies = []api.PolicyHit{
-			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny", 1),
+			mustCreatePolicyHit("0|meh|ns1/meh.policy|deny|-", 1),
 		}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1325,7 +1325,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		// possible values, so use that.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagDeny | ActionFlagFlowLogRemovedUncertainty))
-		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|deny"}))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|deny|-"}))
 	})
 })
 
