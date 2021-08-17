@@ -25,7 +25,7 @@ const defaultCaptureDir = "/var/log/calico/pcap"
 func Capture(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
   calicoctl captured-packets ( copy | clean ) <NAME>
-                [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--dest=<DEST>]
+                [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--dest=<DEST>] [--allow-version-mismatch]
 
 Examples:
   # Copies capture files for packet capture from default namespace in the current directory.
@@ -34,14 +34,15 @@ Examples:
   calicoctl captured-packets clean my-capture
 
 Options:
-  -n --namespace=<NS>      Namespace of the packet capture.
-                           Uses the default namespace if not specified. [default: default]
-  -a --all-namespaces      If present, list the requested packet capture(s) across all namespaces.
-  -d --dest=<DEST>         If present, uses the directory specified as the destination. [default: .]
-  -h --help                Show this screen.
-  -c --config=<CONFIG>     Path to the file containing connection configuration in
-                           YAML or JSON format.
-                           [default: ` + constants.DefaultConfigPath + `]
+  -n --namespace=<NS>          Namespace of the packet capture.
+                               Uses the default namespace if not specified. [default: default]
+  -a --all-namespaces          If present, list the requested packet capture(s) across all namespaces.
+  -d --dest=<DEST>             If present, uses the directory specified as the destination. [default: .]
+  -h --help                    Show this screen.
+  -c --config=<CONFIG>         Path to the file containing connection configuration in
+                               YAML or JSON format.
+                               [default: ` + constants.DefaultConfigPath + `]
+     --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
   Commands for accessing Capture related information.
@@ -60,6 +61,11 @@ Description:
 
 	if len(parsedArgs) == 0 {
 		return nil
+	}
+
+	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
+	if err != nil {
+		return err
 	}
 
 	// List boolean parameters

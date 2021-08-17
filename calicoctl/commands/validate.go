@@ -26,12 +26,13 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
 	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
 )
 
 func Validate(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl validate --filename=<FILENAME>
+  calicoctl validate --filename=<FILENAME> [--config=<CONFIG>] [--allow-version-mismatch]
 
 Examples:
   # Validate the contents of license.yaml.
@@ -40,6 +41,10 @@ Examples:
 Options:
   -h --help                     Show this screen.
   -f --filename=<FILENAME>      Filename to validate.
+  -c --config=<CONFIG>          Path to the file containing connection configuration in
+                                YAML or JSON format.
+                                [default: ` + constants.DefaultConfigPath + `]
+     --allow-version-mismatch   Allow client and cluster versions mismatch.
 
 Description:
   Validate a license file and report license status.
@@ -52,6 +57,12 @@ Description:
 	}
 	if len(parsedArgs) == 0 {
 		return nil
+	}
+
+	// Note: Intentionally not check version mismatch for this command
+	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
+	if err != nil {
+		return err
 	}
 
 	filename := argutils.ArgStringOrBlank(parsedArgs, "--filename")

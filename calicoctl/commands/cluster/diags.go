@@ -24,14 +24,15 @@ const (
 // for the configured cluster.
 func Diags(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl cluster diags [--since=<SINCE>] [--config=<CONFIG>]
+  calicoctl cluster diags [--since=<SINCE>] [--config=<CONFIG>] [--allow-version-mismatch]
 
 Options:
-  -h --help                Show this screen.
-     --since=<SINCE>       Only collect logs newer than provided relative duration, in seconds (s), minutes (m) or hours (h)
-  -c --config=<CONFIG>     Path to the file containing connection configuration in
-                           YAML or JSON format.
-                           [default: ` + constants.DefaultConfigPath + `]
+  -h --help                    Show this screen.
+     --since=<SINCE>           Only collect logs newer than provided relative duration, in seconds (s), minutes (m) or hours (h)
+  -c --config=<CONFIG>         Path to the file containing connection configuration in
+                               YAML or JSON format.
+                               [default: ` + constants.DefaultConfigPath + `]
+     --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
   The cluster diags command collects a snapshot of diagnostic info and logs related to Calico for the given cluster.
@@ -42,6 +43,11 @@ Description:
 	}
 	if len(parsedArgs) == 0 {
 		return nil
+	}
+
+	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
+	if err != nil {
+		return err
 	}
 
 	since := parsedArgs["--since"]
