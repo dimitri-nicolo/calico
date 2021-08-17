@@ -30,15 +30,6 @@ We test {{site.prodname}} {{page.version}} against the following managed Kuberne
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
 
-#### Supported Mirantis Kubernetes Engine (MKE) versions
-
-We test {{site.prodname}} {{page.version}} against the following MKE versions.
-
-{% include content/docker-ee.md %}
-
-Other versions may work, but we do not actively test {{site.prodname}}
-{{page.version}} against them.
-
 #### CNI plug-in enabled
 
 {{site.prodname}} is installed as a CNI plugin. The kubelet must be configured
