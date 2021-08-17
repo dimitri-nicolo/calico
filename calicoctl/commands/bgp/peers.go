@@ -39,13 +39,14 @@ var (
 // kernal, static, device, etc.
 func Peers(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl bgp peers <NAME> [--config=<CONFIG>]
+  calicoctl bgp peers <NAME> [--config=<CONFIG>] [--allow-version-mismatch]
 
 Options:
-  -h --help                Show this screen.
-  -c --config=<CONFIG>     Path to the file containing connection configuration in
-                           YAML or JSON format.
-                           [default: ` + constants.DefaultConfigPath + `]
+  -h --help                    Show this screen.
+  -c --config=<CONFIG>         Path to the file containing connection configuration in
+                               YAML or JSON format.
+                               [default: ` + constants.DefaultConfigPath + `]
+     --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
   The bgp peers command prints BGP related information about a given node's peers. For the
@@ -57,6 +58,11 @@ Description:
 	}
 	if len(parsedArgs) == 0 {
 		return nil
+	}
+
+	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
+	if err != nil {
+		return err
 	}
 
 	name := parsedArgs["<NAME>"]

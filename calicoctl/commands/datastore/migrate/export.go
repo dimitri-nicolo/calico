@@ -81,13 +81,14 @@ var namespacedResources map[string]struct{} = map[string]struct{}{
 
 func Export(args []string) error {
 	doc := `Usage:
-  <BINARY_NAME> datastore migrate export [--config=<CONFIG>]
+  <BINARY_NAME> datastore migrate export [--config=<CONFIG>] [--allow-version-mismatch]
 
 Options:
-  -h --help                 Show this screen.
-  -c --config=<CONFIG>      Path to the file containing connection
-                            configuration in YAML or JSON format.
-                            [default: ` + constants.DefaultConfigPath + `]
+  -h --help                    Show this screen.
+  -c --config=<CONFIG>         Path to the file containing connection
+                               configuration in YAML or JSON format.
+                               [default: ` + constants.DefaultConfigPath + `]
+     --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
   Export the contents of the etcdv3 datastore.  Resources will be exported
@@ -126,6 +127,11 @@ Description:
 	}
 	if len(parsedArgs) == 0 {
 		return nil
+	}
+
+	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
+	if err != nil {
+		return err
 	}
 
 	cf := parsedArgs["--config"].(string)
