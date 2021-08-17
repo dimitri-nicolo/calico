@@ -802,6 +802,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 			Context("Host networked backend", func() {
 				var pod, svc string
 
+				nodeport := uint16(30333)
+
 				JustBeforeEach(func() {
 					pod = hostW[0].IP + ":8055"
 					svc = clusterIP + ":8090"
@@ -816,6 +818,22 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"-m", "tcp", "--dport", "8090",
 							"-j", "DNAT", "--to-destination",
 							pod)
+						f.Exec("iptables", "-t", "nat",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-A", "PREROUTING",
+							"-p", "tcp",
+							"-m", "addrtype", "--dst-type", "LOCAL",
+							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+							"-j", "MARK", "--set-xmark", "0x4000/0x4000")
+						f.Exec("iptables", "-t", "nat",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-A", "PREROUTING",
+							"-p", "tcp",
+							"-m", "addrtype", "--dst-type", "LOCAL",
+							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+							"-j", "DNAT", "--to-destination", pod)
 						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
 						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
 							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
@@ -824,7 +842,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"-j", "MASQUERADE", "--random-fully")
 					}
 					// for this context create service before each test
-					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
 					if TPROXYMode == "Enabled" {
 						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
 					}
@@ -843,6 +861,33 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
 
 					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+				})
+
+				It("should have connectivity via NodePorts", func() {
+					By("asserting that nodeport is programmed in ipsets ")
+					assertPortInIPSet(TPROXYNodeportsSet, "30333", felixes, true)
+
+					opts := []ExpectationOption{ExpectWithPorts(nodeport), expectedFelix0IP}
+
+					cc.Expect(Some, w[0][0], TargetIP(felixes[0].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
+
+					opts = []ExpectationOption{ExpectWithPorts(nodeport), ExpectWithSrcIPs(felixes[1].IP)}
+
+					cc.Expect(Some, w[0][0], TargetIP(felixes[1].IP), opts...)
+					cc.Expect(Some, w[1][0], TargetIP(felixes[1].IP), opts...)
+					cc.CheckConnectivity()
+
+					svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
+
+					// Connection should be proxied at the nodeport's node
+					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+
+					svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
+
+					Expect(proxies[1].ProxiedCount(felixes[0].IP, pod, svc)).To(BeNumerically(">", 0))
 					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
 				})
 			})
