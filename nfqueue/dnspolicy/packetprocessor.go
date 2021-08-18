@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/projectcalico/felix/nfqueue"
@@ -87,6 +88,63 @@ const (
 
 	failedToSetVerdictMessage = "failed to set the nfqueue verdict for the packet"
 )
+
+type PacketProcessorWithNfqueueRestarter struct {
+	nfqueueCreator func() (nfqueue.Nfqueue, error)
+	dnrMark        uint32
+	options        []Option
+	done           chan struct{}
+	closeOnce      sync.Once
+
+	// The current in use nfqueue instance, stored for testing and debugging purposes ONLY and is NOT thread safe to
+	// access or use.
+	debugCurrentNfqueue nfqueue.Nfqueue
+}
+
+func NewPacketProcessorWithNfqueueRestarter(nfqueueCreator func() (nfqueue.Nfqueue, error), dnrMark uint32, options ...Option) *PacketProcessorWithNfqueueRestarter {
+	return &PacketProcessorWithNfqueueRestarter{
+		nfqueueCreator: nfqueueCreator,
+		dnrMark:        dnrMark,
+		options:        options,
+		done:           make(chan struct{}),
+	}
+}
+
+func (restarter *PacketProcessorWithNfqueueRestarter) Start() error {
+done:
+	for {
+		nf, err := restarter.nfqueueCreator()
+		if err != nil {
+			return err
+		}
+
+		restarter.debugCurrentNfqueue = nf
+
+		processor := NewPacketProcessor(nf, restarter.dnrMark, restarter.options...)
+		processor.Start()
+
+		select {
+		case <-nf.ShutdownNotificationChannel():
+			processor.Stop()
+		case <-restarter.done:
+			processor.Stop()
+			if err := nf.Close(); err != nil {
+				log.WithError(err).Warning("an error occurred while closing nfqueue.")
+			}
+			break done
+		}
+
+		log.Info("recreating NFQUEUE connection...")
+	}
+
+	return nil
+}
+
+func (restarter *PacketProcessorWithNfqueueRestarter) Stop() {
+	restarter.closeOnce.Do(func() {
+		close(restarter.done)
+	})
+}
 
 // PacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
 // signal.
@@ -339,4 +397,17 @@ func repeatSetVerdictOnFail(numRepeats int, setVerdictFunc func() error, failure
 
 	nfqueue.PrometheusNfqueueVerdictFailCount.Inc()
 	log.WithError(err).Error(failureMessages)
+}
+
+// DebugKillCurrentNfqueueConnection calls DebugKillConnection on the currently use nfqueue instance, destroying the
+// underlying connection. This is used for testing purposes only, and in general is not safe to use or even thread safe.
+// This was note made thread safe as we want to add as little debug code to interfere with the mainline production code.
+//
+// In general, DO NOT USE THIS FUNCTION.
+func (restarter *PacketProcessorWithNfqueueRestarter) DebugKillCurrentNfqueueConnection() error {
+	if restarter.debugCurrentNfqueue == nil {
+		return fmt.Errorf("no nfqueue instance available")
+	}
+
+	return restarter.debugCurrentNfqueue.DebugKillConnection()
 }

@@ -781,7 +781,9 @@ var _ = Describe("DNS Policy Improvements", func() {
 		dnsserver = dns.StartServer(dnsRecords)
 
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsserver.IP
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
+		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
 		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -883,6 +885,35 @@ var _ = Describe("DNS Policy Improvements", func() {
 			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "rule-name=allow-foobar[^n]*cali40d")
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 		})
+
+		When("the connection to nfqueue is terminated", func() {
+			It("restarts the connection and nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
+				policyChainName := rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
+					Tier: "default",
+					Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
+				})
+
+				waitForIptablesChain(felix, policyChainName)
+
+				workload1.C.EnsureBinary("run-debug-console-command")
+				status, err := felix.ExecCombinedOutput("/run-debug-console-command", "close-nfqueue-conn")
+				Expect(err).ShouldNot(HaveOccurred(), status)
+
+				Expect(checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)).ShouldNot(HaveOccurred())
+
+				iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
+				// being accepted.
+				nfqueuedPacketsCount := getIptablesSavePacketCount(iptablesSaveOutput,
+					fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^n]*NFQUEUE.*")
+				Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
+
+				dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "rule-name=allow-foobar[^n]*cali40d")
+				Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
+			})
+		})
 	})
 })
 
@@ -903,7 +934,8 @@ func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
 // The dnsServerIP is used to tell the test-connection script what dns server to use to resolve the IP for the domain.
 func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerIP string) error {
 	w.C.EnsureBinary("test-connection")
-	_, err := w.ExecCombinedOutput("/test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+	output, err := w.ExecCombinedOutput("/test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+	log.Debug(output)
 	return err
 }
 
@@ -922,4 +954,13 @@ func getIptablesSavePacketCount(iptablesSaveOutput, chainName, ruleIdentifier st
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return count
+}
+
+func getDockerLogs(containerID string) string {
+	cmd := utils.Command("docker", "logs", containerID)
+
+	logsBytes, err := cmd.CombinedOutput()
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return string(logsBytes)
 }

@@ -117,9 +117,10 @@ var _ = Describe("Constructor test", func() {
 				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
 				IptablesMangleAllowAction: configParams.IptablesMangleAllowAction,
 			},
-			IPIPMTU:          configParams.IpInIpMtu,
-			HealthAggregator: healthAggregator,
-			Collector:        col,
+			DisableDNSPolicyPacketProcessor: true,
+			IPIPMTU:                         configParams.IpInIpMtu,
+			HealthAggregator:                healthAggregator,
+			Collector:                       col,
 
 			MTUIfacePattern: regexp.MustCompile(".*"),
 
