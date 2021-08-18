@@ -47,14 +47,26 @@ var (
 		// https://www.elastic.co/guide/en/kibana/current/saved-objects-api-create.html
 		// -------------------------------------------------------------------------------------------------
 		proxy.Route{
-			Name:        "kb-create-new-saved-obj-bulk",
+			Name:        "kb-create-new-saved-obj-bulk-default",
 			Path:        "/tigera-kibana/api/saved_objects/_bulk_create",
 			HTTPMethods: []string{"POST", "PUT"},
 			RequireAuth: true,
 		},
 		proxy.Route{
-			Name:        "kb-create-new-saved-obj-config",
+			Name:        "kb-create-new-saved-obj-config-default",
 			Path:        "/tigera-kibana/api/saved_objects/config/7.6.2",
+			HTTPMethods: []string{"POST", "PUT"},
+			RequireAuth: true,
+		},
+		proxy.Route{
+			Name:        "kb-create-new-saved-obj-bulk-space",
+			Path:        "/tigera-kibana/s/{space_id}/api/saved_objects/_bulk_create",
+			HTTPMethods: []string{"POST", "PUT"},
+			RequireAuth: true,
+		},
+		proxy.Route{
+			Name:        "kb-create-new-saved-obj-config-space",
+			Path:        "/tigera-kibana/s/{space_id}/api/saved_objects/config/7.6.2",
 			HTTPMethods: []string{"POST", "PUT"},
 			RequireAuth: true,
 		},
