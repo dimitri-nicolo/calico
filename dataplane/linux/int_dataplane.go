@@ -384,59 +384,6 @@ const (
 	aksMTUOverhead       = 100
 )
 
-func getDefaultRouteLink(family int) (string, error) {
-	routes, err := netlink.RouteList(nil, family)
-	if err != nil {
-		return "", err
-	}
-
-	for _, rt := range routes {
-		if rt.Dst == nil {
-			link, err := netlink.LinkByIndex(rt.LinkIndex)
-			if err != nil {
-				return "", fmt.Errorf("link index %d: %q", rt.LinkIndex, err)
-			}
-
-			if attrs := link.Attrs(); attrs != nil {
-				return attrs.Name, nil
-			}
-
-			return "", fmt.Errorf("link index %d: no attributes", rt.LinkIndex)
-		}
-	}
-
-	return "", fmt.Errorf("no default route")
-}
-
-func getIfaceByMAC(mac net.HardwareAddr) (string, error) {
-	links, err := netlink.LinkList()
-	if err != nil {
-		return "", err
-	}
-
-	equal := func(a, b net.HardwareAddr) bool {
-		if len(a) != len(b) {
-			return false
-		}
-
-		for i := 0; i < len(a); i++ {
-			if a[i] != b[i] {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	for _, link := range links {
-		if attrs := link.Attrs(); attrs != nil && equal(attrs.HardwareAddr, mac) {
-			return attrs.Name, nil
-		}
-	}
-
-	return "", fmt.Errorf("no matching link for mac %s", mac)
-}
-
 func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
 	if config.DNSLogsLatency && !config.BPFEnabled {
 		// With non-BPF dataplane, set SO_TIMESTAMP so we get timestamps on packets passed
@@ -453,38 +400,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if ruleRenderer == nil {
 
 		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
-			err := func() error {
-				eksPrimaryENI, err := aws.PrimaryInterface()
-				if err != nil {
-					return err
-				}
-
-				if eksPrimaryENI.MacAddress == nil {
-					return fmt.Errorf("primary interface does not have MAC")
-				}
-
-				mac, err := net.ParseMAC(*eksPrimaryENI.MacAddress)
-				if err != nil {
-					return err
-				}
-
-				config.RulesConfig.EKSPrimaryENI, err = getIfaceByMAC(mac)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}()
+			var err error
+			config.RulesConfig.EKSPrimaryENI, err = aws.PrimaryInterfaceName()
 
 			if err != nil {
-				log.WithError(err).Warn("Failed to find primary EKS link name based on AWS api")
-
-				config.RulesConfig.EKSPrimaryENI, err = getDefaultRouteLink(netlink.FAMILY_ALL)
-
-				if err != nil {
-					log.WithError(err).Error("Failed to find primary EKS link name based default route " +
-						"- proxied nodeports may not work correctly")
-				}
+				log.WithError(err).Error("Failed to find primary EKS link name based default route " +
+					"- proxied nodeports may not work correctly")
 			}
 		}
 
