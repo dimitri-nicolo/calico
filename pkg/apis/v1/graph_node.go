@@ -47,9 +47,17 @@ type GraphNode struct {
 	// graph because they are part of an expanded service are not included in this aggregated set.
 	AggregatedProtoPorts *AggregatedProtoPorts `json:"aggregated_proto_ports,omitempty"`
 
-	// Stats for packets flowing between endpoints within this graph node. Each entry corresponds to the
-	// a time slice as specified in the main response object.
-	Stats []GraphStats `json:"stats,omitempty"`
+	// Stats for packets flowing between endpoints within this graph node. Each entry corresponds to a time slice as
+	// specified in the main response object.
+	StatsWithin []GraphStats `json:"stats_within,omitempty"`
+
+	// Stats for packets flowing between endpoints for ingress connections to this graph node. Each entry corresponds
+	// to a time slice as specified in the main response object
+	StatsIngress []GraphStats `json:"stats_ingress,omitempty"`
+
+	// Stats for packets flowing between endpoints for egress connections from this graph node. Each entry corresponds
+	// to a time slice as specified in the main response object
+	StatsEgress []GraphStats `json:"stats_egress,omitempty"`
 
 	// Whether this node is further expandable. In other words if this node is added as an `Expanded` node to
 	// the `GraphView` then the results may return additional nodes and edges.
@@ -94,12 +102,32 @@ type GraphNode struct {
 	Events GraphEvents `json:"events,omitempty"`
 }
 
-func (n *GraphNode) IncludeStats(ts []GraphStats) {
-	if n.Stats == nil {
-		n.Stats = ts
+func (n *GraphNode) IncludeStatsWithin(ts []GraphStats) {
+	if n.StatsWithin == nil {
+		n.StatsWithin = append([]GraphStats(nil), ts...)
 	} else if ts != nil {
-		for i := range n.Stats {
-			n.Stats[i] = n.Stats[i].Combine(ts[i])
+		for i := range n.StatsWithin {
+			n.StatsWithin[i] = n.StatsWithin[i].Combine(ts[i])
+		}
+	}
+}
+
+func (n *GraphNode) IncludeStatsIngress(ts []GraphStats) {
+	if n.StatsIngress == nil {
+		n.StatsIngress = append([]GraphStats(nil), ts...)
+	} else if ts != nil {
+		for i := range n.StatsIngress {
+			n.StatsIngress[i] = n.StatsIngress[i].Combine(ts[i])
+		}
+	}
+}
+
+func (n *GraphNode) IncludeStatsEgress(ts []GraphStats) {
+	if n.StatsEgress == nil {
+		n.StatsEgress = append([]GraphStats(nil), ts...)
+	} else if ts != nil {
+		for i := range n.StatsEgress {
+			n.StatsEgress[i] = n.StatsEgress[i].Combine(ts[i])
 		}
 	}
 }

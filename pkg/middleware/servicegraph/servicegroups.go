@@ -88,6 +88,19 @@ type serviceGroups struct {
 	finished                   bool
 }
 
+func (sgs *serviceGroups) String() string {
+	var lines []string
+	lines = append(lines, "==== Services ====")
+	for sn := range sgs.serviceGroupsByServiceName {
+		lines = append(lines, sn.String())
+	}
+	lines = append(lines, "==== Endpoints ====")
+	for ek := range sgs.serviceGroupsByEndpointKey {
+		lines = append(lines, ek.String())
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (sgs *serviceGroups) Iter(cb func(*ServiceGroup) error) error {
 	var err error
 	sgs.serviceGroups.Iter(func(item interface{}) error {

@@ -44,7 +44,7 @@ func (e *GraphEdge) IncludeServicePort(s ServicePort) {
 
 func (e *GraphEdge) IncludeStats(ts []GraphStats) {
 	if e.Stats == nil {
-		e.Stats = ts
+		e.Stats = append([]GraphStats(nil), ts...)
 	} else if ts != nil {
 		for i := range e.Stats {
 			e.Stats[i] = e.Stats[i].Combine(ts[i])

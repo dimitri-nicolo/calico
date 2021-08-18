@@ -103,11 +103,25 @@ func compareNodes(actual, expected v1.GraphNode) []string {
 			toJson(expected.AggregatedProtoPorts)),
 		)
 	}
-	if !reflect.DeepEqual(actual.Stats, expected.Stats) {
+	if !reflect.DeepEqual(actual.StatsWithin, expected.StatsWithin) {
 		errStrs = append(errStrs, fmt.Sprintf(
-			"  Stats are not the same:\n    Actual:\n%v\n    Expected:\n%v",
-			toJson(actual.Stats),
-			toJson(expected.Stats)),
+			"  StatsWithin are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.StatsWithin),
+			toJson(expected.StatsWithin)),
+		)
+	}
+	if !reflect.DeepEqual(actual.StatsIngress, expected.StatsIngress) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  StatsIngress are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.StatsIngress),
+			toJson(expected.StatsIngress)),
+		)
+	}
+	if !reflect.DeepEqual(actual.StatsEgress, expected.StatsEgress) {
+		errStrs = append(errStrs, fmt.Sprintf(
+			"  StatsEgress are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+			toJson(actual.StatsEgress),
+			toJson(expected.StatsEgress)),
 		)
 	}
 	if !reflect.DeepEqual(actual.Expandable, expected.Expandable) {
@@ -254,7 +268,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Track the last handled response data and the response filename. We use this to write out the expected
 			// file in the event of an error.  It makes dev cycles easier.
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".json"
 
 			// Parse the expected response.
 			content, err := ioutil.ReadFile(expectDataFilename)
@@ -319,7 +333,7 @@ var _ = Describe("Service graph data tests", func() {
 
 			if !reflect.DeepEqual(actual.Selectors, expected.Selectors) {
 				errStrs = append(errStrs, fmt.Sprintf(
-					"  Selectors are not the same:\n    Actual:\n%v\n    Expected:\n%v",
+					"  View selectors are not the same:\n    Actual:\n%v\n    Expected:\n%v",
 					toJson(actual.Selectors),
 					toJson(expected.Selectors)),
 				)

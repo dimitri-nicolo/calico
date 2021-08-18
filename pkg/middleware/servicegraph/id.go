@@ -363,13 +363,7 @@ func ParseGraphNodeID(id v1.GraphNodeID, sgs ServiceGroups) (*IDInfo, error) {
 
 		// If the current type is an endpoint type then update the endpoint info. Each ID should have at most one
 		// endpoint specified.
-		switch thisType {
-		case v1.GraphNodeTypeReplicaSet,
-			v1.GraphNodeTypeWorkload,
-			v1.GraphNodeTypeHosts,
-			v1.GraphNodeTypeHost,
-			v1.GraphNodeTypeNetwork,
-			v1.GraphNodeTypeNetworkSet:
+		if IsEndpointType(thisType) {
 			idf.Endpoint.Type = thisType
 		}
 
@@ -480,4 +474,15 @@ func GetServiceGroupID(svcs []v1.NamespacedName) v1.GraphNodeID {
 		serviceIds[i] = getServiceID(s.Namespace, s.Name)
 	}
 	return v1.GraphNodeID(fmt.Sprintf("%s;%s", v1.GraphNodeTypeServiceGroup, strings.Join(serviceIds, ";")))
+}
+
+// IsEndpointType returns true if the graph node type is considered an endpoint.
+func IsEndpointType(t v1.GraphNodeType) bool {
+	switch t {
+	case v1.GraphNodeTypeHosts, v1.GraphNodeTypeHost, v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeWorkload,
+		v1.GraphNodeTypeNetworkSet, v1.GraphNodeTypeNetwork:
+		return true
+	default:
+		return false
+	}
 }

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
+
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
@@ -76,21 +78,17 @@ type GraphSelectorConstructor struct {
 }
 
 func (s *GraphSelectorConstructor) SelectorString() *string {
-	if s == nil {
+	// Note that only the outer-most selector can have an operator of "no-match" since combining selectors will always
+	// swallow any no-match in the parts and propagate to the outermost selector.
+	if s == nil || s.operator == v1.OpNoMatch {
 		return nil
-	} else if ss, noMatch := s.selectorString(false); noMatch {
-		return nil
-	} else {
-		return &ss
 	}
+	ss := s.selectorString(false)
+	return &ss
 }
 
-func (s *GraphSelectorConstructor) selectorString(nested bool) (sel string, noMatch bool) {
-	if s == nil {
-		return "", false
-	}
+func (s *GraphSelectorConstructor) selectorString(nested bool) string {
 	sb := strings.Builder{}
-
 	writeKey := func(key string) {
 		// The key needs to be quoted if it contains a "."
 		if strings.Contains(key, ".") {
@@ -104,23 +102,23 @@ func (s *GraphSelectorConstructor) selectorString(nested bool) (sel string, noMa
 	switch s.operator {
 	case v1.OpAnd, v1.OpOr:
 		parts := make(map[string]struct{})
-		var foundNoMatch bool
 		var ordered []string
 		for i := 0; i < len(s.selectors); i++ {
-			if ss, noMatch := s.selectors[i].selectorString(true); noMatch {
-				// The process selector indicates "not valid". If this is an OpAnd then then entire selector is not
-				// valid, otherwise we just skip this
-				if s.operator == v1.OpAnd {
-					return "", true
-				}
-				foundNoMatch = true
-			} else if _, ok := parts[ss]; !ok {
+			ss := s.selectors[i].selectorString(true)
+			if _, ok := parts[ss]; !ok {
+				// Don't include duplicate parts.
 				parts[ss] = struct{}{}
 				ordered = append(ordered, ss)
 			}
 		}
 		sort.Strings(ordered)
-		if len(ordered) > 0 {
+		switch {
+		case len(ordered) == 0:
+			// Nothing to write when there are no entries.
+		case len(ordered) == 1:
+			// No additional parens required if there is only one part.
+			sb.WriteString(ordered[0])
+		default:
 			if nested {
 				sb.WriteString("(")
 			}
@@ -132,9 +130,6 @@ func (s *GraphSelectorConstructor) selectorString(nested bool) (sel string, noMa
 			if nested {
 				sb.WriteString(")")
 			}
-		} else if foundNoMatch {
-			// We found one or more no matches with no valid selectors, so the full selector is non-matching.
-			return "", true
 		}
 	case v1.OpEqual, v1.OpNotEqual:
 		writeKey(s.key)
@@ -182,9 +177,9 @@ func (s *GraphSelectorConstructor) selectorString(nested bool) (sel string, noMa
 			sb.WriteString(v1.OpInListEnd)
 		*/
 	case v1.OpNoMatch:
-		return "", true
+		log.Panic("Should not convert no match to string")
 	}
-	return sb.String(), false
+	return sb.String()
 }
 
 func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...interface{}) *GraphSelectorConstructor {
@@ -195,11 +190,41 @@ func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...interface
 	case v1.OpNoMatch:
 		// Nothing to extract for the no-match operator.
 	case v1.OpAnd, v1.OpOr:
+		// Minor finesse: if any parts are IN operators acting on the same parameter then we can combine these.
+		var updated []*GraphSelectorConstructor
+		var foundNoMatch bool
+		inOpsByParm := make(map[string]*GraphSelectorConstructor)
 		for _, part := range parts {
 			egs, ok := part.(*GraphSelectorConstructor)
 			if egs == nil || !ok {
 				continue
 			}
+			if egs.operator == v1.OpNoMatch {
+				if op == v1.OpAnd {
+					// This is an AND operator and one of the matches is a no-match - therefore the whole selector
+					// is a no match.
+					return egs
+				}
+
+				// This must be an OR - if all parts are no matches then the whole selector will be a no match.
+				foundNoMatch = true
+				continue
+			} else if egs.operator != v1.OpIn {
+				updated = append(updated, egs)
+				continue
+			}
+			inOpsByParm[egs.key] = combineInSelectors(op, inOpsByParm[egs.key], egs)
+		}
+		for _, sel := range inOpsByParm {
+			updated = append(updated, sel)
+		}
+
+		if foundNoMatch && len(updated) == 0 {
+			// All of the parts were no-matches, so the entire selector is a no match.
+			return NewGraphSelectorConstructor(v1.OpNoMatch)
+		}
+
+		for _, egs := range updated {
 			if egs.operator == op {
 				// If same operand, then expand into this selector to reduce nesting.
 				gs.selectors = append(gs.selectors, egs.selectors...)
@@ -224,7 +249,7 @@ func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...interface
 		// no point handling other types just yet.
 		value := parts[1].([]string)
 		if len(value) == 0 {
-			return nil
+			gs.operator = v1.OpNoMatch
 		}
 		gs.value = value
 	default:
@@ -232,6 +257,44 @@ func NewGraphSelectorConstructor(op v1.GraphSelectorOperator, parts ...interface
 	}
 
 	return gs
+}
+
+func combineInSelectors(op v1.GraphSelectorOperator, sel1, sel2 *GraphSelectorConstructor) *GraphSelectorConstructor {
+	if sel1 == nil {
+		return sel2
+	} else if sel2 == nil {
+		return sel1
+	}
+
+	if sel1.key != sel2.key || sel1.operator != v1.OpIn || sel2.operator != v1.OpIn {
+		log.Panic("combineInSelectors called with non-matching selector types")
+	}
+
+	vals1 := set.FromArray(sel1.value)
+	vals2 := set.FromArray(sel2.value)
+	var combined []string
+	switch op {
+	case v1.OpAnd:
+		// Only include values in both sel1 and sel2
+		vals1.Iter(func(item interface{}) error {
+			if vals2.Contains(item) {
+				combined = append(combined, item.(string))
+			}
+			return nil
+		})
+	case v1.OpOr:
+		// Take a copy of the selector 2 values.
+		combined = append([]string(nil), sel2.value.([]string)...)
+
+		// Add any value from sel1 that was not in selector 2.
+		vals1.Iter(func(item interface{}) error {
+			if !vals2.Contains(item) {
+				combined = append(combined, item.(string))
+			}
+			return nil
+		})
+	}
+	return NewGraphSelectorConstructor(v1.OpIn, sel1.key, combined)
 }
 
 // SelectorPairs contains source and dest pairs of graph node selectors.
@@ -514,8 +577,8 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 		// we have do do a rather brutal list of all host endpoints. We can at least skip namespace since hep types
 		// are only non-namespaced.
 		hosts := s.nameHelper.GetCompiledHostNamesFromAggregatedName(nameAggr)
-		if len(hosts) > maxSelectorItemsPerGroup {
-			// Too many individual items. Don't filter on the hosts.
+		if len(hosts) == 0 || len(hosts) > maxSelectorItemsPerGroup {
+			// No individual hosts, or too many individual items. Don't filter on the hosts.
 			l3Source = NewGraphSelectorConstructor(v1.OpAnd,
 				NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
 			)
@@ -533,8 +596,7 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 				NewGraphSelectorConstructor(v1.OpEqual, "dest_name_aggr", hosts[0]),
 			)
 		} else {
-			// Multiple (or no) host names, use "in" operator.  The in operator will not include a zero length
-			// comparison (which would be the case if there are no node selectors specified).
+			// Multiple host names, use "in" operator.
 			sort.Strings(hosts)
 			l3Source = NewGraphSelectorConstructor(v1.OpAnd,
 				NewGraphSelectorConstructor(v1.OpEqual, "source_type", rawType),
