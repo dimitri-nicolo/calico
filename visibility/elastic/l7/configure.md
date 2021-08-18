@@ -4,11 +4,11 @@ description: Configure and aggregate L7 logs.
 canonical_url: /visibility/elastic/l7/configure
 ---
 
-## Big picture
+### Big picture
 
 Deploy Envoy and use {{site.prodname}} L7 logs to monitor application activity.
 
-## Value
+### Value
 
 Just like L3/4 {{site.prodname}} logs, platform operators and
 development teams want visibility into L7 logs to see how applications are interacting with each
@@ -18,17 +18,17 @@ with each other, not the specific request details. {{site.prodname}} provides vi
 L7 logs are also key for detecting anomalous behaviors like attempts to
 access applications, restricted URLs, and scans for particular URLs.
 
-## Concepts
+### Concepts
 
-### About L7 logs
+#### About L7 logs
 
 L7 logs capture application interactions from HTTP header data in requests. Data shows what is actually sent in communications between specific pods, providing more specificity than flow logs. (Flow logs capture data only from connections for workload interactions).
 
-Calico Enterprise collects L7 logs by sending the selected traffic through an Envoy proxy.
+{{site.prodname}} collects L7 logs by sending the selected traffic through an Envoy proxy.
 
 L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 
-## Before you begin
+### Before you begin
 
 **Not supported**
 
@@ -38,7 +38,7 @@ L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 
 **Limitations**
 
-* L7 log collection is not supported for host-network pod backend services (Ex. kubernetes service in the default namespace).
+* L7 log collection is not supported for host-network pod backend services (Ex. Kubernetes service in the default namespace).
 * When selecting and deselecting traffic for L7 log collection, active connections may be disrupted.
 * On EKS clusters, `eth0` must be the main network interface.
 
@@ -59,11 +59,11 @@ L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
   [Felix Configuration documentation]({{site.baseurl}}/reference/felix/configuration#calico-enterprise-specific-configuration)
   for more details.
 
-## How to
+### How to
 
-### Configure L7 logs
+#### Configure L7 logs
 
-#### Step 1: Configure the L7 log collector
+**Step 1: Configure the L7 log collector**
 
 In this step, you configure the L7 log collector to gather the L7 logs.
 
@@ -93,7 +93,7 @@ In this step, you configure the L7 log collector to gather the L7 logs.
    kubectl create configmap envoy-config -n calico-system --from-file=envoy-config.yaml
    ```
 
-#### Step 2: Enable L7 log collection
+**Step 2: Enable L7 log collection**
 
 Apply the customized `l7-collector-daemonset.yaml` from Step 1 and ensure that `l7-collector` and `envoy-proxy` containers are in Running state. 
 
@@ -107,7 +107,7 @@ Enable L7 log collection daemonset mode in Felix by setting [Felix configuration
    kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"tproxyMode":"Enabled"}}'
    ```
 
-#### Step 3: Select traffic for L7 log collection
+**Step 3: Select traffic for L7 log collection**
 
 1. Annotate the services you wish to collect L7 logs as shown.
    ```
@@ -119,7 +119,7 @@ Enable L7 log collection daemonset mode in Felix by setting [Felix configuration
    kubectl annotate svc <service-name> -n <service-namespace> projectcalico.org/l7-logging-
    ```
 
-#### Step 4: Test your configuration
+**Step 4: Test your configuration**
 
 To test your installation, you must first know the appropriate path to access your cluster.
 The path can be either of the following:
