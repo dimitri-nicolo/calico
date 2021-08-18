@@ -78,20 +78,23 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 |                                      | VXLAN                                                        | UDP 4789                          |
 | **Cluster scaling**                  | Any {{site.prodname}} networking option above with Typha agents enabled | TCP 5473 (default)     |
 {%- if include.orch == "Kubernetes" %} 
-| **APIs**                             | Kubernetes API (kube-apiserver) to access Kubernetes datastore (kdd)| Often TCP 443 or 6443\*    |
+| **APIs**                             | Kubernetes API (kube-apiserver) to access Kubernetes API datastore  | Often TCP 443 or 6443\*    |
 |                                      | {{site.prodname}} API server                                        | TCP 8080 and 5443 (default)|
 {%- elsif include.orch == "OpenShift" %}
-| **APIs**                             | Kubernetes API (kube-apiserver) to access Kubernetes datastore (kdd)| Often TCP 443 or 8443\*    |
+| **APIs**                             | Kubernetes API (kube-apiserver) to access Kubernetes API datastore  | Often TCP 443 or 8443\*    |
 |                                      | {{site.prodname}} API server                                        | TCP 8080 and 5443 (default)|
 {%- endif %}
 | **Nodes**                            | calico-node (Felix, BIRD, confd)                                    | TCP 9090 (default)         |
 | **Component metrics**                | Prometheus metrics                                                  | TCP 9081 (default)         |
-|                                      | Prometheus BGP metrics                                              | TCP 9900 (default)
+|                                      | Prometheus BGP metrics                                              | TCP 9900 (default)         |
+|                                      | Prometheus API service                                              | TCP 9090 (default)         |
 |                                      | Prometheus Alertmanager                                             | TCP 9093 (default)         |
 | **Logs and storage**                 | Elasticsearch with fluentd datastore                                | TCP 9200 (default)         |
 |                                      | Elasticssearch for cloud (ECK)                                      | TCP 9443 (default)         |
-|                                      | Kibana                                                              | TCP 5601 (default)         |
-| **User interface**                   | {{site.prodname}} Manager UI                                        | TCP 9443 (default)         |
+|                                      | Elasticsearch gateway                                               | TCP 5444 (default)         |
+| **Visibility and troubleshooting**   | Kibana                                                              | TCP 5601 (default)         |
+|                                      | Packet capture API                                                  | TCP 8444 (default)         |
+|                                      | {{site.prodname}} Manager UI                                        | TCP 9443 (default)         |
 | **Intrusion Detection System (IDS)** | {{site.prodname}} intrusion detection                               | TCP 5443 (default)         |
 | **Compliance**                       | {{site.prodname}} compliance                                        | TCP 5443 (default)         |
 | **Multi-cluster management**         | Additional port required for Manager UI                             | TCP 9449                   |
