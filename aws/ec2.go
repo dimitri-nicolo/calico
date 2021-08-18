@@ -228,6 +228,8 @@ func (updater *EC2SrcDstCheckUpdater) Update(caliCheckOption string) error {
 		return err
 	}
 
+	// We are only modifying network interface with device-id-0 to update
+	// instance source-destination-check.
 	ec2NetId, err := ec2Cli.GetMyPrimaryEC2NetworkInterfaceId(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting ec2 network-interface-id: %s", convertError(err))
@@ -345,11 +347,9 @@ func (c *ec2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types
 		if len(instance.NetworkInterfaces) == 0 {
 			return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.ec2InstanceId)
 		}
-		// We are only modifying network interface with device-id-0 to update
-		// instance source-destination-check.
 		// An instance can have multiple interfaces and the API response can be
 		// out-of-order interface list. We compare the device-id in the
-		// response to make sure the right device is updated.
+		// response to make sure we get the right device.
 		for _, networkInterface := range instance.NetworkInterfaces {
 			if networkInterface.Attachment != nil &&
 				networkInterface.Attachment.DeviceIndex != nil &&
