@@ -45,6 +45,7 @@ var (
 		APIGroup: "projectcalico.org",
 		Resources: []string{
 			"hostendpoints", "networksets", "globalnetworksets", "networkpolicies", "globalnetworkpolicies",
+			"packetcaptures",
 		},
 		Verbs: []string{"list"},
 	}, {
