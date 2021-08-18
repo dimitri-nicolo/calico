@@ -16,8 +16,8 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210818002817-bc01cad80642
-	github.com/tigera/compliance v0.0.0-20210818005348-5907217a0211
-	github.com/tigera/lma v0.0.0-20210818004444-db2d8678e86d
+	github.com/tigera/compliance v0.0.0-20210818225640-4bff12555f92
+	github.com/tigera/lma v0.0.0-20210818225706-ae49749aefbe
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
@@ -29,7 +29,7 @@ replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210818023100-ebecc432447f
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210817014223-a395ab09e1d5
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210818005808-81d135106b08
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210817005655-674dfdc81fca
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210818161955-a63b31960518
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
