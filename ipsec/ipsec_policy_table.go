@@ -595,7 +595,7 @@ func (sel PolicySelector) Populate(pol *netlink.XfrmPolicy) {
 }
 
 type PolicyRule struct {
-	Action netlink.XfrmPolicyAction
+	Action netlink.PolicyAction
 
 	TunnelSrc ip.V4Addr
 	TunnelDst ip.V4Addr
@@ -619,12 +619,16 @@ func (r *PolicyRule) Populate(pol *netlink.XfrmPolicy, ourReqID int) {
 
 	// Note: for a block action, the template doesn't get used.  However, we include it because it allows us
 	// to include a ReqID, which we use to match our policies during resync.
+	optional := 0
+	if r.Optional {
+		optional = 1
+	}
 	pol.Tmpls = append(pol.Tmpls, netlink.XfrmPolicyTmpl{
 		Src:      r.TunnelSrc.AsNetIP(),
 		Dst:      r.TunnelDst.AsNetIP(),
 		Proto:    netlink.XFRM_PROTO_ESP,
 		Mode:     netlink.XFRM_MODE_TUNNEL,
 		Reqid:    ourReqID,
-		Optional: r.Optional,
+		Optional: optional,
 	})
 }

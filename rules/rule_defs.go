@@ -253,6 +253,7 @@ type RuleRenderer interface {
 	StaticNATTableChains(ipVersion uint8) []*iptables.Chain
 	StaticNATPostroutingChains(ipVersion uint8) []*iptables.Chain
 	StaticRawTableChains(ipVersion uint8) []*iptables.Chain
+	StaticBPFModeRawChains(ipVersion uint8, tcBypassMark uint32) []*iptables.Chain
 	StaticMangleTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
@@ -289,6 +290,10 @@ type RuleRenderer interface {
 		tiers []*proto.TierInfo,
 		profileIDs []string,
 	) []*iptables.Chain
+	HostEndpointToRawEgressChain(
+		ifaceName string,
+		untrackedTiers []*proto.TierInfo,
+	) *iptables.Chain
 	HostEndpointToRawChains(
 		ifaceName string,
 		untrackedTiers []*proto.TierInfo,

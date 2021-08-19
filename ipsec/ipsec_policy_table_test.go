@@ -77,7 +77,7 @@ var (
 		Dir: netlink.XFRM_DIR_OUT,
 		Tmpls: []netlink.XfrmPolicyTmpl{
 			{
-				Optional: true,
+				Optional: 1,
 				Src:      hostIP1,
 				Dst:      hostIP2,
 				Reqid:    ReqID,
@@ -143,7 +143,7 @@ var (
 		Dir: netlink.XFRM_DIR_FWD,
 		Tmpls: []netlink.XfrmPolicyTmpl{
 			{
-				Optional: true,
+				Optional: 1,
 				Src:      hostIP1,
 				Dst:      hostIP2,
 				Reqid:    ReqID,
