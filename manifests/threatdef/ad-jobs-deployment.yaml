@@ -121,4 +121,4 @@ spec:
             secretName: tigera-secure-es-gateway-http-certs-public
         - name: host-volume
           hostPath:
-            path: /var/log/calico
+            path: /var/log/calico/anomaly_detection_jobs
