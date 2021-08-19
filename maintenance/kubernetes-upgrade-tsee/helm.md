@@ -83,6 +83,24 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
    EOF
    ```
 
+1. If your cluster is v3.7 or older, apply a new [Monitor]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Monitor)
+   CR to your cluster.
+
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: Monitor
+   metadata:
+     name: tigera-secure
+   EOF
+   ```
+
+1. Wait until the `apiserver` shows a status of `Available`, then proceed to the next section. You can monitor progress with the following command:
+
+   ```bash
+   watch kubectl get tigerastatus/apiserver
+   ```
+
 1. Install the new network policies to secure {{site.prodname}} component communications.
 
    If your cluster is a **managed** cluster, apply this manifest.
@@ -95,18 +113,6 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
 
    ```bash
    kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-   ```
-
-1. If your cluster is v3.7 or older, apply a new [Monitor]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Monitor)
-   CR to your cluster.
-
-   ```bash
-   kubectl apply -f - <<EOF
-   apiVersion: operator.tigera.io/v1
-   kind: Monitor
-   metadata:
-     name: tigera-secure
-   EOF
    ```
 
 1. You can monitor progress with the following command:
