@@ -196,7 +196,7 @@ var _ = Describe("AWS Tests", func() {
 			ec2InstanceId: testInstId,
 		}
 
-		Expect(client.getEC2NetworkInterfaceId(context.TODO())).To(Equal(testEniId))
+		Expect(client.GetMyPrimaryEC2NetworkInterfaceId(context.TODO())).To(Equal(testEniId))
 		Expect(client.setEC2SourceDestinationCheck(context.TODO(), testEniId, false)).NotTo(HaveOccurred())
 		Expect(mock.UsageCounter).To(BeNumerically("==", 2))
 

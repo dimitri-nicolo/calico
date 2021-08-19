@@ -37,6 +37,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -397,6 +398,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
+
+		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
+			var err error
+			config.RulesConfig.EKSPrimaryENI, err = aws.PrimaryInterfaceName()
+
+			if err != nil {
+				log.WithError(err).Error("Failed to find primary EKS link name based default route " +
+					"- proxied nodeports may not work correctly")
+			}
+		}
+
 		ruleRenderer = rules.NewRenderer(config.RulesConfig)
 	}
 	epMarkMapper := rules.NewEndpointMarkMapper(

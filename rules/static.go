@@ -1233,11 +1233,11 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		tproxyRules = nil
 
-		if r.KubernetesProvider == config.ProviderEKS {
+		if r.KubernetesProvider == config.ProviderEKS && r.EKSPrimaryENI != "" {
 			tproxyRules = []Rule{{
 				Comment: []string{"Set the EKS nodeport mark that we bypass"},
 				Match: Match().
-					InInterface("eth0").
+					InInterface(r.EKSPrimaryENI).
 					DestAddrTypeLimitIfaceIn(AddrTypeLocal),
 				Action: SetConnMarkAction{Mark: 0x80, Mask: 0x80},
 			}}
