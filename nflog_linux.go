@@ -152,7 +152,7 @@ func openAndReadNFNLSocket(
 	Recvloop:
 		for {
 			var res [][]byte
-			msgs, err := sock.Receive()
+			msgs, _, err := sock.Receive()
 			if err != nil {
 				switch err := err.(type) {
 				case syscall.Errno:
