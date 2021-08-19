@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -29,7 +28,6 @@ import (
 	"github.com/aws/smithy-go"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -123,100 +121,6 @@ func PrimaryInterface() (*types.InstanceNetworkInterface, error) {
 	}
 
 	return ec2Iface, nil
-}
-
-func nlGetDefaultRouteLink(family int) (string, error) {
-	routes, err := netlink.RouteList(nil, family)
-	if err != nil {
-		return "", err
-	}
-
-	for _, rt := range routes {
-		if rt.Dst == nil {
-			link, err := netlink.LinkByIndex(rt.LinkIndex)
-			if err != nil {
-				return "", fmt.Errorf("link index %d: %q", rt.LinkIndex, err)
-			}
-
-			if attrs := link.Attrs(); attrs != nil {
-				return attrs.Name, nil
-			}
-
-			return "", fmt.Errorf("link index %d: no attributes", rt.LinkIndex)
-		}
-	}
-
-	return "", fmt.Errorf("no default route")
-}
-
-func nlGetIfaceByMAC(mac net.HardwareAddr) (string, error) {
-	links, err := netlink.LinkList()
-	if err != nil {
-		return "", err
-	}
-
-	equal := func(a, b net.HardwareAddr) bool {
-		if len(a) != len(b) {
-			return false
-		}
-
-		for i := 0; i < len(a); i++ {
-			if a[i] != b[i] {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	for _, link := range links {
-		if attrs := link.Attrs(); attrs != nil && equal(attrs.HardwareAddr, mac) {
-			return attrs.Name, nil
-		}
-	}
-
-	return "", fmt.Errorf("no matching link for mac %s", mac)
-}
-
-func PrimaryInterfaceName() (string, error) {
-	ifaceName := ""
-
-	err := func() error {
-		eksPrimaryENI, err := PrimaryInterface()
-		if err != nil {
-			return err
-		}
-
-		if eksPrimaryENI.MacAddress == nil {
-			return fmt.Errorf("primary interface does not have MAC")
-		}
-
-		mac, err := net.ParseMAC(*eksPrimaryENI.MacAddress)
-		if err != nil {
-			return err
-		}
-
-		ifaceName, err = nlGetIfaceByMAC(mac)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}()
-
-	if err != nil {
-		log.WithError(err).Warn("Failed to find primary EKS link name based on AWS api")
-
-		ifaceName, err = nlGetDefaultRouteLink(netlink.FAMILY_ALL)
-	}
-
-	return ifaceName, err
-}
-
-type EC2SrcDstCheckUpdater struct{}
-
-func NewEC2SrcDstCheckUpdater() *EC2SrcDstCheckUpdater {
-	return &EC2SrcDstCheckUpdater{}
 }
 
 func (updater *EC2SrcDstCheckUpdater) Update(caliCheckOption string) error {
