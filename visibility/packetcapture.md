@@ -143,7 +143,6 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: jane
-  apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
   name: tigera-packet-capture-role
@@ -194,7 +193,6 @@ subjects:
 - kind: ServiceAccount
   name: jane
   namespace: default
-  apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
   name: tigera-capture-files-role
