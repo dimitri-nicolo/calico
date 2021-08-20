@@ -141,7 +141,7 @@ metadata:
   name: tigera-packet-capture-role-jane
   namespace: sample
 subjects:
-- kind: User
+- kind: ServiceAccount
   name: jane
   apiGroup: rbac.authorization.k8s.io
 roleRef:
@@ -238,8 +238,8 @@ To access the capture files locally, you can use the following api that is avail
 ```bash
 kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
 NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> \
-curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
--H "Authorizaton: Bearer $TOKEN"
+curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" -L -O -k \
+-H "Authorization: Bearer $TOKEN"
 ```
 
 Retrieving capture files from a managed cluster is performed by calling the same API:
@@ -247,8 +247,8 @@ Retrieving capture files from a managed cluster is performed by calling the same
 ```bash
 kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
 NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> MANAGED_CLUSTER=<REPLACE_WITH_THE_NAME_OF_MANAGED_CLUSTER>\
-curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" \
--H "Authorizaton: Bearer $TOKEN" -H "X-CLUSTER-ID: $MANAGED_CLUSTER"
+curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" -L -O k \
+-H "Authorization: Bearer $TOKEN" -H "X-CLUSTER-ID: $MANAGED_CLUSTER"
 ```
 
 Users accessing packet captures from management and managed clusters need to be allowed `CREATE` actions for `authenticationreviews` in api group `projectcalico.org` in the management cluster, as in the example in the section above.
@@ -263,7 +263,7 @@ Using the running example of a service account named, `jane` in the default name
 Alternatively, you can access the capture files locally using [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI:
 
 ```bash
-calicoctl captured-packets copy sample-capture -namespace sample --destination /tmp
+calicoctl captured-packets copy sample-capture --namespace sample --destination /tmp
 ```
 
 You can access the capture files locally from the Fluentd pods using similar commands like the ones below:
