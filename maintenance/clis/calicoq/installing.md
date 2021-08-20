@@ -32,9 +32,19 @@ you want to install the binary.
 
 1. Use the following command to download the `calicoq` binary.
 
+{%- if page.version == "master" -%}
+
    ```
-   curl -o calicoq -O -L {{site.url}}/download/binaries/{{ version }}/calicoq
+   {{site.url}}/download/binaries/{{ version }}/calicoq
    ```
+
+{% else %}
+
+   ```
+   curl -o calicoq -O -L {{site.downloadsurl}}/ee/binaries/{{ version }}/calicoq
+   ```
+
+{% endif %}
 
 1. Set the file to be executable.
 

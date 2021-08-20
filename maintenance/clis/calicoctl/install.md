@@ -56,13 +56,23 @@ you want to install the binary.
 
 1. Use the following command to download the `calicoctl` binary.
 
-   ```bash
+{%- if page.version == "master" -%}
+
+   ```
    curl -o calicoctl -O -L {{site.url}}/download/binaries/{{ version }}/calicoctl
    ```
 
+{% else %}
+
+   ```
+   curl -o calicoctl -O -L {{site.downloadsurl}}/ee/binaries/{{ version }}/calicoctl
+   ```
+
+{% endif %}
+
 1. Set the file to be executable.
 
-   ```bash
+   ```
    chmod +x calicoctl
    ```
 
@@ -83,9 +93,19 @@ you want to install the binary.
 
 1. Use the following command to download the `calicoctl` binary.
 
-   ```bash
+{%- if page.version == "master" -%}
+
+   ```
    curl -o calicoctl -O -L  {{site.url}}/download/binaries/{{ version }}/calicoctl-darwin-amd64
    ```
+
+{% else %}
+
+   ```
+   curl -o calicoctl -O -L  {{site.downloadsurl}}/ee/binaries/{{ version }}/calicoctl-darwin-amd64
+   ```
+
+{% endif %}
 
 1. Set the file to be executable.
 
@@ -110,9 +130,19 @@ you want to install the binary.
    > to a location that's in your `PATH`. For example, `C:\Windows`.
    {: .alert .alert-success}
 
-```
-Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "calicocttl.exe"
-```
+{%- if page.version == "master" -%}
+
+    ```
+    Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "calicocttl.exe"
+    ```
+
+{% else %}
+
+    ```
+    Invoke-WebRequest -Uri "{{site.downloadsurl}}/ee/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "calicocttl.exe"
+    ```
+
+{% endif %}
 
 %>
 {% endtabs %}
@@ -131,9 +161,19 @@ you want to install the binary.
 
 1. Use the following command to download the `calicoctl` binary.
 
-   ```bash
-   curl -o kubectl-calico -O -L  {{site.url}}/download/binaries/{{ version }}/calicoctl
+{%- if page.version == "master" -%}
+
    ```
+   curl -o kubectl-calico -O -L {{site.url}}/download/binaries/{{ version }}/calicoctl
+   ```
+
+{% else %}
+
+   ```
+   curl -o kubectl-calico -O -L  {{site.downloadsurl}}/ee/binaries/{{ version }}/calicoctl
+   ```
+
+{% endif %}
 
 1. Set the file to be executable.
 
@@ -158,9 +198,20 @@ you want to install the binary.
 
 1. Use the following command to download the `calicoctl` binary.
 
-   ```bash
-   curl -o kubectl-calico -O -L  {{site.url}}/download/binaries/{{ version }}/calicoctl-darwin-amd64
+
+{%- if page.version == "master" -%}
+
    ```
+   curl -o kubectl-calico -O -L {{site.url}}/download/binaries/{{ version }}/calicoctl-darwin-amd64
+   ```
+
+{% else %}
+
+   ```
+   curl -o kubectl-calico -O -L  {{site.downloadsurl}}/ee/binaries/{{ version }}/calicoctl-darwin-amd64
+   ```
+
+{% endif %}
 
 1. Set the file to be executable.
 
@@ -186,9 +237,19 @@ you want to install the binary.
    > to a location that's in your `PATH`. For example, `C:\Windows`.
    {: .alert .alert-success}
 
-```
-Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "kubectl-calico.exe"
-```
+{%- if page.version == "master" -%}
+
+   ```
+   Invoke-WebRequest -Uri "{{site.url}}/download/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "kubectl-calico.exe"
+   ```
+
+{% else %}
+
+    ```
+    Invoke-WebRequest -Uri "{{site.downloadsurl}}/ee/binaries/{{ version }}/calicoctl-windows-amd64.exe" -OutFile "kubectl-calico.exe"
+    ```
+
+{% endif %}
 
 %>
 {% endtabs %}

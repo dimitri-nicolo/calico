@@ -113,12 +113,6 @@
   status = 200
   headers = {X-From = "Netlify"}
 
-[[redirects]]
-  from = "/download/archives/*"
-  to = "https://s3.amazonaws.com/tigera-public/ee/archives/:splat"
-  status = 200
-  headers = {X-From = "Netlify"}
-
 # this redirect should be placed above the generic /download/charts/* redirect
 [[redirects]]
   from = "/download/charts/master/*"
@@ -126,22 +120,10 @@
   status = 200
   headers = {X-From = "Netlify"}
 
-[[redirects]]
-  from = "/download/charts/*"
-  to = "https://s3.amazonaws.com/tigera-public/ee/charts/:splat"
-  status = 200
-  headers = {X-From = "Netlify"}
-
 # this redirect should be placed above the generic /download/binaries/* redirect
 [[redirects]]
   from = "/download/binaries/master/*"
   to = "https://storage.googleapis.com/tigera-binaries/:splat"
-  status = 200
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-  from = "/download/binaries/*"
-  to = "https://s3.amazonaws.com/tigera-public/ee/binaries/:splat"
   status = 200
   headers = {X-From = "Netlify"}
 
