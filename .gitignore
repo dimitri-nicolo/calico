@@ -30,3 +30,6 @@ release-notes-*
 
 # Ignore CRDs copied for fv
 config/
+
+# Ignore local snort rules used for dev testing
+*/local.rules

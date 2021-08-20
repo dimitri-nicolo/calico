@@ -5,11 +5,11 @@ package syncer
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/tigera/deep-packet-inspection/pkg/handler"
+
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/deep-packet-inspection/pkg/calicoclient"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -30,11 +30,11 @@ const (
 
 // Run starts a long-running reconciler to sync deep packet inspection related resources.
 // If typha is configured uses typha syncclient else uses local syncer.
-func Run(ctx context.Context, healthy func(live bool)) {
-	var syncer bapi.Syncer
-	r := NewReconciler(healthy)
+func Run(ctx context.Context, hndler handler.Handler, nodeName string, healthCh chan bool, cfg *apiconfig.CalicoAPIConfig, calicoClient client.Interface) {
+	var syncerClient bapi.Syncer
+	r := newReconciler(nodeName, healthCh, cfg, calicoClient)
 
-	// Either create a typha syncclient or a local syncer depending on configuration. This calls back into the
+	// Either create a typha syncclient or a local syncerClient depending on configuration. This calls back into the
 	// reconciler to trigger updates when necessary.
 
 	// Read Typha settings from the environment.
@@ -48,13 +48,14 @@ func Run(ctx context.Context, healthy func(live bool)) {
 	) {
 		log.Debug("Using typha syncclient")
 	} else {
-		log.Debug("Using local syncer")
-		syncer = dpisyncer.New(r.client.(backendClientAccessor).Backend(), r)
-		syncer.Start()
+		log.Debug("Using local syncerClient")
+		syncerClient = dpisyncer.New(r.client.(backendClientAccessor).Backend(), r)
+		syncerClient.Start()
+		defer syncerClient.Stop()
 	}
 
 	// Run the reconciler.
-	r.run(ctx, syncer)
+	r.run(ctx, hndler)
 }
 
 // requestType to indicate if the update is related to status of syncer or regular resource update.
@@ -72,7 +73,7 @@ type reconciler struct {
 	cfg      *apiconfig.CalicoAPIConfig
 	client   client.Interface
 	ch       chan cacheRequest
-	healthy  func(live bool)
+	healthCh chan bool
 }
 
 // cacheRequest is used to communicate the updates from syncer to the local cache.
@@ -83,30 +84,24 @@ type cacheRequest struct {
 	kvPair      model.KVPair
 }
 
-func NewReconciler(healthy func(live bool)) *reconciler {
-	nodeName := os.Getenv("NODENAME")
-	if nodeName == "" {
-		healthy(false)
-		log.Fatal("NODENAME environment is not set")
-	}
-
-	cfg, client := calicoclient.MustCreateClient()
+func newReconciler(nodeName string, healthCh chan bool, cfg *apiconfig.CalicoAPIConfig, calicoClient client.Interface) *reconciler {
 	return &reconciler{
 		nodeName: nodeName,
 		cfg:      cfg,
-		client:   client,
+		client:   calicoClient,
 		ch:       make(chan cacheRequest, bufferQueueSize),
-		healthy:  healthy,
+		healthCh: healthCh,
 	}
 }
 
 // run is the main reconciliation loop, it loops until done. During start up when syncer is not in-sync,
 // it will cache all the resource updates, once syncer is in-sync it passes the cached resources to
-// handlers that will consume the data and then clears the cache.
-// If the syncer is in-sync, the resource update received is directly passed to the handlers that will consume the data.
-func (r *reconciler) run(ctx context.Context, syncer bapi.Syncer) {
+// handler that will consume the data and then clears the cache.
+// If the syncer is in-sync, the resource update received is directly passed to the handler that will consume the data.
+func (r *reconciler) run(ctx context.Context, hndler handler.Handler) {
 	defer close(r.ch)
-	defer syncer.Stop()
+	// Close the handler when syncer callback loop terminates
+	defer hndler.Close()
 
 	var cache []cacheRequest
 	var inSync bool
@@ -117,24 +112,37 @@ func (r *reconciler) run(ctx context.Context, syncer bapi.Syncer) {
 			case updateSyncStatus:
 				inSync = req.inSync
 				if inSync && len(cache) != 0 {
-					// If in-sync with syncer server, start processing the cached entries.
-					// TODO: Logging cached data here to make CI's static-check happy. This will be removed in later PRs.
+					// If in-sync request is received, send a copy of all the cached entries to handler for processing
+					// and clean the cache.
 					log.Debugf("Processing the sync request for cached entries %#v", cache)
+					hndler.OnUpdate(ctx, convertSyncerToHandlerCache(cache))
 					cache = []cacheRequest{}
 				}
 			case updateResource:
 				if inSync {
-					// If in-sync with syncer server, send the received resource to handler.
+					// If already in-sync with syncer server, send the received resource to handler.
+					hndler.OnUpdate(ctx, convertSyncerToHandlerCache([]cacheRequest{req}))
 				} else {
-					// If not in-sync, cache the received resource.
+					// If not in-sync, cache the received resource till in-sync request is received.
 					cache = append(cache, req)
 				}
 			}
-
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+// convertSyncerToHandlerCache copies all the items in syncer cache to handler and returns the copy.
+func convertSyncerToHandlerCache(sycnerCache []cacheRequest) []handler.CacheRequest {
+	var ctrlCache []handler.CacheRequest
+	for _, i := range sycnerCache {
+		ctrlCache = append(ctrlCache, handler.CacheRequest{
+			UpdateType: i.updateType,
+			KVPair:     i.kvPair,
+		})
+	}
+	return ctrlCache
 }
 
 // OnStatusUpdated handles changes to the sync status of the datastore.
@@ -159,7 +167,7 @@ func (r *reconciler) OnUpdates(updates []bapi.Update) {
 			}
 			switch u.UpdateType {
 			case bapi.UpdateTypeKVDeleted, bapi.UpdateTypeKVNew, bapi.UpdateTypeKVUpdated:
-				r.healthy(true)
+				r.healthCh <- true
 				r.ch <- cacheRequest{
 					requestType: updateResource,
 					updateType:  u.UpdateType,
@@ -167,7 +175,7 @@ func (r *reconciler) OnUpdates(updates []bapi.Update) {
 				}
 			default:
 				log.Warningf("Unexpected update type on resource: %s", u.Key)
-				r.healthy(false)
+				r.healthCh <- true
 			}
 			continue
 		}
@@ -176,7 +184,7 @@ func (r *reconciler) OnUpdates(updates []bapi.Update) {
 		if k, ok := u.Key.(model.Key); ok && strings.HasPrefix(k.String(), keyPrefixDPI) {
 			switch u.UpdateType {
 			case bapi.UpdateTypeKVDeleted, bapi.UpdateTypeKVNew, bapi.UpdateTypeKVUpdated:
-				r.healthy(true)
+				r.healthCh <- true
 				r.ch <- cacheRequest{
 					requestType: updateResource,
 					updateType:  u.UpdateType,
@@ -184,14 +192,14 @@ func (r *reconciler) OnUpdates(updates []bapi.Update) {
 				}
 			default:
 				log.Warningf("Unexpected update type on resource: %s", u.Key)
-				r.healthy(false)
+				r.healthCh <- false
 			}
 			continue
 		}
 
 		// Ignore update on other resources
 		log.Warningf("Unexpected data with key %s on update", u.Key)
-		r.healthy(false)
+		r.healthCh <- false
 	}
 }
 

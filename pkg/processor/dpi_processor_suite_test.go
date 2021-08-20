@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package syncer_test
+package processor_test
 
 import (
 	"testing"
@@ -13,9 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSyncer(t *testing.T) {
+func TestDPIProcessor(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/syncer_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Syncer Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/dpi_processor_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Processor Suite", []Reporter{junitReporter})
 }

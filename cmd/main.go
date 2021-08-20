@@ -6,8 +6,13 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
+
+	"github.com/tigera/deep-packet-inspection/pkg/calicoclient"
+	"github.com/tigera/deep-packet-inspection/pkg/processor"
 
 	"github.com/tigera/deep-packet-inspection/pkg/config"
+	"github.com/tigera/deep-packet-inspection/pkg/handler"
 	"github.com/tigera/deep-packet-inspection/pkg/syncer"
 	"github.com/tigera/deep-packet-inspection/pkg/version"
 
@@ -48,17 +53,43 @@ func main() {
 	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
 	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeout)
 
-	// Define a function that can be used to report health.
-	healthy := func(live bool) {
-		h.Report(healthReporterName, &health.HealthReport{Live: live})
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	healthCh := make(chan bool)
+	go runHealthChecks(ctx, h, healthCh, cfg.HealthTimeout)
 
 	// Indicate healthy.
-	healthy(true)
+	healthCh <- true
 
-	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	nodeName := os.Getenv("NODENAME")
+	if nodeName == "" {
+		healthCh <- false
+		log.Fatal("NODENAME environment is not set")
+	}
+
+	clientCfg, client := calicoclient.MustCreateClient()
+	ctrl := handler.NewResourceController(client, nodeName, cfg, processor.NewProcessor)
+
 	// Start a syncer that gets data from syncer server and handles it.
-	syncer.Run(ctx, healthy)
+	log.Info("Starting Syncer")
+	syncer.Run(ctx, ctrl, nodeName, healthCh, clientCfg, client)
+}
+
+// runHealthChecks receives updates on the healthCh and reports it, it also keeps track of the latest health and resends it on interval.
+func runHealthChecks(ctx context.Context, h *health.HealthAggregator, healthCh chan bool, healthDuration time.Duration) {
+	ticker := time.NewTicker(healthDuration)
+	var lastHealth bool
+	for {
+		select {
+		case lastHealth = <-healthCh:
+			// send the latest health report
+			h.Report(healthReporterName, &health.HealthReport{Live: lastHealth})
+		case <-ticker.C:
+			// resend the last health reported if health hasn't changed
+			h.Report(healthReporterName, &health.HealthReport{Live: lastHealth})
+		case <-ctx.Done():
+			return
+		}
+	}
 }

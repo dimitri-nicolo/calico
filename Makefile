@@ -13,18 +13,18 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_DEEP_PACKET_INSPECTION_PROJECT_ID)
 #############################################
 # Env vars related to packaging and releasing
 #############################################
-DEEP_PACKET_INSPECTION_IMAGE   ?=tigera/deep-packet-inspection
-BUILD_IMAGES       ?=$(DEEP_PACKET_INSPECTION_IMAGE)
-ARCHES             ?=amd64
-DEV_REGISTRIES     ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES ?=quay.io
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
+DEEP_PACKET_INSPECTION_IMAGE   	?=tigera/deep-packet-inspection
+SNORT_IMAGE 					?=tigera/snort
+ARCHES             				?=amd64
+DEV_REGISTRIES     				?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES 				?=quay.io
+RELEASE_BRANCH_PREFIX 			?= release-calient
+DEV_TAG_SUFFIX       		 	?= calient-0.dev
 
 # Used by Makefile.common
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 TYPHA_REPO      = github.com/tigera/typha-private
-APISERVER_REPO  = github.com/tigera/apiserver
+API_REPO        = github.com/tigera/api
 
 # Mount Semaphore configuration files.
 ifdef ST_MODE
@@ -107,14 +107,19 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(DEEP_PACKET_INSPECTION_IMAGE)
-image: $(DEEP_PACKET_INSPECTION_IMAGE)
+.PHONY: image $(SNORT_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)
+image: build $(SNORT_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)
+$(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
+$(SNORT_IMAGE)-$(ARCH):
+	rm -rf docker-image/bin
+	mkdir -p docker-image/bin
+	docker build --pull -t $(SNORT_IMAGE):latest-$(ARCH) -t $(SNORT_IMAGE) --file ./docker-image/Dockerfile.snort.$(ARCH) docker-image
 $(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
 $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH): bin/deep-packet-inspection-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/deep-packet-inspection-$(ARCH) docker-image/bin/
-	docker build --pull -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) $(DEEP_PACKET_INSPECTION_IMAGE):latest
 endif
@@ -129,21 +134,27 @@ clean:
 		vendor \
 		Makefile.common* \
 		config/
+	find . -name '*.coverprofile' -type f -delete
 	docker rmi -f $(DEEP_PACKET_INSPECTION_IMAGE) > /dev/null 2>&1
 
 ###############################################################################
 # Testing
 ###############################################################################
+MOCKERY_FILE_PATHS= \
+	pkg/processor/Processor \
+	pkg/exec/Exec \
+	pkg/handler/Handler
+
 GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)
 
 #############################################
 # Run unit level tests
 #############################################
-GINKGO_FOCUS?=.*
+GINKGO_FOCUS?=Syncer
 
 # Comma separated paths to packages containing fv tests
-FV_PACKAGE=pkg/syncer,
+FV_PACKAGE=pkg/syncer
 
 .PHONY: ut
 ## Run only Unit Tests.
@@ -157,7 +168,7 @@ ut:
 ## Run the ginkgo FVs
 fv: run-k8s-apiserver
 	 $(DOCKER_RUN) -e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		ginkgo -cover -r --focus="\[FV\]" $(GINKGO_ARGS)'
+		ginkgo -r --focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS)'
 
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 ifneq ($(BUILDARCH),amd64)
@@ -229,12 +240,14 @@ stop-k8s-apiserver:
 ###############################################################################
 ## Update dependency pins
 
-update-pins: replace-libcalico-pin replace-typha-pin
+update-pins: update-api-pin replace-libcalico-pin replace-typha-pin
 
 ###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci cd
+
+st:
 
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.

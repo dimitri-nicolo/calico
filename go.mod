@@ -3,21 +3,23 @@ module github.com/tigera/deep-packet-inspection
 go 1.15
 
 require (
+	github.com/containernetworking/cni v0.8.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.4
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.7.3-0.20210524104642-ae095e9e80f3
 	github.com/sirupsen/logrus v1.7.0
+	github.com/stretchr/testify v1.6.1
+	github.com/tigera/api v0.0.0-20210818002817-bc01cad80642
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
-
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210715192804-4e8fb609e430
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210715220519-d001cea41078
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210818005808-81d135106b08
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210818161955-a63b31960518
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0

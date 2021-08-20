@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package syncer_test
+package handler_test
 
 import (
 	"testing"
@@ -13,9 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSyncer(t *testing.T) {
+func TestHandler(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/syncer_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Syncer Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/resource_handler_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Handler Suite", []Reporter{junitReporter})
 }
