@@ -36,7 +36,7 @@ type config struct {
 	CertPath                  string `default:"/certs" split_words:"true" json:"-"`
 	VoltronURL                string `required:"true" split_words:"true"`
 	PacketCaptureCABundlePath string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
-	PacketCaptureEndpoint     string `default:"https://tigera-packetcapture.tigera-packetcapture.svc.cluster.local" split_words:"true"`
+	PacketCaptureEndpoint     string `default:"https://tigera-packetcapture.tigera-packetcapture.svc" split_words:"true"`
 
 	KeepAliveEnable   bool `default:"true" split_words:"true"`
 	KeepAliveInterval int  `default:"100" split_words:"true"`
