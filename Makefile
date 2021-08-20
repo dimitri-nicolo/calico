@@ -6,6 +6,8 @@ SEMAPHORE_PROJECT_ID=$(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID)
 
 GIT_USE_SSH = true
 
+TESLA ?= false
+
 # Makefile configuration options
 KUBE_CONTROLLERS_IMAGE  ?=tigera/kube-controllers
 FLANNEL_MIGRATION_IMAGE ?=tigera/flannel-migration-controller
@@ -14,6 +16,14 @@ DEV_REGISTRIES          ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES      ?=quay.io
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
+
+ifeq ($(TESLA),true)
+	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
+	BUILD_TAGS            ?= -tags tesla
+	RELEASE_BRANCH_PREFIX = release-tesla
+	DEV_TAG_SUFFIX        = tesla-0.dev
+	IMAGETAG_PREFIX       ?= tesla
+endif
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
@@ -109,19 +119,19 @@ bin/kube-controllers-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	  go build -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/kube-controllers/'
+	  go build $(BUILD_TAGS) -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/kube-controllers/'
 
 bin/wrapper-$(ARCH):
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	  go build -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/wrapper'
+	  go build $(BUILD_TAGS)  -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/wrapper'
 
 bin/check-status-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	  go build -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/check-status/'
+	  go build $(BUILD_TAGS)  -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/check-status/'
 
 bin/kubectl-$(ARCH):
 	wget https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/$(subst armv7,arm,$(ARCH))/kubectl -O $@
