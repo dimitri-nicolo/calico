@@ -1173,7 +1173,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		tproxyEstablRules := []Rule{
 			{
 				Comment: []string{"Clean upstream mark, not needed anymore"},
-				Action:  ClearMarkAction{Mark: uint32(r.TPROXYUpstreamConnMark)},
+				Action:  ClearMarkAction{Mark: r.TPROXYUpstreamConnMark},
 			},
 			{
 				Comment: []string{"Restore proxy mark from connection if not set"},
@@ -1262,7 +1262,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 
-		upMark := uint32(r.TPROXYUpstreamConnMark)
+		upMark := r.TPROXYUpstreamConnMark
 
 		rules := []Rule{
 			{

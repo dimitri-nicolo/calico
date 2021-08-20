@@ -430,7 +430,7 @@ type Config struct {
 
 	TPROXYMode             string
 	TPROXYPort             int
-	TPROXYUpstreamConnMark int
+	TPROXYUpstreamConnMark uint32
 }
 
 var unusedBitsInBPFMode = map[string]bool{
