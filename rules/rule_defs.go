@@ -64,6 +64,7 @@ const (
 	ChainManglePreroutingTProxySelect = ChainNamePrefix + "pre-tproxy-selec"
 	ChainMangleOutput                 = ChainNamePrefix + "OUTPUT"
 	ChainMangleOutputTProxy           = ChainNamePrefix + "out-mangle-tproxy"
+	ChainMangleOutputTProxyHostNet    = ChainNamePrefix + "out-mangle-tproxy-host"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -432,8 +433,9 @@ type Config struct {
 
 	DNSTrustedServers []config.ServerPort
 
-	TPROXYMode string
-	TPROXYPort int
+	TPROXYMode             string
+	TPROXYPort             int
+	TPROXYUpstreamConnMark uint32
 }
 
 var unusedBitsInBPFMode = map[string]bool{
