@@ -144,20 +144,17 @@ static CALI_BPF_INLINE void __compile_asserts(void) {
 #pragma clang diagnostic pop
 }
 
-/* Calico BPF mode assumes it can use the top 3 nibbles of the 32-bit packet mark,
- * i.e. 0xFFF00000.  To run successfully in BPF mode, Felix's IptablesMarkMask must be
- * configured to _include_ those top 3 nibbles _and_ to have some bits over for use by the
+/* Calico BPF mode uses bits in the top 3 nibbles of the 32-bit packet mark, specifically
+ * within 0x1FF00000.  To run successfully in BPF mode, Felix's IptablesMarkMask must be
+ * configured to _include_ that mask _and_ to have some bits over for use by the
  * remaining iptables rules that do not interact with the BPF C code.  (Felix golang code
  * checks this at start of day and will shutdown and restart if IptablesMarkMask is
  * insufficient.)
  *
  * Bits used only by C code, or for interaction between C and golang code, must come out
- * of the 0xFFF00000, and must be defined compatibly here and in bpf/tc/tc_defs.go.
+ * of the 0x1FF00000, and must be defined compatibly here and in bpf/tc/tc_defs.go.
  *
  * The internal structure of the top 3 nibbles is as follows:
-
-     . 1 0 .  . . . .  . . . .       indicates any packet that has been marked in
-                                     some way by the Calico BPF C code
 
      . . . .  . . . 1  . . . .       packet SEEN by at least one TC program
 
