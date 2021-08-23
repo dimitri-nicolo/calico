@@ -132,8 +132,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		// interop between the BPF C code and Felix golang code - but dynamically
 		// allocated in iptables mode.
 		if configParams.BPFEnabled {
-			// We need it to be just a single bit.
-			markEgressIP = tc.MarkEgress &^ tc.MarkCalico
+			markEgressIP = tc.MarkEgress
 		} else if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
