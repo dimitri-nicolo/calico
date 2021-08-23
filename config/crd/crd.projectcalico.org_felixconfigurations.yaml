@@ -924,6 +924,12 @@ spec:
                 description: 'TPROXYPort sets to which port proxied traffic should
                   be redirected. [Default: 16001]'
                 type: integer
+              tproxyUpstreamConnMark:
+                description: 'TPROXYUpstreamConnMark tells Felix which mark is used
+                  by the proxy for its upstream connections so that Felix can program
+                  the dataplane correctly. [Default: 0x17]'
+                format: int32
+                type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
                   number and cluster size to projectcalico.org. Logs warnings returned
