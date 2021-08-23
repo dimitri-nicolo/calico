@@ -103,22 +103,6 @@ func (c *reconciler) reconcileRoles() error {
 	return esCLI.CreateRoles(roles...)
 }
 
-// reconcileConfigMap copies the tigera-secure-elasticsearch ConfigMap in the management cluster to the managed cluster,
-// changing the clusterName data value to the cluster name this ConfigMap is being copied to
-func (c *reconciler) reconcileConfigMap() error {
-	configMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(context.Background(), resource.ElasticsearchConfigMapName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	cp := resource.CopyConfigMap(configMap)
-	cp.Data["clusterName"] = c.clusterName
-	if err := resource.WriteConfigMapToK8s(c.managedK8sCLI, cp); err != nil {
-		return err
-	}
-	return nil
-}
-
 // reconcileCASecrets copies tigera-secure-es-gateway-http-certs-public from the management cluster to the managed cluster.
 func (c *reconciler) reconcileCASecrets() error {
 	secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})

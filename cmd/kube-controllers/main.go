@@ -121,6 +121,7 @@ func init() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set klog logging configuration")
 	}
+	ValidateEnvVars()
 }
 
 func main() {
