@@ -16,6 +16,7 @@ static_resources:
         - name: envoy.filters.listener.original_src
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.original_src.v3.OriginalSrc
+            mark: 0x17 # must be the same as felixUpstreamConnMark
       filter_chains: &filter_chains
         - filter_chain_match:
             transport_protocol: tls
@@ -182,7 +183,7 @@ static_resources:
         - name: envoy.filters.listener.original_src
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.original_src.v3.OriginalSrc
-            mark: 0x4000 # must be the same as the mark resulting from kube-proxy's masq bit
+            mark: 0x4017 # must have the same bit set as the mark resulting from kube-proxy's masq bit
       filter_chains: *filter_chains
 
   clusters:
