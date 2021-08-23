@@ -277,26 +277,31 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		}
 
 		err := dns.DecodeFromBytes(dnsBytes, gopacket.NilDecodeFeedback)
-		if err == nil {
-			latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
-			if dns.QR == true {
-				// It's a DNS response.
-				if dns.QDCount == 0 || len(dns.Questions) == 0 {
-					// No questions; malformed packet?
-					log.Debug("Ignoring DNS response with no questions; malformed packet?")
-					return
-				}
-				if s.collector != nil {
-					if ipv4 != nil {
-						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
-					} else {
-						log.Warning("Not logging non-IPv4 DNS packet")
-					}
-				}
-				s.processDNSPacket(dns)
+		if err != nil {
+			log.WithError(err).Debug("Failed to decode DNS packet")
+			return
+		}
+		if dns.OpCode != layers.DNSOpCodeQuery {
+			log.Debug("Ignoring non-Query DNS packet.")
+			return
+		}
+		latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
+		if dns.QR == true {
+			// It's a DNS response.
+			if dns.QDCount == 0 || len(dns.Questions) == 0 {
+				// No questions; malformed packet?
+				log.Debug("Ignoring DNS packet with no questions; malformed packet?")
+				return
 			}
-		} else {
-			log.WithError(err).Debug("No DNS layer")
+
+			if s.collector != nil {
+				if ipv4 != nil {
+					s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
+				} else {
+					log.Warning("Not logging non-IPv4 DNS packet")
+				}
+			}
+			s.processDNSPacket(dns)
 		}
 	case expiry := <-s.mappingExpiryChannel:
 		s.processMappingExpiry(expiry.name, expiry.value)
