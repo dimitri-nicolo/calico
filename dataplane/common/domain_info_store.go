@@ -265,11 +265,27 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		// requires port 53.  Here we want to parse as DNS regardless of the port
 		// number.
 		dns := &layers.DNS{}
-		err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
+		dnsBytes := packet.TransportLayer().LayerPayload()
+
+		// We've seen customers using tools that generate "ping" packets over UDP to test connectivity to
+		// their DNS servers. One such tool uses "UDP PING ..." as the UDP payload.  Ignore such packets
+		// rather than logging errors downstream.
+		const udpPingPrefix = "UDP PING"
+		if len(dnsBytes) >= len(udpPingPrefix) && string(dnsBytes[:len(udpPingPrefix)]) == udpPingPrefix {
+			log.Debug("Ignoring UDP ping packet")
+			return
+		}
+
+		err := dns.DecodeFromBytes(dnsBytes, gopacket.NilDecodeFeedback)
 		if err == nil {
 			latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
 			if dns.QR == true {
 				// It's a DNS response.
+				if dns.QDCount == 0 || len(dns.Questions) == 0 {
+					// No questions; malformed packet?
+					log.Debug("Ignoring DNS response with no questions; malformed packet?")
+					return
+				}
 				if s.collector != nil {
 					if ipv4 != nil {
 						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
