@@ -484,8 +484,9 @@ type Config struct {
 	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
 
 	// Configures Transparent proxying modes
-	TPROXYMode string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
-	TPROXYPort int    `config:"int;16001"`
+	TPROXYMode             string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
+	TPROXYPort             int    `config:"int;16001"`
+	TPROXYUpstreamConnMark uint32 `config:"mark-bitmask;0x17"`
 
 	KubeMasqueradeBit int `config:"int;14"`
 
@@ -891,6 +892,11 @@ func (config *Config) Validate() (err error) {
 				"Enable at least one of FlowLogsFileEnabledForAllowed or " +
 				"FlowLogsFileEnabledForDenied")
 		}
+	}
+
+	if config.TPROXYModeEnabled() && (config.IptablesMarkMask&config.TPROXYUpstreamConnMark != 0) {
+		err = fmt.Errorf("TPROXYUpstreamConnMark 0x%x overlaps with IptablesMarkMask 0x%x",
+			config.TPROXYUpstreamConnMark, config.IptablesMarkMask)
 	}
 
 	if err != nil {
