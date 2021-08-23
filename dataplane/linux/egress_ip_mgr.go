@@ -96,7 +96,7 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 		true,
 		netlinkTimeout,
 		deviceRouteSourceAddress,
-		deviceRouteProtocol,
+		netlink.RouteProtocol(deviceRouteProtocol),
 		true,
 		tableIndex,
 		opRecorder)
@@ -553,7 +553,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 					// Allocate a routetable if it does not exists.
 					m.tableIndexToRouteTable[index] = m.rtGenerator.NewRouteTable([]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
 						4, index, true, m.dpConfig.NetlinkTimeout, nil,
-						m.dpConfig.DeviceRouteProtocol, true, m.opRecorder)
+						int(m.dpConfig.DeviceRouteProtocol), true, m.opRecorder)
 					logCxt.WithField("tableindex", index).Info("EgressIPManager allocate new route table.")
 				}
 				m.egressIPSetToTableIndex[id] = index

@@ -41,8 +41,8 @@ type IPSetsDataplane interface {
 // to the ipsets.IPSets dataplane layer.  For domain IP sets - which hereafter we'll just call
 // "domain sets" - IPSetsManager handles the resolution from domain names to expiring IPs.
 type IPSetsManager struct {
-	ipsetsDataplane IPSetsDataplane
-	maxSize         int
+	dataplanes []IPSetsDataplane
+	maxSize    int
 
 	// Provider of domain name to IP information.
 	domainInfoStore store
@@ -72,7 +72,7 @@ type DomainInfoChangeHandler interface {
 
 func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
 	return &IPSetsManager{
-		ipsetsDataplane: ipsets_,
+		dataplanes:      []IPSetsDataplane{ipsets_},
 		maxSize:         maxIPSetSize,
 		domainInfoStore: domainInfoStore,
 
@@ -82,12 +82,28 @@ func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore
 	}
 }
 
-func (m *IPSetsManager) GetIPSetType(setID string) (ipsets.IPSetType, error) {
-	return m.ipsetsDataplane.GetTypeOf(setID)
+func (m *IPSetsManager) AddDataplane(dp IPSetsDataplane) {
+	m.dataplanes = append(m.dataplanes, dp)
 }
 
-func (m *IPSetsManager) GetIPSetMembers(setID string) (set.Set /*<string>*/, error) {
-	return m.ipsetsDataplane.GetMembers(setID)
+func (m *IPSetsManager) GetIPSetType(setID string) (typ ipsets.IPSetType, err error) {
+	for _, dp := range m.dataplanes {
+		typ, err = dp.GetTypeOf(setID)
+		if err == nil {
+			break
+		}
+	}
+	return
+}
+
+func (m *IPSetsManager) GetIPSetMembers(setID string) (members set.Set /*<string>*/, err error) {
+	for _, dp := range m.dataplanes {
+		members, err = dp.GetMembers(setID)
+		if err == nil {
+			break
+		}
+	}
+	return
 }
 
 func (m *IPSetsManager) OnUpdate(msg interface{}) {
@@ -100,9 +116,11 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			// programming.  These domain names may be mixed case.
 			m.handleDomainIPSetDeltaUpdate(msg.Id, msg.RemovedMembers, msg.AddedMembers)
 		} else if !m.ignoredSetIds.Contains(msg.Id) {
-			// Pass deltas directly to the ipsets dataplane layer.
-			m.ipsetsDataplane.AddMembers(msg.Id, msg.AddedMembers)
-			m.ipsetsDataplane.RemoveMembers(msg.Id, msg.RemovedMembers)
+			// Pass deltas directly to the ipsets dataplane layer(s).
+			for _, dp := range m.dataplanes {
+				dp.AddMembers(msg.Id, msg.AddedMembers)
+				dp.RemoveMembers(msg.Id, msg.RemovedMembers)
+			}
 		}
 	case *proto.IPSetUpdate:
 		log.WithField("ipSetId", msg.Id).Debug("IP set update")
@@ -142,8 +160,10 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			// Work needed to resolve domain names to expiring IPs.  These domain names may be mixed case.
 			m.handleDomainIPSetUpdate(msg, &metadata)
 		} else {
-			// Pass directly onto the ipsets dataplane layer.
-			m.ipsetsDataplane.AddOrReplaceIPSet(metadata, msg.Members)
+			// Pass directly onto the ipsets dataplane layer(s).
+			for _, dp := range m.dataplanes {
+				dp.AddOrReplaceIPSet(metadata, msg.Members)
+			}
 		}
 	case *proto.IPSetRemove:
 		log.WithField("ipSetId", msg.Id).Debug("IP set remove")
@@ -155,7 +175,9 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 			m.ignoredSetIds.Discard(msg.Id)
 			return
 		}
-		m.ipsetsDataplane.RemoveIPSet(msg.Id)
+		for _, dp := range m.dataplanes {
+			dp.RemoveIPSet(msg.Id)
+		}
 	}
 }
 
@@ -233,7 +255,9 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	}
 	// Note: no XDP Callbacks here because XDP is for ingress policy only and domain
 	// IP sets are egress only.
-	m.ipsetsDataplane.AddOrReplaceIPSet(*metadata, ipMembers)
+	for _, dp := range m.dataplanes {
+		dp.AddOrReplaceIPSet(*metadata, ipMembers)
+	}
 
 	// Record the programming that we've asked the dataplane for.
 	m.domainSetProgramming[msg.Id] = ipToDomains
@@ -313,8 +337,10 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 
 	// Pass IP deltas onto the ipsets dataplane layer.  Note: no XDP Callbacks here
 	// because XDP is for ingress policy only and domain IP sets are egress only.
-	m.ipsetsDataplane.RemoveMembers(ipSetId, setToSlice(ipsToRemove))
-	m.ipsetsDataplane.AddMembers(ipSetId, setToSlice(ipsToAdd))
+	for _, dp := range m.dataplanes {
+		dp.RemoveMembers(ipSetId, setToSlice(ipsToRemove))
+		dp.AddMembers(ipSetId, setToSlice(ipsToAdd))
+	}
 }
 
 func (m *IPSetsManager) removeDomainIPSetTracking(ipSetId string) {

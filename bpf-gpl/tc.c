@@ -79,6 +79,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	if (CALI_F_FROM_HEP) {
 		if (xdp2tc_get_metadata(skb) & CALI_META_ACCEPTED_BY_XDP) {
 			CALI_INFO("Final result=ALLOW (%d). Accepted by XDP.\n", CALI_REASON_ACCEPTED_BY_XDP);
+			skb->mark = CALI_SKB_MARK_BYPASS;
 			return TC_ACT_UNSPEC;
 		}
 	}
@@ -244,9 +245,23 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			}
 		} else {
 			if (CALI_F_HEP) {
-				// TODO-HEP for data interfaces, this should allow, for active HEPs it should drop or apply policy.
-				CALI_DEBUG("CT mid-flow miss away from host with no Linux conntrack entry, allow.\n");
-				goto allow;
+				// HEP egress for a mid-flow packet with no BPF or Linux CT state.
+				// This happens, for example, with asymmetric untracked policy,
+				// where we want the return path packet to be dropped if there is a
+				// HEP present (as opposed to just a data interface).  Allowing the
+				// packet to hit the HEP policy will achieve that.  On the other
+				// hand, a plain data interface should not drop the packet because
+				// of asymmetric untracked policy, and allowing the packet to
+				// continue will achieve that too.
+				//
+				// However we are mid-flow and so it's important to suppress any CT
+				// state creation - which normally follows when a packet is allowed
+				// through - because that CT state would not be correct.  Basically,
+				// unless we see the SYN packet that starts a flow, we should never
+				// have CT state for that flow.
+				CALI_DEBUG("CT mid-flow miss to HEP with no Linux conntrack entry: continue but suppressing CT state creation.\n");
+				ctx.state->flags |= CALI_ST_SUPPRESS_CT_STATE;
+				ct_result_set_rc(ctx.state->ct_result.rc, CALI_CT_NEW);
 			} else {
 				CALI_DEBUG("CT mid-flow miss away from host with no Linux conntrack entry, drop.\n");
 				goto deny;
@@ -611,7 +626,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 			 * WARNING: this modifies the ip_header pointer in the main context; need to
 			 * be careful in later code to avoid overwriting that. */
 			l3_csum_off += sizeof(*ctx->ip_header) + sizeof(struct icmphdr);
-			ctx->ip_header = (struct iphdr *)(ctx->icmp_header + 1); /* skip to inner ip */
+			ctx->ip_header = (struct iphdr *)(tc_icmphdr(ctx) + 1); /* skip to inner ip */
 			if (ctx->ip_header->ihl != 5) {
 				CALI_INFO("ICMP inner IP header has options; unsupported\n");
 				ctx->fwd.reason = CALI_REASON_IP_OPTIONS;
@@ -723,7 +738,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 				CALI_DEBUG("Too short for TCP: DROP\n");
 				goto deny;
 			}
-			ct_ctx_nat.tcp = ctx->tcp_header;
+			ct_ctx_nat.tcp = tc_tcphdr(ctx);
 		}
 
 		// If we get here, we've passed policy.
@@ -848,10 +863,10 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 
 		switch (ctx->ip_header->protocol) {
 		case IPPROTO_TCP:
-			ctx->tcp_header->dest = bpf_htons(state->post_nat_dport);
+			tc_tcphdr(ctx)->dest = bpf_htons(state->post_nat_dport);
 			break;
 		case IPPROTO_UDP:
-			ctx->udp_header->dest = bpf_htons(state->post_nat_dport);
+			tc_udphdr(ctx)->dest = bpf_htons(state->post_nat_dport);
 			break;
 		}
 
@@ -931,10 +946,10 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 
 		switch (ctx->ip_header->protocol) {
 		case IPPROTO_TCP:
-			ctx->tcp_header->source = bpf_htons(state->ct_result.nat_port);
+			tc_tcphdr(ctx)->source = bpf_htons(state->ct_result.nat_port);
 			break;
 		case IPPROTO_UDP:
-			ctx->udp_header->source = bpf_htons(state->ct_result.nat_port);
+			tc_tcphdr(ctx)->source = bpf_htons(state->ct_result.nat_port);
 			break;
 		}
 
@@ -1053,7 +1068,7 @@ nat_encap:
 				reason = CALI_REASON_SHORT;
 				goto deny;
 			}
-			__builtin_memcpy(&ctx->eth->h_dest, arpv->mac_dst, ETH_ALEN);
+			__builtin_memcpy(&tc_ethhdr(ctx)->h_dest, arpv->mac_dst, ETH_ALEN);
 			if (state->ct_result.ifindex_fwd == skb->ifindex) {
 				/* No need to change src MAC, if we are at the right device */
 			} else {

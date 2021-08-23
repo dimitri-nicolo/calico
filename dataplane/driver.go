@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
 
@@ -110,10 +111,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		// The accept bit is a long-lived bit used to communicate between chains.
 		var markAccept, markPass, markScratch0, markScratch1, markWireguard, markEndpointNonCaliEndpoint uint32
 		markAccept, _ = markBitsManager.NextSingleBitMark()
-		if !configParams.BPFEnabled {
-			// The pass bit is used to communicate from a policy chain up to the endpoint chain.
-			markPass, _ = markBitsManager.NextSingleBitMark()
-		}
+
+		// The pass bit is used to communicate from a policy chain up to the endpoint chain.
+		markPass, _ = markBitsManager.NextSingleBitMark()
 
 		markDrop, _ := markBitsManager.NextSingleBitMark()
 		var markIPsec, markEgressIP uint32
@@ -132,8 +132,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		// interop between the BPF C code and Felix golang code - but dynamically
 		// allocated in iptables mode.
 		if configParams.BPFEnabled {
-			// We need it to be just a single bit.
-			markEgressIP = tc.MarkEgress &^ tc.MarkCalico
+			markEgressIP = tc.MarkEgress
 		} else if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
@@ -147,9 +146,8 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		// Scratch bits are short-lived bits used for calculating multi-rule results.
 		markScratch0, _ = markBitsManager.NextSingleBitMark()
-		if !configParams.BPFEnabled {
-			markScratch1, _ = markBitsManager.NextSingleBitMark()
-		}
+		markScratch1, _ = markBitsManager.NextSingleBitMark()
+
 		if configParams.WireguardEnabled {
 			log.Info("Wireguard enabled, allocating a mark bit")
 			markWireguard, _ = markBitsManager.NextSingleBitMark()
@@ -176,8 +174,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			}
 		}
 
-		// markPass and the scratch-1 bits are only used in iptables mode.
-		if markAccept == 0 || markScratch0 == 0 || !configParams.BPFEnabled && (markPass == 0 || markScratch1 == 0) {
+		if markAccept == 0 || markScratch0 == 0 || markPass == 0 || markScratch1 == 0 {
 			log.WithFields(log.Fields{
 				"Name":     "felix-iptables",
 				"MarkMask": allowedMarkBits,
@@ -401,7 +398,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
 			RouteRefreshInterval:           configParams.RouteRefreshInterval,
 			DeviceRouteSourceAddress:       configParams.DeviceRouteSourceAddress,
-			DeviceRouteProtocol:            configParams.DeviceRouteProtocol,
+			DeviceRouteProtocol:            netlink.RouteProtocol(configParams.DeviceRouteProtocol),
 			RemoveExternalRoutes:           configParams.RemoveExternalRoutes,
 			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
 			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
