@@ -38,9 +38,8 @@ L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 
 **Limitations**
 
-* L7 log collection is not supported for host-network pod backend services (Ex. Kubernetes service in the default namespace).
+* L7 log collection is not supported for host-networked client pods.
 * When selecting and deselecting traffic for L7 log collection, active connections may be disrupted.
-* On EKS clusters, `eth0` must be the main network interface.
 
 **Required**
 
