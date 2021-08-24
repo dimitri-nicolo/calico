@@ -2,7 +2,7 @@ version: v1.0
 name: DeepPacketInspection
 
 execution_time_limit:
-  minutes: 30
+  minutes: 60
 
 agent:
   machine:
@@ -34,7 +34,7 @@ blocks:
       jobs:
         - name: Run CI
           execution_time_limit:
-            minutes: 30
+            minutes: 15
           commands:
             - make ci
 
@@ -57,7 +57,7 @@ blocks:
       jobs:
         - name: Run CD
           execution_time_limit:
-            minutes: 15
+            minutes: 45
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi

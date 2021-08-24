@@ -156,7 +156,7 @@ var _ = Describe("Syncer", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		numberOfCallsToOnUpdate := 0
-		expectedCallsToOnUpdate := 7
+		expectedCallsToOnUpdate := 8
 		mockHndlr.On("OnUpdate", ctx1, mock.Anything).Return().Run(
 			func(args mock.Arguments) {
 				numberOfCallsToOnUpdate++
