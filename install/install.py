@@ -83,13 +83,12 @@ if __name__ == '__main__':
             print("Version: ", f.read())
             sys.exit(0)
     elastic_url = "%s://%s:%s" % (os.getenv("ELASTIC_SCHEME", "https"), os.environ["ELASTIC_HOST"], os.getenv("ELASTIC_PORT", "9200"))
-    kibana_url = "%s://%s:%s" % (os.getenv("KIBANA_SCHEME", "https"), os.environ["KIBANA_HOST"], os.getenv("KIBANA_PORT", "5601"))
+    kibana_url = "%s://%s:%s/tigera-kibana" % (os.getenv("KIBANA_SCHEME", "https"), os.environ["KIBANA_HOST"], os.getenv("KIBANA_PORT", "5601"))
     verify = os.getenv("INSECURE_SKIP_VERIFY") != "yes"
     user = os.getenv("USER", None)
     password = os.getenv("PASSWORD", None)
     es_ca_cert = os.getenv("ES_CA_CERT", None)
     kb_ca_cert = os.getenv("KB_CA_CERT", es_ca_cert) # Fall back on default behavior where kb and es use the same cert.
-    os.environ["CLUSTER_NAME"] = os.getenv("CLUSTER_NAME", DEFAULT_CLUSTER) # set default cluster name if needed
 
     elastic = RESTClient(elastic_url, username=user, password=password, ca_cert=es_ca_cert, verify=verify)
 
@@ -101,11 +100,13 @@ if __name__ == '__main__':
     # Kibana requires kbn-xsrf header to mitigate cross-site request forgery
     kibana = RESTClient(kibana_url, username=user, password=password, ca_cert=kb_ca_cert,
             headers={"kbn-xsrf": "reporting"}, verify=verify)
+    tenant_id = os.getenv("KIBANA_SPACE_ID", "")
     with open("./config.yaml") as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
     try:
         for l in cfg["kibana"]:
-            kibana.exec(l[0], os.path.expandvars(l[1]), l[2])
+            path = l[1] if not tenant_id.strip() else f's/{tenant_id.strip()}/{l[1]}'
+            kibana.exec(l[0], path, l[2])
     except RESTError as e:
         print("Failed to install")
         print(e)
