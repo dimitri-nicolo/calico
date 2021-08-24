@@ -27,7 +27,7 @@ const (
 	// This value is used in calculateUserChangeHash() to force ES users to be considered 'stale' and re-created in case there
 	// is version skew between the Managed and Management clusters. The value can be bumped anytime we change something about
 	// the way ES credentials work and need to re-create them.
-	EsUserCredentialsSchemaVersion = "1"
+	EsUserCredentialsSchemaVersion = "2"
 
 	// Mark any secret containing credentials for ES gateway with this label key/value. This will allow ES gateway watch only the
 	// releveant secrets it needs.
@@ -268,6 +268,8 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 	data := map[string][]byte{
 		"username": []byte(esUser.Username),
 		"password": []byte(esUser.Password),
+		// Allows consumers of this secret to make decisions based on the cluster associated with requests.
+		"cluster_name": []byte(c.clusterName),
 	}
 
 	if elasticsearchUser {

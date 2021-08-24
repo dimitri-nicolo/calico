@@ -27,5 +27,3 @@ func (c *reconciler) reconcileConfigMap() error {
 	}
 	return nil
 }
-
-
