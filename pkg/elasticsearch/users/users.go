@@ -391,10 +391,6 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 	return privateUsers, publicUsers
 }
 
-func indexPattern(prefix, cluster, suffix string) string {
-	return fmt.Sprintf("%s.%s%s", prefix, cluster, suffix)
-}
-
 func formatName(name ElasticsearchUserName, clusterName string, management, secureSuffix bool) string {
 	var formattedName string
 	if management {
@@ -403,7 +399,7 @@ func formatName(name ElasticsearchUserName, clusterName string, management, secu
 		formattedName = fmt.Sprintf("%s-%s", string(name), clusterName)
 	}
 	if secureSuffix {
-		formattedName = fmt.Sprintf("%s-%s", formattedName,  ElasticsearchSecureUserSuffix)
+		formattedName = fmt.Sprintf("%s-%s", formattedName, ElasticsearchSecureUserSuffix)
 	}
 	return formattedName
 }
