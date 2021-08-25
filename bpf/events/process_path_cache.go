@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,6 +30,7 @@ type ProcessPathInfo struct {
 type ProcessPathEntry struct {
 	ProcessPathInfo
 	expiresAt time.Time
+	fromKprobe bool
 }
 
 var numbersRegex = regexp.MustCompile(`\d+`)
@@ -88,7 +90,7 @@ func (r *BPFProcessPathCache) run() {
 			if ok {
 				info := convertPathEventToProcessPath(processEvent)
 				log.Debugf("Converted event %+v to process path %+v", processEvent, info)
-				r.updateCacheWithProcessPathInfo(info)
+				r.updateCacheWithProcessPathInfo(info, true)
 			}
 		case <-r.expireTicker.Channel():
 			r.expireCacheEntries()
@@ -111,6 +113,20 @@ func (r *BPFProcessPathCache) Lookup(Pid int) (ProcessPathInfo, bool) {
 	r.lock.Lock()
 
 	if entry, ok := r.cache[Pid]; ok {
+		// Though the data is available from kprobes, we still do a check in /proc.
+		// This is to avoid inconsistencies especially in cases like nginx deployments
+		// where the kprobe data is that of the container process and proc data is
+		// that of nginx. Hence if /proc/pid/cmdline is available that takes the higher
+		// precedence. 
+		if entry.fromKprobe {
+			procPath := fmt.Sprintf("/proc/%d/cmdline", Pid)
+			_, err := os.Stat(procPath)
+			if err == nil {
+				log.Debugf("Process path found from kprobe. Reading /proc/%+v/cmdline", Pid)
+				r.lock.Unlock()
+				return r.getPathFromProc(Pid)
+			}
+		}
 		log.Debugf("Found process path %+v for Pid %+v", entry.ProcessPathInfo, Pid)
 		entry.expiresAt = time.Now().Add(r.entryTTL)
 		r.cache[Pid] = entry
@@ -118,7 +134,11 @@ func (r *BPFProcessPathCache) Lookup(Pid int) (ProcessPathInfo, bool) {
 		return entry.ProcessPathInfo, true
 	}
 	r.lock.Unlock()
-	log.Debugf("Process path no found in cache, reading /proc")
+	log.Debugf("Process path not found in cache, reading /proc/%+v/cmdline", Pid)
+	return r.getPathFromProc(Pid)
+}
+
+func (r *BPFProcessPathCache) getPathFromProc(Pid int) (ProcessPathInfo, bool) {
 	// Read data from /proc/pid/cmdline
 	// Add to processPathCache
 	path, args, err := r.readProcCmdline(Pid)
@@ -137,7 +157,7 @@ func (r *BPFProcessPathCache) Lookup(Pid int) (ProcessPathInfo, bool) {
 	return ProcessPathInfo{}, false
 }
 
-func (r *BPFProcessPathCache) updateCacheWithProcessPathInfo(info ProcessPathInfo) {
+func (r *BPFProcessPathCache) updateCacheWithProcessPathInfo(info ProcessPathInfo, fromKprobe bool) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	log.Debugf("Updating process path info %+v", info)
@@ -231,7 +251,7 @@ func (r *BPFProcessPathCache) readProcCmdline(procId int) (string, string, error
 					Args: args,
 				},
 			}
-			r.updateCacheWithProcessPathInfo(pathInfo)
+			r.updateCacheWithProcessPathInfo(pathInfo, false)
 		}
 	}
 	if !IsPidPresent {
