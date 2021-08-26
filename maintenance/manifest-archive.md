@@ -34,20 +34,20 @@ This feature is:
 
 **OpenShift users**
 
-1. In the patch release archive, find the `ocp-manifests` folder. This contains all required OpenShift manifests. 
+1. In the patch release archive, find the `ocp-manifests` folder.  This contains two folders `install-manifests` and
+`enterprise-resources`. Former contains all the manifests needed for minimal OCP cluster. The latter contains
+the {{site.prodname}} resources.
 1. Apply patches.
 
    ```
-   cd <your-local-directory-archive>/ocp-manifests && kubectl create -f
+   cd <your-local-directory-archive>/ocp-manifests/install-manifests && kubectl create -f
    ```
 
    **Example**
    
    ```
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/ocp-manifests && kubectl create -f
+   cd /mylocaldir/release-v3.0.0-v1.6.3/ocp-manifests/install-manifests && kubectl create -f
    ```  
-
-   You are done!
 
 **All other users**
 
@@ -65,19 +65,19 @@ This feature is:
    In this example, we apply a patch release for Kubernetes on-premises.
 
    ```
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f tigera-operator.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f custom-resources.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f tigera-policies.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f tigera-policies-managed.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f compliance-reporter-pod-es-config.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f tigera-operator.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f custom-resources.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f tigera-policies.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f tigera-policies-managed.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests && kubectl create -f compliance-reporter-pod-es-config.yaml
    ...
    ```
 
    In this example, we apply a patch release for the threat defense feature.
 
    ```
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/threatdef && kubectl create -f ejr-vpn.yaml.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/threatdef && kubectl create -f tor-exit-feed.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests/threatdef && kubectl create -f ejr-vpn.yaml.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests/threatdef && kubectl create -f tor-exit-feed.yaml
    ```
 
    **Managed cloud provider**
@@ -85,7 +85,7 @@ This feature is:
    In this example, we apply a patch release for GKE.
 
    ```
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/gke && kubectl create -f cnx-api-kdd.yaml.yaml
-   cd https://mylocaldir/release-v3.0.0-v1.6.3/manifests/gke && kubectl create -f calico-typha.yaml.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests/gke && kubectl create -f cnx-api-kdd.yaml.yaml
+   cd /mylocaldir/release-v3.0.0-v1.6.3/manifests/gke && kubectl create -f calico-typha.yaml.yaml
    ...
    ```

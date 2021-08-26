@@ -117,6 +117,8 @@ oc create -f </path/to/license.yaml>
 
 #### Install {{site.prodname}} resources
 
+[comment]: # (OCP_ENTERPRISE_RESOURCES variable in Makefile needs to be updated for any addition or deletion of enterprise resources)
+
 {% if include.clusterType == "managed" %}
 Download the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
