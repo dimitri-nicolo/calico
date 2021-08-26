@@ -8,7 +8,7 @@ canonical_url: '/reference/architecture/overview'
 
 The following diagram shows the components that comprise a Kubernetes on-premises deployment using the {{site.prodname}} CNI for networking and network policy.
 
-**Tip**: For best visbility, right-click the image and select "Open image in new tab"
+**Tip**: For best visibility, right-click on the image below and select "Open image in new tab"
 
 ![calico-components]({{site.baseurl}}/images/architecture-ee.svg)
 
