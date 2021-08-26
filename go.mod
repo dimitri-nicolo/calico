@@ -13,8 +13,8 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20210823082531-eb3327e7f409
-	github.com/tigera/lma v0.0.0-20210823085749-e4c2d356ef2f
+	github.com/tigera/api v0.0.0-20210826165108-d6e4592c976a
+	github.com/tigera/lma v0.0.0-20210826174551-14282401e36b
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	k8s.io/apimachinery v0.21.0
@@ -23,8 +23,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210823085134-9df07902f91b // indirect
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210823084424-bf4d762758b2 // indirect
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210826173946-546991eb15d3 // indirect
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210826172609-46a55b914600 // indirect
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
