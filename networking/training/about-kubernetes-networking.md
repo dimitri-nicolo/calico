@@ -1,7 +1,7 @@
 ---
 title: Kubernetes network model
 description: Learn network behaviors of the Kubernetes network model.
-canonical_url: '/networking/training/about-kubernetes-networking'
+canonical_url: 'https://www.tigera.io/learn/guides/kubernetes-networking/'
 ---
 
 > <span class="glyphicon glyphicon-info-sign"></span> This guide provides educational material that is not specific to {{site.prodname}}.
