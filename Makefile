@@ -3,6 +3,7 @@ GO_BUILD_VER =v0.53
 API_REPO     = github.com/tigera/api
 
 ORGANIZATION=tigera
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LIBCALICO_GO_PRIVATE_PROJECT_ID)
 
 # Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
 SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_API_SERVER_PROJECT_ID) \
