@@ -3595,6 +3595,48 @@ func init() {
 				},
 			},
 		}, true),
+		Entry("should accept a packet capture spec with port and protocol", api.PacketCaptureSpec{
+			Selector: "all()",
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromString("TCP"),
+					Ports:    []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+		}, true),
+		Entry("should accept a packet capture spec with startTime and endTime", api.PacketCaptureSpec{
+			Selector:  "all()",
+			StartTime: &v1.Time{Time: time.Now()},
+			EndTime:   &v1.Time{Time: time.Now().Add(time.Hour)},
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromString("TCP"),
+					Ports:    []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+		}, true),
+		Entry("should deny a packet capture spec with startTime and endTime set to same value", api.PacketCaptureSpec{
+			Selector:  "all()",
+			StartTime: &v1.Time{Time: time.Unix(0, 0)},
+			EndTime:   &v1.Time{Time: time.Unix(0, 0)},
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromString("TCP"),
+					Ports:    []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+		}, false),
+		Entry("should deny a packet capture spec with startTime set after end time", api.PacketCaptureSpec{
+			Selector:  "all()",
+			StartTime: &v1.Time{Time: time.Now().Add(time.Hour)},
+			EndTime:   &v1.Time{Time: time.Now()},
+			Filters: []api.PacketCaptureRule{
+				{
+					Protocol: protocolFromString("TCP"),
+					Ports:    []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+		}, false),
 		//DeepPacketInspection validation
 		Entry("should reject a deep packet inspection resource with an invalid selector", api.DeepPacketInspection{
 			ObjectMeta: v1.ObjectMeta{

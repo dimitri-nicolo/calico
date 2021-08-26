@@ -309,6 +309,7 @@ func init() {
 	registerStructValidator(validate, validateRouteTableRange, api.RouteTableRange{})
 	registerStructValidator(validate, validateBGPConfigurationSpec, api.BGPConfigurationSpec{})
 	registerStructValidator(validate, validatePacketCapture, api.PacketCapture{})
+	registerStructValidator(validate, validatePacketCaptureSpec, api.PacketCaptureSpec{})
 	registerStructValidator(validate, validatePacketCaptureRule, api.PacketCaptureRule{})
 	registerStructValidator(validate, validateDeepPacketInspection, api.DeepPacketInspection{})
 
@@ -1751,6 +1752,27 @@ func validateNetworkSet(structLevel validator.StructLevel) {
 				reason("projectcalico.org/namespace is not a valid label name"),
 				"",
 			)
+		}
+	}
+}
+
+func validatePacketCaptureSpec(structLevel validator.StructLevel) {
+	spec := structLevel.Current().Interface().(api.PacketCaptureSpec)
+
+	if spec.StartTime != nil && spec.EndTime != nil {
+		var start = spec.StartTime.Time
+		var end = spec.EndTime.Time
+		// endTime < startTime
+		if start.After(end) {
+			structLevel.ReportError(reflect.ValueOf(end),
+				"EndTime", "", reason("must be set after startTime"), "")
+
+		}
+		// endTime == startTime
+		if start.Equal(end) {
+			structLevel.ReportError(reflect.ValueOf(end),
+				"EndTime", "", reason("must have a different value than startTime"), "")
+
 		}
 	}
 }

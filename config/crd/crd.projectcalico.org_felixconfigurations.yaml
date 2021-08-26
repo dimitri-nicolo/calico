@@ -927,7 +927,7 @@ spec:
               tproxyUpstreamConnMark:
                 description: 'TPROXYUpstreamConnMark tells Felix which mark is used
                   by the proxy for its upstream connections so that Felix can program
-                  the dataplane correctly. [Default: 0x17]'
+                  the dataplane correctly.  [Default: 0x17]'
                 format: int32
                 type: integer
               usageReportingEnabled:

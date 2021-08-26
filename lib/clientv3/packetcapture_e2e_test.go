@@ -44,6 +44,8 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 				Protocol: &protocol,
 			},
 		},
+		StartTime: &metav1.Time{Time: time.Unix(0, 0)},
+		EndTime:   &metav1.Time{Time: time.Unix(0, 0).Add(time.Hour)},
 	}
 	spec2 := apiv3.PacketCaptureSpec{
 		Selector: "all()",
@@ -57,6 +59,8 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 				Protocol: &protocol,
 			},
 		},
+		StartTime: &metav1.Time{Time: time.Unix(0, 0)},
+		EndTime:   &metav1.Time{Time: time.Unix(0, 0).Add(time.Hour)},
 	}
 
 	DescribeTable("PacketCapture e2e CRUD tests",
@@ -218,11 +222,13 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 			))
 
 			By("Setting status1 on resource")
+			var capturingState = apiv3.PacketCaptureStateCapturing
 			status1 := apiv3.PacketCaptureStatus{
 				Files: []apiv3.PacketCaptureFile{
 					{
 						Node:      "node1",
 						FileNames: []string{"file1", "file2"},
+						State:     &capturingState,
 					},
 				},
 			}
