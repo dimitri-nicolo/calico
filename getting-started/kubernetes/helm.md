@@ -28,7 +28,7 @@ The geeky details of what you get:
    ```
 {% else %}
    ```
-   curl -O -L {{site.url}}/download/charts/tigera-operator-{% include chart_version_name %}.tgz
+   curl -O -L {{site.downloadsurl}}/ee/charts/tigera-operator-{% include chart_version_name %}.tgz
    ```
 {% endif %}
 

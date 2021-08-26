@@ -113,10 +113,11 @@
   status = 200
   headers = {X-From = "Netlify"}
 
+# keeping this redirect incase anyone using old format
 [[redirects]]
   from = "/download/archives/*"
-  to = "https://s3.amazonaws.com/tigera-public/ee/archives/:splat"
-  status = 200
+  to = "https://downloads.tigera.io/ee/archives/:splat"
+  status = 301
   headers = {X-From = "Netlify"}
 
 # this redirect should be placed above the generic /download/charts/* redirect
@@ -126,10 +127,11 @@
   status = 200
   headers = {X-From = "Netlify"}
 
+# keeping this redirect incase anyone using old format
 [[redirects]]
   from = "/download/charts/*"
-  to = "https://s3.amazonaws.com/tigera-public/ee/charts/:splat"
-  status = 200
+  to = "https://downloads.tigera.io/ee/charts/:splat"
+  status = 301
   headers = {X-From = "Netlify"}
 
 # this redirect should be placed above the generic /download/binaries/* redirect
@@ -139,10 +141,11 @@
   status = 200
   headers = {X-From = "Netlify"}
 
+# keeping this redirect incase anyone using old format
 [[redirects]]
   from = "/download/binaries/*"
-  to = "https://s3.amazonaws.com/tigera-public/ee/binaries/:splat"
-  status = 200
+  to = "https://downloads.tigera.io/ee/binaries/:splat"
+  status = 301
   headers = {X-From = "Netlify"}
 
 # This redirect should be last in the order as, redirect rules are applied in order they are defined and this redirect
