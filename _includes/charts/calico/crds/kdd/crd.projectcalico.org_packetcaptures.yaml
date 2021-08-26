@@ -35,6 +35,12 @@ spec:
           spec:
             description: PacketCaptureSpec contains the values of the packet capture.
             properties:
+              endTime:
+                description: Defines the end time at which this PacketCapture will
+                  stop capturing packets. If omitted the capture will continue indefinitely.
+                  If the value is changed to the past, capture will stop immediately.
+                format: date-time
+                type: string
               filters:
                 description: The ordered set of filters applied to traffic captured
                   from an interface.  Each rule contains a set of packet match criteria.
@@ -86,6 +92,13 @@ spec:
                   == \"prod\" \ttype in {\"frontend\", \"backend\"} \tdeployment !=
                   \"dev\" \t! has(label_name)"
                 type: string
+              startTime:
+                description: Defines the start time from which this PacketCapture
+                  will capture packets. If omitted or the value is in the past, the
+                  capture will start immediately. If the value is changed to a future
+                  time, capture will stop immediately and restart at that time
+                format: date-time
+                type: string
             type: object
           status:
             description: PacketCaptureStatus describes the files that have been captured,
@@ -113,8 +126,15 @@ spec:
                         type: string
                       type: array
                     node:
-                      description: Node identifies with a a physical node from the
-                        cluster via its hostname
+                      description: Node identifies with a physical node from the cluster
+                        via its hostname
+                      type: string
+                    state:
+                      description: PacketCaptureState represents the state of the
+                        PacketCapture
+                      enum:
+                      - Capturing
+                      - Inactive
                       type: string
                   type: object
                 type: array
