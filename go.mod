@@ -3,9 +3,9 @@ module github.com/tigera/honeypod-controller
 go 1.15
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210826173946-546991eb15d3
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210826220648-74004edd7b1d
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210826110758-7d2d75c3dffc
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210826172609-46a55b914600
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210826215828-11bb5a3a956f
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210823090324-8208811cc32b
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
@@ -40,6 +40,6 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b
-	github.com/tigera/lma v0.0.0-20210826174551-14282401e36b
+	github.com/tigera/lma v0.0.0-20210826221256-3ded870bafab
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )
