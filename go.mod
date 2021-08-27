@@ -54,4 +54,4 @@ require (
 
 replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
-replace github.com/tigera/api => github.com/fasaxc/api v0.0.0-20210827090615-f9d7010e2e78
+replace github.com/tigera/api => github.com/fasaxc/api-tigera v0.0.0-20210827101944-04e1ad1939c6

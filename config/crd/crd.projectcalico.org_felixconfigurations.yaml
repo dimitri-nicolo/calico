@@ -244,6 +244,11 @@ spec:
                 description: 'DNSLogsLatency indicates to include measurements of
                   DNS request/response latency in each DNS log. [Default: true]'
                 type: boolean
+              dnsPolicyNfqueueID:
+                description: 'DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS
+                  Policy re-evaluation when the domains IP hasn''t been programmed
+                  to ipsets yet. [Default: 100]'
+                type: integer
               dnsTrustedServers:
                 description: 'The DNS servers that Felix should trust. Each entry
                   here must be `<ip>[:<port>]` - indicating an explicit DNS server
@@ -918,6 +923,12 @@ spec:
               tproxyPort:
                 description: 'TPROXYPort sets to which port proxied traffic should
                   be redirected. [Default: 16001]'
+                type: integer
+              tproxyUpstreamConnMark:
+                description: 'TPROXYUpstreamConnMark tells Felix which mark is used
+                  by the proxy for its upstream connections so that Felix can program
+                  the dataplane correctly.  [Default: 0x17]'
+                format: int32
                 type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
