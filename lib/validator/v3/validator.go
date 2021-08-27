@@ -309,6 +309,7 @@ func init() {
 	registerStructValidator(validate, validateRouteTableRange, api.RouteTableRange{})
 	registerStructValidator(validate, validateBGPConfigurationSpec, api.BGPConfigurationSpec{})
 	registerStructValidator(validate, validatePacketCapture, api.PacketCapture{})
+	registerStructValidator(validate, validatePacketCaptureSpec, api.PacketCaptureSpec{})
 	registerStructValidator(validate, validatePacketCaptureRule, api.PacketCaptureRule{})
 	registerStructValidator(validate, validateDeepPacketInspection, api.DeepPacketInspection{})
 
@@ -1755,6 +1756,27 @@ func validateNetworkSet(structLevel validator.StructLevel) {
 	}
 }
 
+func validatePacketCaptureSpec(structLevel validator.StructLevel) {
+	spec := structLevel.Current().Interface().(api.PacketCaptureSpec)
+
+	if spec.StartTime != nil && spec.EndTime != nil {
+		var start = spec.StartTime.Time
+		var end = spec.EndTime.Time
+		// endTime < startTime
+		if start.After(end) {
+			structLevel.ReportError(reflect.ValueOf(end),
+				"EndTime", "", reason("must be set after startTime"), "")
+
+		}
+		// endTime == startTime
+		if start.Equal(end) {
+			structLevel.ReportError(reflect.ValueOf(end),
+				"EndTime", "", reason("must have a different value than startTime"), "")
+
+		}
+	}
+}
+
 func validatePacketCaptureRule(structLevel validator.StructLevel) {
 	rule := structLevel.Current().Interface().(api.PacketCaptureRule)
 
@@ -1762,8 +1784,8 @@ func validatePacketCaptureRule(structLevel validator.StructLevel) {
 	// been specified.
 	if rule.Protocol != nil && !rule.Protocol.SupportsPorts() {
 		if len(rule.Ports) > 0 {
-			structLevel.ReportError(reflect.ValueOf(rule.Ports),
-				"Ports", "", reason(protocolPortsMsg), "")
+			structLevel.ReportError(reflect.ValueOf(rule.Protocol),
+				"Protocol", "", reason("protocol does not accept ports"), "")
 		}
 	}
 
