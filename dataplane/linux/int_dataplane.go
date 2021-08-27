@@ -65,6 +65,7 @@ import (
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/nfqueue"
+	nfqdnspolicy "github.com/projectcalico/felix/nfqueue/dnspolicy"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -371,7 +372,7 @@ type InternalDataplane struct {
 
 	loopSummarizer *logutils.Summarizer
 
-	packetProcessor *nfqueue.DNSPolicyPacketProcessor
+	packetProcessor *nfqdnspolicy.PacketProcessor
 }
 
 const (
@@ -445,7 +446,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
 
 		if err == nil {
-			packetProcessor := nfqueue.NewDNSPolicyPacketProcessor(nf, config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
+			packetProcessor := nfqdnspolicy.NewPacketProcessor(nf, config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
 
 			packetProcessor.Start()
 			dp.packetProcessor = packetProcessor
