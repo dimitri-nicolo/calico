@@ -191,9 +191,9 @@ var _ = Describe("Test the IPPool update processor", func() {
 				APIVersion: apiv3.GroupVersionCurrent,
 			},
 			Spec: apiv3.IPPoolSpec{
-				CIDR:      cidr1str,
-				IPIPMode:  apiv3.IPIPModeNever,
-				VXLANMode: apiv3.VXLANModeCrossSubnet,
+				CIDR:        cidr1str,
+				IPIPMode:    apiv3.IPIPModeNever,
+				VXLANMode:   apiv3.VXLANModeCrossSubnet,
 				AWSSubnetID: "subnet-1234567890abcdef",
 			},
 		}
@@ -208,13 +208,13 @@ var _ = Describe("Test the IPPool update processor", func() {
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key: v1PoolKeyCidr1,
 			Value: &model.IPPool{
-				CIDR:       v1PoolKeyCidr1.CIDR,
-				IPIPMode:   encap.Undefined,
-				Masquerade: false,
-				IPAM:       true,
-				Disabled:   false,
-				VXLANMode:  encap.CrossSubnet,
-				AWSSubnetID:  "subnet-1234567890abcdef",
+				CIDR:        v1PoolKeyCidr1.CIDR,
+				IPIPMode:    encap.Undefined,
+				Masquerade:  false,
+				IPAM:        true,
+				Disabled:    false,
+				VXLANMode:   encap.CrossSubnet,
+				AWSSubnetID: "subnet-1234567890abcdef",
 			},
 			Revision: "abcde",
 		}))

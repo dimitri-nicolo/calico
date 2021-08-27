@@ -1610,6 +1610,121 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		})
 
+		// Allocates IPs from a pool that has a matching node selector,
+		// deallocates them all, allocates an IP with a different use, checks the affinity
+		// is not released.  I.e. use is a per-request check, it shouldn't be treated like the
+		// node selector.
+		It("should not release affinity when pool is disallowed by allowed use", func() {
+			host := "host"
+			pool1 := cnet.MustParseNetwork("10.0.0.0/24")
+
+			bc.Clean()
+			deleteAllPools()
+
+			applyNode(bc, kc, host, map[string]string{"foo": "bar"})
+			applyPool(pool1.String(), true, `foo == "bar"`)
+
+			// Assign three addresses to the node.  These should all come from pool1.
+			v4ia, _, err := ic.AutoAssign(context.Background(), AutoAssignArgs{
+				Num4:     3,
+				Num6:     0,
+				Hostname: host,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(v4ia).ToNot(BeNil())
+			Expect(len(v4ia.IPs)).To(Equal(3))
+
+			// Should have one affine block to this host.
+			blocks := getAffineBlocks(bc, host)
+			Expect(len(blocks)).To(Equal(1))
+
+			// Expect all the IPs to be from pool1.
+			var v4IPs []cnet.IP
+			for _, a := range v4ia.IPs {
+				Expect(pool1.IPNet.Contains(a.IP)).To(BeTrue(), fmt.Sprintf("%s not in pool %s", a.IP, pool1))
+				v4IPs = append(v4IPs, cnet.IP{IP: a.IP})
+			}
+
+			// Release all IPs.
+			unallocated, err := ic.ReleaseIPs(context.Background(), v4IPs)
+			Expect(len(unallocated)).To(Equal(0))
+			Expect(err).NotTo(HaveOccurred())
+
+			// The block should still have an affinity to this host.
+			Expect(len(getAffineBlocks(bc, host))).To(Equal(1))
+
+			// The allocation block should still exist.
+			opts := model.BlockListOptions{IPVersion: 4}
+			out, err := bc.List(context.Background(), opts, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(out.KVPairs)).To(Equal(1))
+
+			// Create a second pool and assign a new address to the node.
+			pool2 := cnet.MustParseNetwork("20.0.0.0/24")
+			applyPoolWithUses(pool2.String(), true, `foo == "bar"`,
+				[]v3.IPPoolAllowedUse{v3.IPPoolAllowedUseHostSecondary})
+
+			// Assign new address to the node supplying IPPoolAllowedUseHostSecondary.
+			v4ia, _, err = ic.AutoAssign(context.Background(), AutoAssignArgs{
+				Num4:        1,
+				Num6:        0,
+				Hostname:    host,
+				IntendedUse: v3.IPPoolAllowedUseHostSecondary,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(v4ia).ToNot(BeNil())
+			Expect(len(v4ia.IPs)).To(Equal(1))
+
+			// Expect all the IPs to be from pool2.
+			v4IPs = []cnet.IP{}
+			for _, a := range v4ia.IPs {
+				Expect(pool2.IPNet.Contains(a.IP)).To(BeTrue(), fmt.Sprintf("%s not in pool %s", a.IP, pool2))
+				v4IPs = append(v4IPs, cnet.IP{IP: a.IP})
+			}
+
+			// Should still be two blocks affine to this host.
+			blocks = getAffineBlocks(bc, host)
+			Expect(len(blocks)).To(Equal(2))
+			{
+				var seenP1, seenP2 bool
+				for _, b := range blocks {
+					if pool1.IPNet.Contains(b.IP) {
+						seenP1 = true
+					}
+					if pool2.IPNet.Contains(b.IP) {
+						seenP2 = true
+					}
+				}
+
+				Expect(seenP1).To(BeTrue(), "Pool 1's block affinity was cleaned up.")
+				Expect(seenP2).To(BeTrue(), "Pool 2's block affinity was cleaned up.")
+			}
+
+			// The block should only have one affinity.
+			out, err = bc.List(context.Background(), opts, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(out.KVPairs)).To(Equal(2))
+			{
+				var seenP1, seenP2 bool
+				for _, b := range out.KVPairs {
+					block := b.Value.(*model.AllocationBlock)
+					Expect(block.Affinity).ToNot(BeNil())
+					Expect(*block.Affinity).To(Equal("host:" + host))
+					addr := block.CIDR.IP
+					if pool1.IPNet.Contains(addr) {
+						seenP1 = true
+					}
+					if pool2.IPNet.Contains(addr) {
+						seenP2 = true
+					}
+				}
+
+				Expect(seenP1).To(BeTrue(), "Pool 1's block was cleaned up.")
+				Expect(seenP2).To(BeTrue(), "Pool 2's block was cleaned up.")
+			}
+
+		})
+
 		// Create one ip pool, call AutoAssign, call ReleaseIPs,
 		// create another ip pool, call AutoAssign explicitly passing the second pool,
 		// ensure that the block affinity from the first ip pool is not released.
