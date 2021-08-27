@@ -20,6 +20,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/prometheus/common/log"
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -240,6 +241,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			IPv6Pools:        v6pools,
 			MaxBlocksPerHost: maxBlocks,
 			Attrs:            attrs,
+			IntendedUse:      v3.IPPoolAllowedUseWorkload,
 		}
 		if runtime.GOOS == "windows" {
 			rsvdAttrWindows := &ipam.HostReservedAttr{
