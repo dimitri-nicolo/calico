@@ -1,10 +1,12 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package nfqueue_test
+package dnspolicy_test
 
 import (
 	"net"
 	"time"
+
+	"github.com/projectcalico/felix/nfqueue/dnspolicy"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
 	. "github.com/onsi/ginkgo"
@@ -36,11 +38,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				nf.On("SetVerdict", uint32(2), gonfqueue.NfRepeat).Return(nil)
 				nf.On("PacketAttributesChannel").Return(readOnlyCh)
 
-				processor := nfqueue.NewDNSPolicyPacketProcessor(
+				processor := dnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
-					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
+					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 				processor.Start()
 
@@ -88,11 +90,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 					}
 				}
 
-				processor := nfqueue.NewDNSPolicyPacketProcessor(
+				processor := dnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
-					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
+					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 				processor.Start()
 
@@ -121,11 +123,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				nf.On("SetVerdictWithMark", uint32(2), gonfqueue.NfRepeat, int(dnrMarkBit)).Return(nil).Once()
 				nf.On("PacketAttributesChannel").Return(readOnlyattrChan)
 
-				processor := nfqueue.NewDNSPolicyPacketProcessor(
+				processor := dnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
-					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
+					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 
 				processor.Start()
@@ -162,11 +164,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				nf.On("SetVerdict", uint32(2), gonfqueue.NfDrop).Return(nil).Once()
 				nf.On("PacketAttributesChannel").Return(readOnlyattrChan)
 
-				processor := nfqueue.NewDNSPolicyPacketProcessor(
+				processor := dnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					nfqueue.WithPacketDropTimeout(100*time.Millisecond),
-					nfqueue.WithPacketReleaseTimeout(20*time.Millisecond),
+					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 
 				processor.Start()

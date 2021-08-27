@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package nfqueue
+package dnspolicy
 
 import (
 	"crypto/sha1"
@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/projectcalico/felix/nfqueue"
 	"github.com/projectcalico/felix/nfqueue/timemanager"
 
 	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
@@ -87,10 +88,10 @@ const (
 	failedToSetVerdictMessage = "failed to set the nfqueue verdict for the packet"
 )
 
-// DNSPolicyPacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
+// PacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
 // signal.
-type DNSPolicyPacketProcessor struct {
-	nf Nfqueue
+type PacketProcessor struct {
+	nf nfqueue.Nfqueue
 
 	dnrMark uint32
 
@@ -138,8 +139,8 @@ func (packet *nfqueuePacket) logLinePrefix() string {
 		packet.id, packet.protocol, packet.srcIP, packet.dstIP, packet.srcPort, packet.dstPort)
 }
 
-func NewDNSPolicyPacketProcessor(nf Nfqueue, dnrMark uint32, options ...Option) *DNSPolicyPacketProcessor {
-	processor := &DNSPolicyPacketProcessor{
+func NewPacketProcessor(nf nfqueue.Nfqueue, dnrMark uint32, options ...Option) *PacketProcessor {
+	processor := &PacketProcessor{
 		nf:                     nf,
 		dnrMark:                dnrMark,
 		done:                   make(chan struct{}),
@@ -159,7 +160,7 @@ func NewDNSPolicyPacketProcessor(nf Nfqueue, dnrMark uint32, options ...Option) 
 	return processor
 }
 
-func (processor *DNSPolicyPacketProcessor) Start() {
+func (processor *PacketProcessor) Start() {
 	processor.timeManager.Start()
 
 	go processor.listenForIncomingPackets()
@@ -169,13 +170,13 @@ func (processor *DNSPolicyPacketProcessor) Start() {
 	go processor.loopFinalPacketRelease()
 }
 
-func (processor *DNSPolicyPacketProcessor) Stop() {
+func (processor *PacketProcessor) Stop() {
 	close(processor.done)
 
 	processor.timeManager.Stop()
 }
 
-func (processor *DNSPolicyPacketProcessor) listenForIncomingPackets() {
+func (processor *PacketProcessor) listenForIncomingPackets() {
 	// TODO rename this, since we have a packetsToDrop (why does this get called packets)
 	releasePackets := make([]nfqueuePacket, 0, 100)
 	finalReleasePackets := make([]nfqueuePacket, 0, 100)
@@ -292,7 +293,7 @@ done:
 	}
 }
 
-func (processor *DNSPolicyPacketProcessor) loopReleasingPackets() {
+func (processor *PacketProcessor) loopReleasingPackets() {
 	for packets := range processor.packetReleaseChan {
 		startTime := time.Now()
 		for _, packet := range packets {
@@ -308,7 +309,7 @@ func (processor *DNSPolicyPacketProcessor) loopReleasingPackets() {
 	}
 }
 
-func (processor *DNSPolicyPacketProcessor) loopFinalPacketRelease() {
+func (processor *PacketProcessor) loopFinalPacketRelease() {
 	for packets := range processor.packetFinalReleaseChan {
 		startTime := time.Now()
 		for _, packet := range packets {
@@ -336,6 +337,6 @@ func repeatSetVerdictOnFail(numRepeats int, setVerdictFunc func() error, failure
 		}
 	}
 
-	PrometheusNfqueueVerdictFailCount.Inc()
+	nfqueue.PrometheusNfqueueVerdictFailCount.Inc()
 	log.WithError(err).Error(failureMessages)
 }

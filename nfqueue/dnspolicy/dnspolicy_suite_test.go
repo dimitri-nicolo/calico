@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package nfqueue_test
+package dnspolicy_test
 
 import (
 	"testing"
@@ -18,6 +18,6 @@ func init() {
 
 func TestPolicysync(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/nfqueue_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Nfqueue Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/nfqueue_dnspolicy_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Nfqueue DNS Policy Test Suite", []Reporter{junitReporter})
 }
