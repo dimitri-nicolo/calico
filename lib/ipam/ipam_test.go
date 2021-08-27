@@ -58,6 +58,7 @@ type pool struct {
 	blockSize    int
 	enabled      bool
 	nodeSelector string
+	allowedUses  []v3.IPPoolAllowedUse
 }
 
 func (i *ipPoolAccessor) GetEnabledPools(ipVersion int) ([]v3.IPPool, error) {
@@ -81,7 +82,11 @@ func (i *ipPoolAccessor) getPools(sorted []string, ipVersion int, caller string)
 	for _, p := range sorted {
 		c := cnet.MustParseCIDR(p)
 		if (ipVersion == 0) || (c.Version() == ipVersion) {
-			pool := v3.IPPool{Spec: v3.IPPoolSpec{CIDR: p, NodeSelector: i.pools[p].nodeSelector}}
+			pool := v3.IPPool{Spec: v3.IPPoolSpec{
+				CIDR:         p,
+				NodeSelector: i.pools[p].nodeSelector,
+				AllowedUses:  i.pools[p].allowedUses,
+			}}
 			if i.pools[p].blockSize == 0 {
 				if ipVersion == 4 {
 					pool.Spec.BlockSize = 26
@@ -2037,16 +2042,38 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			defer deleteNode(bc, kc, host)
 
 			for _, v := range pools {
-				ipPools.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
+				ipPools.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize, allowedUses: v.allowedUses}
 			}
 
-			fromPool := cnet.MustParseNetwork(usePool)
+			parts := strings.Split(usePool, "+")
+			var use v3.IPPoolAllowedUse
+			if len(parts) > 1 {
+				usePool = parts[0]
+				switch parts[1] {
+				case "workload":
+					use = v3.IPPoolAllowedUseWorkload
+				case "tunnel":
+					use = v3.IPPoolAllowedUseTunnel
+				case "host":
+					use = v3.IPPoolAllowedUseHostSecondary
+				default:
+					log.Panicf("Unknown IP use: %v", parts[1])
+				}
+			}
+
+			var reqPools []cnet.IPNet
+			var fromPool cnet.IPNet
+			if usePool != "any" {
+				fromPool = cnet.MustParseNetwork(usePool)
+				reqPools = []cnet.IPNet{fromPool}
+			}
 			args := AutoAssignArgs{
 				Num4:             inv4,
 				Num6:             inv6,
 				Hostname:         host,
-				IPv4Pools:        []cnet.IPNet{fromPool},
+				IPv4Pools:        reqPools,
 				MaxBlocksPerHost: blockLimit,
+				IntendedUse:      use,
 			}
 
 			if strictAffinity {
@@ -2056,7 +2083,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 			outv4ia, outv6ia, err := ic.AutoAssign(context.Background(), args)
 			if expError != nil {
-				Expect(err).To(Equal(expError))
+				Expect(errors.Is(err, expError)).To(BeTrue(), fmt.Sprintf("Got unexpected error: %v", err))
 			} else {
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -2066,6 +2093,12 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			} else {
 				Expect(outv4ia).ToNot(BeNil())
 				Expect(len(outv4ia.IPs)).To(Equal(len(expv4ia.IPs)))
+				if len(reqPools) != 0 {
+					for _, addr := range outv4ia.IPs {
+						Expect(fromPool.Contains(addr.IP)).To(BeTrue(), fmt.Sprintf(
+							"Returned IP (%v) from incorrect pool (expecting %v)", addr, fromPool))
+					}
+				}
 				Expect(outv4ia.IPVersion).To(Equal(expv4ia.IPVersion))
 				Expect(outv4ia.NumRequested).To(Equal(expv4ia.NumRequested))
 				Expect(outv4ia.HostReservedAttr).To(Equal(expv4ia.HostReservedAttr))
@@ -2084,9 +2117,92 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			}
 		},
 
+		Entry("allowed use: requesting workload IP from host pool should fail", "test-host", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseHostSecondary}},
+			{cidr: "192.168.2.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseWorkload}},
+			{cidr: "192.168.3.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseTunnel}},
+		},
+			"192.168.1.0/24+workload",
+			1,
+			0,
+			nil, nil,
+			0, false, ErrNoQualifiedPool,
+		),
+
+		Entry("allowed use: requesting workload IP from workload pool", "test-host", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseHostSecondary}},
+			{cidr: "192.168.2.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseWorkload}},
+			{cidr: "192.168.3.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseTunnel}},
+		},
+			"192.168.2.0/24+workload",
+			1,
+			0,
+			&IPAMAssignments{
+				IPs:              make([]cnet.IPNet, 1),
+				IPVersion:        4,
+				NumRequested:     1,
+				HostReservedAttr: nil,
+				Msgs:             nil,
+			},
+			nil,
+			0, false, nil,
+		),
+
+		Entry("allowed use: requesting workload IP from any workload pool", "test-host", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseHostSecondary}},
+			{cidr: "192.168.2.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseWorkload}},
+			{cidr: "192.168.3.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseTunnel}},
+		},
+			"any+workload",
+			1,
+			0,
+			&IPAMAssignments{
+				IPs:              make([]cnet.IPNet, 1),
+				IPVersion:        4,
+				NumRequested:     1,
+				HostReservedAttr: nil,
+				Msgs:             nil,
+			},
+			nil,
+			0, false, nil,
+		),
+
+		Entry("allowed use: requesting workload IP from any workload pool when there are no workload pools", "test-host", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseHostSecondary}},
+			{cidr: "192.168.3.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseTunnel}},
+		},
+			"any+workload",
+			1,
+			0,
+			nil,
+			nil,
+			0, false, ErrNoQualifiedPool,
+		),
+
+		Entry("allowed use: tunnel IP from tunnel pool", "test-host", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseHostSecondary}},
+			{cidr: "192.168.2.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseWorkload}},
+			{cidr: "192.168.3.0/24", blockSize: 32, enabled: true, allowedUses: []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseTunnel}},
+		},
+			"192.168.3.0/24+tunnel",
+			1,
+			0,
+			&IPAMAssignments{
+				IPs:              make([]cnet.IPNet, 1),
+				IPVersion:        4,
+				NumRequested:     1,
+				HostReservedAttr: nil,
+				Msgs:             nil,
+			},
+			nil,
+			0, false, nil,
+		),
+
 		// Test 1a: AutoAssign 1 IPv4, 1 IPv6 with tiny block - expect one of each to be returned.
 		Entry("1 v4 1 v6 - tiny block", "test-host", true,
-			[]pool{{"192.168.1.0/24", 32, true, ""}, {"fd80:24e2:f998:72d6::/120", 128, true, ""}}, "192.168.1.0/24", 1, 1,
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 32, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 128, enabled: true}},
+			"192.168.1.0/24", 1, 1,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 1),
 				IPVersion:        4,
@@ -2105,7 +2221,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 1b: AutoAssign 1 IPv4, 1 IPv6 with massive block - expect one of each to be returned.
 		Entry("1 v4 1 v6 - big block", "test-host", true,
-			[]pool{{"192.168.0.0/16", 20, true, ""}, {"fd80:24e2:f998:72d6::/110", 116, true, ""}},
+			[]pool{{cidr: "192.168.0.0/16", blockSize: 20, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/110", blockSize: 116, enabled: true}},
 			"192.168.0.0/16", 1, 1,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 1),
@@ -2125,7 +2242,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 1c: AutoAssign 1 IPv4, 1 IPv6 with default block - expect one of each to be returned.
 		Entry("1 v4 1 v6 - default block", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/24", 1, 1,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 1),
@@ -2145,7 +2263,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 2a: AutoAssign 256 IPv4, 256 IPv6 with default blocksize- expect 256 IPv4 + IPv6 addresses.
 		Entry("256 v4 256 v6", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/24", 256, 256,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 256),
@@ -2164,7 +2283,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 2b: AutoAssign 256 IPv4, 256 IPv6 with small blocksize- expect 256 IPv4 + IPv6 addresses.
 		Entry("256 v4 256 v6 - small blocks", "test-host", true,
-			[]pool{{"192.168.1.0/24", 30, true, ""}, {"fd80:24e2:f998:72d6::/120", 126, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 30, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 126, enabled: true}},
 			"192.168.1.0/24", 256, 256,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 256),
@@ -2184,7 +2304,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 2a: AutoAssign 256 IPv4, 256 IPv6 with num blocks limit expect 64 IPv4 + IPv6 addresses.
 		Entry("256 v4 0 v6 block limit", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/24", 256, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 64),
@@ -2195,7 +2316,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			},
 			nil, 1, false, ErrBlockLimit),
 		Entry("256 v4 0 v6 block limit 2", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/24", 256, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 128),
@@ -2206,7 +2328,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			},
 			nil, 2, false, ErrBlockLimit),
 		Entry("0 v4 256 v6 block limit", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/24", 0, 256, nil,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 64),
@@ -2219,7 +2342,9 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 3: AutoAssign 257 IPv4, 0 IPv6 - expect 256 IPv4 addresses, no IPv6, and no error.
 		Entry("257 v4 0 v6", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}}, "192.168.1.0/24", 257, 0,
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
+			"192.168.1.0/24", 257, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 256),
 				IPVersion:        4,
@@ -2231,7 +2356,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// Test 4: AutoAssign 0 IPv4, 257 IPv6 - expect 256 IPv6 addresses, no IPv6, and no error.
 		Entry("0 v4 257 v6", "test-host", true,
-			[]pool{{"192.168.1.0/24", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/24", 0, 257, nil,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 256),
@@ -2245,7 +2371,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 		// Test 5: (use pool of size /25 so only two blocks are contained):
 		// - Assign 1 address on host A (Expect 1 address).
 		Entry("1 v4 0 v6 host-a", "host-a", true,
-			[]pool{{"10.0.0.0/25", 26, true, ""}, {"fd80:24e2:f998:72d6::/121", 122, true, ""}},
+			[]pool{{cidr: "10.0.0.0/25", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/121", blockSize: 122, enabled: true}},
 			"10.0.0.0/25", 1, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 1),
@@ -2258,7 +2385,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// - Assign 1 address on host B (Expect 1 address, different block).
 		Entry("1 v4 0 v6 host-b", "host-b", false,
-			[]pool{{"10.0.0.0/25", 26, true, ""}, {"fd80:24e2:f998:72d6::/121", 122, true, ""}},
+			[]pool{{cidr: "10.0.0.0/25", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/121", blockSize: 122, enabled: true}},
 			"10.0.0.0/25", 1, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 1),
@@ -2271,7 +2399,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		// - Assign 64 more addresses on host A (Expect 63 addresses from host A's block, 1 address from host B's block).
 		Entry("64 v4 0 v6 host-a", "host-a", false,
-			[]pool{{"10.0.0.0/25", 26, true, ""}, {"fd80:24e2:f998:72d6::/121", 122, true, ""}},
+			[]pool{{cidr: "10.0.0.0/25", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/121", blockSize: 122, enabled: true}},
 			"10.0.0.0/25", 64, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 64),
@@ -2283,7 +2412,9 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			nil, 0, false, nil),
 		// - Try to assign 256 addresses with strict affinity enabled, expect 64 addresses.
 		Entry("256 v4 0 v6 strict affinity", "test-host", true,
-			[]pool{{"192.168.1.0/26", 26, true, ""}, {"192.168.1.64/26", 26, true, ""}, {"fd80:24e2:f998:72d6::/120", 122, true, ""}},
+			[]pool{{cidr: "192.168.1.0/26", blockSize: 26, enabled: true},
+				{cidr: "192.168.1.64/26", blockSize: 26, enabled: true},
+				{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}},
 			"192.168.1.0/26", 256, 0,
 			&IPAMAssignments{
 				IPs:              make([]cnet.IPNet, 64),
@@ -2686,6 +2817,10 @@ func deleteAllPools() {
 
 func applyPool(cidr string, enabled bool, nodeSelector string) {
 	ipPools.pools[cidr] = pool{enabled: enabled, nodeSelector: nodeSelector}
+}
+
+func applyPoolWithUses(cidr string, enabled bool, nodeSelector string, uses []v3.IPPoolAllowedUse) {
+	ipPools.pools[cidr] = pool{enabled: enabled, nodeSelector: nodeSelector, allowedUses: uses}
 }
 
 func applyPoolWithBlockSize(cidr string, enabled bool, nodeSelector string, blockSize int) {

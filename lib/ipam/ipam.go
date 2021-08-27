@@ -347,10 +347,11 @@ func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedP
 	// Figure out what subset of the selecting pools we're allowed to use for the request according to the
 	// pool's allowed use.
 	poolsAllowedByUse := filterPoolsByUse(poolsSelectingNode, use)
+	log.Debugf("Pools filtered by allowed use: %v", poolsAllowedByUse)
 
 	// If there are no allowed pools, we cannot assign addresses.
 	if len(poolsAllowedByUse) == 0 {
-		return nil, nil, fmt.Errorf("no configured Calico pools for node %v and use %v", host, use)
+		return nil, nil, fmt.Errorf("%w, no pools match the required use (%v)", ErrNoQualifiedPool, use)
 	}
 
 	logCtx := log.WithFields(log.Fields{"host": host})
