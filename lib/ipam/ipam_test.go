@@ -79,6 +79,7 @@ func (i *ipPoolAccessor) getPools(sorted []string, ipVersion int, caller string)
 	// mimics more closely the behavior of etcd and allows the tests to be
 	// deterministic.
 	pools := make([]v3.IPPool, 0)
+	var poolsToPrint []string
 	for _, p := range sorted {
 		c := cnet.MustParseCIDR(p)
 		if (ipVersion == 0) || (c.Version() == ipVersion) {
@@ -98,10 +99,14 @@ func (i *ipPoolAccessor) getPools(sorted []string, ipVersion int, caller string)
 				pool.Spec.BlockSize = i.pools[p].blockSize
 			}
 			pools = append(pools, pool)
+
+			// Compact string for printing so the log doesn't cost too much to print!
+			poolsToPrint = append(poolsToPrint, fmt.Sprintf("{%s(%v) %q %v}",
+				p, pool.Spec.BlockSize, pool.Spec.NodeSelector, i.pools[p].allowedUses))
 		}
 	}
 
-	log.Infof("%v returns: %v", caller, pools)
+	log.Infof("%v returns: %v", caller, poolsToPrint)
 
 	return pools
 }
