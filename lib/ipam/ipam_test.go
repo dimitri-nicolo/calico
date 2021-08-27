@@ -152,8 +152,12 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 		var hostname string
 		var err error
 		var pool20, pool32, pool26 []cnet.IPNet
+		var initialLogLevel log.Level
 
 		BeforeEach(func() {
+			initialLogLevel = log.GetLevel()
+			log.SetLevel(log.InfoLevel)
+
 			// Remove all data in the datastore.
 			bc, err = backend.NewClient(config)
 			Expect(err).NotTo(HaveOccurred())
@@ -188,6 +192,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		AfterEach(func() {
 			deleteNode(bc, kc, hostname)
+			log.SetLevel(initialLogLevel)
 		})
 
 		Measure("It should be able to allocate a single address quickly - blocksize 32", func(b Benchmarker) {
