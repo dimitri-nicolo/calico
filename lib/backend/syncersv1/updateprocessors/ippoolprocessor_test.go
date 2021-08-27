@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -176,6 +176,45 @@ var _ = Describe("Test the IPPool update processor", func() {
 				IPAM:       true,
 				Disabled:   false,
 				VXLANMode:  encap.CrossSubnet,
+			},
+			Revision: "abcde",
+		}))
+	})
+
+	It("should include the AWS subnet", func() {
+		up := updateprocessors.NewIPPoolUpdateProcessor()
+
+		By("converting an IP Pool with AWs subnet")
+		res := &apiv3.IPPool{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       apiv3.KindIPPool,
+				APIVersion: apiv3.GroupVersionCurrent,
+			},
+			Spec: apiv3.IPPoolSpec{
+				CIDR:      cidr1str,
+				IPIPMode:  apiv3.IPIPModeNever,
+				VXLANMode: apiv3.VXLANModeCrossSubnet,
+				AWSSubnetID: "subnet-1234567890abcdef",
+			},
+		}
+
+		kvps, err := up.Process(&model.KVPair{
+			Key:      v3PoolKey1,
+			Value:    res,
+			Revision: "abcde",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(HaveLen(1))
+		Expect(kvps[0]).To(Equal(&model.KVPair{
+			Key: v1PoolKeyCidr1,
+			Value: &model.IPPool{
+				CIDR:       v1PoolKeyCidr1.CIDR,
+				IPIPMode:   encap.Undefined,
+				Masquerade: false,
+				IPAM:       true,
+				Disabled:   false,
+				VXLANMode:  encap.CrossSubnet,
+				AWSSubnetID:  "subnet-1234567890abcdef",
 			},
 			Revision: "abcde",
 		}))
