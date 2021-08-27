@@ -156,6 +156,10 @@ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7
 github.com/evanphx/json-patch v4.9.0+incompatible h1:kLcOMZeuLAJvL2BPWLMIj5oaZQobrkAqrL+WFZwQses=
 github.com/evanphx/json-patch v4.9.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/evanphx/json-patch/v5 v5.2.0/go.mod h1:G79N1coSVB93tBe7j6PhzjmR3/2VvlbKOFpnXhI9Bw4=
+github.com/fasaxc/api-tigera v0.0.0-20210827122452-3dcee58ac5c0 h1:6t+oVzKPX0UXJjCNTnsc05dOGDTDcMAFU3srWTMrUhQ=
+github.com/fasaxc/api-tigera v0.0.0-20210827122452-3dcee58ac5c0/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
+github.com/fasaxc/libcalico-go-private v1.7.2-0.20210827133627-c0d2ba1be7cc h1:DL0X6AdfD46toMp8PNyVTp0ppbFvpR3SMldcGKoteVY=
+github.com/fasaxc/libcalico-go-private v1.7.2-0.20210827133627-c0d2ba1be7cc/go.mod h1:E8zGsCQCmLNS9MtVg3YUWRcHWOTnckqz8Ipw/0+Opmw=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible h1:TcekIExNqud5crz4xD2pavyTgWiPvpYe4Xau31I0PRk=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
@@ -534,10 +538,6 @@ github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
-github.com/tigera/api v0.0.0-20210826165108-d6e4592c976a h1:keGGf98lSnfV+UNgVTCq4THx6yV6+aFf310I37VTIQw=
-github.com/tigera/api v0.0.0-20210826165108-d6e4592c976a/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210826215828-11bb5a3a956f h1:wYtfaNXwU53dxRHdzcYgSljDiW8eZOLITHiyC0m5BHw=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210826215828-11bb5a3a956f/go.mod h1:c7+GXmqu81V7LXDMZfGDb76+Jd5VNGh106W5Osc26Mg=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
