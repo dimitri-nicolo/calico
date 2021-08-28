@@ -12,17 +12,16 @@ import (
 func logRequestHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Infof("ES Gateway received request for URI %s", r.RequestURI)
-		buf, bodyErr := ioutil.ReadAll(r.Body)
-		if bodyErr != nil {
-			log.Print("bodyErr ", bodyErr.Error())
-			http.Error(w, bodyErr.Error(), http.StatusInternalServerError)
+		buf, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Errorf("Error reading request body: %v", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		log.Infof("logrequesthandler, Request body length: %v", len(string(buf)))
 
-		rdr1 := ioutil.NopCloser(bytes.NewBuffer(buf))
-		rdr2 := ioutil.NopCloser(bytes.NewBuffer(buf))
-		log.Printf("BODY: %q", rdr1)
-		r.Body = rdr2
+		reader := ioutil.NopCloser(bytes.NewBuffer(buf))
+		r.Body = reader
 		next.ServeHTTP(w, r)
 	})
 }

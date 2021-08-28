@@ -241,11 +241,13 @@ var _ = Describe("Authentication middleware", func() {
 
 // mockSecretCache is mock for the cache.SecretsCache interface to be used for testing.
 type mockSecretCache struct {
-	mockSecretName  string
-	mockPassword    string
-	includePassword bool
-	mockUsername    string
-	includeUsername bool
+	mockSecretName     string
+	mockPassword       string
+	clusterName        string
+	includePassword    bool
+	mockUsername       string
+	includeUsername    bool
+	includeClusterName bool
 }
 
 // GetSecret implements the cache.SecretsCache interface and returns the expected mock value for the given name.
@@ -267,6 +269,10 @@ func (sc *mockSecretCache) GetSecret(name string) (*v1.Secret, error) {
 	// Only include the actual expected password if flag is true (for testing scenarios).
 	if sc.includePassword {
 		secret.Data[SecretDataFieldPassword] = []byte(sc.mockPassword)
+	}
+
+	if sc.includeClusterName {
+		secret.Data[SecretDataFieldClusterName] = []byte(sc.clusterName)
 	}
 
 	return secret, nil

@@ -20,14 +20,15 @@ var _ = Describe("Credential swapper middleware", func() {
 		secretName string
 	}
 	type testCase struct {
-		args             args
-		expectedUsername string
-		expectedPassword string
-		expectedErr      bool
+		args                args
+		expectedUsername    string
+		expectedPassword    string
+		expectedClusterName string
+		expectedErr         bool
 	}
 	DescribeTable("Test getting plain ES credentials",
 		func(tt testCase) {
-			actualUsername, actualPassword, err := getPlainESCredentials(tt.args.c, tt.args.secretName)
+			actualUsername, actualPassword, clusterName, err := getPlainESCredentials(tt.args.c, tt.args.secretName)
 
 			if tt.expectedErr {
 				Expect(err).ToNot(BeNil())
@@ -36,23 +37,27 @@ var _ = Describe("Credential swapper middleware", func() {
 			}
 			Expect(actualUsername).To(Equal(tt.expectedUsername))
 			Expect(actualPassword).To(Equal(tt.expectedPassword))
+			Expect(clusterName).To(Equal(tt.expectedClusterName))
 		},
 		Entry(
 			"Should successfully retrieve username and password.",
 			testCase{
 				args: args{
 					c: &mockSecretCache{
-						mockSecretName:  "secret-name",
-						mockUsername:    "username",
-						includeUsername: true,
-						mockPassword:    "passwordHash",
-						includePassword: true,
+						mockSecretName:     "secret-name",
+						mockUsername:       "username",
+						includeUsername:    true,
+						mockPassword:       "passwordHash",
+						includePassword:    true,
+						clusterName:        "my-tenant.my-cluster",
+						includeClusterName: true,
 					},
 					secretName: "secret-name",
 				},
-				expectedUsername: "username",
-				expectedPassword: "passwordHash",
-				expectedErr:      false,
+				expectedUsername:    "username",
+				expectedPassword:    "passwordHash",
+				expectedClusterName: "my-tenant.my-cluster",
+				expectedErr:         false,
 			},
 		),
 		Entry(

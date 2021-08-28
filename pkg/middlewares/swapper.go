@@ -2,8 +2,10 @@
 package middlewares
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/es-gateway/pkg/cache"
@@ -18,13 +20,14 @@ const (
 	// Below are the expected fields within the data section of an ES credential K8s secret.
 	SecretDataFieldUsername = "username"
 	SecretDataFieldPassword = "password"
+	SecretDataFieldClusterName = "cluster_name"
 )
 
 // swapElasticCredHandler returns an HTTP handler which acts as a middleware to swap the credentials attached to
 // a request (from gateway credentials to Elasticsearch credentials).
 func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Debugf("Attempting ES credentials swap for request with URI %s", r.RequestURI)
+		log.Warnf("Attempting ES credentials swap for request with URI %s", r.RequestURI)
 
 		// This should never happen, but is possible if you mistakenly apply this handler in a chain to a route
 		// without having the elasticAuthHandler applied first (it adds the user to the context).
@@ -37,18 +40,26 @@ func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handle
 
 		// Attempt to lookup a credentials for matching ES user (i.e. can be used with ES API) that matches to the current user.
 		secretName := fmt.Sprintf("%s-%s", user.Username, ElasticsearchCredsSecretSuffix)
-		username, password, err := getPlainESCredentials(c, secretName)
+		username, password, clusterName, err := getPlainESCredentials(c, secretName)
+
 		if err != nil {
 			log.Errorf("unable to authenticate user: %s", err)
 			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
 			return
 		}
+
 		// Set swapped ES user credentials on the request
-		r.SetBasicAuth(string(username), string(password))
+		r.SetBasicAuth(username, password)
 		log.Debugf("Found ES credentials for real user [%s] for request with URI %s", username, r.RequestURI)
 
+		// Add the clusterID and tenantID to the context for other handlers to read.
+		tenantID, clusterID := clusterNameToTenantIDAndClusterID(clusterName)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ClusterIDKey, clusterID)
+		ctx = context.WithValue(ctx, TenantIDKey, tenantID)
+
 		// Call the next handler, which can be another middleware in the chain, or the final handler.
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -60,21 +71,43 @@ func NewSwapElasticCredMiddlware(c cache.SecretsCache) func(http.Handler) http.H
 }
 
 // getPlainESCredentials attempts to retrieve credentials from the given secretName using the provided k8s client for given request.
-func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, string, error) {
+func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, string, string, error) {
 	secret, err := c.GetSecret(secretName)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	// Extract the username and password from the alternate ES credential secret
 	data := secret.Data
 	username, usernameFound := data[SecretDataFieldUsername]
 	if !usernameFound {
-		return "", "", fmt.Errorf("k8s secret did not contain username field")
+		return "", "", "", fmt.Errorf("k8s secret did not contain username field")
 	}
 	password, passwordFound := data[SecretDataFieldPassword]
 	if !passwordFound {
-		return "", "", fmt.Errorf("k8s secret did not contain username field")
+		return "", "", "", fmt.Errorf("k8s secret did not contain username field")
 	}
+	clusterName, _ := data[SecretDataFieldClusterName]
 
-	return string(username), string(password), nil
+	return string(username), string(password), string(clusterName), nil
+}
+
+// clusterNameToTenantIDAndClusterID takes a clusterName input string and returns the tenantID and clusterID.
+// Example input values:
+// - cluster: This is the default name for the standard/management cluster
+// - my-tenant.my-managed-cluster: This is an example name for a managed cluster in Cloud
+// - my-managed-cluster: This is an example name for a managed cluster in EE.
+// Returns false if the input value does not contain a clusterName.
+func clusterNameToTenantIDAndClusterID(clusterName string) (tenantID string, clusterID string) {
+	parts := strings.Split(clusterName, ".")
+	if len(parts) == 1 {
+		// This is a clusterName for EE
+		tenantID, clusterID = "", parts[0]
+		return
+	} else if len(parts) == 2 {
+		// This is a clusterName for cloud
+		tenantID, clusterID = parts[0], parts[1]
+		return
+	}
+	// This is not a clusterName.
+	return
 }

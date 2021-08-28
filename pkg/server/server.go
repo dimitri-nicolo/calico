@@ -4,9 +4,10 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"github.com/tigera/es-gateway/pkg/metrics"
 	"net/http"
 	"time"
+
+	"github.com/tigera/es-gateway/pkg/metrics"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -83,14 +84,14 @@ func New(opts ...Option) (*Server, error) {
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
-	middlewares := mid.GetHandlerMap(srv.cache, srv.collector)
+	middlewares := mid.GetHandlerMap(srv.cache)
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
 	healthHandler := health.GetHealthHandler(srv.esClient, srv.kbClient, srv.k8sClient)
 	router.HandleFunc("/health", healthHandler).Name("health")
 
 	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
-	kibanaHandler, err := gateway.GetProxyHandler(srv.kibanaTarget)
+	kibanaHandler, err := gateway.GetProxyHandler(srv.kibanaTarget, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func New(opts ...Option) (*Server, error) {
 		srv.kibanaTarget.Routes,
 		srv.kibanaTarget.CatchAllRoute,
 		middlewares,
-		http.HandlerFunc(kibanaHandler),
+		kibanaHandler,
 	)
 	if err != nil {
 		return nil, err
@@ -109,7 +110,7 @@ func New(opts ...Option) (*Server, error) {
 
 	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
 	// these routes do not have a universally common path prefix.
-	esHandler, err := gateway.GetProxyHandler(srv.esTarget)
+	esHandler, err := gateway.GetProxyHandler(srv.esTarget, gateway.ElasticModifyResponseFunc(srv.collector))
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +185,6 @@ func getLogRouteMatchHandler(routeName string) func(h http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Debugf("Request %s as been matched with route \"%s\"", r.RequestURI, routeName)
 			h.ServeHTTP(w, r)
-			log.Warnf("response: %v", r.Response)
 		})
 	}
 }
@@ -210,10 +210,6 @@ func buildMiddlewareChain(r *proxy.Route, h mid.HandlerMap, f http.Handler) http
 		// Alongside auth, add credential swapping middlware to the Handler chain for this
 		// Route
 		chain = append(chain, h[mid.TypeSwap])
-	}
-
-	if r.MetricsCollection {
-		chain = append(chain, h[mid.TypeMetrics])
 	}
 
 	// Now apply the chain of middleware handlers on the given route handler f, starting with the last one.

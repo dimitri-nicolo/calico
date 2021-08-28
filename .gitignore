@@ -19,6 +19,7 @@ bin
 # Ignore IDE files
 .vscode/
 */__debug_bin
+.idea/
 
 # Ignore Go build files
 Makefile.common*
