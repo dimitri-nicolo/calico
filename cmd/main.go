@@ -4,8 +4,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/tigera/es-gateway/pkg/metrics"
 	"os"
+
+	"github.com/tigera/es-gateway/pkg/metrics"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -94,7 +95,7 @@ func init() {
 // Start up HTTPS server for ES Gateway.
 func main() {
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	metricsAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.NetricsPort)
+	metricsAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.MetricsPort)
 	// Create Kibana target that will be used to configure all routing to Kibana target.
 	kibanaTarget, err := proxy.CreateTarget(
 		kibanaCatchAllRoute,
