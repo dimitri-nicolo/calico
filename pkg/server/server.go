@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/tigera/es-gateway/pkg/handlers"
 	"github.com/tigera/es-gateway/pkg/metrics"
 
 	"github.com/gorilla/mux"
@@ -17,7 +18,6 @@ import (
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/clients/kibana"
 	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
-	"github.com/tigera/es-gateway/pkg/handlers/gateway"
 	"github.com/tigera/es-gateway/pkg/handlers/health"
 	mid "github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
@@ -49,7 +49,7 @@ type Server struct {
 	adminESPassword string // Used to store the password for a real ES admin user
 
 	cache     cache.SecretsCache // Used to store secrets related authN and credential swapping
-	collector metrics.Collector // Used to collect prometheus metrics.
+	collector metrics.Collector  // Used to collect prometheus metrics.
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -91,7 +91,7 @@ func New(opts ...Option) (*Server, error) {
 	router.HandleFunc("/health", healthHandler).Name("health")
 
 	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
-	kibanaHandler, err := gateway.GetProxyHandler(srv.kibanaTarget, nil)
+	kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func New(opts ...Option) (*Server, error) {
 
 	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
 	// these routes do not have a universally common path prefix.
-	esHandler, err := gateway.GetProxyHandler(srv.esTarget, gateway.ElasticModifyResponseFunc(srv.collector))
+	esHandler, err := handlers.GetProxyHandler(srv.esTarget, handlers.ElasticModifyResponseFunc(srv.collector))
 	if err != nil {
 		return nil, err
 	}

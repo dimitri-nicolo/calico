@@ -25,9 +25,6 @@ type Route struct {
 	HTTPMethods []string
 	// Name helps identify this Route (for logging purposes).
 	Name string
-	// MetricsCollection indicates whether metrics should be collected from this route to expose via
-	// the Prometheus server.
-	MetricsCollection bool
 }
 
 // Routes is a listing of Route paths that a Target possesses.

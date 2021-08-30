@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-package gateway
+package handlers
 
 import (
 	"crypto/tls"
@@ -17,7 +17,7 @@ import (
 )
 
 // GetProxyHandler generates an HTTP proxy handler based on the given Target.
-func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response)error) (http.HandlerFunc, error) {
+func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) error) (http.HandlerFunc, error) {
 	p := httputil.NewSingleHostReverseProxy(t.Dest)
 	p.FlushInterval = -1
 

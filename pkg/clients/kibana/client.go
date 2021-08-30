@@ -86,7 +86,7 @@ func (c *client) GetKibanaStatus() error {
 		return err
 	}
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		// Dump response
 		defer res.Body.Close()
 		data, err := ioutil.ReadAll(res.Body)

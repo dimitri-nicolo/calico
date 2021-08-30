@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-package gateway_test
+package handlers_test
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-package gateway_test
+package handlers_test
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"github.com/tigera/es-gateway/pkg/handlers"
 
-	"github.com/tigera/es-gateway/pkg/handlers/gateway"
 	"github.com/tigera/es-gateway/pkg/metrics"
 	"github.com/tigera/es-gateway/pkg/middlewares"
 )
@@ -50,7 +50,7 @@ var _ = Describe("Test the elastic response hook", func() {
 		collector.On("CollectLogBytesRead", tenantID, clusterID, mock.Anything).Return(nil)
 		collector.On("CollectLogBytesWritten", tenantID, clusterID, mock.Anything).Return(nil)
 
-		fn := gateway.ElasticModifyResponseFunc(&collector)
+		fn := handlers.ElasticModifyResponseFunc(&collector)
 		req := &http.Request{RequestURI: "/some-uri", ContentLength: 25}
 		req = req.WithContext(context.WithValue(context.WithValue(context.TODO(), middlewares.ClusterIDKey, clusterID), middlewares.TenantIDKey, tenantID))
 		resp := &http.Response{
