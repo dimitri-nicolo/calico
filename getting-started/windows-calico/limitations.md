@@ -1,7 +1,7 @@
 ---
 title: Limitations and known issues
 description: Review limitations before starting installation.
-canonical_url: '/windows-calico/limitations'
+canonical_url: '/getting-started/windows-calico/limitations'
 ---
 
 ### Feature support and limitations

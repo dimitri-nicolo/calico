@@ -1,7 +1,7 @@
 ---
 title: Install Calico Enterprise for Windows
 description: Install Calico Enterprise for Windows to enable a workload-to-workload Zero Trust model.
-canonical_url: '/windows-calico/kubernetes/standard'
+canonical_url: '/getting-started/windows-calico/kubernetes/standard'
 ---
 
 ### Big picture

@@ -1,7 +1,7 @@
 ---
 title: Start and stop Calico Enterprise for Windows services
 description: Tasks to manage Calico services and uninstall Calico Enterprise for Windows.
-canonical_url: '/windows-calico/maintain'
+canonical_url: '/getting-started/windows-calico/maintain'
 ---
 
 ### Big picture

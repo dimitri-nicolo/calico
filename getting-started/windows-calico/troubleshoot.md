@@ -1,7 +1,7 @@
 ---
 title: Troubleshoot Calico Enterprise for Windows
 description: Help for troubleshooting Calico Enterprise for Windows issues.
-canonical_url: /windows-calico/troubleshoot
+canonical_url: '/getting-started/windows-calico/troubleshoot'
 ---
 
 ### Useful troubleshooting commands

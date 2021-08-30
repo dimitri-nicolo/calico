@@ -1,7 +1,7 @@
 ---
 title: Quickstart
 description: Install Calico Enterprise for Windows on a Kubernetes cluster for testing or development.
-canonical_url: '/windows-calico/quickstart'
+canonical_url: '/getting-started/windows-calico/quickstart'
 ---
 
 ### Big picture

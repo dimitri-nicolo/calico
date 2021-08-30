@@ -1,7 +1,7 @@
 ---
 title: Install Calico Enterprise for Windows on a Rancher Kubernetes Engine cluster
 description: Install Calico Enterprise for Windows on a Rancher RKE cluster.
-canonical_url: '/windows-calico/kubernetes/rancher'
+canonical_url: '/getting-started/windows-calico/kubernetes/rancher'
 ---
 
 ### Big picture

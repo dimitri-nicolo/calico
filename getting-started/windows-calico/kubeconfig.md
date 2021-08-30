@@ -1,7 +1,7 @@
 ---
 title: Create kubeconfig for Windows nodes
 description: Configure kubeconfig for Calico Enterprise for Windows.
-canonical_url: '/windows-calico/kubeconfig'
+canonical_url: '/getting-started/windows-calico/kubeconfig'
 ---
 
 ### Big picture

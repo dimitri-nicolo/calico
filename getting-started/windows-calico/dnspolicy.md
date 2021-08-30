@@ -1,7 +1,7 @@
 ---
 title: Configure DNS policy for workloads 
 description: Configure DNS policy for Calico Enterprise for Windows workloads.
-canonical_url: '/windows-calico/dnspolicy'
+canonical_url: '/getting-started/windows-calico/dnspolicy'
 ---
 
 >**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
