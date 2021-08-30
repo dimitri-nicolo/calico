@@ -18,17 +18,17 @@ type collectorMocker struct {
 	metrics.Collector
 }
 
-func (c collectorMocker) CollectLogBytesWritten(tenantID, clusterID string, bytes float64) error {
+func (c *collectorMocker) CollectLogBytesWritten(tenantID, clusterID string, bytes float64) error {
 	c.Called(tenantID, clusterID, bytes)
 	return nil
 }
 
-func (c collectorMocker) CollectLogBytesRead(tenantID, clusterID string, bytes float64) error {
+func (c *collectorMocker) CollectLogBytesRead(tenantID, clusterID string, bytes float64) error {
 	c.Called(tenantID, clusterID, bytes)
 	return nil
 }
 
-func (c collectorMocker) Serve(address string) error {
+func (c *collectorMocker) Serve(address string) error {
 	c.Called(address)
 	return nil
 }
@@ -50,7 +50,7 @@ var _ = Describe("Test the elastic response hook", func() {
 		collector.On("CollectLogBytesRead", tenantID, clusterID, mock.Anything).Return(nil)
 		collector.On("CollectLogBytesWritten", tenantID, clusterID, mock.Anything).Return(nil)
 
-		fn := gateway.ElasticModifyResponseFunc(collector)
+		fn := gateway.ElasticModifyResponseFunc(&collector)
 		req := &http.Request{RequestURI: "/some-uri", ContentLength: 25}
 		req = req.WithContext(context.WithValue(context.WithValue(context.TODO(), middlewares.ClusterIDKey, clusterID), middlewares.TenantIDKey, tenantID))
 		resp := &http.Response{

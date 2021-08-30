@@ -18,8 +18,8 @@ const (
 	ElasticsearchCredsSecretSuffix = "elasticsearch-access-gateway"
 	ESGatewayPasswordSecretSuffix  = "gateway-verification-credentials"
 	// Below are the expected fields within the data section of an ES credential K8s secret.
-	SecretDataFieldUsername = "username"
-	SecretDataFieldPassword = "password"
+	SecretDataFieldUsername    = "username"
+	SecretDataFieldPassword    = "password"
 	SecretDataFieldClusterName = "cluster_name"
 )
 
@@ -86,7 +86,7 @@ func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, str
 	if !passwordFound {
 		return "", "", "", fmt.Errorf("k8s secret did not contain username field")
 	}
-	clusterName, _ := data[SecretDataFieldClusterName]
+	clusterName := data[SecretDataFieldClusterName]
 
 	return string(username), string(password), string(clusterName), nil
 }
