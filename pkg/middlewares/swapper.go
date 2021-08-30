@@ -27,7 +27,7 @@ const (
 // a request (from gateway credentials to Elasticsearch credentials).
 func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Warnf("Attempting ES credentials swap for request with URI %s", r.RequestURI)
+		log.Debugf("Attempting ES credentials swap for request with URI %s", r.RequestURI)
 
 		// This should never happen, but is possible if you mistakenly apply this handler in a chain to a route
 		// without having the elasticAuthHandler applied first (it adds the user to the context).
@@ -41,13 +41,11 @@ func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handle
 		// Attempt to lookup a credentials for matching ES user (i.e. can be used with ES API) that matches to the current user.
 		secretName := fmt.Sprintf("%s-%s", user.Username, ElasticsearchCredsSecretSuffix)
 		username, password, clusterName, err := getPlainESCredentials(c, secretName)
-
 		if err != nil {
 			log.Errorf("unable to authenticate user: %s", err)
 			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
 			return
 		}
-
 		// Set swapped ES user credentials on the request
 		r.SetBasicAuth(username, password)
 		log.Debugf("Found ES credentials for real user [%s] for request with URI %s", username, r.RequestURI)
@@ -86,9 +84,13 @@ func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, str
 	if !passwordFound {
 		return "", "", "", fmt.Errorf("k8s secret did not contain username field")
 	}
-	clusterName := data[SecretDataFieldClusterName]
+	clusterName, ok := data[SecretDataFieldClusterName]
+	var clusterNameStr string
+	if ok {
+		clusterNameStr = string(clusterName)
+	}
 
-	return string(username), string(password), string(clusterName), nil
+	return string(username), string(password), clusterNameStr, nil
 }
 
 // clusterNameToTenantIDAndClusterID takes a clusterName input string and returns the tenantID and clusterID.
