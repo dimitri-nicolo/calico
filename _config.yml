@@ -72,7 +72,7 @@ imageNames:
   honeypod: tigera/honeypod
   honeypod-exp-service: tigera/honeypod-exp-service
   honeypod-controller: tigera/honeypod-controller
- # The Prometheus + eck-operator images below are third-party images 
+ # The Prometheus + eck-operator images below are third-party images
  # that have been ported to quay.io/tigera as per customer request
   prometheusConfigReloader: tigera/prometheus-config-reloader
   configMapReload: tigera/configmap-reload
@@ -166,8 +166,9 @@ defaults:
         key-cert-provisioner: tigera/key-cert-provisioner
         elasticsearch-metrics: tigera/elasticsearch-metrics
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
+        performance_hotspots: tigera/performance_hotspots
         es-gateway: tigera/es-gateway
-        # The Prometheus + eck-operator images below are third-party images 
+        # The Prometheus + eck-operator images below are third-party images
         # that have been ported to quay.io/tigera as per customer request
         configMapReload: tigera/configmap-reload
         alertManager: tigera/alertmanager
