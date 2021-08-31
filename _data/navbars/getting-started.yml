@@ -19,6 +19,8 @@ section:
       path: /getting-started/options-install
     - title: Standard
       path: /getting-started/kubernetes/generic-install
+    - title: Mirantis Kubernetes Engine
+      path: /getting-started/kubernetes/docker-enterprise
     - title: Helm
       path: /getting-started/kubernetes/helm 
   - title: AKS 
