@@ -20,5 +20,4 @@ monitor:
   enabled: false
 compliance:
   enabled: false
-includePrometheusOperator: false
 {% endhelm %}
