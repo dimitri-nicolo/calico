@@ -50,7 +50,8 @@ type Config struct {
 	EnableKibanaMutualTLS bool   `default:"false" split_words:"true"`
 
 	// Prometheus metrics are exposed on this port.
-	MetricsPort int `default:"9091"`
+	MetricsEnabled bool `default:"false" split_words:"true"`
+	MetricsPort    int  `default:"9091" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

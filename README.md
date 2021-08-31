@@ -26,3 +26,14 @@ ES_GATEWAY_KIBANA_CA_BUNDLE_PATH | /certs/kibana/tls.crt | Path to CA cert for c
 ES_GATEWAY_KIBANA_CLIENT_CERT_PATH | /certs/kibana/client.crt | Path to client cert for connecting to Kibana using mTLS.
 ES_GATEWAY_KIBANA_CLIENT_KEY_PATH | /certs/kibana/client.key | Path to client key for connecting to Kibana using mTLS.
 ES_GATEWAY_ENABLE_KIBANA_MUTUAL_TLS | false | Flag for enabling mTLS with Kibana.
+
+## Metrics server
+
+When the environment variable METRICS_ENABLED is set to true, a metrics server will listen at 0.0.0.0:
+METRICS_PORT/metrics exposing two metrics:
+
+- tigera_elastic_log_bytes_written
+- tigera_elastic_log_bytes_read
+
+The values should be closely related to actual data sent to and from Elasticsearch broken down per tenant and/or cluster
+id. The tenant and cluster id are derived from the identity of the sender of the request and not on the payload or URL.

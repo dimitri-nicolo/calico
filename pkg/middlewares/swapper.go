@@ -98,7 +98,6 @@ func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, str
 // - cluster: This is the default name for the standard/management cluster
 // - my-tenant.my-managed-cluster: This is an example name for a managed cluster in Cloud
 // - my-managed-cluster: This is an example name for a managed cluster in EE.
-// Returns false if the input value does not contain a clusterName.
 func clusterNameToTenantIDAndClusterID(clusterName string) (tenantID string, clusterID string) {
 	parts := strings.Split(clusterName, ".")
 	if len(parts) == 1 {

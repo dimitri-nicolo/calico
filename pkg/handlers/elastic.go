@@ -11,7 +11,7 @@ import (
 func ElasticModifyResponseFunc(collector metrics.Collector) func(res *http.Response) error {
 	return func(res *http.Response) error {
 		req := res.Request
-		if res.StatusCode >= http.StatusOK && res.StatusCode < http.StatusMultipleChoices {
+		if collector != nil && res.StatusCode >= http.StatusOK && res.StatusCode < http.StatusMultipleChoices {
 			ctx := req.Context()
 			tenantID := ctx.Value(middlewares.TenantIDKey)
 			clusterID := ctx.Value(middlewares.ClusterIDKey)
