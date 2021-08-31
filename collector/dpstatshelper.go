@@ -26,7 +26,7 @@ func New(
 	healthAggregator *health.HealthAggregator,
 ) Collector {
 
-	rm := NewReporterManager()
+	rm := NewReporterManager(configParams.FlowLogsCollectorDebugTrace)
 	if configParams.PrometheusReporterEnabled {
 		pr := NewPrometheusReporter(configParams.PrometheusReporterPort,
 			configParams.DeletedMetricsRetentionSecs,
@@ -60,7 +60,7 @@ func New(
 				int64(configParams.FlowLogsAggregationThresholdBytes))
 		}
 		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator,
-			configParams.FlowLogsEnableHostEndpoint, offsetReader)
+			configParams.FlowLogsEnableHostEndpoint, configParams.FlowLogsCollectorDebugTrace, offsetReader)
 		configureFlowAggregation(configParams, cw)
 		rm.RegisterMetricsReporter(cw)
 	}
@@ -146,6 +146,7 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := NewFlowLogAggregator().
 				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
+				DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				IncludeService(configParams.FlowLogsFileIncludeService).
@@ -162,6 +163,7 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := NewFlowLogAggregator().
 				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
+				DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				IncludeService(configParams.FlowLogsFileIncludeService).

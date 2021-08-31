@@ -12,6 +12,7 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/felix/calc"
+	logutil "github.com/projectcalico/felix/logutils"
 )
 
 const (
@@ -180,13 +181,15 @@ type MetricsReporter interface {
 }
 
 type ReporterManager struct {
-	ReportChan chan MetricUpdate
-	reporters  []MetricsReporter
+	ReportChan            chan MetricUpdate
+	reporters             []MetricsReporter
+	displayDebugTraceLogs bool
 }
 
-func NewReporterManager() *ReporterManager {
+func NewReporterManager(displayDebugTraceLogs bool) *ReporterManager {
 	return &ReporterManager{
-		ReportChan: make(chan MetricUpdate, reporterChanBufferSize),
+		displayDebugTraceLogs: displayDebugTraceLogs,
+		ReportChan:            make(chan MetricUpdate, reporterChanBufferSize),
 	}
 }
 
@@ -207,7 +210,7 @@ func (r *ReporterManager) startManaging() {
 		// TODO(doublek): Channel for stopping the reporter.
 		select {
 		case mu := <-r.ReportChan:
-			log.Debugf("Received metric update %v", mu)
+			logutil.Tracef(r.displayDebugTraceLogs, "Received metric update %v", mu)
 			for _, reporter := range r.reporters {
 				reporter.Report(mu)
 			}
