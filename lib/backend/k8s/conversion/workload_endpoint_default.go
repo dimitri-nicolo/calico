@@ -229,10 +229,10 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 	}
 
 	// Map any named ports through.
-	var endpointPorts []apiv3.EndpointPort
+	var endpointPorts []libapiv3.WorkloadEndpointPort
 	for _, container := range pod.Spec.Containers {
 		for _, containerPort := range container.Ports {
-			if containerPort.Name != "" && containerPort.ContainerPort != 0 {
+			if containerPort.ContainerPort != 0 && (containerPort.HostPort != 0 || containerPort.Name != "") {
 				var modelProto numorstring.Protocol
 				switch containerPort.Protocol {
 				case kapiv1.ProtocolUDP:
@@ -250,10 +250,12 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 					continue
 				}
 
-				endpointPorts = append(endpointPorts, apiv3.EndpointPort{
+				endpointPorts = append(endpointPorts, libapiv3.WorkloadEndpointPort{
 					Name:     containerPort.Name,
 					Protocol: modelProto,
 					Port:     uint16(containerPort.ContainerPort),
+					HostPort: uint16(containerPort.HostPort),
+					HostIP:   containerPort.HostIP,
 				})
 			}
 		}
