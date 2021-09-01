@@ -1,7 +1,7 @@
 ---
 title: About eBPF
 description: Learn about eBPF!
-canonical_url: 'https://www.tigera.io/learn/guides/ebpf/'
+canonical_url: 'https://docs.projectcalico.org/about/about-ebpf'
 ---
 
 > <span class="glyphicon glyphicon-info-sign"></span> This guide provides optional background education, including
