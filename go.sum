@@ -706,13 +706,13 @@ github.com/tigera/api v0.0.0-20210805004937-7a70d5252063 h1:ZmzcXEMTQYSOrGCuDMCY
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba h1:yRzRCcfFCeIdQlTELjECxH4kV7iDK046NhWmE7Y6ZHE=
 github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/apiserver v0.0.0-20210901213114-f1aefa1e7479 h1:/Q1IfhzSCQyQyO+hFtdafPFwNKHVnu459clI6eb6y4A=
-github.com/tigera/apiserver v0.0.0-20210901213114-f1aefa1e7479/go.mod h1:n5HhBC+BGaHqGKY+mWxg+YxCuFsPWaEjwX2KvjfQAGo=
+github.com/tigera/apiserver v0.0.0-20210901223027-a0977691e21c h1:pYKozYfAqBr5sH5yFzhxnQDDYhgvWK8W8T7NfyJz0uM=
+github.com/tigera/apiserver v0.0.0-20210901223027-a0977691e21c/go.mod h1:c829odKRoBTZnjlTQvJgpmO7+Lsbg/QwztaTo7DKJ3w=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210901221850-30c1443cb9d7 h1:8SIYuL6ciXtwEJnSX3EtPcb7T/CxfCYX6hJZH5wmy7s=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210901221850-30c1443cb9d7/go.mod h1:IshJCT6+XPBl3GApV2zdSy3NpPZNoZ7iC6gI7G/T0Rw=
 github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b/go.mod h1:ZQPJD/V9qpXlUzkaDHzJ6MNaqgo6Mhbb4aFN7uYDNLI=
-github.com/tigera/lma v0.0.0-20210901221819-90879a484fb1 h1:k49F3iM0QcOLcwK6H82Bnln8tGAdpd5qDyBjemlLma0=
-github.com/tigera/lma v0.0.0-20210901221819-90879a484fb1/go.mod h1:6ZQgM/01ZAXOGrrnaS1o9p1x5Im0eQVzruJfBxyk1OM=
+github.com/tigera/lma v0.0.0-20210901222845-4bb8c03dfaab h1:ZC1dooN5hXRZgdfav6aIaeuAck4/seYHrs/ZMOkBtnk=
+github.com/tigera/lma v0.0.0-20210901222845-4bb8c03dfaab/go.mod h1:AVVk0ZVzIGnU3fi2dI2R6Csyx8TgXKV6dBXHLBey76M=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
