@@ -23,7 +23,7 @@ require (
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20210826165108-d6e4592c976a
+	github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba
 	github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
