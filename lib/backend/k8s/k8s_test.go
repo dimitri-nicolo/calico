@@ -17,7 +17,6 @@ package k8s_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
@@ -472,8 +471,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("Deleting the namespace", func() {
-			err := c.ClientSet.CoreV1().Namespaces().Delete(ctx, ns.ObjectMeta.Name, metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			testutils.DeleteNamespace(c.ClientSet, ns.ObjectMeta.Name)
 		})
 
 		By("Checking the correct entries are no longer in our cache", func() {
@@ -523,8 +521,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("deleting a namespace", func() {
-			err := c.ClientSet.CoreV1().Namespaces().Delete(ctx, ns.ObjectMeta.Name, metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			testutils.DeleteNamespace(c.ClientSet, ns.ObjectMeta.Name)
 		})
 
 		By("Checking the correct entries are in no longer in our cache", func() {
@@ -1346,14 +1343,13 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		})
 
 		By("Deleting the namespace", func() {
-			err := c.ClientSet.CoreV1().Namespaces().Delete(ctx, ns.ObjectMeta.Name, metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			testutils.DeleteNamespace(c.ClientSet, ns.ObjectMeta.Name)
 		})
 
 		By("Listing all Network Sets in a non-existent namespace", func() {
 			kvps, err := c.List(ctx, model.ResourceListOptions{Namespace: ns.ObjectMeta.Name, Kind: apiv3.KindNetworkSet}, "")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(kvps.KVPairs).To(HaveLen(1))
+			Expect(kvps.KVPairs).To(HaveLen(0))
 		})
 	})
 
@@ -3175,7 +3171,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 	})
 })
 
-var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testutils.DatastoreK8s, func(cfg apiconfig.CalicoAPIConfig) {
+// Add the [Datastore] indicator to fun only as an FV.
+var _ = Describe("Test [Datastore] (Inline kubeconfig support)", func() {
 	var (
 		c  *k8s.KubeClient
 		ns k8sapi.Namespace
@@ -3185,24 +3182,12 @@ var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testuti
 		// Clean up all Calico resources.
 		err := c.Clean()
 		Expect(err).NotTo(HaveOccurred())
-		// Ensure the namespace is removed
-		Eventually(func() bool {
-			err = c.ClientSet.CoreV1().Namespaces().Delete(context.Background(), ns.Name, metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
-			return kerrors.IsNotFound(err)
-		}, 30*time.Second).Should(BeTrue())
+		testutils.DeleteNamespace(c.ClientSet, ns.Name)
 	}
 
 	BeforeEach(func() {
-		// Load kubeconfig file that was mounted in to the test.
-		conf, err := ioutil.ReadFile("/kubeconfig.yaml")
-		Expect(err).NotTo(HaveOccurred())
-
-		// Override the provided config to use inline configuration.
-		cfg.Spec = apiconfig.CalicoAPIConfigSpec{
-			KubeConfig: apiconfig.KubeConfig{
-				KubeconfigInline: string(conf),
-			},
-		}
+		// Get the k8s inline config.
+		cfg := testutils.GetK8sInlineConfig()
 
 		// Create a client using the config.
 		client, err := k8s.NewKubeClient(&cfg.Spec)
@@ -3227,8 +3212,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testuti
 			Expect(err).NotTo(HaveOccurred())
 		})
 		By("Deleting the namespace", func() {
-			err := c.ClientSet.CoreV1().Namespaces().Delete(context.Background(), ns.ObjectMeta.Name, metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
-			Expect(err).NotTo(HaveOccurred())
+			testutils.DeleteNamespace(c.ClientSet, ns.ObjectMeta.Name)
 		})
 	})
 })
