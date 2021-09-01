@@ -106,6 +106,14 @@ func New(
 		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 	)
 
+	w.AddWatch(
+		cache.NewFilteredListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.TigeraElasticsearchNamespace, func(options *metav1.ListOptions) {
+			options.LabelSelector = "esgateway.tigera.io/secrets"
+		}),
+		&corev1.Secret{},
+		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+	)
+
 	notifications := []worker.ResourceWatch{worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd}
 
 	w.AddWatch(
