@@ -20,15 +20,15 @@ section:
     path: /security/policy-impact-preview
   - title: Policy recommendation
     path: /security/generate-policy-recommendation
-  - title: Calico Enterprise policy tutorial
-    path: /security/simple-policy-cnx
 - title: Calico Enterprise network policy for beginners
   path: /security/beginners
   section:
   - title: Enable default deny
     path: /security/kubernetes-default-deny
   - title: Get started with Calico Enterprise network policy
-    path: /security/calico-network-policy  
+    path: /security/calico-network-policy
+  - title: Calico Enterprise policy tutorial
+    path: /security/simple-policy-cnx    
   - title: Policy rules
     path: /security/policy-rules
     section:
