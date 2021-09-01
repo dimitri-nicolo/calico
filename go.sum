@@ -665,6 +665,8 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210826165108-d6e4592c976a h1:keGGf98lSnfV+UNgVTCq4THx6yV6+aFf310I37VTIQw=
 github.com/tigera/api v0.0.0-20210826165108-d6e4592c976a/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
+github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba h1:yRzRCcfFCeIdQlTELjECxH4kV7iDK046NhWmE7Y6ZHE=
+github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210901205802-89e32fb7e186 h1:WLggQX0q3r53/YNcB4eOtsIBnD1ADsZYcdhi5Rp0Kfk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210901205802-89e32fb7e186/go.mod h1:c7+GXmqu81V7LXDMZfGDb76+Jd5VNGh106W5Osc26Mg=
 github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b h1:e/wex7uN9uRFqsPDOVyupng/+MqbSU3lTEZkfP9DS9c=
