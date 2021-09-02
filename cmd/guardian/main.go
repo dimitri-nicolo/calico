@@ -187,7 +187,7 @@ func main() {
 			defer wg.Done()
 
 			if err := cli.AcceptAndProxy(listener); err != nil {
-				log.WithError(err).Error("AcceptAndProxy returned with an error")
+				log.WithError(err).Fatal("proxy tunnel exited with an error")
 			}
 		}()
 	}
