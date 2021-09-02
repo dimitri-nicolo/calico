@@ -326,6 +326,14 @@ rules:
       - validatingwebhookconfigurations
     verbs:
       - '*'
+    - apiGroups:
+      - projectcalico.org
+    resources:
+      - deeppacketinspections
+    verbs:
+      - list
+      - get
+      - watch
   # Add the permissions to monitor the status of certificate signing requests when certificate management is enabled.
   - apiGroups:
       - certificates.k8s.io
