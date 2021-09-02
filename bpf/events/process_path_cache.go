@@ -5,12 +5,12 @@ package events
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,7 +29,7 @@ type ProcessPathInfo struct {
 
 type ProcessPathEntry struct {
 	ProcessPathInfo
-	expiresAt time.Time
+	expiresAt  time.Time
 	fromKprobe bool
 }
 
@@ -117,7 +117,7 @@ func (r *BPFProcessPathCache) Lookup(Pid int) (ProcessPathInfo, bool) {
 		// This is to avoid inconsistencies especially in cases like nginx deployments
 		// where the kprobe data is that of the container process and proc data is
 		// that of nginx. Hence if /proc/pid/cmdline is available that takes the higher
-		// precedence. 
+		// precedence.
 		if entry.fromKprobe {
 			procPath := fmt.Sprintf("/proc/%d/cmdline", Pid)
 			_, err := os.Stat(procPath)

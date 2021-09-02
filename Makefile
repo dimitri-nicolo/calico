@@ -448,7 +448,7 @@ fv/infrastructure/crds: go.mod go.sum $(LOCAL_BUILD_DEP)
 # or It{} description string. For example, to only run dns_test.go, type:
 # 	GINKGO_FOCUS="DNS Policy" make fv
 #
-fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-workload bin/test-connection bin/test-dns bin/calico-bpf fv/fv.test
+fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-workload bin/test-connection bin/test-dns bin/calico-bpf fv/fv.test test-dns-server-container bin/run-debug-console-command
 	rm -f fv/data-races.log fv/latency.log
 	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
@@ -584,6 +584,17 @@ bin/test-workload: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/utils.
 	@echo Building test-workload...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
+
+test-dns-server-container: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
+	@echo Building test-dns-server-container...
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -o fv/dns/server/dns-server -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/dns/server"'
+	docker build -t tigera-test/dns-server fv/dns/server
+
+bin/run-debug-console-command:
+	@echo Copying run-debug-console-command script...
+	mkdir -p bin
+	cp "fv/run-debug-console-command" $@
 
 bin/test-connection: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-connection/*.go
 	@echo Building test-connection...

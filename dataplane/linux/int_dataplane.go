@@ -216,7 +216,9 @@ type Config struct {
 	SidecarAccelerationEnabled bool
 
 	DebugSimulateDataplaneHangAfter time.Duration
+	DebugStartDebugConsole          bool
 	DebugUseShortPollIntervals      bool
+	DebugNfqueueEnableFDLogging     bool
 
 	FelixHostname string
 	NodeIP        net.IP
@@ -443,8 +445,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 {
-		nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
+		var nfqueueOptions []nfqueue.Option
+		if config.DebugNfqueueEnableFDLogging {
+			nfqueueOptions = append(nfqueueOptions, nfqueue.WithDebugLogFDEnabled())
+		}
 
+		nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
 		if err == nil {
 			packetProcessor := nfqdnspolicy.NewPacketProcessor(nf, config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
 
@@ -1263,6 +1269,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			bpfEvnt.Close()
 		}
 
+	}
+
+	if config.DebugStartDebugConsole {
+		go startDebugConsole()
 	}
 
 	return dp

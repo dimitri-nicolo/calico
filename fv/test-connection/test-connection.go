@@ -45,19 +45,20 @@ import (
 const usage = `test-connection: test connection to some target, for Felix FV testing.
 
 Usage:
-  test-connection <namespace-path> <ip-address> <port> [--source-ip=<source_ip>] [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>] [--sendlen=<bytes>] [--recvlen=<bytes>] [--log-pongs] [--stdin]
+  test-connection <namespace-path> <destination> <port> [--source-ip=<source_ip>] [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>] [--sendlen=<bytes>] [--recvlen=<bytes>] [--log-pongs] [--stdin] [--dns-server=<dns-server>]
 
 Options:
-  --source-ip=<source_ip>  Source IP to use for the connection [default: 0.0.0.0].
-  --source-port=<source>   Source port to use for the connection [default: 0].
-  --protocol=<protocol>    Protocol to test tcp (default), udp (connected) udp-noconn (unconnected).
-  --duration=<seconds>     Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
-  --loop-with-file=<file>  Whether to send messages repeatedly, file is used for synchronization
-  --log-pongs              Whether to log every response
-  --debug                  Enable debug logging
-  --sendlen=<bytes>        How many additional bytes to send
-  --recvlen=<bytes>        Tell the other side to send this many additional bytes
-  --stdin                  Read and send data from stdin
+  --source-ip=<source_ip>   Source IP to use for the connection [default: 0.0.0.0].
+  --source-port=<source>    Source port to use for the connection [default: 0].
+  --protocol=<protocol>     Protocol to test tcp (default), udp (connected) udp-noconn (unconnected).
+  --duration=<seconds>      Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
+  --dns-server=<dns-server> If specified use the given address to do the DNS lookup. Only valid if <destination> is a domain name.
+  --loop-with-file=<file>   Whether to send messages repeatedly, file is used for synchronization
+  --log-pongs               Whether to log every response
+  --debug                   Enable debug logging
+  --sendlen=<bytes>         How many additional bytes to send
+  --recvlen=<bytes>         Tell the other side to send this many additional bytes
+  --stdin                   Read and send data from stdin
 
 If connection is successful, test-connection exits successfully.
 
@@ -93,8 +94,9 @@ func main() {
 	}
 	log.WithField("args", arguments).Info("Parsed arguments")
 	namespacePath := arguments["<namespace-path>"].(string)
-	ipAddress := arguments["<ip-address>"].(string)
+	destination := arguments["<destination>"].(string)
 	protocol := arguments["--protocol"].(string)
+	dnsServer, _ := arguments.String("--dns-server")
 	port := ""
 	sourcePort := ""
 	// No such thing as a port for raw IP.
@@ -123,7 +125,7 @@ func main() {
 	// Set default for source IP. If we're using IPv6 as indicated by ipAddress
 	// and no --source-ip option was provided, set the source IP to the default
 	// IPv6 address.
-	if strings.Contains(ipAddress, ":") && sourceIpAddress == defaultIPv4SourceIP {
+	if strings.Count(destination, ":") > 1 && sourceIpAddress == defaultIPv4SourceIP {
 		sourceIpAddress = defaultIPv6SourceIP
 	}
 
@@ -148,9 +150,9 @@ func main() {
 		log.WithError(err).Fatal("Invalid --stdin")
 	}
 
-	log.Infof("Test connection from namespace %v IP %v port %v to IP %v port %v proto %v "+
+	log.Infof("Test connection from namespace %v IP %v port %v to destination %v port %v proto %v "+
 		"max duration %d seconds, logging pongs (%v), stdin %v",
-		namespacePath, sourceIpAddress, sourcePort, ipAddress, port, protocol, seconds, logPongs, stdin)
+		namespacePath, sourceIpAddress, sourcePort, destination, port, protocol, seconds, logPongs, stdin)
 
 	if loopFile == "" {
 		// I found that configuring the timeouts on all the network calls was a bit fiddly.  Since
@@ -160,6 +162,39 @@ func main() {
 			time.Sleep(timeout * time.Second)
 			log.Fatal("Timed out")
 		}()
+	}
+
+	var ipAddress string
+
+	// Destination a domain, not an IP, do a DNS lookup.
+	if net.ParseIP(destination) == nil {
+		var resolver *net.Resolver
+		if dnsServer != "" {
+			resolver = &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					d := net.Dialer{
+						Timeout: time.Millisecond * time.Duration(10000),
+					}
+					return d.DialContext(ctx, network, dnsServer)
+				},
+			}
+		} else {
+			resolver = net.DefaultResolver
+		}
+
+		addrs, err := resolver.LookupHost(context.Background(), destination)
+		if err != nil {
+			log.WithError(err).Fatal("failed to lookup host addresses")
+		}
+
+		if len(addrs) == 0 {
+			log.WithError(err).Fatal("no addresses found for host")
+		}
+
+		ipAddress = addrs[0]
+	} else {
+		ipAddress = destination
 	}
 
 	if namespacePath == "-" {

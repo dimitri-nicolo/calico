@@ -5,10 +5,12 @@
 package fv_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +27,8 @@ import (
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/rules"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
@@ -747,3 +751,161 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		})
 	})
 })
+
+type dnsRecordIP struct {
+	TTL uint32 `json:"ttl"`
+	IP  string `json:"ip"`
+}
+
+var _ = Describe("DNS Policy Improvements", func() {
+
+	var (
+		dnsserver *containers.Container
+		etcd      *containers.Container
+		felix     *infrastructure.Felix
+		client    client.Interface
+		infra     infrastructure.DatastoreInfra
+		workload1 *workload.Workload
+		workload2 *workload.Workload
+		workloads []*workload.Workload
+		policy    *api.NetworkPolicy
+	)
+
+	BeforeEach(func() {
+		var err error
+
+		opts := infrastructure.DefaultTopologyOptions()
+
+		workload1Name := "w1"
+		workload2Name := "w2"
+		workload1IP := "10.65.0.1"
+		workload2IP := "10.65.0.2"
+
+		dnsRecords := map[string][]dnsRecordIP{"foobar.com": {{TTL: 20, IP: workload2IP}}}
+
+		recordsStr, err := json.Marshal(dnsRecords)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		dnsserver = containers.Run("dnsserver",
+			containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
+			"-i", "--privileged", "-e", fmt.Sprintf("IP=%s", "53"), "-e", fmt.Sprintf("PORT=%s", "53"), "-e",
+			fmt.Sprintf("RECORDS=%s", string(recordsStr)), "tigera-test/dns-server:latest")
+
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsserver.IP
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
+		opts.ExtraEnvVars["FELIX_DEBUGSTARTDEBUGCONSOLE"] = "true"
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
+
+		workload1 = workload.Run(felix, workload1Name, "default", workload1IP, "8055", "tcp")
+		workload1.ConfigureInInfra(infra)
+		workloads = append(workloads, workload1)
+
+		workload2 = workload.Run(felix, workload2Name, "default", workload2IP, "8055", "udp")
+		workload2.ConfigureInInfra(infra)
+		workloads = append(workloads, workload2)
+
+		udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+
+		policy = api.NewNetworkPolicy()
+		policy.Name = "allow-foobar"
+		policy.Namespace = "default"
+		order := float64(20)
+		policy.Spec.Order = &order
+		policy.Spec.Selector = workload1.NameSelector()
+		policy.Spec.Egress = []api.Rule{
+			{
+				Action:      api.Allow,
+				Destination: api.EntityRule{Domains: []string{"foobar.com"}},
+			},
+			{
+				Action:   api.Allow,
+				Protocol: &udp,
+				Destination: api.EntityRule{
+					Ports: []numorstring.Port{numorstring.SinglePort(53)},
+				},
+			},
+		}
+		_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Allow workloads to connect out to the Internet.
+		felix.Exec(
+			"iptables", "-w", "-t", "nat",
+			"-A", "POSTROUTING",
+			"-o", "eth0",
+			"-j", "MASQUERADE", "--random-fully",
+		)
+
+		// Ensure that Felix is connected to nfqueue
+		_, err = felix.ExecCombinedOutput("cat", "/proc/net/netfilter/nfnetlink_queue")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Install netcat so we can run debug console commands.
+		_, err = felix.ExecCombinedOutput("apt-get", "install", "netcat-openbsd", "-y")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	// Stop etcd and workloads, collecting some state if anything failed.
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("calico-bpf", "ipsets", "dump")
+			felix.Exec("ipset", "list")
+			felix.Exec("iptables-save", "-c")
+			felix.Exec("ip", "r")
+			felix.Exec("conntrack", "-L")
+		}
+
+		for ii := range workloads {
+			workloads[ii].Stop()
+		}
+		workloads = nil
+
+		felix.Stop()
+
+		if CurrentGinkgoTestDescription().Failed {
+			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+		}
+		etcd.Stop()
+		infra.Stop()
+		dnsserver.Stop()
+	})
+
+	When("when the dns response isn't programmed before the packet reaches the dns policy rule", func() {
+		It("nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
+			workload1.C.EnsureBinary("test-connection")
+			_, err := workload1.ExecCombinedOutput("/test-connection", "-", "foobar.com", "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsserver.IP, 53))
+			Expect(err).ShouldNot(HaveOccurred())
+
+			iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
+			// being accepted.
+			nfqueuedPacketsCount := getIptablesSavePacketCount(iptablesSaveOutput,
+				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^n]*NFQUEUE.*")
+			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
+
+			policyChainName := rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
+				Tier: "default",
+				Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
+			})
+
+			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "cali40d:c19ArGfvjwU6D6ljIxk2xsA")
+			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
+		})
+	})
+
+})
+
+func getIptablesSavePacketCount(iptablesSaveOutput, chainName, ruleIdentifier string) int {
+	re := regexp.MustCompile(fmt.Sprintf(`\[(\d*):\d*\]\s-A %s[^\n]*%s.*`, chainName, ruleIdentifier))
+	matches := re.FindStringSubmatch(iptablesSaveOutput)
+	Expect(len(matches)).Should(BeNumerically(">", 0))
+
+	count, err := strconv.Atoi(matches[1])
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return count
+}

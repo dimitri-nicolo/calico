@@ -4,7 +4,9 @@ package nfqueue
 
 import (
 	"context"
+	"reflect"
 	"time"
+	"unsafe"
 
 	log "github.com/sirupsen/logrus"
 
@@ -40,7 +42,9 @@ func init() {
 type nfQueue struct {
 	*gonfqueue.Nfqueue
 
-	attrsChannel chan gonfqueue.Attribute
+	attrsChannel     chan gonfqueue.Attribute
+	debugEnableLogFD bool
+	queueID          int
 }
 
 type Nfqueue interface {
@@ -51,7 +55,7 @@ type Nfqueue interface {
 	PacketAttributesChannel() <-chan gonfqueue.Attribute
 }
 
-func NewNfqueue(queueID int) (Nfqueue, error) {
+func NewNfqueue(queueID int, options ...Option) (Nfqueue, error) {
 	nfqueueAttrChan := make(chan gonfqueue.Attribute, 1000)
 
 	defaultConfig := &gonfqueue.Config{
@@ -62,7 +66,6 @@ func NewNfqueue(queueID int) (Nfqueue, error) {
 		ReadTimeout:  nfReadTimeout,
 		WriteTimeout: nfWriteTimeout,
 	}
-
 	nfRaw, err := gonfqueue.Open(defaultConfig)
 	if err != nil {
 		return nil, err
@@ -71,6 +74,15 @@ func NewNfqueue(queueID int) (Nfqueue, error) {
 	nf := &nfQueue{
 		Nfqueue:      nfRaw,
 		attrsChannel: nfqueueAttrChan,
+		queueID:      queueID,
+	}
+
+	for _, option := range options {
+		option(nf)
+	}
+
+	if nf.debugEnableLogFD {
+		nf.debugPrintConnFD()
 	}
 
 	err = nf.Register(context.Background(), func(a gonfqueue.Attribute) int {
@@ -96,4 +108,39 @@ func NewNfqueue(queueID int) (Nfqueue, error) {
 
 func (nf *nfQueue) PacketAttributesChannel() <-chan gonfqueue.Attribute {
 	return nf.attrsChannel
+}
+
+// printConnFD logs int connection file descriptor. This should never be used in production, and is only here so we can
+// use the file descriptor to kill the nfqueue connection for fv tests.
+func (nf *nfQueue) debugPrintConnFD() {
+	path := []string{"sock", "s", "fd", "file", "pfd", "Sysfd"}
+	current := reflect.ValueOf(nf.Con)
+	for _, v := range path {
+		if current.Kind() == reflect.Interface {
+			current = current.Elem()
+		}
+
+		if current.Kind() == reflect.Ptr {
+			current = current.Elem()
+		}
+
+		if current.Kind() != reflect.Struct {
+			break
+		}
+
+		current = current.FieldByName(v)
+		if !current.IsValid() {
+			log.Warning("Field path to file descriptor is invalid. NFQUEUE file descriptor will not be printed out.")
+			return
+		}
+	}
+
+	if !current.IsValid() {
+		log.Warning("Field path to file descriptor is invalid. NFQUEUE file descriptor will not be printed out.")
+		return
+	}
+
+	fd := reflect.NewAt(current.Type(), unsafe.Pointer(current.UnsafeAddr())).Elem().Interface().(int)
+
+	log.Infof("DEBUG NFQUEUE (id %d) fd: %d", nf.queueID, fd)
 }
