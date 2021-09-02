@@ -69,6 +69,10 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewDeepPacketInspectionStorage(opts)
 	case "projectcalico.org/deeppacketinspections/status":
 		return NewDeepPacketInspectionStatusStorage(opts)
+	case "projectcalico.org/uisettingsgroups":
+		return NewUISettingsGroupStorage(opts)
+	case "projectcalico.org/uisettingsgroups/data":
+		return NewUISettingsGroupDataStorage(opts)
 	default:
 		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return registry.DryRunnableStorage{}, nil

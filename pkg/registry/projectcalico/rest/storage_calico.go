@@ -55,6 +55,7 @@ import (
 	calicostagedk8spolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/stagedkubernetesnetworkpolicy"
 	calicostagedpolicy "github.com/projectcalico/apiserver/pkg/registry/projectcalico/stagednetworkpolicy"
 	calicotier "github.com/projectcalico/apiserver/pkg/registry/projectcalico/tier"
+	calicouisettingsgroup "github.com/projectcalico/apiserver/pkg/registry/projectcalico/uisettingsgroup"
 	calicostorage "github.com/projectcalico/apiserver/pkg/storage/calico"
 	"github.com/projectcalico/apiserver/pkg/storage/etcd"
 )
@@ -711,6 +712,29 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{},
 	)
 
+	uiSettingsGroupRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("uisettingsgroups"))
+	if err != nil {
+		return nil, err
+	}
+	uiSettingsGroupOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   uiSettingsGroupRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicouisettingsgroup.EmptyObject(),
+			ScopeStrategy: calicouisettingsgroup.NewStrategy(scheme),
+			NewListFunc:   calicouisettingsgroup.NewList,
+			GetAttrsFunc:  calicouisettingsgroup.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions:  uiSettingsGroupRESTOptions,
+			LicenseCache: licenseCache,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -720,6 +744,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts))
 	storage["globalnetworksets"] = rESTInPeace(calicognetworkset.NewREST(scheme, *gNetworkSetOpts))
 	storage["networksets"] = rESTInPeace(caliconetworkset.NewREST(scheme, *networksetOpts))
+	storage["uisettingsgroups"] = rESTInPeace(calicouisettingsgroup.NewREST(scheme, *uiSettingsGroupOpts))
 	licenseStorage, licenseStatusStorage, err := calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
