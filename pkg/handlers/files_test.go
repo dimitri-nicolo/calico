@@ -30,7 +30,7 @@ import (
 
 const loremLipsum = "Lorem Lipsum"
 
-var _ = Describe("Download", func() {
+var _ = Describe("FilesDownload", func() {
 	var req *http.Request
 
 	var files = []string{"a", "b"}
@@ -113,11 +113,11 @@ var _ = Describe("Download", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
 		var mockLocator = &capture.MockLocator{}
-		var mockFileRetrieval = &capture.MockFileRetrieval{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
 		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
-		var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
@@ -156,13 +156,13 @@ var _ = Describe("Download", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
 		var mockLocator = &capture.MockLocator{}
-		var mockFileRetrieval = &capture.MockFileRetrieval{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureMultipleNodes, nil)
 		mockLocator.On("GetEntryPod", "cluster", "nodeOne").Return("entryNs", "entryPodOne", nil)
 		mockLocator.On("GetEntryPod", "cluster", "nodeTwo").Return("entryNs", "entryPodTwo", nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNodeOne).Return(tarFileReaderOne, nil, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNodeTwo).Return(tarFileReaderTwo, nil, nil)
-		var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
@@ -191,9 +191,9 @@ var _ = Describe("Download", func() {
 			// Bootstrap the download
 			var mockCache = &cache.MockClientCache{}
 			var mockLocator = &capture.MockLocator{}
-			var mockFileRetrieval = &capture.MockFileRetrieval{}
+			var mockFileRetrieval = &capture.MockFileCommands{}
 			mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(nil, expectedError)
-			var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+			var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
 
 			// Bootstrap the http recorder
 			recorder := httptest.NewRecorder()
@@ -215,11 +215,11 @@ var _ = Describe("Download", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
 		var mockLocator = &capture.MockLocator{}
-		var mockFileRetrieval = &capture.MockFileRetrieval{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
 		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(nil, &errorWriter, nil)
-		var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
@@ -249,11 +249,11 @@ var _ = Describe("Download", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
 		var mockLocator = &capture.MockLocator{}
-		var mockFileRetrieval = &capture.MockFileRetrieval{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
 		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
-		var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
@@ -278,10 +278,10 @@ var _ = Describe("Download", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
 		var mockLocator = &capture.MockLocator{}
-		var mockFileRetrieval = &capture.MockFileRetrieval{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
 		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", fmt.Errorf("any error"))
-		var download = handlers.NewDownload(mockCache, mockLocator, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()

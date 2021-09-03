@@ -63,14 +63,14 @@ func main() {
 	}()
 	var auth = middleware.NewAuth(mustGetAuthenticator(cfg), cache)
 	var locator = capture.NewLocator(cache)
-	var fileRetrieval = capture.NewFileRetrieval(cache)
-	var download = handlers.NewDownload(cache, locator, fileRetrieval)
+	var fileCommands = capture.NewFileCommands(cache)
+	var files = handlers.NewFiles(cache, locator, fileCommands)
 
 	log.Infof("PacketCapture API listening for HTTPS requests at %s", addr)
 	// Define handlers
 	http.Handle("/version", http.HandlerFunc(version.Handler))
 	http.Handle("/health", http.HandlerFunc(handlers.Health))
-	http.Handle("/download/", middleware.Parse(auth.Authenticate(auth.Authorize(download.Download))))
+	http.Handle("/download/", middleware.Parse(auth.Authenticate(auth.Authorize(files.Download))))
 
 	// Start server
 	log.Fatal(http.ListenAndServeTLS(addr, cfg.HTTPSCert, cfg.HTTPSKey, nil))

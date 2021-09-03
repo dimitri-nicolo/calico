@@ -135,7 +135,7 @@ clean:
 ###############################################################################
 MOCKERY_FILE_PATHS= \
 	pkg/cache/ClientCache \
-	pkg/capture/FileRetrieval \
+	pkg/capture/FileCommands \
 	pkg/capture/Locator
 
 
