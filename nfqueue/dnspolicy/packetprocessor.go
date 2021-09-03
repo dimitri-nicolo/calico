@@ -293,26 +293,54 @@ done:
 			prometheusReleasePacketBatchSizeGauge.Set(float64(len(releasePackets)))
 			prometheusDropPacketBatchSizeGauge.Set(float64(len(finalReleasePackets)))
 
-			rawPacket := gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv4, gopacket.Lazy)
-			ipv4, _ := rawPacket.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
-			if ipv4 == nil {
-				log.Debug(packet.logLinePrefix(), "Dropping non ipv4 packet.")
+			rawPacket := gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv4, gopacket.Default)
+			if rawPacket.ErrorLayer() != nil {
+				rawPacket = gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv6, gopacket.Default)
+				if rawPacket.ErrorLayer() != nil {
+					log.Error(packet.logLinePrefix(), "dropping unknown packet type (neither ipv4 nor ipv6)")
+					finalReleasePackets = append(finalReleasePackets, packet)
+					continue
+				}
+			}
 
+			switch rawPacket.NetworkLayer().LayerType() {
+			case layers.LayerTypeIPv4:
+				ipv4 := rawPacket.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+
+				packet.id = ipv4.Id
+				packet.srcIP = ipv4.SrcIP
+				packet.dstIP = ipv4.DstIP
+			case layers.LayerTypeIPv6:
+				ipv6 := rawPacket.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
+
+				packet.srcIP = ipv6.SrcIP
+				packet.dstIP = ipv6.DstIP
+			default:
+				log.Error(packet.logLinePrefix(), "dropping unknown packet type (neither ipv4 nor ipv6)")
 				finalReleasePackets = append(finalReleasePackets, packet)
 				continue
 			}
 
-			packet.id = ipv4.Id
-			packet.srcIP = ipv4.SrcIP
-			packet.protocol = ipv4.Protocol
-			packet.dstIP = ipv4.DstIP
+			transportLayer := rawPacket.TransportLayer()
+			if transportLayer != nil {
+				switch rawPacket.TransportLayer().LayerType() {
+				case layers.LayerTypeTCP:
+					tcp := rawPacket.Layer(layers.LayerTypeTCP).(*layers.TCP)
 
-			if tcp, _ := rawPacket.Layer(layers.LayerTypeTCP).(*layers.TCP); tcp != nil {
-				packet.srcPort = uint16(tcp.SrcPort)
-				packet.dstPort = uint16(tcp.DstPort)
-			} else if udp, _ := rawPacket.Layer(layers.LayerTypeUDP).(*layers.UDP); udp != nil {
-				packet.srcPort = uint16(udp.SrcPort)
-				packet.dstPort = uint16(udp.DstPort)
+					packet.srcPort = uint16(tcp.SrcPort)
+					packet.dstPort = uint16(tcp.DstPort)
+					packet.protocol = layers.IPProtocolTCP
+				case layers.LayerTypeUDP:
+					udp := rawPacket.Layer(layers.LayerTypeUDP).(*layers.UDP)
+					packet.srcPort = uint16(udp.SrcPort)
+					packet.dstPort = uint16(udp.DstPort)
+					packet.protocol = layers.IPProtocolUDP
+				default:
+					log.Debug("Unknown transport layer type")
+				}
+
+			} else {
+				log.Debug("No transport layer type")
 			}
 
 			// This case protects against a packet looping forever in case the nfqueue rule is missing the negative
