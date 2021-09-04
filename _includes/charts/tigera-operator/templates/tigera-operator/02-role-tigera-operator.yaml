@@ -326,7 +326,7 @@ rules:
       - validatingwebhookconfigurations
     verbs:
       - '*'
-    - apiGroups:
+  - apiGroups:
       - projectcalico.org
     resources:
       - deeppacketinspections
