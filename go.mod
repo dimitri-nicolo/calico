@@ -13,7 +13,7 @@ require (
 	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2
+	github.com/tigera/api v0.0.0-20210906133756-466200eaba0b
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
