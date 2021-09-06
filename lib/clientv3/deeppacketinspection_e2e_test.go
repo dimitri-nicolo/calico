@@ -31,8 +31,8 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 	name2 := "dpi-2"
 	namespace1 := "namespace-1"
 	namespace2 := "namespace-2"
-	spec1 := apiv3.DeepPacketInspectionSpec{}
-	spec2 := apiv3.DeepPacketInspectionSpec{}
+	spec1Empty := apiv3.DeepPacketInspectionSpec{}
+	spec2Empty := apiv3.DeepPacketInspectionSpec{}
 	DescribeTable("DeepPacketInspection e2e CRUD tests", func(name1, name2 string, spec1, spec2 apiv3.DeepPacketInspectionSpec) {
 		c, err := clientv3.New(config)
 		Expect(err).NotTo(HaveOccurred())
@@ -336,7 +336,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 		Expect(outError.Error()).To(ContainSubstring("resource does not exist: DeepPacketInspection(" + namespace2 + "/" + name2 + ") with error:"))
 
 	},
-		Entry("Two fully populated DeepPacketInspectionSpec", name1, name2, spec1, spec2))
+		Entry("Two fully populated DeepPacketInspectionSpec", name1, name2, spec1Empty, spec2Empty))
 
 	Describe("DeepPacketInspection watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {
@@ -358,7 +358,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1},
-					Spec:       spec1,
+					Spec:       spec1Empty,
 				},
 				options.SetOptions{},
 			)
@@ -369,7 +369,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace2, Name: name2},
-					Spec:       spec2,
+					Spec:       spec2Empty,
 				},
 				options.SetOptions{},
 			)
@@ -408,7 +408,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: outRes2.ObjectMeta,
-					Spec:       spec1,
+					Spec:       spec1Empty,
 				},
 				options.SetOptions{},
 			)
@@ -472,7 +472,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1},
-					Spec:       spec1,
+					Spec:       spec1Empty,
 				},
 				options.SetOptions{},
 			)
