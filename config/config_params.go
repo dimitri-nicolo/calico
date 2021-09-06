@@ -295,7 +295,8 @@ type Config struct {
 	AllowVXLANPacketsFromWorkloads bool `config:"bool;false"`
 	AllowIPIPPacketsFromWorkloads  bool `config:"bool;false"`
 
-	AWSSrcDstCheck string `config:"oneof(DoNothing,Enable,Disable);DoNothing;non-zero"`
+	AWSSrcDstCheck    string `config:"oneof(DoNothing,Enable,Disable);DoNothing;non-zero"`
+	AWSSubnetsEnabled bool   `config:"bool;false;local"`
 
 	ServiceLoopPrevention string `config:"oneof(Drop,Reject,Disabled);Drop"`
 
