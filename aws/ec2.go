@@ -443,11 +443,9 @@ func (c *EC2Client) GetMyPrimaryEC2NetworkInterfaceID(ctx context.Context) (netw
 	if len(instance.NetworkInterfaces) == 0 {
 		return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.InstanceID)
 	}
-	// We are only modifying network interface with device-id-0 to update
-	// instance source-destination-check.
-	// An instance can have multiple interfaces and the API response can be
-	// out-of-order interface list. We compare the device-id in the
-	// response to make sure the right device is updated.
+
+	// An instance can have more than one interface.  By definition, the "primary" interface has
+	// DeviceIndex equal to 0.
 	for _, networkInterface := range instance.NetworkInterfaces {
 		if networkInterface.Attachment != nil &&
 			networkInterface.Attachment.DeviceIndex != nil &&

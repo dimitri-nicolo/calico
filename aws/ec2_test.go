@@ -33,26 +33,16 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
+var (
 	testRegion = "us-west-2"
 	testEniId  = "eni-i-000"
+	testEniId1  = "eni-i-001"
 	testInstId = "i-000"
+	testInstId1 = "i-001"
 )
 
 type mockClient struct {
 	UsageCounter int
-}
-
-func (c *mockClient) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
-	panic("implement me")
-}
-
-func (c *mockClient) DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error) {
-	panic("implement me")
-}
-
-func (c *mockClient) DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error) {
-	panic("implement me")
 }
 
 func newMockClient() *mockClient {
@@ -88,16 +78,27 @@ func (c *mockClient) DescribeInstances(ctx context.Context, params *ec2.Describe
 	c.UsageCounter++
 
 	deviceIndexZero := int32(0)
-	eniId := testEniId
 
 	return &ec2.DescribeInstancesOutput{
 		Reservations: []types.Reservation{
 			{
 				Instances: []types.Instance{
 					{
+						InstanceId: &testInstId1,
 						NetworkInterfaces: []types.InstanceNetworkInterface{
 							{
-								NetworkInterfaceId: &eniId,
+								NetworkInterfaceId: &testEniId1,
+								Attachment: &types.InstanceNetworkInterfaceAttachment{
+									DeviceIndex: &deviceIndexZero,
+								},
+							},
+						},
+					},
+					{
+						InstanceId: &testInstId,
+						NetworkInterfaces: []types.InstanceNetworkInterface{
+							{
+								NetworkInterfaceId: &testEniId,
 								Attachment: &types.InstanceNetworkInterfaceAttachment{
 									DeviceIndex: &deviceIndexZero,
 								},
@@ -108,6 +109,42 @@ func (c *mockClient) DescribeInstances(ctx context.Context, params *ec2.Describe
 			},
 		},
 	}, nil
+}
+
+func (c *mockClient) CreateNetworkInterface(ctx context.Context, params *ec2.CreateNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.CreateNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) AttachNetworkInterface(ctx context.Context, params *ec2.AttachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.AttachNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) AssignPrivateIpAddresses(ctx context.Context, params *ec2.AssignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.AssignPrivateIpAddressesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.UnassignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.UnassignPrivateIpAddressesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DetachNetworkInterface(ctx context.Context, params *ec2.DetachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DetachNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DeleteNetworkInterface(ctx context.Context, params *ec2.DeleteNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DeleteNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error) {
+	panic("implement me")
 }
 
 var (
