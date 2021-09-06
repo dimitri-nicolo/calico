@@ -245,7 +245,12 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 			outPool, err := be.Get(ctx, kvp.Key, outKVP1.Revision)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outPool.Value.(*apiv3.IPPool).Spec.IPIP).To(BeNil())
-			Expect(outPool.Value.(*apiv3.IPPool).Spec).To(Equal(spec_v3))
+
+			// We don't expect the AllowedUses field to be filled in by the backend client.  That is defaulted
+			// in the frontend.
+			spec_v3_copy := spec_v3
+			spec_v3_copy.AllowedUses = nil
+			Expect(outPool.Value.(*apiv3.IPPool).Spec).To(Equal(spec_v3_copy))
 
 			By("Updating the IPPool from the API client with the non-writable v1 IPIP field")
 			_, outError = c.IPPools().Update(ctx, &apiv3.IPPool{
