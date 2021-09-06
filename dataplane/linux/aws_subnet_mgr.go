@@ -888,7 +888,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			"mac":      mac,
 			"name":     ifaceName,
 			"awsNICID": awsNIC.NetworkInterfaceId,
-		}).Info("Matched local NIC with AWs NIC.")
+		}).Info("Matched local NIC with AWS NIC.")
 
 		// Enable the NIC.
 		err := netlink.LinkSetUp(iface)
@@ -902,7 +902,6 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 			addrs, err := netlink.AddrList(iface, netlink.FAMILY_V4)
 			if err != nil {
 				logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
-
 			} else {
 				found := false
 				addrStr := *awsNIC.PrivateIpAddress
@@ -939,7 +938,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 						logrus.WithError(err).WithFields(logrus.Fields{
 							"name": ifaceName,
 							"addr": newAddr,
-						}).Info("Added address.")
+						}).Info("Added address to secondary ENI.")
 					}
 				}
 			}
@@ -950,8 +949,8 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 		routingTableID := a.getOrAllocRoutingTableID(ifaceName)
 
 		var secondaryIPs []ec2types.NetworkInterfacePrivateIpAddress
-		if len(awsNIC.PrivateIpAddresses) > 1 {
-			// Ignore the primary IP, it doesn't need a special routing table.
+		if len(awsNIC.PrivateIpAddresses) >= 1 {
+			// Ignore the primary IP (which is always listed first), it doesn't need a special routing table.
 			secondaryIPs = awsNIC.PrivateIpAddresses[1:]
 		}
 		for _, privateIP := range secondaryIPs {
@@ -1006,6 +1005,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 		}
 	}
 
+	// TODO Release unused routing table IDs, being careful to clear the routing table and rule before disposing of them
 	// TODO Avoid reprogramming all rules every time just to clean up.
 	for _, r := range a.lastRules {
 		a.routeRules.RemoveRule(r)
