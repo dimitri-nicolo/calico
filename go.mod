@@ -29,7 +29,7 @@ replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210901223027-a0977691e21c
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210906140938-4c38ec7adfc5
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210906140847-bee9fd7970d9
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210906140048-a1a486d36dd9
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210906142719-755b7479b6e9
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
