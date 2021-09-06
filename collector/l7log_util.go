@@ -183,6 +183,12 @@ func extractK8sServiceNameAndNamespace(addr string) (string, string) {
 		return strings.Join(parts[:len(parts)-3], "."), ""
 	}
 
+	// Kubernetes service names can be in the format: <name>.<namespace>
+	// Note that this check does not allow subdomains in the <name>
+	if parts := strings.Split(addr, "."); len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+
 	// Not a valid Kubernetes service name
 	return "", ""
 }

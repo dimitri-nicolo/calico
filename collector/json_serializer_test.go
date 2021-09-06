@@ -17,8 +17,8 @@ var _ = Describe("FlowLog JSON serialization", func() {
 	emptyList := []string{"-"}
 	Describe("should set every field", func() {
 		policies := FlowPolicies{
-			"0|tier.policy|pass":                      emptyValue,
-			"1|default.knp.default.default-deny|deny": emptyValue,
+			"0|tier.policy|pass|0":                      emptyValue,
+			"1|default.knp.default.default-deny|deny|1": emptyValue,
 		}
 		flowLog := FlowLog{
 			StartTime: time.Now(),

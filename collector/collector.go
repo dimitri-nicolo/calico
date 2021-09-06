@@ -573,6 +573,7 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 			data.preDNATAddr = originalTuple.dst
 			data.preDNATPort = originalTuple.l4Dst
 		}
+		data.isProxied = ctInfo.IsProxy
 
 		c.applyConntrackStatUpdate(data,
 			ctInfo.Counters.Packets, ctInfo.Counters.Bytes,
@@ -728,11 +729,10 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	ips := make([]net.IP, 0, len(d.HttpData))
 
 	for _, hd := range d.HttpData {
-		if c.l7LogReporter != nil && hd.Type != "" {
+		if c.l7LogReporter != nil && isL7Data {
 			// If the l7LogReporter has been set, then L7 logs are configured to be run.
-			// If the HttpData has a type, then this is an L7 log.
 			c.LogL7(hd, data, t, httpDataCount)
-		} else if hd.Type == "" {
+		} else if !isL7Data {
 			var origSrcIP string
 			if len(hd.XRealIp) != 0 {
 				origSrcIP = hd.XRealIp
@@ -760,8 +760,9 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 		data.AddOriginalSourceIPs(bs)
 	} else if httpDataCount != 0 && !isL7Data {
 		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
-	} else if httpDataCount != 0 && c.l7LogReporter != nil && isL7Data {
+	} else if httpDataCount != 0 && c.l7LogReporter != nil && len(d.HttpData) == 0 && isL7Data {
 		// Record overflow L7 log counts
+		// Overflow logs will have counts but no HttpData
 		// Create an empty HTTPData since this is an overflow log
 		hd := &proto.HTTPData{}
 		c.LogL7(hd, data, t, httpDataCount)
@@ -896,8 +897,6 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	// Translate endpoint data into L7Update
 	update := L7Update{
 		Tuple:         tuple,
-		SrcEp:         data.srcEp,
-		DstEp:         data.dstEp,
 		Duration:      int(hd.Duration),
 		DurationMax:   int(hd.DurationMax),
 		BytesReceived: int(hd.BytesReceived),
@@ -907,6 +906,14 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		UserAgent:     hd.UserAgent,
 		Type:          hd.Type,
 		Domain:        hd.Domain,
+	}
+
+	// If there is no endpoint data for the supplied tuple, skip logging this info.
+	// This means that this log was collected for traffic that was forwarded through
+	// this node (like traffic through a nodeport service).
+	if data != nil {
+		update.SrcEp = data.srcEp
+		update.DstEp = data.dstEp
 	}
 
 	// Handle setting the response code. An empty response code is valid for overflow logs.
@@ -923,7 +930,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	}
 
 	// Grab the destination metadata to use the namespace to validate the service name
-	dstMeta, err := getFlowLogEndpointMetadata(data.dstEp, tuple.dst)
+	dstMeta, err := getFlowLogEndpointMetadata(update.DstEp, tuple.dst)
 	if err != nil {
 		reportDataplaneStatsUpdateErrorMetrics(1)
 		log.WithError(err).Errorf("Failed to extract metadata for destination %v", update.DstEp)
@@ -942,7 +949,13 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 	var validService bool
 	svcName := addr
 	svcNamespace := dstMeta.Namespace
-	svcPortName := data.dstSvc.Port
+
+	// TODO: Find a separate way of retrieving this data when we do not
+	// have endpoint data on this node.
+	var svcPortName string
+	if data != nil {
+		svcPortName = data.dstSvc.Port
+	}
 
 	if ip := net.ParseIP(addr); ip != nil {
 		// Address is an IP. Attempt to look up a service name by cluster IP

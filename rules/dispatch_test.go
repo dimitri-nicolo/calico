@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,20 +32,23 @@ var _ = Describe("Dispatch chains", func() {
 	for _, trueOrFalse := range []bool{true, false} {
 		kubeIPVSEnabled := trueOrFalse
 		var rrConfigNormal = Config{
-			IPIPEnabled:                 true,
-			IPIPTunnelAddress:           nil,
-			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			IptablesMarkEgress:          0x4,
-			IptablesMarkAccept:          0x8,
-			IptablesMarkPass:            0x10,
-			IptablesMarkScratch0:        0x20,
-			IptablesMarkScratch1:        0x40,
-			IptablesMarkDrop:            0x80,
-			IptablesMarkEndpoint:        0xff00,
-			IptablesMarkNonCaliEndpoint: 0x0100,
-			WorkloadIfacePrefixes:       []string{"cali", "tap"},
-			KubeIPVSSupportEnabled:      kubeIPVSEnabled,
+			IPIPEnabled:                      true,
+			IPIPTunnelAddress:                nil,
+			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyNfqueueID:               100,
+			IptablesMarkEgress:               0x4,
+			IptablesMarkAccept:               0x8,
+			IptablesMarkPass:                 0x10,
+			IptablesMarkScratch0:             0x20,
+			IptablesMarkScratch1:             0x40,
+			IptablesMarkDrop:                 0x80,
+			IptablesMarkEndpoint:             0xff00,
+			IptablesMarkNonCaliEndpoint:      0x0100,
+			IptablesMarkDNSPolicy:            0x00001,
+			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+			WorkloadIfacePrefixes:            []string{"cali", "tap"},
+			KubeIPVSSupportEnabled:           kubeIPVSEnabled,
 		}
 
 		var expDropRule = iptables.Rule{

@@ -343,8 +343,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			r.DropRules(Match().ProtocolNum(ProtoESP), "Drop IPSec ESP packets from non-Calico hosts")...,
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoUDP).
-				DestPorts(PortIKE),
+			r.DropRules(Match().ProtocolNum(ProtoUDP).DestPorts(PortIKE),
 				"Drop IPSec IKE packets from non-Calico hosts")...,
 		)
 	}
@@ -1173,6 +1172,10 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		// connection that is proxied and marked accordingly or not.
 		tproxyEstablRules := []Rule{
 			{
+				Comment: []string{"Clean upstream mark, not needed anymore"},
+				Action:  ClearMarkAction{Mark: r.TPROXYUpstreamConnMark},
+			},
+			{
 				Comment: []string{"Restore proxy mark from connection if not set"},
 				Match:   Match().MarkClear(mark),
 				Action:  RestoreConnMarkAction{RestoreMask: mark},
@@ -1234,11 +1237,11 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		tproxyRules = nil
 
-		if r.KubernetesProvider == config.ProviderEKS {
+		if r.KubernetesProvider == config.ProviderEKS && r.EKSPrimaryENI != "" {
 			tproxyRules = []Rule{{
 				Comment: []string{"Set the EKS nodeport mark that we bypass"},
 				Match: Match().
-					InInterface("eth0").
+					InInterface(r.EKSPrimaryENI).
 					DestAddrTypeLimitIfaceIn(AddrTypeLocal),
 				Action: SetConnMarkAction{Mark: 0x80, Mask: 0x80},
 			}}
@@ -1259,6 +1262,8 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 
+		upMark := r.TPROXYUpstreamConnMark
+
 		rules := []Rule{
 			{
 				// Proxied connections for regular services do not have
@@ -1266,6 +1271,12 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				// identify the upstream part and mark it.
 				Comment: []string{"Mark any non-local connection as local for return"},
 				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+			},
+			{
+				Comment: []string{"Save tproxy upstream mark in conntrack if set"},
+				// XXX use the same mark in conntrack for now
+				Match:  Match().MarkMatchesWithMask(upMark, upMark),
+				Action: SetConnMarkAction{Mark: upMark, Mask: upMark},
 			},
 			{
 				// Proxied connections that are pod-to-self need to be masqueraded
@@ -1284,6 +1295,28 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 
 		chains = append(chains, &Chain{
 			Name:  ChainMangleOutputTProxy,
+			Rules: rules,
+		})
+
+		rules = []Rule{
+			{
+				Comment: []string{"Restore tproxy upstream mark in conntrack if not set"},
+				// XXX use the same mark in conntrack for now
+				Match:  Match().MarkClear(upMark),
+				Action: RestoreConnMarkAction{RestoreMask: upMark},
+			},
+			{
+				// If it is upstream and from local address, it means it is
+				// retuning traffic from local host and we need to turn it back
+				// to the proxy on the local host.
+				Comment: []string{"If upstream and from local address, accept it"},
+				Match:   Match().MarkMatchesWithMask(upMark, upMark).ConntrackState("RELATED,ESTABLISHED"),
+				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+			},
+		}
+
+		chains = append(chains, &Chain{
+			Name:  ChainMangleOutputTProxyHostNet,
 			Rules: rules,
 		})
 	}
@@ -1376,11 +1409,18 @@ func (r *DefaultRuleRenderer) StaticMangleOutputChain(ipVersion uint8) *Chain {
 	rules := []Rule{}
 
 	if r.TPROXYModeEnabled() {
-		rules = append(rules, Rule{
-			Comment: []string{"Process non-local connections as proxied"},
-			Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
-			Action:  JumpAction{Target: ChainMangleOutputTProxy},
-		})
+		rules = append(rules,
+			Rule{
+				Comment: []string{"Process non-local connections as proxied"},
+				Match:   Match().NotSrcAddrType(AddrTypeLocal, false),
+				Action:  JumpAction{Target: ChainMangleOutputTProxy},
+			},
+			Rule{
+				Comment: []string{"Check local connections for host networked workloads"},
+				Match:   Match().SrcAddrType(AddrTypeLocal, false),
+				Action:  JumpAction{Target: ChainMangleOutputTProxyHostNet},
+			},
+		)
 	}
 
 	return &Chain{
@@ -1466,7 +1506,42 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*Chain {
 		r.failsafeOutChain("raw", ipVersion),
 		r.StaticRawPreroutingChain(ipVersion),
 		r.WireguardIncomingMarkChain(),
-		r.StaticRawOutputChain(),
+		r.StaticRawOutputChain(0),
+	}
+}
+
+func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8, tcBypassMark uint32) []*Chain {
+	rawPreroutingChain := &Chain{
+		Name: ChainRawPrerouting,
+		Rules: []Rule{
+			Rule{
+				// Return, i.e. no-op, if bypass mark is not set.
+				Match:  Match().NotMarkMatchesWithMask(tcBypassMark, 0xffffffff),
+				Action: ReturnAction{},
+			},
+			// At this point we know bypass mark is set, which means that the packet has
+			// been explicitly allowed by untracked ingress policy (XDP).  We should
+			// clear the mark so as not to affect any FROM_HOST processing.  (There
+			// shouldn't be any FROM_HOST processing, because untracked policy is only
+			// intended for traffic to/from the host.  But if the traffic is in fact
+			// forwarded and goes to or through another endpoint, it's better to enforce
+			// that endpoint's policy than to accidentally skip it because of the BYPASS
+			// mark.  Note that we can clear the mark without stomping on anyone else's
+			// logic because no one else's iptables should have had a chance to execute
+			// yet.
+			Rule{
+				Action: SetMarkAction{Mark: 0},
+			},
+			// Now ensure that the packet is not tracked.
+			Rule{
+				Action: NoTrackAction{},
+			},
+		},
+	}
+	return []*Chain{
+		rawPreroutingChain,
+		r.failsafeOutChain("raw", ipVersion),
+		r.StaticRawOutputChain(tcBypassMark),
 	}
 }
 
@@ -1593,7 +1668,8 @@ func (r *DefaultRuleRenderer) allCalicoMarkBits() uint32 {
 		r.IptablesMarkPass |
 		r.IptablesMarkScratch0 |
 		r.IptablesMarkScratch1 |
-		r.IptablesMarkIPsec
+		r.IptablesMarkIPsec |
+		r.IptablesMarkDNSPolicy
 }
 
 func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *Chain {
@@ -1623,38 +1699,68 @@ func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *Chain {
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticRawOutputChain() *Chain {
-	return &Chain{
-		Name: ChainRawOutput,
-		Rules: []Rule{
-			// For safety, clear all our mark bits before we start.  (We could be in
-			// append mode and another process' rules could have left the mark bit set.)
-			{Action: ClearMarkAction{Mark: r.allCalicoMarkBits()}},
-			// Then, jump to the untracked policy chains.
-			{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
-			// Then, if the packet was marked as allowed, accept it.  Packets also
-			// return here without the mark bit set if the interface wasn't one that
-			// we're policing.
+func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32) *Chain {
+	rules := []Rule{
+		// For safety, clear all our mark bits before we start.  (We could be in
+		// append mode and another process' rules could have left the mark bit set.)
+		{Action: ClearMarkAction{Mark: r.allCalicoMarkBits()}},
+		// Then, jump to the untracked policy chains.
+		{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
+		// Then, if the packet was marked as allowed, accept it.  Packets also
+		// return here without the mark bit set if the interface wasn't one that
+		// we're policing.
+	}
+	if tcBypassMark == 0 {
+		rules = append(rules, []Rule{
 			{Match: Match().MarkSingleBitSet(r.IptablesMarkAccept),
 				Action: AcceptAction{}},
-		},
+		}...)
+	} else {
+		rules = append(rules, []Rule{
+			{Match: Match().MarkSingleBitSet(r.IptablesMarkAccept),
+				Action: SetMaskedMarkAction{Mark: tcBypassMark, Mask: 0xffffffff}},
+			{Match: Match().MarkMatchesWithMask(tcBypassMark, 0xffffffff),
+				Action: AcceptAction{}},
+		}...)
+	}
+	return &Chain{
+		Name:  ChainRawOutput,
+		Rules: rules,
 	}
 }
 
+// DropRules combines the matchCritera and comments given in the function parameters to the drop rules calculated when
+// the DefaultRenderer was constructed.
+//
+// If the original drop rules have MatchCriteria the matchCriteria is combined with the existing MatchCritera on the
+// rule.
 func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string) []Rule {
 	rules := []Rule{}
 
-	for _, action := range r.DropActions() {
-		rules = append(rules, Rule{
-			Match:   matchCriteria,
-			Action:  action,
-			Comment: comments,
-		})
+	for _, rule := range r.dropRules {
+		if matchCriteria != nil {
+			rule.Match = Combine(rule.Match, matchCriteria)
+		}
+		rule.Comment = comments
+		rules = append(rules, rule)
 	}
 
 	return rules
 }
 
-func (r *DefaultRuleRenderer) DropActions() []Action {
-	return r.dropActions
+// NfqueueRule combines the matchCritera and comments given in the function parameters to the nfqueue rule calculated when
+// the DefaultRenderer was constructed.
+func (r DefaultRuleRenderer) NfqueueRule(matchCriteria MatchCriteria, comments ...string) *Rule {
+	if r.Config.IptablesMarkDNSPolicy != 0x0 && r.nfqueueRule != nil {
+		nfqueueRule := *r.nfqueueRule
+
+		if matchCriteria != nil {
+			nfqueueRule.Match = Combine(nfqueueRule.Match, matchCriteria)
+		}
+		nfqueueRule.Comment = comments
+
+		return &nfqueueRule
+	}
+
+	return nil
 }

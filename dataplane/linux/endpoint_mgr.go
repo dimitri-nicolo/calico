@@ -942,12 +942,19 @@ func (m *endpointManager) updateHostEndpoints() {
 		logCxt := log.WithField("id", id).WithField("ifaceName", ifaceName)
 		ep := m.rawHostEndpoints[id]
 		if len(ep.UntrackedTiers) > 0 {
-			// Optimisation: only add the endpoint chains to the raw (untracked)
-			// table if there's some untracked policy to apply.  This reduces
-			// per-packet latency since every packet has to traverse the raw
-			// table.
-			logCxt.Debug("Endpoint has untracked policies.")
-			newUntrackedIfaceNameToHostEpID[ifaceName] = id
+			if ifaceName == allInterfaces {
+				// GlobalNetworkPolicy with `doNotTrack: True` has been configured
+				// to apply to a host-* endpoint, which is not currently supported.
+				// Log and warning and ignore it.
+				logCxt.Warning("DoNotTrack policy is not supported for a HEP with `interfaceName: *`; ignoring it")
+			} else {
+				// Optimisation: only add the endpoint chains to the raw (untracked)
+				// table if there's some untracked policy to apply.  This reduces
+				// per-packet latency since every packet has to traverse the raw
+				// table.
+				logCxt.Debug("Endpoint has untracked policies.")
+				newUntrackedIfaceNameToHostEpID[ifaceName] = id
+			}
 		}
 		if len(ep.PreDnatTiers) > 0 {
 			// Similar optimisation (or neatness) for pre-DNAT policy.
@@ -979,7 +986,7 @@ func (m *endpointManager) updateHostEndpoints() {
 	}
 
 	if !m.bpfEnabled {
-		// Set up programming for the host endpoints that are now to be used.
+		// Build iptables chains for normal and apply-on-forward host endpoint policy.
 		newHostIfaceFiltChains := map[string][]*iptables.Chain{}
 		newHostIfaceMangleEgressChains := map[string][]*iptables.Chain{}
 		for ifaceName, id := range newIfaceNameToHostEpID {
@@ -1013,6 +1020,7 @@ func (m *endpointManager) updateHostEndpoints() {
 			delete(m.activeHostIfaceToMangleEgressChains, ifaceName)
 		}
 
+		// Build iptables chains for pre-DNAT host endpoint policy.
 		newHostIfaceMangleIngressChains := map[string][]*iptables.Chain{}
 		for ifaceName, id := range newPreDNATIfaceNameToHostEpID {
 			log.WithField("id", id).Info("Updating host endpoint mangle ingress chains.")
@@ -1030,24 +1038,8 @@ func (m *endpointManager) updateHostEndpoints() {
 			delete(m.activeHostIfaceToMangleIngressChains, ifaceName)
 		}
 
-		newHostIfaceRawChains := map[string][]*iptables.Chain{}
-		for ifaceName, id := range newUntrackedIfaceNameToHostEpID {
-			log.WithField("id", id).Info("Updating host endpoint raw chains.")
-			hostEp := m.rawHostEndpoints[id]
-
-			// Update the raw chain, for untracked traffic.
-			rawChains := m.ruleRenderer.HostEndpointToRawChains(
-				ifaceName,
-				hostEp.UntrackedTiers,
-			)
-			if !reflect.DeepEqual(rawChains, m.activeHostIfaceToRawChains[ifaceName]) {
-				m.rawTable.UpdateChains(rawChains)
-			}
-			newHostIfaceRawChains[ifaceName] = rawChains
-			delete(m.activeHostIfaceToRawChains, ifaceName)
-		}
-
-		// Remove programming for host endpoints that are not now in use.
+		// Remove normal, apply-on-forward and pre-DNAT policy iptables chains that are no
+		// longer wanted.
 		for ifaceName, chains := range m.activeHostIfaceToFiltChains {
 			log.WithField("ifaceName", ifaceName).Info(
 				"Host interface no longer protected, deleting its normal chains.")
@@ -1063,15 +1055,48 @@ func (m *endpointManager) updateHostEndpoints() {
 				"Host interface no longer protected, deleting its preDNAT chains.")
 			m.mangleTable.RemoveChains(chains)
 		}
+
+		m.callbacks.InvokeInterfaceCallbacks(m.activeIfaceNameToHostEpID, newIfaceNameToHostEpID)
+
+		m.activeHostIfaceToFiltChains = newHostIfaceFiltChains
+		m.activeHostIfaceToMangleEgressChains = newHostIfaceMangleEgressChains
+		m.activeHostIfaceToMangleIngressChains = newHostIfaceMangleIngressChains
+	}
+
+	if m.ipVersion == 4 || !m.bpfEnabled {
+		// Build iptables chains for untracked host endpoint policy.
+		newHostIfaceRawChains := map[string][]*iptables.Chain{}
+		for ifaceName, id := range newUntrackedIfaceNameToHostEpID {
+			log.WithField("id", id).Info("Updating host endpoint raw chains.")
+			hostEp := m.rawHostEndpoints[id]
+
+			// Update the raw chain, for untracked traffic.
+			var rawChains []*iptables.Chain
+			if m.bpfEnabled {
+				rawChains = append(rawChains, m.ruleRenderer.HostEndpointToRawEgressChain(
+					ifaceName,
+					hostEp.UntrackedTiers,
+				))
+			} else {
+				rawChains = m.ruleRenderer.HostEndpointToRawChains(
+					ifaceName,
+					hostEp.UntrackedTiers,
+				)
+			}
+			if !reflect.DeepEqual(rawChains, m.activeHostIfaceToRawChains[ifaceName]) {
+				m.rawTable.UpdateChains(rawChains)
+			}
+			newHostIfaceRawChains[ifaceName] = rawChains
+			delete(m.activeHostIfaceToRawChains, ifaceName)
+		}
+
+		// Remove untracked policy iptables chains that are no longer wanted.
 		for ifaceName, chains := range m.activeHostIfaceToRawChains {
 			log.WithField("ifaceName", ifaceName).Info(
 				"Host interface no longer protected, deleting its untracked chains.")
 			m.rawTable.RemoveChains(chains)
 		}
-		m.callbacks.InvokeInterfaceCallbacks(m.activeIfaceNameToHostEpID, newIfaceNameToHostEpID)
-		m.activeHostIfaceToFiltChains = newHostIfaceFiltChains
-		m.activeHostIfaceToMangleEgressChains = newHostIfaceMangleEgressChains
-		m.activeHostIfaceToMangleIngressChains = newHostIfaceMangleIngressChains
+
 		m.activeHostIfaceToRawChains = newHostIfaceRawChains
 	}
 
@@ -1079,9 +1104,22 @@ func (m *endpointManager) updateHostEndpoints() {
 	m.activeIfaceNameToHostEpID = newIfaceNameToHostEpID
 	m.activeHostEpIDToIfaceNames = newHostEpIDToIfaceNames
 
+	if m.ipVersion == 4 || !m.bpfEnabled {
+		// Rewrite the raw dispatch chains if they've changed.  Note, we use iptables for untracked
+		// egress policy even in BPF mode.
+		log.WithField("resolvedHostEpIds", newUntrackedIfaceNameToHostEpID).Debug("Rewrite raw dispatch chains?")
+		var newRawDispatchChains []*iptables.Chain
+		if m.bpfEnabled {
+			newRawDispatchChains = m.ruleRenderer.ToHostDispatchChains(newUntrackedIfaceNameToHostEpID, "")
+		} else {
+			newRawDispatchChains = m.ruleRenderer.HostDispatchChains(newUntrackedIfaceNameToHostEpID, "", false)
+		}
+		m.updateDispatchChains(m.activeHostRawDispatchChains, newRawDispatchChains, m.rawTable)
+	}
+
 	if m.bpfEnabled {
-		// Code after this point is for dispatch chains and IPVS endpoint marking, which
-		// aren't needed in BPF mode.
+		// Code after this point is for other dispatch chains and IPVS endpoint marking,
+		// which aren't needed in BPF mode.
 		return
 	}
 
@@ -1113,11 +1151,6 @@ func (m *endpointManager) updateHostEndpoints() {
 	newMangleIngressDispatchChains := m.ruleRenderer.FromHostDispatchChains(newPreDNATIfaceNameToHostEpID, defaultIfaceName)
 	newMangleDispatchChains := append(newMangleIngressDispatchChains, newMangleEgressDispatchChains...)
 	m.updateDispatchChains(m.activeHostMangleDispatchChains, newMangleDispatchChains, m.mangleTable)
-
-	// Rewrite the raw dispatch chains if they've changed.
-	log.WithField("resolvedHostEpIds", newUntrackedIfaceNameToHostEpID).Debug("Rewrite raw dispatch chains?")
-	newRawDispatchChains := m.ruleRenderer.HostDispatchChains(newUntrackedIfaceNameToHostEpID, "", false)
-	m.updateDispatchChains(m.activeHostRawDispatchChains, newRawDispatchChains, m.rawTable)
 
 	log.Debug("Done resolving host endpoints.")
 }

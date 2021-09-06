@@ -120,7 +120,7 @@ func TestLoadKitchenSinkPolicy(t *testing.T) {
 
 	cleanIPSetMap()
 
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
+	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), tcJumpMap.MapFD())
 	insns, err := pg.Instructions(polprog.Rules{
 		Tiers: []polprog.Tier{{
 			Name: "base tier",
@@ -2132,7 +2132,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	setUpIPSets(tp.IPSets(), realAlloc, ipsMap)
 
 	// Build the program.
-	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), jumpMap.MapFD(), polprogOpts...)
+	pg := polprog.NewBuilder(forceAlloc, ipsMap.MapFD(), testStateMap.MapFD(), tcJumpMap.MapFD(), polprogOpts...)
 	insns, err := pg.Instructions(tp.Policy())
 	Expect(err).NotTo(HaveOccurred(), "failed to assemble program")
 
@@ -2147,7 +2147,7 @@ func runTest(t *testing.T, tp testPolicy, polprogOpts ...polprog.Option) {
 	}()
 
 	// Give the policy program somewhere to jump to.
-	epiFD := installAllowedProgram(jumpMap)
+	epiFD := installAllowedProgram(tcJumpMap)
 	defer func() {
 		err := epiFD.Close()
 		Expect(err).NotTo(HaveOccurred())

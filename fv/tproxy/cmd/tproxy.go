@@ -19,7 +19,7 @@ import (
 const usage = `tproxy: acts as a transparent proxy for Felix fv testing.
 
 Usage:
-  tproxy <port-svc> <port-np> [--masq-mark=<masq-mark>]`
+  tproxy <port-svc> <port-np> [--masq-mark=<masq-mark>] [--upstream-mark=<upstream-mark>]`
 
 func main() {
 	log.SetLevel(log.InfoLevel)
@@ -37,8 +37,13 @@ func main() {
 		if err != nil {
 			log.WithError(err).Fatal("--masq-mark not a number")
 		}
-		if masqMark < 0 || masqMark > 31 {
-			log.Fatal("--masq-mark not between 0 and 31")
+	}
+
+	upMark := 0x17
+	if args["--upstream-mark"] != nil {
+		upMark, err = strconv.Atoi(args["--upstream-mark"].(string))
+		if err != nil {
+			log.WithError(err).Fatal("--upstream-mark not a number")
 		}
 	}
 
@@ -77,7 +82,7 @@ func main() {
 				continue
 			}
 
-			go handleConnection(down, -1)
+			go handleConnection(down, upMark)
 		}
 	}()
 
@@ -114,7 +119,7 @@ func main() {
 				continue
 			}
 
-			go handleConnection(down, masqMark)
+			go handleConnection(down, masqMark|upMark)
 		}
 	}()
 
@@ -153,7 +158,8 @@ func handleConnection(down net.Conn, mark int) {
 
 	preDNATDest := getPreDNATDest(down)
 
-	log.Infof("Accepted connection from %s to %s orig dest %s", down.RemoteAddr(), down.LocalAddr(), preDNATDest)
+	log.Infof("Accepted connection from %s to %s orig dest %s upstream mark 0x%x",
+		down.RemoteAddr(), down.LocalAddr(), preDNATDest, mark)
 	clientNetAddr := down.RemoteAddr().(*net.TCPAddr)
 	clientIP := [4]byte{}
 	copy(clientIP[:], clientNetAddr.IP.To4())
@@ -196,7 +202,9 @@ func handleConnection(down net.Conn, mark int) {
 	}
 	defer up.Close()
 
-	log.Infof("Proxying from %s to %s orig dest %s", down.RemoteAddr(), up.RemoteAddr(), preDNATDest)
+	log.Infof("Proxying from %s to %s orig dest %s with mark 0x%x",
+		down.RemoteAddr(), up.RemoteAddr(), preDNATDest, mark)
+
 	proxyConnection(down, up)
 }
 

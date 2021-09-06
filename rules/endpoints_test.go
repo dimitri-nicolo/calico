@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@ package rules_test
 
 import (
 	"strings"
+
+	"github.com/google/go-cmp/cmp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,42 +39,48 @@ var _ = Describe("Endpoints", func() {
 	for _, trueOrFalse := range []bool{true, false} {
 		kubeIPVSEnabled := trueOrFalse
 		var rrConfigNormalMangleReturn = Config{
-			IPIPEnabled:                 true,
-			IPIPTunnelAddress:           nil,
-			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			IptablesMarkEgress:          0x4,
-			IptablesMarkAccept:          0x8,
-			IptablesMarkPass:            0x10,
-			IptablesMarkScratch0:        0x20,
-			IptablesMarkScratch1:        0x40,
-			IptablesMarkDrop:            0x80,
-			IptablesMarkEndpoint:        0xff00,
-			IptablesMarkNonCaliEndpoint: 0x0100,
-			KubeIPVSSupportEnabled:      kubeIPVSEnabled,
-			IptablesMangleAllowAction:   "RETURN",
-			VXLANPort:                   4789,
-			VXLANVNI:                    4096,
+			IPIPEnabled:                      true,
+			IPIPTunnelAddress:                nil,
+			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyNfqueueID:               100,
+			IptablesMarkEgress:               0x4,
+			IptablesMarkAccept:               0x8,
+			IptablesMarkPass:                 0x10,
+			IptablesMarkScratch0:             0x20,
+			IptablesMarkScratch1:             0x40,
+			IptablesMarkDrop:                 0x80,
+			IptablesMarkEndpoint:             0xff00,
+			IptablesMarkNonCaliEndpoint:      0x0100,
+			IptablesMarkDNSPolicy:            0x00001,
+			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+			KubeIPVSSupportEnabled:           kubeIPVSEnabled,
+			IptablesMangleAllowAction:        "RETURN",
+			VXLANPort:                        4789,
+			VXLANVNI:                         4096,
 		}
 
 		var rrConfigConntrackDisabledReturnAction = Config{
-			IPIPEnabled:                 true,
-			IPIPTunnelAddress:           nil,
-			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			IptablesMarkEgress:          0x4,
-			IptablesMarkAccept:          0x8,
-			IptablesMarkPass:            0x10,
-			IptablesMarkScratch0:        0x20,
-			IptablesMarkScratch1:        0x40,
-			IptablesMarkDrop:            0x80,
-			IptablesMarkEndpoint:        0xff00,
-			IptablesMarkNonCaliEndpoint: 0x0100,
-			KubeIPVSSupportEnabled:      kubeIPVSEnabled,
-			DisableConntrackInvalid:     true,
-			IptablesFilterAllowAction:   "RETURN",
-			VXLANPort:                   4789,
-			VXLANVNI:                    4096,
+			IPIPEnabled:                      true,
+			IPIPTunnelAddress:                nil,
+			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyNfqueueID:               100,
+			IptablesMarkEgress:               0x4,
+			IptablesMarkAccept:               0x8,
+			IptablesMarkPass:                 0x10,
+			IptablesMarkScratch0:             0x20,
+			IptablesMarkScratch1:             0x40,
+			IptablesMarkDrop:                 0x80,
+			IptablesMarkEndpoint:             0xff00,
+			IptablesMarkNonCaliEndpoint:      0x0100,
+			IptablesMarkDNSPolicy:            0x00001,
+			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+			KubeIPVSSupportEnabled:           kubeIPVSEnabled,
+			DisableConntrackInvalid:          true,
+			IptablesFilterAllowAction:        "RETURN",
+			VXLANPort:                        4789,
+			VXLANVNI:                         4096,
 		}
 
 		var renderer RuleRenderer
@@ -114,6 +122,10 @@ var _ = Describe("Endpoints", func() {
 								Action: DropAction{}},
 
 							{Action: ClearMarkAction{Mark: 0x88}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -131,6 +143,10 @@ var _ = Describe("Endpoints", func() {
 							{Action: ClearMarkAction{Mark: 0x88}},
 							dropVXLANRule,
 							dropIPIPRule,
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -212,6 +228,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -226,7 +245,10 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
-
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -257,6 +279,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -271,7 +296,10 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
-
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -319,6 +347,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -334,6 +365,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"}},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -361,6 +395,9 @@ var _ = Describe("Endpoints", func() {
 								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:be"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -376,6 +413,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"}},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -432,6 +472,10 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -468,6 +512,10 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -483,7 +531,7 @@ var _ = Describe("Endpoints", func() {
 			})
 
 			It("should render a host endpoint", func() {
-				Expect(renderer.HostEndpointToFilterChains("eth0",
+				actual := renderer.HostEndpointToFilterChains("eth0",
 					[]*proto.TierInfo{{
 						Name:            "default",
 						IngressPolicies: []string{"ai", "bi"},
@@ -496,7 +544,8 @@ var _ = Describe("Endpoints", func() {
 					}},
 					epMarkMapper,
 					[]string{"prof1", "prof2"},
-				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+				)
+				expected := trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-th-eth0",
 						Rules: []Rule{
@@ -523,6 +572,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -538,6 +590,10 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -569,6 +625,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -584,6 +643,10 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -612,6 +675,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -642,6 +708,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no policies passed packet"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -655,7 +724,8 @@ var _ = Describe("Endpoints", func() {
 							{Action: SetMaskedMarkAction{Mark: 0xa200, Mask: 0xff00}},
 						},
 					},
-				})))
+				})
+				Expect(actual).To(Equal(expected), cmp.Diff(actual, expected))
 			})
 
 			It("should render host endpoint raw chains with untracked policies", func() {
@@ -785,6 +855,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Comment: []string{"Drop if no policies passed packet"},
+								Action:  NfqueueAction{QueueNum: 100}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -800,6 +873,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Comment: []string{"Drop if no profiles matched"},
+								Action:  NfqueueAction{QueueNum: 100}},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -828,6 +904,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
+								Comment: []string{"Drop if no policies passed packet"},
+								Action:  NfqueueAction{QueueNum: 100}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
@@ -843,6 +922,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Comment: []string{"Drop if no profiles matched"},
+								Action:  NfqueueAction{QueueNum: 100}},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -885,6 +967,10 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -903,6 +989,10 @@ var _ = Describe("Endpoints", func() {
 							dropVXLANRule,
 							dropIPIPRule,
 
+							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{"Drop if no profiles matched"},
+							},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -975,6 +1065,9 @@ var _ = Describe("Endpoints", func() {
 									Action: DropAction{}},
 
 								{Action: ClearMarkAction{Mark: 0x88}},
+								{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+									Comment: []string{"Drop if no profiles matched"},
+									Action:  NfqueueAction{QueueNum: 100}},
 								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
@@ -991,6 +1084,9 @@ var _ = Describe("Endpoints", func() {
 
 								{Action: ClearMarkAction{Mark: 0x88}},
 								dropIPIPRule,
+								{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+									Comment: []string{"Drop if no profiles matched"},
+									Action:  NfqueueAction{QueueNum: 100}},
 								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
@@ -1011,13 +1107,15 @@ var _ = Describe("Endpoints", func() {
 					renderer = NewRenderer(rrConfigNormalMangleReturn)
 					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
 						rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
-					Expect(renderer.WorkloadEndpointToIptablesChains(
+
+					actual := renderer.WorkloadEndpointToIptablesChains(
 						"cali1234", epMarkMapper,
 						true,
 						nil,
 						nil,
 						NotAnEgressGateway,
-					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					)
+					expected := trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
 							Name: "cali-tw-cali1234",
 							Rules: []Rule{
@@ -1028,6 +1126,9 @@ var _ = Describe("Endpoints", func() {
 									Action: DropAction{}},
 
 								{Action: ClearMarkAction{Mark: 0x88}},
+								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
+									Action:  NfqueueAction{QueueNum: 100},
+									Comment: []string{"Drop if no profiles matched"}},
 								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
@@ -1044,6 +1145,9 @@ var _ = Describe("Endpoints", func() {
 
 								{Action: ClearMarkAction{Mark: 0x88}},
 								dropVXLANRule,
+								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
+									Action:  NfqueueAction{QueueNum: 100},
+									Comment: []string{"Drop if no profiles matched"}},
 								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
@@ -1055,7 +1159,8 @@ var _ = Describe("Endpoints", func() {
 								{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
 							},
 						},
-					})))
+					})
+					Expect(actual).To(Equal(expected), cmp.Diff(actual, expected))
 				})
 			})
 			Context("VXLAN and IPIP allowed", func() {
@@ -1082,6 +1187,9 @@ var _ = Describe("Endpoints", func() {
 									Action: DropAction{}},
 
 								{Action: ClearMarkAction{Mark: 0x88}},
+								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
+									Action:  NfqueueAction{QueueNum: 100},
+									Comment: []string{"Drop if no profiles matched"}},
 								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
@@ -1097,6 +1205,9 @@ var _ = Describe("Endpoints", func() {
 									Action: DropAction{}},
 
 								{Action: ClearMarkAction{Mark: 0x88}},
+								{Match: Match().MarkSingleBitSet(0x0001).NotMarkMatchesWithMask(0x400000, 0x400000),
+									Action:  NfqueueAction{QueueNum: 100},
+									Comment: []string{"Drop if no profiles matched"}},
 								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},

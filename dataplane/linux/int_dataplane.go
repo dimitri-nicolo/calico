@@ -37,8 +37,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/libcalico-go/lib/ipam"
-
+	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -65,12 +64,15 @@ import (
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/felix/nfqueue"
+	nfqdnspolicy "github.com/projectcalico/felix/nfqueue/dnspolicy"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/throttle"
 	"github.com/projectcalico/felix/wireguard"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	lclogutils "github.com/projectcalico/libcalico-go/lib/logutils"
 	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -160,7 +162,7 @@ type Config struct {
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
 	DeviceRouteSourceAddress       net.IP
-	DeviceRouteProtocol            int
+	DeviceRouteProtocol            netlink.RouteProtocol
 	RemoveExternalRoutes           bool
 	IptablesRefreshInterval        time.Duration
 	IPSecPolicyRefreshInterval     time.Duration
@@ -246,7 +248,9 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
-	LookPathOverride func(file string) (string, error)
+	DNSPolicyNfqueueID    int
+	DebugDNSResponseDelay time.Duration
+	LookPathOverride      func(file string) (string, error)
 
 	IPAMClient    ipam.Interface
 	KubeClientSet *kubernetes.Clientset
@@ -372,6 +376,8 @@ type InternalDataplane struct {
 	callbacks         *common.Callbacks
 
 	loopSummarizer *logutils.Summarizer
+
+	packetProcessor *nfqdnspolicy.PacketProcessor
 }
 
 const (
@@ -385,12 +391,11 @@ const (
 )
 
 func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
-
 	if config.DNSLogsLatency && !config.BPFEnabled {
 		// With non-BPF dataplane, set SO_TIMESTAMP so we get timestamps on packets passed
-		// up via NFLOG.
+		// up via NFLOG and NFQUEUE.
 		if err := EnableTimestamping(); err != nil {
-			log.WithError(err).Warning("Couldn't enable timestamping, so DNS latency will not be measured")
+			log.WithError(err).Warning("Couldn't enable timestamping, so DNS and NFQUEUE latency will not be measured")
 		} else {
 			log.Info("Timestamping enabled, so DNS latency will be measured")
 		}
@@ -399,6 +404,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
+
+		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
+			var err error
+			config.RulesConfig.EKSPrimaryENI, err = aws.PrimaryInterfaceName()
+
+			if err != nil {
+				log.WithError(err).Error("Failed to find primary EKS link name based default route " +
+					"- proxied nodeports may not work correctly")
+			}
+		}
+
 		ruleRenderer = rules.NewRenderer(config.RulesConfig)
 	}
 	epMarkMapper := rules.NewEndpointMarkMapper(
@@ -430,6 +446,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
 		stopChan:          stopChan,
 	}
+
+	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 {
+		nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
+
+		if err == nil {
+			packetProcessor := nfqdnspolicy.NewPacketProcessor(nf, config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
+
+			packetProcessor.Start()
+			dp.packetProcessor = packetProcessor
+		} else {
+			log.WithError(err).Error("failed to open NFQUEUE, DNS optimizations are now disabled")
+		}
+	}
+
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
 	dp.ifaceMonitor.StateCallback = dp.onIfaceStateChange
@@ -599,12 +629,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
 	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges, &common.DnsConfig{
-		Collector:            config.Collector,
-		DNSCacheEpoch:        config.DNSCacheEpoch,
-		DNSCacheFile:         config.DNSCacheFile,
-		DNSCacheSaveInterval: config.DNSCacheSaveInterval,
-		DNSExtraTTL:          config.DNSExtraTTL,
-		DNSLogsLatency:       config.DNSLogsLatency,
+		Collector:             config.Collector,
+		DNSCacheEpoch:         config.DNSCacheEpoch,
+		DNSCacheFile:          config.DNSCacheFile,
+		DNSCacheSaveInterval:  config.DNSCacheSaveInterval,
+		DNSExtraTTL:           config.DNSExtraTTL,
+		DNSLogsLatency:        config.DNSLogsLatency,
+		DebugDNSResponseDelay: config.DebugDNSResponseDelay,
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
@@ -671,10 +702,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// bpffs so there's nothing to clean up
 	}
 
+	ipsetsManager := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
+	dp.RegisterManager(ipsetsManager)
+
 	if !config.BPFEnabled {
 		// BPF mode disabled, create the iptables-only managers.
-		ipsetsManager := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
-		dp.RegisterManager(ipsetsManager)
 		dp.ipsetsSourceV4 = ipsetsManager
 		// TODO Connect host IP manager to BPF
 		dp.RegisterManager(newHostIPManager(
@@ -690,6 +722,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 		}
 		tc.CleanUpProgramsAndPins()
+	} else {
+		// In BPF mode we still use iptables for raw egress policy.
+		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, func(neededIPSets set.Set) {
+			ipSetsV4.SetFilter(neededIPSets)
+		}))
 	}
 
 	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
@@ -830,7 +867,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
-		dp.RegisterManager(common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
+		ipsetsManager.AddDataplane(ipSetsV4)
 		bpfRTMgr := newBPFRouteManager(config.Hostname, config.ExternalNodesCidrs, bpfMapContext, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
 
@@ -1216,7 +1253,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
-			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval)
+			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval, config.RulesConfig.IptablesMarkProxy)
 			collectorConntrackInfoReader = ctrd
 		}
 
@@ -1469,6 +1506,12 @@ func (d *InternalDataplane) Start() {
 			}
 		},
 		stopChannel)
+}
+
+func (d *InternalDataplane) Stop() {
+	if d.packetProcessor != nil {
+		d.packetProcessor.Stop()
+	}
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
@@ -1755,6 +1798,17 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
+
+		if t.IPVersion == 4 {
+			// Iptables for untracked policy.
+			t.UpdateChains(d.ruleRenderer.StaticBPFModeRawChains(t.IPVersion, uint32(tc.MarkSeenBypass)))
+			t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+				Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
+			}})
+			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
+				Action: iptables.JumpAction{Target: rules.ChainRawOutput},
+			}})
+		}
 	}
 
 	if d.config.BPFExtToServiceConnmark != 0 {

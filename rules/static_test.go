@@ -56,7 +56,7 @@ var _ = Describe("Static", func() {
 			}
 			expRules = append(expRules, []Rule{
 				// Clear all Calico mark bits.
-				{Action: ClearMarkAction{Mark: 0xf0}},
+				{Action: ClearMarkAction{Mark: 0xf1}},
 				// For DNAT'd traffic, apply host endpoint policy.
 				{
 					Match:  Match().ConntrackState("DNAT"),
@@ -92,17 +92,20 @@ var _ = Describe("Static", func() {
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 23},
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 1023},
 					},
-					IptablesMarkAccept:          0x10,
-					IptablesMarkPass:            0x20,
-					IptablesMarkScratch0:        0x40,
-					IptablesMarkScratch1:        0x80,
-					IptablesMarkDrop:            0x200,
-					IptablesMarkEgress:          0x400,
-					IptablesMarkEndpoint:        0xff000,
-					IptablesMarkNonCaliEndpoint: 0x1000,
-					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
-					KubeNodePortRanges:          []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
-					DNSTrustedServers:           []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
+					DNSPolicyNfqueueID:               100,
+					IptablesMarkAccept:               0x10,
+					IptablesMarkPass:                 0x20,
+					IptablesMarkScratch0:             0x40,
+					IptablesMarkScratch1:             0x80,
+					IptablesMarkDrop:                 0x200,
+					IptablesMarkEgress:               0x400,
+					IptablesMarkEndpoint:             0xff000,
+					IptablesMarkNonCaliEndpoint:      0x1000,
+					IptablesMarkDNSPolicy:            0x00001,
+					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
+					KubeNodePortRanges:               []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
+					DNSTrustedServers:                []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
 				}
 			})
 
@@ -115,7 +118,7 @@ var _ = Describe("Static", func() {
 					Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&Chain{
 						Name: "cali-PREROUTING",
 						Rules: []Rule{
-							{Action: ClearMarkAction{Mark: 0xf0}},
+							{Action: ClearMarkAction{Mark: 0xf1}},
 							{Match: Match().InInterface("cali+"),
 								Action: SetMarkAction{Mark: 0x40}},
 							{Match: Match().MarkSingleBitSet(0x40),
@@ -132,7 +135,7 @@ var _ = Describe("Static", func() {
 					Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&Chain{
 						Name: "cali-PREROUTING",
 						Rules: []Rule{
-							{Action: ClearMarkAction{Mark: 0xf0}},
+							{Action: ClearMarkAction{Mark: 0xf1}},
 							{Match: Match().InInterface("cali+"),
 								Action: SetMarkAction{Mark: 0x40}},
 							{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
@@ -307,7 +310,7 @@ var _ = Describe("Static", func() {
 								{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 								// Incoming host endpoint chains.
-								{Action: ClearMarkAction{Mark: 0xe0}},
+								{Action: ClearMarkAction{Mark: 0xe1}},
 								{Match: Match().MarkClear(0x10),
 									Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 								// Per-prefix workload jump rules.
@@ -357,7 +360,7 @@ var _ = Describe("Static", func() {
 									},
 
 									// Non-workload traffic, send to host chains.
-									{Action: ClearMarkAction{Mark: 0xf0}},
+									{Action: ClearMarkAction{Mark: 0xf1}},
 									{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 									{
 										Match:   Match().MarkSingleBitSet(0x10),
@@ -388,7 +391,7 @@ var _ = Describe("Static", func() {
 									},
 
 									// Non-workload traffic, send to host chains.
-									{Action: ClearMarkAction{Mark: 0xf0}},
+									{Action: ClearMarkAction{Mark: 0xf1}},
 									{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 									{
 										Match:   Match().MarkSingleBitSet(0x10),
@@ -426,7 +429,7 @@ var _ = Describe("Static", func() {
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
 									// Non-workload traffic, send to host chains.
-									{Action: ClearMarkAction{Mark: 0xf0}},
+									{Action: ClearMarkAction{Mark: 0xf1}},
 									{
 										Match:  Match().NotConntrackState("DNAT"),
 										Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -459,7 +462,7 @@ var _ = Describe("Static", func() {
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
 									// Non-workload traffic, send to host chains.
-									{Action: ClearMarkAction{Mark: 0xf0}},
+									{Action: ClearMarkAction{Mark: 0xf1}},
 									{
 										Match:  Match().NotConntrackState("DNAT"),
 										Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -507,7 +510,7 @@ var _ = Describe("Static", func() {
 							Rules: []Rule{
 								// For safety, clear all our mark bits before we start.  (We could be in
 								// append mode and another process' rules could have left the mark bit set.)
-								{Action: ClearMarkAction{Mark: 0xf0}},
+								{Action: ClearMarkAction{Mark: 0xf1}},
 								// Then, jump to the untracked policy chains.
 								{Action: JumpAction{Target: "cali-to-host-endpoint"}},
 								// Then, if the packet was marked as allowed, accept it.  Packets also
@@ -533,7 +536,7 @@ var _ = Describe("Static", func() {
 				Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&Chain{
 					Name: "cali-PREROUTING",
 					Rules: []Rule{
-						{Action: ClearMarkAction{Mark: 0xf0}},
+						{Action: ClearMarkAction{Mark: 0xf1}},
 						{Match: Match().InInterface("cali+"),
 							Action: SetMarkAction{Mark: 0x40}},
 						{Match: Match().MarkSingleBitSet(0x40),
@@ -549,7 +552,7 @@ var _ = Describe("Static", func() {
 				Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&Chain{
 					Name: "cali-PREROUTING",
 					Rules: []Rule{
-						{Action: ClearMarkAction{Mark: 0xf0}},
+						{Action: ClearMarkAction{Mark: 0xf1}},
 						{Match: Match().InInterface("cali+"),
 							Action: SetMarkAction{Mark: 0x40}},
 						{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
@@ -656,20 +659,23 @@ var _ = Describe("Static", func() {
 			epMark := uint32(0xff000)
 			BeforeEach(func() {
 				conf = Config{
-					WorkloadIfacePrefixes:       []string{"cali"},
-					IPIPEnabled:                 true,
-					IPIPTunnelAddress:           net.ParseIP("10.0.0.1"),
-					IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-					IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-					IptablesMarkAccept:          0x10,
-					IptablesMarkPass:            0x20,
-					IptablesMarkScratch0:        0x40,
-					IptablesMarkScratch1:        0x80,
-					IptablesMarkEgress:          0x400,
-					IptablesMarkEndpoint:        epMark,
-					IptablesMarkNonCaliEndpoint: 0x1000,
-					IptablesMarkDrop:            0x200,
-					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
+					WorkloadIfacePrefixes:            []string{"cali"},
+					IPIPEnabled:                      true,
+					IPIPTunnelAddress:                net.ParseIP("10.0.0.1"),
+					IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+					IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+					DNSPolicyNfqueueID:               100,
+					IptablesMarkAccept:               0x10,
+					IptablesMarkPass:                 0x20,
+					IptablesMarkScratch0:             0x40,
+					IptablesMarkScratch1:             0x80,
+					IptablesMarkEgress:               0x400,
+					IptablesMarkEndpoint:             epMark,
+					IptablesMarkNonCaliEndpoint:      0x1000,
+					IptablesMarkDNSPolicy:            0x00001,
+					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+					IptablesMarkDrop:                 0x200,
+					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
 				}
 			})
 
@@ -707,7 +713,7 @@ var _ = Describe("Static", func() {
 						Action: AcceptAction{}},
 
 					// Not from a workload, apply host policy.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{Action: JumpAction{Target: "cali-from-host-endpoint"}},
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
@@ -742,7 +748,7 @@ var _ = Describe("Static", func() {
 						Action: AcceptAction{}},
 
 					// Not from a workload, apply host policy.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{Action: JumpAction{Target: "cali-from-host-endpoint"}},
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
@@ -773,7 +779,7 @@ var _ = Describe("Static", func() {
 						Action: AcceptAction{}},
 
 					// Not from a workload, apply host policy.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{Action: JumpAction{Target: "cali-from-host-endpoint"}},
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
@@ -795,7 +801,7 @@ var _ = Describe("Static", func() {
 						Action: AcceptAction{}},
 
 					// Not from a workload, apply host policy.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{Action: JumpAction{Target: "cali-from-host-endpoint"}},
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
@@ -830,7 +836,7 @@ var _ = Describe("Static", func() {
 					},
 
 					// Non-workload traffic, send to host chains.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{
 						Match:  Match().NotConntrackState("DNAT"),
 						Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -863,7 +869,7 @@ var _ = Describe("Static", func() {
 					},
 
 					// Non-workload traffic, send to host chains.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{
 						Match:  Match().NotConntrackState("DNAT"),
 						Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -893,7 +899,7 @@ var _ = Describe("Static", func() {
 					{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
 					// Non-workload traffic, send to host chains.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{
 						Match:  Match().NotConntrackState("DNAT"),
 						Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -917,7 +923,7 @@ var _ = Describe("Static", func() {
 					{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
 					// Non-workload traffic, send to host chains.
-					{Action: ClearMarkAction{Mark: 0xf0}},
+					{Action: ClearMarkAction{Mark: 0xf1}},
 					{
 						Match:  Match().NotConntrackState("DNAT"),
 						Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -1053,18 +1059,21 @@ var _ = Describe("Static", func() {
 	Describe("with multiple KubePortRanges", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:       []string{"cali"},
-				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				IptablesMarkAccept:          0x10,
-				IptablesMarkPass:            0x20,
-				IptablesMarkScratch0:        0x40,
-				IptablesMarkScratch1:        0x80,
-				IptablesMarkEgress:          0x400,
-				IptablesMarkEndpoint:        0xff000,
-				IptablesMarkNonCaliEndpoint: 0x1000,
-				IptablesMarkDrop:            0x200,
-				KubeIPVSSupportEnabled:      true,
+				WorkloadIfacePrefixes:            []string{"cali"},
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				IptablesMarkDrop:                 0x200,
+				KubeIPVSSupportEnabled:           true,
 				KubeNodePortRanges: []numorstring.Port{
 					{MinPort: 30030, MaxPort: 30040, PortName: ""},
 					{MinPort: 30130, MaxPort: 30140, PortName: ""},
@@ -1150,20 +1159,23 @@ var _ = Describe("Static", func() {
 	Describe("with openstack special-cases", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:        []string{"tap"},
-				IPSetConfigV4:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				OpenStackSpecialCasesEnabled: true,
-				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
-				OpenStackMetadataPort:        1234,
-				IptablesMarkAccept:           0x10,
-				IptablesMarkPass:             0x20,
-				IptablesMarkScratch0:         0x40,
-				IptablesMarkScratch1:         0x80,
-				IptablesMarkDrop:             0x200,
-				IptablesMarkEgress:           0x400,
-				IptablesMarkEndpoint:         0xff000,
-				IptablesMarkNonCaliEndpoint:  0x1000,
+				WorkloadIfacePrefixes:            []string{"tap"},
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				OpenStackSpecialCasesEnabled:     true,
+				OpenStackMetadataIP:              net.ParseIP("10.0.0.1"),
+				OpenStackMetadataPort:            1234,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x200,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 			}
 		})
 
@@ -1255,21 +1267,24 @@ var _ = Describe("Static", func() {
 	Describe("with openstack special-cases and RETURN action", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:        []string{"tap"},
-				IPSetConfigV4:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				OpenStackSpecialCasesEnabled: true,
-				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
-				OpenStackMetadataPort:        1234,
-				IptablesMarkAccept:           0x10,
-				IptablesMarkPass:             0x20,
-				IptablesMarkScratch0:         0x40,
-				IptablesMarkScratch1:         0x80,
-				IptablesMarkDrop:             0x200,
-				IptablesMarkEgress:           0x400,
-				IptablesMarkEndpoint:         0xff000,
-				IptablesMarkNonCaliEndpoint:  0x1000,
-				IptablesFilterAllowAction:    "RETURN",
+				WorkloadIfacePrefixes:            []string{"tap"},
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				OpenStackSpecialCasesEnabled:     true,
+				OpenStackMetadataIP:              net.ParseIP("10.0.0.1"),
+				OpenStackMetadataPort:            1234,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x200,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				IptablesFilterAllowAction:        "RETURN",
 			}
 		})
 
@@ -1328,18 +1343,21 @@ var _ = Describe("Static", func() {
 	Describe("with Egress IP enabled", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:       []string{"tap"},
-				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				EgressIPEnabled:             true,
-				IptablesMarkAccept:          0x10,
-				IptablesMarkPass:            0x20,
-				IptablesMarkScratch0:        0x40,
-				IptablesMarkScratch1:        0x80,
-				IptablesMarkDrop:            0x200,
-				IptablesMarkEgress:          0x400,
-				IptablesMarkEndpoint:        0xff000,
-				IptablesMarkNonCaliEndpoint: 0x1000,
+				WorkloadIfacePrefixes:            []string{"tap"},
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				EgressIPEnabled:                  true,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x200,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 			}
 		})
 
@@ -1437,19 +1455,22 @@ var _ = Describe("Static", func() {
 		epMark := uint32(0xff000)
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:       []string{"cali"},
-				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				IptablesMarkAccept:          0x10,
-				IptablesMarkPass:            0x20,
-				IptablesMarkScratch0:        0x40,
-				IptablesMarkScratch1:        0x80,
-				IptablesMarkDrop:            0x200,
-				IptablesMarkEgress:          0x400,
-				IptablesMarkEndpoint:        epMark,
-				IptablesMarkNonCaliEndpoint: 0x1000,
-				IptablesFilterAllowAction:   "RETURN",
-				IptablesMangleAllowAction:   "RETURN",
+				WorkloadIfacePrefixes:            []string{"cali"},
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x200,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             epMark,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				IptablesFilterAllowAction:        "RETURN",
+				IptablesMangleAllowAction:        "RETURN",
 			}
 		})
 
@@ -1460,7 +1481,7 @@ var _ = Describe("Static", func() {
 					Name: "cali-FORWARD",
 					Rules: []Rule{
 						// Incoming host endpoint chains.
-						{Action: ClearMarkAction{Mark: 0xe0}},
+						{Action: ClearMarkAction{Mark: 0xe1}},
 						{Match: Match().MarkClear(0x10),
 							Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 						// Per-prefix workload jump rules.
@@ -1494,7 +1515,7 @@ var _ = Describe("Static", func() {
 							Action: ReturnAction{}},
 
 						// Non-workload traffic, send to host chains.
-						{Action: ClearMarkAction{Mark: 0xf0}},
+						{Action: ClearMarkAction{Mark: 0xf1}},
 						{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						{
 							Match:   Match().MarkSingleBitSet(0x10),
@@ -1516,7 +1537,7 @@ var _ = Describe("Static", func() {
 						{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
 						// Non-workload traffic, send to host chains.
-						{Action: ClearMarkAction{Mark: 0xf0}},
+						{Action: ClearMarkAction{Mark: 0xf1}},
 						{
 							Match:  Match().NotConntrackState("DNAT"),
 							Action: JumpAction{Target: ChainDispatchToHostEndpoint},
@@ -1535,22 +1556,25 @@ var _ = Describe("Static", func() {
 	Describe("with WireGuard enabled", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:       []string{"cali"},
-				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				IptablesMarkAccept:          0x10,
-				IptablesMarkPass:            0x20,
-				IptablesMarkScratch0:        0x40,
-				IptablesMarkScratch1:        0x80,
-				IptablesMarkDrop:            0x200,
-				IptablesMarkEndpoint:        0xff000,
-				IptablesMarkNonCaliEndpoint: 0x1000,
-				WireguardEnabled:            true,
-				WireguardInterfaceName:      "wireguard.cali",
-				WireguardIptablesMark:       0x100000,
-				WireguardListeningPort:      51820,
-				WireguardEncryptHostTraffic: true,
-				RouteSource:                 "WorkloadIPs",
+				WorkloadIfacePrefixes:            []string{"cali"},
+				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyNfqueueID:               100,
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x200,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				WireguardEnabled:                 true,
+				WireguardInterfaceName:           "wireguard.cali",
+				WireguardIptablesMark:            0x100000,
+				WireguardListeningPort:           51820,
+				WireguardEncryptHostTraffic:      true,
+				RouteSource:                      "WorkloadIPs",
 			}
 		})
 
@@ -1561,7 +1585,7 @@ var _ = Describe("Static", func() {
 				Name: "cali-PREROUTING",
 				Rules: []Rule{
 					{Match: nil,
-						Action: ClearMarkAction{Mark: 0xf0}},
+						Action: ClearMarkAction{Mark: 0xf1}},
 					{Match: nil,
 						Action: JumpAction{Target: "cali-wireguard-incoming-mark"}},
 					{Match: Match().InInterface("cali+"),
@@ -1593,23 +1617,26 @@ var _ = Describe("Static", func() {
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:       []string{"cali", "tap"},
-				ActionOnDrop:                "ACCEPT",
-				IptablesMarkAccept:          0x10,
-				IptablesMarkPass:            0x20,
-				IptablesMarkScratch0:        0x40,
-				IptablesMarkScratch1:        0x80,
-				IptablesMarkDrop:            0x100,
-				IptablesMarkEgress:          0x400,
-				IptablesMarkEndpoint:        0xff000,
-				IptablesMarkNonCaliEndpoint: 0x2000,
+				DNSPolicyNfqueueID:               100,
+				WorkloadIfacePrefixes:            []string{"cali", "tap"},
+				ActionOnDrop:                     "ACCEPT",
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x100,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x2000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 			}
 		})
 
 		expForwardChain := &Chain{
 			Name: "cali-FORWARD",
 			Rules: []Rule{
-				{Action: ClearMarkAction{Mark: 0xe0}},
+				{Action: ClearMarkAction{Mark: 0xe1}},
 				// Incoming host endpoint chains.
 				{Match: Match().MarkClear(0x10),
 					Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
@@ -1648,7 +1675,7 @@ var _ = Describe("Static", func() {
 					Action: AcceptAction{}},
 
 				// Non-workload through-traffic, pass to host endpoint chains.
-				{Action: ClearMarkAction{Mark: 0xf0}},
+				{Action: ClearMarkAction{Mark: 0xf1}},
 				{Action: JumpAction{Target: "cali-from-host-endpoint"}},
 				{
 					Match:   Match().MarkSingleBitSet(0x10),
@@ -1670,7 +1697,7 @@ var _ = Describe("Static", func() {
 				{Match: Match().OutInterface("tap+"), Action: ReturnAction{}},
 
 				// Non-workload traffic, pass to host endpoint chain.
-				{Action: ClearMarkAction{Mark: 0xf0}},
+				{Action: ClearMarkAction{Mark: 0xf1}},
 				{
 					Match:  Match().NotConntrackState("DNAT"),
 					Action: JumpAction{Target: "cali-to-host-endpoint"},
@@ -1746,16 +1773,19 @@ var _ = Describe("DropRules", func() {
 	Describe("with LOGandDROP override", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:       []string{"cali", "tap"},
-				ActionOnDrop:                "LOGandDROP",
-				IptablesMarkAccept:          0x10,
-				IptablesMarkPass:            0x20,
-				IptablesMarkScratch0:        0x40,
-				IptablesMarkScratch1:        0x80,
-				IptablesMarkDrop:            0x200,
-				IptablesMarkEgress:          0x400,
-				IptablesMarkEndpoint:        0xff000,
-				IptablesMarkNonCaliEndpoint: 0x1000,
+				DNSPolicyNfqueueID:               100,
+				WorkloadIfacePrefixes:            []string{"cali", "tap"},
+				ActionOnDrop:                     "LOGandDROP",
+				IptablesMarkAccept:               0x10,
+				IptablesMarkPass:                 0x20,
+				IptablesMarkScratch0:             0x40,
+				IptablesMarkScratch1:             0x80,
+				IptablesMarkDrop:                 0x200,
+				IptablesMarkEgress:               0x400,
+				IptablesMarkEndpoint:             0xff000,
+				IptablesMarkNonCaliEndpoint:      0x1000,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 			}
 		})
 

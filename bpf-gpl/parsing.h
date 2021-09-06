@@ -39,7 +39,7 @@ static CALI_BPF_INLINE int parse_packet_ip(struct cali_tc_ctx *ctx) {
 			CALI_DEBUG("Too short\n");
 			goto deny;
 		}
-		protocol = bpf_ntohs(ctx->eth->h_proto);
+		protocol = bpf_ntohs(tc_ethhdr(ctx)->h_proto);
 	} else {
 		protocol = bpf_ntohs(ctx->skb->protocol);
 	}
@@ -111,6 +111,7 @@ static CALI_BPF_INLINE void tc_state_fill_from_iphdr(struct cali_tc_ctx *ctx)
 {
 	ctx->state->ip_src = ctx->ip_header->saddr;
 	ctx->state->ip_dst = ctx->ip_header->daddr;
+	ctx->state->pre_nat_ip_dst = ctx->ip_header->daddr;
 	ctx->state->ip_proto = ctx->ip_header->protocol;
 	ctx->state->ip_size = ctx->ip_header->tot_len;
 }
@@ -127,13 +128,15 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx)
 			CALI_DEBUG("Too short\n");
 			goto deny;
 		}
-		ctx->state->sport = bpf_ntohs(ctx->tcp_header->source);
-		ctx->state->dport = bpf_ntohs(ctx->tcp_header->dest);
+		ctx->state->sport = bpf_ntohs(tc_tcphdr(ctx)->source);
+		ctx->state->dport = bpf_ntohs(tc_tcphdr(ctx)->dest);
+		ctx->state->pre_nat_dport = ctx->state->dport;
 		CALI_DEBUG("TCP; ports: s=%d d=%d\n", ctx->state->sport, ctx->state->dport);
 		break;
 	case IPPROTO_UDP:
-		ctx->state->sport = bpf_ntohs(ctx->udp_header->source);
-		ctx->state->dport = bpf_ntohs(ctx->udp_header->dest);
+		ctx->state->sport = bpf_ntohs(tc_udphdr(ctx)->source);
+		ctx->state->dport = bpf_ntohs(tc_udphdr(ctx)->dest);
+		ctx->state->pre_nat_dport = ctx->state->dport;
 		CALI_DEBUG("UDP; ports: s=%d d=%d\n", ctx->state->sport, ctx->state->dport);
 		if (ctx->state->dport == VXLAN_PORT) {
 			/* CALI_F_FROM_HEP case is handled in vxlan_attempt_decap above since it already decoded
@@ -152,10 +155,11 @@ static CALI_BPF_INLINE int tc_state_fill_from_nexthdr(struct cali_tc_ctx *ctx)
 		}
 		break;
 	case IPPROTO_ICMP:
-		ctx->state->icmp_type = ctx->icmp_header->type;
-		ctx->state->icmp_code = ctx->icmp_header->code;
+		ctx->state->icmp_type = tc_icmphdr(ctx)->type;
+		ctx->state->icmp_code = tc_icmphdr(ctx)->code;
+
 		CALI_DEBUG("ICMP; type=%d code=%d\n",
-				ctx->icmp_header->type, ctx->icmp_header->code);
+				tc_icmphdr(ctx)->type, tc_icmphdr(ctx)->code);
 		break;
 	case IPPROTO_IPIP:
 		if (CALI_F_TUNNEL | CALI_F_WIREGUARD) {

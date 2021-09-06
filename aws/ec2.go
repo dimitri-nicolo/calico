@@ -114,6 +114,23 @@ func WaitForEC2SrcDstCheckUpdate(check string, healthAgg *health.HealthAggregato
 	}
 }
 
+func PrimaryInterface() (*types.InstanceNetworkInterface, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ec2Cli, err := NewEC2Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ec2Iface, err := ec2Cli.GetMyPrimaryEC2NetworkInterface(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting ec2 network-interface: %s", convertError(err))
+	}
+
+	return ec2Iface, nil
+}
+
 type EC2SrcDstCheckUpdater struct{}
 
 func NewEC2SrcDstCheckUpdater() *EC2SrcDstCheckUpdater {
@@ -129,6 +146,8 @@ func (updater *EC2SrcDstCheckUpdater) Update(caliCheckOption string) error {
 		return err
 	}
 
+	// We are only modifying network interface with device-id-0 to update
+	// instance source-destination-check.
 	ec2NetId, err := ec2Cli.GetMyPrimaryEC2NetworkInterfaceID(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting ec2 network-interface-id: %s", convertError(err))
@@ -363,6 +382,56 @@ func (c *EC2Client) GetMyEC2NetworkInterfaces(ctx context.Context) ([]types.Netw
 		return nil, fmt.Errorf("failed to list attached network interfaces: %w", err)
 	}
 	return nio.NetworkInterfaces, nil
+}
+
+func (c *EC2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types.InstanceNetworkInterface, error) {
+	var err error
+
+	input := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{
+			c.InstanceID,
+		},
+	}
+
+	var out *ec2.DescribeInstancesOutput
+	for i := 0; i < retries; i++ {
+		out, err = c.EC2Svc.DescribeInstances(ctx, input)
+		if err != nil {
+			if retriable(err) {
+				// if error is temporary, try again in a second.
+				time.Sleep(1 * time.Second)
+				log.WithField("instance-id", c.InstanceID).Debug("retrying getting network-interface")
+				continue
+			}
+			return nil, err
+		} else {
+			break
+		}
+	}
+
+	if out == nil || len(out.Reservations) == 0 {
+		return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.InstanceID)
+	}
+
+	var interfaceId string
+	for _, instance := range out.Reservations[0].Instances {
+		if len(instance.NetworkInterfaces) == 0 {
+			return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.InstanceID)
+		}
+		// An instance can have multiple interfaces and the API response can be
+		// out-of-order interface list. We compare the device-id in the
+		// response to make sure we get the right device.
+		for _, networkInterface := range instance.NetworkInterfaces {
+			if networkInterface.Attachment != nil &&
+				networkInterface.Attachment.DeviceIndex != nil &&
+				*(networkInterface.Attachment.DeviceIndex) == deviceIndexZero {
+				return &networkInterface, nil
+			}
+			log.Debugf("instance-id: %s, network-interface-id: %s", c.InstanceID, interfaceId)
+		}
+	}
+
+	return nil, fmt.Errorf("no primary network-interface found for EC2 instance %s", c.InstanceID)
 }
 
 func (c *EC2Client) GetMyPrimaryEC2NetworkInterfaceID(ctx context.Context) (networkInstanceId string, err error) {

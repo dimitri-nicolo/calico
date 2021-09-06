@@ -123,8 +123,20 @@ var retvalToStr = map[int]string{
 	resTC_ACT_UNSPEC:     "TC_ACT_UNSPEC",
 }
 
+const (
+	resXDP_ABORTED int = iota
+	resXDP_DROP
+	resXDP_PASS
+)
+
+var retvalToStrXDP = map[int]string{
+	resXDP_ABORTED: "XDP_ABORTED",
+	resXDP_PASS:    "XDP_PASS",
+	resXDP_DROP:    "XDP_DROP",
+}
+
 func TestCompileTemplateRun(t *testing.T) {
-	runBpfTest(t, "calico_to_workload_ep", false, &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
+	runBpfTest(t, "calico_to_workload_ep", &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
 		_, _, _, _, pktBytes, err := testPacketUDPDefault()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -150,7 +162,7 @@ type testLogger interface {
 	Logf(format string, args ...interface{})
 }
 
-func setupAndRun(logger testLogger, loglevel, section string, forXDP bool, rules *polprog.Rules,
+func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rules,
 	runFn func(progName string), opts ...testOption) {
 
 	topts := testOpts{
@@ -186,9 +198,9 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(bpfFsDir)
 
-	obj := "../../bpf-gpl/bin/xdp_debug"
+	obj := "../../bpf-gpl/bin/test_xdp_debug"
 	progLog := ""
-	if !forXDP {
+	if !topts.xdp {
 		obj = "../../bpf-gpl/bin/test_"
 		if strings.Contains(section, "from") {
 			obj += "from_"
@@ -233,7 +245,7 @@ outter:
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir, rules != nil, maps...)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, topts.xdp, rules != nil, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	if err != nil {
@@ -241,12 +253,20 @@ outter:
 	}
 	Expect(err).NotTo(HaveOccurred())
 
+	jumpMap := tcJumpMap
+	if topts.xdp {
+		jumpMap = xdpJumpMap
+	}
+
 	if rules != nil {
 		alloc := &forceAllocator{alloc: idalloc.New()}
 		pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
 		insns, err := pg.Instructions(*rules)
 		Expect(err).NotTo(HaveOccurred())
 		polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
+		if topts.xdp {
+			polProgFD, err = bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_XDP)
+		}
 		Expect(err).NotTo(HaveOccurred())
 		defer func() { _ = polProgFD.Close() }()
 		progFDBytes := make([]byte, 4)
@@ -259,9 +279,9 @@ outter:
 }
 
 // runBpfTest runs a specific section of the entire bpf program in isolation
-func runBpfTest(t *testing.T, section string, forXDP bool, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
+func runBpfTest(t *testing.T, section string, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
 	RegisterTestingT(t)
-	setupAndRun(t, "debug", section, forXDP, rules, func(progName string) {
+	setupAndRun(t, "debug", section, rules, func(progName string) {
 		t.Run(section, func(_ *testing.T) {
 			testFn(func(dataIn []byte) (bpfRunResult, error) {
 				res, err := bpftoolProgRun(progName, dataIn)
@@ -290,7 +310,7 @@ func bpftool(args ...string) ([]byte, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
-			log.WithField("stderr", string(e.Stderr)).Errorf("bpftool %s failed: %v", args, err)
+			log.WithField("stderr", string(e.Stderr)).Errorf("bpftool %s failed: %v out=\n%v", args, err, string(out))
 			// to make the output reflect the new lines, logrus ignores it
 			fmt.Print(fmt.Sprint(string(e.Stderr)))
 		}
@@ -302,9 +322,9 @@ func bpftool(args ...string) ([]byte, error) {
 var (
 	mapInitOnce sync.Once
 
-	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap, fsafeMap bpf.Map
-	perfMap                                                                                                bpf.Map
-	allMaps, progMaps                                                                                      []bpf.Map
+	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap bpf.Map
+	perfMap                                                                                                              bpf.Map
+	allMaps, progMaps                                                                                                    []bpf.Map
 )
 
 func initMapsOnce() {
@@ -318,13 +338,14 @@ func initMapsOnce() {
 		ipsMap = ipsets.Map(mc)
 		stateMap = state.Map(mc)
 		testStateMap = state.MapForTest(mc)
-		jumpMap = jump.MapForTest(mc)
+		tcJumpMap = jump.MapForTest(mc)
+		xdpJumpMap = MapForTest(mc)
 		affinityMap = nat.AffinityMap(mc)
 		arpMap = arp.Map(mc)
 		perfMap = perf.Map(mc, "perf_evnt", 512)
 		fsafeMap = failsafes.Map(mc)
 
-		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, arpMap, fsafeMap}
+		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -342,7 +363,8 @@ func initMapsOnce() {
 			natBEMap,
 			ctMap,
 			rtMap,
-			jumpMap,
+			tcJumpMap,
+			xdpJumpMap,
 			stateMap,
 			affinityMap,
 			arpMap,
@@ -360,7 +382,7 @@ func cleanUpMaps() {
 	defer log.SetLevel(logLevel)
 
 	for _, m := range allMaps {
-		if m == stateMap || m == testStateMap || m == jumpMap {
+		if m == stateMap || m == testStateMap || m == tcJumpMap || m == xdpJumpMap {
 			continue // Can't clean up array maps
 		}
 		log.WithField("map", m.GetName()).Info("Cleaning")
@@ -374,10 +396,22 @@ func cleanUpMaps() {
 	log.Info("Cleaned up all maps")
 }
 
-func bpftoolProgLoadAll(fname, bpfFsDir string, polProg bool, maps ...bpf.Map) error {
+func bpftoolProgLoadAll(fname, bpfFsDir string, forXDP bool, polProg bool, maps ...bpf.Map) error {
 	args := []string{"prog", "loadall", fname, bpfFsDir, "type", "classifier"}
+	if forXDP {
+		args = []string{"prog", "loadall", fname, bpfFsDir, "type", "xdp"}
+	}
 
 	for _, m := range maps {
+		if forXDP && m == tcJumpMap {
+			log.Info("XDP program, skipping TC jump map")
+			continue
+		}
+		if !forXDP && m == xdpJumpMap {
+			log.Info("TC program, skipping XDP jump map")
+			continue
+		}
+
 		args = append(args, "map", "name", m.GetName(), "pinned", m.Path())
 	}
 
@@ -385,6 +419,11 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, polProg bool, maps ...bpf.Map) e
 	_, err := bpftool(args...)
 	if err != nil {
 		return err
+	}
+
+	jumpMap := tcJumpMap
+	if forXDP {
+		jumpMap = xdpJumpMap
 	}
 
 	if polProg {
@@ -406,13 +445,16 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, polProg bool, maps ...bpf.Map) e
 	if err != nil {
 		return errors.Wrap(err, "failed to update jump map (allowed program)")
 	}
-	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "2", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_2"))
-	if err != nil {
-		return errors.Wrap(err, "failed to update jump map (icmp program)")
-	}
-	_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "3", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_3"))
-	if err != nil {
-		return errors.Wrap(err, "failed to update jump map (drop program)")
+
+	if !forXDP {
+		_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "2", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_2"))
+		if err != nil {
+			return errors.Wrap(err, "failed to update jump map (icmp program)")
+		}
+		_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "3", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "1_3"))
+		if err != nil {
+			return errors.Wrap(err, "failed to update jump map (drop program)")
+		}
 	}
 
 	return nil
@@ -426,6 +468,14 @@ type bpfRunResult struct {
 
 func (r bpfRunResult) RetvalStr() string {
 	s := retvalToStr[r.Retval]
+	if s == "" {
+		return fmt.Sprint(r.Retval)
+	}
+	return s
+}
+
+func (r bpfRunResult) RetvalStrXDP() string {
+	s := retvalToStrXDP[r.Retval]
 	if s == "" {
 		return fmt.Sprint(r.Retval)
 	}
@@ -536,7 +586,7 @@ outter:
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir, true, maps...)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, false, true, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	runTest := func() {
@@ -563,6 +613,7 @@ type testOpts struct {
 	subtests  bool
 	logLevel  log.Level
 	extraMaps []bpf.Map
+	xdp       bool
 }
 
 type testOption func(opts *testOpts)
@@ -582,6 +633,12 @@ func withLogLevel(l log.Level) testOption {
 func withExtraMap(m bpf.Map) testOption {
 	return func(o *testOpts) {
 		o.extraMaps = append(o.extraMaps, m)
+	}
+}
+
+func withXDP() testOption {
+	return func(o *testOpts) {
+		o.xdp = true
 	}
 }
 
@@ -965,7 +1022,7 @@ func TestMapIterWithDeleteLastOfBatch(t *testing.T) {
 func TestJumpMap(t *testing.T) {
 	RegisterTestingT(t)
 
-	jumpMapFD := jumpMap.MapFD()
+	jumpMapFD := tcJumpMap.MapFD()
 	pg := polprog.NewBuilder(idalloc.New(), ipsMap.MapFD(), stateMap.MapFD(), jumpMapFD)
 	rules := polprog.Rules{}
 	insns, err := pg.Instructions(rules)

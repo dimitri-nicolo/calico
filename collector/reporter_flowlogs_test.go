@@ -125,11 +125,12 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		fp := make(FlowPolicies)
 		for _, mu := range mus {
 			for idx, r := range mu.ruleIDs {
-				name := fmt.Sprintf("%d|%s|%s.%s|%s", idx,
+				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
 					r.TierString(),
 					r.TierString(),
 					r.NameString(),
-					r.ActionString())
+					r.ActionString(),
+					r.IndexStr)
 				fp[name] = emptyValue
 			}
 		}

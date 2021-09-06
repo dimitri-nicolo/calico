@@ -22,17 +22,17 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 	struct bpf_sock *sk = NULL;
 	struct bpf_sock_tuple tuple={};
 	struct bpf_tcp_sock *tsk = NULL;
-	
+
 	if (CALI_F_FROM_WEP) {
 		tuple.ipv4.saddr = ctx->ip_header->daddr;
 		tuple.ipv4.daddr = ctx->ip_header->saddr;
-		tuple.ipv4.sport = ctx->tcp_header->dest;
-		tuple.ipv4.dport = ctx->tcp_header->source;
+		tuple.ipv4.sport = tc_tcphdr(ctx)->dest;
+		tuple.ipv4.dport = tc_tcphdr(ctx)->source;
 	} else if (CALI_F_TO_WEP) {
 		tuple.ipv4.saddr = ctx->ip_header->saddr;
 		tuple.ipv4.daddr = ctx->ip_header->daddr;
-		tuple.ipv4.sport = ctx->tcp_header->source;
-		tuple.ipv4.dport = ctx->tcp_header->dest;
+		tuple.ipv4.sport = tc_tcphdr(ctx)->source;
+		tuple.ipv4.dport = tc_tcphdr(ctx)->dest;
 	}
 	sk = bpf_sk_lookup_tcp(ctx->skb, &tuple, sizeof(tuple.ipv4), IF_NS, 0);
 	if (!sk) {
@@ -41,13 +41,13 @@ static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 		if (CALI_F_FROM_WEP) {
 			tuple.ipv6.saddr[3] = ctx->ip_header->daddr;
 			tuple.ipv6.daddr[3] = ctx->ip_header->saddr;
-			tuple.ipv6.sport = ctx->tcp_header->dest;
-			tuple.ipv6.dport = ctx->tcp_header->source;
+			tuple.ipv6.sport = tc_tcphdr(ctx)->dest;
+			tuple.ipv6.dport = tc_tcphdr(ctx)->source;
 		} else if (CALI_F_TO_WEP) {
 			tuple.ipv6.saddr[3] = ctx->ip_header->saddr;
 			tuple.ipv6.daddr[3] = ctx->ip_header->daddr;
-			tuple.ipv6.sport = ctx->tcp_header->source;
-			tuple.ipv6.dport = ctx->tcp_header->dest;
+			tuple.ipv6.sport = tc_tcphdr(ctx)->source;
+			tuple.ipv6.dport = tc_tcphdr(ctx)->dest;
 		}
 		sk = bpf_sk_lookup_tcp(ctx->skb, &tuple, sizeof(tuple.ipv6), IF_NS, 0);
 	}

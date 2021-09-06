@@ -71,9 +71,17 @@ var _ = Describe("L7 log utility functions", func() {
 		})
 
 		Context("With a Kubernetes service DNS name with a subdomain", func() {
-			It("Should properly extrac the service name, subdomain, and namespace", func() {
+			It("Should properly extract the service name, subdomain, and namespace", func() {
 				name, ns := extractK8sServiceNameAndNamespace("my-svc.place.svc-namespace.svc.cluster.local")
 				Expect(name).To(Equal("my-svc.place"))
+				Expect(ns).To(Equal("svc-namespace"))
+			})
+		})
+
+		Context("With only the service name and namespace", func() {
+			It("Should properly extract the service name and namespace", func() {
+				name, ns := extractK8sServiceNameAndNamespace("my-svc.svc-namespace")
+				Expect(name).To(Equal("my-svc"))
 				Expect(ns).To(Equal("svc-namespace"))
 			})
 		})
@@ -86,7 +94,7 @@ var _ = Describe("L7 log utility functions", func() {
 				Expect(ns).To(Equal(""))
 
 				// Non Kubernetes DNS
-				name, ns = extractK8sServiceNameAndNamespace("my-external-svc.com")
+				name, ns = extractK8sServiceNameAndNamespace("my-external-svc.random.com")
 				Expect(name).To(Equal(""))
 				Expect(ns).To(Equal(""))
 			})

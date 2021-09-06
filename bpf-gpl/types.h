@@ -112,6 +112,8 @@ enum cali_state_flags {
 	/* CALI_ST_SRC_IS_HOST is set if the packet is heading away from the host namespace and the source
 	 * belongs to the host. */
 	CALI_ST_SRC_IS_HOST	  = 0x08,
+	/* CALI_ST_SUPPRESS_CT_STATE prevents the creation of any new CT state. */
+	CALI_ST_SUPPRESS_CT_STATE = 0x10,
 };
 
 struct fwd {
@@ -129,25 +131,35 @@ struct cali_tc_ctx {
   struct xdp_md *xdp;
 
   /* Our single copies of the data start/end pointers loaded from the skb. */
-  union {
-  	void *data_start;
-  	struct ethhdr *eth; /* If there is an ethhdr it's at the start. */
-  };
+  void *data_start;
   void *data_end;
+  struct iphdr *ip_header;
+  void *nh;
 
   struct cali_tc_state *state;
-
-  struct iphdr *ip_header;
-  union {
-    void *nh;
-    struct tcphdr *tcp_header;
-    struct udphdr *udp_header;
-    struct icmphdr *icmp_header;
-  };
-
   struct calico_nat_dest *nat_dest;
   struct arp_key arpk;
   struct fwd fwd;
 };
+
+static CALI_BPF_INLINE struct ethhdr* tc_ethhdr(struct cali_tc_ctx *ctx)
+{
+	return (struct ethhdr *)ctx->data_start;
+}
+
+static CALI_BPF_INLINE struct tcphdr* tc_tcphdr(struct cali_tc_ctx *ctx)
+{
+	return (struct tcphdr *)ctx->nh;
+}
+
+static CALI_BPF_INLINE struct udphdr* tc_udphdr(struct cali_tc_ctx *ctx)
+{
+	return (struct udphdr *)ctx->nh;
+}
+
+static CALI_BPF_INLINE struct icmphdr* tc_icmphdr(struct cali_tc_ctx *ctx)
+{
+	return (struct icmphdr *)ctx->nh;
+}
 
 #endif /* __CALI_BPF_TYPES_H__ */

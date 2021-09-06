@@ -119,6 +119,8 @@ type DomainInfoStore struct {
 	epoch    int
 	extraTTL time.Duration
 	resetC   chan struct{}
+
+	dnsResponseDelay time.Duration
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -136,12 +138,13 @@ type domainMappingExpired struct {
 }
 
 type DnsConfig struct {
-	Collector            collector.Collector
-	DNSCacheEpoch        int
-	DNSCacheFile         string
-	DNSCacheSaveInterval time.Duration
-	DNSExtraTTL          time.Duration
-	DNSLogsLatency       bool
+	Collector             collector.Collector
+	DNSCacheEpoch         int
+	DNSCacheFile          string
+	DNSCacheSaveInterval  time.Duration
+	DNSExtraTTL           time.Duration
+	DNSLogsLatency        bool
+	DebugDNSResponseDelay time.Duration
 }
 
 func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *DnsConfig) *DomainInfoStore {
@@ -177,6 +180,7 @@ func newDomainInfoStoreWithShims(
 		requestTimestamp:     make(map[dnsExchangeKey]uint64),
 		epoch:                config.DNSCacheEpoch,
 		extraTTL:             config.DNSExtraTTL,
+		dnsResponseDelay:     config.DebugDNSResponseDelay,
 		// Capacity 1 here is to allow UT to test the use of this channel without
 		// needing goroutines.
 		resetC: make(chan struct{}, 1),
@@ -261,22 +265,43 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		// requires port 53.  Here we want to parse as DNS regardless of the port
 		// number.
 		dns := &layers.DNS{}
-		err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
-		if err == nil {
-			latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
-			if dns.QR == true {
-				// It's a DNS response.
-				if s.collector != nil {
-					if ipv4 != nil {
-						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
-					} else {
-						log.Warning("Not logging non-IPv4 DNS packet")
-					}
-				}
-				s.processDNSPacket(dns)
+		dnsBytes := packet.TransportLayer().LayerPayload()
+
+		// We've seen customers using tools that generate "ping" packets over UDP to test connectivity to
+		// their DNS servers. One such tool uses "UDP PING ..." as the UDP payload.  Ignore such packets
+		// rather than logging errors downstream.
+		const udpPingPrefix = "UDP PING"
+		if len(dnsBytes) >= len(udpPingPrefix) && string(dnsBytes[:len(udpPingPrefix)]) == udpPingPrefix {
+			log.Debug("Ignoring UDP ping packet")
+			return
+		}
+
+		err := dns.DecodeFromBytes(dnsBytes, gopacket.NilDecodeFeedback)
+		if err != nil {
+			log.WithError(err).Debug("Failed to decode DNS packet")
+			return
+		}
+		if dns.OpCode != layers.DNSOpCodeQuery {
+			log.Debug("Ignoring non-Query DNS packet.")
+			return
+		}
+		latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
+		if dns.QR == true {
+			// It's a DNS response.
+			if dns.QDCount == 0 || len(dns.Questions) == 0 {
+				// No questions; malformed packet?
+				log.Debug("Ignoring DNS packet with no questions; malformed packet?")
+				return
 			}
-		} else {
-			log.WithError(err).Debug("No DNS layer")
+
+			if s.collector != nil {
+				if ipv4 != nil {
+					s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
+				} else {
+					log.Warning("Not logging non-IPv4 DNS packet")
+				}
+			}
+			s.processDNSPacket(dns)
 		}
 	case expiry := <-s.mappingExpiryChannel:
 		s.processMappingExpiry(expiry.name, expiry.value)
@@ -705,6 +730,12 @@ func (s *DomainInfoStore) signalDomainInfoChange(name, reason string) {
 	// thread and the int_dataplane thread.
 	s.mutex.Unlock()
 	defer s.mutex.Lock()
+
+	if s.dnsResponseDelay != 0 {
+		log.Debugf("Delaying DNS response for domain %s name for %d millis", name, s.dnsResponseDelay)
+		time.Sleep(s.dnsResponseDelay)
+	}
+
 	changedNames.Iter(func(item interface{}) error {
 		log.Debugf("Signal domain change for %v -> %v", name, item.(string))
 		s.domainInfoChanges <- &DomainInfoChanged{Domain: item.(string), Reason: reason}

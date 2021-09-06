@@ -14,11 +14,13 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
+	github.com/florianl/go-nfqueue v1.2.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/go-ini/ini v1.44.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.4.3
+	github.com/google/go-cmp v0.5.6
 	github.com/google/gopacket v1.1.19
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/google/uuid v1.2.0
@@ -35,7 +37,7 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20210730214600-1e304d763cc0
+	github.com/projectcalico/pod2daemon v0.0.0-20210818162850-fa9ba6fd57c4
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/client_model v0.2.0
@@ -45,11 +47,11 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/api v0.0.0-20210803092542-1ba9f4618d05
-	github.com/tigera/licensing v1.0.1-0.20210729221455-c94356193edd
-	github.com/tigera/nfnetlink v0.0.0-20210409154814-77f63bf4c133
+	github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2
+	github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b
+	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
-	github.com/vishvananda/netlink v1.1.0
+	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
@@ -62,7 +64,7 @@ require (
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 	k8s.io/kubernetes v1.21.0-rc.0
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/utils v0.0.0-20210802155522-efc7438f0176
 	modernc.org/memory v1.0.4
 	sigs.k8s.io/kind v0.11.1
 )
@@ -73,7 +75,6 @@ replace (
 	github.com/projectcalico/libcalico-go => github.com/fasaxc/libcalico-go-private v1.7.2-0.20210804171503-f2964c73e85d
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210803101820-5d9c25feb29f
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
-	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for
@@ -103,5 +104,7 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.21.0-rc.0
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.0-rc.0
 )
+
+replace github.com/projectcalico/api => github.com/tigera/api v0.0.0-20210823082531-eb3327e7f409
 
 replace github.com/tigera/api => github.com/fasaxc/api v0.0.0-20210804170705-0155fc5f1ae7

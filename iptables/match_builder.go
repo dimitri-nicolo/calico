@@ -30,6 +30,14 @@ func Match() MatchCriteria {
 	return nil
 }
 
+// Combine creates a copy of m1 and appends the values of m2 to the copy, creating a new MatchCritera with the values
+// of m1 and m2.
+func Combine(m1, m2 MatchCriteria) MatchCriteria {
+	cp := make(MatchCriteria, len(m1))
+	copy(cp, m1)
+	return append(cp, m2...)
+}
+
 func (m MatchCriteria) Render() string {
 	return strings.Join([]string(m), " ")
 }
@@ -238,6 +246,18 @@ func (m MatchCriteria) DestIPPortSet(name string) MatchCriteria {
 
 func (m MatchCriteria) NotDestIPPortSet(name string) MatchCriteria {
 	return append(m, fmt.Sprintf("-m set ! --match-set %s dst,dst", name))
+}
+
+func (m MatchCriteria) IPSetNames() (ipSetNames []string) {
+	for _, matchString := range []string(m) {
+		words := strings.Split(matchString, " ")
+		for i := range words {
+			if words[i] == "--match-set" && (i+1) < len(words) {
+				ipSetNames = append(ipSetNames, words[i+1])
+			}
+		}
+	}
+	return
 }
 
 func (m MatchCriteria) SourcePorts(ports ...uint16) MatchCriteria {

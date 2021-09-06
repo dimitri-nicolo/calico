@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -239,7 +239,7 @@ type RouteTable struct {
 
 	deviceRouteSourceAddress net.IP
 
-	deviceRouteProtocol  int
+	deviceRouteProtocol  netlink.RouteProtocol
 	removeExternalRoutes bool
 
 	// The route table index. A value of 0 defaults to the main table.
@@ -260,7 +260,7 @@ func New(
 	vxlan bool,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
-	deviceRouteProtocol int,
+	deviceRouteProtocol netlink.RouteProtocol,
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
@@ -293,7 +293,7 @@ func NewWithShims(
 	conntrack conntrackIface,
 	timeShim timeshim.Interface,
 	deviceRouteSourceAddress net.IP,
-	deviceRouteProtocol int,
+	deviceRouteProtocol netlink.RouteProtocol,
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,

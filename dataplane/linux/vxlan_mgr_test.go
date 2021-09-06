@@ -18,17 +18,15 @@ import (
 	"net"
 	"time"
 
-	"github.com/projectcalico/felix/rules"
-
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
+	"github.com/projectcalico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vishvananda/netlink"
-
-	"github.com/projectcalico/felix/proto"
 )
 
 type mockVXLANDataplane struct {
@@ -123,7 +121,7 @@ var _ = Describe("VXLANManager", func() {
 				links: []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "eth0"}}},
 			},
 			func(interfacePrefixes []string, ipVersion uint8, vxlan bool, netlinkTimeout time.Duration,
-				deviceRouteSourceAddress net.IP, deviceRouteProtocol int, removeExternalRoutes bool) routeTable {
+				deviceRouteSourceAddress net.IP, deviceRouteProtocol netlink.RouteProtocol, removeExternalRoutes bool) routeTable {
 				return prt
 			},
 		)

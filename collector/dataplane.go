@@ -56,6 +56,7 @@ type ConntrackInfo struct {
 	Expired       bool
 	Counters      ConntrackCounters
 	ReplyCounters ConntrackCounters
+	IsProxy       bool
 }
 
 func (ct ConntrackInfo) String() string {

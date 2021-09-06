@@ -92,18 +92,22 @@ var _ = Describe("Constructor test", func() {
 					nil,
 				),
 
+				DNSPolicyNfqueueID: 100,
+
 				OpenStackSpecialCasesEnabled: configParams.OpenstackActive(),
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				IptablesMarkAccept:   0x1000000,
-				IptablesMarkPass:     0x2000000,
-				IptablesMarkScratch0: 0x4000000,
-				IptablesMarkScratch1: 0x8000000,
-				IptablesMarkDrop:     0x0800000,
-				IptablesMarkIPsec:    0x0400000,
-				IptablesMarkEgress:   0x0200000,
-				IptablesMarkEndpoint: 0x000ff00,
+				IptablesMarkAccept:               0x1000000,
+				IptablesMarkPass:                 0x2000000,
+				IptablesMarkScratch0:             0x4000000,
+				IptablesMarkScratch1:             0x8000000,
+				IptablesMarkDrop:                 0x0800000,
+				IptablesMarkIPsec:                0x0400000,
+				IptablesMarkEgress:               0x0200000,
+				IptablesMarkEndpoint:             0x000ff00,
+				IptablesMarkDNSPolicy:            0x00001,
+				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
@@ -139,6 +143,7 @@ var _ = Describe("Constructor test", func() {
 
 	It("should be constructable", func() {
 		var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
+		defer dp.Stop()
 		Expect(dp).ToNot(BeNil())
 	})
 
@@ -150,6 +155,7 @@ var _ = Describe("Constructor test", func() {
 
 		It("should be constructable", func() {
 			var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
+			defer dp.Stop()
 			Expect(dp).ToNot(BeNil())
 		})
 	})
@@ -162,6 +168,7 @@ var _ = Describe("Constructor test", func() {
 
 		It("should be constructable", func() {
 			var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
+			defer dp.Stop()
 			Expect(dp).ToNot(BeNil())
 		})
 	})

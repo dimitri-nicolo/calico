@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
 
@@ -110,10 +111,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		// The accept bit is a long-lived bit used to communicate between chains.
 		var markAccept, markPass, markScratch0, markScratch1, markWireguard, markEndpointNonCaliEndpoint uint32
 		markAccept, _ = markBitsManager.NextSingleBitMark()
-		if !configParams.BPFEnabled {
-			// The pass bit is used to communicate from a policy chain up to the endpoint chain.
-			markPass, _ = markBitsManager.NextSingleBitMark()
-		}
+
+		// The pass bit is used to communicate from a policy chain up to the endpoint chain.
+		markPass, _ = markBitsManager.NextSingleBitMark()
 
 		markDrop, _ := markBitsManager.NextSingleBitMark()
 		var markIPsec, markEgressIP uint32
@@ -132,8 +132,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		// interop between the BPF C code and Felix golang code - but dynamically
 		// allocated in iptables mode.
 		if configParams.BPFEnabled {
-			// We need it to be just a single bit.
-			markEgressIP = tc.MarkEgress &^ tc.MarkCalico
+			markEgressIP = tc.MarkEgress
 		} else if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
@@ -147,9 +146,8 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		// Scratch bits are short-lived bits used for calculating multi-rule results.
 		markScratch0, _ = markBitsManager.NextSingleBitMark()
-		if !configParams.BPFEnabled {
-			markScratch1, _ = markBitsManager.NextSingleBitMark()
-		}
+		markScratch1, _ = markBitsManager.NextSingleBitMark()
+
 		if configParams.WireguardEnabled {
 			log.Info("Wireguard enabled, allocating a mark bit")
 			markWireguard, _ = markBitsManager.NextSingleBitMark()
@@ -176,12 +174,20 @@ func StartDataplaneDriver(configParams *config.Config,
 			}
 		}
 
-		// markPass and the scratch-1 bits are only used in iptables mode.
-		if markAccept == 0 || markScratch0 == 0 || !configParams.BPFEnabled && (markPass == 0 || markScratch1 == 0) {
+		if markAccept == 0 || markScratch0 == 0 || markPass == 0 || markScratch1 == 0 {
 			log.WithFields(log.Fields{
 				"Name":     "felix-iptables",
 				"MarkMask": allowedMarkBits,
 			}).Panic("Not enough mark bits available.")
+		}
+
+		var markDNSPolicy, markSkipDNSPolicyNfqueue uint32
+		// If this is in BPF mode don't even try to allocate DNS policy bits. The markDNSPolicy bit is used as a flag
+		// to enable the DNS policy enhancements and we don't want to somehow have the markDNSPolicy bit set without
+		// the markSkipDNSPolicyNfqueue.
+		if !configParams.BPFEnabled {
+			markDNSPolicy, _ = markBitsManager.NextSingleBitMark()
+			markSkipDNSPolicyNfqueue, _ = markBitsManager.NextSingleBitMark()
 		}
 
 		// Mark bits for endpoint mark. Currently Felix takes the rest bits from mask available for use.
@@ -197,16 +203,18 @@ func StartDataplaneDriver(configParams *config.Config,
 			markEndpointNonCaliEndpoint = uint32(1) << uint(bits.TrailingZeros32(markEndpointMark))
 		}
 		log.WithFields(log.Fields{
-			"acceptMark":          markAccept,
-			"passMark":            markPass,
-			"dropMark":            markDrop,
-			"scratch0Mark":        markScratch0,
-			"scratch1Mark":        markScratch1,
-			"endpointMark":        markEndpointMark,
-			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
-			"wireguardMark":       markWireguard,
-			"ipsecMark":           markIPsec,
-			"egressMark":          markEgressIP,
+			"acceptMark":           markAccept,
+			"passMark":             markPass,
+			"dropMark":             markDrop,
+			"scratch0Mark":         markScratch0,
+			"scratch1Mark":         markScratch1,
+			"endpointMark":         markEndpointMark,
+			"endpointMarkNonCali":  markEndpointNonCaliEndpoint,
+			"wireguardMark":        markWireguard,
+			"ipsecMark":            markIPsec,
+			"egressMark":           markEgressIP,
+			"dnsPolicyMark":        markDNSPolicy,
+			"skipDNSPolicyNfqueue": markSkipDNSPolicyNfqueue,
 		}).Info("Calculated iptables mark bits")
 
 		// Create a routing table manager. There are certain components that should take specific indices in the range
@@ -304,15 +312,19 @@ func StartDataplaneDriver(configParams *config.Config,
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				IptablesMarkAccept:          markAccept,
-				IptablesMarkPass:            markPass,
-				IptablesMarkDrop:            markDrop,
-				IptablesMarkIPsec:           markIPsec,
-				IptablesMarkEgress:          markEgressIP,
-				IptablesMarkScratch0:        markScratch0,
-				IptablesMarkScratch1:        markScratch1,
-				IptablesMarkEndpoint:        markEndpointMark,
-				IptablesMarkNonCaliEndpoint: markEndpointNonCaliEndpoint,
+				DNSPolicyNfqueueID: int64(configParams.DNSPolicyNfqueueID),
+
+				IptablesMarkAccept:               markAccept,
+				IptablesMarkPass:                 markPass,
+				IptablesMarkDrop:                 markDrop,
+				IptablesMarkIPsec:                markIPsec,
+				IptablesMarkEgress:               markEgressIP,
+				IptablesMarkScratch0:             markScratch0,
+				IptablesMarkScratch1:             markScratch1,
+				IptablesMarkEndpoint:             markEndpointMark,
+				IptablesMarkNonCaliEndpoint:      markEndpointNonCaliEndpoint,
+				IptablesMarkDNSPolicy:            markDNSPolicy,
+				IptablesMarkSkipDNSPolicyNfqueue: markSkipDNSPolicyNfqueue,
 
 				VXLANEnabled: configParams.VXLANEnabled,
 				VXLANPort:    configParams.VXLANPort,
@@ -360,10 +372,11 @@ func StartDataplaneDriver(configParams *config.Config,
 				BPFEnabled:                         configParams.BPFEnabled,
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
-				TPROXYMode:         configParams.TPROXYMode,
-				TPROXYPort:         configParams.TPROXYPort,
-				IptablesMarkProxy:  markProxy,
-				KubeMasqueradeMark: k8sMasqMark,
+				TPROXYMode:             configParams.TPROXYMode,
+				TPROXYPort:             configParams.TPROXYPort,
+				TPROXYUpstreamConnMark: configParams.TPROXYUpstreamConnMark,
+				IptablesMarkProxy:      markProxy,
+				KubeMasqueradeMark:     k8sMasqMark,
 			},
 
 			Wireguard: wireguard.Config{
@@ -385,7 +398,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
 			RouteRefreshInterval:           configParams.RouteRefreshInterval,
 			DeviceRouteSourceAddress:       configParams.DeviceRouteSourceAddress,
-			DeviceRouteProtocol:            configParams.DeviceRouteProtocol,
+			DeviceRouteProtocol:            netlink.RouteProtocol(configParams.DeviceRouteProtocol),
 			RemoveExternalRoutes:           configParams.RemoveExternalRoutes,
 			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
 			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
@@ -480,7 +493,9 @@ func StartDataplaneDriver(configParams *config.Config,
 				MaxFiles:        configParams.CaptureMaxFiles,
 			},
 
-			LookupsCache: lc,
+			LookupsCache:          lc,
+			DNSPolicyNfqueueID:    configParams.DNSPolicyNfqueueID,
+			DebugDNSResponseDelay: configParams.DebugDNSResponseDelay,
 		}
 
 		if configParams.BPFExternalServiceMode == "dsr" {

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package metrics
 
@@ -37,7 +37,7 @@ cnx_policy_rule_packets{action="allow",namespace="fv",policy="policy-1",rule_dir
 cnx_policy_rule_packets{action="deny",namespace="fv",policy="policy-icmp",rule_direction="ingress",rule_index="0",tier="tier-1",traffic_direction="outbound"} 1
 # HELP calico_denied_packets Total number of packets denied by calico Policies.
 # TYPE calico_denied_packets gauge
-calico_denied_packets{policy="tier1|fv/policy-1|0|deny",srcIP="10.245.13.133"} 5
+calico_denied_packets{policy="tier1|fv/policy-1|0|deny|-1",srcIP="10.245.13.133"} 5
 */
 func GetCNXMetrics(felixIP, name string) (metricLines []string, err error) {
 	var resp *http.Response
