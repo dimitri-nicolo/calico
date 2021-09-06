@@ -136,7 +136,7 @@ var retvalToStrXDP = map[int]string{
 }
 
 func TestCompileTemplateRun(t *testing.T) {
-	runBpfTest(t, "calico_to_workload_ep", false, &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
+	runBpfTest(t, "calico_to_workload_ep", &polprog.Rules{}, func(bpfrun bpfProgRunFn) {
 		_, _, _, _, pktBytes, err := testPacketUDPDefault()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -162,7 +162,7 @@ type testLogger interface {
 	Logf(format string, args ...interface{})
 }
 
-func setupAndRun(logger testLogger, loglevel, section string, forXDP bool, rules *polprog.Rules,
+func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rules,
 	runFn func(progName string), opts ...testOption) {
 
 	topts := testOpts{
@@ -200,7 +200,7 @@ outter:
 
 	obj := "../../bpf-gpl/bin/test_xdp_debug"
 	progLog := ""
-	if !forXDP {
+	if !topts.xdp {
 		obj = "../../bpf-gpl/bin/test_"
 		if strings.Contains(section, "from") {
 			obj += "from_"
@@ -245,7 +245,7 @@ outter:
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir, forXDP, rules != nil, maps...)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, topts.xdp, rules != nil, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	if err != nil {
@@ -254,7 +254,7 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 
 	jumpMap := tcJumpMap
-	if forXDP {
+	if topts.xdp {
 		jumpMap = xdpJumpMap
 	}
 
@@ -264,7 +264,7 @@ outter:
 		insns, err := pg.Instructions(*rules)
 		Expect(err).NotTo(HaveOccurred())
 		polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
-		if forXDP {
+		if topts.xdp {
 			polProgFD, err = bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_XDP)
 		}
 		Expect(err).NotTo(HaveOccurred())
@@ -279,9 +279,9 @@ outter:
 }
 
 // runBpfTest runs a specific section of the entire bpf program in isolation
-func runBpfTest(t *testing.T, section string, forXDP bool, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
+func runBpfTest(t *testing.T, section string, rules *polprog.Rules, testFn func(bpfProgRunFn), opts ...testOption) {
 	RegisterTestingT(t)
-	setupAndRun(t, "debug", section, forXDP, rules, func(progName string) {
+	setupAndRun(t, "debug", section, rules, func(progName string) {
 		t.Run(section, func(_ *testing.T) {
 			testFn(func(dataIn []byte) (bpfRunResult, error) {
 				res, err := bpftoolProgRun(progName, dataIn)
@@ -613,6 +613,7 @@ type testOpts struct {
 	subtests  bool
 	logLevel  log.Level
 	extraMaps []bpf.Map
+	xdp       bool
 }
 
 type testOption func(opts *testOpts)
@@ -632,6 +633,12 @@ func withLogLevel(l log.Level) testOption {
 func withExtraMap(m bpf.Map) testOption {
 	return func(o *testOpts) {
 		o.extraMaps = append(o.extraMaps, m)
+	}
+}
+
+func withXDP() testOption {
+	return func(o *testOpts) {
+		o.xdp = true
 	}
 }
 
