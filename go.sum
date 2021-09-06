@@ -675,10 +675,10 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae h1:vgGSvdW5Lqg+I1
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2 h1:3NLDcfatLo9DzO93d1+efPeoryl3aSqOSjtvQKZ7DWI=
-github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210906123903-99411d519d77 h1:EiAdkHasAwvgs/a50j4Exgw6eTN4EuMF5gXXJdOrVJU=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210906123903-99411d519d77/go.mod h1:K7Gy+IcWjOFAw07OgwzMmFfUFdl8MwVLjWZKjUd4bdY=
+github.com/tigera/api v0.0.0-20210906133756-466200eaba0b h1:AyW5Yb4bAmVabRsoBtCobEN4OwhywORPLHQM+Xn3kRI=
+github.com/tigera/api v0.0.0-20210906133756-466200eaba0b/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210906140847-bee9fd7970d9 h1:5Qm3qF6kfcapDPLLxZDUAeIlYq0CSGM5wYQkO4lnxa0=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210906140847-bee9fd7970d9/go.mod h1:LtjACaSl0c8yB6y0Yk9kgw8/kPg5ZJvpSdOBhgoUxEI=
 github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b h1:e/wex7uN9uRFqsPDOVyupng/+MqbSU3lTEZkfP9DS9c=
 github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b/go.mod h1:ZQPJD/V9qpXlUzkaDHzJ6MNaqgo6Mhbb4aFN7uYDNLI=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
