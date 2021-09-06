@@ -1,4 +1,4 @@
-// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019,2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	kvp1 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -83,6 +84,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	kvp2 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -118,6 +120,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	kvp3 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -152,6 +155,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	kvp5 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -189,6 +193,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "has(x)",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	kvp6 := &model.KVPair{
 		Key: model.ResourceKey{
