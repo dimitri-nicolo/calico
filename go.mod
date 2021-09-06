@@ -9,7 +9,6 @@ require (
 	github.com/alecthomas/participle v0.7.1
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/go-openapi/spec v0.19.5
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.0.0-20170327191703-71201497bace // indirect
 	github.com/google/gopacket v1.1.17
@@ -29,7 +28,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tchap/go-patricia/v2 v2.3.1
-	github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba
+	github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
@@ -48,7 +47,7 @@ require (
 	k8s.io/apiserver v0.21.0
 	k8s.io/client-go v0.21.0
 	k8s.io/code-generator v0.21.2
-	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+	k8s.io/kube-openapi v0.0.0-20210817084001-7fbd8d59e5b8
 	sigs.k8s.io/kind v0.11.1
 )
 

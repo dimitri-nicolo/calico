@@ -51,7 +51,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 		ContainerID:   "a12345a",
 		Endpoint:      "eth0",
 		InterfaceName: "cali09123",
-		Ports: []apiv3.EndpointPort{
+		Ports: []libapiv3.WorkloadEndpointPort{
 			{
 				Port:     1234,
 				Name:     "foobar",
@@ -71,7 +71,7 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 		ContainerID:   "a12345a",
 		Endpoint:      "eth0",
 		InterfaceName: "foobar",
-		Ports: []apiv3.EndpointPort{
+		Ports: []libapiv3.WorkloadEndpointPort{
 			{
 				Port:     5678,
 				Name:     "bazzbiff",
