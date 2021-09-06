@@ -1142,6 +1142,49 @@ func init() {
 		Entry("should reject IPv6 pool with a CIDR range overlapping with Link Local range",
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: "fe80::/120"}}, false),
 
+		Entry("should accept IP pool with valid AWS subnet ID",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "subnet-0123456789abcdef0",
+				},
+			}, true),
+		Entry("should accept IP pool with valid short AWS subnet ID",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "subnet-01234567",
+				},
+			}, true),
+		Entry("should reject IP pool with too-long AWS subnet ID",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "subnet-0123456789abcdef01",
+				},
+			}, false),
+		Entry("should reject IP pool with garbage AWS subnet ID",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "fgkjdhfjadhfjah",
+				},
+			}, false),
+		Entry("should reject IP pool with wrong ID type",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "vpc-0123456789abcdef01",
+				},
+			}, false),
+		Entry("should reject IP pool with upper case",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "subnet-0123456789Abcdef0",
+				},
+			}, false),
+
 		// (API) IPIPMode
 		Entry("should accept IPPool with no IPIP mode specified", api.IPPoolSpec{CIDR: "1.2.3.0/24"}, true),
 		Entry("should accept IPIP mode Never (api)", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: api.IPIPModeNever, VXLANMode: api.VXLANModeNever}, true),

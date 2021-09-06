@@ -131,6 +131,7 @@ var (
 	protocolPortsMsg      = "rules that specify ports must set protocol to TCP or UDP or SCTP"
 	protocolIcmpMsg       = "rules that specify ICMP fields must set protocol to ICMP"
 	protocolAndHTTPMsg    = "rules that specify HTTP fields must set protocol to TCP or empty"
+	invalidAWSSubnetID    = "AWS subnet ID is invalid; should be 'subnet-' followed by 8 or 17 lower-case hex digits"
 	globalSelectorEntRule = fmt.Sprintf("%v can only be used in an EntityRule namespaceSelector", globalSelector)
 	globalSelectorOnly    = fmt.Sprintf("%v cannot be combined with other selectors", globalSelector)
 
@@ -1297,6 +1298,12 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 	if cidr.Version() == 6 && cidr.IsNetOverlap(ipv6LinkLocalNet) {
 		structLevel.ReportError(reflect.ValueOf(pool.CIDR),
 			"IPpool.CIDR", "", reason(overlapsV6LinkLocal), "")
+	}
+
+	subnetRE := regexp.MustCompile(`^subnet-[0-9a-f]{8,17}$`)
+	if pool.AWSSubnetID != "" && !subnetRE.MatchString(pool.AWSSubnetID) {
+		structLevel.ReportError(reflect.ValueOf(pool.AWSSubnetID),
+			"IPpool.AWSSubnetID", "", reason(invalidAWSSubnetID), "")
 	}
 }
 

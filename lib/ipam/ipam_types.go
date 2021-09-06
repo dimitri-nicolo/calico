@@ -71,7 +71,7 @@ type AutoAssignArgs struct {
 	HostReservedAttrIPv6s *HostReservedAttr
 
 	// The intended use for the IP address.  Used to filter the available IP pools on their AllowedUses field.
-	// If omitted, defaults to v3.IPPoolAllowedUseWorkload for back-compatibility.
+	// This field is required.
 	IntendedUse v3.IPPoolAllowedUse
 }
 

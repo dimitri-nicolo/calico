@@ -623,11 +623,13 @@ func (i *IPAMAssignments) PartialFulfillmentError() error {
 	return nil
 }
 
+var ErrUseRequired = errors.New("must specify the intended use when assigning an IP")
+
 func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string, maxNumBlocks int, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse) (*IPAMAssignments, error) {
 	// Default parameters.
 	if use == "" {
-		log.Debug("Intended use of IP not specified, defaulting to Workload.")
-		use = v3.IPPoolAllowedUseWorkload
+		log.Error("Attempting to auto-assign an IP without specifying intended use.")
+		return nil, ErrUseRequired
 	}
 
 	// Get the existing host-affine blocks.
