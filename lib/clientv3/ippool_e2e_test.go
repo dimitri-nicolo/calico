@@ -49,6 +49,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	spec1_2 := apiv3.IPPoolSpec{
 		CIDR:         "1.2.3.0/24",
@@ -57,6 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeAlways,
 		BlockSize:    26,
 		NodeSelector: `foo == "bar"`,
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	spec2 := apiv3.IPPoolSpec{
 		CIDR:         "2001::/120",
@@ -65,6 +67,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	spec2_1 := apiv3.IPPoolSpec{
 		CIDR:         "2001::/120",
@@ -72,6 +75,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 
 	It("should error when creating an IPPool with no name", func() {

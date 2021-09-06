@@ -88,6 +88,9 @@ func (i *ipPoolAccessor) getPools(sorted []string, ipVersion int, caller string)
 				NodeSelector: i.pools[p].nodeSelector,
 				AllowedUses:  i.pools[p].allowedUses,
 			}}
+			if len(pool.Spec.AllowedUses) == 0 {
+				pool.Spec.AllowedUses = []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseWorkload, v3.IPPoolAllowedUseTunnel}
+			}
 			if i.pools[p].blockSize == 0 {
 				if ipVersion == 4 {
 					pool.Spec.BlockSize = 26
@@ -2230,6 +2233,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				default:
 					log.Panicf("Unknown IP use: %v", parts[1])
 				}
+			} else {
+				use = v3.IPPoolAllowedUseWorkload
 			}
 
 			var reqPools []cnet.IPNet

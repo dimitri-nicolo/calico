@@ -1017,7 +1017,6 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(ia.IPs)).To(Equal(1))
 			Expect(ia.IPs[0].String()).To(Equal("10.0.0.2/30"))
-
 		})
 	})
 })

@@ -343,6 +343,9 @@ func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedP
 	if err != nil {
 		return nil, nil, err
 	}
+	if len(poolsSelectingNode) == 0 {
+		return nil, nil, fmt.Errorf("no configured Calico pools for node %s", host)
+	}
 
 	// Figure out what subset of the selecting pools we're allowed to use for the request according to the
 	// pool's allowed use.
@@ -427,14 +430,7 @@ func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedP
 func filterPoolsByUse(pools []v3.IPPool, use v3.IPPoolAllowedUse) []v3.IPPool {
 	var filteredPools []v3.IPPool
 	for _, p := range pools {
-		allowedUses := p.Spec.AllowedUses
-		if len(allowedUses) == 0 {
-			allowedUses = []v3.IPPoolAllowedUse{
-				v3.IPPoolAllowedUseWorkload,
-				v3.IPPoolAllowedUseTunnel,
-			}
-		}
-		for _, allowed := range allowedUses {
+		for _, allowed := range p.Spec.AllowedUses {
 			if allowed == use {
 				filteredPools = append(filteredPools, p)
 				break
