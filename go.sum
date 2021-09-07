@@ -899,8 +899,8 @@ github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba/go.mod h1:KZ+Ck27bbY+L0
 github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
 github.com/tigera/api v0.0.0-20210907142848-f71992c952a6 h1:eLwKc4pO7KVODNrHYSIhMicWNaT55jiXOQeIyMg3Bro=
 github.com/tigera/api v0.0.0-20210907142848-f71992c952a6/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
-github.com/tigera/apiserver v0.0.0-20210901223027-a0977691e21c h1:pYKozYfAqBr5sH5yFzhxnQDDYhgvWK8W8T7NfyJz0uM=
-github.com/tigera/apiserver v0.0.0-20210901223027-a0977691e21c/go.mod h1:c829odKRoBTZnjlTQvJgpmO7+Lsbg/QwztaTo7DKJ3w=
+github.com/tigera/apiserver v0.0.0-20210907220214-a1e85de83a3c h1:1+WdriwnAcDOdRo/7noKNsOTCz+1okuGjumJ/emMBDw=
+github.com/tigera/apiserver v0.0.0-20210907220214-a1e85de83a3c/go.mod h1:c829odKRoBTZnjlTQvJgpmO7+Lsbg/QwztaTo7DKJ3w=
 github.com/tigera/compliance v0.0.0-20210907214653-c77d126530ba h1:u1CYs5qsRmVMH2sQ2B27K95y2oJQwpy/MJRb4DkutEI=
 github.com/tigera/compliance v0.0.0-20210907214653-c77d126530ba/go.mod h1:fCxvjbg4CvlfVmN24EgaLOw7BhHdOcTx4PGpJfv8CmI=
 github.com/tigera/felix-private v0.0.0-20210906140938-4c38ec7adfc5 h1:WQohs3OIikWen0i/dLrVEMMIHPYoYWIq43rMJTQSI3M=
