@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER=v0.53
+GO_BUILD_VER?=v0.55
 
 GIT_USE_SSH = true
 
