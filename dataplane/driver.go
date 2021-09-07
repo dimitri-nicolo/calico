@@ -485,6 +485,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DNSLogsLatency:       configParams.DNSLogsLatency,
 
 			AWSSubnetSupport: configParams.AWSSubnetSupport == "Enabled",
+			AWSTimeout:       configParams.AWSTimeout,
 
 			PacketCapture: capture.Config{
 				Directory:       configParams.CaptureDir,

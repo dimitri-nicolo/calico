@@ -34,10 +34,10 @@ import (
 )
 
 var (
-	testRegion = "us-west-2"
-	testEniId  = "eni-i-000"
+	testRegion  = "us-west-2"
+	testEniId   = "eni-i-000"
 	testEniId1  = "eni-i-001"
-	testInstId = "i-000"
+	testInstId  = "i-000"
 	testInstId1 = "i-001"
 )
 

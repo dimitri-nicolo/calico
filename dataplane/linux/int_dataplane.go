@@ -240,6 +240,7 @@ type Config struct {
 
 	// AWS-specials.
 	AWSSubnetSupport bool
+	AWSTimeout       time.Duration
 
 	// Config for DNS policy.
 	DNSCacheFile         string
