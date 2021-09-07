@@ -2,7 +2,7 @@ FROM ubuntu:xenial AS snort
 
 ENV SNORT3_VERSION=3.1.8.0
 ENV DAQ_VERSION=3.0.4
-ENV OPEN_APPID_VERSION=17843
+ENV OPEN_APPID_VERSION=19913
 
 RUN apt update -y \
     && apt upgrade -y
