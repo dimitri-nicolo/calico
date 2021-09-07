@@ -15,6 +15,7 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_DEEP_PACKET_INSPECTION_PROJECT_ID)
 #############################################
 DEEP_PACKET_INSPECTION_IMAGE   	?=tigera/deep-packet-inspection
 SNORT_IMAGE 					?=tigera/snort
+BUILD_IMAGES					?=$(SNORT_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)
 ARCHES             				?=amd64
 DEV_REGISTRIES     				?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES 				?=quay.io
@@ -99,7 +100,7 @@ endif
 # BUILD IMAGE
 ###############################################################################
 # Build the docker image.
-.PHONY: $(DEEP_PACKET_INSPECTION_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
+.PHONY: image $(BUILD_IMAGES)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -108,12 +109,16 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image $(SNORT_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)
-image: build $(SNORT_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)
+image: $(BUILD_IMAGES)
 $(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
 $(SNORT_IMAGE)-$(ARCH):
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	docker build --pull -t $(SNORT_IMAGE):latest-$(ARCH) -t $(SNORT_IMAGE) --file ./docker-image/Dockerfile.snort.$(ARCH) docker-image
+ifeq ($(ARCH),amd64)
+	docker tag $(SNORT_IMAGE):latest-$(ARCH) $(SNORT_IMAGE):latest
+endif
+
 $(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
 $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH): bin/deep-packet-inspection-$(ARCH)
 	rm -rf docker-image/bin
