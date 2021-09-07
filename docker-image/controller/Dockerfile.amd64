@@ -2,6 +2,8 @@ FROM snort:local AS snort
 
 FROM scratch
 
+ENV SNORT_VERSION=2.9.18.1
+
 COPY --from=snort /usr/local/lib/ /usr/local/lib/
 
 COPY --from=snort /lib64/libc.so.6 /lib64/libc.so.6
@@ -24,11 +26,11 @@ COPY --from=snort /usr/lib64/liblzma.so.5 /usr/lib64/liblzma.so.5
 COPY --from=snort /usr/lib64/liblzma.so.5.2.4 /usr/lib64/liblzma.so.5.2.4
 
 COPY --from=snort /usr/sbin/snort /usr/sbin/snort
-COPY --from=snort /lib64/snort-2.9.18_dynamicengine /lib64/snort-2.9.18_dynamicengine
-COPY --from=snort /lib64/snort-2.9.18_dynamicpreprocessor /lib64/snort-2.9.18_dynamicpreprocessor
+COPY --from=snort /lib64/snort-${SNORT_VERSION}_dynamicengine /lib64/snort-${SNORT_VERSION}_dynamicengine
+COPY --from=snort /lib64/snort-${SNORT_VERSION}_dynamicpreprocessor /lib64/snort-${SNORT_VERSION}_dynamicpreprocessor
 
-COPY --from=snort /usr/lib64/snort-2.9.18_dynamicpreprocessor/ /usr/lib64/snort-2.9.18_dynamicpreprocessor/
-COPY --from=snort /usr/lib64/snort-2.9.18_dynamicengine/ /usr/lib64/snort-2.9.18_dynamicengine/
+COPY --from=snort /usr/lib64/snort-${SNORT_VERSION}_dynamicpreprocessor/ /usr/lib64/snort-${SNORT_VERSION}_dynamicpreprocessor/
+COPY --from=snort /usr/lib64/snort-${SNORT_VERSION}_dynamicengine/ /usr/lib64/snort-${SNORT_VERSION}_dynamicengine/
 
 COPY --from=snort /etc/snort/ /etc/snort/
 COPY --from=snort /var/log/snort/ /var/log/snort/
