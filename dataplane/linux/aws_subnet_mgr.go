@@ -118,6 +118,7 @@ func NewAWSSubnetManager(
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set{},
+
 		healthAgg:                 healthAgg,
 		ipamClient:                ipamClient,
 		k8sClient:                 k8sClient,
@@ -417,7 +418,8 @@ func (a *awsSubnetManager) resyncWithAWS() error {
 		}
 	}
 
-	// Tell AWS to assign the needed Calico IPs to the secondary NICs.
+	// Tell AWS to assign the needed Calico IPs to the secondary NICs as best we can.  (It's possible we weren't able
+	// to allocate enough IPs or NICs above.)
 	err = a.assignSecondaryIPsToNICs(awsNICState, subnetCalicoRoutesNotInAWS)
 	if err != nil {
 		return err
@@ -909,6 +911,8 @@ func (a *awsSubnetManager) freeUnusedHostCalicoIPs(awsNICState *awsNICState) err
 	return nil
 }
 
+// calculateNumNewNICsNeeded does the maths to figure out how many NICs we need to add given the number of
+// IPs we need and the spare capacity of existing NICs.
 func (a *awsSubnetManager) calculateNumNewNICsNeeded(awsNICState *awsNICState, bestSubnetID string) (int, error) {
 	totalIPs := a.localRouteDestsBySubnetID[bestSubnetID].Len()
 	if a.networkCapabilities.MaxIPv4PerInterface <= 1 {
@@ -923,6 +927,7 @@ func (a *awsSubnetManager) calculateNumNewNICsNeeded(awsNICState *awsNICState, b
 	return numNICsNeeded, nil
 }
 
+// allocateCalicoHostIPs allocates the given number of IPPoolAllowedUseHostSecondary IPs to this host in Calico IPAM.
 func (a *awsSubnetManager) allocateCalicoHostIPs(numNICsNeeded int) (*ipam.IPAMAssignments, error) {
 	ipamCtx, ipamCancel := a.newContext()
 
@@ -954,7 +959,13 @@ func (a *awsSubnetManager) allocateCalicoHostIPs(numNICsNeeded int) (*ipam.IPAMA
 	return v4addrs, nil
 }
 
+// createAWSNICs creates one AWS secondary ENI in the given subnet for each given IP address and attempts to
+// attach the newly created NIC to this host.
 func (a *awsSubnetManager) createAWSNICs(awsNICState *awsNICState, subnetID string, v4addrs []calinet.IPNet) error {
+	if len(v4addrs) == 0 {
+		return nil
+	}
+
 	ctx, cancel := a.newContext()
 	defer cancel()
 	ec2Client, err := a.ec2Client()
