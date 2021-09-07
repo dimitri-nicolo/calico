@@ -224,7 +224,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	labels := make(map[string]string)
 	annot := make(map[string]string)
 
-	var ports []api.EndpointPort
+	var ports []libapi.WorkloadEndpointPort
 	var profiles []string
 	var generateName string
 	var serviceAccount string
@@ -919,7 +919,7 @@ func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotation
 	return ns.Annotations, nil
 }
 
-func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []api.EndpointPort, profiles []string, generateName, serviceAccount string, err error) {
+func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []libapi.WorkloadEndpointPort, profiles []string, generateName, serviceAccount string, err error) {
 	logrus.Debugf("pod info %+v", pod)
 
 	c := k8sconversion.NewConverter()
