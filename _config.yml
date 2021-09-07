@@ -168,6 +168,7 @@ defaults:
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
         performance_hotspots: tigera/performance_hotspots
         es-gateway: tigera/es-gateway
+        deep-packet-inspection: tigera/deep-packet-inspection
         # The Prometheus + eck-operator images below are third-party images
         # that have been ported to quay.io/tigera as per customer request
         configMapReload: tigera/configmap-reload
