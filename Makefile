@@ -10,6 +10,7 @@ API_REPO        = github.com/tigera/api
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
+ARCHES                ?=amd64
 IDS_IMAGE             ?=tigera/intrusion-detection-controller
 JOB_INSTALLER_IMAGE   ?=tigera/intrusion-detection-job-installer
 BUILD_IMAGES          ?=$(IDS_IMAGE) $(JOB_INSTALLER_IMAGE)
