@@ -803,6 +803,11 @@ var _ = Describe("DNS Policy Improvements", func() {
 		policy.Spec.Selector = workload1.NameSelector()
 		policy.Spec.Egress = []api.Rule{
 			{
+				Metadata: &api.RuleMetadata{
+					Annotations: map[string]string{
+						"rule-name": "allow-foobar",
+					},
+				},
 				Action:      api.Allow,
 				Destination: api.EntityRule{Domains: []string{"foobar.com"}},
 			},
@@ -857,9 +862,14 @@ var _ = Describe("DNS Policy Improvements", func() {
 
 	When("when the dns response isn't programmed before the packet reaches the dns policy rule", func() {
 		It("nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
-			workload1.C.EnsureBinary("test-connection")
-			_, err := workload1.ExecCombinedOutput("/test-connection", "-", "foobar.com", "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsserver.IP, 53))
-			Expect(err).ShouldNot(HaveOccurred())
+			policyChainName := rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
+				Tier: "default",
+				Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
+			})
+
+			waitForIptablesChain(felix, policyChainName)
+
+			Expect(checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)).ShouldNot(HaveOccurred())
 
 			iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
 			Expect(err).ShouldNot(HaveOccurred())
@@ -870,22 +880,43 @@ var _ = Describe("DNS Policy Improvements", func() {
 				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^n]*NFQUEUE.*")
 			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-			policyChainName := rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
-				Tier: "default",
-				Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
-			})
-
-			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "cali40d:c19ArGfvjwU6D6ljIxk2xsA")
+			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "rule-name=allow-foobar[^n]*cali40d")
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 		})
 	})
-
 })
 
+// waitForIptablesChain waits for the chain to be programmed on the felix instance. It eventually times out if it waits
+// too long.
+func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
+	Eventually(func() int {
+		iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		re := regexp.MustCompile(fmt.Sprintf(`\-A %s`, chainName))
+		matches := re.FindStringSubmatch(iptablesSaveOutput)
+		return len(matches)
+	}, "10s", "1s").Should(BeNumerically(">", 0))
+}
+
+// checkSingleShotDNSConnectivity sends a single udp request to the domain name from the given workload on port 8055.
+// The dnsServerIP is used to tell the test-connection script what dns server to use to resolve the IP for the domain.
+func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerIP string) error {
+	w.C.EnsureBinary("test-connection")
+	_, err := w.ExecCombinedOutput("/test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+	return err
+}
+
+// getIptablesSavePacketCount searches the given iptables-save output for the iptables rule identified by the chain and
+// rule identifier given, and returns the packet count for that rule. If the rule isn't found, in the output and this function
+// fails the test.
+//
+// The ruleIdentifier is a regex that targets the text in the rule AFTER the chain name.
 func getIptablesSavePacketCount(iptablesSaveOutput, chainName, ruleIdentifier string) int {
 	re := regexp.MustCompile(fmt.Sprintf(`\[(\d*):\d*\]\s-A %s[^\n]*%s.*`, chainName, ruleIdentifier))
 	matches := re.FindStringSubmatch(iptablesSaveOutput)
-	Expect(len(matches)).Should(BeNumerically(">", 0))
+	Expect(len(matches)).Should(BeNumerically(">", 0),
+		fmt.Sprintf("No rule found for chain \"%s\" and identifier \"%s\"", chainName, ruleIdentifier))
 
 	count, err := strconv.Atoi(matches[1])
 	Expect(err).ShouldNot(HaveOccurred())
