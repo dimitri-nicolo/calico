@@ -131,6 +131,8 @@ spec:
               secretKeyRef:
                 key: password
                 name: tigera-ee-performance-hotspots-elasticsearch-access
+          - name: PH_NEED_API
+            value: "True"
         volumeMounts:
           - name: host-volume
             mountPath: /home/idsuser/performance_hotspots/models
