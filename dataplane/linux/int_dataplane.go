@@ -37,6 +37,8 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
+	aws2 "github.com/projectcalico/felix/dataplane/aws"
+
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
@@ -379,6 +381,8 @@ type InternalDataplane struct {
 	loopSummarizer *logutils.Summarizer
 
 	packetProcessor *nfqdnspolicy.PacketProcessor
+	awsStateUpdC    chan *aws2.AWSState
+	awsSubnetMgr    *awsSubnetManager
 }
 
 const (
@@ -1111,6 +1115,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.loopSummarizer,
 		)
 		dp.RegisterManager(awsSubnetManager)
+		dp.awsStateUpdC = awsSubnetManager.ResponseC()
+		dp.awsSubnetMgr = awsSubnetManager
 	}
 
 	if config.IPv6Enabled {
@@ -2148,6 +2154,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 					}
 				}
 			}
+		case msg := <-d.awsStateUpdC:
+			d.awsSubnetMgr.OnAWSStateUpdate(msg)
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
