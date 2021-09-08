@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
+	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
-	github.com/go-openapi/spec v0.20.3 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -22,8 +22,7 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	k8s.io/api v0.21.1 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20210527164424-3c818078ee3d // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.1 // indirect
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/projectcalico/libcalico-go v1.7.2-0.20210812140029-ea2cbedbe2e7
+replace github.com/projectcalico/libcalico-go => github.com/projectcalico/libcalico-go v1.7.2-0.20210907233349-2b6de0513146
