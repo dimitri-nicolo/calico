@@ -236,7 +236,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 			// apply XDP policy to felix[1] blocking felixes[0] by IP
 			serverSelector := "proto == 'udp' && role=='server'"
 			xdpPolicy := api.NewGlobalNetworkPolicy()
-			xdpPolicy.Name = "xdp-filter-u" // keep name short, so it matches with the iptables chain name
+			xdpPolicy.Name = "xfu" // keep name short, so it matches with the iptables chain name
 			xdpPolicy.Spec.Order = &order
 			xdpPolicy.Spec.DoNotTrack = true
 			xdpPolicy.Spec.ApplyOnForward = true
@@ -252,7 +252,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 
 			serverSelector = "proto == 'tcp' && role=='server'"
 			xdpPolicy = api.NewGlobalNetworkPolicy()
-			xdpPolicy.Name = "xdp-filter-t" // keep name short, so it matches with the iptables chain name
+			xdpPolicy.Name = "xft" // keep name short, so it matches with the iptables chain name
 			xdpPolicy.Spec.Order = &order
 			xdpPolicy.Spec.DoNotTrack = true
 			xdpPolicy.Spec.ApplyOnForward = true
@@ -271,8 +271,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 			_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "allow-all", options.DeleteOptions{})
 			_, _ = client.GlobalNetworkSets().Delete(utils.Ctx, "xdpblacklistudp", options.DeleteOptions{})
 			_, _ = client.GlobalNetworkSets().Delete(utils.Ctx, "xdpblacklisttcp", options.DeleteOptions{})
-			_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xdp-filter-t", options.DeleteOptions{})
-			_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xdp-filter-u", options.DeleteOptions{})
+			_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xft", options.DeleteOptions{})
+			_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xfu", options.DeleteOptions{})
 		})
 
 		It("should have XDP program attached", func() {
@@ -283,8 +283,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 		Context("with untracked policies deleted again", func() {
 			BeforeEach(func() {
 				time.Sleep(time.Second)
-				_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xdp-filter-t", options.DeleteOptions{})
-				_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xdp-filter-u", options.DeleteOptions{})
+				_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xft", options.DeleteOptions{})
+				_, _ = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xfu", options.DeleteOptions{})
 			})
 
 			It("should not have XDP program attached", func() {
@@ -351,7 +351,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				Expect(utils.LastRunOutput).To(ContainSubstring(`100% packet loss`))
 
 				if !bpfEnabled {
-					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdp-filter-t")
+					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the raw small packets should've been
 					// blocked by XDP
@@ -383,7 +383,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				Expect(utils.LastRunOutput).To(ContainSubstring(`100% packet loss`))
 
 				if !bpfEnabled {
-					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdp-filter-t")
+					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the icmp packets should've been
 					// blocked by XDP
@@ -418,7 +418,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccUDP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdp-filter-u")
+					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xfu")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
@@ -439,7 +439,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccTCP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdp-filter-t")
+					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
@@ -454,10 +454,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccUDP)
 				expectBlacklisted(ccTCP)
 
-				_, err := client.GlobalNetworkPolicies().Delete(utils.Ctx, "xdp-filter-u", options.DeleteOptions{})
+				_, err := client.GlobalNetworkPolicies().Delete(utils.Ctx, "xfu", options.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xdp-filter-t", options.DeleteOptions{})
+				_, err = client.GlobalNetworkPolicies().Delete(utils.Ctx, "xft", options.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				time.Sleep(applyPeriod)
@@ -564,7 +564,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccUDP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdp-filter-u")
+					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xfu")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
@@ -585,7 +585,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccTCP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xdp-filter-t")
+					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
