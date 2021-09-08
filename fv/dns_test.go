@@ -781,9 +781,7 @@ var _ = Describe("DNS Policy Improvements", func() {
 		dnsserver = dns.StartServer(dnsRecords)
 
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsserver.IP
-		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
-		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
 		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 

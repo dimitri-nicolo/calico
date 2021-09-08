@@ -414,10 +414,8 @@ type Config struct {
 	DebugMemoryProfilePath          string        `config:"file;;"`
 	DebugCPUProfilePath             string        `config:"file;/tmp/felix-cpu-<timestamp>.pprof;"`
 	DebugDisableLogDropping         bool          `config:"bool;false"`
-	DebugNfqueueEnableFDLogging     bool          `config:"bool;false"`
 	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
-	DebugConsoleEnabled             bool          `config:"bool;false"`
 	DebugUseShortPollIntervals      bool          `config:"bool;false"`
 	DebugCloudWatchLogsFile         string        `config:"file;;"`
 	DebugWindowsPktMonStartArgs     string        `config:"string;"`
