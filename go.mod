@@ -4,9 +4,9 @@ go 1.15
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210907220214-a1e85de83a3c
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210906140938-4c38ec7adfc5
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210907223425-25717379d6f5
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210908011451-59dd9bf7b0f4
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210908141555-2adb0d0808a8
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210908082140-99f1cd2d6f10
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210908083805-b889130dc39e
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
