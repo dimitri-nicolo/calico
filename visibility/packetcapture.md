@@ -31,7 +31,6 @@ format used for capturing traffic by network tools.
 
 This feature is in a technical preview stage. PacketCapture does not support:
 
-- Capping a capture using either time or size
 - Storing traffic in pcapng traffic
 - Capturing traffic from a multi-nic setup
 - Capture traffic from Calico nodes running on Windows hosts
@@ -45,9 +44,6 @@ This feature is in a technical preview stage. PacketCapture does not support:
 - [Access packet capture files](#access-packet-capture-files)
 
 #### Capture live traffic
-
-
-<iframe width="260" height="127" src="https://www.youtube.com/embed/bKTkvywT7s4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 
 Capturing live traffic will start by creating a [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource.
@@ -104,6 +100,30 @@ spec:
 ```
 
 More examples for filtering traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
+
+#### Schedule to capture traffic
+
+You can schedule a `PacketCapture` to start and/or stop at a certain time. Start and end time are defined using RFC3339 format. 
+
+In the following example, we schedule to capture traffic for 10 minutes between 00:30 UTC and 00:40 UTC for all workload
+endpoints in `sample` namespace.
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: PacketCapture
+metadata:
+  name: sample-capture-all
+  namespace: sample
+spec:
+  selector: all()
+  startTime: "2021-09-08T00:30:00Z"
+  endTime: "2021-09-08T00:40:00Z"
+```
+
+In order to check the state of the capture, you can monitor to status of a `PacketCapture` for each node there are pods 
+scheduled and targeted by the selector to cycle between states: `Scheduled`, `Capturing` and `Finished`.
+
+More examples for scheduling to capture traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
 
 #### Configure packet capture rotation
 
@@ -229,6 +249,7 @@ status:
     fileNames:
     - pod_cali.pcap
     node: node-0
+    state: Capturing
 ```
 
 To access the capture files locally, you can use the following api that is available via tigera-manager service:
@@ -277,7 +298,7 @@ kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sam
 Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
 The active packet capture file will be identified using the following schema: {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
 
-Packet capture files will not be deleted after a capture has stopped. 
+Packet capture files will be deleted after the packet capture resource has been deleted.
 
 [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI can be used to clean capture files:
 
