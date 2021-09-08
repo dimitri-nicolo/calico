@@ -87,6 +87,8 @@ spec:
           privileged: true
           allowPrivilegeEscalation: true
         env:
+          - name: ELASTIC_HOST
+            value: "tigera-secure-es-gateway-http.tigera-elasticsearch.svc"
           - name: CLUSTER_NAME
             value: "cluster"
           - name: ELASTIC_PORT
