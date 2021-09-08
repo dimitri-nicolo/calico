@@ -2,7 +2,7 @@
 # Copyright 2019-21 Tigera Inc. All rights reserved.
 ##############################################################################
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
-GO_BUILD_VER   ?= v0.53
+GO_BUILD_VER   ?= v0.55
 GIT_USE_SSH     = true
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 API_REPO        = github.com/tigera/api
