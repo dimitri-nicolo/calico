@@ -86,12 +86,21 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				return svc
 			}
 
-			assertIPPortInIPSet := func(ipSetID string, ip string, port string, felixes []*infrastructure.Felix, exists bool) {
+			assertIPPortInIPSetErr := func(ipSetID string,
+				ip string,
+				port string,
+				felixes []*infrastructure.Felix,
+				exists bool,
+				canErr bool) {
+
 				results := make(map[*infrastructure.Felix]struct{}, len(felixes))
 				Eventually(func() bool {
 					for _, felix := range felixes {
 						out, err := felix.ExecOutput("ipset", "list", ipSetID)
 						log.Infof("felix ipset list output %s", out)
+						if canErr && err != nil {
+							continue
+						}
 						Expect(err).NotTo(HaveOccurred())
 						if (strings.Contains(out, ip) && strings.Contains(out, port)) == exists {
 							results[felix] = struct{}{}
@@ -99,6 +108,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					}
 					return len(results) == len(felixes)
 				}, "90s", "5s").Should(BeTrue())
+			}
+
+			assertIPPortInIPSet := func(ipSetID string,
+				ip string,
+				port string,
+				felixes []*infrastructure.Felix,
+				exists bool) {
+				assertIPPortInIPSetErr(ipSetID, ip, port, felixes, exists, false)
 			}
 
 			assertPortInIPSet := func(ipSetID string, port string, felixes []*infrastructure.Felix, exists bool) {
@@ -126,6 +143,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				options.NATOutgoingEnabled = true
 				options.AutoHEPsEnabled = true
+				options.DelayFelixStart = true
+				options.TriggerDelayedFelixStart = true
 
 				// XXX until we can safely remove roting rules and not break other tests
 				options.EnableIPv6 = false
@@ -135,10 +154,16 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					options.IPIPRoutesEnabled = false
 				}
 
-				options.ExtraEnvVars["FELIX_TPROXYMODE"] = TPROXYMode
 				options.ExtraEnvVars["FELIX_DEFAULTENDPOINTTOHOSTACTION"] = "Accept"
 				// XXX until we can safely remove roting rules and not break other tests
 				options.EnableIPv6 = false
+
+				var config *api.FelixConfiguration
+				config = api.NewFelixConfiguration()
+				config.SetName("default")
+				config.Spec.TPROXYMode = TPROXYMode
+
+				options.InitialFelixConfiguration = config
 
 				infra = getInfra()
 				clientset = infra.(*infrastructure.K8sDatastoreInfra).K8sClient
@@ -952,5 +977,102 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 			})
 
+			Context("Enabling TPROXY with life connections", func() {
+				var pod, svc string
+
+				BeforeEach(func() {
+					utils.UpdateFelixConfig(calicoClient, func(fc *api.FelixConfiguration) {
+						fc.Spec.TPROXYMode = "Disabled"
+					})
+
+					// Wait until the ipsets disappear
+					Eventually(func() bool {
+						for _, felix := range felixes {
+							if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-services"); err == nil {
+								return false
+							}
+						}
+						return true
+					}, "20s", "1s").Should(BeTrue())
+				})
+
+				JustBeforeEach(func() {
+					pod = w[0][0].IP + ":8055"
+					svc = clusterIP + ":8090"
+
+					for _, f := range felixes {
+						// Mimic the kube-proxy service iptable clusterIP rule.
+						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-p", "tcp",
+							"-d", clusterIP,
+							"-m", "tcp", "--dport", "8090",
+							"-j", "DNAT", "--to-destination",
+							pod)
+						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
+							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+							"-W", "100000", // How often to probe the lock in microsecs.
+							"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
+							"-j", "MASQUERADE", "--random-fully")
+					}
+					// for this context create service before each test
+					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
+					if TPROXYMode == "Enabled" {
+						v1Svc.ObjectMeta.Annotations = map[string]string{l7LoggingAnnotation: "true"}
+					}
+					createService(v1Svc, clientset)
+				})
+
+				It("should not break existing connections", func() {
+
+					pc := w[1][0].StartPersistentConnection(
+						clusterIP, 8090, workload.PersistentConnectionOpts{
+							MonitorConnectivity: true,
+						})
+					defer pc.Stop()
+
+					Eventually(pc.PongCount, "5s").Should(
+						BeNumerically(">", 0),
+						"Expected to see pong responses on the connection but didn't receive any")
+					log.Info("Pongs received within last 1s")
+
+					// Connection should be proxied on the pod's local node
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+
+					By("Enabling TPROXY")
+					utils.UpdateFelixConfig(calicoClient, func(fc *api.FelixConfiguration) {
+						fc.Spec.TPROXYMode = TPROXYMode
+					})
+
+					By("asserting that ipaddress, port exists in ipset ")
+					assertIPPortInIPSetErr(TPROXYServicesIPSetV4, clusterIP, "8090", felixes, true, true)
+
+					cc.Expect(Some, w[1][1], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.CheckConnectivity()
+
+					// Check the we did not break the persistent connection.
+					prevCount := pc.PongCount()
+					Eventually(pc.PongCount, "5s").Should(
+						BeNumerically(">", prevCount),
+						"Expected to see pong responses on the connection but didn't receive any")
+					log.Info("Pongs received within last 1s")
+
+					// Connection should be proxied on the pod's local node
+					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+
+					// New connection should be proxied
+					cc.ResetExpectations()
+					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
+					cc.CheckConnectivity()
+
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+				})
+			})
 		})
 }
