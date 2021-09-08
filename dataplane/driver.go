@@ -440,7 +440,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				logutils.DumpHeapMemoryProfile(configParams.DebugMemoryProfilePath)
 			},
 			HealthAggregator:                healthAggregator,
-			DebugStartDebugConsole:          configParams.DebugStartDebugConsole,
+			DebugConsoleEnabled:             configParams.DebugConsoleEnabled,
 			DebugNfqueueEnableFDLogging:     configParams.DebugNfqueueEnableFDLogging,
 			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
 			DebugUseShortPollIntervals:      configParams.DebugUseShortPollIntervals,

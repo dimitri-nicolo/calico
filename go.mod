@@ -31,7 +31,6 @@ require (
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/lestrrat-go/strftime v1.0.3 // indirect
 	github.com/libp2p/go-reuseport v0.0.1
-	github.com/mdlayher/netlink v1.1.0
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.14.2

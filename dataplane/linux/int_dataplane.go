@@ -216,7 +216,7 @@ type Config struct {
 	SidecarAccelerationEnabled bool
 
 	DebugSimulateDataplaneHangAfter time.Duration
-	DebugStartDebugConsole          bool
+	DebugConsoleEnabled             bool
 	DebugUseShortPollIntervals      bool
 	DebugNfqueueEnableFDLogging     bool
 
@@ -1271,7 +1271,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	}
 
-	if config.DebugStartDebugConsole {
+	if config.DebugConsoleEnabled {
 		go startDebugConsole()
 	}
 

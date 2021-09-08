@@ -110,8 +110,8 @@ func (nf *nfQueue) PacketAttributesChannel() <-chan gonfqueue.Attribute {
 	return nf.attrsChannel
 }
 
-// printConnFD logs int connection file descriptor. This should never be used in production, and is only here so we can
-// use the file descriptor to kill the nfqueue connection for fv tests.
+// debugPrintConnFD logs the connection file descriptor. This should never be used in production, and is only here so we
+// can use the file descriptor to kill the nfqueue connection for fv tests.
 func (nf *nfQueue) debugPrintConnFD() {
 	path := []string{"sock", "s", "fd", "file", "pfd", "Sysfd"}
 	current := reflect.ValueOf(nf.Con)

@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,6 +23,7 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/felix/fv/dns"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
@@ -752,11 +752,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 })
 
-type dnsRecordIP struct {
-	TTL uint32 `json:"ttl"`
-	IP  string `json:"ip"`
-}
-
 var _ = Describe("DNS Policy Improvements", func() {
 
 	var (
@@ -781,20 +776,14 @@ var _ = Describe("DNS Policy Improvements", func() {
 		workload1IP := "10.65.0.1"
 		workload2IP := "10.65.0.2"
 
-		dnsRecords := map[string][]dnsRecordIP{"foobar.com": {{TTL: 20, IP: workload2IP}}}
+		dnsRecords := map[string][]dns.RecordIP{"foobar.com": {{TTL: 20, IP: workload2IP}}}
 
-		recordsStr, err := json.Marshal(dnsRecords)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		dnsserver = containers.Run("dnsserver",
-			containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
-			"-i", "--privileged", "-e", fmt.Sprintf("IP=%s", "53"), "-e", fmt.Sprintf("PORT=%s", "53"), "-e",
-			fmt.Sprintf("RECORDS=%s", string(recordsStr)), "tigera-test/dns-server:latest")
+		dnsserver = dns.StartServer(dnsRecords)
 
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsserver.IP
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
-		opts.ExtraEnvVars["FELIX_DEBUGSTARTDEBUGCONSOLE"] = "true"
+		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
 		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -840,10 +829,6 @@ var _ = Describe("DNS Policy Improvements", func() {
 
 		// Ensure that Felix is connected to nfqueue
 		_, err = felix.ExecCombinedOutput("cat", "/proc/net/netfilter/nfnetlink_queue")
-		Expect(err).ShouldNot(HaveOccurred())
-
-		// Install netcat so we can run debug console commands.
-		_, err = felix.ExecCombinedOutput("apt-get", "install", "netcat-openbsd", "-y")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 

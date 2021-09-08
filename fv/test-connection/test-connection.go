@@ -174,7 +174,7 @@ func main() {
 				PreferGo: true,
 				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 					d := net.Dialer{
-						Timeout: time.Millisecond * time.Duration(10000),
+						Timeout: 10000 * time.Millisecond,
 					}
 					return d.DialContext(ctx, network, dnsServer)
 				},

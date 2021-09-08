@@ -47,25 +47,25 @@ func main() {
 		log.WithError(err).Fatal("failed to listen")
 	}
 
+	reqBytes := make([]byte, 1024)
 	for {
-		reqBytes := make([]byte, 1024)
-		_, addr, err := u.ReadFrom(reqBytes)
+		bytesRead, addr, err := u.ReadFrom(reqBytes)
 		if err != nil {
 			log.WithError(err).Fatal("failed to read the request")
 		}
 
 		clientAddr := addr
 
-		packet := gopacket.NewPacket(reqBytes, layers.LayerTypeDNS, gopacket.Default)
+		packet := gopacket.NewPacket(reqBytes[:bytesRead], layers.LayerTypeDNS, gopacket.Default)
 		dnsPacket := packet.Layer(layers.LayerTypeDNS)
 
 		tcp, _ := dnsPacket.(*layers.DNS)
 
-		serveDNSResponse(u, clientAddr, tcp, records)
+		sendDNSResponse(u, clientAddr, tcp, records)
 	}
 }
 
-func serveDNSResponse(u *net.UDPConn, clientAddr net.Addr, request *layers.DNS, records map[string][]dns.RecordIP) {
+func sendDNSResponse(u *net.UDPConn, clientAddr net.Addr, request *layers.DNS, records map[string][]dns.RecordIP) {
 	var err error
 
 	response := request
