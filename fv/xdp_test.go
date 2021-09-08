@@ -351,7 +351,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				Expect(utils.LastRunOutput).To(ContainSubstring(`100% packet loss`))
 
 				if !bpfEnabled {
-					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
+					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the raw small packets should've been
 					// blocked by XDP
@@ -383,7 +383,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				Expect(utils.LastRunOutput).To(ContainSubstring(`100% packet loss`))
 
 				if !bpfEnabled {
-					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
+					output, err := felixes[server].ExecOutput("iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should
 					// have 0 packets/bytes because the icmp packets should've been
 					// blocked by XDP
@@ -418,7 +418,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccUDP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xfu")
+					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xfu")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
@@ -439,7 +439,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccTCP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
+					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
@@ -564,7 +564,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccUDP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xfu")
+					utils.Run("docker", "exec", felixes[1].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xfu")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
@@ -585,7 +585,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ XDP tests with initialized 
 				expectBlacklisted(ccTCP)
 
 				if !bpfEnabled {
-					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default.xft")
+					utils.Run("docker", "exec", felixes[3].Name, "iptables", "-t", "raw", "-v", "-n", "-L", "cali-pi-default/default.xft")
 					// the only rule that refers to a cali40-prefixed ipset should have 0 packets/bytes
 					Expect(utils.LastRunOutput).To(MatchRegexp(`(?m)^\s+0\s+0.*cali40s:`))
 				}
