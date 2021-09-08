@@ -5,6 +5,7 @@ package capture_test
 import (
 	"context"
 	"fmt"
+
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -29,6 +30,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 	const name = "capture"
 	const anotherName = "anotherCapture"
 	const namespace = "ns"
+	var capturing = v3.PacketCaptureStateCapturing
+	var finished = v3.PacketCaptureStateFinished
 
 	var packetCaptureNoStatus = v3.PacketCapture{
 		TypeMeta: v1.TypeMeta{
@@ -67,6 +70,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 					Node:      hostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
+					State:     &capturing,
 				},
 			},
 		},
@@ -86,6 +90,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 					Node:      hostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
+					State:     &capturing,
 				},
 			},
 		},
@@ -105,6 +110,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 					Node:      hostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
+					State:     &capturing,
 				},
 			},
 		},
@@ -124,6 +130,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 					Node:      hostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c", "d"},
+					State:     &capturing,
 				},
 			},
 		},
@@ -143,6 +150,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 					Node:      anotherHostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
+					State:     &capturing,
 				},
 			},
 		},
@@ -162,11 +170,13 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 					Node:      anotherHostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
+					State:     &capturing,
 				},
 				{
 					Node:      hostname,
 					Directory: captureDir,
 					FileNames: []string{"a", "b", "c"},
+					State:     &capturing,
 				},
 			},
 		},
@@ -185,6 +195,28 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 				{
 					Node:      hostname,
 					Directory: captureDir,
+					State:     (*v3.PacketCaptureState)(&finished),
+				},
+			},
+		},
+	}
+
+	var updatedPacketCaptureWithInactiveState = v3.PacketCapture{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "",
+			APIVersion: "",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Status: v3.PacketCaptureStatus{
+			Files: []v3.PacketCaptureFile{
+				{
+					Node:      hostname,
+					Directory: captureDir,
+					FileNames: []string{"a", "b", "c"},
+					State:     (*v3.PacketCaptureState)(&finished),
 				},
 			},
 		},
@@ -196,6 +228,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 		},
 		CaptureFiles: []string{"a", "b", "c"},
+		State:        proto.PacketCaptureStatusUpdate_CAPTURING,
 	}
 
 	var anotherStatusUpdate = &proto.PacketCaptureStatusUpdate{
@@ -204,6 +237,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      anotherName,
 		},
 		CaptureFiles: []string{"a", "b", "c"},
+		State:        proto.PacketCaptureStatusUpdate_CAPTURING,
 	}
 
 	var overrideStatusUpdate = &proto.PacketCaptureStatusUpdate{
@@ -212,6 +246,7 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Name:      name,
 		},
 		CaptureFiles: []string{"a", "b", "c", "d"},
+		State:        proto.PacketCaptureStatusUpdate_CAPTURING,
 	}
 
 	var statusUpdateNoFiles = &proto.PacketCaptureStatusUpdate{
@@ -219,6 +254,16 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 			Namespace: namespace,
 			Name:      name,
 		},
+		State: proto.PacketCaptureStatusUpdate_FINISHED,
+	}
+
+	var statusUpdateInactiveState = &proto.PacketCaptureStatusUpdate{
+		Id: &proto.PacketCaptureID{
+			Namespace: namespace,
+			Name:      name,
+		},
+		CaptureFiles: []string{"a", "b", "c"},
+		State:        proto.PacketCaptureStatusUpdate_FINISHED,
 	}
 
 	It("Updates the status of the packet capture", func(done Done) {
@@ -454,6 +499,36 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 		}).Should(ConsistOf([]string{"Get", "Update"}))
 	})
 
+	It("Updates the status of the packet capture with a different state", func(done Done) {
+		defer close(done)
+
+		var calicoClient = new(mockedCalicoClient)
+		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
+		var packetCapture = packetCaptureWithStatus.DeepCopy()
+
+		// Mock CalicoClient to expect one Get and one Update request
+		calicoClient.mock.On("Get", mock.Anything, namespace, name,
+			options.GetOptions{}).Return(packetCapture, nil).Once()
+		calicoClient.mock.On("Update", mock.Anything, &updatedPacketCaptureWithInactiveState,
+			options.SetOptions{}).Return(&updatedPacketCaptureWithInactiveState, nil).Once()
+
+		// Start StatusWriter
+		var statusWriter = capture.NewStatusWriter(hostname, captureDir, calicoClient, updatesFromDataPlane, 1*time.Millisecond)
+		go statusWriter.Start()
+		defer statusWriter.Stop()
+
+		// Send an update from data plane
+		updatesFromDataPlane <- statusUpdateInactiveState
+
+		// Expect 2 calls to be invoked: one for get and one for update
+		Eventually(func() []string {
+			var methods []string
+			for _, call := range calicoClient.mock.Calls {
+				methods = append(methods, call.Method)
+			}
+			return methods
+		}).Should(ConsistOf([]string{"Get", "Update"}))
+	})
 })
 
 type mockedCalicoClient struct {

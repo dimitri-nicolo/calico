@@ -850,6 +850,8 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2 h1:3NLDcfatLo9DzO93d1+efPeoryl3aSqOSjtvQKZ7DWI=
 github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
+github.com/tigera/api v0.0.0-20210907142848-f71992c952a6 h1:eLwKc4pO7KVODNrHYSIhMicWNaT55jiXOQeIyMg3Bro=
+github.com/tigera/api v0.0.0-20210907142848-f71992c952a6/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210906123903-99411d519d77 h1:EiAdkHasAwvgs/a50j4Exgw6eTN4EuMF5gXXJdOrVJU=
@@ -873,7 +875,6 @@ github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtX
 github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
 github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf/go.mod h1:+SR5DhBJrl6ZM7CoCKvpw5BKroDKQ+PJqOg65H/2ktk=
-github.com/vishvananda/netlink v1.1.0 h1:1iyaYNBLmP6L0220aDnYQpo1QEV4t4hJ+xEEhhJH8j0=
 github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYppBueQtXaqoE=
 github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727 h1:ocCC8f9ic0JubgwloXlpNYXxn3twdQ8ERel0jqH8rmw=
 github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhgX83tXhKS2B/PRMpOho=

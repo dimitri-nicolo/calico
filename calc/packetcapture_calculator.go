@@ -8,6 +8,8 @@ import (
 
 	"k8s.io/utils/strings"
 
+	"github.com/projectcalico/felix/calc/capture"
+
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -58,6 +60,8 @@ func (pcc *PacketCaptureCalculator) onMatchStarted(selID, labelId interface{}) {
 func (pcc *PacketCaptureCalculator) extractSpecification(pc *v3.PacketCapture) PacketCaptureSpecification {
 	return PacketCaptureSpecification{
 		BPFFilter: RenderBPFFilter(pc.Spec.Filters, strings.JoinQualifiedName(pc.Namespace, pc.Name)),
+		StartTime: capture.RenderStartTime(pc.Spec.StartTime),
+		EndTime:   capture.RenderEndTime(pc.Spec.EndTime),
 	}
 }
 
@@ -131,13 +135,18 @@ func (pcc *PacketCaptureCalculator) updatePacketCapture(capture *v3.PacketCaptur
 }
 
 func (pcc *PacketCaptureCalculator) hasOtherFieldsUpdated(old *v3.PacketCapture, new *v3.PacketCapture) bool {
-	var otherFieldsUpdated = false
 	if old != nil {
 		if !reflect.DeepEqual(old.Spec.Filters, new.Spec.Filters) {
-			otherFieldsUpdated = true
+			return true
+		}
+		if !reflect.DeepEqual(old.Spec.StartTime, new.Spec.StartTime) {
+			return true
+		}
+		if !reflect.DeepEqual(old.Spec.EndTime, new.Spec.EndTime) {
+			return true
 		}
 	}
-	return otherFieldsUpdated
+	return false
 }
 
 func (pcc *PacketCaptureCalculator) parseSelector(capture *v3.PacketCapture) sel.Selector {

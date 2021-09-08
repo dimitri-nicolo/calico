@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/calc/capture"
 
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -82,8 +83,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect a single update for packet-capture-all -> wep1
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("2 workload endpoints sent before capture with selector all()", []api.Update{
@@ -114,12 +116,14 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect two updates for packet-capture-all -> wep1, wep2
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep2Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep2Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("2 workload endpoints sent before and after capture with selector all()", []api.Update{
@@ -150,12 +154,14 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect two updates for packet-capture-all -> wep1, wep2
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep2Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep2Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("2 workload endpoints sent after capture with selector all()", []api.Update{
@@ -186,12 +192,14 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect two updates for packet-capture-all -> wep1, wep2
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep2Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep2Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("2 workload endpoints sent after capture with selector label == 'a'", []api.Update{
@@ -222,8 +230,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect one update for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("2 workload endpoints sent after capture with selector label != 'b'", []api.Update{
@@ -254,8 +263,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect one update for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("update capture with selector label == 'b'", []api.Update{
@@ -294,19 +304,22 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect one update for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 			// Expect one update for packet-capture-selection -> wep2
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep2Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep2Key,
+				specification: EmptySpecification,
 			},
 		}, []output{
 			// Expect one removal for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}),
 		Entry("delete capture", []api.Update{
@@ -345,8 +358,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect one update for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}, []output{
 			// Expect one removal for packet-capture-selection -> wep1
@@ -383,14 +397,16 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect one update for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}, []output{
 			// Expect one removal for packet-capture-selection -> wep1
 			{
-				captureKey: CaptureSelectionKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureSelectionKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}),
 		Entry("delete update without an new update", []api.Update{
@@ -448,8 +464,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect a single update for packet-capture-dev -> wep-profile
 			{
-				captureKey: CaptureDevKey,
-				endpoint:   WepWithProfileKey,
+				captureKey:    CaptureDevKey,
+				endpoint:      WepWithProfileKey,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("1 workload endpoint 1 profile sent before capture with selector profile == 'dev'", []api.Update{
@@ -480,8 +497,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect a single update for packet-capture-dev -> wep-profile
 			{
-				captureKey: CaptureDevKey,
-				endpoint:   WepWithProfileKey,
+				captureKey:    CaptureDevKey,
+				endpoint:      WepWithProfileKey,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("1 workload endpoint 1 profile sent after capture with selector profile == 'dev'", []api.Update{
@@ -512,8 +530,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect a single update for packet-capture-dev -> wep-profile
 			{
-				captureKey: CaptureDevKey,
-				endpoint:   WepWithProfileKey,
+				captureKey:    CaptureDevKey,
+				endpoint:      WepWithProfileKey,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("capture a different namespace", []api.Update{
@@ -561,8 +580,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect a single update for packet-capture-all -> wep1
 			{
-				captureKey: CaptureAllKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureAllKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 		}, []output{}),
 		Entry("unknown type is ignored", []api.Update{
@@ -599,6 +619,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep1Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(tcp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 		}, []output{}),
@@ -630,8 +652,9 @@ var _ = Describe("PacketCaptureCalculator", func() {
 		}, []output{
 			// Expect start for packet-capture-bpf-filter  -> wep1
 			{
-				captureKey: CaptureBPFFilterKey,
-				endpoint:   Wep1Key,
+				captureKey:    CaptureBPFFilterKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
 			},
 			// Expect update for packet-capture-bpf-filter with bfp filter for tcp protocol -> wep1
 			{
@@ -639,6 +662,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep1Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(tcp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 		}, []output{}),
@@ -674,6 +699,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep1Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(tcp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 			// Expect update for packet-capture-bpf-filter with bfp filter for udp protocol -> wep1
@@ -682,6 +709,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep1Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(udp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 		}, []output{}),
@@ -725,6 +754,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep1Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(tcp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 			// Expect start for packet-capture-bpf-filter  with bfp filter for tcp protocol -> wep2
@@ -733,6 +764,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep2Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(tcp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 			// Expect update for packet-capture-bpf-filter with bfp filter for udp protocol -> wep1
@@ -741,6 +774,8 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep2Key,
 				specification: calc.PacketCaptureSpecification{
 					BPFFilter: "(udp)",
+					StartTime: capture.MinTime,
+					EndTime:   capture.MaxTime,
 				},
 			},
 		}, []output{
@@ -750,5 +785,161 @@ var _ = Describe("PacketCaptureCalculator", func() {
 				endpoint:   Wep1Key,
 			},
 		}),
+		Entry("1 capture added and then updated with a start/end time", []api.Update{
+			// update for packet capture for new packet-capture-start-stop
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureAllValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-start-stop with start and end time
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureStartStopValue,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect start for packet-capture-start-stop  -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
+			},
+			// Expect update for packet-capture-start-stop with start & endtime -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: StartStopSpecification,
+			},
+		}, []output{}),
+		Entry("1 capture added with start/stop and then updated without these fields", []api.Update{
+			// update for packet capture for new packet-capture-start-stop with start and end time
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureStartStopValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-start-stop without start and end time
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureAllValue,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect update for packet-capture-start-stop with start & endtime -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: StartStopSpecification,
+			},
+			// Expect start for packet-capture-start-stop  -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: EmptySpecification,
+			},
+		}, []output{}),
+		Entry("1 capture added with start-stop then updated with start time", []api.Update{
+			// update for packet capture for new packet-capture-start-stop
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureStartStopValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-start-stop with a new start time
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureUpdatedStart,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect start for packet-capture-start-stop with start-stop time -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: StartStopSpecification,
+			},
+			// Expect update for packet-capture-start-stop with start time -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: UpdatedStartSpecification,
+			},
+		}, []output{}),
+		Entry("1 capture added with start-stop then updated with end time", []api.Update{
+			// update for packet capture for new packet-capture-start-stop
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureStartStopValue,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update for workload endpoint wep1
+			{
+				KVPair: model.KVPair{
+					Key:   Wep1Key,
+					Value: Wep1Value,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			},
+			// update packet-capture-start-stop with a new end time
+			{
+				KVPair: model.KVPair{
+					Key:   CaptureStartStopKey,
+					Value: CaptureUpdatedEnd,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			},
+		}, []output{
+			// Expect start for packet-capture-start-stop with start-stop time -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: StartStopSpecification,
+			},
+			// Expect update for packet-capture-start-stop with end time -> wep1
+			{
+				captureKey:    CaptureStartStopKey,
+				endpoint:      Wep1Key,
+				specification: UpdatedEndSpecification,
+			},
+		}, []output{}),
 	)
 })

@@ -1,6 +1,7 @@
 syntax = "proto3";
 package felix;
 option go_package = "proto";
+import "google/protobuf/timestamp.proto";
 
 service PolicySync {
   // On this API, only the following payloads will be sent:
@@ -778,8 +779,17 @@ message PacketCaptureID {
 message PacketCaptureStatusUpdate {
   PacketCaptureID id = 1;
   repeated string capture_files = 2;
+  enum PacketCaptureState {
+    SCHEDULED = 0;
+    CAPTURING = 1;
+    FINISHED = 2;
+    ERROR = 3;
+  }
+  PacketCaptureState state = 3;
 }
 
 message PacketCaptureSpecification {
   string bpfFilter = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
 }

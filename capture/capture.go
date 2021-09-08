@@ -3,12 +3,15 @@
 package capture
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	calcCapture "github.com/projectcalico/felix/calc/capture"
 
 	"github.com/projectcalico/felix/proto"
 
@@ -34,8 +37,12 @@ const defaultReadTimeout = 1 * time.Second
 
 // Capture starts/stops a packet capture for an active interface
 type Capture interface {
+	// Start starts capturing traffic from an active interface
 	Start() error
+	// Stop stops capturing traffic from an interface
 	Stop()
+	// StopAndClean stops capturing traffic from an interface and cleans any residue resources
+	StopAndClean() error
 }
 
 // PcapFile writes packets captured from an active interface to a pcap file
@@ -44,6 +51,8 @@ type PcapFile interface {
 	Write(chan gopacket.Packet) error
 	// Done stops capture and closes all used resources. Should not be used without Write()
 	Done()
+	// Clean deletes any lingering pcap files. Should not be used without Done()
+	Clean() error
 }
 
 type rotatingPcapFile struct {
@@ -59,6 +68,9 @@ type rotatingPcapFile struct {
 	done            chan struct{}
 	isDone          bool
 	statusUpdates   chan interface{}
+	bpfFilter       string
+	startTime       time.Time
+	endTime         time.Time
 
 	// the parameters below should not be made available to users
 	currentSize  int
@@ -68,7 +80,8 @@ type rotatingPcapFile struct {
 	handle       *pcap.Handle
 	ticker       *time.Ticker
 	loggingID    string
-	bpfFilter    string
+	context      context.Context
+	cancel       context.CancelFunc
 }
 
 type Option func(file *rotatingPcapFile)
@@ -108,6 +121,20 @@ func WithBPFFilter(filter string) Option {
 	}
 }
 
+// WithStartTime adds a startTime to start capturing traffic
+func WithStartTime(startTime time.Time) Option {
+	return func(c *rotatingPcapFile) {
+		c.startTime = startTime
+	}
+}
+
+// WithEndTime adds an endTime to stop capturing traffic
+func WithEndTime(endTime time.Time) Option {
+	return func(c *rotatingPcapFile) {
+		c.endTime = endTime
+	}
+}
+
 // NewRotatingPcapFile creates a rotatingPcapFile. It will capture traffic from a live interface
 // defined by deviceName and store under a specified directory. The directory used to stored traffic is
 // defined by {directory}/{namespace}/{captureName}, where directory is a general directory to store all
@@ -115,7 +142,10 @@ func WithBPFFilter(filter string) Option {
 // Traffic will be stored on disk using pcap file format. All pcap files will have a name that matches
 // {podName}_{deviceName}. The pcap file that is currently used for logging will have {podName}_{deviceName}.pcap
 // format, while older files will have {podName}_{deviceName}.{rotationTimestamp}.pcap. Pcap files will be rotated using
-// both time and size and we only keep a predefined number of backup files.
+// both time and size, and we only keep a predefined number of backup files.
+// A PacketCapture can be scheduled to start and/or stop at certain times defined by the user. In this case values are
+// not provided, it will start as soon as the PacketCapture resource is configured and continue until the resource is
+// deleted
 func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName string, statusUpdates chan interface{}, opts ...Option) *rotatingPcapFile {
 
 	const (
@@ -127,6 +157,7 @@ func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName 
 	var captureDirectory = filepath.Join(directory, namespace, captureName)
 	var baseName = fmt.Sprintf("%s_%s", podName, deviceName)
 	var loggingID = fmt.Sprintf("%s/%s/%s", namespace, captureName, deviceName)
+	var ctx, cancel = context.WithCancel(context.Background())
 
 	var capture = &rotatingPcapFile{
 		directory:       captureDirectory,
@@ -140,6 +171,10 @@ func NewRotatingPcapFile(directory, namespace, captureName, podName, deviceName 
 		done:            make(chan struct{}),
 		statusUpdates:   statusUpdates,
 		loggingID:       loggingID,
+		context:         ctx,
+		cancel:          cancel,
+		startTime:       calcCapture.MinTime,
+		endTime:         calcCapture.MaxTime,
 	}
 
 	for _, opt := range opts {
@@ -245,9 +280,15 @@ func (capture *rotatingPcapFile) rotate() error {
 
 	var files = capture.cleanOlderFiles()
 
-	capture.updateStatus(capture.extractFileNames(files))
+	capture.updateStatus(capture.extractFileNamesWithCurrentFile(files), proto.PacketCaptureStatusUpdate_CAPTURING)
 
 	return nil
+}
+
+func (capture *rotatingPcapFile) extractFileNamesWithCurrentFile(files []os.FileInfo) []string {
+	// current capture file was previously filtered when listing the files
+	// and needs to be appended to the received files
+	return append(capture.extractFileNames(files), capture.currentCaptureFileName())
 }
 
 func (capture *rotatingPcapFile) extractFileNames(files []os.FileInfo) []string {
@@ -255,13 +296,6 @@ func (capture *rotatingPcapFile) extractFileNames(files []os.FileInfo) []string 
 	for _, f := range files {
 		fileNames = append(fileNames, f.Name())
 	}
-
-	// current capture file was previously filtered when listing the files
-	// and needs to be appended to the received files
-	fileNames = append(fileNames, capture.currentCaptureFileName())
-
-	// Sort files in an ascending alphanumerical
-	sort.Strings(fileNames)
 
 	return fileNames
 }
@@ -277,13 +311,14 @@ func (capture *rotatingPcapFile) cleanOlderFiles() []os.FileInfo {
 		return nil
 	}
 
-	err, files := capture.listFiles()
+	err, files := capture.listFiles(true)
 
 	if err != nil {
 		log.WithField("CAPTURE", capture.loggingID).WithError(err).Errorf("Failed to list directory %s", capture.directory)
+		return files
 	}
 
-	// Sort files in an ascending order using last modification timestamp
+	// Sort files in ascending order using last modification timestamp
 	sort.Slice(files, func(current, next int) bool {
 		return files[current].ModTime().UnixNano() < files[next].ModTime().UnixNano()
 	})
@@ -305,13 +340,13 @@ func (capture *rotatingPcapFile) cleanOlderFiles() []os.FileInfo {
 	return files[cutOffIndex:]
 }
 
-func (capture *rotatingPcapFile) listFiles() (error, []os.FileInfo) {
+func (capture *rotatingPcapFile) listFiles(filterCurrent bool) (error, []os.FileInfo) {
 	var files []os.FileInfo
 	var err error
 
 	err = filepath.Walk(capture.directory, func(path string, info os.FileInfo, err error) error {
 		if info != nil && !info.IsDir() && strings.HasSuffix(info.Name(), ".pcap") {
-			if info.Name() != capture.currentCaptureFileName() {
+			if !filterCurrent || info.Name() != capture.currentCaptureFileName() {
 				files = append(files, info)
 			}
 		}
@@ -332,11 +367,14 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	}
 	defer capture.doDone()
 
-	err, files := capture.listFiles()
+	err, files := capture.listFiles(false)
 	if err != nil {
 		return err
 	}
-	capture.updateStatus(capture.extractFileNames(files))
+	capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_CAPTURING)
+
+	var endAfter = capture.endTime.Sub(capture.startTime)
+	log.WithField("CAPTURE", capture.loggingID).Debugf("PacketCapture will stop after %v", endAfter)
 
 	for {
 		select {
@@ -360,11 +398,19 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 			}
 		case <-capture.ticker.C:
 			// rotate based on time
-			log.WithField("CAPTURE", capture.loggingID).Debug("Wil exceed time limit. Will invoke rotation")
+			log.WithField("CAPTURE", capture.loggingID).Debug("Will exceed time limit. Will invoke rotation")
 			if err = capture.tryToRotate(); err != nil {
 				log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not rotate file")
 				return err
 			}
+		case <-time.After(endAfter):
+			log.WithField("CAPTURE", capture.loggingID).Debug("Stop writing packets to pcap files")
+			err, files := capture.listFiles(false)
+			if err != nil {
+				return err
+			}
+			capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_FINISHED)
+			return nil
 		case <-capture.done:
 			return nil
 		}
@@ -376,12 +422,33 @@ func (capture *rotatingPcapFile) doDone() {
 	if err = capture.close(); err != nil {
 		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not close file")
 	}
-	capture.isDone = true
+	close(capture.done)
 	capture.ticker.Stop()
 }
 
 func (capture *rotatingPcapFile) Done() {
+	capture.isDone = true
 	capture.done <- struct{}{}
+}
+
+func (capture *rotatingPcapFile) Clean() error {
+	if !capture.isDone {
+		return fmt.Errorf("capture has not been closed")
+	}
+	var err, files = capture.listFiles(false)
+	if err != nil {
+		return err
+	}
+
+	log.WithField("CAPTURE", capture.loggingID).Debugf("Cleaning files %v", files)
+	for _, file := range files {
+		err = os.Remove(filepath.Join(capture.directory, file.Name()))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (capture *rotatingPcapFile) writePacket(packet gopacket.Packet) error {
@@ -407,6 +474,28 @@ func (capture *rotatingPcapFile) writeHeader() error {
 }
 
 func (capture *rotatingPcapFile) Start() error {
+	if capture.endTime.Before(time.Now()) {
+		return fmt.Errorf("failed to start capture as endTime %v is in the past", capture.endTime)
+	}
+
+	var delay = time.Second * 0
+	if capture.startTime.After(time.Now()) {
+		delay = capture.startTime.Sub(time.Now())
+		log.WithField("CAPTURE", capture.loggingID).Debugf("Setting a delay of %v", delay)
+		capture.updateStatus([]string{}, proto.PacketCaptureStatusUpdate_SCHEDULED)
+	}
+
+	select {
+	case <-time.After(delay):
+		return capture.captureTraffic()
+	case <-capture.context.Done():
+		log.WithField("CAPTURE", capture.loggingID).Debug("Cancelling context")
+	}
+
+	return nil
+}
+
+func (capture *rotatingPcapFile) captureTraffic() error {
 	var err error
 
 	capture.handle, err = pcap.OpenLive(capture.deviceName, int32(maxSizePerPacket), false, defaultReadTimeout)
@@ -426,15 +515,35 @@ func (capture *rotatingPcapFile) Start() error {
 }
 
 func (capture *rotatingPcapFile) Stop() {
+	capture.cancel()
 	capture.Done()
 	capture.handle.Close()
+
+	var err, files = capture.listFiles(false)
+	if err != nil {
+		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not list files")
+	}
+	capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_FINISHED)
 }
 
-func (capture *rotatingPcapFile) updateStatus(fileNames []string) {
+func (capture *rotatingPcapFile) StopAndClean() error {
+	capture.cancel()
+	capture.Done()
+	capture.handle.Close()
+
+	return capture.Clean()
+}
+
+func (capture *rotatingPcapFile) updateStatus(fileNames []string, state proto.PacketCaptureStatusUpdate_PacketCaptureState) {
+	// Sort files in an ascending alphanumerical
+	sort.Strings(fileNames)
+
 	var update = &proto.PacketCaptureStatusUpdate{
 		Id:           &proto.PacketCaptureID{Name: capture.captureName, Namespace: capture.namespace},
 		CaptureFiles: fileNames,
+		State:        state,
 	}
-	log.WithField("CAPTURE", capture.loggingID).Debugf("Sending PacketCaptureStatusUpdate to dataplane for files %v", fileNames)
+	log.WithField("CAPTURE", capture.loggingID).Debugf("Sending PacketCaptureStatusUpdate to dataplane"+
+		" for files %v and state %v", fileNames, state)
 	capture.statusUpdates <- update
 }

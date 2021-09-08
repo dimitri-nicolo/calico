@@ -11,6 +11,7 @@ import (
 	gonfqueue "github.com/florianl/go-nfqueue"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/nfqueue"
 
 	"github.com/google/gopacket"
