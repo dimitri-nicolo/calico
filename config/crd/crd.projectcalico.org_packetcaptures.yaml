@@ -134,7 +134,9 @@ spec:
                         PacketCapture
                       enum:
                       - Capturing
-                      - Inactive
+                      - Finished
+                      - Scheduled
+                      - Error
                       type: string
                   type: object
                 type: array
