@@ -4,6 +4,7 @@ package intdataplane
 
 import (
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -30,6 +31,11 @@ func (m *myMockedCaptures) Remove(key capture.Key) capture.Specification {
 	return args.Get(0).(capture.Specification)
 }
 
+func (m *myMockedCaptures) RemoveAndClean(key capture.Key) (capture.Specification, error) {
+	args := m.Called(key)
+	return args.Get(0).(capture.Specification), args.Error(1)
+}
+
 func (m *myMockedCaptures) Add(key capture.Key, spec capture.Specification) error {
 	args := m.Called(key, spec)
 	return args.Error(0)
@@ -44,8 +50,13 @@ var _ = Describe("PacketCapture Manager", func() {
 		wasPreviouslyAdded     bool
 	}
 
+	emptySpecification := &proto.PacketCaptureSpecification{
+		StartTime: proto.ConvertTime(time.Time{}),
+		EndTime:   proto.ConvertTime(time.Time{}),
+	}
+
 	DescribeTable("Buffers packet captures until interfaces are up",
-		func(updateBatches [][]interface{}, expectedAdditions []output, expectedRemovals []output) {
+		func(updateBatches [][]interface{}, expectedAdditions []output, expectedRemovals []output, expectedRemovalsAndClean []output) {
 			var mockedCaptures = myMockedCaptures{}
 
 			// Mock Add to return the expectedAdditions output
@@ -62,6 +73,12 @@ var _ = Describe("PacketCapture Manager", func() {
 			// We expect Removal to be called only with these values
 			for _, v := range expectedRemovals {
 				mockedCaptures.On("Remove", v.key).Return(v.specification)
+			}
+
+			// Mock RemovalAndClean to return the expectedRemovalsAndClean output
+			// We expect RemovalAndClean to be called only with these values
+			for _, v := range expectedRemovalsAndClean {
+				mockedCaptures.On("RemoveAndClean", v.key).Return(v.specification, v.err)
 			}
 
 			var captureMgr = newCaptureManager(&mockedCaptures, []string{"cali"})
@@ -111,6 +128,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 		}, []output{
@@ -124,7 +142,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				shouldCheckForContains: true,
 				wasPreviouslyAdded:     false,
 			},
-		}, []output{}),
+		}, []output{}, []output{}),
 		Entry("1 capture before interfaces and endpoints are up", [][]interface{}{
 			{
 				// capture update will be processed in a single batch
@@ -136,6 +154,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -168,7 +187,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				shouldCheckForContains: true,
 				wasPreviouslyAdded:     false,
 			},
-		}, []output{}),
+		}, []output{}, []output{}),
 		Entry("1 capture before endpoints and interfaces are up", [][]interface{}{
 			{
 				// capture update will be processed in a single batch
@@ -180,6 +199,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -220,7 +240,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				specification: capture.Specification{DeviceName: "cali123"},
 				err:           fmt.Errorf("cannot start twice"),
 			},
-		}, []output{}),
+		}, []output{}, []output{}),
 		Entry("multiple captures for different endpoints", [][]interface{}{
 			{
 				// capture update will be processed in a single batch
@@ -232,6 +252,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod-1",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -244,6 +265,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod-2",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -305,7 +327,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				shouldCheckForContains: true,
 				wasPreviouslyAdded:     false,
 			},
-		}, []output{}),
+		}, []output{}, []output{}),
 		Entry("overlapping captures for the same endpoint", [][]interface{}{
 			{
 				// capture update will be processed in a single batch
@@ -317,6 +339,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -329,6 +352,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -370,7 +394,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				shouldCheckForContains: true,
 				wasPreviouslyAdded:     false,
 			},
-		}, []output{}),
+		}, []output{}, []output{}),
 		Entry("start/stop for the same endpoint", [][]interface{}{
 			{
 				// capture update will be processed in a single batch
@@ -382,6 +406,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -426,9 +451,9 @@ var _ = Describe("PacketCapture Manager", func() {
 				shouldCheckForContains: true,
 				wasPreviouslyAdded:     false,
 			},
-		}, []output{
+		}, []output{}, []output{
 			{
-				// Expect packet capture to stop
+				// Expect packet capture to stop and clean
 				key: capture.Key{
 					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
 				},
@@ -446,6 +471,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 				&ifaceUpdate{
 					Name:  "cali123",
@@ -488,7 +514,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				specification: capture.Specification{DeviceName: "cali123"},
 				err:           fmt.Errorf("cannot start twice"),
 			},
-		}, []output{}),
+		}, []output{}, []output{}),
 		Entry("interface down stops a capture", [][]interface{}{
 			{
 				// wep update will be processed in a single batch
@@ -500,6 +526,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -548,7 +575,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				specification: capture.Specification{DeviceName: "cali123"},
 				err:           nil,
 			},
-		}),
+		}, []output{}),
 		Entry("start after an interface went down", [][]interface{}{
 			{
 				// wep update will be processed in a single batch
@@ -560,6 +587,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -623,7 +651,7 @@ var _ = Describe("PacketCapture Manager", func() {
 				specification: capture.Specification{DeviceName: "cali123"},
 				err:           nil,
 			},
-		}),
+		}, []output{}),
 		Entry("start/stop for the same endpoint in the same batch does not produce output", [][]interface{}{
 			{
 				// all updates will be processed in a single batch
@@ -635,6 +663,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 				&ifaceUpdate{
 					Name:  "cali123",
@@ -659,7 +688,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					},
 				},
 			},
-		}, []output{}, []output{}),
+		}, []output{}, []output{}, []output{}),
 		Entry("interface up/down in the same batch does not produce output", [][]interface{}{
 			{
 				// all updates will be processed in a single batch
@@ -671,6 +700,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 				&ifaceUpdate{
 					Name:  "cali123",
@@ -690,7 +720,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					State: ifacemonitor.StateDown,
 				},
 			},
-		}, []output{}, []output{}),
+		}, []output{}, []output{}, []output{}),
 		Entry("1 capture update after the capture started", [][]interface{}{
 			{
 				// capture update will be processed in a single batch
@@ -702,6 +732,7 @@ var _ = Describe("PacketCapture Manager", func() {
 					Endpoint: &proto.WorkloadEndpointID{
 						WorkloadId: "default/sample-pod",
 					},
+					Specification: emptySpecification,
 				},
 			},
 			{
@@ -735,6 +766,8 @@ var _ = Describe("PacketCapture Manager", func() {
 					},
 					Specification: &proto.PacketCaptureSpecification{
 						BpfFilter: "anyfilter",
+						StartTime: proto.ConvertTime(time.Time{}),
+						EndTime:   proto.ConvertTime(time.Time{}),
 					},
 				},
 			},
@@ -767,6 +800,6 @@ var _ = Describe("PacketCapture Manager", func() {
 				},
 				specification: capture.Specification{DeviceName: "cali123"},
 			},
-		}),
+		}, []output{}),
 	)
 })

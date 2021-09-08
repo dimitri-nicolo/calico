@@ -15,6 +15,8 @@
 package calc
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
@@ -116,6 +118,8 @@ type packetCaptureCallbacks interface {
 // sent to the data plane
 type PacketCaptureSpecification struct {
 	BPFFilter string
+	StartTime time.Time
+	EndTime   time.Time
 }
 
 type PipelineCallbacks interface {

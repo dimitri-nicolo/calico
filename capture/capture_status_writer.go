@@ -82,7 +82,7 @@ func (sw *StatusWriter) handleStatusUpdate() {
 
 		for id, update := range sw.pendingUpdates {
 			// Try and reconcile the packet capture status data that have been recently received
-			err := sw.reconcileStatusUpdate(update.Id.GetName(), update.Id.GetNamespace(), update.GetCaptureFiles())
+			err := sw.reconcileStatusUpdate(update.Id.GetName(), update.Id.GetNamespace(), update.GetCaptureFiles(), convert(update.GetState()))
 			if err == nil {
 				delete(sw.pendingUpdates, id)
 			} else {
@@ -105,7 +105,22 @@ func (sw *StatusWriter) handleStatusUpdate() {
 	}
 }
 
-func (sw *StatusWriter) reconcileStatusUpdate(captureName, captureNamespace string, fileNames []string) error {
+func convert(state proto.PacketCaptureStatusUpdate_PacketCaptureState) v3.PacketCaptureState {
+	switch state {
+	case proto.PacketCaptureStatusUpdate_FINISHED:
+		return v3.PacketCaptureStateFinished
+	case proto.PacketCaptureStatusUpdate_CAPTURING:
+		return v3.PacketCaptureStateCapturing
+	case proto.PacketCaptureStatusUpdate_SCHEDULED:
+		return v3.PacketCaptureStateScheduled
+	case proto.PacketCaptureStatusUpdate_ERROR:
+		return v3.PacketCaptureStateError
+	}
+
+	return v3.PacketCaptureStateError
+}
+
+func (sw *StatusWriter) reconcileStatusUpdate(captureName, captureNamespace string, fileNames []string, state v3.PacketCaptureState) error {
 	var captureID = strings.JoinQualifiedName(captureNamespace, captureName)
 	// Read PacketCapture status resource from datastore and compare it with the fileNames from the dataplane.
 	ctx, cancel := context.WithTimeout(context.Background(), sw.tick)
@@ -118,16 +133,18 @@ func (sw *StatusWriter) reconcileStatusUpdate(captureName, captureNamespace stri
 
 	// Get last files from status and find the index of the previous status update for this node
 	var lastFiles []string
+	var lastState *v3.PacketCaptureState
 	var index = -1
 	for i, f := range packetCapture.Status.Files {
 		if f.Node == sw.hostname {
 			lastFiles = f.FileNames
+			lastState = f.State
 			index = i
 		}
 	}
 
 	// Check if the files needs to be updated.
-	if !reflect.DeepEqual(lastFiles, fileNames) {
+	if !reflect.DeepEqual(lastFiles, fileNames) || !reflect.DeepEqual(lastState, &state) {
 		updateCtx, cancel := context.WithTimeout(context.Background(), sw.tick)
 		var updatedPacketCapture = packetCapture.DeepCopy()
 		if index == -1 {
@@ -136,10 +153,12 @@ func (sw *StatusWriter) reconcileStatusUpdate(captureName, captureNamespace stri
 				Node:      sw.hostname,
 				Directory: sw.packetCaptureDir,
 				FileNames: fileNames,
+				State:     &state,
 			})
 		} else {
 			// Override the status update as the files have changed
 			updatedPacketCapture.Status.Files[index].FileNames = fileNames
+			updatedPacketCapture.Status.Files[index].State = &state
 		}
 
 		log.WithField("CAPTURE", captureID).Debugf("Updating status for node %s with %v", sw.hostname, fileNames)

@@ -665,6 +665,8 @@ func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint
 		},
 		Specification: &proto.PacketCaptureSpecification{
 			BpfFilter: spec.BPFFilter,
+			StartTime: proto.ConvertTime(spec.StartTime),
+			EndTime:   proto.ConvertTime(spec.EndTime),
 		},
 	}
 }

@@ -55,7 +55,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 	for i := 1; i <= countTX; i++ {
 		skbMark = 0
 		// Leaving workload
-		runBpfTest(t, "calico_from_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_from_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktBytes)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -79,7 +79,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 		// Leaving node 1
 		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
 
-		runBpfTest(t, "calico_to_host_ep", false, nil, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_to_host_ep", nil, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -106,7 +106,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
 		// Response arriving on the node
-		runBpfTest(t, "calico_from_host_ep", false, nil, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_from_host_ep", nil, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(respPkt)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -130,7 +130,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 		// Response arriving at the workload
 		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
 
-		runBpfTest(t, "calico_to_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -188,7 +188,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 	for i := 1; i <= countTX; i++ {
 		skbMark = 0
 		// Leaving workload
-		runBpfTest(t, "calico_from_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_from_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktBytes)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -212,7 +212,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 		// Leaving node 1
 		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
 
-		runBpfTest(t, "calico_to_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -239,7 +239,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
 		// Response arriving on the node
-		runBpfTest(t, "calico_from_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_from_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(respPkt)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -263,7 +263,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 		// Response arriving at the workload
 		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
 
-		runBpfTest(t, "calico_to_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -319,7 +319,7 @@ func TestCountsHostPodSameNode(t *testing.T) {
 	for i := 1; i <= countTX; i++ {
 		skbMark = 0
 		// Leaving workload
-		runBpfTest(t, "calico_to_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktBytes)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -344,7 +344,7 @@ func TestCountsHostPodSameNode(t *testing.T) {
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
 		// Response arriving on the node
-		runBpfTest(t, "calico_from_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_from_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(respPkt)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -393,7 +393,7 @@ func TestCountsHostToOutside(t *testing.T) {
 	for i := 1; i <= countTX; i++ {
 		skbMark = 0
 		// Leaving workload
-		runBpfTest(t, "calico_to_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktBytes)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
@@ -418,7 +418,7 @@ func TestCountsHostToOutside(t *testing.T) {
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
 		// Response arriving on the node
-		runBpfTest(t, "calico_from_workload_ep", false, rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
+		runBpfTest(t, "calico_from_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(respPkt)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
