@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright 2019-20 Tigera Inc. All rights reserved.
+# Copyright 2019-21 Tigera Inc. All rights reserved.
 ##############################################################################
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
 GO_BUILD_VER   ?= v0.53
@@ -11,7 +11,8 @@ ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
 IDS_IMAGE             ?=tigera/intrusion-detection-controller
-BUILD_IMAGES          ?=$(IDS_IMAGE)
+JOB_INSTALLER_IMAGE   ?=tigera/intrusion-detection-job-installer
+BUILD_IMAGES          ?=$(IDS_IMAGE) $(JOB_INSTALLER_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
@@ -77,7 +78,7 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 # Some will have dedicated targets to make it easier to type, for example
 # "controller" instead of "$(BINDIR)/controller".
 #########################################################################
-build: $(IDS_IMAGE)
+build: $(BUILD_IMAGES)
 
 controller: $(BINDIR)/controller
 
@@ -120,24 +121,33 @@ endif
 	             ( echo "Error: $(BINDIR)/healthz-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
-.PHONY: $(IDS_IMAGE) $(IDS_IMAGE)-$(ARCH)
+.PHONY: $(IDS_IMAGE) $(IDS_IMAGE)-$(ARCH) $(JOB_INSTALLER_IMAGE) $(JOB_INSTALLER_IMAGE)-$(ARCH)
 
 # by default, build the image for the target architecture
-.PHONY: image-all
-image-all: $(addprefix sub-image-,$(ARCHES))
+.PHONY: images-all image-all
+images-all image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-image: $(IDS_IMAGE)
+images image: $(BUILD_IMAGES)
+
 $(IDS_IMAGE): $(IDS_IMAGE)-$(ARCH)
 $(IDS_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	rm -rf docker-image/bin
-	mkdir -p docker-image/bin
-	cp $(BINDIR)/controller-$(ARCH) docker-image/bin/
-	cp $(BINDIR)/healthz-$(ARCH) docker-image/bin/
-	docker build --pull -t $(IDS_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	rm -rf docker-image/controller/bin
+	mkdir -p docker-image/controller/bin
+	cp $(BINDIR)/controller-$(ARCH) docker-image/controller/bin/
+	cp $(BINDIR)/healthz-$(ARCH) docker-image/controller/bin/
+	docker build --pull -t $(IDS_IMAGE):latest-$(ARCH) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller
 ifeq ($(ARCH),amd64)
 	docker tag $(IDS_IMAGE):latest-$(ARCH) $(IDS_IMAGE):latest
+endif
+
+$(JOB_INSTALLER_IMAGE): $(JOB_INSTALLER_IMAGE)-$(ARCH)
+$(JOB_INSTALLER_IMAGE)-$(ARCH):
+	# Run from the "install" sub-directory so that docker has access to all the python bits.
+	docker build --pull -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) --build-arg version=$(BUILD_VERSION) --file ./docker-image/install/Dockerfile.$(ARCH) install
+ifeq ($(ARCH),amd64)
+	docker tag $(JOB_INSTALLER_IMAGE):latest-$(ARCH) $(JOB_INSTALLER_IMAGE):latest
 endif
 
 ##########################################################################
@@ -160,10 +170,11 @@ clean: clean-bin clean-build-image
 	rm -rf vendor Makefile.common*
 clean-build-image:
 	docker rmi -f $(IDS_IMAGE) > /dev/null 2>&1 || true
+	docker rmi -f $(JOB_INSTALLER_IMAGE) > /dev/null 2>&1 || true
 
 clean-bin:
 	rm -rf $(BINDIR) \
-			docker-image/bin
+			docker-image/controller/bin
 
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
@@ -200,3 +211,10 @@ replace-licensing-pin:
 	$(call update_replace_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
 
 update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-apiserver-pin replace-licensing-pin
+
+
+###############################################################################
+# Miscellaneous
+###############################################################################
+migrate-dashboards:
+	bash install/migrate_dashboards.sh

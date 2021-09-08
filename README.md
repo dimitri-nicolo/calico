@@ -2,7 +2,8 @@
 
 ###Contents
   * install/ - Installer for Elastic Stack (ML jobs, watches, dashboards, etc.)
-  * controller/ - Controller for intrusion detection jobs
+  * cmd/controller/ - Controller for intrusion detection jobs
+  * pkg/controller/ - Go packages for the controller for intrusion detection jobs
   * test/ - Test applications, command, etc
 
 ###Migrating Kibana Dashboards
