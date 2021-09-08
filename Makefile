@@ -1,5 +1,5 @@
 PACKAGE_NAME            ?= github.com/tigera/compliance
-GO_BUILD_VER            ?= v0.53
+GO_BUILD_VER            ?= v0.55
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
