@@ -124,12 +124,12 @@ endif
 .PHONY: $(IDS_IMAGE) $(IDS_IMAGE)-$(ARCH) $(JOB_INSTALLER_IMAGE) $(JOB_INSTALLER_IMAGE)-$(ARCH)
 
 # by default, build the image for the target architecture
-.PHONY: images-all image-all
-images-all image-all: $(addprefix sub-image-,$(ARCHES))
-sub-image-%:
-	$(MAKE) image ARCH=$*
+.PHONY: images-all
+images-all: $(addprefix sub-images-,$(ARCHES))
+sub-images-%:
+	$(MAKE) images ARCH=$*
 
-images image: $(BUILD_IMAGES)
+images: $(BUILD_IMAGES)
 
 $(IDS_IMAGE): $(IDS_IMAGE)-$(ARCH)
 $(IDS_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
@@ -166,9 +166,9 @@ st:
 	echo "ST not implemented yet"
 
 .PHONY: clean
-clean: clean-bin clean-build-image
+clean: clean-bin clean-build-images
 	rm -rf vendor Makefile.common*
-clean-build-image:
+clean-build-images:
 	docker rmi -f $(IDS_IMAGE) > /dev/null 2>&1 || true
 	docker rmi -f $(JOB_INSTALLER_IMAGE) > /dev/null 2>&1 || true
 
@@ -186,10 +186,10 @@ MOCKERY_FILE_PATHS= \
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: clean test image-all
+ci: clean test images-all
 
 ## Deploy images to registry
-cd: image cd-common
+cd: images cd-common
 
 ###############################################################################
 # Updating pins
