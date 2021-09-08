@@ -1,4 +1,4 @@
-GO_BUILD_VER ?= v0.53
+GO_BUILD_VER ?= v0.55
 
 # Override shell if we're on Windows
 # https://stackoverflow.com/a/63840549
