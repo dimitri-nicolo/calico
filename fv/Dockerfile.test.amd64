@@ -29,8 +29,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     ethtool \
     tcpdump \
-    libpcap-dev \
-    netcat-openbsd
+    libpcap-dev
 
 ARG FV_BINARY=calico-felix-amd64
 
