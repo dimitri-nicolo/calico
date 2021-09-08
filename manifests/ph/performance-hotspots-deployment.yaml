@@ -86,6 +86,34 @@ spec:
         securityContext:
           privileged: true
           allowPrivilegeEscalation: true
+        startupProbe:
+          httpGet:
+            path: /ph/ping
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 20
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 15
+        readinessProbe:
+          httpGet:
+            path: /ph/ping
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 20
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /ph/ping
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
         env:
           - name: CLUSTER_NAME
             value: "cluster"
