@@ -570,7 +570,6 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 				rotatedFileOrderOneSizeOnePacket,
 				rotatedFileOrderZeroSizeOnePacket},
 				namespace, name)
-
 		}
 
 	}, 10)
@@ -776,6 +775,47 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			dummyFile,
 		}, namespace, name)
 	}, 10)
+
+	It("Clean files when calling clean", func(done Done) {
+		defer close(done)
+		var err error
+		var updates = make(chan interface{}, 100)
+		defer close(updates)
+
+		// Initialise a new capture
+		var pcap = capture.NewRotatingPcapFile(baseDir, namespace, name, podName, deviceName, updates)
+
+		// Capture listens to incoming packets
+		var packets = make(chan gopacket.Packet)
+		defer close(packets)
+		go func() {
+			defer GinkgoRecover()
+
+			err = pcap.Write(packets)
+			Expect(err).NotTo(HaveOccurred())
+		}()
+
+		// Write 1 packet
+		packet := dummyPacket()
+		packets <- packet
+
+		pcap.Done()
+
+		assertPcapFiles(captureDir, []outputFile{
+			currentOrderTwoFileSizeOnePacket,
+		})
+		// Assert that an update was sent
+		var update *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&update))
+		assertStatusUpdates(update, []outputFile{
+			currentOrderTwoFileSizeOnePacket,
+		}, namespace, name)
+
+		// Call clean and expect no files to be present
+		err = pcap.Clean()
+		Expect(err).NotTo(HaveOccurred())
+		assertPcapFiles(captureDir, []outputFile{})
+	}, 10)
 })
 
 type outputFile struct {
@@ -807,6 +847,7 @@ func assertStatusUpdates(update *proto.PacketCaptureStatusUpdate, expected []out
 	}
 	Expect(update.Id.GetNamespace()).To(Equal(expectedNs))
 	Expect(update.Id.GetName()).To(Equal(expectedCaptureName))
+	Expect(update.State).To(Equal(proto.PacketCaptureStatusUpdate_CAPTURING))
 }
 
 func read(baseDir string) []os.FileInfo {

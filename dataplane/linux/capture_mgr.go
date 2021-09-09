@@ -138,7 +138,8 @@ func (c *captureManager) CompleteDeferredWork() error {
 					spec := c.activePacketCaptures.Remove(k)
 					c.interfaceToPacketCapture.Discard(spec.DeviceName, captureTuple{key: k, specification: previousSpec})
 				}
-				var spec = capture.Specification{DeviceName: workload.Name, BPFFilter: v.GetBpfFilter()}
+				var spec = capture.Specification{DeviceName: workload.Name, BPFFilter: v.GetBpfFilter(),
+					StartTime: proto.ConvertTimestamp(v.StartTime), EndTime: proto.ConvertTimestamp(v.EndTime)}
 				err := c.activePacketCaptures.Add(k, spec)
 				if err != nil {
 					log.WithField("CAPTURE", k.CaptureName).WithError(err).Error("Failed to start capture")
@@ -151,7 +152,10 @@ func (c *captureManager) CompleteDeferredWork() error {
 				delete(c.pendingPacketCaptures, k)
 			}
 		} else {
-			spec := c.activePacketCaptures.Remove(k)
+			spec, err := c.activePacketCaptures.RemoveAndClean(k)
+			if err != nil {
+				log.WithField("CAPTURE", k.CaptureName).WithError(err).Error("Failed to remove and clean capture")
+			}
 			// we delete the capture from the reverse mapping interface name -> capture
 			c.interfaceToPacketCapture.Discard(spec.DeviceName, captureTuple{key: k, specification: spec})
 			// we delete the pending capture because we processed the removal event (this means that a workload endpoint

@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/projectcalico/felix/calc/capture"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -418,9 +420,13 @@ var _ = Describe("PacketCaptures update/remove", func() {
 	var anotherFilter = "anotherFilter"
 	var anySpecification = calc.PacketCaptureSpecification{
 		BPFFilter: anyFilter,
+		StartTime: capture.MinTime,
+		EndTime:   capture.MaxTime,
 	}
 	var anotherSpecification = calc.PacketCaptureSpecification{
 		BPFFilter: anotherFilter,
+		StartTime: capture.MinTime,
+		EndTime:   capture.MaxTime,
 	}
 
 	BeforeEach(func() {
@@ -444,6 +450,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 				},
 				Specification: &proto.PacketCaptureSpecification{
 					BpfFilter: anotherFilter,
+					StartTime: proto.ConvertTime(capture.MinTime),
+					EndTime:   proto.ConvertTime(capture.MaxTime),
 				},
 			}}))
 	})
@@ -470,6 +478,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 				},
 				Specification: &proto.PacketCaptureSpecification{
 					BpfFilter: anyFilter,
+					StartTime: proto.ConvertTime(capture.MinTime),
+					EndTime:   proto.ConvertTime(capture.MaxTime),
 				},
 			}}))
 	})
@@ -487,6 +497,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 			},
 			Specification: &proto.PacketCaptureSpecification{
 				BpfFilter: anyFilter,
+				StartTime: proto.ConvertTime(capture.MinTime),
+				EndTime:   proto.ConvertTime(capture.MaxTime),
 			},
 		}}))
 		// Clear messages

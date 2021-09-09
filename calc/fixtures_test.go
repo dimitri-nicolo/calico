@@ -3,7 +3,12 @@
 package calc_test
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/calc/capture"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -51,6 +56,7 @@ var CaptureSelectionKey = model.ResourceKey{Name: "packet-capture-selection", Na
 var CaptureDevKey = model.ResourceKey{Name: "packet-capture-dev", Namespace: "default", Kind: v3.KindPacketCapture}
 var CaptureDifferentNamespaceKey = model.ResourceKey{Name: "packet-capture-different-namespace", Namespace: "different", Kind: v3.KindPacketCapture}
 var CaptureBPFFilterKey = model.ResourceKey{Name: "packet-capture-bpf-filter", Namespace: "default", Kind: v3.KindPacketCapture}
+var CaptureStartStopKey = model.ResourceKey{Name: "packet-capture-start-stop", Namespace: "default", Kind: v3.KindPacketCapture}
 var CaptureAllValue = &v3.PacketCapture{
 	TypeMeta: metav1.TypeMeta{
 		Kind: v3.KindPacketCapture,
@@ -166,4 +172,78 @@ var CaptureUDPTrafficValueAndLabelB = &v3.PacketCapture{
 			},
 		},
 	},
+}
+
+var startTime = metav1.NewTime(time.Unix(0, 0))
+var updatedStartTime = metav1.NewTime(time.Unix(1, 0))
+var endTime = metav1.NewTime(time.Unix(100, 0))
+var updatedEndTime = metav1.NewTime(time.Unix(101, 0))
+
+var CaptureStartStopValue = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindPacketCapture,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "packet-capture-start-stop",
+	},
+	Spec: v3.PacketCaptureSpec{
+		Selector:  "all()",
+		StartTime: &startTime,
+		EndTime:   &endTime,
+	},
+}
+
+var CaptureUpdatedStart = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindPacketCapture,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "packet-capture-start-stop",
+	},
+	Spec: v3.PacketCaptureSpec{
+		Selector:  "all()",
+		StartTime: &updatedStartTime,
+		EndTime:   &endTime,
+	},
+}
+
+var CaptureUpdatedEnd = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindPacketCapture,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "packet-capture-start-stop",
+	},
+	Spec: v3.PacketCaptureSpec{
+		Selector:  "all()",
+		StartTime: &startTime,
+		EndTime:   &updatedEndTime,
+	},
+}
+
+var EmptySpecification = calc.PacketCaptureSpecification{
+	BPFFilter: "",
+	StartTime: capture.MinTime,
+	EndTime:   capture.MaxTime,
+}
+
+var StartStopSpecification = calc.PacketCaptureSpecification{
+	BPFFilter: "",
+	StartTime: time.Unix(0, 0),
+	EndTime:   time.Unix(100, 0),
+}
+
+var UpdatedStartSpecification = calc.PacketCaptureSpecification{
+	BPFFilter: "",
+	StartTime: time.Unix(1, 0),
+	EndTime:   time.Unix(100, 0),
+}
+
+var UpdatedEndSpecification = calc.PacketCaptureSpecification{
+	BPFFilter: "",
+	StartTime: time.Unix(0, 0),
+	EndTime:   time.Unix(101, 0),
 }
