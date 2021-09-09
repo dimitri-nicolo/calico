@@ -156,12 +156,12 @@ func (auth *Auth) extractUserFromImpersonationHeaders(req *http.Request) (string
 	return userName, groups, extras
 }
 
-// Authorize is a middleware handler that authorizes a request for aceess to
+// Authorize is a middleware handler that authorizes a request for access or delete to
 // subresource packet captures/files in a given namespace
 func (auth *Auth) Authorize(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		resAtr := &authzv1.ResourceAttributes{
-			Verb:        "get",
+			Verb:        ActionIDFromContext(req.Context()),
 			Group:       "projectcalico.org",
 			Resource:    "packetcaptures",
 			Subresource: "files",

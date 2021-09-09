@@ -28,8 +28,16 @@ var _ = Describe("Auth", func() {
 	var req *http.Request
 	var noOpHandler http.HandlerFunc
 	var anyError = fmt.Errorf("any error")
-	var resAtr = &authzv1.ResourceAttributes{
+	var getResAtr = &authzv1.ResourceAttributes{
 		Verb:        "get",
+		Group:       "projectcalico.org",
+		Resource:    "packetcaptures",
+		Subresource: "files",
+		Name:        "name",
+		Namespace:   "ns",
+	}
+	var deleteResAtr = &authzv1.ResourceAttributes{
+		Verb:        "delete",
 		Group:       "projectcalico.org",
 		Resource:    "packetcaptures",
 		Subresource: "files",
@@ -40,7 +48,7 @@ var _ = Describe("Auth", func() {
 	BeforeEach(func() {
 		// Create a new request
 		var err error
-		req, err = http.NewRequest("GET", "/download/ns/name/files.zip", nil)
+		req, err = http.NewRequest("", "any", nil)
 		Expect(err).NotTo(HaveOccurred())
 		// Set the Authorization header
 		req.Header.Set("Authorization", "token")
@@ -100,62 +108,77 @@ var _ = Describe("Auth", func() {
 		Expect(recorder.Body.String()).To(Equal("any error\n"))
 	})
 
-	It("Fails to authorize user", func() {
-		req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
+	DescribeTable("Fails to authorize user",
+		func(action string, resAttr *authzv1.ResourceAttributes) {
+			req = req.WithContext(middleware.WithActionID(req.Context(), action))
+			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
 
-		// Bootstrap the authorizer
-		var mockCache = &cache.MockClientCache{}
-		var mockAuth = &lmaauth.MockRBACAuthorizer{}
-		mockCache.On("GetAuthorizer", lmak8s.DefaultCluster).Return(mockAuth, nil)
-		mockAuth.On("Authorize", &user.DefaultInfo{}, resAtr, (*authzv1.NonResourceAttributes)(nil)).Return(false, anyError)
-		var auth = middleware.NewAuth(&mockAuthenticator{}, mockCache)
+			// Bootstrap the authorizer
+			var mockCache = &cache.MockClientCache{}
+			var mockAuth = &lmaauth.MockRBACAuthorizer{}
+			mockCache.On("GetAuthorizer", lmak8s.DefaultCluster).Return(mockAuth, nil)
+			mockAuth.On("Authorize", &user.DefaultInfo{}, resAttr, (*authzv1.NonResourceAttributes)(nil)).Return(false, anyError)
+			var auth = middleware.NewAuth(&mockAuthenticator{}, mockCache)
 
-		// Bootstrap the http recorder
-		recorder := httptest.NewRecorder()
-		handler := auth.Authorize(noOpHandler)
-		handler.ServeHTTP(recorder, req)
+			// Bootstrap the http recorder
+			recorder := httptest.NewRecorder()
+			handler := auth.Authorize(noOpHandler)
+			handler.ServeHTTP(recorder, req)
 
-		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-		Expect(recorder.Body.String()).To(Equal("any error\n"))
-	})
+			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+			Expect(recorder.Body.String()).To(Equal("any error\n"))
+		},
+		Entry("GET", middleware.GET, getResAtr),
+		Entry("DELETE", middleware.DELETE, deleteResAtr),
+	)
 
-	It("User is not authorized", func() {
-		req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
+	DescribeTable("User is not authorized",
+		func(action string, resAttr *authzv1.ResourceAttributes) {
+			req = req.WithContext(middleware.WithActionID(req.Context(), action))
+			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
 
-		// Bootstrap the authorizer
-		var mockCache = &cache.MockClientCache{}
-		var mockAuth = &lmaauth.MockRBACAuthorizer{}
-		mockCache.On("GetAuthorizer", lmak8s.DefaultCluster).Return(mockAuth, nil)
-		mockAuth.On("Authorize", &user.DefaultInfo{}, resAtr, (*authzv1.NonResourceAttributes)(nil)).Return(false, anyError)
-		var auth = middleware.NewAuth(&mockAuthenticator{}, mockCache)
+			// Bootstrap the authorizer
+			var mockCache = &cache.MockClientCache{}
+			var mockAuth = &lmaauth.MockRBACAuthorizer{}
+			mockCache.On("GetAuthorizer", lmak8s.DefaultCluster).Return(mockAuth, nil)
+			mockAuth.On("Authorize", &user.DefaultInfo{}, resAttr, (*authzv1.NonResourceAttributes)(nil)).Return(false, anyError)
+			var auth = middleware.NewAuth(&mockAuthenticator{}, mockCache)
 
-		// Bootstrap the http recorder
-		recorder := httptest.NewRecorder()
-		handler := auth.Authorize(noOpHandler)
-		handler.ServeHTTP(recorder, req)
+			// Bootstrap the http recorder
+			recorder := httptest.NewRecorder()
+			handler := auth.Authorize(noOpHandler)
+			handler.ServeHTTP(recorder, req)
 
-		Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-		Expect(recorder.Body.String()).To(Equal("any error\n"))
-	})
+			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+			Expect(recorder.Body.String()).To(Equal("any error\n"))
+		},
+		Entry("GET", middleware.GET, getResAtr),
+		Entry("DELETE", middleware.DELETE, deleteResAtr),
+	)
 
-	It("Authorizes user", func() {
-		req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
+	DescribeTable("Authorizes user",
+		func(action string, resAttr *authzv1.ResourceAttributes) {
+			req = req.WithContext(middleware.WithActionID(req.Context(), action))
+			req = req.WithContext(request.WithUser(req.Context(), &user.DefaultInfo{}))
 
-		// Bootstrap the authorizer
-		var mockCache = &cache.MockClientCache{}
-		var mockAuth = &lmaauth.MockRBACAuthorizer{}
-		mockCache.On("GetAuthorizer", lmak8s.DefaultCluster).Return(mockAuth, nil)
-		mockAuth.On("Authorize", &user.DefaultInfo{}, resAtr, (*authzv1.NonResourceAttributes)(nil)).Return(true, nil)
-		var auth = middleware.NewAuth(&mockAuthenticator{}, mockCache)
+			// Bootstrap the authorizer
+			var mockCache = &cache.MockClientCache{}
+			var mockAuth = &lmaauth.MockRBACAuthorizer{}
+			mockCache.On("GetAuthorizer", lmak8s.DefaultCluster).Return(mockAuth, nil)
+			mockAuth.On("Authorize", &user.DefaultInfo{}, resAttr, (*authzv1.NonResourceAttributes)(nil)).Return(true, nil)
+			var auth = middleware.NewAuth(&mockAuthenticator{}, mockCache)
 
-		// Bootstrap the http recorder
-		recorder := httptest.NewRecorder()
-		handler := auth.Authorize(noOpHandler)
-		handler.ServeHTTP(recorder, req)
+			// Bootstrap the http recorder
+			recorder := httptest.NewRecorder()
+			handler := auth.Authorize(noOpHandler)
+			handler.ServeHTTP(recorder, req)
 
-		Expect(recorder.Code).To(Equal(http.StatusOK))
-		Expect(recorder.Body.String()).To(Equal(""))
-	})
+			Expect(recorder.Code).To(Equal(http.StatusOK))
+			Expect(recorder.Body.String()).To(Equal(""))
+		},
+		Entry("GET", middleware.GET, getResAtr),
+		Entry("DELETE", middleware.DELETE, deleteResAtr),
+	)
 
 	type expectedImpersonationReq struct {
 		resAttr *authzv1.ResourceAttributes

@@ -71,6 +71,7 @@ func main() {
 	http.Handle("/version", http.HandlerFunc(version.Handler))
 	http.Handle("/health", http.HandlerFunc(handlers.Health))
 	http.Handle("/download/", middleware.Parse(auth.Authenticate(auth.Authorize(files.Download))))
+	http.Handle("/files/", middleware.Parse(auth.Authenticate(auth.Authorize(files.Delete))))
 
 	// Start server
 	log.Fatal(http.ListenAndServeTLS(addr, cfg.HTTPSCert, cfg.HTTPSKey, nil))

@@ -16,14 +16,20 @@ import (
 // ZipFiles represents the expected query for the download API
 const ZipFiles = "files.zip"
 
+// GET represents the user intent to download packet capture files
+const GET = "get"
+
+// DELETE represents the user intent to delete packet capture files
+const DELETE = "delete"
+
 // MalformedRequest is the error message when the API received an invalid request
 var MalformedRequest = fmt.Errorf("request URL is malformed")
 
 // Parse is a middleware handler that parses the request and sets the common attributes
-// on the its context
+// on its context
 func Parse(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var ns, name, err = parse(req.URL)
+		var ns, name, action, err = parse(req.URL)
 		if err != nil {
 			log.WithError(err).Errorf("Invalid request %s", req.URL)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -37,17 +43,33 @@ func Parse(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		req = req.WithContext(WithCaptureName(req.Context(), name))
 		req = req.WithContext(WithNamespace(req.Context(), ns))
 		req = req.WithContext(WithClusterID(req.Context(), clusterID))
+		req = req.WithContext(WithActionID(req.Context(), action))
 		handlerFunc.ServeHTTP(w, req)
 	}
 }
 
-func parse(url *url.URL) (string, string, error) {
+func parse(url *url.URL) (string, string, string, error) {
 	var tokens = strings.Split(url.Path, "/")
-	if len(tokens) != 5 {
-		return "", "", MalformedRequest
+	if len(tokens) < 1 {
+		return "", "", "", MalformedRequest
 	}
-	if tokens[4] != ZipFiles {
-		return "", "", MalformedRequest
+	switch tokens[1] {
+	case "files":
+
+		if len(tokens) != 4 {
+			return "", "", "", MalformedRequest
+		}
+		return tokens[2], tokens[3], DELETE, nil
+	case "download":
+		if len(tokens) != 5 {
+			return "", "", "", MalformedRequest
+		}
+		if tokens[4] != ZipFiles {
+			return "", "", "", MalformedRequest
+		}
+		return tokens[2], tokens[3], GET, nil
 	}
-	return tokens[2], tokens[3], nil
+
+	return "", "", "", MalformedRequest
+
 }

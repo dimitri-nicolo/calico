@@ -14,6 +14,8 @@ import (
 	"os"
 	"strings"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	. "github.com/onsi/ginkgo"
@@ -23,68 +25,12 @@ import (
 	"github.com/tigera/packetcapture-api/pkg/capture"
 	"github.com/tigera/packetcapture-api/pkg/handlers"
 	"github.com/tigera/packetcapture-api/pkg/middleware"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const loremLipsum = "Lorem Lipsum"
 
 var _ = Describe("FilesDownload", func() {
 	var req *http.Request
-
-	var files = []string{"a", "b"}
-	var otherFiles = []string{"c", "d"}
-	var packetCaptureOneNode = &v3.PacketCapture{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "",
-			APIVersion: "",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "name",
-			Namespace: "ns",
-		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
-				{
-					Node:      "node",
-					Directory: "dir",
-					FileNames: files,
-				},
-			},
-		},
-	}
-	var packetCaptureMultipleNodes = &v3.PacketCapture{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "",
-			APIVersion: "",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "name",
-			Namespace: "ns",
-		},
-		Status: v3.PacketCaptureStatus{
-			Files: []v3.PacketCaptureFile{
-				{
-					Node:      "nodeOne",
-					Directory: "dir",
-					FileNames: files,
-				},
-				{
-					Node:      "nodeTwo",
-					Directory: "dir",
-					FileNames: otherFiles,
-				},
-			},
-		},
-	}
-
-	var point = capture.EntryPoint{PodName: "entryPod", PodNamespace: "entryNs", CaptureDirectory: "dir",
-		CaptureNamespace: "ns", CaptureName: "name"}
-	var pointNodeOne = capture.EntryPoint{PodName: "entryPodOne", PodNamespace: "entryNs", CaptureDirectory: "dir",
-		CaptureNamespace: "ns", CaptureName: "name"}
-	var pointNodeTwo = capture.EntryPoint{PodName: "entryPodTwo", PodNamespace: "entryNs", CaptureDirectory: "dir",
-		CaptureNamespace: "ns", CaptureName: "name"}
 
 	BeforeEach(func() {
 		// Create a new request
@@ -286,6 +232,143 @@ var _ = Describe("FilesDownload", func() {
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
 		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
+	})
+})
+
+var _ = Describe("FilesDelete", func() {
+	var req *http.Request
+
+	BeforeEach(func() {
+		// Create a new request
+		var err error
+		req, err = http.NewRequest("DELETE", "/files/ns/name", nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Setup the variables on the context to be used for authN/authZ
+		req = req.WithContext(middleware.WithClusterID(req.Context(), "cluster"))
+		req = req.WithContext(middleware.WithNamespace(req.Context(), "ns"))
+		req = req.WithContext(middleware.WithCaptureName(req.Context(), "name"))
+	})
+
+	It("Deletes files from a single node", func() {
+		// Bootstrap the files
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockFileRetrieval.On("Delete", "cluster", point).Return(nil, nil)
+		var files = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(files.Delete)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusOK))
+	})
+
+	It("Delete files from a multiple node", func() {
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureMultipleNodes, nil)
+		mockLocator.On("GetEntryPod", "cluster", "nodeOne").Return("entryNs", "entryPodOne", nil)
+		mockLocator.On("GetEntryPod", "cluster", "nodeTwo").Return("entryNs", "entryPodTwo", nil)
+		mockFileRetrieval.On("Delete", "cluster", pointNodeOne).Return(nil, nil)
+		mockFileRetrieval.On("Delete", "cluster", pointNodeTwo).Return(nil, nil)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Delete)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusOK))
+	})
+
+	DescribeTable("Failure to get packet capture",
+		func(expectedStatus int, expectedError error) {
+			// Bootstrap the files
+			var mockCache = &cache.MockClientCache{}
+			var mockLocator = &capture.MockLocator{}
+			var mockFileRetrieval = &capture.MockFileCommands{}
+			mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(nil, expectedError)
+			var files = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+			// Bootstrap the http recorder
+			recorder := httptest.NewRecorder()
+			handler := http.HandlerFunc(files.Delete)
+			handler.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(expectedStatus))
+			Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal(expectedError.Error()))
+		},
+		Entry("Missing resource", http.StatusNotFound, errors.ErrorResourceDoesNotExist{}),
+		Entry("Failure to get resource", http.StatusInternalServerError, fmt.Errorf("any error")),
+	)
+
+	DescribeTable("Fail to delete files for packetCapture with non-finished states",
+		func(packetCapture *v3.PacketCapture, expectedStatus int) {
+			// Bootstrap the files
+			var mockCache = &cache.MockClientCache{}
+			var mockLocator = &capture.MockLocator{}
+			var mockFileRetrieval = &capture.MockFileCommands{}
+			mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCapture, nil)
+			var files = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+			// Bootstrap the http recorder
+			recorder := httptest.NewRecorder()
+			handler := http.HandlerFunc(files.Delete)
+			handler.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(expectedStatus))
+		},
+		Entry("All nodes in different state", differentStatesPacketCaptureMultipleNodes, http.StatusForbidden),
+		Entry("Missing finished state", packetCaptureMultipleNodes, http.StatusForbidden),
+		Entry("One finished state", oneFinishedPacketCaptureMultipleNodes, http.StatusForbidden),
+	)
+
+	It("Delete returns an error via io.Reader", func() {
+		var errorWriter bytes.Buffer
+		var _, err = errorWriter.WriteString("any error")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Bootstrap the files
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockFileRetrieval.On("Delete", "cluster", point).Return(&errorWriter, nil)
+		var files = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(files.Delete)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
+	})
+
+	It("Fails to locate an entry pod", func() {
+		// Bootstrap the files
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", fmt.Errorf("any error"))
+		var files = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(files.Delete)
 		handler.ServeHTTP(recorder, req)
 
 		Expect(recorder.Code).To(Equal(http.StatusInternalServerError))

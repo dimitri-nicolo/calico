@@ -13,6 +13,29 @@ type MockFileCommands struct {
 	mock.Mock
 }
 
+// Delete provides a mock function with given fields: clusterID, entryPoint
+func (_m *MockFileCommands) Delete(clusterID string, entryPoint EntryPoint) (io.Reader, error) {
+	ret := _m.Called(clusterID, entryPoint)
+
+	var r0 io.Reader
+	if rf, ok := ret.Get(0).(func(string, EntryPoint) io.Reader); ok {
+		r0 = rf(clusterID, entryPoint)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(io.Reader)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, EntryPoint) error); ok {
+		r1 = rf(clusterID, entryPoint)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // OpenTarReader provides a mock function with given fields: clusterID, entryPoint
 func (_m *MockFileCommands) OpenTarReader(clusterID string, entryPoint EntryPoint) (io.Reader, io.Reader, error) {
 	ret := _m.Called(clusterID, entryPoint)

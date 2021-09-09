@@ -18,6 +18,7 @@ type FileCommands interface {
 	// OpenTarReader opens a tar reader for all the files that can be found at entryPoint on a cluster identified
 	// by clusterID.
 	OpenTarReader(clusterID string, entryPoint EntryPoint) (tarReader io.Reader, errorReader io.Reader, err error)
+	Delete(clusterID string, entryPoint EntryPoint) (errorReader io.Reader, err error)
 }
 
 type fileCommands struct {
@@ -35,6 +36,12 @@ func (f *fileCommands) OpenTarReader(clusterID string, entryPoint EntryPoint) (i
 	return f.command(clusterID, entryPoint, []string{"tar", "cf", "-", dir})
 }
 
+func (f *fileCommands) Delete(clusterID string, entryPoint EntryPoint) (errorReader io.Reader, err error) {
+	var dir = fmt.Sprintf("%s/%s/%s", entryPoint.CaptureDirectory, entryPoint.CaptureNamespace, entryPoint.CaptureName)
+	_, errorReader, err = f.command(clusterID, entryPoint, []string{"rm", "-rf", dir})
+	return errorReader, err
+}
+
 func (f *fileCommands) command(clusterID string, entryPoint EntryPoint, command []string) (io.Reader, io.Reader, error) {
 	var cs, config, err = f.cache.GetClientAndConfig(clusterID)
 	if err != nil {
@@ -49,10 +56,10 @@ func (f *fileCommands) command(clusterID string, entryPoint EntryPoint, command 
 	req.VersionedParams(
 		&v1.PodExecOptions{
 			Command: command,
-			Stdin:  false,
-			Stdout: true,
-			Stderr: true,
-			TTY:    false,
+			Stdin:   false,
+			Stdout:  true,
+			Stderr:  true,
+			TTY:     false,
 		},
 		scheme.ParameterCodec,
 	)

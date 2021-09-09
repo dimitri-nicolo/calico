@@ -20,7 +20,7 @@ type Config struct {
 	LogLevel  string `default:"INFO" split_words:"true"`
 
 	// Dex settings
-	DexEnabled      bool   `default:"false" split_words:"true"`
+	DexEnabled bool `default:"false" split_words:"true"`
 
 	// OIDC Authentication settings.
 	OIDCAuthJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
