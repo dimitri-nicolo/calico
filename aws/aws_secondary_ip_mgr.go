@@ -71,8 +71,8 @@ type DatastoreState struct {
 }
 
 const (
-	healthNameSubnetCapacity = "have-at-most-one-aws-subnet"
-	healthNameAWSInSync      = "aws-enis-in-sync"
+	healthNameENICapacity = "aws-eni-capacity"
+	healthNameAWSInSync   = "aws-eni-addresses-in-sync"
 )
 
 func NewSecondaryIfaceProvisioner(
@@ -82,12 +82,11 @@ func NewSecondaryIfaceProvisioner(
 	nodeName string,
 	awsTimeout time.Duration,
 ) *SecondaryIfaceProvisioner {
-	// TODO actually report health
-	healthAgg.RegisterReporter(healthNameSubnetCapacity, &health.HealthReport{
+	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{
 		Ready: true,
 		Live:  false,
 	}, 0)
-	healthAgg.Report(healthNameSubnetCapacity, &health.HealthReport{
+	healthAgg.Report(healthNameENICapacity, &health.HealthReport{
 		Ready: true,
 		Live:  true,
 	})
@@ -377,6 +376,19 @@ func (m *SecondaryIfaceProvisioner) attemptResync() error {
 	}
 
 	if numNICsNeeded > 0 {
+		numNICsPossible := m.calculateUnusedNICCapacity(awsNICState)
+		haveNICCapacity := numNICsNeeded <= numNICsPossible
+		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{
+			Live:  true,
+			Ready: haveNICCapacity,
+		})
+		if !haveNICCapacity {
+			logrus.Warnf("Need %d more AWS secondary ENIs to support local workloads but only %d are " +
+				"available.  Some local workloads will not have AWS connectivity,",
+				numNICsNeeded, numNICsPossible)
+			numNICsNeeded = numNICsPossible // Avoid trying to create NICs that we know will fail.
+		}
+
 		logrus.WithField("num", numNICsNeeded).Info("Allocating IPs for new AWS NICs.")
 		v4addrs, err := m.allocateCalicoHostIPs(numNICsNeeded)
 		if err != nil {
@@ -406,7 +418,6 @@ func (m *SecondaryIfaceProvisioner) attemptResync() error {
 	}
 
 	// TODO update k8s Node with capacities
-	// TODO Report health
 
 	m.response = m.calculateResponse(awsNICState)
 
@@ -416,7 +427,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() error {
 func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *awsNICState) *SecondaryIfaceState {
 	// Index the AWS NICs on MAC.
 	ifacesByMAC := map[string]Iface{}
-	for nicID, awsNIC := range awsNICState.awsNICsByID {
+	for nicID, awsNIC := range awsNICState.calicoOwnedNICsByID {
 		if awsNIC.MacAddress == nil {
 			continue
 		}
@@ -472,8 +483,8 @@ func (m *SecondaryIfaceProvisioner) getMyNetworkCapabilities() (*NetworkCapabili
 // It is populated from scratch at the start of each resync.  This is because some operations (such as assigning
 // an IP or attaching a new NIC) invalidate the data.
 type awsNICState struct {
-	awsNICsByID             map[string]ec2types.NetworkInterface
-	nicIDsBySubnet          map[string][]string
+	calicoOwnedNICsByID map[string]ec2types.NetworkInterface
+	nicIDsBySubnet      map[string][]string
 	nicIDByIP               map[ip.CIDR]string
 	nicIDByPrimaryIP        map[ip.CIDR]string
 	inUseDeviceIndexes      map[int32]bool
@@ -525,7 +536,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *awsNICState, err erro
 	}
 
 	s = &awsNICState{
-		awsNICsByID:             map[string]ec2types.NetworkInterface{},
+		calicoOwnedNICsByID:     map[string]ec2types.NetworkInterface{},
 		nicIDsBySubnet:          map[string][]string{},
 		nicIDByIP:               map[ip.CIDR]string{},
 		nicIDByPrimaryIP:        map[ip.CIDR]string{},
@@ -543,6 +554,11 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *awsNICState, err erro
 			if n.Attachment.DeviceIndex != nil {
 				s.inUseDeviceIndexes[*n.Attachment.DeviceIndex] = true
 			}
+			if n.Attachment.NetworkCardIndex != nil && *n.Attachment.NetworkCardIndex != 0 {
+				// Ignore NICs that aren't on the primary network card.  We only support one network card for now.
+				logrus.Debugf("Ignoring NIC on non-primary network card: %d.", *n.Attachment.NetworkCardIndex)
+				continue
+			}
 			if n.Attachment.AttachmentId != nil {
 				s.attachmentIDByNICID[*n.NetworkInterfaceId] = *n.Attachment.AttachmentId
 			}
@@ -556,7 +572,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *awsNICState, err erro
 		// Found one of our managed interfaces; collect its IPs.
 		logCtx := logrus.WithField("id", *n.NetworkInterfaceId)
 		logCtx.Debug("Found Calico NIC")
-		s.awsNICsByID[*n.NetworkInterfaceId] = n
+		s.calicoOwnedNICsByID[*n.NetworkInterfaceId] = n
 		s.nicIDsBySubnet[*n.SubnetId] = append(s.nicIDsBySubnet[*n.SubnetId], *n.NetworkInterfaceId)
 		for _, addr := range n.PrivateIpAddresses {
 			if addr.PrivateIpAddress == nil {
@@ -624,7 +640,7 @@ func (m *SecondaryIfaceProvisioner) loadLocalAWSSubnets() (map[string]ec2types.S
 // have an associated IP pool.
 func (m *SecondaryIfaceProvisioner) findNICsWithNoPool(awsNICState *awsNICState) set.Set {
 	nicsToRelease := set.New()
-	for nicID, nic := range awsNICState.awsNICsByID {
+	for nicID, nic := range awsNICState.calicoOwnedNICsByID {
 		if _, ok := m.ds.PoolIDsBySubnetID[*nic.SubnetId]; ok {
 			continue
 		}
@@ -858,7 +874,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanNICs(awsNICState *awsNICState, b
 		devIdx := awsNICState.FindFreeDeviceIdx()
 
 		subnetID := safeReadString(nic.SubnetId)
-		if subnetID != bestSubnetID || int(devIdx) >= m.networkCapabilities.MaxNetworkInterfaces {
+		if subnetID != bestSubnetID || int(devIdx) >= m.networkCapabilities.MaxNICsForCard(0) {
 			nicID := safeReadString(nic.NetworkInterfaceId)
 			logrus.WithField("nicID", nicID).Info(
 				"Found unattached NIC that belongs to this node and is no longer needed, deleting.")
@@ -882,7 +898,9 @@ func (m *SecondaryIfaceProvisioner) attachOrphanNICs(awsNICState *awsNICState, b
 			DeviceIndex:        &devIdx,
 			InstanceId:         &ec2Client.InstanceID,
 			NetworkInterfaceId: nic.NetworkInterfaceId,
-			NetworkCardIndex:   nil, // TODO Multi-network card handling
+			// For now, only support the first network card.  There's only one type of AWS instance with >1
+			// NetworkCard.
+			NetworkCardIndex:   int32Ptr(0),
 		})
 		if err != nil {
 			// TODO handle idempotency; make sure that we can't get a successful failure(!)
@@ -1038,7 +1056,9 @@ func (m *SecondaryIfaceProvisioner) createAWSNICs(awsNICState *awsNICState, subn
 			DeviceIndex:        &devIdx,
 			InstanceId:         &ec2Client.InstanceID,
 			NetworkInterfaceId: cno.NetworkInterface.NetworkInterfaceId,
-			NetworkCardIndex:   nil, // TODO Multi-network card handling
+			// For now, only support the first network card.  There's only one type of AWS instance with >1
+			// NetworkCard.
+			NetworkCardIndex:   int32Ptr(0),
 		})
 		if err != nil {
 			// TODO handle idempotency; make sure that we can't get a successful failure(!)
@@ -1076,15 +1096,16 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToNICs(awsNICState *awsNIC
 	}
 
 	var needRefresh bool
+	remainingRoutes := filteredRoutes
 	for nicID, freeIPs := range awsNICState.freeIPv4CapacityByNICID {
 		if freeIPs == 0 {
 			continue
 		}
-		routesToAdd := filteredRoutes
+		routesToAdd := remainingRoutes
 		if len(routesToAdd) > freeIPs {
 			routesToAdd = routesToAdd[:freeIPs]
 		}
-		filteredRoutes = filteredRoutes[len(routesToAdd):]
+		remainingRoutes = remainingRoutes[len(routesToAdd):]
 
 		var ipAddrs []string
 		for _, r := range routesToAdd {
@@ -1104,6 +1125,11 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToNICs(awsNICState *awsNIC
 		logrus.WithFields(logrus.Fields{"nicID": nicID, "addrs": ipAddrs}).Info("Assigned IPs to secondary NIC.")
 		needRefresh = true
 	}
+
+	if len(remainingRoutes) > 0 {
+		logrus.Warn("Failed to assign all Calico IPs to local ENIs.  Insufficient secondary IP capacity on the available ENIs.")
+	}
+
 	if needRefresh {
 		return errResyncNeeded
 	}
@@ -1132,6 +1158,13 @@ func (m *SecondaryIfaceProvisioner) ec2Client() (*EC2Client, error) {
 	}
 	m.cachedEC2Client = c
 	return m.cachedEC2Client, nil
+}
+
+func (m *SecondaryIfaceProvisioner) calculateUnusedNICCapacity(state *awsNICState) int {
+	// For now, only supporting the first network card.
+	numPossibleNICs := m.networkCapabilities.MaxNICsForCard(0)
+	numExistingNICS := len(state.inUseDeviceIndexes)
+	return numPossibleNICs - numExistingNICS
 }
 
 func trimPrefixLen(cidr string) string {

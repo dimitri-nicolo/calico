@@ -336,8 +336,22 @@ func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*types.InstanceTypeI
 
 type NetworkCapabilities struct {
 	MaxNetworkInterfaces int
+	NetworkCards         []types.NetworkCardInfo
 	MaxIPv4PerInterface  int
 	MaxIPv6PerInterface  int
+}
+
+func (n NetworkCapabilities) MaxNICsForCard(idx int) int {
+	if idx >= len(n.NetworkCards) { // defensive; would be an AWS bug.
+		log.Warn("Asked about network card that doesn't exist, returning 0.")
+		return 0
+	}
+	maxPtr := n.NetworkCards[idx].MaximumNetworkInterfaces
+	if maxPtr == nil { // defensive; would be an AWS bug.
+		log.Error("AWS failed to return maximum network interfaces value on query.")
+		return 0
+	}
+	return int(*maxPtr)
 }
 
 func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkCapabilities, err error) {
@@ -364,6 +378,7 @@ func InstanceTypeNetworkCapabilities(instType *types.InstanceTypeInfo) (netc Net
 			netc.MaxIPv6PerInterface = int(*instType.NetworkInfo.Ipv6AddressesPerInterface)
 		}
 	}
+	netc.NetworkCards = instType.NetworkInfo.NetworkCards
 	return
 }
 
