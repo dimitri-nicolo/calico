@@ -2177,7 +2177,6 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.reschedC = nil
 		case <-throttleC:
 			d.applyThrottle.Refill()
-			continue
 		case <-healthTicks:
 			d.reportHealth()
 		case <-retryTicker.C:
