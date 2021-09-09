@@ -138,11 +138,22 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 	// Response channel is masked (nil) until we're ready to send something.
 	var responseC chan *SecondaryIfaceState
 
-	backoffMgr := m.newBackoffManager()
-	defer backoffMgr.Backoff().Stop()
-
 	var backoffTimer clock.Timer
 	var backoffC <-chan time.Time
+	backoffMgr := m.newBackoffManager()
+	stopBackoffTimer := func() {
+		if backoffTimer != nil {
+			// New snapshot arrived, ignore the backoff since the new snapshot might resolve whatever issue
+			// caused us to fail to resync.  We also must reset the timer before calling Backoff() again for
+			// correct behaviour. This is the standard time.Timer.Stop() dance...
+			if !backoffTimer.Stop() {
+				<-backoffTimer.C()
+			}
+			backoffTimer = nil
+			backoffC = nil
+		}
+	}
+	defer stopBackoffTimer()
 
 	for {
 		// Thread safety: we receive messages _from_, and, send messages _to_ the dataplane main loop.
@@ -164,23 +175,14 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			responseC = nil
 			continue // Don't want sending a response to trigger an early resync.
 		case <-backoffC:
-			// Nil out the timer so we don't try to stop it again below.
+			// Important: nil out the timer so that stopBackoffTimer() won't try to stop it again (and deadlock).
+			backoffC = nil
+			backoffTimer = nil
 			logrus.Warn("Retrying AWS resync after backoff.")
 			m.opRecorder.RecordOperation("aws-retry")
-			backoffC = nil
-			backoffTimer = nil
 		}
 
-		if backoffTimer != nil {
-			// New snapshot arrived, ignore the backoff since the new snapshot might resolve whatever issue
-			// caused us to fail to resync.  We also must reset the timer before calling Backoff() again for
-			// correct behaviour. This is the standard time.Timer.Stop() dance...
-			if !backoffTimer.Stop() {
-				<-backoffTimer.C()
-			}
-			backoffTimer = nil
-			backoffC = nil
-		}
+		stopBackoffTimer()
 
 		if m.resyncNeeded {
 			err := m.resync(ctx)
