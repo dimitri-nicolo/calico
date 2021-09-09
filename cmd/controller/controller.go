@@ -16,8 +16,8 @@ import (
 	"strconv"
 	"syscall"
 
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
@@ -59,6 +59,10 @@ const (
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
 type backendClientAccessor interface {
 	Backend() bapi.Client
+}
+
+func init() {
+	ValidateEnvVars()
 }
 
 func main() {

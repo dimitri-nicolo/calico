@@ -81,6 +81,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	}
 
 	ch := make(chan struct{})
+	name = getVariantSpecificClusterName(name)
 	if err := es.CreateOrUpdateIndex(ctx, r.esCLI, r.indexSettings, fmt.Sprintf(es.EventIndexPattern, name), es.EventMapping, ch); err != nil {
 		log.WithError(err).WithFields(log.Fields{
 			"index": fmt.Sprintf(es.EventIndexPattern, name),
