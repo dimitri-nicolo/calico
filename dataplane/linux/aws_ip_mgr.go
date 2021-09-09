@@ -42,14 +42,14 @@ type awsIPManager struct {
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
-	// from the main thread.  We send it datastore snapshots; in return, it sends back AWSState objects telling us
-	// what state the AWS fabric is in.
+	// from the main thread.  We send it datastore snapshots; in return, it sends back SecondaryIfaceState objects
+	// telling us what state the AWS fabric is in.
 	ifaceProvisioner        *aws.SecondaryIfaceProvisioner
 	ifaceProvisionerStarted bool
 
 	// awsState is the most recent update we've got from the background thread telling us what state it thinks
 	// the AWS fabric should be in. <nil> means "don't know", i.e. we're not ready to touch the dataplane yet.
-	awsState *aws.AWSState
+	awsState *aws.SecondaryIfaceState
 
 	// Dataplane state.
 
@@ -116,8 +116,8 @@ func NewAWSSubnetManager(
 	return sm
 }
 
-func (a *awsIPManager) ResponseC() chan *aws.AWSState {
-	return a.ifaceProvisioner.ResponseC
+func (a *awsIPManager) ResponseC() <-chan *aws.SecondaryIfaceState {
+	return a.ifaceProvisioner.ResponseC()
 }
 
 func (a *awsIPManager) OnUpdate(msg interface{}) {
@@ -133,7 +133,7 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 	}
 }
 
-func (a *awsIPManager) OnAWSStateUpdate(msg *aws.AWSState) {
+func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.SecondaryIfaceState) {
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
 }
@@ -252,6 +252,8 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		a.ifaceProvisioner.Start(context.Background())
 	}
 	if a.awsResyncNeeded {
+		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
+		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
 			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},

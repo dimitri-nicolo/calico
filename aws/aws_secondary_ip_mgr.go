@@ -14,7 +14,9 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/logutils"
@@ -27,26 +29,39 @@ import (
 )
 
 type SecondaryIfaceProvisioner struct {
-	nodeName             string
-	healthAgg            *health.HealthAggregator
-	opRecorder           logutils.OpRecorder
-	ipamClient           ipam.Interface
-	k8sClient            *kubernetes.Clientset
-	cachedEC2Client      *EC2Client
-	timeout              time.Duration
-	updatesFromDatastore chan DatastoreState
+	nodeName string
+	timeout  time.Duration
+	clock    clock.Clock
 
-	resyncNeeded          bool
+	healthAgg  *health.HealthAggregator
+	opRecorder logutils.OpRecorder
+	ipamClient ipam.Interface
+	k8sClient  *kubernetes.Clientset
+
+	// resyncNeeded is set to true if we need to do any kind of resync.
+	resyncNeeded bool
+	// orphanNICResyncNeeded is set to true if the next resync should also check for orphaned NICs.  I.e. ones
+	// that this node previously created but which never got attached.  (For example, because felix restarted.)
 	orphanNICResyncNeeded bool
-	hostIPAMResyncNeeded  bool
+	// hostIPAMResyncNeeded is set to true if the next resync should also check for IPs that are assigned ot this
+	// node but not in use for one of our NICs.
+	hostIPAMResyncNeeded bool
 
+	cachedEC2Client     *EC2Client
 	networkCapabilities *NetworkCapabilities
 	awsGatewayAddr      ip.Addr
 	awsSubnetCIDR       ip.CIDR
 
-	ds        DatastoreState
-	response  *AWSState
-	ResponseC chan *AWSState
+	// datastoreUpdateC carries updates from Felix's main dataplane loop to our loop.
+	datastoreUpdateC chan DatastoreState
+	// ds is the most recent datastore state we've received.
+	ds DatastoreState
+
+	// ResponseC is our channel back to the main dataplane loop.
+	responseC chan *SecondaryIfaceState
+	// response, if non-nil, is the response we want to send back to the main dataplane loop.  It carries the
+	// current state of the AWS fabric.
+	response *SecondaryIfaceState
 }
 
 type DatastoreState struct {
@@ -93,7 +108,8 @@ func NewSecondaryIfaceProvisioner(
 		timeout:    awsTimeout,
 		opRecorder: logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
-		updatesFromDatastore: make(chan DatastoreState, 1),
+		datastoreUpdateC: make(chan DatastoreState, 1),
+		clock: clock.RealClock{},
 	}
 }
 
@@ -103,13 +119,13 @@ func (m *SecondaryIfaceProvisioner) Start(ctx context.Context) (done chan struct
 	return
 }
 
-type AWSState struct {
-	SecondaryNICsByMAC map[string]NICInfo
+type SecondaryIfaceState struct {
+	SecondaryNICsByMAC map[string]Iface
 	SubnetCIDR         ip.CIDR
 	GatewayAddr        ip.Addr
 }
 
-type NICInfo struct {
+type Iface struct {
 	ID                 string
 	MAC                net.HardwareAddr
 	PrimaryIPv4Addr    ip.Addr
@@ -120,59 +136,101 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 	defer close(doneC)
 
 	// Response channel is masked (nil) until we're ready to send something.
-	var responseC chan *AWSState
+	var responseC chan *SecondaryIfaceState
+
+	backoffMgr := m.newBackoffManager()
+	defer backoffMgr.Backoff().Stop()
+
+	var backoffTimer clock.Timer
+	var backoffC <-chan time.Time
 
 	for {
 		// Thread safety: we receive messages _from_, and, send messages _to_ the dataplane main loop.
 		// To avoid deadlock,
-		// - Sends on updatesFromDatastore never block the main loop.  We ensure this by draining the channel before
-		//   sending in OnDatastoreUpdate.
+		// - Sends on datastoreUpdateC never block the main loop.  We ensure this by draining the capacity one
+		//   channel before sending in OnDatastoreUpdate.
 		// - We do our receives and sends in the same select block so that we never block a send op on a receive op
 		//   or vice versa.
 		select {
 		case <-ctx.Done():
 			logrus.Info("SecondaryIfaceManager stopping, context canceled.")
 			return
-		case snapshot := <-m.updatesFromDatastore:
+		case snapshot := <-m.datastoreUpdateC:
 			logrus.Debug("New datastore snapshot received")
 			m.resyncNeeded = true
 			m.ds = snapshot
 		case responseC <- m.response:
 			// Mask the response channel so we don't resend again and again.
 			responseC = nil
+			continue // Don't want sending a response to trigger an early resync.
+		case <-backoffC:
+			// Nil out the timer so we don't try to stop it again below.
+			logrus.Warn("Retrying AWS resync after backoff.")
+			m.opRecorder.RecordOperation("aws-retry")
+			backoffC = nil
+			backoffTimer = nil
+		}
+
+		if backoffTimer != nil {
+			// New snapshot arrived, ignore the backoff since the new snapshot might resolve whatever issue
+			// caused us to fail to resync.  We also must reset the timer before calling Backoff() again for
+			// correct behaviour. This is the standard time.Timer.Stop() dance...
+			if !backoffTimer.Stop() {
+				<-backoffTimer.C()
+			}
+			backoffTimer = nil
+			backoffC = nil
 		}
 
 		if m.resyncNeeded {
 			err := m.resync(ctx)
 			if err != nil {
-				logrus.WithError(err).Error("Failed to resync with AWS.")
-				// TODO retry with backoff
+				logrus.WithError(err).Error("Failed to resync with AWS. Will retry after backoff.")
+				backoffTimer = backoffMgr.Backoff()
+				backoffC = backoffTimer.C()
 			}
 			if m.response == nil {
 				responseC = nil
 			} else {
-				responseC = m.ResponseC
+				responseC = m.responseC
 			}
 		}
 	}
 }
 
+func (m *SecondaryIfaceProvisioner) newBackoffManager() wait.BackoffManager {
+	const (
+		initBackoff   = 1 * time.Second
+		maxBackoff    = 1 * time.Minute
+		resetDuration = 10 * time.Minute
+		backoffFactor = 2.0
+		jitter        = 0.1
+	)
+	backoffMgr := wait.NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration, backoffFactor, jitter, m.clock)
+	return backoffMgr
+}
+
+func (m *SecondaryIfaceProvisioner) ResponseC() <-chan *SecondaryIfaceState {
+	return m.responseC
+}
+
 func (m *SecondaryIfaceProvisioner) OnDatastoreUpdate(snapshot DatastoreState) {
 	// To make sure we don't block, drain any pending update from the channel.
 	select {
-	case <-m.updatesFromDatastore:
+	case <-m.datastoreUpdateC:
 		// Discarded previous snapshot, channel now has capacity for new one.
 	default:
 		// No pending update.  We're ready to send a new one.
 	}
 	// Should have capacity in the channel now to send without blocking.
-	m.updatesFromDatastore <- snapshot
+	m.datastoreUpdateC <- snapshot
 }
 
 var errResyncNeeded = errors.New("resync needed")
 
 func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) error {
 	var awsResyncErr error
+	m.opRecorder.RecordOperation("aws-fabric-resync")
 	for attempt := 0; attempt < 3; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -185,10 +243,9 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) error {
 		} else if awsResyncErr != nil {
 			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
 			m.cachedEC2Client = nil // Maybe something wrong with client?
-			continue
+			return awsResyncErr
 		}
 		m.resyncNeeded = false
-		logrus.Info("Resync completed successfully.")
 		break
 	}
 	if awsResyncErr != nil {
@@ -253,7 +310,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() error {
 	bestSubnetID := m.calculateBestSubnet(awsNICState, localSubnetsByID)
 	if bestSubnetID == "" {
 		logrus.Debug("No AWS subnets needed.")
-		m.response = &AWSState{}
+		m.response = &SecondaryIfaceState{}
 		if needRefresh {
 			return errResyncNeeded
 		}
@@ -353,9 +410,9 @@ func (m *SecondaryIfaceProvisioner) attemptResync() error {
 	return nil
 }
 
-func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *awsNICState) *AWSState {
+func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *awsNICState) *SecondaryIfaceState {
 	// Index the AWS NICs on MAC.
-	ifacesByMAC := map[string]NICInfo{}
+	ifacesByMAC := map[string]Iface{}
 	for nicID, awsNIC := range awsNICState.awsNICsByID {
 		if awsNIC.MacAddress == nil {
 			continue
@@ -377,7 +434,7 @@ func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *awsNICState) 
 				secondaryAddrs = append(secondaryAddrs, addr)
 			}
 		}
-		ifacesByMAC[hwAddr.String()] = NICInfo{
+		ifacesByMAC[hwAddr.String()] = Iface{
 			ID:                 nicID,
 			MAC:                hwAddr,
 			PrimaryIPv4Addr:    primary,
@@ -385,7 +442,7 @@ func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *awsNICState) 
 		}
 	}
 
-	return &AWSState{
+	return &SecondaryIfaceState{
 		SecondaryNICsByMAC: ifacesByMAC,
 		SubnetCIDR:         m.awsSubnetCIDR,
 		GatewayAddr:        m.awsGatewayAddr,

@@ -37,8 +37,6 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
-	aws2 "github.com/projectcalico/felix/dataplane/aws"
-
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
@@ -381,7 +379,7 @@ type InternalDataplane struct {
 	loopSummarizer *logutils.Summarizer
 
 	packetProcessor *nfqdnspolicy.PacketProcessor
-	awsStateUpdC    chan *aws2.AWSState
+	awsStateUpdC    <-chan *aws.SecondaryIfaceState
 	awsSubnetMgr    *awsIPManager
 }
 
@@ -2155,7 +2153,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 				}
 			}
 		case msg := <-d.awsStateUpdC:
-			d.awsSubnetMgr.OnAWSStateUpdate(msg)
+			d.awsSubnetMgr.OnSecondaryIfaceStateUpdate(msg)
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
