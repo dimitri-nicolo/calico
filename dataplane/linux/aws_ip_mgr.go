@@ -25,6 +25,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+// awsIPManager tries to provision secondary ENIs and IP addresses in the AWS fabric for any local pods that are
+// in an IP pool with an associated AWS subnet.  The work of attaching ENIs and IP addresses is done by a
+// background instance of aws.SecondaryIfaceProvisioner.  The work to configure the local dataplane is done
+// by this object.
+//
+// For thread safety, the aws.SecondaryIfaceProvisioner sends its responses via a channel that is read by the
+// main loop in int_dataplane.go.
 type awsIPManager struct {
 	// Indexes of data we've learned from the datastore.
 
@@ -106,7 +113,6 @@ func NewAWSSubnetManager(
 		),
 	}
 	sm.queueAWSResync("first run")
-	sm.queueDataplaneResync("first run")
 	return sm
 }
 
@@ -262,11 +268,16 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 			ds.PoolIDsBySubnetID[k] = v
 		}
 		a.ifaceProvisioner.OnDatastoreUpdate(ds)
+		a.awsResyncNeeded = false
 	}
 
 	var err error
 	if a.dataplaneResyncNeeded {
 		err = a.resyncWithDataplane()
+		if err != nil {
+			return err
+		}
+		a.dataplaneResyncNeeded = false
 	}
 	return err
 }
