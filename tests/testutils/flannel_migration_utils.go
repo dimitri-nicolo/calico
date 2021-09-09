@@ -49,6 +49,7 @@ func RunFlannelMigrationController(kconfigfile string, nodeName, subnetEnv strin
 		"-e", fmt.Sprintf("DEBUG_WAIT_BEFORE_EXIT=%d", waitBeforeExit),
 		"-e", fmt.Sprintf("KUBECONFIG=%s", kconfigfile),
 		"-v", fmt.Sprintf("%s:%s", kconfigfile, kconfigfile),
+		"-e", "KUBE_CONTROLLERS_CONFIG_NAME=default",
 		os.Getenv("MIGRATION_CONTAINER_NAME"))
 }
 
