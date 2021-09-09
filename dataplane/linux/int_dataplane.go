@@ -382,7 +382,7 @@ type InternalDataplane struct {
 
 	packetProcessor *nfqdnspolicy.PacketProcessor
 	awsStateUpdC    chan *aws2.AWSState
-	awsSubnetMgr    *awsSubnetManager
+	awsSubnetMgr    *awsIPManager
 }
 
 const (

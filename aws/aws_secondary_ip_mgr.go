@@ -16,7 +16,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
@@ -27,13 +26,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-type SecondaryIfaceManager struct {
+type SecondaryIfaceProvisioner struct {
 	nodeName             string
 	healthAgg            *health.HealthAggregator
 	opRecorder           logutils.OpRecorder
 	ipamClient           ipam.Interface
 	k8sClient            *kubernetes.Clientset
-	cachedEC2Client      *aws.EC2Client
+	cachedEC2Client      *EC2Client
 	timeout              time.Duration
 	updatesFromDatastore chan DatastoreState
 
@@ -41,7 +40,7 @@ type SecondaryIfaceManager struct {
 	orphanNICResyncNeeded bool
 	hostIPAMResyncNeeded  bool
 
-	networkCapabilities *aws.NetworkCapabilities
+	networkCapabilities *NetworkCapabilities
 	awsGatewayAddr      ip.Addr
 	awsSubnetCIDR       ip.CIDR
 
@@ -61,13 +60,13 @@ const (
 	healthNameAWSInSync      = "aws-enis-in-sync"
 )
 
-func NewSecondaryIfaceManager(
+func NewSecondaryIfaceProvisioner(
 	healthAgg *health.HealthAggregator,
 	ipamClient ipam.Interface,
 	k8sClient *kubernetes.Clientset,
 	nodeName string,
 	awsTimeout time.Duration,
-) *SecondaryIfaceManager {
+) *SecondaryIfaceProvisioner {
 	// TODO actually report health
 	healthAgg.RegisterReporter(healthNameSubnetCapacity, &health.HealthReport{
 		Ready: true,
@@ -86,7 +85,7 @@ func NewSecondaryIfaceManager(
 		Live:  true,
 	})
 
-	return &SecondaryIfaceManager{
+	return &SecondaryIfaceProvisioner{
 		healthAgg:  healthAgg,
 		ipamClient: ipamClient,
 		k8sClient:  k8sClient,
@@ -98,7 +97,7 @@ func NewSecondaryIfaceManager(
 	}
 }
 
-func (m *SecondaryIfaceManager) Start(ctx context.Context) (done chan struct{}) {
+func (m *SecondaryIfaceProvisioner) Start(ctx context.Context) (done chan struct{}) {
 	done = make(chan struct{})
 	go m.loopKeepingAWSInSync(ctx, done)
 	return
@@ -117,7 +116,7 @@ type NICInfo struct {
 	SecondaryIPv4Addrs []ip.Addr
 }
 
-func (m *SecondaryIfaceManager) loopKeepingAWSInSync(ctx context.Context, doneC chan struct{}) {
+func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, doneC chan struct{}) {
 	defer close(doneC)
 
 	// Response channel is masked (nil) until we're ready to send something.
@@ -158,7 +157,7 @@ func (m *SecondaryIfaceManager) loopKeepingAWSInSync(ctx context.Context, doneC 
 	}
 }
 
-func (m *SecondaryIfaceManager) OnDatastoreUpdate(snapshot DatastoreState) {
+func (m *SecondaryIfaceProvisioner) OnDatastoreUpdate(snapshot DatastoreState) {
 	// To make sure we don't block, drain any pending update from the channel.
 	select {
 	case <-m.updatesFromDatastore:
@@ -172,7 +171,7 @@ func (m *SecondaryIfaceManager) OnDatastoreUpdate(snapshot DatastoreState) {
 
 var errResyncNeeded = errors.New("resync needed")
 
-func (m *SecondaryIfaceManager) resync(ctx context.Context) error {
+func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) error {
 	var awsResyncErr error
 	for attempt := 0; attempt < 3; attempt++ {
 		if err := ctx.Err(); err != nil {
@@ -198,7 +197,7 @@ func (m *SecondaryIfaceManager) resync(ctx context.Context) error {
 	return nil
 }
 
-func (m *SecondaryIfaceManager) attemptResync() error {
+func (m *SecondaryIfaceProvisioner) attemptResync() error {
 	m.response = nil
 
 	if m.networkCapabilities == nil {
@@ -354,7 +353,7 @@ func (m *SecondaryIfaceManager) attemptResync() error {
 	return nil
 }
 
-func (m *SecondaryIfaceManager) calculateResponse(awsNICState *awsNICState) *AWSState {
+func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *awsNICState) *AWSState {
 	// Index the AWS NICs on MAC.
 	ifacesByMAC := map[string]NICInfo{}
 	for nicID, awsNIC := range awsNICState.awsNICsByID {
@@ -395,7 +394,7 @@ func (m *SecondaryIfaceManager) calculateResponse(awsNICState *awsNICState) *AWS
 
 // getMyNetworkCapabilities looks up the network capabilities of this host; this includes the number of NICs
 // and IPs per NIC.
-func (m *SecondaryIfaceManager) getMyNetworkCapabilities() (*aws.NetworkCapabilities, error) {
+func (m *SecondaryIfaceProvisioner) getMyNetworkCapabilities() (*NetworkCapabilities, error) {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -452,7 +451,7 @@ func (s *awsNICState) OnIPUnassigned(nicID string, addr ip.CIDR) {
 }
 
 // loadAWSNICsState looks up all the NICs attached ot this host and creates an awsNICState to index them.
-func (m *SecondaryIfaceManager) loadAWSNICsState() (s *awsNICState, err error) {
+func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *awsNICState, err error) {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -488,7 +487,7 @@ func (m *SecondaryIfaceManager) loadAWSNICsState() (s *awsNICState, err error) {
 				s.attachmentIDByNICID[*n.NetworkInterfaceId] = *n.Attachment.AttachmentId
 			}
 		}
-		if !aws.NetworkInterfaceIsCalicoSecondary(n) {
+		if !NetworkInterfaceIsCalicoSecondary(n) {
 			if s.primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex != nil && *n.Attachment.DeviceIndex == 0 {
 				s.primaryNIC = &n
 			}
@@ -524,7 +523,7 @@ func (m *SecondaryIfaceManager) loadAWSNICsState() (s *awsNICState, err error) {
 }
 
 // findUnusedAWSIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
-func (m *SecondaryIfaceManager) findUnusedAWSIPs(awsState *awsNICState) set.Set /* ip.Addr */ {
+func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *awsNICState) set.Set /* ip.Addr */ {
 	awsIPsToRelease := set.New()
 	for addr, nicID := range awsState.nicIDByIP {
 		if _, ok := m.ds.LocalAWSRoutesByDst[addr]; !ok {
@@ -539,7 +538,7 @@ func (m *SecondaryIfaceManager) findUnusedAWSIPs(awsState *awsNICState) set.Set 
 }
 
 // loadLocalAWSSubnets looks up all the AWS Subnets that are in this host's VPC and availability zone.
-func (m *SecondaryIfaceManager) loadLocalAWSSubnets() (map[string]ec2types.Subnet, error) {
+func (m *SecondaryIfaceProvisioner) loadLocalAWSSubnets() (map[string]ec2types.Subnet, error) {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -563,7 +562,7 @@ func (m *SecondaryIfaceManager) loadLocalAWSSubnets() (map[string]ec2types.Subne
 
 // findNICsWithNoPool scans the awsNICState for secondary AWS NICs that were created by Calico but no longer
 // have an associated IP pool.
-func (m *SecondaryIfaceManager) findNICsWithNoPool(awsNICState *awsNICState) set.Set {
+func (m *SecondaryIfaceProvisioner) findNICsWithNoPool(awsNICState *awsNICState) set.Set {
 	nicsToRelease := set.New()
 	for nicID, nic := range awsNICState.awsNICsByID {
 		if _, ok := m.ds.PoolIDsBySubnetID[*nic.SubnetId]; ok {
@@ -580,7 +579,7 @@ func (m *SecondaryIfaceManager) findNICsWithNoPool(awsNICState *awsNICState) set
 }
 
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
-func (m *SecondaryIfaceManager) findRoutesWithNoAWSAddr(awsNICState *awsNICState, localSubnetsByID map[string]ec2types.Subnet) []*proto.RouteUpdate {
+func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsNICState *awsNICState, localSubnetsByID map[string]ec2types.Subnet) []*proto.RouteUpdate {
 	var missingRoutes []*proto.RouteUpdate
 	for addr, route := range m.ds.LocalAWSRoutesByDst {
 		if _, ok := localSubnetsByID[route.AwsSubnetId]; !ok {
@@ -616,7 +615,7 @@ func (m *SecondaryIfaceManager) findRoutesWithNoAWSAddr(awsNICState *awsNICState
 
 // unassignAWSIPs unassigns (releases) the given IPs in the AWS fabric.  It updates the free IP counters
 // in the awsNICState (but it does not refresh the AWS NIC data itself).
-func (m *SecondaryIfaceManager) unassignAWSIPs(awsIPsToRelease set.Set, awsNICState *awsNICState) error {
+func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsNICState *awsNICState) error {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -651,7 +650,7 @@ func (m *SecondaryIfaceManager) unassignAWSIPs(awsIPsToRelease set.Set, awsNICSt
 
 // releaseAWSNICs tries to unattach and release the given NICs.  Returns errResyncNeeded if the awsNICState now needs
 // to be refreshed.
-func (m *SecondaryIfaceManager) releaseAWSNICs(nicsToRelease set.Set, awsNICState *awsNICState) error {
+func (m *SecondaryIfaceProvisioner) releaseAWSNICs(nicsToRelease set.Set, awsNICState *awsNICState) error {
 	if nicsToRelease.Len() == 0 {
 		return nil
 	}
@@ -699,7 +698,7 @@ func (m *SecondaryIfaceManager) releaseAWSNICs(nicsToRelease set.Set, awsNICStat
 // calculateBestSubnet Tries to calculate a single "best" AWS subnet for this host.  When we're configured correctly
 // there should only be one subnet in use on this host but we try to pick a sensible one if the IP pools have conflicting
 // information.
-func (m *SecondaryIfaceManager) calculateBestSubnet(awsNICState *awsNICState, localSubnetsByID map[string]ec2types.Subnet) string {
+func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsNICState *awsNICState, localSubnetsByID map[string]ec2types.Subnet) string {
 	// Match AWS subnets against our IP pools.
 	localIPPoolSubnetIDs := set.New()
 	for subnetID := range m.ds.PoolIDsBySubnetID {
@@ -736,7 +735,7 @@ func (m *SecondaryIfaceManager) calculateBestSubnet(awsNICState *awsNICState, lo
 }
 
 // subnetCIDRAndGW extracts the subnet's CIDR and gateway address from the given AWS subnet.
-func (m *SecondaryIfaceManager) subnetCIDRAndGW(subnet ec2types.Subnet) (ip.CIDR, ip.Addr, error) {
+func (m *SecondaryIfaceProvisioner) subnetCIDRAndGW(subnet ec2types.Subnet) (ip.CIDR, ip.Addr, error) {
 	subnetID := safeReadString(subnet.SubnetId)
 	if subnet.CidrBlock == nil {
 		return nil, nil, fmt.Errorf("our subnet missing its CIDR id=%s", subnetID) // AWS bug?
@@ -768,7 +767,7 @@ func filterRoutesByAWSSubnet(missingRoutes []*proto.RouteUpdate, bestSubnet stri
 
 // attachOrphanNICs looks for any unattached Calico-created NICs that should be attached to this host and tries
 // to attach them.
-func (m *SecondaryIfaceManager) attachOrphanNICs(awsNICState *awsNICState, bestSubnetID string) error {
+func (m *SecondaryIfaceProvisioner) attachOrphanNICs(awsNICState *awsNICState, bestSubnetID string) error {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -780,7 +779,7 @@ func (m *SecondaryIfaceManager) attachOrphanNICs(awsNICState *awsNICState, bestS
 		Filters: []ec2types.Filter{
 			{
 				// We label all our NICs at creation time with the instance they belong to.
-				Name:   stringPtr("tag:" + aws.NetworkInterfaceTagOwningInstance),
+				Name:   stringPtr("tag:" + NetworkInterfaceTagOwningInstance),
 				Values: []string{ec2Client.InstanceID},
 			},
 			{
@@ -844,7 +843,7 @@ func (m *SecondaryIfaceManager) attachOrphanNICs(awsNICState *awsNICState, bestS
 
 // freeUnusedHostCalicoIPs finds any IPs assign to this host for a secondary ENI that are not actually in use
 // and then frees those IPs.
-func (m *SecondaryIfaceManager) freeUnusedHostCalicoIPs(awsNICState *awsNICState) error {
+func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsNICState *awsNICState) error {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.ipamHandle())
@@ -871,7 +870,7 @@ func (m *SecondaryIfaceManager) freeUnusedHostCalicoIPs(awsNICState *awsNICState
 
 // calculateNumNewNICsNeeded does the maths to figure out how many NICs we need to add given the number of
 // IPs we need and the spare capacity of existing NICs.
-func (m *SecondaryIfaceManager) calculateNumNewNICsNeeded(awsNICState *awsNICState, bestSubnetID string) (int, error) {
+func (m *SecondaryIfaceProvisioner) calculateNumNewNICsNeeded(awsNICState *awsNICState, bestSubnetID string) (int, error) {
 	totalIPs := m.ds.LocalRouteDestsBySubnetID[bestSubnetID].Len()
 	if m.networkCapabilities.MaxIPv4PerInterface <= 1 {
 		logrus.Error("Instance type doesn't support secondary IPs")
@@ -886,7 +885,7 @@ func (m *SecondaryIfaceManager) calculateNumNewNICsNeeded(awsNICState *awsNICSta
 }
 
 // allocateCalicoHostIPs allocates the given number of IPPoolAllowedUseHostSecondary IPs to this host in Calico IPAM.
-func (m *SecondaryIfaceManager) allocateCalicoHostIPs(numNICsNeeded int) (*ipam.IPAMAssignments, error) {
+func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numNICsNeeded int) (*ipam.IPAMAssignments, error) {
 	ipamCtx, ipamCancel := m.newContext()
 
 	handle := m.ipamHandle()
@@ -919,7 +918,7 @@ func (m *SecondaryIfaceManager) allocateCalicoHostIPs(numNICsNeeded int) (*ipam.
 
 // createAWSNICs creates one AWS secondary ENI in the given subnet for each given IP address and attempts to
 // attach the newly created NIC to this host.
-func (m *SecondaryIfaceManager) createAWSNICs(awsNICState *awsNICState, subnetID string, v4addrs []calinet.IPNet) error {
+func (m *SecondaryIfaceProvisioner) createAWSNICs(awsNICState *awsNICState, subnetID string, v4addrs []calinet.IPNet) error {
 	if len(v4addrs) == 0 {
 		return nil
 	}
@@ -951,11 +950,11 @@ func (m *SecondaryIfaceManager) createAWSNICs(awsNICState *awsNICState, subnetID
 					ResourceType: ec2types.ResourceTypeNetworkInterface,
 					Tags: []ec2types.Tag{
 						{
-							Key:   stringPtr(aws.NetworkInterfaceTagUse),
-							Value: stringPtr(aws.NetworkInterfaceUseSecondary),
+							Key:   stringPtr(NetworkInterfaceTagUse),
+							Value: stringPtr(NetworkInterfaceUseSecondary),
 						},
 						{
-							Key:   stringPtr(aws.NetworkInterfaceTagOwningInstance),
+							Key:   stringPtr(NetworkInterfaceTagOwningInstance),
 							Value: stringPtr(ec2Client.InstanceID),
 						},
 					},
@@ -1008,7 +1007,7 @@ func (m *SecondaryIfaceManager) createAWSNICs(awsNICState *awsNICState, subnetID
 	return finalErr
 }
 
-func (m *SecondaryIfaceManager) assignSecondaryIPsToNICs(awsNICState *awsNICState, filteredRoutes []*proto.RouteUpdate) error {
+func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToNICs(awsNICState *awsNICState, filteredRoutes []*proto.RouteUpdate) error {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -1051,23 +1050,23 @@ func (m *SecondaryIfaceManager) assignSecondaryIPsToNICs(awsNICState *awsNICStat
 	return nil
 }
 
-func (m *SecondaryIfaceManager) ipamHandle() string {
+func (m *SecondaryIfaceProvisioner) ipamHandle() string {
 	// Using the node name here for consistency with tunnel IPs.
 	return fmt.Sprintf("aws-secondary-ifaces-%s", m.nodeName)
 }
 
-func (m *SecondaryIfaceManager) newContext() (context.Context, context.CancelFunc) {
+func (m *SecondaryIfaceProvisioner) newContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), m.timeout)
 }
 
-func (m *SecondaryIfaceManager) ec2Client() (*aws.EC2Client, error) {
+func (m *SecondaryIfaceProvisioner) ec2Client() (*EC2Client, error) {
 	if m.cachedEC2Client != nil {
 		return m.cachedEC2Client, nil
 	}
 
 	ctx, cancel := m.newContext()
 	defer cancel()
-	c, err := aws.NewEC2Client(ctx)
+	c, err := NewEC2Client(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"syscall"
@@ -11,7 +12,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"k8s.io/client-go/kubernetes"
 
-	aws2 "github.com/projectcalico/felix/dataplane/aws"
+	"github.com/projectcalico/felix/aws"
 
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/routerule"
@@ -24,7 +25,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-type awsSubnetManager struct {
+type awsIPManager struct {
 	// Indexes of data we've learned from the datastore.
 
 	poolsByID                 map[string]*proto.IPAMPool
@@ -33,14 +34,15 @@ type awsSubnetManager struct {
 	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
 	awsResyncNeeded           bool
 
-	// secondaryIfaceMgr manages the AWS fabric resources.  We send it datstore snapshots and it sends back
-	// AWSState objects telling us what state the AWS fabric is in.
-	secondaryIfaceMgr *aws2.SecondaryIfaceManager
+	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
+	// from the main thread.  We send it datastore snapshots; in return, it sends back AWSState objects telling us
+	// what state the AWS fabric is in.
+	ifaceProvisioner        *aws.SecondaryIfaceProvisioner
+	ifaceProvisionerStarted bool
 
 	// awsState is the most recent update we've got from the background thread telling us what state it thinks
-	// the AWS fabric should be in.
-	// TODO Deal with this being "behind"" without logging lots of errors.
-	awsState *aws2.AWSState
+	// the AWS fabric should be in. <nil> means "don't know", i.e. we're not ready to touch the dataplane yet.
+	awsState *aws.AWSState
 
 	// Dataplane state.
 
@@ -63,7 +65,7 @@ func NewAWSSubnetManager(
 	routeTableIndexes []int,
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
-) *awsSubnetManager {
+) *awsIPManager {
 
 	rules, err := routerule.New(
 		4,
@@ -81,7 +83,7 @@ func NewAWSSubnetManager(
 		logrus.WithError(err).Panic("Failed to init routing rules manager.")
 	}
 
-	sm := &awsSubnetManager{
+	sm := &awsIPManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
@@ -95,7 +97,7 @@ func NewAWSSubnetManager(
 		dpConfig:   dpConfig,
 		opRecorder: opRecorder,
 
-		secondaryIfaceMgr: aws2.NewSecondaryIfaceManager(
+		ifaceProvisioner: aws.NewSecondaryIfaceProvisioner(
 			healthAgg,
 			ipamClient,
 			k8sClient,
@@ -108,11 +110,11 @@ func NewAWSSubnetManager(
 	return sm
 }
 
-func (a *awsSubnetManager) ResponseC() chan *aws2.AWSState {
-	return a.secondaryIfaceMgr.ResponseC
+func (a *awsIPManager) ResponseC() chan *aws.AWSState {
+	return a.ifaceProvisioner.ResponseC
 }
 
-func (a *awsSubnetManager) OnUpdate(msg interface{}) {
+func (a *awsIPManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.IPAMPoolUpdate:
 		a.onPoolUpdate(msg.Id, msg.Pool)
@@ -125,12 +127,12 @@ func (a *awsSubnetManager) OnUpdate(msg interface{}) {
 	}
 }
 
-func (a *awsSubnetManager) OnAWSStateUpdate(msg *aws2.AWSState) {
+func (a *awsIPManager) OnAWSStateUpdate(msg *aws.AWSState) {
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
 }
 
-func (a *awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
+func (a *awsIPManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	// Update the index from subnet ID to pool ID.  We do this first so we can look up the
 	// old version of the pool (if any).
 	oldSubnetID := ""
@@ -174,7 +176,7 @@ func (a *awsSubnetManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 	a.queueAWSResync("IP pool updated")
 }
 
-func (a *awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
+func (a *awsIPManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	if route != nil && !route.LocalWorkload {
 		route = nil
 	}
@@ -223,7 +225,7 @@ func (a *awsSubnetManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) 
 	}
 }
 
-func (a *awsSubnetManager) queueAWSResync(reason string) {
+func (a *awsIPManager) queueAWSResync(reason string) {
 	if a.awsResyncNeeded {
 		return
 	}
@@ -231,7 +233,7 @@ func (a *awsSubnetManager) queueAWSResync(reason string) {
 	a.awsResyncNeeded = true
 }
 
-func (a *awsSubnetManager) queueDataplaneResync(reason string) {
+func (a *awsIPManager) queueDataplaneResync(reason string) {
 	if a.dataplaneResyncNeeded {
 		return
 	}
@@ -239,9 +241,12 @@ func (a *awsSubnetManager) queueDataplaneResync(reason string) {
 	a.dataplaneResyncNeeded = true
 }
 
-func (a *awsSubnetManager) CompleteDeferredWork() error {
+func (a *awsIPManager) CompleteDeferredWork() error {
+	if !a.ifaceProvisionerStarted {
+		a.ifaceProvisioner.Start(context.Background())
+	}
 	if a.awsResyncNeeded {
-		ds := aws2.DatastoreState{
+		ds := aws.DatastoreState{
 			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
@@ -256,7 +261,7 @@ func (a *awsSubnetManager) CompleteDeferredWork() error {
 		for k, v := range a.poolIDsBySubnetID {
 			ds.PoolIDsBySubnetID[k] = v
 		}
-		a.secondaryIfaceMgr.OnDatastoreUpdate(ds)
+		a.ifaceProvisioner.OnDatastoreUpdate(ds)
 	}
 
 	var err error
@@ -266,7 +271,7 @@ func (a *awsSubnetManager) CompleteDeferredWork() error {
 	return err
 }
 
-func (a *awsSubnetManager) resyncWithDataplane() error {
+func (a *awsIPManager) resyncWithDataplane() error {
 	// TODO Listen for interface updates and resync after any relevant ones.
 
 	if a.awsState == nil {
@@ -409,7 +414,7 @@ func (a *awsSubnetManager) resyncWithDataplane() error {
 	return nil
 }
 
-func (a *awsSubnetManager) getOrAllocRoutingTable(tableIndex int, ifaceName string) routeTable {
+func (a *awsIPManager) getOrAllocRoutingTable(tableIndex int, ifaceName string) routeTable {
 	if _, ok := a.routeTables[tableIndex]; !ok {
 		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
 		a.routeTables[tableIndex] = routetable.New(
@@ -427,7 +432,7 @@ func (a *awsSubnetManager) getOrAllocRoutingTable(tableIndex int, ifaceName stri
 	return a.routeTables[tableIndex]
 }
 
-func (a *awsSubnetManager) getOrAllocRoutingTableID(ifaceName string) int {
+func (a *awsIPManager) getOrAllocRoutingTableID(ifaceName string) int {
 	if _, ok := a.routeTableIndexByIfaceName[ifaceName]; !ok {
 		a.routeTableIndexByIfaceName[ifaceName] = a.freeRouteTableIndexes[0]
 		a.freeRouteTableIndexes = a.freeRouteTableIndexes[1:]
@@ -435,13 +440,13 @@ func (a *awsSubnetManager) getOrAllocRoutingTableID(ifaceName string) int {
 	return a.routeTableIndexByIfaceName[ifaceName]
 }
 
-func (a *awsSubnetManager) releaseRoutingTableID(ifaceName string) {
+func (a *awsIPManager) releaseRoutingTableID(ifaceName string) {
 	id := a.routeTableIndexByIfaceName[ifaceName]
 	delete(a.routeTableIndexByIfaceName, ifaceName)
 	a.freeRouteTableIndexes = append(a.freeRouteTableIndexes, id)
 }
 
-func (a *awsSubnetManager) GetRouteTableSyncers() []routeTableSyncer {
+func (a *awsIPManager) GetRouteTableSyncers() []routeTableSyncer {
 	var rts []routeTableSyncer
 	for _, t := range a.routeTables {
 		rts = append(rts, t)
@@ -449,10 +454,10 @@ func (a *awsSubnetManager) GetRouteTableSyncers() []routeTableSyncer {
 	return rts
 }
 
-func (a *awsSubnetManager) GetRouteRules() []routeRules {
+func (a *awsIPManager) GetRouteRules() []routeRules {
 	return []routeRules{a.routeRules}
 }
 
-var _ Manager = (*awsSubnetManager)(nil)
-var _ ManagerWithRouteRules = (*awsSubnetManager)(nil)
-var _ ManagerWithRouteTables = (*awsSubnetManager)(nil)
+var _ Manager = (*awsIPManager)(nil)
+var _ ManagerWithRouteRules = (*awsIPManager)(nil)
+var _ ManagerWithRouteTables = (*awsIPManager)(nil)
