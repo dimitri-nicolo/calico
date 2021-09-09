@@ -23,6 +23,7 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 const (
@@ -231,7 +232,7 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	// form query
 	query := buildESQuery(params)
-	index := lmaindex.FlowLogs().GetIndex(params.ClusterName)
+	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
 
 	aggQuery := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,

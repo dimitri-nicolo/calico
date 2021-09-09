@@ -894,7 +894,6 @@ github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFC
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/api v0.0.0-20210805004937-7a70d5252063/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
-github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba h1:yRzRCcfFCeIdQlTELjECxH4kV7iDK046NhWmE7Y6ZHE=
 github.com/tigera/api v0.0.0-20210901212008-beb0c9888cba/go.mod h1:KZ+Ck27bbY+L0sJap9f9eJy1wMEWrssdY0oOOSb0bnM=
 github.com/tigera/api v0.0.0-20210903212353-9812eaaf9cf2/go.mod h1:MCvyQfRUzBS+gTqjd2QUgB9tIkcdp9m2nGl3+8CSUmU=
 github.com/tigera/api v0.0.0-20210907142848-f71992c952a6 h1:eLwKc4pO7KVODNrHYSIhMicWNaT55jiXOQeIyMg3Bro=

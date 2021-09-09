@@ -13,6 +13,7 @@ import (
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 type L7Flow struct {
@@ -101,7 +102,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		}()
 	}
 
-	index := lmaindex.L7Logs().GetIndex(cluster)
+	index := lmaindex.L7Logs().GetIndex(elasticvariant.AddIndexInfix(cluster))
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           index,
 		Query:                   lmaindex.L7Logs().NewTimeRangeQuery(tr.From, tr.To),

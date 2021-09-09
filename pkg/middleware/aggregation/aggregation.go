@@ -24,6 +24,8 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 // This file implements an aggregated data query handler. The primary use of this is for the UX when querying aggregated
@@ -202,7 +204,7 @@ func (s *aggregation) getAggregationRequest(w http.ResponseWriter, req *http.Req
 	return &RequestData{
 		HTTPRequest:        req,
 		AggregationRequest: ar,
-		Index:              s.indexHelper.GetIndex(ar.Cluster),
+		Index:              s.indexHelper.GetIndex(elasticvariant.AddIndexInfix(ar.Cluster)),
 		IsTimeSeries:       buckets != 0,
 		Aggregations:       aggs,
 	}, nil

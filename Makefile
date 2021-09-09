@@ -37,12 +37,23 @@ else
 local_build:
 endif
 
+TESLA ?= false
+
 ES_PROXY_IMAGE        ?=tigera/es-proxy
 BUILD_IMAGES          ?=$(ES_PROXY_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
+
+ifeq ($(TESLA),true)
+	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
+	BUILD_TAGS            ?= -tags tesla
+	RELEASE_BRANCH_PREFIX = release-cloud
+	DEV_TAG_SUFFIX        = cloud-0.dev
+	IMAGETAG_PREFIX       ?= tesla
+endif
+
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -121,7 +132,7 @@ else
 endif
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
+			go build -o $@ -v -x $(LDFLAGS) $(BUILD_TAGS) "$(PACKAGE_NAME)/cmd/server" && \
 				( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | \
 	                grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 				( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'

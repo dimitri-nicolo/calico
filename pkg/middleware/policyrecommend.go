@@ -9,7 +9,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/datastore"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 	lmaerror "github.com/tigera/lma/pkg/api"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/policyrec"
 	"github.com/tigera/lma/pkg/rbac"
 
@@ -38,6 +40,10 @@ func PolicyRecommendationHandler(k8sClientFactory datastore.ClusterCtxK8sClientF
 		}
 
 		clusterID := req.Header.Get(clusterIdHeader)
+
+		// Ensure index is properly scoped by to the correct cluster.
+		params.DocumentIndex = lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(clusterID))
+
 		authorizer, err := k8sClientFactory.RBACAuthorizerForCluster(clusterID)
 		if err != nil {
 			log.WithError(err).Error("failed to get authorizer from client factory")

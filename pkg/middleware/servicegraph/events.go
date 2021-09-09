@@ -19,6 +19,7 @@ import (
 	"github.com/tigera/lma/pkg/k8s"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 const (
@@ -139,7 +140,7 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, 
 	// - the context indicates "done"
 	var results []Event
 	query := lmaindex.Alerts().NewTimeRangeQuery(tr.From, tr.To)
-	index := lmaindex.Alerts().GetIndex(cluster)
+	index := lmaindex.Alerts().GetIndex(elasticvariant.AddIndexInfix(cluster))
 	var searchAfterKeys []interface{}
 	for {
 		log.Debugf("Issuing search query, start after %#v", searchAfterKeys)

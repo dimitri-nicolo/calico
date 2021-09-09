@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/math"
 
 	"github.com/olivere/elastic/v7"
@@ -140,7 +141,7 @@ func search(
 	// Releases timer resources if the operation completes before the timeout.
 	defer cancelWithTimeout()
 
-	index := idxHelper.GetIndex(params.ClusterName)
+	index := idxHelper.GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
 
 	esquery := elastic.NewBoolQuery()
 	// Selector query.

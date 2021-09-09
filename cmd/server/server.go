@@ -29,6 +29,8 @@ func PrintVersion() error {
 func init() {
 	// Add a flag to check the version.
 	flag.BoolVar(&version, "version", false, "Display version")
+
+	ValidateEnvVars()
 }
 
 func main() {
