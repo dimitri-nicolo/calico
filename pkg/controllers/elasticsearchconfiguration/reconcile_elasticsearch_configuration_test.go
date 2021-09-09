@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 
 	"k8s.io/client-go/kubernetes"
@@ -98,59 +100,164 @@ kdjulhPG079HRWabxrqxv49z9Hb1w71iD6Yd/oDVzeXyvj/pfBaAit6qq9yEAyTT
 -----END RSA PRIVATE KEY-----`
 
 var _ = Describe("Reconcile", func() {
-	Context("Configuration successfully created", func() {
-		var managedK8sCli *k8sfake.Clientset
-		var managementK8sCli *k8sfake.Clientset
-		var esK8sCli *relasticsearchfake.RESTClient
-		var esCertSecret, gatewayCertSecret *corev1.Secret
-		var managementESConfigMap *corev1.ConfigMap
+	var managementK8sCli *k8sfake.Clientset
+	var esK8sCli *relasticsearchfake.RESTClient
+	var esCertSecret, gatewayCertSecret *corev1.Secret
+	var managementESConfigMap *corev1.ConfigMap
 
-		BeforeEach(func() {
-			esCertSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      resource.ElasticsearchCertSecret,
-					Namespace: resource.OperatorNamespace,
-				},
-				Data: map[string][]byte{
-					"tls.crt": []byte(cert),
-					"tls.key": []byte(key),
-				},
-			}
+	BeforeEach(func() {
+		esCertSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resource.ElasticsearchCertSecret,
+				Namespace: resource.OperatorNamespace,
+			},
+			Data: map[string][]byte{
+				"tls.crt": []byte(cert),
+				"tls.key": []byte(key),
+			},
+		}
 
-			gatewayCertSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      resource.ESGatewayCertSecret,
-					Namespace: resource.OperatorNamespace,
-				},
-				Data: map[string][]byte{
-					"tls.crt": []byte(cert),
-					"tls.key": []byte(key),
-				},
-			}
+		gatewayCertSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resource.ESGatewayCertSecret,
+				Namespace: resource.OperatorNamespace,
+			},
+			Data: map[string][]byte{
+				"tls.crt": []byte(cert),
+				"tls.key": []byte(key),
+			},
+		}
 
-			managementESConfigMap = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      resource.ElasticsearchConfigMapName,
-					Namespace: resource.OperatorNamespace,
-				},
-				Data: map[string]string{
-					"clusterName": "cluster",
-					"replicas":    "1",
-					"shards":      "5",
-				},
-			}
+		managementESConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resource.ElasticsearchConfigMapName,
+				Namespace: resource.OperatorNamespace,
+			},
+			Data: map[string]string{
+				"clusterName": "cluster",
+				"replicas":    "1",
+				"shards":      "5",
+			},
+		}
 
-			managedK8sCli = k8sfake.NewSimpleClientset()
-			managementK8sCli = k8sfake.NewSimpleClientset(esCertSecret, gatewayCertSecret, managementESConfigMap)
+		managementK8sCli = k8sfake.NewSimpleClientset(esCertSecret, gatewayCertSecret, managementESConfigMap)
 
-			var err error
-			esK8sCli, err = relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
-				Name:              resource.DefaultTSEEInstanceName,
-				Namespace:         resource.TigeraElasticsearchNamespace,
-				CreationTimestamp: metav1.Now(),
-			}})
+		var err error
+		esK8sCli, err = relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
+			Name:              resource.DefaultTSEEInstanceName,
+			Namespace:         resource.TigeraElasticsearchNamespace,
+			CreationTimestamp: metav1.Now(),
+		}})
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	Context("Management cluster configuration successfully created", func() {
+		It("Creates the initial necessary configuration", func() {
+			ctx := context.Background()
+
+			es := &esv1.Elasticsearch{}
+			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			}))
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			mockESClientBuild := new(elasticsearch.MockClientBuilder)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockESClientBuild.On("Build").Return(esClient, err)
+
+			r := elasticsearchconfiguration.NewReconciler("cluster", "", mockESClientBuild, true, managementK8sCli, managementK8sCli, esK8sCli)
+
+			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
+
+			assertManagementConfiguration(managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
 		})
+
+		It("Recreates the verification secrets if they're removed", func() {
+			ctx := context.Background()
+
+			es := &esv1.Elasticsearch{}
+			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			}))
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			mockESClientBuild := new(elasticsearch.MockClientBuilder)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockESClientBuild.On("Build").Return(esClient, err)
+
+			r := elasticsearchconfiguration.NewReconciler("cluster", "", mockESClientBuild, true, managementK8sCli, managementK8sCli, esK8sCli)
+
+			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
+
+			// Assert the configuration is initially correct.
+			assertManagementConfiguration(managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
+
+			verificationSecretName := fmt.Sprintf("%s-gateway-verification-credentials", esusers.ElasticsearchUserNameFluentd)
+			err = managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+				Delete(context.Background(), verificationSecretName, metav1.DeleteOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
+
+			// Assert that the configuration has been rectified.
+			assertManagementConfiguration(managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
+		})
+
+		It("Rectifies the verification secrets if they're changed", func() {
+			ctx := context.Background()
+
+			es := &esv1.Elasticsearch{}
+			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			mockESClientBuild := new(elasticsearch.MockClientBuilder)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockESClientBuild.On("Build").Return(esClient, err)
+
+			r := elasticsearchconfiguration.NewReconciler("cluster", "", mockESClientBuild, true, managementK8sCli, managementK8sCli, esK8sCli)
+
+			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
+
+			// Assert the configuration is initially correct.
+			assertManagementConfiguration(managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
+
+			verificationSecretName := fmt.Sprintf("%s-gateway-verification-credentials", esusers.ElasticsearchUserNameFluentd)
+			verificationSecret, err := managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+				Get(context.Background(), verificationSecretName, metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			verificationSecret.Data["password"] = []byte("foobar")
+
+			_, err = managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+				Update(context.Background(), verificationSecret, metav1.UpdateOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
+
+			// Assert that the configuration has been rectified.
+			assertManagementConfiguration(managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
+		})
+	})
+
+	Context("Managed cluster configuration successfully created", func() {
+		var managedK8sCli *k8sfake.Clientset
+		BeforeEach(func() {
+			managedK8sCli = k8sfake.NewSimpleClientset()
+		})
+
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {
 			ctx := context.Background()
 
@@ -175,6 +282,7 @@ var _ = Describe("Reconcile", func() {
 
 			assertManagedConfiguration(managedK8sCli, managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
 		})
+
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			}))
@@ -189,7 +297,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli,  esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
 
 			ctx := context.Background()
 
@@ -222,7 +330,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementK8sCli,  esCertSecret, gatewayCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
 
 			ctx := context.Background()
 
@@ -270,30 +378,151 @@ var _ = Describe("Reconcile", func() {
 			Expect(newFluentdSecret.Labels[elasticsearchconfiguration.UserChangeHashLabel]).ShouldNot(Equal(fluentdSecret.Labels[elasticsearchconfiguration.UserChangeHashLabel]))
 			Expect(newFluentdSecret.Data).ShouldNot(Equal(fluentdSecret.Data))
 		})
+
+		It("Creates verification secrets", func() {
+			ctx := context.Background()
+
+			es := &esv1.Elasticsearch{}
+			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			}))
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			mockESClientBuild := new(elasticsearch.MockClientBuilder)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			Expect(err).ShouldNot(HaveOccurred())
+			mockESClientBuild.On("Build").Return(esClient, err)
+
+			r := elasticsearchconfiguration.NewReconciler("managed-1", "", mockESClientBuild, false, managementK8sCli, managedK8sCli, esK8sCli)
+
+			err = r.Reconcile(types.NamespacedName{})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			assertManagedConfiguration(managedK8sCli, managementK8sCli, esCertSecret, gatewayCertSecret, managementESConfigMap)
+		})
 	})
 })
 
-func assertManagedConfiguration(managedk8sCli, managementk8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedgatewayCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
+func assertManagementConfiguration(managementK8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedGatewayCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
+	ctx := context.Background()
+
+	publicUserSecrets, err := managementK8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	publicUserSecretsMap := map[string]corev1.Secret{}
+	for _, publicUserSecret := range publicUserSecrets.Items {
+		username := string(publicUserSecret.Data["username"])
+		Expect(username).ShouldNot(BeEmpty())
+		publicUserSecretsMap[username] = publicUserSecret
+	}
+
+	verificationSecrets, err := managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+		List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ESGatewaySelectorLabel})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	verificationSecretsMap := map[string]corev1.Secret{}
+	for _, verificationSecret := range verificationSecrets.Items {
+		username := string(verificationSecret.Data["username"])
+		Expect(username).ShouldNot(BeEmpty())
+		verificationSecretsMap[username] = verificationSecret
+	}
+
+	// Test the public and verification secrets both exist for every user, and that those two secrets match (i.e. that
+	// the verification secrets hashed password matches the original).
+	privateUserMap, publicUserMap := esusers.ElasticsearchUsers("cluster", true)
+	for _, user := range publicUserMap {
+		publicUserSecret, exists := publicUserSecretsMap[user.Username]
+		Expect(exists).Should(BeTrue())
+
+		Expect(user.Username).Should(Equal(string(publicUserSecret.Data["username"])))
+		Expect(publicUserSecret.Data["password"]).ShouldNot(BeEmpty())
+
+		verificationSecret, exists := verificationSecretsMap[user.Username]
+		Expect(exists).Should(BeTrue())
+
+		Expect(user.Username).Should(Equal(string(verificationSecret.Data["username"])))
+		Expect(verificationSecret.Data["password"]).ShouldNot(BeEmpty())
+
+		Expect(bcrypt.CompareHashAndPassword(verificationSecret.Data["password"], publicUserSecret.Data["password"]))
+	}
+
+	privateUserSecrets, err := managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+		List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	for _, userSecret := range privateUserSecrets.Items {
+		userName := userSecret.Labels[elasticsearchconfiguration.ElasticsearchUserNameLabel]
+		user, exists := privateUserMap[esusers.ElasticsearchUserName(userName)]
+
+		Expect(exists).Should(BeTrue())
+		if strings.HasSuffix(userSecret.Name, esusers.ElasticsearchSecureUserSuffix) {
+			Expect(user.Username).Should(Equal(string(userSecret.Data["username"])))
+		}
+	}
+
+	esCertSecret, err := managementK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(esCertSecret.Data).Should(Equal(expectedESCertSecret.Data))
+
+	gatewayCertSecret, err := managementK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ESGatewayCertSecret, metav1.GetOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(gatewayCertSecret.Data).Should(Equal(expectedGatewayCertSecret.Data))
+
+	managedESConfigMap, err := managementK8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(managedESConfigMap.Data).Should(Equal(map[string]string{
+		"clusterName": "cluster",
+		"replicas":    expectedESConfigMap.Data["replicas"],
+		"shards":      expectedESConfigMap.Data["shards"],
+	}))
+}
+
+func assertManagedConfiguration(managedk8sCli, managementK8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedGatewayCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
 	ctx := context.Background()
 
 	publicUserSecrets, err := managedk8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
 	Expect(err).ShouldNot(HaveOccurred())
 
-	//Test user secrets are created
-	privateUserMap, publicUserMap := esusers.ElasticsearchUsers("managed-1", false)
-	for _, userSecret := range publicUserSecrets.Items {
-		userName := userSecret.Labels[elasticsearchconfiguration.ElasticsearchUserNameLabel]
-		user, exists := publicUserMap[esusers.ElasticsearchUserName(userName)]
-
-		Expect(exists).Should(BeTrue())
-		Expect(user.Username).Should(Equal(string(userSecret.Data["username"])))
-
-		delete(publicUserMap, esusers.ElasticsearchUserName(userName))
+	publicUserSecretsMap := map[string]corev1.Secret{}
+	for _, publicUserSecret := range publicUserSecrets.Items {
+		username := string(publicUserSecret.Data["username"])
+		Expect(username).ShouldNot(BeEmpty())
+		publicUserSecretsMap[username] = publicUserSecret
 	}
 
-	Expect(len(publicUserMap)).Should(BeNumerically("==", 0))
+	verificationSecrets, err := managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+		List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ESGatewaySelectorLabel})
+	Expect(err).ShouldNot(HaveOccurred())
 
-	privateUserSecrets, err := managementk8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
+	verificationSecretsMap := map[string]corev1.Secret{}
+	for _, verificationSecret := range verificationSecrets.Items {
+		username := string(verificationSecret.Data["username"])
+		Expect(username).ShouldNot(BeEmpty())
+		verificationSecretsMap[username] = verificationSecret
+	}
+
+	//Test user secrets are created
+	privateUserMap, publicUserMap := esusers.ElasticsearchUsers("managed-1", false)
+	for _, user := range publicUserMap {
+		publicUserSecret, exists := publicUserSecretsMap[user.Username]
+		Expect(exists).Should(BeTrue())
+
+		Expect(user.Username).Should(Equal(string(publicUserSecret.Data["username"])))
+		Expect(publicUserSecret.Data["password"]).ShouldNot(BeEmpty())
+
+		verificationSecret, exists := verificationSecretsMap[user.Username]
+		Expect(exists).Should(BeTrue())
+
+		Expect(user.Username).Should(Equal(string(verificationSecret.Data["username"])))
+		Expect(verificationSecret.Data["password"]).ShouldNot(BeEmpty())
+
+		Expect(bcrypt.CompareHashAndPassword(verificationSecret.Data["password"], publicUserSecret.Data["password"]))
+	}
+
+	privateUserSecrets, err := managementK8sCli.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).List(ctx, metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
 	Expect(err).ShouldNot(HaveOccurred())
 
 	for _, userSecret := range privateUserSecrets.Items {
@@ -312,7 +541,7 @@ func assertManagedConfiguration(managedk8sCli, managementk8sCli kubernetes.Inter
 
 	gatewayCertSecret, err := managedk8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(ctx, resource.ESGatewayCertSecret, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
-	Expect(gatewayCertSecret.Data).Should(Equal(expectedgatewayCertSecret.Data))
+	Expect(gatewayCertSecret.Data).Should(Equal(expectedGatewayCertSecret.Data))
 
 	managedESConfigMap, err := managedk8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(ctx, resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())

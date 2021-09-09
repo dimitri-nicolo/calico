@@ -136,16 +136,111 @@ func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 	}
 
 	for username, user := range staleOrMissingPrivateUsers {
-		reqLogger.Infof("creating user %s", username)
+		reqLogger.Infof("Creating private user %s", username)
 		if err := c.createUser(username, user, true); err != nil {
 			return err
 		}
 	}
 
 	for username, user := range staleOrMissingPublicUsers {
-		reqLogger.Infof("creating user %s", username)
+		reqLogger.Infof("Creating public user %s", username)
 		if err := c.createUser(username, user, false); err != nil {
 			return err
+		}
+	}
+
+	return c.reconcileVerificationSecrets(reqLogger)
+}
+
+// reconcileVerificationSecrets ensures that the verification secrets that the Elasticsearch gateway uses exist and are
+// up to date.
+func (c *reconciler) reconcileVerificationSecrets(reqLogger *log.Entry) error {
+	publicSecretList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).
+		List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
+	if err != nil {
+		return err
+	}
+
+	verificationSecretList, err := c.managementK8sCLI.CoreV1().Secrets(resource.TigeraElasticsearchNamespace).
+		List(context.Background(), metav1.ListOptions{LabelSelector: ESGatewaySelectorLabel})
+	if err != nil {
+		return err
+	}
+
+	publicSecretMap := map[string]corev1.Secret{}
+	for _, publicSecret := range publicSecretList.Items {
+		username := string(publicSecret.Data["username"])
+
+		publicSecretMap[username] = publicSecret
+	}
+
+	verifySecretMap := map[string]corev1.Secret{}
+	for _, verificationSecret := range verificationSecretList.Items {
+		username := string(verificationSecret.Data["username"])
+
+		verifySecretMap[username] = verificationSecret
+	}
+
+	// Iterate through each user that's expected to have a verification secret in the tigera-elasticsearch namespace and
+	// ensure that secret exists and is correct. It should match the corresponding "access" secrets in the
+	// tigera-operator namespace
+	_, publicEsUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
+	for username, user := range publicEsUsers {
+		publicSecret, exists := publicSecretMap[user.Username]
+		if !exists {
+			reqLogger.Warnf("No public secret for user %s", user.Username)
+			continue
+		}
+		password := publicSecret.Data["password"]
+
+		var verificationSecretData map[string][]byte
+		// Check if a verification secret exists for the given user, if not, continue to create it.
+		if verificationSecret, exists := verifySecretMap[user.Username]; exists {
+			verificationSecretData = verificationSecret.Data
+			// If the username matches with the current access secret in the operator namespace and verification secret
+			// password matches the current access password, don't update the secret.
+			if bcrypt.CompareHashAndPassword(verificationSecretData["password"], password) == nil &&
+				string(verificationSecret.Data["username"]) == user.Username {
+				continue
+			}
+
+			reqLogger.Infof("Password out of date for verification for user %s", user.Username)
+		} else {
+			reqLogger.Infof("No verification secret for user %s", user.Username)
+
+			verificationSecretData = map[string][]byte{
+				"username": []byte(user.Username),
+			}
+		}
+
+		var verificationSecretName string
+		if c.management {
+			verificationSecretName = fmt.Sprintf("%s-gateway-verification-credentials", username)
+		} else {
+			verificationSecretName = fmt.Sprintf("%s-%s-gateway-verification-credentials", username, c.clusterName)
+		}
+
+		reqLogger.Infof("Creating / updating verification secret for %s", verificationSecretName)
+
+		// Reaching this point means either there is no verification secret for the user or it's outdated. From here
+		// we recalculate the hashed password and update the verification secret.
+		hash, err := bcrypt.GenerateFromPassword(password, bcrypt.MinCost)
+		if err != nil {
+			reqLogger.WithError(err).Errorf("failed to generate password for %s", verificationSecretName)
+		}
+
+		verificationSecretData["password"] = hash
+
+		// Note that we don't add the change hash label here, this is because the if there is a breaking change then
+		// the change hash for the access secret in the operator namespace will force the corrections.
+		labels := map[string]string{
+			ElasticsearchUserNameLabel: string(username),
+			ESGatewaySelectorLabel:     ESGatewaySelectorLabelValue,
+		}
+
+		err = writeUserSecret(verificationSecretName, resource.TigeraElasticsearchNamespace, labels, c.managementK8sCLI, verificationSecretData)
+		if err != nil {
+			reqLogger.WithError(err).Errorf("failed to create secret %s", verificationSecretName)
 		}
 	}
 
@@ -209,29 +304,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 		ElasticsearchUserNameLabel: string(username),
 	}
 
-	// First create the secret in the Operator namespace in the appropriate cluster. If this is a Management cluster,
-	// c.managedK8sCLI actually contains a client for the Management cluster.
-	if err := writeUserSecret(name, resource.OperatorNamespace, labels, c.managedK8sCLI, data); err != nil {
-		return err
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(esUser.Password), bcrypt.MinCost)
-	if err != nil {
-		return err
-	}
-	data["password"] = hash
-
-	if c.management {
-		name = fmt.Sprintf("%s-gateway-verification-credentials", string(username))
-	} else {
-		name = fmt.Sprintf("%s-%s-gateway-verification-credentials", string(username), c.clusterName)
-	}
-
-	// Now insert the additional label for ES Gateway (so that it knows to include this secret in its watch).
-	labels[ESGatewaySelectorLabel] = ESGatewaySelectorLabelValue
-
-	// Next create the user secret with the username and password hashed in the Management cluster Elasticsearch namespace.
-	return writeUserSecret(name, resource.TigeraElasticsearchNamespace, labels, c.managementK8sCLI, data)
+	return writeUserSecret(name, resource.OperatorNamespace, labels, c.managedK8sCLI, data)
 }
 
 // missingOrStaleUsers returns 2 maps, the first containing private users and the second containing public users that are
@@ -264,8 +337,9 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 
 	for _, secret := range privateSecretsList.Items {
 		if strings.HasSuffix(secret.Name, "gateway-verification-credentials") {
-			break
+			continue
 		}
+
 		username := esusers.ElasticsearchUserName(secret.Labels[ElasticsearchUserNameLabel])
 		if user, exists := privateEsUsers[username]; exists {
 			userHash, err := c.calculateUserChangeHash(user)

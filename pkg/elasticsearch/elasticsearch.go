@@ -54,11 +54,6 @@ func (u User) RoleNames() []string {
 	return names
 }
 
-// SecretName returns the name of the secret that should be used to store the information of this user
-func (u User) SecretName() string {
-	return fmt.Sprintf("%s-elasticsearch-access", u.Username)
-}
-
 // Role represents an Elasticsearch role that may be attached to a User
 type Role struct {
 	Name       string `json:"-"`
