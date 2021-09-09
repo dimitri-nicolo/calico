@@ -40,6 +40,5 @@ blocks:
             - value: 40
               when: true
           commands:
-            - cd controller
             - CONFIRM=true make git-config
             - CONFIRM=true GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN} make trigger-auto-pin-update-process
