@@ -1,11 +1,10 @@
 PACKAGE_NAME    ?= github.com/tigera/calicoq
 GO_BUILD_VER    ?= v0.53
-GOMOD_VENDOR     = true
+GOMOD_VENDOR     = false
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
 TYPHA_REPO       = github.com/tigera/typha-private
-LOCAL_CHECKS     = vendor
 BINARY           = bin/calicoq
 
 ORGANIZATION=tigera
@@ -71,13 +70,9 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
 	touch $@
 
-vendor: go.mod mod-download
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go mod vendor -v'
-
 .PHONY: ut ut-containerized
 ut:
-	ginkgo -cover -r --skipPackage vendor calicoq/*
+	ginkgo -cover -r --skipPackage calicoq/*
 
 	@echo
 	@echo '+==============+'
@@ -93,7 +88,7 @@ ut:
 	@echo
 	@find ./calicoq/ -iname '*.coverprofile' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'
 
-ut-containerized: vendor
+ut-containerized:
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) make ut'
 
@@ -174,10 +169,7 @@ else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
 	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE)
-	$(MAKE) vendor
-	# Generate the protobuf bindings for Felix
-	# Cannot do this together with vendoring since docker permissions in go-build are not perfect?
-	$(MAKE) felixbackend
+
 	# Create the binary
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
@@ -221,14 +213,6 @@ ci: clean static-checks fv-containerized ut-containerized st-containerized
 
 ## Deploys images to registry
 cd: image cd-common
-
-# Generate the protobuf bindings for Felix.
-.PHONY: felixbackend
-felixbackend: vendor/github.com/projectcalico/felix/proto/felixbackend.proto
-	docker run --rm -v `pwd`/vendor/github.com/projectcalico/felix/proto:/src:rw \
-	              calico/protoc \
-	              --gogofaster_out=. \
-	              felixbackend.proto
 
 ## Run etcd as a container (calico-etcd)
 run-etcd: stop-etcd
