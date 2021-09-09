@@ -23,7 +23,7 @@ require (
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20210907142848-f71992c952a6
+	github.com/tigera/api v0.0.0-20210908220740-4eee9be4208c
 	github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
@@ -36,8 +36,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210908170740-4feb1ee1dff4
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210908082140-99f1cd2d6f10
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210908230322-e41fb980dbcb
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210908224811-8106d5ea4f30
 	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210805040145-adb68d9c078b
 
 	// k8s apiserver upgrade
