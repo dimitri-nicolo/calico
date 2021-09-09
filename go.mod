@@ -34,12 +34,11 @@ require (
 	k8s.io/apiserver v0.21.0
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20210817084001-7fbd8d59e5b8 // indirect
 )
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210908230322-e41fb980dbcb
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210909174027-56b617c9ca76
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210909180008-03f5b5bdf187
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210908224811-8106d5ea4f30
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210908230316-cefa712c9550
 
