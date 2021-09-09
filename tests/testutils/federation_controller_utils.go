@@ -30,6 +30,7 @@ func RunFederationController(etcdIP string, localKubeconfig string, remoteKubeco
 		"-e", "DEBUG_USE_SHORT_POLL_INTERVALS=true",
 		"-e", fmt.Sprintf("KUBECONFIG=%s", localKubeconfig),
 		"-v", fmt.Sprintf("%s:%s", localKubeconfig, localKubeconfig),
+		"-e", "KUBE_CONTROLLERS_CONFIG_NAME=default",
 	}...)
 
 	for _, rkc := range remoteKubeconfigs {

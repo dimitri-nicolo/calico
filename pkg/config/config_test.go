@@ -16,6 +16,7 @@ package config_test
 
 import (
 	"context"
+	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 	"os"
 	"time"
 
@@ -49,6 +50,7 @@ var _ = Describe("Config", func() {
 		os.Unsetenv("COMPACTION_PERIOD")
 		os.Unsetenv("SYNC_NODE_LABELS")
 		os.Unsetenv("AUTO_HOST_ENDPOINTS")
+		os.Unsetenv("KUBE_CONTROLLERS_CONFIG_NAME")
 	}
 
 	// setEnv() function that sets environment variables
@@ -108,7 +110,9 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
-				m = &mockKCC{get: config.DefaultKCC.DeepCopy()}
+				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
+				Expect(err).NotTo(HaveOccurred())
+				m = &mockKCC{get: initialConfig.DeepCopy()}
 				ctrl = config.NewRunConfigController(ctx, *cfg, m)
 			})
 
@@ -183,7 +187,7 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				kcc := v3.NewKubeControllersConfiguration()
-				kcc.Name = "default"
+				kcc.Name = cfg.KubeControllersConfigName
 				kcc.Spec = v3.KubeControllersConfigurationSpec{
 					LogSeverityScreen:      "Warning",
 					HealthChecks:           v3.Disabled,
@@ -277,7 +281,9 @@ var _ = Describe("Config", func() {
 
 			It("should create a default KubeControllersConfig", func(done Done) {
 				<-ctrl.ConfigChan()
-				Expect(m.create.Spec).To(Equal(config.DefaultKCC.Spec))
+				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(m.create.Spec).To(Equal(initialConfig.Spec))
 				close(done)
 			}, 600)
 
@@ -290,7 +296,7 @@ var _ = Describe("Config", func() {
 
 				// send an update
 				knew := v3.NewKubeControllersConfiguration()
-				knew.Name = "default"
+				knew.Name = cfg.KubeControllersConfigName
 				knew.Spec = v3.KubeControllersConfigurationSpec{
 					LogSeverityScreen: "Error",
 				}
@@ -370,7 +376,7 @@ var _ = Describe("Config", func() {
 
 				// send an update on the new watch, with changed spec
 				knew := v3.NewKubeControllersConfiguration()
-				knew.Name = "default"
+				knew.Name = cfg.KubeControllersConfigName
 				knew.Spec = v3.KubeControllersConfigurationSpec{
 					LogSeverityScreen: "Error",
 				}
@@ -391,7 +397,7 @@ var _ = Describe("Config", func() {
 
 		It("should send new update when FederatedServices is added", func(done Done) {
 			kcc := v3.NewKubeControllersConfiguration()
-			kcc.Name = "default"
+			kcc.Name = cfg.KubeControllersConfigName
 			kcc.Spec = v3.KubeControllersConfigurationSpec{
 				LogSeverityScreen:      "Warning",
 				HealthChecks:           v3.Enabled,
@@ -444,14 +450,19 @@ var _ = Describe("Config", func() {
 	Context("with valid user defined values", func() {
 
 		var cfg *config.Config
+		var kubeControllersConfigName string
 
 		BeforeEach(func() {
 			// Set environment variables
 			setEnv()
 
+			kubeControllersConfigName = "testConfigName"
+			err := os.Setenv("KUBE_CONTROLLERS_CONFIG_NAME", kubeControllersConfigName)
+			Expect(err).NotTo(HaveOccurred())
+
 			// Parse config
 			cfg = new(config.Config)
-			err := cfg.Parse()
+			err = cfg.Parse()
 
 			// Assert no error generated
 			Expect(err).NotTo(HaveOccurred())
@@ -470,6 +481,7 @@ var _ = Describe("Config", func() {
 			Expect(cfg.PolicyWorkers).To(Equal(4))
 			Expect(cfg.ServiceWorkers).To(Equal(3))
 			Expect(cfg.Kubeconfig).To(Equal("/home/user/.kube/config"))
+			Expect(cfg.KubeControllersConfigName).To(Equal(kubeControllersConfigName))
 		})
 
 		Context("with default API values", func() {
@@ -480,7 +492,9 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
-				m = &mockKCC{get: config.DefaultKCC.DeepCopy()}
+				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
+				Expect(err).NotTo(HaveOccurred())
+				m = &mockKCC{get: initialConfig.DeepCopy()}
 				ctrl = config.NewRunConfigController(ctx, *cfg, m)
 			})
 
@@ -551,7 +565,7 @@ var _ = Describe("Config", func() {
 
 			BeforeEach(func() {
 				kcc := v3.NewKubeControllersConfiguration()
-				kcc.Name = "default"
+				kcc.Name = kubeControllersConfigName
 				kcc.Spec = v3.KubeControllersConfigurationSpec{
 					LogSeverityScreen:      "Warning",
 					HealthChecks:           v3.Enabled,
@@ -676,7 +690,6 @@ var _ = Describe("Config", func() {
 			err := cfg.Parse()
 			Expect(err).ToNot(HaveOccurred())
 			kcc := v3.NewKubeControllersConfiguration()
-			kcc.Name = "default"
 			kcc.Spec = v3.KubeControllersConfigurationSpec{
 				LogSeverityScreen:      "Warning",
 				HealthChecks:           v3.Enabled,

@@ -15,6 +15,8 @@ package config
 
 import (
 	"context"
+	"fmt"
+	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 	"os"
 	"reflect"
 	"strconv"
@@ -35,40 +37,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-// Export for testing purposes
-var DefaultKCC *v3.KubeControllersConfiguration
-
 const datastoreBackoff = time.Second
-
-func init() {
-	DefaultKCC = v3.NewKubeControllersConfiguration()
-	DefaultKCC.Name = "default"
-	DefaultKCC.Spec = v3.KubeControllersConfigurationSpec{
-		LogSeverityScreen:      "Info",
-		HealthChecks:           v3.Enabled,
-		EtcdV3CompactionPeriod: &v1.Duration{Duration: time.Minute * 10},
-		Controllers: v3.ControllersConfig{
-			Node: &v3.NodeControllerConfig{
-				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
-				SyncLabels:       v3.Enabled,
-				HostEndpoint:     nil,
-				LeakGracePeriod:  &v1.Duration{Duration: time.Minute * 15},
-			},
-			Policy: &v3.PolicyControllerConfig{
-				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
-			},
-			WorkloadEndpoint: &v3.WorkloadEndpointControllerConfig{
-				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
-			},
-			ServiceAccount: &v3.ServiceAccountControllerConfig{
-				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
-			},
-			Namespace: &v3.NamespaceControllerConfig{
-				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
-			},
-		},
-	}
-}
 
 // RunConfig represents the configuration for all controllers and includes
 // merged information from environment variables (Config) and the Calico
@@ -192,9 +161,9 @@ MAINLOOP:
 
 		// if we don't have a snapshot, then try to get one
 		if snapshot == nil {
-			snapshot, err = getOrCreateSnapshot(ctx, client)
+			snapshot, err = getOrCreateSnapshot(ctx, client, cfg.KubeControllersConfigName)
 			if err != nil {
-				log.WithError(err).Warn("unable to get KubeControllersConfiguration(default)")
+				log.WithError(err).Warn(fmt.Sprintf("unable to get KubeControllersConfiguration(%s)", cfg.KubeControllersConfigName))
 				snapshot = nil
 				time.Sleep(datastoreBackoff)
 				continue MAINLOOP
@@ -210,7 +179,7 @@ MAINLOOP:
 		snapshot.Status = status
 		snapshot, err = client.Update(ctx, snapshot, options.SetOptions{})
 		if err != nil {
-			log.WithError(err).Warn("unable to perform status update on KubeControllersConfiguration(default)")
+			log.WithError(err).Warn(fmt.Sprintf("unable to perform status update on KubeControllersConfiguration(%s)", cfg.KubeControllersConfigName))
 			snapshot = nil
 			time.Sleep(datastoreBackoff)
 			continue MAINLOOP
@@ -219,9 +188,9 @@ MAINLOOP:
 		// With the snapshot updated, get a list of
 		// kubecontrollersconfigurations so we can watch on its resource
 		// version.
-		kccList, err := client.List(ctx, options.ListOptions{Name: "default"})
+		kccList, err := client.List(ctx, options.ListOptions{Name: cfg.KubeControllersConfigName})
 		if err != nil {
-			log.WithError(err).Warn("unable to list KubeControllersConfiguration(default)")
+			log.WithError(err).Warn(fmt.Sprintf("unable to list KubeControllersConfiguration(%s)", cfg.KubeControllersConfigName))
 			snapshot = nil
 			time.Sleep(datastoreBackoff)
 			continue MAINLOOP
@@ -238,7 +207,7 @@ MAINLOOP:
 		if w != nil {
 			w.Stop()
 		}
-		w, err = client.Watch(ctx, options.ListOptions{ResourceVersion: kccList.ResourceVersion})
+		w, err = client.Watch(ctx, options.ListOptions{ResourceVersion: kccList.ResourceVersion, Name: cfg.KubeControllersConfigName})
 		if err != nil {
 			// Watch failed
 			log.WithError(err).Warn("unable to watch KubeControllersConfigurations")
@@ -259,7 +228,7 @@ MAINLOOP:
 			case watch.Added, watch.Modified:
 				// New snapshot
 				newKCC := e.Object.(*v3.KubeControllersConfiguration)
-				if newKCC.Name != "default" {
+				if newKCC.Name != cfg.KubeControllersConfigName {
 					// Some non-default object got into the datastore --- calicoctl should
 					// prevent this, but an admin with datastore access might not know better.
 					// Ignore it
@@ -277,7 +246,7 @@ MAINLOOP:
 					if err != nil {
 						// this probably means someone else is trying to write to the resource,
 						// so best to just take a breath and start over
-						log.WithError(err).Warn("unable to perform status update on KubeControllersConfiguration(default)")
+						log.WithError(err).Warn(fmt.Sprintf("unable to perform status update on KubeControllersConfiguration(%s)", cfg.KubeControllersConfigName))
 						snapshot = nil
 						time.Sleep(datastoreBackoff)
 						continue MAINLOOP
@@ -295,9 +264,9 @@ MAINLOOP:
 				// so guard against it.
 				if e.Previous != nil {
 					oldKCC := e.Previous.(*v3.KubeControllersConfiguration)
-					// Ignore any object that's not named default
-					if oldKCC.Name == "default" {
-						// do a full resync, which will recreate a default object
+					// Ignore any object whose name doesn't match
+					if oldKCC.Name == cfg.KubeControllersConfigName {
+						// do a full resync, which will recreate an object
 						// if one doesn't exist
 						snapshot = nil
 						// not an error per-se, so don't bother with sleeping
@@ -311,19 +280,23 @@ MAINLOOP:
 }
 
 // getOrCreateSnapshot gets the current KubeControllersConfig from the datastore,
-// or creates and returns a default if it doesn't exist
-func getOrCreateSnapshot(ctx context.Context, kcc clientv3.KubeControllersConfigurationInterface) (*v3.KubeControllersConfiguration, error) {
-	snapshot, err := kcc.Get(ctx, "default", options.GetOptions{})
-	// If the default doesn't exist, we'll create it.
+// or creates and returns one with KubeControllersConfig.Name if it doesn't exist
+func getOrCreateSnapshot(ctx context.Context, kcc clientv3.KubeControllersConfigurationInterface, configName string) (*v3.KubeControllersConfiguration, error) {
+	snapshot, err := kcc.Get(ctx, configName, options.GetOptions{})
+	// If the KubeControllersConfig with given name doesn't exist, we'll create it.
 	if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
-		snapshot = DefaultKCC.DeepCopy()
-		var err2 error
-		snapshot, err2 = kcc.Create(ctx, snapshot, options.SetOptions{})
-		if err2 != nil {
+		initialConfig, getConfigErr := configfactory.NewDefaultKubeControllersConfig(configName)
+		if getConfigErr != nil {
+			return nil, getConfigErr
+		}
+		toBeCreated := initialConfig.DeepCopy()
+		var createSnapshotErr error
+		snapshot, createSnapshotErr = kcc.Create(ctx, toBeCreated, options.SetOptions{})
+		if createSnapshotErr != nil {
 			// Besides datastore connection errors, we might get a race with
 			// something else creating the resource but this can get handled
 			// in the main retry loop just fine
-			return nil, err2
+			return nil, createSnapshotErr
 		}
 	} else if err != nil {
 		return nil, err

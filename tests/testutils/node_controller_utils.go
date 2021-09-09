@@ -52,6 +52,7 @@ func RunNodeController(datastoreType apiconfig.DatastoreType, etcdIP, kconfigfil
 		"-e", fmt.Sprintf("KUBECONFIG=%s", kconfigfile),
 		"-e", "RECONCILER_PERIOD=10s",
 		"-v", fmt.Sprintf("%s:%s", kconfigfile, kconfigfile),
+		"-e", "KUBE_CONTROLLERS_CONFIG_NAME=default",
 		os.Getenv("CONTAINER_NAME"))
 }
 
@@ -69,6 +70,7 @@ func RunKubeControllerWithEnv(datastoreType apiconfig.DatastoreType, etcdIP, kco
 		"-e", fmt.Sprintf("DATASTORE_TYPE=%s", datastoreType),
 		"-e", fmt.Sprintf("KUBECONFIG=%s", kconfigfile),
 		"-v", fmt.Sprintf("%s:%s", kconfigfile, kconfigfile),
+		"-e", "KUBE_CONTROLLERS_CONFIG_NAME=default",
 		os.Getenv("CONTAINER_NAME"))
 
 	return containers.Run("calico-kube-controllers",
