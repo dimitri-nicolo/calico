@@ -98,15 +98,16 @@ type PacketProcessorWithNfqueueRestarter struct {
 
 	// The current in use nfqueue instance, stored for testing and debugging purposes ONLY and is NOT thread safe to
 	// access or use.
-	debugCurrentNfqueue nfqueue.Nfqueue
+	debugKillNfqueueConnChan chan chan error
 }
 
 func NewPacketProcessorWithNfqueueRestarter(nfqueueCreator func() (nfqueue.Nfqueue, error), dnrMark uint32, options ...Option) *PacketProcessorWithNfqueueRestarter {
 	return &PacketProcessorWithNfqueueRestarter{
-		nfqueueCreator: nfqueueCreator,
-		dnrMark:        dnrMark,
-		options:        options,
-		done:           make(chan struct{}),
+		nfqueueCreator:           nfqueueCreator,
+		dnrMark:                  dnrMark,
+		options:                  options,
+		done:                     make(chan struct{}),
+		debugKillNfqueueConnChan: make(chan chan error),
 	}
 }
 
@@ -118,20 +119,25 @@ done:
 			return err
 		}
 
-		restarter.debugCurrentNfqueue = nf
-
 		processor := NewPacketProcessor(nf, restarter.dnrMark, restarter.options...)
 		processor.Start()
 
-		select {
-		case <-nf.ShutdownNotificationChannel():
-			processor.Stop()
-		case <-restarter.done:
-			processor.Stop()
-			if err := nf.Close(); err != nil {
-				log.WithError(err).Warning("an error occurred while closing nfqueue.")
+	loop:
+		for {
+			select {
+			case <-nf.ShutdownNotificationChannel():
+				processor.Stop()
+				break loop
+			case <-restarter.done:
+				processor.Stop()
+				if err := nf.Close(); err != nil {
+					log.WithError(err).Warning("an error occurred while closing nfqueue.")
+				}
+				break done
+			case errChan := <-restarter.debugKillNfqueueConnChan:
+				errChan <- nf.DebugKillConnection()
+				close(errChan)
 			}
-			break done
 		}
 
 		log.Info("recreating NFQUEUE connection...")
@@ -143,7 +149,20 @@ done:
 func (restarter *PacketProcessorWithNfqueueRestarter) Stop() {
 	restarter.closeOnce.Do(func() {
 		close(restarter.done)
+		close(restarter.debugKillNfqueueConnChan)
 	})
+}
+
+// DebugKillCurrentNfqueueConnection calls DebugKillConnection on the currently use nfqueue instance, destroying the
+// underlying connection. This is used for testing purposes only, and in general is not safe to use or even thread safe.
+// This was note made thread safe as we want to add as little debug code to interfere with the mainline production code.
+//
+// In general, DO NOT USE THIS FUNCTION.
+func (restarter *PacketProcessorWithNfqueueRestarter) DebugKillCurrentNfqueueConnection() error {
+	errChan := make(chan error)
+	restarter.debugKillNfqueueConnChan <- errChan
+
+	return <-errChan
 }
 
 // PacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
@@ -397,17 +416,4 @@ func repeatSetVerdictOnFail(numRepeats int, setVerdictFunc func() error, failure
 
 	nfqueue.PrometheusNfqueueVerdictFailCount.Inc()
 	log.WithError(err).Error(failureMessages)
-}
-
-// DebugKillCurrentNfqueueConnection calls DebugKillConnection on the currently use nfqueue instance, destroying the
-// underlying connection. This is used for testing purposes only, and in general is not safe to use or even thread safe.
-// This was note made thread safe as we want to add as little debug code to interfere with the mainline production code.
-//
-// In general, DO NOT USE THIS FUNCTION.
-func (restarter *PacketProcessorWithNfqueueRestarter) DebugKillCurrentNfqueueConnection() error {
-	if restarter.debugCurrentNfqueue == nil {
-		return fmt.Errorf("no nfqueue instance available")
-	}
-
-	return restarter.debugCurrentNfqueue.DebugKillConnection()
 }
