@@ -281,6 +281,9 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		}
 		a.dataplaneResyncNeeded = false
 	}
+
+	// TODO update k8s Node with capacities
+
 	return err
 }
 
