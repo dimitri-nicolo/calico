@@ -26,12 +26,3 @@ ES_GATEWAY_KIBANA_CA_BUNDLE_PATH | /certs/kibana/tls.crt | Path to CA cert for c
 ES_GATEWAY_KIBANA_CLIENT_CERT_PATH | /certs/kibana/client.crt | Path to client cert for connecting to Kibana using mTLS.
 ES_GATEWAY_KIBANA_CLIENT_KEY_PATH | /certs/kibana/client.key | Path to client key for connecting to Kibana using mTLS.
 ES_GATEWAY_ENABLE_KIBANA_MUTUAL_TLS | false | Flag for enabling mTLS with Kibana.
-
-## Build tags
-
-There are two variants of es-gateway Cloud and Enterprise. To build or deploy the Cloud version preprend `TESLA=true` to make commands.
-
-An example of using build tags to write variant specific code can be found in:
-- [pkg/version/version.go](pkg/version/version.go)
-- [pkg/version/cloud.go](pkg/version/cloud.go)
-- [pkg/version/enterprise.go](pkg/version/enterprise.go)

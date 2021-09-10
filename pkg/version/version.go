@@ -1,5 +1,4 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-
 package version
 
 import "fmt"
@@ -18,9 +17,8 @@ var GitRevision string
 
 // Version prints version and build information.
 func Version() {
-	fmt.Println("Version:       ", BuildVersion)
-	fmt.Println("Build date:    ", BuildDate)
-	fmt.Println("Git tag ref:   ", GitDescription)
-	fmt.Println("Git commit:    ", GitRevision)
-	fmt.Println("Variant:       ", Variant)
+	fmt.Println("Version:     ", BuildVersion)
+	fmt.Println("Build date:  ", BuildDate)
+	fmt.Println("Git tag ref: ", GitDescription)
+	fmt.Println("Git commit:  ", GitRevision)
 }
