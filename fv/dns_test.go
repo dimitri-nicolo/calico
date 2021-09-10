@@ -895,9 +895,8 @@ var _ = Describe("DNS Policy Improvements", func() {
 
 				waitForIptablesChain(felix, policyChainName)
 
-				workload1.C.EnsureBinary("run-debug-console-command")
-				status, err := felix.ExecCombinedOutput("/run-debug-console-command", "close-nfqueue-conn")
-				Expect(err).ShouldNot(HaveOccurred(), status)
+				output, err := felix.RunDebugConsoleCommand("close-nfqueue-conn")
+				Expect(err).ShouldNot(HaveOccurred(), output)
 
 				Expect(checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)).ShouldNot(HaveOccurred())
 
@@ -954,13 +953,4 @@ func getIptablesSavePacketCount(iptablesSaveOutput, chainName, ruleIdentifier st
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return count
-}
-
-func getDockerLogs(containerID string) string {
-	cmd := utils.Command("docker", "logs", containerID)
-
-	logsBytes, err := cmd.CombinedOutput()
-	Expect(err).ShouldNot(HaveOccurred())
-
-	return string(logsBytes)
 }

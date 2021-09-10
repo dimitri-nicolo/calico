@@ -448,19 +448,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 && !config.DisableDNSPolicyPacketProcessor {
-		packetProcessor := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(
+		packetProcessorRestarter := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(
 			nfqueue.DefaultNfqueueCreator(config.DNSPolicyNfqueueID),
 			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
 
-		go func() {
-			defer packetProcessor.Stop()
+		packetProcessorRestarter.Start()
 
-			if err := packetProcessor.Start(); err != nil {
-				log.WithError(err).Panic("failed to start nfqueue dns policy packet processor")
-			}
-		}()
-
-		dp.packetProcessorRestarter = packetProcessor
+		dp.packetProcessorRestarter = packetProcessorRestarter
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.

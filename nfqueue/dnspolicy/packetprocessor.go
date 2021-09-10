@@ -111,7 +111,17 @@ func NewPacketProcessorWithNfqueueRestarter(nfqueueCreator func() (nfqueue.Nfque
 	}
 }
 
-func (restarter *PacketProcessorWithNfqueueRestarter) Start() error {
+// Start kicks off the internal loop to start the packet processor and open the nfqueue connection, and restart if
+// something should go wrong. If the loop fails to start (without being gracefully closed) then it panics.
+func (restarter *PacketProcessorWithNfqueueRestarter) Start() {
+	go func() {
+		if err := restarter.loop(); err != nil {
+			log.WithError(err).Panic("failed to start nfqueue dns policy packet processor")
+		}
+	}()
+}
+
+func (restarter *PacketProcessorWithNfqueueRestarter) loop() error {
 done:
 	for {
 		nf, err := restarter.nfqueueCreator()
