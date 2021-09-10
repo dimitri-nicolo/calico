@@ -11,11 +11,16 @@ TESLA ?= false
 # Makefile configuration options
 KUBE_CONTROLLERS_IMAGE  ?=tigera/kube-controllers
 FLANNEL_MIGRATION_IMAGE ?=tigera/flannel-migration-controller
-BUILD_IMAGES            ?=$(KUBE_CONTROLLERS_IMAGE) $(FLANNEL_MIGRATION_IMAGE)
 DEV_REGISTRIES          ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES      ?=quay.io
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
+
+ifdef RELEASE
+BUILD_IMAGES ?=$(KUBE_CONTROLLERS_IMAGE)
+else
+BUILD_IMAGES ?=$(KUBE_CONTROLLERS_IMAGE) $(FLANNEL_MIGRATION_IMAGE)
+endif
 
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
