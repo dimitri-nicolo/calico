@@ -1269,7 +1269,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.DebugConsoleEnabled {
 		console := debugconsole.New(dp.packetProcessorRestarter)
-		go console.Start()
+		console.Start()
 	}
 
 	return dp

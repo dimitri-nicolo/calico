@@ -56,6 +56,10 @@ func (console debugConsole) Start() {
 		log.WithError(err).Fatal("failed to remove socket")
 	}
 
+	go console.loopAcceptingConnections()
+}
+
+func (console *debugConsole) loopAcceptingConnections() {
 	l, err := net.Listen("unix", SockAddr)
 	if err != nil {
 		log.WithError(err).Error("failed to listen on socket")
