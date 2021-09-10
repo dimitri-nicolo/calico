@@ -118,6 +118,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		opts.IPIPEnabled = false
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
 
 		if networkSetIPsSupported {
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLENETWORKSETS"] = "true"
