@@ -11,6 +11,9 @@ ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
 
 ARCHES                ?=amd64
+
+TESLA ?= false
+
 IDS_IMAGE             ?=tigera/intrusion-detection-controller
 JOB_INSTALLER_IMAGE   ?=tigera/intrusion-detection-job-installer
 BUILD_IMAGES          ?=$(IDS_IMAGE) $(JOB_INSTALLER_IMAGE)
@@ -18,6 +21,14 @@ DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
+
+ifeq ($(TESLA),true)
+	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
+	BUILD_TAGS            ?= -tags tesla
+	RELEASE_BRANCH_PREFIX = release-tesla
+	DEV_TAG_SUFFIX        = tesla-0.dev
+	IMAGETAG_PREFIX       ?= tesla
+endif
 
 # Figure out the GID of the docker group so that we can set the user inside the
 # container to be a member of that group. This, combined with mounting the
@@ -96,7 +107,7 @@ endif
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
+	           go build -o $@ -v $(LDFLAGS) $(BUILD_TAGS) "$(PACKAGE_NAME)/cmd/controller" && \
                ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | \
 			       grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
