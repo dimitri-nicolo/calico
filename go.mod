@@ -36,7 +36,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210909211109-8b6090ea9bb5
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210910000252-b26c0918cb9b
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210908224811-8106d5ea4f30
 	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20210909210158-3abd2ab1f65b
 
