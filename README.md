@@ -35,5 +35,5 @@ METRICS_PORT/metrics exposing two metrics:
 - tigera_elastic_log_bytes_written
 - tigera_elastic_log_bytes_read
 
-The values should be closely related to actual data sent to and from Elasticsearch broken down per tenant and/or cluster
-id. The tenant and cluster id are derived from the identity of the sender of the request and not on the payload or URL.
+The values should be closely related to actual data sent to and from Elasticsearch broken down per cluster id. The
+cluster id is derived from the identity of the sender of the request and not on the payload or URL.

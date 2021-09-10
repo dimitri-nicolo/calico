@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/es-gateway/pkg/cache"
@@ -40,7 +39,7 @@ func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handle
 
 		// Attempt to lookup a credentials for matching ES user (i.e. can be used with ES API) that matches to the current user.
 		secretName := fmt.Sprintf("%s-%s", user.Username, ElasticsearchCredsSecretSuffix)
-		username, password, clusterName, err := getPlainESCredentials(c, secretName)
+		username, password, clusterID, err := getPlainESCredentials(c, secretName)
 		if err != nil {
 			log.Errorf("unable to authenticate user: %s", err)
 			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
@@ -50,11 +49,9 @@ func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handle
 		r.SetBasicAuth(username, password)
 		log.Debugf("Found ES credentials for real user [%s] for request with URI %s", username, r.RequestURI)
 
-		// Add the clusterID and tenantID to the context for other handlers to read.
-		tenantID, clusterID := clusterNameToTenantIDAndClusterID(clusterName)
+		// Add the clusterID to the context for other handlers to read.
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, ClusterIDKey, clusterID)
-		ctx = context.WithValue(ctx, TenantIDKey, tenantID)
 
 		// Call the next handler, which can be another middleware in the chain, or the final handler.
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -91,24 +88,4 @@ func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, str
 	}
 
 	return string(username), string(password), clusterNameStr, nil
-}
-
-// clusterNameToTenantIDAndClusterID takes a clusterName input string and returns the tenantID and clusterID.
-// Example input values:
-// - cluster: This is the default name for the standard/management cluster
-// - my-tenant.my-managed-cluster: This is an example name for a managed cluster in Cloud
-// - my-managed-cluster: This is an example name for a managed cluster in EE.
-func clusterNameToTenantIDAndClusterID(clusterName string) (tenantID string, clusterID string) {
-	parts := strings.Split(clusterName, ".")
-	if len(parts) == 1 {
-		// This is a clusterName for EE
-		tenantID, clusterID = "", parts[0]
-		return
-	} else if len(parts) == 2 {
-		// This is a clusterName for cloud
-		tenantID, clusterID = parts[0], parts[1]
-		return
-	}
-	// This is not a clusterName.
-	return
 }

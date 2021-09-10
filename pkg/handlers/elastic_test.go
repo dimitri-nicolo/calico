@@ -1,3 +1,5 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+
 package handlers_test
 
 import (
@@ -18,13 +20,13 @@ type collectorMocker struct {
 	metrics.Collector
 }
 
-func (c *collectorMocker) CollectLogBytesWritten(tenantID, clusterID string, bytes float64) error {
-	c.Called(tenantID, clusterID, bytes)
+func (c *collectorMocker) CollectLogBytesWritten(clusterID string, bytes float64) error {
+	c.Called(clusterID, bytes)
 	return nil
 }
 
-func (c *collectorMocker) CollectLogBytesRead(tenantID, clusterID string, bytes float64) error {
-	c.Called(tenantID, clusterID, bytes)
+func (c *collectorMocker) CollectLogBytesRead(clusterID string, bytes float64) error {
+	c.Called(clusterID, bytes)
 	return nil
 }
 
@@ -35,10 +37,8 @@ func (c *collectorMocker) Serve(address string) error {
 
 var _ = Describe("Test the elastic response hook", func() {
 
-	const (
-		clusterID = "my-cluster"
-		tenantID  = "my-tenant"
-	)
+	const clusterID = "my-cluster"
+
 	var collector collectorMocker
 
 	BeforeEach(func() {
@@ -47,12 +47,12 @@ var _ = Describe("Test the elastic response hook", func() {
 
 	It("should call the metrics collector", func() {
 
-		collector.On("CollectLogBytesRead", tenantID, clusterID, mock.Anything).Return(nil)
-		collector.On("CollectLogBytesWritten", tenantID, clusterID, mock.Anything).Return(nil)
+		collector.On("CollectLogBytesRead", clusterID, mock.Anything).Return(nil)
+		collector.On("CollectLogBytesWritten", clusterID, mock.Anything).Return(nil)
 
 		fn := handlers.ElasticModifyResponseFunc(&collector)
 		req := &http.Request{RequestURI: "/some-uri", ContentLength: 25}
-		req = req.WithContext(context.WithValue(context.WithValue(context.TODO(), middlewares.ClusterIDKey, clusterID), middlewares.TenantIDKey, tenantID))
+		req = req.WithContext(context.WithValue(context.TODO(), middlewares.ClusterIDKey, clusterID))
 		resp := &http.Response{
 			Request:       req,
 			ContentLength: 50,

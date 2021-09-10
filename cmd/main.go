@@ -174,6 +174,7 @@ func main() {
 	var collector metrics.Collector
 
 	if cfg.MetricsEnabled {
+		log.Debugf("starting a metrics server on port %v", cfg.MetricsPort)
 		collector, err = metrics.NewCollector()
 		if err != nil {
 			log.Fatal(err)
