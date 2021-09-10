@@ -10,6 +10,11 @@ endif
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_FLUENTD_DOCKER_PROJECT_ID)
 
+# If this is a windows release we're not building the images and they will all be "cut" together
+ifdef WINDOWS_RELEASE
+FLUENTD_IMAGE=tigera/fluentd-windows
+ARCHES=windows-1809 windows-2004 windows-20H2
+else
 # For Windows we append to the image tag to identify the Windows 10 version.
 # For example, "v3.5.0-calient-0.dev-26-gbaba2f0b96a4-windows-1903"
 #
@@ -42,6 +47,7 @@ else
 FLUENTD_IMAGE ?= tigera/fluentd
 DOCKERFILE    ?= Dockerfile
 ARCHES        ?= amd64
+endif
 endif
 
 BUILD_IMAGES          ?= $(FLUENTD_IMAGE)
