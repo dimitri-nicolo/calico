@@ -238,7 +238,8 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 
 		fa.flowStore[flowMeta] = newEntry
 	} else {
-		log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, *mu)
+		// FIXME HACK Disable spammy logs.
+		// log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, *mu)
 
 		fl.spec.AggregateMetricUpdate(mu)
 		fl.shouldExport = true

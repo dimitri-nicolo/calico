@@ -575,7 +575,8 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 }
 
 func (f *FlowStats) aggregateFlowTCPStats(mu MetricUpdate) {
-	log.Debugf("Aggregrate TCP stats %+v with flow %+v", mu, f)
+	// FIXME HACK Disable spammy logs.
+	// log.Debugf("Aggregrate TCP stats %+v with flow %+v", mu, f)
 	// Here we check if the metric update has a valid TCP stats.
 	// If the TCP stats is not valid (example: config is disabled),
 	// it is indicated by one of sendCongestionWnd, smoothRtt, minRtt, Mss
