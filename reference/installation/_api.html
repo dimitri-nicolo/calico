@@ -979,6 +979,21 @@ IntrusionDetectionSpec
 <br/>
 <br/>
 <table>
+<tr>
+<td>
+<code>componentResources</code><br>
+<em>
+<a href="#operator.tigera.io/v1.IntrusionDetectionComponentResource">
+[]IntrusionDetectionComponentResource
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ComponentResources can be used to customize the resource requirements for each component.
+Only DeepPacketInspection is supported for this spec.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3481,6 +3496,55 @@ InstallationSpec
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.IntrusionDetectionComponentName">IntrusionDetectionComponentName
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.IntrusionDetectionComponentResource">IntrusionDetectionComponentResource</a>)
+</p>
+<h3 id="operator.tigera.io/v1.IntrusionDetectionComponentResource">IntrusionDetectionComponentResource
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.IntrusionDetectionSpec">IntrusionDetectionSpec</a>)
+</p>
+<p>The ComponentResource struct associates a ResourceRequirements with a component by name</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>componentName</code><br>
+<em>
+<a href="#operator.tigera.io/v1.IntrusionDetectionComponentName">
+IntrusionDetectionComponentName
+</a>
+</em>
+</td>
+<td>
+<p>ComponentName is an enum which identifies the component</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceRequirements</code><br>
+<em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<p>ResourceRequirements allows customization of limits and requests for compute resources such as cpu and memory.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.IntrusionDetectionSpec">IntrusionDetectionSpec
 </h3>
 <p>
@@ -3488,6 +3552,31 @@ InstallationSpec
 <a href="#operator.tigera.io/v1.IntrusionDetection">IntrusionDetection</a>)
 </p>
 <p>IntrusionDetectionSpec defines the desired state of Tigera intrusion detection capabilities.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>componentResources</code><br>
+<em>
+<a href="#operator.tigera.io/v1.IntrusionDetectionComponentResource">
+[]IntrusionDetectionComponentResource
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ComponentResources can be used to customize the resource requirements for each component.
+Only DeepPacketInspection is supported for this spec.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.IntrusionDetectionStatus">IntrusionDetectionStatus
 </h3>
 <p>

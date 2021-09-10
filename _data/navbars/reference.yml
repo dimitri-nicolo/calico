@@ -125,6 +125,8 @@ section:
       path: /reference/compliance-reports/policy-audit
     - title: CIS Benchmark
       path: /reference/compliance-reports/cis-benchmark  
+  - title: Deep packet inspection
+    path: /reference/resources/deeppacketinspection
   - title: Felix configuration
     path: /reference/resources/felixconfig
   - title: Global alert
