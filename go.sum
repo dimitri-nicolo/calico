@@ -892,6 +892,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/api v0.0.0-20210908220740-4eee9be4208c h1:UqhrK+L20Qp7e+kDLSviYWOuSNWbICXuVsLind4d/vc=
 github.com/tigera/api v0.0.0-20210908220740-4eee9be4208c/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
+github.com/tigera/api v0.0.0-20210910105806-f1faa724662a h1:g8gieRboGloLO87lLvgj4MVYd9JrUN2qhSxNLXrpbtw=
+github.com/tigera/api v0.0.0-20210910105806-f1faa724662a/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/apiserver v0.0.0-20210910005618-e1bdf7848b16 h1:SQbeu+SUOyj6NA49jACO19xdfc6pAUH9wWeH4ACnHrI=
 github.com/tigera/apiserver v0.0.0-20210910005618-e1bdf7848b16/go.mod h1:/lDT6VNrHwSctxINVp/tbCoffazr/q4QmpgWELWLszU=
 github.com/tigera/compliance v0.0.0-20210910103331-d5a213a19680 h1:U1EKD97FZqPli/lJS1GpR66Ded73qh/9oRq1syazfgY=
