@@ -9,23 +9,13 @@ GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go")
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_ES_GATEWAY_PROJECT_ID)
 
-TESLA ?= false
+ES_GATEWAY_IMAGE   ?=tigera/es-gateway
+BUILD_IMAGES       ?=$(ES_GATEWAY_IMAGE)
+DEV_REGISTRIES     ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES ?=quay.io
 
-ES_GATEWAY_IMAGE      ?= tigera/es-gateway
-RELEASE_REGISTRIES    ?= quay.io
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
-DEV_REGISTRIES        ?= gcr.io/unique-caldron-775/cnx
-
-ifeq ($(TESLA),true)
-	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
-	BUILD_TAGS            ?= -tags tesla
-	RELEASE_BRANCH_PREFIX = release-tesla
-	DEV_TAG_SUFFIX        = tesla-0.dev
-	IMAGETAG_PREFIX       ?= tesla
-endif
-
-BUILD_IMAGES       ?=$(ES_GATEWAY_IMAGE)
 
 ###############################################################################
 # Download and include Makefile.common
@@ -84,7 +74,7 @@ endif
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(LDFLAGS) $(BUILD_TAGS) cmd/$*/*.go && \
+			go build -o $@ -v $(LDFLAGS) cmd/$*/*.go && \
 				( ldd $@ 2>&1 | \
 					grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 				( echo "Error: $@ was not statically linked"; false ) )'
