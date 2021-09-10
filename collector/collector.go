@@ -700,12 +700,7 @@ func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 // convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current
 // data stored for the specific connection tuple.
 func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats) {
-	displayTraceLogs := false
-	if c.reporterMgr != nil {
-		displayTraceLogs = c.reporterMgr.displayDebugTraceLogs
-	}
-
-	logutil.Tracef(displayTraceLogs, "Received dataplane stats update %+v", d)
+	logutil.Tracef(c.displayDebugTraceLogs, "Received dataplane stats update %+v", d)
 	// Create a Tuple representing the DataplaneStats.
 	t, err := extractTupleFromDataplaneStats(d)
 	if err != nil {
@@ -844,11 +839,7 @@ func reportDataplaneStatsUpdateErrorMetrics(dataplaneErrorDelta uint32) {
 // When called, clear the contents of the file Config.StatsDumpFilePath before
 // writing the stats to it.
 func (c *collector) dumpStats() {
-	displayTraceLogs := false
-	if c.reporterMgr != nil {
-		displayTraceLogs = c.reporterMgr.displayDebugTraceLogs
-	}
-	logutil.Tracef(displayTraceLogs, "Dumping Stats to %v", c.config.StatsDumpFilePath)
+	logutil.Tracef(c.displayDebugTraceLogs, "Dumping Stats to %v", c.config.StatsDumpFilePath)
 
 	_ = os.Truncate(c.config.StatsDumpFilePath, 0)
 	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
