@@ -382,6 +382,10 @@ spec:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP
                   socket stats
                 type: boolean
+              flowLogsCollectorDebugTrace:
+                description: When FlowLogsCollectorDebugTrace is set to true, enables
+                  the logs in the collector to be printed in their entirety.
+                type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
                   dynamically changing aggregation levels. Default is true.
