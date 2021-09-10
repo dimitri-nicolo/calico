@@ -73,7 +73,10 @@ func NewAWSSubnetManager(
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 ) *awsIPManager {
-
+	logrus.WithFields(logrus.Fields{
+		"nodeName": nodeName,
+		"routeTables": routeTableIndexes,
+	}).Info("Creating AWS subnet manager.")
 	rules, err := routerule.New(
 		4,
 		101,
@@ -250,6 +253,7 @@ func (a *awsIPManager) queueDataplaneResync(reason string) {
 func (a *awsIPManager) CompleteDeferredWork() error {
 	if !a.ifaceProvisionerStarted {
 		a.ifaceProvisioner.Start(context.Background())
+		a.ifaceProvisionerStarted = true
 	}
 	if a.awsResyncNeeded {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS

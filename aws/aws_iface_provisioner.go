@@ -172,6 +172,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			m.ds = snapshot
 		case responseC <- response:
 			// Mask the response channel so we don't resend again and again.
+			logrus.Debug("Sent AWS state back to main goroutine")
 			responseC = nil
 			continue // Don't want sending a response to trigger an early resync.
 		case <-backoffC:
