@@ -110,6 +110,7 @@ func NewSecondaryIfaceProvisioner(
 }
 
 func (m *SecondaryIfaceProvisioner) Start(ctx context.Context) (done chan struct{}) {
+	logrus.Info("Starting AWS secondary interface provisioner.")
 	done = make(chan struct{})
 	go m.loopKeepingAWSInSync(ctx, done)
 	return
@@ -895,7 +896,6 @@ func (m *SecondaryIfaceProvisioner) attachOrphanNICs(resyncState *nicResyncState
 			NetworkCardIndex: int32Ptr(0),
 		})
 		if err != nil {
-			// TODO handle idempotency; make sure that we can't get a successful failure(!)
 			logrus.WithError(err).Error("Failed to attach interface to host.")
 			continue
 		}

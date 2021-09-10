@@ -731,12 +731,15 @@ func (f *FlowStatsByProcess) aggregateFlowStatsByProcess(mu *MetricUpdate) {
 		mu.processArgs = flowLogFieldNotIncluded
 	}
 	if stats, ok := f.statsByProcessName[mu.processName]; ok {
-		log.Debugf("Process stats found %+v for metric update %+v", stats, mu)
+		// FIXME HACK Disable spammy log
+		//log.Debugf("Process stats found %+v for metric update %+v", stats, mu)
 		stats.aggregateFlowStats(*mu)
-		log.Debugf("Aggregated stats %+v after processing metric update %+v", stats, mu)
+		// FIXME HACK Disable spammy log
+		// log.Debugf("Aggregated stats %+v after processing metric update %+v", stats, mu)
 		f.statsByProcessName[mu.processName] = stats
 	} else {
-		log.Debugf("Process stats not found for metric update %+v", mu)
+		// FIXME HACK Disable spammy log
+		// log.Debugf("Process stats not found for metric update %+v", mu)
 		f.processNames.PushBack(mu.processName)
 		stats := NewFlowStats(*mu)
 		f.statsByProcessName[mu.processName] = &stats

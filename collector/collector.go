@@ -217,7 +217,8 @@ func (c *collector) startStatsCollectionAndReporting() {
 		case ctInfos := <-ctInfoC:
 			conntrackProcessStart := time.Now()
 			for _, ctInfo := range ctInfos {
-				log.WithField("ConntrackInfo", ctInfo).Debug("collector event")
+				// FIXME HACK Disable spammy log
+				// log.WithField("ConntrackInfo", ctInfo).Debug("collector event")
 				c.handleCtInfo(ctInfo)
 			}
 			histogramConntrackLatency.Observe(float64(time.Since(conntrackProcessStart).Seconds()))
