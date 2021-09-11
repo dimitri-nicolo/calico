@@ -3,10 +3,10 @@ module github.com/tigera/honeypod-controller
 go 1.15
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210910005618-e1bdf7848b16
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210910102115-7f2d6f419f61
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210910000805-757878f369ce
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210910085947-bcd93036c123
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210910153003-9f808458c145
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210910235532-10f2bc6a7f5c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210910152123-94f7ad424bd0
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210910153856-198bb946380e
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
