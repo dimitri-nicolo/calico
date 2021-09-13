@@ -36,7 +36,7 @@ Running snort with custom rules:
 ```
 alert icmp any any -> any any ( sid:1000005; rev:1;)
 ``` 
-- Copy the `local.rules` file to docker image by adding this line in Dockerfile.amd64
+- Copy the `local.rules` file to docker image by adding this line in Dockerfile.snort.amd64
 ```
 # Copy local rules for dev testing
 COPY local.rules /usr/local/etc/rules/
@@ -49,3 +49,43 @@ COPY local.rules /usr/local/etc/rules/
     "-R", "/usr/local/etc/rules/local.rules",
     )
 ```
+
+## Debug logs
+Set environment variable `DPI_LOG_LEVEL` with value `debug`
+
+## Code flow
+```flow
+M=>Main:
+```
+![Alt text](flow_diagram.svg)<img src="flow_diagram.svg">
+
+```mermaid
+sequenceDiagram
+    participant M as Main
+    participant EF as ESForwarder
+    participant FM as FileMaintainer
+    participant S as Syncer
+    participant D as Dispatcher
+    participant P as Processor
+    participant E as EventGenerator
+    participant ES as ElasticSearch
+    participant T as Typha
+
+    M-->>T: Creates a local/typha syncer client
+    M->>S: Sync
+    Note over S: Wait for typha to callback
+    M->>EF: Run
+    Note over EF: Wait for events and forward them to ES
+    M->>FM: Run
+    Note over FM: Delete older alter files on interval
+    T-->>S: Send DPI and WEP resorces via Syncer callback
+    S->>D: Send the DPI and WEP <br/> resource to Dispatch
+    Note over D: For valid combination of WEP and DPI <br/> resource initailize Processor and EvenGenerator 
+    D->>P: start the snort process
+    Note over P: Starts/restarts snort on interface
+    D->>E: start event generator
+    Note over E: Tails the alert file, generates events <br/> forwards it to ESForwarder
+    E->>EF: Security events
+    EF-->>ES: Send received events to ES
+```
+

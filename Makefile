@@ -148,7 +148,12 @@ clean:
 MOCKERY_FILE_PATHS= \
 	pkg/processor/Processor \
 	pkg/exec/Exec \
-	pkg/handler/Handler
+	pkg/dispatcher/Dispatcher \
+	pkg/eventgenerator/EventGenerator \
+	pkg/elastic/Client \
+	pkg/elastic/ESForwarder \
+	pkg/dpiupdater/DPIStatusUpdater \
+	pkg/file/FileMaintainer
 
 GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)

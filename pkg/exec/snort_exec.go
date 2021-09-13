@@ -31,15 +31,16 @@ func NewExec(podName string,
 ) (Exec, error) {
 	s := &snort{}
 
-	// -c <config path>			 : configuration
-	// -q                        : quiet mode
-	// -k none                   : checksum level
-	// -y                        : show year in timestamp
-	// -i <iface>				 : WEP interface
-	// -l <path> 				 : alert output directory
-	// --daq afpacket  			 : packet acquisition module
-	// --lua <alert type>		 : type/level of alert
-	// -R <rules path>			 : path to the rules
+	// -c <config path>		: configuration
+	// -q					: quiet mode
+	// -y					: include year in output
+	// -k none				: checksum level
+	// -y					: show year in timestamp
+	// -i <iface>			: WEP interface
+	// -l <path>			: alert output directory
+	// --daq afpacket		: packet acquisition module
+	// --lua <alert type>	: type/level of alert
+	// -R <rules path>		: path to the rules
 	logPath := fmt.Sprintf("%s/%s/%s/%s", alertFileBasePath, namespace, dpiName, podName)
 	err := os.MkdirAll(logPath, os.ModePerm)
 	if err != nil {
@@ -51,6 +52,7 @@ func NewExec(podName string,
 		"-c",
 		"/usr/local/etc/snort/snort.lua",
 		"-q",
+		"-y",
 		"-k", "none",
 		"-i", iface,
 		"-l", logPath,

@@ -5,23 +5,17 @@ package processor
 import (
 	"context"
 	"fmt"
-
-	"github.com/tigera/deep-packet-inspection/pkg/exec"
-	"k8s.io/client-go/util/retry"
+	"time"
 
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
+	"github.com/tigera/deep-packet-inspection/pkg/exec"
+	"github.com/tigera/deep-packet-inspection/pkg/weputils"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
-
-	"time"
 )
 
 const (
-	maxErrors          = 10
 	snortRetryDuration = 1000 * time.Millisecond
 )
 
@@ -37,12 +31,12 @@ type Processor interface {
 type dpiProcessor struct {
 	dpiKey                  model.ResourceKey
 	nodeName                string
-	calicoClient            clientv3.Interface
 	snortExecFn             exec.Snort
 	ch                      chan cacheReq
 	snortAlertFileBasePath  string
 	snortAlertFileSize      int
 	snortCommunityRulesFile string
+	dpiUpdater              dpiupdater.DPIStatusUpdater
 }
 
 type requestType int
@@ -70,29 +64,26 @@ type cacheResponse struct {
 }
 
 func NewProcessor(ctx context.Context,
-	calicoClient clientv3.Interface,
-	dpikey interface{},
+	dpiKey model.ResourceKey,
 	nodeName string,
 	snortExecFn exec.Snort,
 	snortAlertFileBasePath string,
 	snortAlertFileSize int,
 	snortCommunityRulesFile string,
+	dpiUpdater dpiupdater.DPIStatusUpdater,
 ) Processor {
 	d := &dpiProcessor{
-		dpiKey:                  dpikey.(model.ResourceKey),
+		dpiKey:                  dpiKey,
 		nodeName:                nodeName,
-		calicoClient:            calicoClient,
 		snortExecFn:             snortExecFn,
 		snortAlertFileBasePath:  snortAlertFileBasePath,
 		snortAlertFileSize:      snortAlertFileSize,
 		snortCommunityRulesFile: snortCommunityRulesFile,
 		ch:                      make(chan cacheReq, 100),
+		dpiUpdater:              dpiUpdater,
 	}
 	go d.run(ctx)
-	d.retryStatusUpdate(ctx, &v3.DPIActive{
-		Success:     false,
-		LastUpdated: &metav1.Time{Time: time.Now()},
-	}, nil)
+	dpiUpdater.UpdateStatus(ctx, d.dpiKey, false)
 	return d
 }
 
@@ -154,10 +145,7 @@ func (p *dpiProcessor) run(ctx context.Context) {
 
 					// If there is no snort running, update the DeepPacketInspection status.
 					if len(wepKeyToSnortExec) == 0 {
-						p.retryStatusUpdate(ctx, &v3.DPIActive{
-							Success:     false,
-							LastUpdated: &metav1.Time{Time: time.Now()},
-						}, nil)
+						p.dpiUpdater.UpdateStatus(ctx, p.dpiKey, false)
 					}
 
 					r.cacheResponse <- cacheResponse{success: true}
@@ -176,10 +164,7 @@ func (p *dpiProcessor) run(ctx context.Context) {
 
 				// Status needs to be updated only if the request actually stopped snort process
 				if len(wepKeyToSnortExec) != 0 {
-					p.retryStatusUpdate(ctx, &v3.DPIActive{
-						Success:     false,
-						LastUpdated: &metav1.Time{Time: time.Now()},
-					}, nil)
+					p.dpiUpdater.UpdateStatus(ctx, p.dpiKey, false)
 				}
 
 				// reset all cached WEP Keys
@@ -214,10 +199,7 @@ func (p *dpiProcessor) Add(ctx context.Context, wepKey model.WorkloadEndpointKey
 	go p.runSnort(ctx, wepKey, iface)
 
 	log.WithFields(log.Fields{"DPI": p.dpiKey.String(), "WEP": wepKey.String()}).Info("Snort process has started and running")
-	p.retryStatusUpdate(ctx, &v3.DPIActive{
-		Success:     true,
-		LastUpdated: &metav1.Time{Time: time.Now()},
-	}, nil)
+	p.dpiUpdater.UpdateStatus(ctx, p.dpiKey, true)
 }
 
 // Remove stops snort process running on the WEP interface, if there are no more snort processes running for
@@ -252,85 +234,22 @@ func (p *dpiProcessor) Close() {
 	<-resCh
 }
 
-// retryStatusUpdate retries setting the status of DeepPacketInspection resource if there is a conflict.
-func (p *dpiProcessor) retryStatusUpdate(ctx context.Context, statusActive *v3.DPIActive, statusErr *v3.DPIErrorCondition) {
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		return p.statusUpdate(ctx, statusActive, statusErr)
-	}); err != nil {
-		log.WithField("DPI", p.dpiKey).WithError(err).Error("failed to update status after retries")
-	}
-}
-
-// statusUpdate gets the DeepPacketInspection resource and updates the status field with the values for status activity and
-// status error for the current node.
-func (p *dpiProcessor) statusUpdate(ctx context.Context, statusActive *v3.DPIActive, statusErr *v3.DPIErrorCondition) error {
-	res, err := p.calicoClient.DeepPacketInspections().Get(ctx, p.dpiKey.Namespace, p.dpiKey.Name, options.GetOptions{})
-	if err != nil {
-		log.WithError(err).Errorf("could not get resource %s", p.dpiKey.String())
-		return err
-	}
-
-	var currentNode v3.DPINode
-	currentNode = v3.DPINode{Node: p.nodeName}
-	if res.Status.Nodes == nil {
-		res.Status.Nodes = []v3.DPINode{}
-	}
-
-	nodeIndex := -1
-	// get the status of the current node if it already exists
-	for i, s := range res.Status.Nodes {
-		if s.Node == p.nodeName {
-			currentNode = s
-			nodeIndex = i
-			break
-		}
-	}
-
-	currentNode.Active = *statusActive
-	// If status error exists, retain the latest maxErrors
-	if statusErr != nil {
-		errorConditions := currentNode.ErrorConditions
-		errorConditions = append(errorConditions, *statusErr)
-		if len(errorConditions) > maxErrors {
-			errorConditions = errorConditions[1:]
-		}
-		currentNode.ErrorConditions = errorConditions
-	}
-
-	if nodeIndex == -1 {
-		// There is no status for the current node, append the current node's status
-		res.Status.Nodes = append(res.Status.Nodes, currentNode)
-	} else {
-		// update the existing status of current node
-		res.Status.Nodes[nodeIndex] = currentNode
-	}
-
-	_, err = p.calicoClient.DeepPacketInspections().UpdateStatus(ctx, res, options.SetOptions{})
-	if err != nil {
-		log.WithError(err).Errorf("could not update status of resource %s in cluster", p.dpiKey.String())
-		return err
-	}
-	return nil
-}
-
 // runSnort starts snort and waits for the process to complete.
 // Only case where snort process terminates without error is when syscall.SIGTERM signal is sent during dpiProcessor.Close,
 // if snort fails with error, restart the snort process after some interval and update the cache with the new snortExec,
 // if request to update the cache fails, it implies that WEP interface is no longer valid so return.
 func (p *dpiProcessor) runSnort(ctx context.Context, wepKey model.WorkloadEndpointKey, iface string) {
 	for {
-		snortExec, err := p.snortExecFn(wepKey.WorkloadID, iface, p.dpiKey.Namespace, p.dpiKey.Name, p.snortAlertFileBasePath,
+		_, podName, err := weputils.ExtractNamespaceAndNameFromWepName(wepKey.WorkloadID)
+		if err != nil {
+			log.WithError(err).Error("Failed to get pod name from WEP key")
+		}
+		snortExec, err := p.snortExecFn(podName, iface, p.dpiKey.Namespace, p.dpiKey.Name, p.snortAlertFileBasePath,
 			p.snortAlertFileSize, p.snortCommunityRulesFile)
 		if err != nil {
 			log.WithFields(log.Fields{"DPI": p.dpiKey.String(), "WEP": wepKey.String()}).WithError(err).
 				Errorf("failed to set snort command line")
-			p.retryStatusUpdate(ctx, &v3.DPIActive{
-				Success:     false,
-				LastUpdated: &metav1.Time{Time: time.Now()},
-			}, &v3.DPIErrorCondition{
-				Message:     err.Error(),
-				LastUpdated: &metav1.Time{Time: time.Now()},
-			})
+			p.dpiUpdater.UpdateStatusWithError(ctx, p.dpiKey, false, err.Error())
 			// If there is an error, retry after snortRetryDuration
 			<-time.After(snortRetryDuration)
 			continue
@@ -351,13 +270,8 @@ func (p *dpiProcessor) runSnort(ctx context.Context, wepKey model.WorkloadEndpoi
 		if err != nil {
 			log.WithFields(log.Fields{"DPI": p.dpiKey.String(), "WEP": wepKey.String()}).WithError(err).
 				Errorf("snort failed to start")
-			p.retryStatusUpdate(ctx, &v3.DPIActive{
-				Success:     false,
-				LastUpdated: &metav1.Time{Time: time.Now()},
-			}, &v3.DPIErrorCondition{
-				Message:     fmt.Sprintf("failed to start snort for resource %s on WEP interface %s", p.dpiKey.String(), iface),
-				LastUpdated: &metav1.Time{Time: time.Now()},
-			})
+			p.dpiUpdater.UpdateStatusWithError(ctx, p.dpiKey, false,
+				fmt.Sprintf("failed to start snort for resource %s on WEP interface %s", p.dpiKey.String(), iface))
 			// If there is an error, retry after snortRetryDuration
 			<-time.After(snortRetryDuration)
 			continue
@@ -366,13 +280,8 @@ func (p *dpiProcessor) runSnort(ctx context.Context, wepKey model.WorkloadEndpoi
 		err = snortExec.Wait()
 		if err != nil {
 			log.WithFields(log.Fields{"DPI": p.dpiKey.String(), "WEP": wepKey.String()}).WithError(err).Errorf("snort failed")
-			p.retryStatusUpdate(ctx, &v3.DPIActive{
-				Success:     false,
-				LastUpdated: &metav1.Time{Time: time.Now()},
-			}, &v3.DPIErrorCondition{
-				Message:     fmt.Sprintf("snort process failed for resource %s on WEP interface %s with error '%s'", p.dpiKey.String(), iface, err.Error()),
-				LastUpdated: &metav1.Time{Time: time.Now()},
-			})
+			p.dpiUpdater.UpdateStatusWithError(ctx, p.dpiKey, false,
+				fmt.Sprintf("snort process failed for resource %s on WEP interface %s with error '%s'", p.dpiKey.String(), iface, err.Error()))
 			// If there is an error in starting snort restart snort with de
 			<-time.After(snortRetryDuration)
 		} else {

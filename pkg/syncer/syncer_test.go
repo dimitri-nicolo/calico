@@ -6,11 +6,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/dpisyncer"
+	"github.com/projectcalico/typha/pkg/buildinfo"
+	"github.com/projectcalico/typha/pkg/syncclientutils"
+	"github.com/projectcalico/typha/pkg/syncproto"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/deep-packet-inspection/pkg/handler"
+	"github.com/tigera/deep-packet-inspection/pkg/dispatcher"
 	"github.com/tigera/deep-packet-inspection/pkg/syncer"
 	k8sapi "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,7 +56,7 @@ var _ = Describe("Syncer", func() {
 			},
 		}
 
-		// Create the backend client to obtain a syncer interface.
+		// Create the backend client to obtain a syncerCallbacks interface.
 		k8sBackend, err := backend.NewClient(cfg)
 		Expect(err).NotTo(HaveOccurred())
 		k8sClientset = k8sBackend.(*k8s.KubeClient).ClientSet
@@ -114,9 +119,9 @@ var _ = Describe("Syncer", func() {
 		_ = k8sClientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
 	})
 
-	It("syncs all resources created before and after the syncer started", func() {
+	It("syncs all resources created before and after the syncerCallbacks started", func() {
 		ctx1, cancelFn := context.WithCancel(ctx)
-		mockHndlr := &handler.MockHandler{}
+		mockDispatcher := &dispatcher.MockDispatcher{}
 
 		go func() {
 			for {
@@ -128,7 +133,7 @@ var _ = Describe("Syncer", func() {
 			}
 		}()
 
-		By("creating WEP before starting syncer")
+		By("creating WEP before starting syncerCallbacks")
 		_, err := calicoClient.WorkloadEndpoints().Create(ctx1, &calicolib.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", nodename)},
 			Spec: calicolib.WorkloadEndpointSpec{
@@ -144,7 +149,7 @@ var _ = Describe("Syncer", func() {
 		}, options.SetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 
-		By("creating DPI resource before starting syncer")
+		By("creating DPI resource before starting syncerCallbacks")
 		_, err = calicoClient.DeepPacketInspections().Create(
 			ctx1,
 			&v3.DeepPacketInspection{
@@ -157,12 +162,12 @@ var _ = Describe("Syncer", func() {
 
 		numberOfCallsToOnUpdate := 0
 		expectedCallsToOnUpdate := 8
-		mockHndlr.On("OnUpdate", ctx1, mock.Anything).Return().Run(
+		mockDispatcher.On("Dispatch", ctx1, mock.Anything).Return().Run(
 			func(args mock.Arguments) {
 				numberOfCallsToOnUpdate++
-				for _, c := range mockHndlr.ExpectedCalls {
-					if c.Method == "OnUpdate" {
-						cacheReq := args.Get(1).([]handler.CacheRequest)
+				for _, c := range mockDispatcher.ExpectedCalls {
+					if c.Method == "Dispatch" {
+						cacheReq := args.Get(1).([]dispatcher.CacheRequest)
 						switch numberOfCallsToOnUpdate {
 						case 1:
 							Expect(cacheReq[0].UpdateType).Should(Equal(bapi.UpdateTypeKVNew))
@@ -219,10 +224,23 @@ var _ = Describe("Syncer", func() {
 					}
 				}
 			}).Times(8)
-		go syncer.Run(ctx1, mockHndlr, nodename, healthCh, &cfg, calicoClient)
+
+		s := syncer.NewSyncerCallbacks(healthCh)
+		typhaConfig := syncclientutils.ReadTyphaConfig([]string{"DPI_"})
+		if syncclientutils.MustStartSyncerClientIfTyphaConfigured(
+			&typhaConfig, syncproto.SyncerTypeDPI,
+			buildinfo.GitVersion, nodename, fmt.Sprintf("dpi %s", buildinfo.GitVersion),
+			s,
+		) {
+		} else {
+			syncerClient := dpisyncer.New(calicoClient.(backendClientAccessor).Backend(), s)
+			syncerClient.Start()
+			defer syncerClient.Stop()
+		}
+		go s.Sync(ctx1, mockDispatcher)
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(1))
 
-		By("creating WEP and checking updates are received by handler")
+		By("creating WEP and checking updates are received by dispatcher")
 		_, err = calicoClient.WorkloadEndpoints().Create(ctx1, &calicolib.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod2-eth0", nodename)},
 			Spec: calicolib.WorkloadEndpointSpec{
@@ -239,7 +257,7 @@ var _ = Describe("Syncer", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(2))
 
-		By("creating DPI and checking updates are received by reconciler")
+		By("creating DPI and checking updates are received by syncerCallbacks")
 		dpi, err := calicoClient.DeepPacketInspections().Create(
 			ctx1,
 			&v3.DeepPacketInspection{
@@ -251,7 +269,7 @@ var _ = Describe("Syncer", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(3))
 
-		By("creating WEP for non-local node and checking updates are not sent to reconciler")
+		By("creating WEP for non-local node and checking updates are not sent to syncerCallbacks")
 		tempNode := "tempnode"
 		_, err = calicoClient.WorkloadEndpoints().Create(ctx1, &calicolib.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", tempNode)},
@@ -269,7 +287,7 @@ var _ = Describe("Syncer", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(3))
 
-		By("updating DPI and checking updates are received by reconciler")
+		By("updating DPI and checking updates are received by syncerCallbacks")
 		_, err = calicoClient.DeepPacketInspections().Update(
 			ctx1,
 			&v3.DeepPacketInspection{
@@ -281,7 +299,7 @@ var _ = Describe("Syncer", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(4))
 
-		By("deleting WEP & DPI resource and checking updates are received by handler")
+		By("deleting WEP & DPI resource and checking updates are received by dispatcher")
 		_, err = calicoClient.WorkloadEndpoints().Delete(ctx1, namespace, fmt.Sprintf("%s-k8s-pod1-eth0", nodename), options.DeleteOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(5))
@@ -298,8 +316,13 @@ var _ = Describe("Syncer", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(expectedCallsToOnUpdate))
 
-		mockHndlr.On("Close").Return()
-		// Stop the syncer by cancelling the context
+		mockDispatcher.On("Close").Return()
+		// StopGeneratingEventsForWEP the syncerCallbacks by cancelling the context
 		cancelFn()
 	}, 10)
 })
+
+// backendClientAccessor is an interface to access the backend client from the main v2 client.
+type backendClientAccessor interface {
+	Backend() bapi.Client
+}

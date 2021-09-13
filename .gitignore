@@ -33,3 +33,6 @@ config/
 
 # Ignore local snort rules used for dev testing
 */local.rules
+
+# Test Data files
+pkg/eventgenerator/test/dpi-ns/*

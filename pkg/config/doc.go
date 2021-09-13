@@ -2,5 +2,4 @@
 
 // Package config contains the configurations that will be applied for
 // an application upon starting up
-
 package config

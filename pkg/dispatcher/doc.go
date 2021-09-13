@@ -1,10 +1,10 @@
-package handler
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 // This package handles the updates to resources that dpisyncer watches.
 // The syncer package receives and caches updates on resource change from either typha or local syncer client,
-// the cached request is sent to the handler for processing.
+// the cached request is sent to the dispatcher for processing.
 
-// The resourceHandler handles changes to WorkLoadEndpoint and DeepPacketInspection resource,
+// The dispatcher handles changes to WorkLoadEndpoint and DeepPacketInspection resource,
 // If WorkLoadEndpoint resource is
 // 	- created/updated:
 //     	- if interface has changed, update the cached WEP name to interface mapping
@@ -18,3 +18,4 @@ package handler
 //	      that no longer match the updated selector.
 //	- deleted:
 //		- delete the cached selectors and stop snort processes started for this DPI resource.
+package dispatcher
