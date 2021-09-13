@@ -164,9 +164,6 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 		var origLogLevel log.Level
 
 		BeforeEach(func() {
-			initialLogLevel = log.GetLevel()
-			log.SetLevel(log.InfoLevel)
-
 			// Remove all data in the datastore.
 			bc, err = backend.NewClient(config)
 			Expect(err).NotTo(HaveOccurred())
