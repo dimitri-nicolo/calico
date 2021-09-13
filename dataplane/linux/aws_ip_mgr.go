@@ -4,6 +4,7 @@ package intdataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -50,7 +51,7 @@ type awsIPManager struct {
 
 	// awsState is the most recent update we've got from the background thread telling us what state it thinks
 	// the AWS fabric should be in. <nil> means "don't know", i.e. we're not ready to touch the dataplane yet.
-	awsState *aws.SecondaryIfaceState
+	awsState *aws.IfaceState
 
 	// Dataplane state.
 
@@ -61,6 +62,7 @@ type awsIPManager struct {
 	routeRules                 *routerule.RouteRules
 	routeRulesInDataplane      map[awsRuleKey]*routerule.Rule
 	dataplaneResyncNeeded      bool
+	primaryIfaceMTU            int
 	dpConfig                   Config
 	expectedPrimaryIPs         map[string]string
 
@@ -131,7 +133,7 @@ func NewAWSSubnetManager(
 	return sm
 }
 
-func (a *awsIPManager) ResponseC() <-chan *aws.SecondaryIfaceState {
+func (a *awsIPManager) ResponseC() <-chan *aws.IfaceState {
 	return a.ifaceProvisioner.ResponseC()
 }
 
@@ -175,7 +177,7 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 	}
 }
 
-func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.SecondaryIfaceState) {
+func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.IfaceState) {
 	logrus.WithField("awsState", msg).Debug("Received AWS state update.")
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
@@ -345,6 +347,14 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	activeIfaceNames := set.New()
 	var finalErr error
 
+	if a.primaryIfaceMTU == 0 {
+		mtu, err := a.findPrimaryInterfaceMTU(ifaces)
+		if err != nil {
+			return err
+		}
+		a.primaryIfaceMTU = mtu
+	}
+
 	for _, iface := range ifaces {
 		// Skip NICs that don't match anything in AWS.
 		mac := iface.Attrs().HardwareAddr.String()
@@ -392,6 +402,25 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	return finalErr
 }
 
+var (
+	errPrimaryMTUNotFound  = errors.New("failed to find primary interface MTU")
+	errPrimaryIfaceZeroMTU = errors.New("primary interface had 0 MTU")
+)
+
+func (a *awsIPManager) findPrimaryInterfaceMTU(ifaces []netlink.Link) (int, error) {
+	for _, iface := range ifaces {
+		mac := iface.Attrs().HardwareAddr.String()
+		if mac == a.awsState.PrimaryNIC.MAC.String() {
+			// Found the primary interface.
+			if iface.Attrs().MTU == 0 { // defensive
+				return 0, errPrimaryIfaceZeroMTU
+			}
+			return iface.Attrs().MTU, nil
+		}
+	}
+	return 0, errPrimaryMTUNotFound
+}
+
 func (a *awsIPManager) cleanUpPrimaryIPs(matchedNICs set.Set) {
 	if matchedNICs.Len() != len(a.expectedPrimaryIPs) {
 		// Clean up primary IPs of interfaces that no longer exist.
@@ -406,12 +435,21 @@ func (a *awsIPManager) cleanUpPrimaryIPs(matchedNICs set.Set) {
 
 // configureNIC Brings the given NIC up and ensures its has the expected IP assigned.
 func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primaryIPStr string) error {
-	ifaceIsAdminUp := iface.Attrs().RawFlags&syscall.IFF_UP != 0
-	if !ifaceIsAdminUp {
+	if iface.Attrs().MTU != a.primaryIfaceMTU {
+		// Set the MTU on the link to match the MTU of the primary ENI.  This ensures that we don't flap the
+		// detected host MTU by bringing up the new NIC.
+		err := netlink.LinkSetMTU(iface, a.primaryIfaceMTU)
+		if err != nil {
+			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set secondary ENI MTU.")
+			return err
+		}
+	}
+
+	if iface.Attrs().OperState != netlink.OperUp {
 		err := netlink.LinkSetUp(iface)
 		if err != nil {
-			ifaceName := iface.Attrs().Name
-			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set link up")
+			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set secondary ENI MTU 'up'")
+			return err
 		}
 	}
 

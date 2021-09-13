@@ -379,7 +379,7 @@ type InternalDataplane struct {
 	loopSummarizer *logutils.Summarizer
 
 	packetProcessor *nfqdnspolicy.PacketProcessor
-	awsStateUpdC    <-chan *aws.SecondaryIfaceState
+	awsStateUpdC    <-chan *aws.IfaceState
 	awsSubnetMgr    *awsIPManager
 }
 
@@ -1318,7 +1318,13 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 		// Skip links that we know are not external interfaces.
 		fields := log.Fields{"mtu": l.Attrs().MTU, "name": l.Attrs().Name}
 		if matchRegex == nil || !matchRegex.MatchString(l.Attrs().Name) {
-			log.WithFields(fields).Debug("Skipping interface for MTU detection")
+			log.WithFields(fields).Debug("Skipping interface for MTU detection (name is excluded by regex)")
+			continue
+		}
+		// Skip links that are down.  In particular, we want to ignore newly-added AWS secondary ENIs until
+		// the AWS IP manager has had a chance to configure them.
+		if l.Attrs().OperState != netlink.OperUp {
+			log.WithFields(fields).Debug("Skipping interface for MTU detection (link is down)")
 			continue
 		}
 		log.WithFields(fields).Debug("Examining link for MTU calculation")

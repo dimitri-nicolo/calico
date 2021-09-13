@@ -58,7 +58,7 @@ type SecondaryIfaceProvisioner struct {
 	ds DatastoreState
 
 	// ResponseC is our channel back to the main dataplane loop.
-	responseC chan *SecondaryIfaceState
+	responseC chan *IfaceState
 }
 
 type DatastoreState struct {
@@ -105,7 +105,7 @@ func NewSecondaryIfaceProvisioner(
 		opRecorder: logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
-		responseC:        make(chan *SecondaryIfaceState, 1),
+		responseC:        make(chan *IfaceState, 1),
 		clock:            clock.RealClock{},
 	}
 }
@@ -117,7 +117,8 @@ func (m *SecondaryIfaceProvisioner) Start(ctx context.Context) (done chan struct
 	return
 }
 
-type SecondaryIfaceState struct {
+type IfaceState struct {
+	PrimaryNIC         *Iface
 	SecondaryNICsByMAC map[string]Iface
 	SubnetCIDR         ip.CIDR
 	GatewayAddr        ip.Addr
@@ -135,8 +136,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 	logrus.Info("AWS secondary interface provisioner running in background.")
 
 	// Response channel is masked (nil) until we're ready to send something.
-	var responseC chan *SecondaryIfaceState
-	var response *SecondaryIfaceState
+	var responseC chan *IfaceState
+	var response *IfaceState
 
 	// Set ourselves up for exponential backoff after a failure.  backoffMgr.Backoff() returns the same Timer
 	// on each call so we need to stop it properly when cancelling it.
@@ -217,7 +218,7 @@ func (m *SecondaryIfaceProvisioner) newBackoffManager() wait.BackoffManager {
 	return backoffMgr
 }
 
-func (m *SecondaryIfaceProvisioner) ResponseC() <-chan *SecondaryIfaceState {
+func (m *SecondaryIfaceProvisioner) ResponseC() <-chan *IfaceState {
 	return m.responseC
 }
 
@@ -235,10 +236,10 @@ func (m *SecondaryIfaceProvisioner) OnDatastoreUpdate(snapshot DatastoreState) {
 
 var errResyncNeeded = errors.New("resync needed")
 
-func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*SecondaryIfaceState, error) {
+func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*IfaceState, error) {
 	var awsResyncErr error
 	m.opRecorder.RecordOperation("aws-fabric-resync")
-	var response *SecondaryIfaceState
+	var response *IfaceState
 	for attempt := 0; attempt < 5; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -262,7 +263,7 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*SecondaryIface
 	return response, nil
 }
 
-func (m *SecondaryIfaceProvisioner) attemptResync() (*SecondaryIfaceState, error) {
+func (m *SecondaryIfaceProvisioner) attemptResync() (*IfaceState, error) {
 	if m.networkCapabilities == nil {
 		// Figure out what kind of instance we are and how many NICs and IPs we can support.
 		netCaps, err := m.getMyNetworkCapabilities()
@@ -312,7 +313,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*SecondaryIfaceState, error
 	bestSubnetID := m.calculateBestSubnet(awsSnapshot, localSubnetsByID)
 	if bestSubnetID == "" {
 		logrus.Debug("No AWS subnets needed.")
-		return &SecondaryIfaceState{}, nil
+		return &IfaceState{}, nil
 	}
 
 	// Record the gateway address of the best subnet.
@@ -334,7 +335,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*SecondaryIfaceState, error
 	subnetCalicoRoutesNotInAWS := filterRoutesByAWSSubnet(allCalicoRoutesNotInAWS, bestSubnetID)
 	if len(subnetCalicoRoutesNotInAWS) == 0 {
 		logrus.Debug("No new AWS IPs to program")
-		return m.calculateResponse(awsSnapshot), nil
+		return m.calculateResponse(awsSnapshot)
 	}
 	logrus.WithField("numNewRoutes", len(subnetCalicoRoutesNotInAWS)).Info("Need to program new AWS IPs")
 
@@ -407,46 +408,64 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*SecondaryIfaceState, error
 	if err != nil {
 		return nil, err
 	}
-	return m.calculateResponse(awsSnapshot), nil
+	return m.calculateResponse(awsSnapshot)
 }
 
-func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *nicSnapshot) *SecondaryIfaceState {
+func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *nicSnapshot) (*IfaceState, error) {
 	// Index the AWS NICs on MAC.
 	ifacesByMAC := map[string]Iface{}
-	for nicID, awsNIC := range awsNICState.calicoOwnedNICsByID {
-		if awsNIC.MacAddress == nil {
+	for _, awsNIC := range awsNICState.calicoOwnedNICsByID {
+		iface, err := m.ec2NICToIface(&awsNIC)
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to convert AWS NIC.")
 			continue
 		}
-		hwAddr, err := net.ParseMAC(*awsNIC.MacAddress)
-		if err != nil {
-			logrus.WithError(err).Error("Failed to parse MAC address of AWS NIC.")
-		}
-		var primary ip.Addr
-		var secondaryAddrs []ip.Addr
-		for _, pa := range awsNIC.PrivateIpAddresses {
-			if pa.PrivateIpAddress == nil {
-				continue
-			}
-			addr := ip.FromString(*pa.PrivateIpAddress)
-			if pa.Primary != nil && *pa.Primary || primary == nil /* primary should be first */ {
-				primary = addr
-			} else {
-				secondaryAddrs = append(secondaryAddrs, addr)
-			}
-		}
-		ifacesByMAC[hwAddr.String()] = Iface{
-			ID:                 nicID,
-			MAC:                hwAddr,
-			PrimaryIPv4Addr:    primary,
-			SecondaryIPv4Addrs: secondaryAddrs,
-		}
+		ifacesByMAC[iface.MAC.String()] = *iface
 	}
-
-	return &SecondaryIfaceState{
+	primaryNIC, err := m.ec2NICToIface(awsNICState.primaryNIC)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to convert primary NIC.")
+		return nil, err
+	}
+	return &IfaceState{
+		PrimaryNIC:         primaryNIC,
 		SecondaryNICsByMAC: ifacesByMAC,
 		SubnetCIDR:         m.awsSubnetCIDR,
 		GatewayAddr:        m.awsGatewayAddr,
+	}, nil
+}
+
+var errNoMAC = errors.New("AWS NIC missing MAC")
+
+func (m *SecondaryIfaceProvisioner) ec2NICToIface(awsNIC *ec2types.NetworkInterface) (*Iface, error) {
+	if awsNIC.MacAddress == nil {
+		return nil, errNoMAC
 	}
+	hwAddr, err := net.ParseMAC(*awsNIC.MacAddress)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to parse MAC address of AWS NIC.")
+		return nil, err
+	}
+	var primary ip.Addr
+	var secondaryAddrs []ip.Addr
+	for _, pa := range awsNIC.PrivateIpAddresses {
+		if pa.PrivateIpAddress == nil {
+			continue
+		}
+		addr := ip.FromString(*pa.PrivateIpAddress)
+		if pa.Primary != nil && *pa.Primary || primary == nil /* primary should be first */ {
+			primary = addr
+		} else {
+			secondaryAddrs = append(secondaryAddrs, addr)
+		}
+	}
+	iface := &Iface{
+		ID:                 safeReadString(awsNIC.NetworkInterfaceId),
+		MAC:                hwAddr,
+		PrimaryIPv4Addr:    primary,
+		SecondaryIPv4Addrs: secondaryAddrs,
+	}
+	return iface, nil
 }
 
 // getMyNetworkCapabilities looks up the network capabilities of this host; this includes the number of NICs
