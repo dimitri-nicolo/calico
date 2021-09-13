@@ -5,7 +5,6 @@
 package users
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
@@ -389,17 +388,4 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 	}
 	return privateUsers, publicUsers
-}
-
-func formatName(name ElasticsearchUserName, clusterName string, management, secureSuffix bool) string {
-	var formattedName string
-	if management {
-		formattedName = string(name)
-	} else {
-		formattedName = fmt.Sprintf("%s-%s", string(name), clusterName)
-	}
-	if secureSuffix {
-		formattedName = fmt.Sprintf("%s-%s", formattedName, ElasticsearchSecureUserSuffix)
-	}
-	return formattedName
 }

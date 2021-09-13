@@ -27,22 +27,6 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/strutil"
 )
 
-var resourceNameToElasticsearchRole = map[string]string{
-	"flows":      esusers.ElasticsearchRoleNameFlowsViewer,
-	"audit*":     esusers.ElasticsearchRoleNameAuditViewer,
-	"audit_ee":   esusers.ElasticsearchRoleNameAuditEEViewer,
-	"audit_kube": esusers.ElasticsearchRoleNameAuditKubeViewer,
-	"events":     esusers.ElasticsearchRoleNameEventsViewer,
-	"dns":        esusers.ElasticsearchRoleNameDNSViewer,
-	"l7":         esusers.ElasticsearchRoleNameL7Viewer,
-}
-
-var resourceNameToGlobalElasticsearchRoles = map[string]string{
-	"kibana_login":            esusers.ElasticsearchRoleNameKibanaViewer,
-	"elasticsearch_superuser": esusers.ElasticsearchRoleNameSuperUser,
-	"kibana_admin":            esusers.ElasticsearchRoleNameKibanaAdmin,
-}
-
 func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 	var esRoles []string
 
