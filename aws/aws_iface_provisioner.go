@@ -105,6 +105,7 @@ func NewSecondaryIfaceProvisioner(
 		opRecorder: logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
+		responseC:        make(chan *SecondaryIfaceState, 1),
 		clock:            clock.RealClock{},
 	}
 }
