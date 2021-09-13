@@ -8,6 +8,8 @@ metadata:
   annotations:
     "helm.sh/hook": "crd-install"
 spec:
+  # preserveUnknownFields - set to false to pickup udpate to v1/CRD structure 
+  preserveUnknownFields: false
   group: elasticsearch.k8s.elastic.co
   names:
     kind: TrustRelationship
